@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sqlite3
 from collections import Counter
@@ -63,12 +64,16 @@ def _failure_diagnostic(raw: object, *, failure_code: str) -> dict[str, Any]:
     )
     diagnostic["repair_attempt"] = max(0, min(9, diagnostic["repair_attempt"]))
     context = raw.get("error_context")
-    diagnostic["error_context"] = {
-        key: token
-        for key, value in sorted(context.items())
-        if key in _FAILURE_CONTEXT_FIELDS
-        if (token := _bounded_diagnostic_token(value))
-    } if isinstance(context, dict) else {}
+    diagnostic["error_context"] = (
+        {
+            key: token
+            for key, value in sorted(context.items())
+            if key in _FAILURE_CONTEXT_FIELDS
+            if (token := _bounded_diagnostic_token(value))
+        }
+        if isinstance(context, dict)
+        else {}
+    )
     diagnostic["outer_code"] = _bounded_diagnostic_token(
         diagnostic["outer_code"] or failure_code
     )
@@ -119,6 +124,37 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+
+
+def _repair_effectiveness_projection(
+    *, artifact_dir: Path, validation_run_id: str
+) -> dict[str, Any]:
+    """Project the retained, content-free repair scorecard without recomputing it."""
+
+    run_hash = hashlib.sha256(validation_run_id.encode("utf-8")).hexdigest()
+    path = artifact_dir / "validation-runs" / run_hash / "reliability_telemetry.json"
+    if not path.is_file():
+        return {
+            "schema_version": "1.0",
+            "measurement_status": "unavailable",
+            "reason": "retained_reliability_artifact_missing",
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {
+            "schema_version": "1.0",
+            "measurement_status": "unavailable",
+            "reason": "retained_reliability_artifact_invalid",
+        }
+    scorecard = payload.get("repair_scorecard") if isinstance(payload, dict) else None
+    if not isinstance(scorecard, dict):
+        return {
+            "schema_version": "1.0",
+            "measurement_status": "unavailable",
+            "reason": "retained_repair_scorecard_missing",
+        }
+    return scorecard
 
 
 def _authoritative_frozen_cohort_projection(
@@ -455,6 +491,12 @@ def export_run_evidence(
                 row for row in recovery_rows if row["stage"] == "regeneration"
             ],
         },
+    )
+    _write_json(
+        output_dir / "repair_effectiveness.json",
+        _repair_effectiveness_projection(
+            artifact_dir=artifact_dir, validation_run_id=validation_run_id
+        ),
     )
     usage_rows: list[dict[str, Any]] = []
     if usage_db.exists():

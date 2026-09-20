@@ -1354,6 +1354,7 @@ def _resume_prompt_family_repair(
             runtime=runtime,
             dependencies=dependencies.analysis,
             audit=_candidate_audit(
+                runtime=runtime,
                 attempt_index=1,
                 transformation_scope=regeneration.regenerated_sections,
                 current_artifacts=analysis.artifacts_payload,
@@ -1426,6 +1427,7 @@ def _resume_prompt_family_repair(
                 runtime=runtime,
                 dependencies=dependencies.analysis,
                 audit=_candidate_audit(
+                    runtime=runtime,
                     attempt_index=1,
                     transformation_scope=regeneration.regenerated_sections,
                     current_artifacts=analysis.artifacts_payload,
@@ -1458,6 +1460,7 @@ def _resume_prompt_family_repair(
                 runtime=runtime,
                 dependencies=dependencies.analysis,
                 audit=_candidate_audit(
+                    runtime=runtime,
                     attempt_index=1,
                     transformation_scope=regeneration.regenerated_sections,
                     current_artifacts=analysis.artifacts_payload,
@@ -1483,6 +1486,7 @@ def _resume_prompt_family_repair(
             runtime=runtime,
             dependencies=dependencies.analysis,
             audit=_candidate_audit(
+                runtime=runtime,
                 attempt_index=1,
                 transformation_scope=regeneration.regenerated_sections,
                 current_artifacts=analysis.artifacts_payload,

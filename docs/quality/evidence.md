@@ -31,6 +31,22 @@ This deterministic queue evidence confirms queue semantics at the exact tested r
 
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 
+## Repair-effectiveness evidence
+
+The validation reliability artifact retains a cohort-compatible, content-free
+repair scorecard when regeneration candidate audits include exact
+run/cohort/configuration/policy/build identity. Its rows contain stable
+failure, strategy/evidence, and candidate fingerprints; typed repair deltas;
+validator rule classes; promotion/rollback/removal/scope outcomes; and bounded
+usage and latency totals. Prompt identity is namespace plus hash only. The
+artifact does not
+retain source text, rendered prompts, or provider responses.
+
+The read-only reliability exporter writes this retained projection as
+`repair_effectiveness.json`. A missing or incompatible sidecar, or unavailable
+usage attribution, is explicitly `unavailable` with `null` metrics. It must
+not be represented as a zero-cost or zero-success repair cohort.
+
 The bounded workflow-queue foundation record is retained in
 [workflow-queue-foundation-evidence-2026-07-18.md](workflow-queue-foundation-evidence-2026-07-18.md).
 

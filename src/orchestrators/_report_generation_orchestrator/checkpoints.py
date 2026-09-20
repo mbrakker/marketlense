@@ -333,6 +333,12 @@ def _regeneration_attempts_from_list(
                     raw_attempt.get("repair_delta")
                 ),
                 strategy_fingerprint=str(raw_attempt.get("strategy_fingerprint") or ""),
+                latency_ms=(
+                    int(raw_attempt["latency_ms"])
+                    if isinstance(raw_attempt.get("latency_ms"), int)
+                    and not isinstance(raw_attempt.get("latency_ms"), bool)
+                    else None
+                ),
                 schema_version=str(raw_attempt.get("schema_version") or "1.0"),
             )
         )

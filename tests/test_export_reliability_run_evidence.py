@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import sqlite3
 from collections import Counter
@@ -116,6 +117,75 @@ def test_export_run_evidence_writes_terminal_and_funnel_views(tmp_path: Path) ->
             },
         ],
     }
+
+
+def test_export_run_evidence_projects_repair_scorecard_without_source_content(
+    tmp_path: Path,
+) -> None:
+    """Removing the retained repair-scorecard projection must fail this export."""
+
+    state_dir = tmp_path / "state"
+    artifact_dir = tmp_path / "out"
+    output_dir = tmp_path / "evidence"
+    state_dir.mkdir()
+    run_id = "validation:repair-scorecard"
+    telemetry_path = (
+        artifact_dir
+        / "validation-runs"
+        / hashlib.sha256(run_id.encode()).hexdigest()
+        / "reliability_telemetry.json"
+    )
+    telemetry_path.parent.mkdir(parents=True)
+    telemetry_path.write_text(
+        json.dumps(
+            {
+                "repair_scorecard": {
+                    "measurement_status": "available",
+                    "cohort_compatible": True,
+                    "repair_chain_count": 1,
+                    "success_at_1_rate": 1.0,
+                    "attempts": [
+                        {
+                            "failure_fingerprints": ["a" * 64],
+                            "candidate_fingerprint": "b" * 64,
+                            "prompt_identities": ["report_vs/repair:" + "c" * 64],
+                        }
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    with sqlite3.connect(state_dir / "reports.sqlite") as conn:
+        conn.executescript(
+            """
+            CREATE TABLE validation_run_cohort_members (
+              validation_run_id TEXT, report_id TEXT, publisher_id TEXT,
+              source_identity_id TEXT
+            );
+            CREATE TABLE validation_run_entity_attempts (
+              validation_run_id TEXT, report_id TEXT, terminal_outcome TEXT,
+              terminal_stage TEXT, failure_code TEXT, is_current INTEGER
+            );
+            CREATE TABLE validation_run_stage_records (
+              validation_run_id TEXT, stage TEXT, terminal_outcome TEXT,
+              failure_code TEXT, retryable INTEGER, repair_disposition TEXT,
+              idempotency_state TEXT, started_at_utc TEXT, completed_at_utc TEXT
+            );
+            """
+        )
+
+    export_run_evidence(
+        state_dir=state_dir,
+        artifact_dir=artifact_dir,
+        output_dir=output_dir,
+        validation_run_id=run_id,
+    )
+
+    scorecard = json.loads(output_dir.joinpath("repair_effectiveness.json").read_text())
+    assert scorecard["measurement_status"] == "available"
+    assert scorecard["attempts"][0]["candidate_fingerprint"] == "b" * 64
+    assert "source" not in json.dumps(scorecard).lower()
 
 
 def test_export_run_evidence_projects_retained_validator_cause(

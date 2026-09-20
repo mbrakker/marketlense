@@ -30562,6 +30562,16 @@
           },
           "type": "array"
         },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "plan_mode": {
           "type": "string"
         },
@@ -30625,6 +30635,12 @@
         "candidate_artifacts_path": {
           "type": "string"
         },
+        "cohort_id": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
         "current_artifacts_path": {
           "type": "string"
         },
@@ -30639,6 +30655,22 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
         },
         "promotion_outcome": {
           "type": "string"
@@ -30658,6 +30690,9 @@
         "repair_strategy": {
           "type": "string"
         },
+        "report_id": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -30666,6 +30701,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "strategy_fingerprint": {
+          "type": "string"
         },
         "transformation_scope": {
           "items": {
@@ -30685,7 +30723,13 @@
           },
           "type": "array"
         },
+        "validation_run_id": {
+          "type": "string"
+        },
         "validation_status": {
+          "type": "string"
+        },
+        "workflow_run_id": {
           "type": "string"
         }
       },
@@ -42018,6 +42062,9 @@
         "producer_build_identity": {
           "type": "string"
         },
+        "repair_scorecard": {
+          "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityRepairScorecard"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -42047,13 +42094,17 @@
         "failure_pareto",
         "first_attempt_entities",
         "first_attempt_transitions",
-        "first_attempt_failure_pareto"
+        "first_attempt_failure_pareto",
+        "repair_scorecard"
       ],
       "type": "object"
     },
     "src.contracts.validation_reliability.ValidationReliabilityBuildRequest": {
       "additionalProperties": false,
       "properties": {
+        "repair_evidence_root": {
+          "type": "string"
+        },
         "reports_db_path": {
           "type": "string"
         },
@@ -42444,6 +42495,461 @@
         "terminal_failure_rate",
         "verified_replay_entity_count",
         "verified_replay_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityRepairAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "abstention_or_removal": {
+          "type": "boolean"
+        },
+        "attempt_index": {
+          "type": "integer"
+        },
+        "candidate_fingerprint": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failure_rule_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "introduced_failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_call_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "out_of_scope_mutation": {
+          "type": "boolean"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "persisting_failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
+        "promotion_outcome": {
+          "type": "string"
+        },
+        "prompt_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_mode": {
+          "type": "string"
+        },
+        "repair_strategy": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "resolved_failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "strategy_fingerprint": {
+          "type": "string"
+        },
+        "successful": {
+          "type": "boolean"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage_attribution": {
+          "type": "string"
+        },
+        "validation_status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "report_id",
+        "attempt_index",
+        "failure_rule_ids",
+        "failure_fingerprints",
+        "resolved_failure_fingerprints",
+        "persisting_failure_fingerprints",
+        "introduced_failure_fingerprints",
+        "strategy_fingerprint",
+        "candidate_fingerprint",
+        "repair_action",
+        "repair_strategy",
+        "evidence_fingerprints",
+        "validation_status",
+        "promotion_outcome",
+        "successful",
+        "abstention_or_removal",
+        "out_of_scope_mutation",
+        "repair_mode",
+        "usage_attribution",
+        "model_call_count",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+        "latency_ms",
+        "prompt_identities",
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityRepairModeMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_count": {
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metric_attribution": {
+          "type": "string"
+        },
+        "model_call_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repair_mode": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "successful_attempt_count": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "repair_mode",
+        "attempt_count",
+        "successful_attempt_count",
+        "success_rate",
+        "metric_attribution",
+        "model_call_count",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+        "latency_ms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityRepairScorecard": {
+      "additionalProperties": false,
+      "properties": {
+        "abstention_or_removal_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityRepairAttempt"
+          },
+          "type": "array"
+        },
+        "cohort_compatible": {
+          "type": "boolean"
+        },
+        "incompatible_audit_count": {
+          "type": "integer"
+        },
+        "measurement_status": {
+          "type": "string"
+        },
+        "mode_metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityRepairModeMetric"
+          },
+          "type": "array"
+        },
+        "out_of_scope_mutation_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repair_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repair_chain_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repeated_failed_candidate_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repeated_failed_strategy_evidence_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rolled_back_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "success_at_1_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "success_at_1_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "success_at_3_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "success_at_3_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "measurement_status",
+        "cohort_compatible",
+        "repair_chain_count",
+        "repair_attempt_count",
+        "success_at_1_count",
+        "success_at_1_rate",
+        "success_at_3_count",
+        "success_at_3_rate",
+        "rolled_back_attempt_count",
+        "abstention_or_removal_attempt_count",
+        "out_of_scope_mutation_attempt_count",
+        "repeated_failed_strategy_evidence_attempt_count",
+        "repeated_failed_candidate_attempt_count",
+        "incompatible_audit_count",
+        "attempts",
+        "mode_metrics"
       ],
       "type": "object"
     },

@@ -5,13 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
+from src.contracts.regeneration import FailureFingerprint
 from src.contracts.run_context import RunContext
 from src.contracts.validation_reliability import (
     ValidationFailureParetoEntry,
@@ -22,6 +24,9 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityFirstAttemptEntity,
     ValidationReliabilityFirstAttemptStage,
     ValidationReliabilityFirstAttemptTransition,
+    ValidationReliabilityRepairAttempt,
+    ValidationReliabilityRepairModeMetric,
+    ValidationReliabilityRepairScorecard,
     ValidationReliabilityTransition,
     ValidationReliabilityWriteRequest,
     ValidationReliabilityWriteResponse,
@@ -119,6 +124,7 @@ _REQUIRED_USAGE_ATTRIBUTION = (
     "policy_hash",
     "producer_build_identity",
 )
+_SAFE_REPAIR_TOKEN = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 
 
 @dataclass(frozen=True)
@@ -128,6 +134,14 @@ class _A21StateEvidence:
     awaiting_review_report_ids: frozenset[str] = frozenset()
     operator_requeue_report_ids: frozenset[str] = frozenset()
     automatic_queue_failure_codes: tuple[tuple[str, str], ...] = ()
+
+
+class _RepairUsage(TypedDict):
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    cost: float
 
 
 def build_validation_reliability_artifact(
@@ -240,6 +254,13 @@ def build_validation_reliability_artifact(
         ),
         first_attempt_failure_pareto=_first_attempt_failure_pareto(
             first_attempt_entities
+        ),
+        repair_scorecard=_repair_scorecard(
+            request=request,
+            run=run,
+            attempts=attempts,
+            usage_events=usage_events,
+            usage_attribution_available=usage_attribution_available,
         ),
     )
     artifact = replace(artifact, artifact_hash=_artifact_hash(artifact))
@@ -579,7 +600,9 @@ def _automatic_queue_failure_code(evidence: _A21StateEvidence, report_id: str) -
     return next(
         (
             failure_code
-            for candidate_report_id, failure_code in evidence.automatic_queue_failure_codes
+            for candidate_report_id, failure_code in (
+                evidence.automatic_queue_failure_codes
+            )
             if candidate_report_id == report_id
         ),
         "",
@@ -629,10 +652,12 @@ def _read_usage_events(
                 """
                 SELECT timestamp_utc, validation_run_id, cohort_id, workflow_run_id,
                        report_id, publisher_id, workflow, stage, artifact_family,
-                       action, semantic_task, prompt_namespace, policy_namespace,
+                       action, semantic_task, prompt_namespace, prompt_hash,
+                       policy_namespace,
                        provider, model, input_tokens, output_tokens, total_tokens,
                        estimated_cost_usd, cache_decision, repair_attempt,
-                       configuration_hash, policy_hash, producer_build_identity
+                       configuration_hash, policy_hash, producer_build_identity,
+                       model_policy_namespace
                 FROM llm_usage_events
                 WHERE validation_run_id=?
                 ORDER BY timestamp_utc, id
@@ -681,6 +706,456 @@ def _validate_usage_attribution(
                     "missing": sorted(set(missing)),
                 },
             )
+
+
+def _repair_scorecard(
+    *,
+    request: ValidationReliabilityBuildRequest,
+    run: dict[str, Any],
+    attempts: list[dict[str, Any]],
+    usage_events: list[dict[str, Any]],
+    usage_attribution_available: bool,
+) -> ValidationReliabilityRepairScorecard:
+    """Aggregate only cohort-bound, content-free candidate audit records."""
+
+    root_text = request.repair_evidence_root.strip()
+    if not root_text:
+        return _unavailable_repair_scorecard(incompatible_audit_count=0)
+    root = Path(root_text)
+    if not root.is_dir():
+        return _unavailable_repair_scorecard(incompatible_audit_count=0)
+
+    cohort_report_ids = {
+        str(row["report_id"])
+        for row in attempts
+        if str(row.get("cohort_disposition") or "") == "final_validation"
+    }
+    raw_audits: list[tuple[Path, dict[str, Any]]] = []
+    incompatible_count = 0
+    for path in sorted(root.rglob("regeneration_candidate_audit_*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            incompatible_count += 1
+            continue
+        if not isinstance(payload, dict):
+            incompatible_count += 1
+            continue
+        if not _audit_matches_reliability_run(
+            payload=payload,
+            run=run,
+            cohort_report_ids=cohort_report_ids,
+        ):
+            incompatible_count += 1
+            continue
+        raw_audits.append((path, payload))
+
+    if incompatible_count:
+        return _unavailable_repair_scorecard(
+            incompatible_audit_count=incompatible_count
+        )
+    if not raw_audits:
+        return ValidationReliabilityRepairScorecard(
+            schema_version=_SCHEMA_VERSION,
+            measurement_status="available",
+            cohort_compatible=True,
+            repair_chain_count=0,
+            repair_attempt_count=0,
+            success_at_1_count=None,
+            success_at_1_rate=None,
+            success_at_3_count=None,
+            success_at_3_rate=None,
+            rolled_back_attempt_count=0,
+            abstention_or_removal_attempt_count=0,
+            out_of_scope_mutation_attempt_count=0,
+            repeated_failed_strategy_evidence_attempt_count=0,
+            repeated_failed_candidate_attempt_count=0,
+            incompatible_audit_count=0,
+            attempts=(),
+            mode_metrics=(),
+        )
+
+    repair_attempts: list[ValidationReliabilityRepairAttempt] = []
+    seen_attempt_keys: set[tuple[str, int, str]] = set()
+    for _, audit in raw_audits:
+        attempt = _repair_attempt_from_audit(
+            audit=audit,
+            usage_events=usage_events,
+            usage_attribution_available=usage_attribution_available,
+        )
+        key = (attempt.report_id, attempt.attempt_index, attempt.candidate_fingerprint)
+        if key in seen_attempt_keys:
+            return _unavailable_repair_scorecard(incompatible_audit_count=1)
+        seen_attempt_keys.add(key)
+        repair_attempts.append(attempt)
+    repair_attempts.sort(
+        key=lambda item: (
+            item.report_id,
+            item.attempt_index,
+            item.candidate_fingerprint,
+        )
+    )
+    chains: dict[tuple[str, str], list[ValidationReliabilityRepairAttempt]] = (
+        defaultdict(list)
+    )
+    for attempt in repair_attempts:
+        chains[(attempt.report_id, _chain_fingerprint(attempt))].append(attempt)
+    for entries in chains.values():
+        entries.sort(key=lambda item: item.attempt_index)
+    chain_count = len(chains)
+    success_at_1 = sum(
+        any(item.successful for item in values[:1]) for values in chains.values()
+    )
+    success_at_3 = sum(
+        any(item.successful for item in values[:3]) for values in chains.values()
+    )
+    failed_attempts = [item for item in repair_attempts if not item.successful]
+    repeated_strategy = _repeated_failed_attempt_count(
+        failed_attempts, key=lambda item: item.strategy_fingerprint
+    )
+    repeated_candidate = _repeated_failed_attempt_count(
+        failed_attempts, key=lambda item: item.candidate_fingerprint
+    )
+    return ValidationReliabilityRepairScorecard(
+        schema_version=_SCHEMA_VERSION,
+        measurement_status="available",
+        cohort_compatible=True,
+        repair_chain_count=chain_count,
+        repair_attempt_count=len(repair_attempts),
+        success_at_1_count=success_at_1,
+        success_at_1_rate=_rate(success_at_1, chain_count),
+        success_at_3_count=success_at_3,
+        success_at_3_rate=_rate(success_at_3, chain_count),
+        rolled_back_attempt_count=sum(
+            item.promotion_outcome == "rolled_back" for item in repair_attempts
+        ),
+        abstention_or_removal_attempt_count=sum(
+            item.abstention_or_removal for item in repair_attempts
+        ),
+        out_of_scope_mutation_attempt_count=sum(
+            item.out_of_scope_mutation for item in repair_attempts
+        ),
+        repeated_failed_strategy_evidence_attempt_count=repeated_strategy,
+        repeated_failed_candidate_attempt_count=repeated_candidate,
+        incompatible_audit_count=0,
+        attempts=tuple(repair_attempts),
+        mode_metrics=_repair_mode_metrics(repair_attempts),
+    )
+
+
+def _unavailable_repair_scorecard(
+    *, incompatible_audit_count: int
+) -> ValidationReliabilityRepairScorecard:
+    return ValidationReliabilityRepairScorecard(
+        schema_version=_SCHEMA_VERSION,
+        measurement_status="unavailable",
+        cohort_compatible=False,
+        repair_chain_count=None,
+        repair_attempt_count=None,
+        success_at_1_count=None,
+        success_at_1_rate=None,
+        success_at_3_count=None,
+        success_at_3_rate=None,
+        rolled_back_attempt_count=None,
+        abstention_or_removal_attempt_count=None,
+        out_of_scope_mutation_attempt_count=None,
+        repeated_failed_strategy_evidence_attempt_count=None,
+        repeated_failed_candidate_attempt_count=None,
+        incompatible_audit_count=incompatible_audit_count,
+        attempts=(),
+        mode_metrics=(),
+    )
+
+
+def _audit_matches_reliability_run(
+    *, payload: dict[str, Any], run: dict[str, Any], cohort_report_ids: set[str]
+) -> bool:
+    required_identity = {
+        "validation_run_id": str(run["validation_run_id"]),
+        "cohort_id": str(run["cohort_id"]),
+        "workflow_run_id": str(run["workflow_run_id"]),
+        "configuration_hash": str(run["configuration_hash"]),
+        "policy_hash": str(run["policy_hash"]),
+        "producer_build_identity": str(run["producer_build_identity"]),
+    }
+    if any(
+        str(payload.get(key) or "") != value for key, value in required_identity.items()
+    ):
+        return False
+    report_id = str(payload.get("report_id") or "")
+    if not report_id or report_id not in cohort_report_ids:
+        return False
+    return bool(
+        _safe_repair_token(payload.get("strategy_fingerprint"))
+        and _safe_hash(payload.get("after_sha256"))
+        and isinstance(payload.get("repair_delta"), dict)
+        and isinstance(payload.get("attempt_index"), int)
+        and int(payload["attempt_index"]) > 0
+    )
+
+
+def _repair_attempt_from_audit(
+    *,
+    audit: dict[str, Any],
+    usage_events: list[dict[str, Any]],
+    usage_attribution_available: bool,
+) -> ValidationReliabilityRepairAttempt:
+    delta = audit["repair_delta"]
+    resolved = _fingerprints_from_delta(delta.get("resolved"))
+    persisting = _fingerprints_from_delta(delta.get("persisting"))
+    introduced = _fingerprints_from_delta(delta.get("introduced"))
+    failures = tuple(sorted(set(resolved) | set(persisting)))
+    failure_rule_ids = _failure_rule_ids_from_delta(
+        delta.get("resolved"), delta.get("persisting"), delta.get("introduced")
+    )
+    validation_issues = tuple(
+        token
+        for item in list(audit.get("validation_issues") or [])
+        if (token := _safe_repair_token(item))
+    )
+    repair_action = _safe_repair_token(audit.get("repair_action"))
+    repair_strategy = _safe_repair_token(audit.get("repair_strategy"))
+    abstention_or_removal = any(
+        marker in f"{repair_action}:{repair_strategy}".lower()
+        for marker in ("remove", "abstain")
+    )
+    out_of_scope_mutation = any(
+        value.startswith("regeneration_scope_violation:") for value in validation_issues
+    ) or any(value == "regeneration_scope_violation" for value in introduced)
+    matching_usage = [
+        event
+        for event in usage_events
+        if str(event.get("report_id") or "") == str(audit["report_id"])
+        and int(event.get("repair_attempt") or 0) == int(audit["attempt_index"])
+    ]
+    attribution_valid = usage_attribution_available and all(
+        str(event.get(field) or "") == str(audit[field])
+        for event in matching_usage
+        for field in (
+            "validation_run_id",
+            "cohort_id",
+            "workflow_run_id",
+            "configuration_hash",
+            "policy_hash",
+            "producer_build_identity",
+        )
+    )
+    usage = _repair_usage(matching_usage) if attribution_valid else None
+    latency_raw = audit.get("latency_ms")
+    latency_ms = (
+        int(latency_raw)
+        if isinstance(latency_raw, int)
+        and not isinstance(latency_raw, bool)
+        and latency_raw >= 0
+        else None
+    )
+    return ValidationReliabilityRepairAttempt(
+        schema_version=_SCHEMA_VERSION,
+        report_id=str(audit["report_id"]),
+        attempt_index=int(audit["attempt_index"]),
+        failure_rule_ids=failure_rule_ids,
+        failure_fingerprints=failures,
+        resolved_failure_fingerprints=resolved,
+        persisting_failure_fingerprints=persisting,
+        introduced_failure_fingerprints=introduced,
+        strategy_fingerprint=_safe_repair_token(audit.get("strategy_fingerprint")),
+        candidate_fingerprint=_safe_hash(audit.get("after_sha256")),
+        repair_action=repair_action,
+        repair_strategy=repair_strategy,
+        evidence_fingerprints=_evidence_fingerprints(
+            audit.get("selected_evidence_ids")
+        ),
+        validation_status=_safe_repair_token(audit.get("validation_status")),
+        promotion_outcome=_safe_repair_token(audit.get("promotion_outcome")),
+        successful=(
+            str(audit.get("promotion_outcome") or "") == "promoted"
+            and str(audit.get("validation_status") or "") == "pass"
+            and bool(resolved)
+            and not persisting
+            and not introduced
+            and not abstention_or_removal
+            and not out_of_scope_mutation
+        ),
+        abstention_or_removal=abstention_or_removal,
+        out_of_scope_mutation=out_of_scope_mutation,
+        repair_mode=(
+            "unavailable"
+            if usage is None
+            else "model"
+            if usage["calls"]
+            else "deterministic"
+        ),
+        usage_attribution="available" if usage is not None else "unavailable",
+        model_call_count=usage["calls"] if usage is not None else None,
+        input_tokens=usage["input_tokens"] if usage is not None else None,
+        output_tokens=usage["output_tokens"] if usage is not None else None,
+        total_tokens=usage["total_tokens"] if usage is not None else None,
+        estimated_cost_usd=usage["cost"] if usage is not None else None,
+        latency_ms=latency_ms,
+        prompt_identities=_prompt_identities(matching_usage)
+        if usage is not None
+        else (),
+        configuration_hash=str(audit["configuration_hash"]),
+        policy_hash=str(audit["policy_hash"]),
+        producer_build_identity=str(audit["producer_build_identity"]),
+    )
+
+
+def _fingerprints_from_delta(raw_items: object) -> tuple[str, ...]:
+    if not isinstance(raw_items, list):
+        return ()
+    fingerprints: set[str] = set()
+    for item in raw_items:
+        if isinstance(item, dict):
+            try:
+                fingerprints.add(
+                    FailureFingerprint(
+                        rule_id=str(item.get("rule_id") or "validation"),
+                        affected_section=str(item.get("affected_section") or ""),
+                        entity_id=str(item.get("entity_id") or ""),
+                        evidence_ids=[
+                            str(value)
+                            for value in list(item.get("evidence_ids") or [])
+                            if str(value)
+                        ],
+                    ).key
+                )
+            except (TypeError, ValueError):
+                continue
+    return tuple(sorted(fingerprints))
+
+
+def _failure_rule_ids_from_delta(*raw_item_groups: object) -> tuple[str, ...]:
+    """Expose validator classes without retaining issue text or source content."""
+
+    return tuple(
+        sorted(
+            {
+                rule_id
+                for raw_items in raw_item_groups
+                if isinstance(raw_items, list)
+                for item in raw_items
+                if isinstance(item, dict)
+                if (rule_id := _safe_repair_token(item.get("rule_id")))
+            }
+        )
+    )
+
+
+def _safe_repair_token(value: object) -> str:
+    token = str(value or "").strip()
+    return token if _SAFE_REPAIR_TOKEN.fullmatch(token) else ""
+
+
+def _safe_hash(value: object) -> str:
+    token = str(value or "").strip().lower()
+    return token if re.fullmatch(r"[a-f0-9]{64}", token) else ""
+
+
+def _evidence_fingerprints(raw_items: object) -> tuple[str, ...]:
+    if not isinstance(raw_items, list):
+        return ()
+    return tuple(
+        sorted(
+            {
+                hashlib.sha256(str(value).strip().encode("utf-8")).hexdigest()
+                for value in raw_items
+                if str(value).strip()
+            }
+        )
+    )
+
+
+def _repair_usage(events: list[dict[str, Any]]) -> _RepairUsage:
+    return {
+        "calls": len(events),
+        "input_tokens": sum(int(event["input_tokens"] or 0) for event in events),
+        "output_tokens": sum(int(event["output_tokens"] or 0) for event in events),
+        "total_tokens": sum(int(event["total_tokens"] or 0) for event in events),
+        "cost": round(
+            sum(float(event["estimated_cost_usd"] or 0.0) for event in events), 6
+        ),
+    }
+
+
+def _prompt_identities(events: list[dict[str, Any]]) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {
+                f"{namespace}:{prompt_hash}"
+                for event in events
+                if (namespace := _safe_repair_token(event.get("prompt_namespace")))
+                and (prompt_hash := _safe_hash(event.get("prompt_hash")))
+            }
+        )
+    )
+
+
+def _chain_fingerprint(attempt: ValidationReliabilityRepairAttempt) -> str:
+    payload = "|".join(attempt.failure_fingerprints)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _repeated_failed_attempt_count(
+    attempts: list[ValidationReliabilityRepairAttempt], *, key
+) -> int:
+    counts = Counter(key(item) for item in attempts if key(item))
+    return sum(count for count in counts.values() if count > 1)
+
+
+def _repair_mode_metrics(
+    attempts: list[ValidationReliabilityRepairAttempt],
+) -> tuple[ValidationReliabilityRepairModeMetric, ...]:
+    metrics: list[ValidationReliabilityRepairModeMetric] = []
+    for mode in ("deterministic", "model", "unavailable"):
+        entries = [item for item in attempts if item.repair_mode == mode]
+        if not entries:
+            continue
+        attributable = mode != "unavailable" and all(
+            item.latency_ms is not None for item in entries
+        )
+        successful = sum(item.successful for item in entries)
+        metrics.append(
+            ValidationReliabilityRepairModeMetric(
+                schema_version=_SCHEMA_VERSION,
+                repair_mode=mode,
+                attempt_count=len(entries),
+                successful_attempt_count=successful,
+                success_rate=_rate(successful, len(entries)),
+                metric_attribution="available" if attributable else "unavailable",
+                model_call_count=(
+                    sum(item.model_call_count or 0 for item in entries)
+                    if attributable
+                    else None
+                ),
+                input_tokens=(
+                    sum(item.input_tokens or 0 for item in entries)
+                    if attributable
+                    else None
+                ),
+                output_tokens=(
+                    sum(item.output_tokens or 0 for item in entries)
+                    if attributable
+                    else None
+                ),
+                total_tokens=(
+                    sum(item.total_tokens or 0 for item in entries)
+                    if attributable
+                    else None
+                ),
+                estimated_cost_usd=(
+                    round(sum(item.estimated_cost_usd or 0.0 for item in entries), 6)
+                    if attributable
+                    else None
+                ),
+                latency_ms=(
+                    sum(item.latency_ms or 0 for item in entries)
+                    if attributable
+                    else None
+                ),
+            )
+        )
+    return tuple(metrics)
 
 
 def _state_statuses(records: list[dict[str, Any]]) -> dict[str, bool]:

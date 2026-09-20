@@ -147,6 +147,89 @@ class ValidationReliabilityFirstAttemptTransition(SemanticIdContract):
 
 
 @dataclass(frozen=True)
+class ValidationReliabilityRepairAttempt(SemanticIdContract):
+    """Content-free outcome and attribution for one retained repair candidate."""
+
+    schema_version: str = field(
+        metadata={"doc": "Repair-attempt telemetry schema version."}
+    )
+    report_id: str
+    attempt_index: int
+    failure_rule_ids: tuple[str, ...]
+    failure_fingerprints: tuple[str, ...]
+    resolved_failure_fingerprints: tuple[str, ...]
+    persisting_failure_fingerprints: tuple[str, ...]
+    introduced_failure_fingerprints: tuple[str, ...]
+    strategy_fingerprint: str
+    candidate_fingerprint: str
+    repair_action: str
+    repair_strategy: str
+    evidence_fingerprints: tuple[str, ...]
+    validation_status: str
+    promotion_outcome: str
+    successful: bool
+    abstention_or_removal: bool
+    out_of_scope_mutation: bool
+    repair_mode: str
+    usage_attribution: str
+    model_call_count: int | None
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+    estimated_cost_usd: float | None
+    latency_ms: int | None
+    prompt_identities: tuple[str, ...]
+    configuration_hash: str
+    policy_hash: str
+    producer_build_identity: str
+
+
+@dataclass(frozen=True)
+class ValidationReliabilityRepairModeMetric(SemanticIdContract):
+    """Comparable success and resource totals for one repair execution mode."""
+
+    schema_version: str = field(
+        metadata={"doc": "Repair-mode scorecard schema version."}
+    )
+    repair_mode: str
+    attempt_count: int
+    successful_attempt_count: int
+    success_rate: float | None
+    metric_attribution: str
+    model_call_count: int | None
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+    estimated_cost_usd: float | None
+    latency_ms: int | None
+
+
+@dataclass(frozen=True)
+class ValidationReliabilityRepairScorecard(SemanticIdContract):
+    """Cohort-compatible effectiveness measurement for retained repair attempts."""
+
+    schema_version: str = field(
+        metadata={"doc": "Repair-effectiveness scorecard schema version."}
+    )
+    measurement_status: str
+    cohort_compatible: bool
+    repair_chain_count: int | None
+    repair_attempt_count: int | None
+    success_at_1_count: int | None
+    success_at_1_rate: float | None
+    success_at_3_count: int | None
+    success_at_3_rate: float | None
+    rolled_back_attempt_count: int | None
+    abstention_or_removal_attempt_count: int | None
+    out_of_scope_mutation_attempt_count: int | None
+    repeated_failed_strategy_evidence_attempt_count: int | None
+    repeated_failed_candidate_attempt_count: int | None
+    incompatible_audit_count: int
+    attempts: tuple[ValidationReliabilityRepairAttempt, ...]
+    mode_metrics: tuple[ValidationReliabilityRepairModeMetric, ...]
+
+
+@dataclass(frozen=True)
 class ValidationReliabilityArtifact(SemanticIdContract):
     """The retained validation-run funnel, failure metrics, and Pareto report."""
 
@@ -165,6 +248,7 @@ class ValidationReliabilityArtifact(SemanticIdContract):
     first_attempt_entities: tuple[ValidationReliabilityFirstAttemptEntity, ...]
     first_attempt_transitions: tuple[ValidationReliabilityFirstAttemptTransition, ...]
     first_attempt_failure_pareto: tuple[ValidationFailureParetoEntry, ...]
+    repair_scorecard: ValidationReliabilityRepairScorecard
     artifact_hash: str = field(
         default="", metadata={"doc": "Hash of this artifact excluding itself."}
     )
@@ -181,6 +265,7 @@ class ValidationReliabilityBuildRequest(SemanticIdContract):
     usage_db_path: str
     validation_run_id: ValidationRunId
     state_db_path: str = ""
+    repair_evidence_root: str = ""
 
 
 @dataclass(frozen=True)

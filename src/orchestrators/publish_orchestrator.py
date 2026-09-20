@@ -2507,6 +2507,7 @@ def run_publish(
                 ),
                 validation_run_id=validation_run_id,
                 state_db_path=settings.state_db,
+                repair_evidence_root=settings.output_dir,
             ),
             root_ctx,
         )

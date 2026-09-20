@@ -171,6 +171,35 @@ unknown values still fail closed.
 
 The deterministic [public editorial quality diagnostics](../quality/public-editorial-quality.md) run before the regeneration loop and after its final attempt. They retain repair eligibility and evidence IDs and may route scoped regeneration, but they are not an independent release decision. After the final render, the canonical `publish_readiness.json` evaluates the exact HTML and normalized WordPress projection together with the final semantic/grounding report, category decisions, evidence lineage, accepted crop linkage, promotion state, provenance, and metadata surfaces. Publication consumes that signed/hash-bound artifact instead of rereading `validation.json` as a second policy. A public-copy finding is regenerated only when retained source text, an explicit evidence ID, and a supported target exist; otherwise it is explicitly abstained and final readiness remains failed. This preserves passing fields and prevents generic fallback copy. A rejected regeneration candidate is never a subsequent attempt's input: every later attempt starts from the most recently promoted canonical artifacts, and the rejected candidate remains audit-only.
 
+## Repair-effectiveness measurement
+
+Each retained regeneration candidate audit carries only content-free measurement
+identity: report, validation-run, cohort, workflow, configuration, policy, and
+producer-build identities; failure and strategy fingerprints; candidate hash;
+validator rule classes; evidence-ID fingerprints; promotion result; typed
+resolved/persisting/introduced delta; scoped-mutation signal; and elapsed
+milliseconds. It never retains source
+prose, rendered prompts, or model responses. The audit is observational: it
+does not make model calls or change regeneration, validation, retry, promotion,
+or rollback decisions.
+
+The canonical `reliability_telemetry.json` aggregates compatible audits into a
+repair scorecard. It reports repair-chain and attempt denominators, success at
+one and three candidate attempts, rollback, removal/abstention and
+out-of-scope-mutation counts, repeated failed strategy/evidence and candidate
+hash counts, typed failure deltas, and separate deterministic/model usage,
+tokens, estimated cost, and latency. A promoted removal or abstention, a
+rolled-back candidate, a persisting/introduced failure, or a scope violation
+cannot count as a successful repair. Missing sidecars, incompatible cohort
+identity, or absent usage attribution are represented as `unavailable`/`null`,
+never as zero.
+
+`scripts/quality/export_reliability_run_evidence.py` projects the already
+retained scorecard to `repair_effectiveness.json`; it does not recompute or
+replay repairs. Historical audit files that predate the required identity
+fields remain historical artifacts but are intentionally not mixed into a
+compatible scorecard.
+
 The same deterministic public-editorial path checks comparative temporal
 integrity. When public prose repeats both values from a retained source
 comparison, it must retain each source-proven quarter, half-year, month/year,

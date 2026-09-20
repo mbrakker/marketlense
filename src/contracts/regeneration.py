@@ -289,6 +289,7 @@ class RegenerationAttemptResult:
     failure_fingerprints: List[str] = field(default_factory=list)
     repair_delta: RepairDelta = field(default_factory=RepairDelta)
     strategy_fingerprint: str = field(default="")
+    latency_ms: int | None = field(default=None)
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration attempt result schema version."}
     )
@@ -503,6 +504,15 @@ class RegenerationCandidateAudit:
     selected_evidence_ids: List[str] = field(default_factory=list)
     quarantined_evidence_ids: List[str] = field(default_factory=list)
     repair_delta: RepairDelta = field(default_factory=RepairDelta)
+    report_id: str = field(default="")
+    validation_run_id: str = field(default="")
+    cohort_id: str = field(default="")
+    workflow_run_id: str = field(default="")
+    configuration_hash: str = field(default="")
+    policy_hash: str = field(default="")
+    producer_build_identity: str = field(default="")
+    strategy_fingerprint: str = field(default="")
+    latency_ms: int | None = field(default=None)
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Regeneration candidate-audit schema version."},

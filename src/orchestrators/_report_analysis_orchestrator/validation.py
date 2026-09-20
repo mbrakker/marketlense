@@ -9,6 +9,7 @@ from __future__ import annotations
 import inspect
 from copy import deepcopy
 from dataclasses import asdict, replace
+from time import perf_counter
 from typing import Any, Dict, List, Optional
 
 from src.contracts.regeneration import (
@@ -422,6 +423,7 @@ def _validation_issue_keys(report: ValidationReport) -> list[str]:
 
 def _candidate_audit(
     *,
+    runtime: ReportRuntimeState,
     attempt_index: int,
     transformation_scope: List[str],
     current_artifacts: Dict[str, Any],
@@ -433,6 +435,8 @@ def _candidate_audit(
     promotion_outcome: str = "candidate",
     plan=None,
     repair_delta: RepairDelta | None = None,
+    strategy_fingerprint: str = "",
+    latency_ms: int | None = None,
 ) -> RegenerationCandidateAudit:
     report = validation_report or ValidationReport(
         schema_version="1.1",
@@ -489,6 +493,15 @@ def _candidate_audit(
             else []
         ),
         repair_delta=repair_delta or RepairDelta(),
+        report_id=str(runtime.ctx.report_id or runtime.file.file_id),
+        validation_run_id=str(runtime.ctx.validation_run_id or ""),
+        cohort_id=str(runtime.ctx.cohort_id or ""),
+        workflow_run_id=str(runtime.ctx.run_id or ""),
+        configuration_hash=str(runtime.ctx.configuration_hash or ""),
+        policy_hash=str(runtime.ctx.policy_hash or ""),
+        producer_build_identity=str(runtime.ctx.producer_commit_sha or "workspace"),
+        strategy_fingerprint=strategy_fingerprint,
+        latency_ms=latency_ms,
     )
 
 
@@ -734,6 +747,7 @@ def _run_validation_regeneration_loop(
         validation_before_status = current_validation_report.status
         artifacts_before = deepcopy(working_artifacts)
         candidate_parent_path = current_artifacts_path
+        attempt_started = perf_counter()
         regeneration_kwargs = {}
         if regeneration_openai_client is not None and _accepts_keyword(
             dependencies.regenerate_artifacts, "openai_client"
@@ -784,6 +798,7 @@ def _run_validation_regeneration_loop(
                 runtime=runtime,
                 dependencies=dependencies,
                 audit=_candidate_audit(
+                    runtime=runtime,
                     attempt_index=attempt_index,
                     transformation_scope=regeneration_response.regenerated_sections,
                     current_artifacts=working_artifacts,
@@ -904,6 +919,7 @@ def _run_validation_regeneration_loop(
                         runtime=runtime,
                         dependencies=dependencies,
                         audit=_candidate_audit(
+                            runtime=runtime,
                             attempt_index=attempt_index,
                             transformation_scope=(
                                 regeneration_response.regenerated_sections
@@ -915,6 +931,12 @@ def _run_validation_regeneration_loop(
                             candidate_result=candidate_result,
                             validation_report=candidate_validation_report,
                             promotion_outcome="rolled_back",
+                            plan=plan,
+                            repair_delta=repair_delta,
+                            strategy_fingerprint=strategy_fingerprint,
+                            latency_ms=max(
+                                0, int((perf_counter() - attempt_started) * 1000)
+                            ),
                         ),
                         ctx=attempt_ctx,
                     )
@@ -958,6 +980,7 @@ def _run_validation_regeneration_loop(
                 runtime=runtime,
                 dependencies=dependencies,
                 audit=_candidate_audit(
+                    runtime=runtime,
                     attempt_index=attempt_index,
                     transformation_scope=regeneration_response.regenerated_sections,
                     current_artifacts=artifacts_before,
@@ -969,6 +992,8 @@ def _run_validation_regeneration_loop(
                     promotion_outcome=promotion_outcome,
                     plan=plan,
                     repair_delta=repair_delta,
+                    strategy_fingerprint=strategy_fingerprint,
+                    latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
                 ),
                 ctx=attempt_ctx,
             )
@@ -1003,6 +1028,7 @@ def _run_validation_regeneration_loop(
             ],
             repair_delta=repair_delta,
             strategy_fingerprint=strategy_fingerprint,
+            latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
         )
         attempts.append(attempt_result)
         logger.info(
