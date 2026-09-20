@@ -1,0 +1,22 @@
+{
+  "admission_outcome": "admitted",
+  "awaiting_review": true,
+  "bounded_automatic_repair": false,
+  "cost_usd": 0.083682,
+  "final_state": "awaiting_review",
+  "git_sha": "c2df11a5c9c28749cd243bcc4a7727ca50580691",
+  "input_tokens": 239119,
+  "isolated_fresh_state": true,
+  "model_provider_calls": 29,
+  "operator_intervention": false,
+  "output_tokens": 29883,
+  "publication_readiness": "pass",
+  "publisher_id": "Contentstack",
+  "report_id": "cohort-076eca6d31e0c1dcddf0",
+  "source_identity_id": "source:ac8915b43ea20012f9da2bf3c8150b9f",
+  "terminal_failure_code": "",
+  "total_duration_seconds": 253.081,
+  "validation": "pass",
+  "workflow_attempt_count": 1,
+  "workflow_root_id": "6c1e2622-4384-4ee9-ad23-2bd5a2bc96cd"
+}

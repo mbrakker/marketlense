@@ -349,10 +349,24 @@ committed in [`results/`](reliability-replay-20260920-linkedin-provenance-fix/re
 with canonical `--cohort-result` exporter projections per round under
 [`evidence-export/`](reliability-replay-20260920-linkedin-provenance-fix/evidence-export/).
 The evidence records that ten of the eleven baseline failures plus the control
-reached `awaiting_review` under the fixed code, that Mintel (source-PDF glyph
-corruption) and Contentstack (model provenance-declaration non-compliance)
-remain blocked with precise typed causes, and that single-run model variance
-flips borderline reports between rounds.
+reached `awaiting_review` under the fixed code, that Mintel remains blocked by
+source-PDF glyph corruption, and that single-run model variance flips
+borderline reports between rounds. Contentstack's former model-provenance
+classification was superseded by the clean, one-member replay retained below;
+it reached `awaiting_review` without a publisher exception, weakened
+validation, automatic repair, or operator intervention.
+
+### Targeted real-report replay — Contentstack E13 verification — 2026-09-20
+
+[`reliability-replay-20260920-contentstack-e13/`](reliability-replay-20260920-contentstack-e13/)
+retains the sanitized terminal outcome of a fresh isolated production-queue
+run for the immutable Contentstack source `source:ac8915b43ea20012f9da2bf3c8150b9f`
+at `c2df11a5`. The normal submit, supervisor, validation, render, and
+publication-readiness path completed in one workflow attempt: validation and
+publication readiness passed and the result reached `awaiting_review`. The
+record is an outcome measurement, not a claim that an individual model call is
+deterministic; it corrects the prior conclusion that Contentstack was a stable
+non-repairable pipeline/model-contract blocker.
 
 ### Reusable sanitized acquisition-assessment projection
 
