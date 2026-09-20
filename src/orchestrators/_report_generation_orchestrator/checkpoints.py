@@ -27,6 +27,7 @@ from src.contracts.prompt_family_materialization import (
 )
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.regeneration import (
+    FailureFingerprint,
     RegenerationAttemptResult,
     RegenerationLoopState,
     RepairDelta,
@@ -259,6 +260,27 @@ def _regeneration_loop_from_dict(raw_state: object) -> Optional[RegenerationLoop
     )
 
 
+def _repair_delta_from_checkpoint(raw_delta: object) -> RepairDelta:
+    """Read both v1 empty deltas and v2 typed fingerprint payloads."""
+
+    payload = raw_delta if isinstance(raw_delta, dict) else {}
+
+    def fingerprints(key: str) -> list[FailureFingerprint]:
+        values = payload.get(key)
+        if not isinstance(values, list):
+            return []
+        return [
+            FailureFingerprint(**value) for value in values if isinstance(value, dict)
+        ]
+
+    return RepairDelta(
+        resolved=fingerprints("resolved"),
+        persisting=fingerprints("persisting"),
+        introduced=fingerprints("introduced"),
+        schema_version=str(payload.get("schema_version") or "1.0"),
+    )
+
+
 def _regeneration_attempts_from_list(
     raw_attempts: object,
 ) -> list[RegenerationAttemptResult]:
@@ -307,12 +329,8 @@ def _regeneration_attempts_from_list(
                     for item in raw_attempt.get("failure_fingerprints", [])
                     if str(item).strip()
                 ],
-                repair_delta=RepairDelta(
-                    **(
-                        raw_attempt.get("repair_delta")
-                        if isinstance(raw_attempt.get("repair_delta"), dict)
-                        else {}
-                    )
+                repair_delta=_repair_delta_from_checkpoint(
+                    raw_attempt.get("repair_delta")
                 ),
                 strategy_fingerprint=str(raw_attempt.get("strategy_fingerprint") or ""),
                 schema_version=str(raw_attempt.get("schema_version") or "1.0"),

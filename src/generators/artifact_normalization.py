@@ -1368,9 +1368,7 @@ def normalize_artifact_evidence_ids(
         spans = item.get("evidence_spans")
         if isinstance(spans, list):
             for span in spans:
-                _normalize_span(
-                    span, parent_evidence_id=parent_evidence_id
-                )
+                _normalize_span(span, parent_evidence_id=parent_evidence_id)
 
     def _normalize_span(span: Any, *, parent_evidence_id: str = "") -> None:
         nonlocal normalized_count, unresolved_count
@@ -1443,9 +1441,7 @@ def normalize_artifact_evidence_ids(
                 source_spans = claim.get("source_spans")
                 if isinstance(source_spans, list):
                     for span in source_spans:
-                        _normalize_span(
-                            span, parent_evidence_id=parent_evidence_id
-                        )
+                        _normalize_span(span, parent_evidence_id=parent_evidence_id)
 
     return {
         "known_reference_count": len(known_ids),
@@ -1798,12 +1794,12 @@ def _collect_known_evidence_ids(
         numeric_suffix = re.fullmatch(r"(.+?)(\d+)", evidence_id)
         if not numeric_suffix:
             continue
-        prefix, index = numeric_suffix.groups()
+        prefix, numeric_index = numeric_suffix.groups()
         normalized_prefix = prefix.rstrip("-_ ").lower()
         if normalized_prefix:
-            numeric_ids.setdefault(
-                (normalized_prefix, int(index)), []
-            ).append(evidence_id)
+            numeric_ids.setdefault((normalized_prefix, int(numeric_index)), []).append(
+                evidence_id
+            )
     for (prefix, index), evidence_ids in numeric_ids.items():
         # Only one retained canonical ID may prove a compact/unpadded form.
         # Distinct canonical spellings remain distinct, even if their numeric

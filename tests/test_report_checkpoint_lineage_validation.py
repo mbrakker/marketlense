@@ -27,6 +27,7 @@ from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _regeneration_attempts_from_list,
     _vector_indexing_state_from_checkpoint,
 )
+from src.contracts.regeneration import FailureFingerprint
 from src.orchestrators._report_generation_orchestrator.resume import (
     _outcome_from_render_checkpoint,
     _read_validated_checkpoint,
@@ -154,6 +155,31 @@ def test_regeneration_attempt_checkpoint_preserves_promotion_lineage() -> None:
     assert attempts[0].promotion_outcome == "promoted"
     assert attempts[0].candidate_artifacts_path.endswith("candidate-artifacts.json")
     assert attempts[0].candidate_audit_path.endswith("candidate-audit.json")
+
+
+def test_regeneration_attempt_checkpoint_restores_typed_repair_delta() -> None:
+    attempts = _regeneration_attempts_from_list(
+        [
+            {
+                "attempt_index": 1,
+                "plan_mode": "targeted",
+                "validation_before_status": "fail",
+                "validation_after_status": "fail",
+                "repair_delta": {
+                    "persisting": [
+                        {
+                            "rule_id": "grounding",
+                            "affected_section": "summary",
+                            "entity_id": "claim-1",
+                            "evidence_ids": ["f1"],
+                        }
+                    ]
+                },
+            }
+        ]
+    )
+
+    assert isinstance(attempts[0].repair_delta.persisting[0], FailureFingerprint)
 
 
 def test_rendered_html_lineage_explicitly_depends_on_prompt_materializations(
