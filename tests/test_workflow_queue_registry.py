@@ -129,6 +129,8 @@ def _isolated_app_config(tmp_path: Path) -> Path:
     assert isinstance(paths, dict)
     ingest = config_payload["ingest"]
     assert isinstance(ingest, dict)
+    analysis = config_payload["analysis"]
+    assert isinstance(analysis, dict)
     ingest["gdrive_folder_id"] = "test-drive-folder"
     evidence_packs = ingest.setdefault("evidence_packs", {})
     assert isinstance(evidence_packs, dict)
@@ -175,9 +177,11 @@ def _isolated_app_config(tmp_path: Path) -> Path:
         {
             "ledger_path": str(tmp_path / "cost-ledger.jsonl"),
             "daily_path": str(tmp_path / "cost-daily.json"),
+            "usage_db_path": str(tmp_path / "llm-usage.sqlite"),
             "pricing_path": str(Path("src/config/llm-costs.yaml").resolve()),
         }
     )
+    analysis["cost_ledger_path"] = str(tmp_path / "cost-ledger.jsonl")
     config_path = tmp_path / "app.yaml"
     config_path.write_text(
         yaml.safe_dump(config_payload, sort_keys=False), encoding="utf-8"

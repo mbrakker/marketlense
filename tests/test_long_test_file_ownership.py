@@ -79,12 +79,6 @@ LONG_TEST_FILE_ALLOWLIST = {
         "expires_on": "2026-09-30",
         "max_lines": 1020,
     },
-    "tests/test_public_editorial_quality_generator.py": {
-        "owner": "quality/repository-hygiene",
-        "reason": "Public-editorial quality coverage requires a follow-up split.",
-        "expires_on": "2026-09-30",
-        "max_lines": 1279,
-    },
     "tests/test_validation_reliability_service.py": {
         "owner": "quality/repository-hygiene",
         "reason": "Validation-reliability coverage requires a follow-up split.",

@@ -14,6 +14,8 @@ Default test runs exclude the `integration` marker. Controlled real provider cal
 
 Tests that exercise a request's default relative accounting, ledger, cache, or state paths must isolate them under `tmp_path` (for example, with the existing `external_boundary_mocks_only.chdir(tmp_path)` fixture) or pass explicit test paths. They must not share repository-root state artifacts: accumulated local ledgers can turn a small unit case into an unbounded projection or lease-recovery operation.
 
+First-party test modules remain below the repository ownership threshold through semantic case splits. A temporary allowlist is not a substitute for splitting a module once its approved maximum is exceeded.
+
 Validation runs MUST reuse the canonical production workflow and production orchestration by default. Validation-specific code may isolate inputs, state, outputs, external side effects and evidence collection, but MUST NOT reproduce workflow sequencing or business logic. A divergent/component validation is permitted only when explicitly required by the validation objective and must identify that limitation in its evidence.
 
 CLI unit tests must inject the canonical configuration service whenever the command needs application settings. The default suite must not depend on developer credentials or a local `.env` file.

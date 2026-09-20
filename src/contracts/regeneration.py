@@ -54,7 +54,9 @@ class RepairDelta:
     resolved: List[FailureFingerprint] = field(default_factory=list)
     persisting: List[FailureFingerprint] = field(default_factory=list)
     introduced: List[FailureFingerprint] = field(default_factory=list)
-    schema_version: str = field(default="1.0")
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Repair-delta schema version."}
+    )
 
 
 def repair_strategy_fingerprint(

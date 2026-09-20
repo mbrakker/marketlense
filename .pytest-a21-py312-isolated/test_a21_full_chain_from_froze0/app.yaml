@@ -1,0 +1,1558 @@
+schema_version: '1.0'
+paths:
+  output_dir: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\out
+  cache_dir: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\cache
+  state_db: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\state.sqlite
+  reports_db: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\reports.sqlite
+  signal_store_db: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\signals.sqlite
+  publisher_profiles: C:\Programing\Market lense\Wordpress\config\publisher-profiles.json
+  category_mappings: C:\Programing\Market lense\src\config\category-mappings.yaml
+  html_tag_acronyms: C:\Programing\Market lense\src\config\html-tag-acronyms.yaml
+  cover_styles: C:\Programing\Market lense\src\config\cover-styles.yaml
+  ingest_lock: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\ingest.lock
+ingest:
+  google_sa_path: ''
+  gdrive_folder_id: test-drive-folder
+  drive:
+    auth_mode: oauth_user
+    oauth_client_path: ''
+    oauth_token_path: ''
+    supports_all_drives: true
+    include_items_from_all_drives: true
+    drive_id: ''
+    list_mode: metadata
+  openai_model: gpt-5.6-luna
+  temperature: 1.0
+  taxonomy_temperature: 1.0
+  timeout_seconds: 600
+  llm:
+    retries: 0
+    base_delay_seconds: 0.0
+    backoff_step_seconds: 0.0
+    jitter_seconds: 0.0
+    circuit_breaker_failure_threshold: 3
+    circuit_breaker_recovery_seconds: 30.0
+  lock_ttl_seconds: 7200
+  seed: null
+  batch_limit: 20
+  worker_limit: 5
+  report_worker_limit: 5
+  source_quarantine:
+    enabled: true
+  admission:
+    min_text_chars: 500
+    max_pages: 250
+    max_source_bytes: 104857600
+    required_evidence_families:
+    - doc_map
+  run_budget:
+    max_spend_usd: 6.0
+    max_retries: 40
+    max_runtime_seconds: 43200
+    limit_decision: stop
+  pdf_text:
+    max_pages: 5
+    max_chars: 80000
+    min_density: 250
+    sample_pages: 3
+    native_confidence_threshold: 0.55
+    native_page_confidence_threshold: 0.35
+    ocr_fallback:
+      enabled: false
+      policy: native_first_selective
+      model: gpt-5.6-luna
+      timeout_seconds: 600
+      prompt_namespace: pdf_text/ocr_fallback
+      cache_enabled: true
+      chunk_page_count: 8
+  figure_captions:
+    enabled: false
+    temperature: 0.2
+    timeout_seconds: 600
+    prompt_namespace: report_vs/figure_caption
+    max_chars: 500
+  validation:
+    data_gap_policy: warn
+    regeneration_max_attempts: 3
+    public_editorial_quality:
+      disabled_rule_waivers: {}
+  contents_page:
+    max_pages: 8
+    min_headings: 3
+    keywords:
+    - table of contents
+    - contents
+    - index
+    preview_enabled: true
+    render_dpi: 144
+  candidate_page_gate:
+    enabled: true
+    min_score: 0.2
+    min_recall_pages: 12
+    min_recall_page_fraction: 0.65
+  evidence_packs:
+    parallel_workers: 1
+    global_max_in_flight: 1
+    global_min_interval_ms: 0
+    doc_map_max_attempts: 3
+    doc_map_retry_delay_ms: 0
+    registry:
+    - doc_map
+    - scope
+    - methods
+    - findings
+    - limitations
+    - quote_candidates
+  artifacts:
+    parallel_workers: 1
+    global_max_in_flight: 1
+    global_min_interval_ms: 0
+openai_models:
+  report_vs/artifacts: gpt-5.6-luna
+  report_vs/artifacts/summary: gpt-5.6-luna
+  report_vs/artifacts/cover_semantics: gpt-5.6-luna
+  report_vs/artifacts/cover_semantics_repair: gpt-5.6-luna
+  report_vs/artifacts/insights_candidates: gpt-5.6-luna
+  report_vs/artifacts/insights_final: gpt-5.6-luna
+  report_vs/artifacts/quotes: gpt-5.6-luna
+  report_vs/artifacts/expert_comment: gpt-5.6-luna
+  report_vs/artifacts/linkedin_post: gpt-5.6-luna
+  report_vs/doc_map: gpt-5.6-luna
+  report_vs/evidence_packs: gpt-5.6-luna
+  report_vs/evidence_packs/scope: gpt-5.6-luna
+  report_vs/evidence_packs/findings: gpt-5.6-luna
+  report_vs/evidence_packs/limitations: gpt-5.6-luna
+  report_vs/evidence_packs/methods: gpt-5.6-luna
+  report_vs/evidence_packs/quote_candidates: gpt-5.6-luna
+  report_vs/figure_caption: gpt-5.6-luna
+  report_vs/identity_resolution: gpt-5.6-luna
+  report_vs/validate/grounding: gpt-5.6-luna
+  report_vs/taxonomy: gpt-5.6-luna
+  rank_candidates: gpt-5.6-luna
+  rank_candidates/crop_refine: gpt-5.6-luna
+llm_routing:
+  report_vs/artifacts:
+    model: gpt-5.6-luna
+    tier: routine_structured
+    max_input_tokens: 48000
+    compaction_enabled: true
+    quality_threshold: 0.8
+    same_provider_fallback: true
+  report_vs/evidence_packs:
+    model: gpt-5.6-luna
+    tier: evidence_sensitive
+    max_input_tokens: 64000
+    compaction_enabled: true
+    quality_threshold: 0.9
+    same_provider_fallback: true
+  rank_candidates:
+    model: gpt-5.6-luna
+    tier: quality_ranked
+    max_input_tokens: 32000
+    compaction_enabled: true
+    quality_threshold: 0.85
+    same_provider_fallback: true
+llm_execution_policies:
+  browser_report_download/browser_route:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: browser_route.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  browser_report_download/form_value_derivation:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 400
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_schema
+    structured_output_schema_identity: form_value_derivation_v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  crop_qa_escalation/publication_strict:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: crop_qa_escalation.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  cross_report_analysis/synthesis:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: cross_report_analysis.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  pdf_text/ocr_fallback:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 16000
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: pdf_text_ocr.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  publisher_inventory/discovery:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: publisher_inventory_discovery.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  publisher_inventory/meaningful_candidate_screen:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: publisher_inventory_candidate_screen.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 1.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/evidence_packs:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/summary:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/insights_final:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/editorial_plan:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.3
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/insights_candidates:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.4
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/expert_comment:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.4
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/linkedin_post:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.5
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/regenerate/linkedin_post:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/artifacts/cover_semantics_repair:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: cover_semantics.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/validate:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 2048
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/taxonomy:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/taxonomy_repair:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: taxonomy.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/structured_output:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_schema
+    structured_output_schema_identity: structured_output_recovery.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/context_category_fit:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: context_category_fit.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/context_category_fit_repair:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: file_search
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: context_category_fit.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/figure_caption:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: figure_caption.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  report_vs/identity_resolution:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 512
+    retrieval_mode: chat_json
+    timeout_seconds: 180
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: report_title_identity.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  rank_candidates:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: inherit
+    timeout_seconds: 7200
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  rank_candidates/crop_refine:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.0
+    seed_policy: inherit
+    max_output_tokens: 1024
+    retrieval_mode: chat_json
+    timeout_seconds: 7200
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: crop_refine.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  signal_generation/synthesis:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: signal_generation.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  briefing_generation/synthesis:
+    schema_version: '1.0'
+    provider: openai
+    model: gpt-5.6-luna
+    temperature: 0.2
+    seed_policy: inherit
+    max_output_tokens: 4096
+    retrieval_mode: chat_json
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    structured_output_schema_identity: briefing_generation.v1
+    fallback_policy: same_provider_only
+    pricing_key: gpt-5.6-luna
+  claim_embedding/generate:
+    schema_version: '2.0'
+    provider: openai
+    model: text-embedding-3-large
+    temperature: 0.0
+    seed_policy: disabled
+    max_output_tokens: 1
+    retrieval_mode: inherit
+    timeout_seconds: 120
+    provider_retry_count: 0
+    structured_output_mode: embedding
+    structured_output_schema_identity: claim_embedding.vector.1024.v1
+    output_validator_identity: claim_embedding.vector_dimensions.1024.validator.v1
+    dimensions: 1024
+    batch_size: 25
+    fallback_policy: disabled
+    pricing_key: text-embedding-3-large
+rank:
+  model: gpt-5.6-luna
+  temperature: 1.0
+  timeout_seconds: 7200
+  seed: null
+  max_candidates: 40
+  selected_max: 5
+  min_overall_score: 78
+  min_quality_score: 75
+  min_insight_score: 75
+  min_data_score: 70
+  crop_refine_enabled: true
+  crop_refine_mode: adaptive
+  crop_refine_page_dpi: 110
+  final_crop_dpi: 216
+  crop_qa_escalation_enabled: false
+  crop_qa_escalation_min_score: 72.0
+  crop_qa_escalation_max_score: 82.0
+  crop_qa_escalation_max_calls: 2
+  crop_qa_escalation_max_repairs: 1
+  crop_refine_temperature: 0.0
+  crop_refine_timeout_seconds: 7200
+publish:
+  wp:
+    site_url: ''
+    username: ''
+    post_status: publish
+    post_type: ml_report
+    ssl_verify: true
+  media_upload_workers: 4
+  publish_interval_seconds: 0
+  validation:
+    policy: block
+  run_budget:
+    enabled: true
+    max_wordpress_writes: 30
+    projection_pending_event_threshold: 50
+    limit_decision: stop
+browser_download:
+  model: gpt-5.6-luna
+  openrouter_model: openai/gpt-5.6-luna
+  identity_config_path: ./browser_download_identity.yaml
+  temperature: 0.0
+  timeout_seconds: 180
+  max_steps: 30
+  run_budget:
+    enabled: true
+    max_browser_launches: 30
+    max_drive_writes: 30
+    max_drive_reads: 120
+    max_mailbox_reads: 24
+    max_retries: 20
+    max_runtime_seconds: 21600
+    limit_decision: stop
+  route_budgets:
+    browser_email_form:
+      timeout_seconds: 120
+      max_steps: 18
+    browser_pdf_click:
+      timeout_seconds: 90
+      max_steps: 12
+    browser_tracker_redirect:
+      timeout_seconds: 90
+      max_steps: 12
+    browser_listing_hub:
+      timeout_seconds: 180
+      max_steps: 30
+    browser_onsite_report:
+      timeout_seconds: 120
+      max_steps: 16
+  max_tokens: 12000
+  accounting_queue_size: 256
+  accounting_flush_timeout_seconds: 5
+  output_dir: ./out/browser_downloads
+  headed: false
+  warm_worker_pool:
+    enabled: false
+    max_workers: 5
+    max_runs_per_worker: 5
+    max_memory_mb: 768
+    idle_ttl_seconds: 300
+    fallback_to_subprocess: true
+  captcha_handoff:
+    enabled: true
+    timeout_seconds: 120
+  route_playbook_dir: ./src/playbooks/browser_routes
+  route_playbook_stale_policy: fallback
+  route_memory_ttl_seconds: 2592000
+  route_suppression:
+    enabled: true
+    minimum_sample_size: 3
+    terminal_failure_threshold: 1.0
+    ttl_seconds: 604800
+    terminal_failure_classes:
+    - blocked_captcha
+    - blocked_email_domain
+    - blocked_no_progress
+  route_playbook_promotion_mode: write
+  private_api_playbook_promotion_mode: write
+  private_api_playbook_min_success_count: 3
+  private_api_playbook_min_distinct_source_urls: 2
+  drive_upload:
+    enabled: true
+    required: true
+    parent_folder_id: 1lavfpSqJIbGIbWQ1Z65_Kq4aKS6Qj_zB
+  failure_forensics:
+    enabled: true
+    policy: copy_artifacts
+  retry:
+    retries: 1
+    base_delay_seconds: 1.0
+    backoff_step_seconds: 1.0
+    jitter_seconds: 0.25
+mailbox_acquisition:
+  provider: imap
+  output_dir: ./out/mailbox_acquisition
+  search_window_minutes: 120
+  max_results: 10
+  poll_timeout_seconds: 900
+  poll_interval_seconds: 60
+  gmail_oauth_client_path: ''
+  gmail_oauth_token_path: ''
+  gmail_user_id: me
+  imap_host: ''
+  imap_port: 993
+  imap_user: ''
+  imap_mailbox: INBOX
+publisher_discovery:
+  model: openai/gpt-5.6-luna
+  temperature: 0.0
+  timeout_seconds: 360
+  max_steps: 30
+  output_dir: ./out/publisher_inventory_discovery
+  prompt_namespace: publisher_inventory/discovery
+  pagination_max_pages: 75
+  http_timeout_seconds: 30
+  command_time_budget_seconds: 570
+  headed: false
+  force_browser: false
+  enable_deferred_candidate_recovery: true
+  enable_structured_route_reuse: true
+  enable_preflight_classifier_and_direct_detail: true
+  retry:
+    retries: 1
+    base_delay_seconds: 1.0
+    backoff_step_seconds: 1.0
+    jitter_seconds: 0.25
+  candidate_screening:
+    enabled: true
+    model: gpt-5.6-luna
+    temperature: 1.0
+    timeout_seconds: 120
+    batch_size: 10
+    prompt_namespace: publisher_inventory/meaningful_candidate_screen
+  candidate_quality_check:
+    enabled: true
+    timeout_seconds: 15
+    max_workers: 6
+  resource_quality_ranking:
+    enabled: true
+    score_window_size: 5
+    min_sample_size: 2
+    consistency_weight: 0.35
+    average_weight: 0.5
+    confidence_weight: 0.15
+    low_score_demotion_threshold: 45.0
+analysis:
+  vector_store_keep: true
+  vector_store_retention_days: 30
+  artifacts_use_vector_store: false
+  validation_grounding_use_vector_store: false
+  strict_schema_validation: true
+  cost_ledger_path: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\cost-ledger.jsonl
+cross_report_analysis:
+  enabled: false
+  max_source_reports: 6
+  max_evidence_items: 48
+  max_prompt_chars: 60000
+  prompt_namespace: cross_report_analysis/synthesis
+  model: gpt-5.6-luna
+  temperature: 1.0
+  timeout_seconds: 600
+  cache_enabled: true
+  auto_theme_enabled: true
+  theme_rotation_window_days: 30
+  min_theme_source_publishers: 2
+  publish_enabled: false
+  publish_requires_validation_pass: true
+  signal_score_weights:
+    recurrence: 1.0
+    diversity: 1.0
+    recency: 1.0
+    taxonomy_fit: 1.0
+    support: 1.0
+    contradiction: 0.5
+cost:
+  ledger_path: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\cost-ledger.jsonl
+  daily_path: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\cost-daily.json
+  usage_db_path: C:\Programing\Market lense\.pytest-a21-py312-isolated\test_a21_full_chain_from_froze0\llm-usage.sqlite
+  budget_authority:
+    policy_version: budget-authority-v2
+    reservation_ttl_seconds: 300
+    enabled_effect_kinds:
+    - llm_provider
+    - embedding
+    - ocr
+    - vision
+    - browser_use_model
+    - vector_store
+    - browser_launch
+    - drive_read
+    - drive_write
+    - wordpress_write
+    - pdf_process
+    - retry
+    - mailbox_read
+    run: {}
+    day: {}
+    publisher: {}
+  daily_spend_warn_usd: 3.0
+  daily_spend_pause_usd: 5.0
+  daily_spend_stop_usd: 6.0
+  daily_spend_overrides_allowed: false
+  pricing_path: C:\Programing\Market lense\src\config\llm-costs.yaml
+workflow_queues:
+  publisher_discovery:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 200
+    maximum_fanout: 100
+    budget_profile: publisher_inventory
+  report_acquisition:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 1200
+    maximum_pending: 500
+    maximum_fanout: 5
+    budget_profile: browser_acquisition
+  mailbox_delivery:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 100
+    maximum_fanout: 3
+    budget_profile: mailbox_delivery
+  source_ingest:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 1800
+    maximum_pending: 300
+    maximum_fanout: 3
+    budget_profile: report_ingest
+  report_selection:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 1800
+    maximum_pending: 150
+    maximum_fanout: 2
+    budget_profile: report_ingest
+  report_analysis:
+    enabled: true
+    max_workers: 5
+    max_attempts: 2
+    lease_seconds: 3600
+    maximum_pending: 100
+    maximum_fanout: 5
+    budget_profile: high_quality
+  report_render:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 1200
+    maximum_pending: 150
+    maximum_fanout: 5
+    budget_profile: report_render
+  analytics_projection:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 200
+    maximum_fanout: 5
+    budget_profile: analytics_projection
+  claim_embedding:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 500
+    maximum_fanout: 50
+    budget_profile: embedding
+  signal_candidate:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 100
+    maximum_fanout: 10
+    budget_profile: signal_candidate
+  signal_generation:
+    enabled: true
+    max_workers: 5
+    max_attempts: 2
+    lease_seconds: 3600
+    maximum_pending: 50
+    maximum_fanout: 5
+    budget_profile: high_quality
+  briefing_opportunity:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 600
+    maximum_pending: 300
+    maximum_fanout: 1
+    budget_profile: briefing_opportunity
+  briefing_generation:
+    enabled: true
+    max_workers: 5
+    max_attempts: 2
+    lease_seconds: 3600
+    maximum_pending: 25
+    maximum_fanout: 5
+    budget_profile: cross_report_analysis
+  cover_generation:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 1200
+    maximum_pending: 100
+    maximum_fanout: 5
+    budget_profile: cover_generation
+  publication_readiness:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 600
+    maximum_pending: 200
+    maximum_fanout: 2
+    budget_profile: publishing
+  wordpress_publish:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 100
+    maximum_fanout: 10
+    budget_profile: publishing
+  wordpress_projection:
+    enabled: true
+    max_workers: 5
+    max_attempts: 3
+    lease_seconds: 900
+    maximum_pending: 200
+    maximum_fanout: 5
+    budget_profile: wordpress_projection
+workflow_control:
+  schema_version: '1.0'
+  run_profiles:
+    safe_default:
+      intended_outcome: conservative cached-first execution
+      compatible_workflows: []
+      cached_artifact_preference: prefer
+      browser_allowance: explicit_required
+      ocr_fallback_policy: when_required
+      model_quality_tier: default
+      regeneration_scope: affected_only
+    fast_cached:
+      intended_outcome: planner-safe cache-first execution
+      compatible_workflows:
+      - report_generation
+      - cross_report_analysis
+      budget_profile_refs:
+      - report_ingest
+      minimum_regeneration_mode: require_planner_safe
+      cached_artifact_preference: require
+      browser_allowance: restricted
+      ocr_fallback_policy: restricted
+      regeneration_scope: minimum
+    repair_failed:
+      intended_outcome: bounded failed-work repair
+      compatible_workflows:
+      - report_generation
+      - report_download
+      - publisher_inventory
+      budget_profile_refs:
+      - report_ingest
+      minimum_regeneration_mode: affected_only
+      cached_artifact_preference: require
+      requires_bounded_target: true
+      regeneration_scope: affected_only
+    publish_ready:
+      intended_outcome: publication readiness with human approval
+      compatible_workflows:
+      - publishing
+      - wordpress_sync
+      budget_profile_refs:
+      - publishing
+      minimum_regeneration_mode: readiness_only
+      cached_artifact_preference: require
+      browser_allowance: restricted
+      ocr_fallback_policy: restricted
+      publication_readiness_mode: readiness_only
+      regeneration_scope: readiness_only
+      human_publication_approval_required: true
+    browser_acquisition:
+      intended_outcome: governed direct-first acquisition
+      compatible_workflows:
+      - report_download
+      - browser_acquisition
+      - publisher_inventory
+      budget_profile_refs:
+      - browser_acquisition
+      cached_artifact_preference: prefer
+      browser_allowance: allowed
+      ocr_fallback_policy: restricted
+      concurrency_resource: browser
+    cost_saver:
+      intended_outcome: restrictive cache-first cost control
+      compatible_workflows: []
+      minimum_regeneration_mode: require_planner_safe
+      cached_artifact_preference: require
+      browser_allowance: restricted
+      ocr_fallback_policy: restricted
+      regeneration_scope: minimum
+    high_quality:
+      intended_outcome: approved high-quality generation and validation
+      compatible_workflows:
+      - report_generation
+      - cross_report_analysis
+      budget_profile_refs:
+      - high_quality
+      - cross_report_analysis
+      cached_artifact_preference: prefer
+      model_quality_tier: high_quality
+      ocr_fallback_policy: when_required
+      regeneration_scope: affected_only
+  supervisor:
+    schema_version: '1.0'
+    enabled: false
+    materialize_outbox_enabled: true
+    recover_expired_leases_enabled: true
+    deferred_work_enabled: false
+    remediation_enabled: false
+    worker_batches_enabled: false
+    reconcile_enabled: true
+    evidence_enabled: true
+    max_parallel_workers: 3
+    max_jobs_per_queue: 1
+    max_total_jobs: 20
+    max_runtime_seconds: 120
+    lease_seconds: 180
+  remediation_reaper:
+    schema_version: '1.0'
+    execution_enabled: false
+    max_records_per_run: 10
+    lease_seconds: 60
+  deferred_work_reaper:
+    schema_version: '1.0'
+    execution_enabled: false
+    max_records_per_run: 10
+    lease_seconds: 60
+    retry_delay_seconds: 3600
+  preflight_profiles:
+    report_generation:
+      workflow: report_generation
+      planned_side_effects:
+      - pdf
+      - model
+      require_llm: true
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces: []
+    publisher_inventory:
+      workflow: publisher_inventory
+      planned_side_effects:
+      - network
+      - browser
+      - drive
+      - model
+      require_llm: true
+      require_drive: true
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+      - publisher_inventory/discovery
+      - publisher_inventory/meaningful_candidate_screen
+    report_download:
+      workflow: report_download
+      planned_side_effects:
+      - network
+      - browser
+      - drive
+      require_llm: false
+      require_drive: true
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+      - browser_report_download/browser_route
+    cross_report_analysis:
+      workflow: cross_report_analysis
+      planned_side_effects:
+      - model
+      - analytics_store
+      require_llm: true
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces:
+      - cross_report_analysis/synthesis
+    publishing:
+      workflow: publishing
+      planned_side_effects:
+      - wordpress
+      - publish
+      require_llm: false
+      require_drive: false
+      require_publish: true
+      require_browser: false
+      prompt_namespaces: []
+    ui_replay:
+      workflow: ui_replay
+      planned_side_effects:
+      - filesystem
+      require_llm: false
+      require_drive: false
+      require_publish: false
+      require_browser: false
+      prompt_namespaces: []
+    wordpress_sync:
+      workflow: wordpress_sync
+      planned_side_effects:
+      - wordpress
+      require_llm: false
+      require_drive: false
+      require_publish: true
+      require_browser: false
+      prompt_namespaces: []
+    browser_acquisition:
+      workflow: browser_acquisition
+      planned_side_effects:
+      - network
+      - browser
+      require_llm: false
+      require_drive: false
+      require_publish: false
+      require_browser: true
+      prompt_namespaces:
+      - browser_report_download/browser_route
+  retry_policies:
+    report_generation:
+      report_pipeline:
+        policy_id: report_generation.report_pipeline.v1
+        retries: 2
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      doc_map:
+        policy_id: report_generation.doc_map.v1
+        retries: 2
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    report_download:
+      http_pdf:
+        policy_id: report_download.http_pdf.v1
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      browser_acquisition:
+        policy_id: report_download.browser_acquisition.v1
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+      drive_archive:
+        policy_id: report_download.drive_archive.v1
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    publisher_inventory:
+      discovery:
+        policy_id: publisher_inventory.discovery.v1
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+    publishing:
+      wordpress_publish:
+        policy_id: publishing.wordpress_publish.v1
+        retries: 1
+        base_delay_seconds: 1.0
+        backoff_step_seconds: 1.0
+        jitter_seconds: 0.25
+  workflow_contracts:
+    report_generation:
+      workflow: report_generation
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - source_prepared
+      - selection_complete
+      - analysis_complete
+      - render_complete
+      - processed
+      - error
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: source_prepared
+        step_name: source_preparation
+        retry_policy_ref: default.v1
+        side_effects:
+        - pdf
+      - from_state: source_prepared
+        to_state: selection_complete
+        step_name: figure_selection
+        retry_policy_ref: default.v1
+        side_effects:
+        - pdf
+        - model
+      - from_state: selection_complete
+        to_state: analysis_complete
+        step_name: report_analysis
+        retry_policy_ref: report_generation.report_pipeline.v1
+        side_effects:
+        - model
+      - from_state: analysis_complete
+        to_state: render_complete
+        step_name: render_projection
+        retry_policy_ref: default.v1
+        side_effects:
+        - filesystem
+      - from_state: render_complete
+        to_state: processed
+        step_name: finish
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs:
+      - source_prepared
+      - selection_complete
+      - analysis_complete
+      - render_complete
+      validation_gates:
+      - preflight
+      - artifact_integrity
+      - report_validation
+      terminal_outcomes:
+      - processed
+      - skipped
+      - error
+    publisher_inventory:
+      workflow: publisher_inventory
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    report_download:
+      workflow: report_download
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    cross_report_analysis:
+      workflow: cross_report_analysis
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    publishing:
+      workflow: publishing
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    ui_replay:
+      workflow: ui_replay
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    wordpress_sync:
+      workflow: wordpress_sync
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+    browser_acquisition:
+      workflow: browser_acquisition
+      version: '1.0'
+      states:
+      - pending
+      - preflighted
+      - running
+      - completed
+      - failed
+      initial_state: pending
+      transitions:
+      - from_state: pending
+        to_state: preflighted
+        step_name: preflight
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: preflighted
+        to_state: running
+        step_name: execute
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: completed
+        step_name: complete
+        retry_policy_ref: default.v1
+        side_effects: []
+      - from_state: running
+        to_state: failed
+        step_name: fail
+        retry_policy_ref: default.v1
+        side_effects: []
+      prerequisites:
+        preflighted:
+        - preflight
+      checkpoint_outputs: []
+      validation_gates:
+      - preflight
+      terminal_outcomes:
+      - completed
+      - failed
+  concurrency:
+    model:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.25
+      high_latency_ms: 5000
+      low_retry_rate: 0.05
+      low_latency_ms: 1500
+    pdf:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.2
+      high_latency_ms: 4000
+      low_retry_rate: 0.02
+      low_latency_ms: 1000
+    browser:
+      min_limit: 1
+      max_limit: 2
+      default_limit: 1
+      high_retry_rate: 0.2
+      high_latency_ms: 10000
+      low_retry_rate: 0.02
+      low_latency_ms: 3000
+    drive:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.2
+      high_latency_ms: 3000
+      low_retry_rate: 0.02
+      low_latency_ms: 800
+    wordpress:
+      min_limit: 1
+      max_limit: 4
+      default_limit: 2
+      high_retry_rate: 0.2
+      high_latency_ms: 3000
+      low_retry_rate: 0.02
+      low_latency_ms: 800
+  operational_memory:
+    ttl_days: 30
+    min_observations: 2

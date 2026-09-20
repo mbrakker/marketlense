@@ -8,3 +8,5 @@ from ._test_artifact_generator.cases_04_advisory_metric_spine import *  # noqa: 
 from ._test_artifact_generator.cases_05_docmap_insight_selection import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_06_editorial_plan import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_07_ias_summary_provenance import *  # noqa: F401,F403
+from ._test_artifact_generator.cases_08_topic_briefs import *  # noqa: F401,F403
+from ._test_artifact_generator.cases_09_unknown_evidence import *  # noqa: F401,F403
