@@ -42,12 +42,20 @@ implication or action, the public copy remains descriptive or omits it; the
 existing validators continue to enforce grounding independently.
 
 For retained soft-copy families, the artifact keeps private sentence-level
-claim provenance beside the unchanged public prose. Expert View, LinkedIn, and
-useful summary/TLDR claims declare their exact canonical evidence IDs during
-generation, retain known source pages/spans, claim classification, text hash,
-prompt identity, and generation/regeneration attempt. When one retained
-sentence has an unambiguous validation finding, Expert View and LinkedIn repair
-only that claim; a clearly named summary field follows the same path. Valid
+claim provenance beside the unchanged public prose. The pipeline derives the
+mechanical provenance metadata itself: the canonical sentence grid is
+segmented from the generated public text, and claim identity, text hash,
+source pages/spans (from the canonical evidence index), and coverage are
+computed deterministically. The model contributes only the semantic binding
+during generation — which sentences carry which classification and which
+canonical evidence IDs. Declared quotes are resolved onto the sentence grid
+deterministically (exact, normalized, then unique-containment matching), so
+mechanically equivalent quoting cannot fail provenance or trigger a repair
+call, while a sentence without any declared binding, a factual binding
+without retained evidence, or an ambiguous quote still fails closed. When one
+retained sentence has an unambiguous validation finding, Expert View and
+LinkedIn repair only that claim; a clearly named summary field follows the
+same path. Valid
 sibling sentences are reconstructed byte-for-byte with their original
 provenance, while only replacement prose receives new attempt and prompt
 provenance. If the scoped evidence is insufficient, that sentence is removed

@@ -1,4 +1,10 @@
-"""Deterministic assembly of private soft-copy claim provenance."""
+"""Deterministic assembly of private soft-copy claim provenance.
+
+Sentence segmentation, claim identity, text hashes, source spans, and coverage
+are derived mechanically from the generated public text and the canonical
+evidence span index.  The model contributes only the semantic binding: which
+material sentences carry which classification and which retained evidence IDs.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +13,7 @@ from typing import Any
 
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    align_soft_copy_claim_bindings_to_text,
     soft_copy_material_sentences,
 )
 from src.utils.errors import AppError
@@ -25,11 +32,13 @@ def build_soft_copy_claim_provenance(
     generation_attempt: int,
     regeneration_attempt: int,
 ) -> list[SoftCopyClaimProvenance]:
-    """Retain only model-declared soft-copy evidence bindings.
+    """Retain model-declared soft-copy evidence bindings on the canonical grid.
 
-    The generator never infers evidence IDs from wording.  It maps declared IDs
-    to the repository's existing canonical span index so the retained claim is
-    auditable without creating a second evidence system.
+    The generator never infers evidence IDs from wording.  Declared quotes are
+    resolved onto the segmented public sentences by the contract's canonical
+    resolver, so quoting variance in mechanically equivalent text cannot fail
+    provenance, while every material sentence still needs one declared binding
+    and every factual binding still needs retained evidence IDs.
     """
 
     family = str(artifact_family or "").strip()
@@ -51,34 +60,48 @@ def build_soft_copy_claim_provenance(
             context={"artifact_family": family},
         )
 
+    sentences = soft_copy_material_sentences(public_text)
+    resolved_bindings = align_soft_copy_claim_bindings_to_text(
+        artifact_family=family,
+        text=public_text,
+        claim_bindings=declared_claims,
+    )
+    covered_claims = {
+        _normalized_text(binding.get("claim"))
+        for binding in resolved_bindings
+        if isinstance(binding, dict)
+    }
+    if missing_sentences := [
+        sentence for sentence in sentences if sentence not in covered_claims
+    ]:
+        first_excerpt = " ".join(str(missing_sentences[0]).split())[:100]
+        raise AppError(
+            code="soft_copy_claim_provenance_bindings_incomplete",
+            message=(
+                "Soft-copy provenance must declare every material sentence; "
+                f"uncovered sentences: {len(missing_sentences)}; first uncovered "
+                f"sentence starts: {first_excerpt}"
+            ),
+            retryable=False,
+            context={
+                "artifact_family": family,
+                "missing_claim_count": len(missing_sentences),
+            },
+        )
+
     claims: list[SoftCopyClaimProvenance] = []
     seen_claim_ids: set[str] = set()
-    declared_texts: set[str] = set()
-    for raw in declared_claims:
-        if not isinstance(raw, dict):
+    for binding in resolved_bindings:
+        claim_text = _normalized_text(binding.get("claim"))
+        classification = str(binding.get("classification") or "").strip()
+        evidence_ids = _unique_strings(binding.get("evidence_ids"))
+        if classification not in _CLASSIFICATIONS:
             raise AppError(
                 code="soft_copy_claim_provenance_binding_invalid",
-                message="Soft-copy claim provenance binding must be an object",
+                message="Soft-copy claim binding must declare a valid classification",
                 retryable=False,
                 context={"artifact_family": family},
             )
-        claim_text = _normalized_text(raw.get("claim"))
-        classification = str(raw.get("classification") or "").strip()
-        evidence_ids = _unique_strings(raw.get("evidence_ids"))
-        if (
-            not claim_text
-            or claim_text not in public_text
-            or classification not in _CLASSIFICATIONS
-        ):
-            raise AppError(
-                code="soft_copy_claim_provenance_binding_invalid",
-                message=(
-                    "Soft-copy claim binding must match public text and classification"
-                ),
-                retryable=False,
-                context={"artifact_family": family},
-            )
-        declared_texts.add(claim_text)
         if classification == "factual" and not evidence_ids:
             raise AppError(
                 code="soft_copy_claim_provenance_binding_invalid",
@@ -116,20 +139,6 @@ def build_soft_copy_claim_provenance(
             message="Material soft-copy requires at least one declared claim binding",
             retryable=False,
             context={"artifact_family": family},
-        )
-    if missing_sentences := [
-        sentence
-        for sentence in _material_sentences(public_text)
-        if sentence not in declared_texts
-    ]:
-        raise AppError(
-            code="soft_copy_claim_provenance_bindings_incomplete",
-            message="Soft-copy provenance must declare every material sentence",
-            retryable=False,
-            context={
-                "artifact_family": family,
-                "missing_claim_count": len(missing_sentences),
-            },
         )
     return claims
 

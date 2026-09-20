@@ -159,6 +159,120 @@ def test_material_soft_copy_sentence_without_declared_binding_is_rejected() -> N
         )
 
 
+def test_builder_resolves_varied_quotes_to_identical_retained_records() -> None:
+    """Mechanical quote variance must not change the retained provenance bytes."""
+
+    from src.generators.soft_copy_claim_provenance import (
+        build_soft_copy_claim_provenance,
+    )
+
+    text = "Revenue grew by 12%. This suggests leaders should protect retention investment."
+    span_index = {
+        "finding-7": [
+            {"evidence_id": "finding-7", "source_pack": "findings", "page": 12}
+        ],
+        "quote-3": [
+            {"evidence_id": "quote-3", "source_pack": "quote_candidates", "page": 13}
+        ],
+    }
+    identity = {"namespace": "report_vs/artifacts/expert_comment"}
+    exact_claims = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment",
+        text=text,
+        declared_claims=[
+            {
+                "claim": "Revenue grew by 12%.",
+                "classification": "factual",
+                "evidence_ids": ["finding-7"],
+            },
+            {
+                "claim": "This suggests leaders should protect retention investment.",
+                "classification": "interpretive",
+                "evidence_ids": ["finding-7", "quote-3"],
+            },
+        ],
+        evidence_span_index=span_index,
+        producing_prompt_identity=identity,
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    varied_claims = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment",
+        text=text,
+        declared_claims=[
+            {
+                "claim": "revenue grew by 12%",
+                "classification": "factual",
+                "evidence_ids": ["finding-7"],
+            },
+            {
+                "claim": "suggests leaders should protect retention investment",
+                "classification": "interpretive",
+                "evidence_ids": ["finding-7", "quote-3"],
+            },
+        ],
+        evidence_span_index=span_index,
+        producing_prompt_identity=identity,
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    assert [
+        (claim.claim_id, claim.text_hash, claim.evidence_ids, claim.source_spans)
+        for claim in exact_claims
+    ] == [
+        (claim.claim_id, claim.text_hash, claim.evidence_ids, claim.source_spans)
+        for claim in varied_claims
+    ]
+
+
+def test_builder_reports_uncovered_sentences_with_actionable_context() -> None:
+    from src.generators.soft_copy_claim_provenance import (
+        build_soft_copy_claim_provenance,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_soft_copy_claim_provenance(
+            artifact_family="linkedin_post",
+            text="Revenue grew by 12%. Leaders should protect retention investment.",
+            declared_claims=[
+                {
+                    "claim": "Revenue grew by twelve percent.",
+                    "classification": "factual",
+                    "evidence_ids": ["finding-7"],
+                }
+            ],
+            evidence_span_index={},
+            producing_prompt_identity={"namespace": "linkedin"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+    assert exc_info.value.code == "soft_copy_claim_provenance_bindings_incomplete"
+    assert exc_info.value.context["missing_claim_count"] == 2
+
+
+def test_builder_still_rejects_factual_claim_without_evidence() -> None:
+    from src.generators.soft_copy_claim_provenance import (
+        build_soft_copy_claim_provenance,
+    )
+
+    with pytest.raises(AppError, match="requires declared evidence IDs"):
+        build_soft_copy_claim_provenance(
+            artifact_family="linkedin_post",
+            text="Revenue grew by 12%.",
+            declared_claims=[
+                {
+                    "claim": "revenue grew by 12%",
+                    "classification": "factual",
+                    "evidence_ids": [],
+                }
+            ],
+            evidence_span_index={},
+            producing_prompt_identity={"namespace": "linkedin"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+
+
 def test_ias_summary_claim_bindings_cover_uk_abbreviation_sentences() -> None:
     """The IAS canary's valid provider shape must not split ``U.K.`` in two."""
     summary = {
@@ -270,8 +384,9 @@ def test_artifact_assembly_allows_empty_soft_copy_without_claims() -> None:
     }
 
 
-def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation(
-) -> None:
+def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation() -> (
+    None
+):
     payload = _assemble_soft_copy(
         expert_comment="Revenue grew by 12%.",
         evidence_packs={
@@ -554,14 +669,14 @@ def test_align_bindings_keeps_exact_and_unmatched_bindings() -> None:
         align_soft_copy_claim_bindings_to_sentences,
     )
 
-    post = "Exact sentence here. Off-grid model phrasing."
+    post = "Exact sentence here. Unrelated off-grid model phrasing about weather."
     exact_binding = {
         "claim": "Exact sentence here.",
         "classification": "factual",
         "evidence_ids": ["f1"],
     }
     unmatched_binding = {
-        "claim": "Off-grid model phrasing",
+        "claim": "The forecast looks cloudy for marketers worldwide.",
         "classification": "interpretive",
         "evidence_ids": ["f2"],
     }
@@ -572,6 +687,133 @@ def test_align_bindings_keeps_exact_and_unmatched_bindings() -> None:
     )
     assert aligned[0] == exact_binding
     assert aligned[1] == unmatched_binding
+
+
+def test_align_bindings_resolves_punctuation_and_case_variance() -> None:
+    """Mechanically equivalent quotes bind without a model repair attempt."""
+
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+        soft_copy_claim_bindings_cover_public_text,
+    )
+
+    post = (
+        "Marketers plan to raise budgets by 12% in 2026. Leaders remain "
+        "cautious about attribution spend."
+    )
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": "marketers plan to raise budgets by 12% in 2026",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+            {
+                "claim": "Leaders remain cautious about attribution spend",
+                "classification": "interpretive",
+                "evidence_ids": ["f2"],
+            },
+        ],
+    )
+    assert [binding["claim"] for binding in aligned] == [
+        "Marketers plan to raise budgets by 12% in 2026.",
+        "Leaders remain cautious about attribution spend.",
+    ]
+    assert soft_copy_claim_bindings_cover_public_text(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=aligned,
+    )
+
+
+def test_align_bindings_resolves_quoted_clause_within_unique_sentence() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+        soft_copy_uncovered_sentences,
+    )
+
+    post = (
+        "Retail media networks now capture the majority of new brand budgets "
+        "across every measured region this year."
+    )
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": "Retail media networks now capture",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+        ],
+    )
+    assert [binding["claim"] for binding in aligned] == [
+        post,
+    ]
+    assert (
+        soft_copy_uncovered_sentences(
+            artifact_family="linkedin_post",
+            public_output=post,
+            claim_bindings=aligned,
+        )
+        == []
+    )
+
+
+def test_align_bindings_resolves_sentence_quoted_with_extra_words() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+    )
+
+    post = "Attribution windows keep shrinking for performance teams."
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": (
+                    "Key insight: attribution windows keep shrinking for "
+                    "performance teams overall"
+                ),
+                "classification": "interpretive",
+                "evidence_ids": ["f2"],
+            }
+        ],
+    )
+    assert [binding["claim"] for binding in aligned] == [post]
+    assert aligned[0]["evidence_ids"] == ["f2"]
+
+
+def test_align_bindings_leaves_ambiguous_clause_unmatched() -> None:
+    """An ambiguous quote stays unmatched so coverage still fails closed."""
+
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+        soft_copy_uncovered_sentences,
+    )
+
+    post = "First generic growth signal appeared early. Second generic growth signal appeared late."
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[
+            {
+                "claim": "generic growth signal appeared",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+        ],
+    )
+    assert (
+        soft_copy_uncovered_sentences(
+            artifact_family="linkedin_post",
+            public_output=post,
+            claim_bindings=aligned,
+        )
+        != []
+    )
 
 
 def test_align_bindings_drops_noise_once_coverage_is_complete() -> None:

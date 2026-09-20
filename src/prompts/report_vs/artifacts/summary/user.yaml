@@ -24,10 +24,10 @@ text: |
       ]
     },
     "claim_provenance": [
-      {"claim": "<exact material sentence from tldr, compact TLDR, or executive_summary>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<existing evidence id>"]}
+      {"claim": "<material sentence quoted from tldr, card_tldr_compact, or executive_summary>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<existing evidence id>"]}
     ]
   }
-  `claim_provenance` is retained metadata only: include every material sentence or claim from the public summary fields, use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
+  `claim_provenance` is retained metadata only: cover every material sentence or claim from the public summary fields with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
   - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
   - When source evidence is descriptive, factual statements must remain descriptive. Add analyst interpretation only when it follows without introducing a new factual premise. Recommendations must be explicitly MarketLense-authored, conditional and traceable to supplied evidence. Do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions. If evidence does not support a distinct implication or action, remain descriptive or omit it.

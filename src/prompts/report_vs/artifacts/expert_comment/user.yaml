@@ -37,7 +37,7 @@ text: |
   - Do not restate supplied evidence verbatim; synthesize across it
   - If an implication is not clearly supported, omit it
   - Do not expose evidence IDs, evidence spans, report pages, pack names, JSON fields, or internal document structure in `expert_comment`.
-  - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `expert_comment`, with its exact `claim` text, a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
+  - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `expert_comment`, quoting the covered text as its `claim` (one object per sentence or consecutive sentence group; minor punctuation differences are resolved mechanically), a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
   - If the available evidence does not support a distinct synthesis across multiple findings, return exactly {"expert_comment": ""}.
 
   Output:

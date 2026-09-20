@@ -317,6 +317,16 @@ its wording. Interpretations and recommendations remain non-factual here and
 continue through the existing grounding and editorial-quality policies rather
 than becoming a second factual-validation path.
 
+During generation, the retained bindings themselves stay mechanically
+derivable: the pipeline segments the final public text into the canonical
+sentence grid and computes claim identity, text hashes, source spans, and
+coverage from that grid and the canonical evidence index, while the model
+declares only the semantic classification and evidence selection. Declared
+quotes are resolved onto the grid deterministically, so quoting variance in
+mechanically equivalent text cannot fail provenance or trigger an avoidable
+repair call; an undeclared sentence, evidence-free factual claim, or
+ambiguous quote still fails closed.
+
 For material current soft copy, provenance is mandatory at this validation
 boundary. Every sentence must have exactly one hash-matching binding in a
 well-formed retained provenance payload; missing, malformed, ambiguous, or

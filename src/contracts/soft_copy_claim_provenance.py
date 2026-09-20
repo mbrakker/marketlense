@@ -169,6 +169,50 @@ def align_soft_copy_claim_bindings_to_sentences(
 
     The provenance contract retains one binding per material public sentence,
     while models legitimately declare one object per paragraph or clause group.
+    """
+    if not isinstance(claim_bindings, list):
+        return []
+    text = soft_copy_public_text(artifact_family, public_output)
+    if not text:
+        return [binding for binding in claim_bindings if isinstance(binding, dict)]
+    return align_soft_copy_claim_bindings_to_text(
+        artifact_family=artifact_family,
+        text=text,
+        claim_bindings=claim_bindings,
+    )
+
+
+def align_soft_copy_claim_bindings_to_text(
+    *,
+    artifact_family: str,
+    text: str,
+    claim_bindings: object,
+) -> list[dict[str, Any]]:
+    """Resegment declared bindings onto the sentence grid of normalized ``text``.
+
+    Canonical companion to :func:`align_soft_copy_claim_bindings_to_sentences`
+    for callers that already hold the joined public prose, such as the retained
+    provenance builder, so render and storage gates share one resolver.
+    """
+
+    if not isinstance(claim_bindings, list):
+        return []
+    joined = " ".join(str(text or "").split())
+    if not joined:
+        return [binding for binding in claim_bindings if isinstance(binding, dict)]
+    return _align_bindings_to_sentences(
+        sentences=soft_copy_material_sentences(joined),
+        claim_bindings=claim_bindings,
+    )
+
+
+def _align_bindings_to_sentences(
+    *,
+    sentences: list[str],
+    claim_bindings: list[Any],
+) -> list[dict[str, Any]]:
+    """Split declared bindings across the exact public sentences they cover.
+
     Splitting a declared binding distributes its own unchanged classification
     and evidence IDs across the exact public sentences it already covers; it
     never invents evidence or rewrites declared text. A binding that matches no
@@ -178,12 +222,6 @@ def align_soft_copy_claim_bindings_to_sentences(
     actionable context.
     """
 
-    if not isinstance(claim_bindings, list):
-        return []
-    text = soft_copy_public_text(artifact_family, public_output)
-    if not text:
-        return [binding for binding in claim_bindings if isinstance(binding, dict)]
-    sentences = soft_copy_material_sentences(text)
     aligned: list[dict[str, Any]] = []
     unmatched: list[dict[str, Any]] = []
     covered_sentences: set[str] = set()
@@ -211,7 +249,37 @@ def align_soft_copy_claim_bindings_to_sentences(
     return aligned
 
 
+_BINDING_MIN_MATCH_TOKENS = 3
+_BINDING_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+
+
 def _matching_sentence_run(sentences: list[str], claim_text: str) -> list[str] | None:
+    """Return the consecutive sentence run a declared quote mechanically covers.
+
+    Resolution is tiered so mechanically equivalent quotes never fail
+    provenance while semantic matches stay anchored to declared text:
+
+    1. exact equality with a sentence or a consecutive run join;
+    2. equality after case and punctuation normalization (the model quoting
+       the same words with different punctuation or capitalization);
+    3. unique token containment — a quoted clause inside exactly one
+       sentence, or exactly one sentence inside a longer quote.
+
+    Ambiguous containment (several equally valid sentences) resolves nothing,
+    so an unclear quote stays unmatched and the coverage gate fails closed
+    instead of guessing which sentence the evidence belongs to.
+    """
+
+    run = _exact_sentence_run(sentences, claim_text)
+    if run is not None:
+        return run
+    run = _normalized_sentence_run(sentences, claim_text)
+    if run is not None:
+        return run
+    return _contained_sentence_run(sentences, claim_text)
+
+
+def _exact_sentence_run(sentences: list[str], claim_text: str) -> list[str] | None:
     """Return the consecutive sentence run exactly equal to ``claim_text``."""
 
     if claim_text in sentences:
@@ -225,6 +293,64 @@ def _matching_sentence_run(sentences: list[str], claim_text: str) -> list[str] |
             if len(joined) > len(claim_text):
                 break
     return None
+
+
+def _normalized_sentence_run(sentences: list[str], claim_text: str) -> list[str] | None:
+    """Return the run whose canonical text equals the quote's canonical text."""
+
+    claimed = _canonical_binding_text(claim_text)
+    if not claimed:
+        return None
+    for sentence in sentences:
+        if _canonical_binding_text(sentence) == claimed:
+            return [sentence]
+    for start in range(len(sentences)):
+        joined = _canonical_binding_text(sentences[start])
+        for end in range(start + 1, len(sentences)):
+            joined = f"{joined} {_canonical_binding_text(sentences[end])}"
+            if joined == claimed:
+                return sentences[start : end + 1]
+            if len(joined) > len(claimed):
+                break
+    return None
+
+
+def _contained_sentence_run(sentences: list[str], claim_text: str) -> list[str] | None:
+    """Return the one sentence uniquely containing, or contained in, the quote."""
+
+    claimed_tokens = frozenset(_binding_tokens(claim_text))
+    if len(claimed_tokens) < _BINDING_MIN_MATCH_TOKENS:
+        return None
+    clause_candidates = [
+        sentence
+        for sentence in sentences
+        if claimed_tokens <= _sentence_token_set(sentence)
+    ]
+    if len(clause_candidates) == 1:
+        return [clause_candidates[0]]
+    sentence_candidates = [
+        sentence
+        for sentence in sentences
+        if len(_sentence_token_set(sentence)) >= _BINDING_MIN_MATCH_TOKENS
+        and _sentence_token_set(sentence) <= claimed_tokens
+    ]
+    if len(sentence_candidates) == 1:
+        return [sentence_candidates[0]]
+    return None
+
+
+def _canonical_binding_text(value: str) -> str:
+    """Return the case- and punctuation-insensitive text form for matching."""
+
+    return " ".join(_BINDING_TOKEN_PATTERN.findall(str(value or "").casefold()))
+
+
+def _binding_tokens(value: str) -> list[str]:
+    return _BINDING_TOKEN_PATTERN.findall(str(value or "").casefold())
+
+
+def _sentence_token_set(sentence: str) -> frozenset[str]:
+    return frozenset(_binding_tokens(sentence))
 
 
 def soft_copy_material_sentences(text: object) -> list[str]:
