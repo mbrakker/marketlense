@@ -44,6 +44,36 @@ def test_percent_decimal_and_ratio_forms_match() -> None:
     assert _any_match("0.5% churn", "0.005 churn rate")
 
 
+def test_hyphenated_percentage_point_matches_spelled_out_points() -> None:
+    """A hyphenated "percentage-point" is pp, not a percent value.
+
+    Regression: "a 24 percentage-point increase" prefix-matched "percent"
+    inside "percentage-point" and canonicalized to percent, so evidence that
+    states the same fact as "24 percentage points" could never ground it and
+    the numbers gate blocked an Emplifi report with
+    "Number 24.0 not present in report or evidence".
+    """
+
+    assert _first("a 24 percentage-point increase").unit_family == "points"
+    assert _first("a 24 percentage-point increase").unit == "pp"
+    assert _numeric_grounding_match(
+        "a 24 percentage-point increase",
+        "research time increases by 24 percentage points",
+    )
+    assert _numeric_grounding_match(
+        "a 2 basis-point cut",
+        "yields fell 2 basis points",
+    )
+
+
+def test_unit_word_boundary_does_not_absorb_prose() -> None:
+    """A unit match must not consume the prefix of a longer word."""
+
+    parsed = extract_quantities("Adoption reached 56 percentage globally.")
+    assert all(q.unit != "percent" for q in parsed)
+    assert _any_match("Support grew 5 percent.", "Support grew 5 percent.")
+
+
 def test_currency_magnitude_forms_match() -> None:
     assert _any_match("$3M in spend", "3 million USD spend")
     assert _any_match("€2.1bn revenue", "2,100,000,000 EUR revenue")

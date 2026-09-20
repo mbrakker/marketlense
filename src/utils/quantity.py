@@ -23,7 +23,7 @@ _MAG_RE = r"(?:k|m|mm|mn|b|bn|t|tn|thousand|million|billion|trillion)\b"
 
 _RANGE_RE = re.compile(
     rf"(?<!\w)(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
-    r"(?P<unit>percentage points?|basis points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
+    r"(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
     r"k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)?(?!\w)",
     re.IGNORECASE,
 )
@@ -46,11 +46,11 @@ _MAIN_RE = re.compile(
     r"(?P<currency>[$€£¥])?\s*"
     rf"(?P<number>{_NUMBER_RE})"
     rf"(?:\s*(?P<magnitude>{_MAG_RE}))?"
-    r"(?:\s*(?P<unit>percentage points?|basis points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
+    r"(?:\s*(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
     r"users?|downloads?|respondents?|impressions?|installs?|visits?|sessions?|"
     r"kbps|mbps|gbps|"
     r"minutes?|hours?|days?|weeks?|months?|years?|points?|index|rank|"
-    r"times?|yoy|mom|qoq|cagr|per day|per month|per year))?",
+    r"times?|yoy|mom|qoq|cagr|per day|per month|per year)(?!\w))?",
     re.IGNORECASE,
 )
 _TIMEFRAME_RE = re.compile(
@@ -879,6 +879,10 @@ def _sign(value: float) -> int:
 
 def _clean_unit(value: str) -> str:
     unit = normalize_text(value).strip()
+    # normalize_text pads hyphens ("percentage-point" becomes
+    # "percentage - point"); collapse them back so hyphenated unit spellings
+    # resolve to the same canonical unit as their spaced forms.
+    unit = re.sub(r"\s*-\s*", "-", unit)
     if unit.endswith("."):
         unit = unit[:-1]
     if unit in {"billions", "billion"}:
@@ -889,9 +893,14 @@ def _clean_unit(value: str) -> str:
         return "trillion"
     if unit in {"thousands", "thousand"}:
         return "thousand"
-    if unit in {"percentage point", "percentage points"}:
+    if unit in {
+        "percentage point",
+        "percentage points",
+        "percentage-point",
+        "percentage-points",
+    }:
         return "pp"
-    if unit in {"basis point", "basis points"}:
+    if unit in {"basis point", "basis points", "basis-point", "basis-points"}:
         return "bps"
     if unit in {"per day", "per month", "per year"}:
         return unit

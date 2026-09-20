@@ -162,7 +162,12 @@ additionally projects the retained actionable cause when available: `stage`,
 `claim_or_entity_id`, `repair_attempt`, and an allowlisted bounded
 `error_context`. The projection is built only from the validation-manifest
 artifact and remediation record already produced by the canonical workflow;
-it does not inspect runtime logs or rerun validation. The context accepts only
+it does not inspect runtime logs or rerun validation. The reader scans the
+failing validation stage records newest-first and keeps scanning past terminal
+checkpoint records whose artifacts carry no validation-issues document, so the
+generic `validation_failed` outer code surfaces the retained inner validator
+finding (rule, affected section/family, claim or entity ID, and bounded repair
+attempt) instead of exporting an empty diagnostic. The context accepts only
 short identifier-like values (for example rule, field, schema, component, and
 evidence IDs). Prompt text, provider/model responses, source text, exception
 messages, file paths, and arbitrary error-context values are excluded. For

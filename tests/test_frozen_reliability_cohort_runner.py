@@ -190,6 +190,120 @@ def test_failure_diagnostic_projects_structured_reference_and_cover_terminal_cau
     assert diagnostics["cover"]["error_context"] == {"field": "selection_reason"}
 
 
+def test_failure_diagnostic_scans_past_issue_free_stage_records(
+    tmp_path: Path,
+) -> None:
+    """A generic validation_failed surfaces the retained inner validator finding.
+
+    Regression: the terminal `analysis_complete` stage record is the newest
+    failing record but points at the analysis vector store, which carries no
+    validation-issues document. The reader must keep scanning the older
+    failing validation stages instead of returning no diagnostic at all.
+    """
+
+    validation_path = tmp_path / "validation.json"
+    validation_path.write_text(
+        json.dumps(
+            {
+                "status": "fail",
+                "issues": [
+                    {
+                        "severity": "info",
+                        "rule_id": "family_confidence",
+                        "affected_section": "evidence_pack:limitations",
+                        "entity_id": "",
+                        "evidence_ids": [],
+                        "message": "informational abstention",
+                    },
+                    {
+                        "severity": "error",
+                        "rule_id": "claim_support",
+                        "affected_section": "summary.claim_evidence_map[0]",
+                        "entity_id": "strategy",
+                        "evidence_ids": [],
+                        "message": "source prose that must never be exported",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    checkpoint_path = tmp_path / "analysis_vector_store.json"
+    checkpoint_path.write_text(json.dumps({"vectors": []}), encoding="utf-8")
+    reports_db = tmp_path / "reports.sqlite"
+    with sqlite3.connect(reports_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE validation_run_entity_attempts (
+              attempt_id TEXT, validation_run_id TEXT, report_id TEXT,
+              attempt_number INTEGER
+            );
+            CREATE TABLE validation_run_stage_records (
+              attempt_id TEXT, stage TEXT, failure_code TEXT,
+              repair_disposition TEXT, output_artifact_ids_json TEXT,
+              completed_at_utc TEXT
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO validation_run_entity_attempts VALUES (?, ?, ?, ?)",
+            ("attempt-1", "validation-1", "report-1", 1),
+        )
+        rows = [
+            (
+                "attempt-1",
+                "analysis_complete",
+                "validation_failed",
+                "not_required",
+                json.dumps([str(checkpoint_path)]),
+                "2026-09-20T00:16:11.959102+00:00",
+            ),
+            (
+                "attempt-1",
+                "regeneration",
+                "validation_failed",
+                "targeted_repair",
+                json.dumps([str(tmp_path / "artifacts.json")]),
+                "2026-09-20T00:16:11.901010+00:00",
+            ),
+            (
+                "attempt-1",
+                "semantic_validation",
+                "validation_failed",
+                "targeted_repair",
+                json.dumps([str(validation_path)]),
+                "2026-09-20T00:16:11.889746+00:00",
+            ),
+        ]
+        conn.executemany(
+            "INSERT INTO validation_run_stage_records VALUES (?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+
+    diagnostic = _read_failure_diagnostic(
+        state_db=tmp_path / "workflow.sqlite",
+        reports_db=reports_db,
+        report_id="report-1",
+        validation_run_id="validation-1",
+        root_workflow_id="workflow-1",
+        outer_code="validation_failed",
+    )
+
+    assert diagnostic == {
+        "stage": "semantic_validation",
+        "outer_code": "validation_failed",
+        "inner_error_class": "",
+        "validator_rule": "claim_support",
+        "artifact_family": "summary.claim_evidence_map[0]",
+        "claim_or_entity_id": "strategy",
+        "repair_attempt": 1,
+        "error_context": {
+            "affected_section": "summary.claim_evidence_map[0]",
+        },
+    }
+    assert "prose" not in json.dumps(diagnostic)
+
+
 def test_first_attempt_canary_uses_production_submission_and_supervisor_path(
     tmp_path: Path,
     external_boundary_mocks_only,

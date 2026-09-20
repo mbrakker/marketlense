@@ -16,6 +16,16 @@ STRONG_CLAIM_RE = re.compile(
     r"largest|smallest|dominates?|requires?)\b)",
     re.IGNORECASE,
 )
+_CONTRAST_MARKERS = (
+    "rather than",
+    "instead of",
+    "other than",
+    "not just",
+    "not merely",
+    "not only",
+)
+_SENTENCE_BOUNDARY_RE = re.compile(r"[.!?;]")
+
 SOURCE_BACKED_GRADES = {
     "direct_evidence_span",
     "direct_metric",
@@ -221,14 +231,43 @@ def _claim_evidence_ids(*, evidence_id: str, evidence_spans: list[dict]) -> list
     return sorted(dict.fromkeys(item for item in ids if item))
 
 
+def _has_unscoped_strong_language(claim_text: str) -> bool:
+    """Decide whether strong language asserts the claim itself.
+
+    Numeric tokens always count. An absolutist word ("only", "never", ...)
+    inside a contrast construction ("rather than treated only as messaging")
+    scopes the *rejected* alternative, so it does not strengthen the asserted
+    claim and must not flag supported recommendations as overstated.
+    """
+
+    for match in STRONG_CLAIM_RE.finditer(claim_text):
+        token = match.group(0)
+        if token[:1].isdigit() or token[:1] in {"$", "€", "£"}:
+            return True
+        if not _contrast_scoped(claim_text, match.start(), match.end()):
+            return True
+    return False
+
+
+def _contrast_scoped(claim_text: str, start: int, end: int) -> bool:
+    before = claim_text[:end]
+    boundaries = [
+        match.end() for match in _SENTENCE_BOUNDARY_RE.finditer(before[:start])
+    ]
+    clause = before[boundaries[-1] :] if boundaries else before
+    clause = clause.casefold()
+    return any(marker in clause for marker in _CONTRAST_MARKERS)
+
+
 def _strong_claim_overstates_support(
     *,
     claim_text: str,
     evidence_ids: list[str],
     evidence_quality_grades: dict[str, str],
 ) -> bool:
-    if not STRONG_CLAIM_RE.search(claim_text):
+    if not _has_unscoped_strong_language(claim_text):
         return False
+
     grades = [
         evidence_quality_grades.get(evidence_id, "") for evidence_id in evidence_ids
     ]

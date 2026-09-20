@@ -188,7 +188,11 @@ explicit period/value and category/value tuples. Quantity extraction keeps a
 hyphen attached to its original neighbours, so a hyphenated prose compound such
 as `first-90-day` is the positive number it names and never parses as a signed
 quantity; an explicit minus still yields a negative quantity that positive
-evidence cannot satisfy. Every retained primary metric
+evidence cannot satisfy. Hyphenated unit spellings resolve to the same
+canonical unit as their spaced forms (`24 percentage-point` and `24 percentage
+points` are both pp/points, never percent), and a unit word never matches the
+prefix of a longer word, so the same source fact grounds across its singular,
+plural, and hyphenated spellings. Every retained primary metric
 also preserves its source-bound subject, cohort, denominator, and
 observed/forecast/estimate status when supplied, alongside the existing metric,
 period, geography, unit, and evidence ID. A mismatched year, forecast marker,

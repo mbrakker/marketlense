@@ -1,6 +1,7 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.validation.claim_support import _has_unscoped_strong_language
 from src.generators.validation.semantic import run_semantic_validation
 
 from ._shared import *  # noqa: F401,F403
@@ -437,6 +438,104 @@ def test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence(tmp_pa
     assert issue.severity == "error"
     assert issue.repair_target == "summary"
     assert issue.entity_id == "f1"
+
+
+def test_claim_support_allows_contrast_scoped_only_with_weak_evidence(tmp_path):
+    """A contrast-scoped exclusivity term does not overstate a weak-evidence claim.
+
+    Regression: "managed ... rather than treated only as messaging" blocked an
+    Emplifi summary claim that faithfully paraphrased the referenced strategy
+    section's explicit recommendation.
+    """
+
+    settings = _settings(tmp_path)
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-claim-r2",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": "Brands manage authenticity across touchpoints.",
+                    "card_tldr_compact": "Brands manage authenticity day to day.",
+                    "executive_summary": (
+                        "Authenticity works as an operating model across "
+                        "customer touchpoints."
+                    ),
+                    "claim_evidence_map": [
+                        {
+                            "claim": (
+                                "Authenticity should be managed across "
+                                "interconnected customer touchpoints rather than "
+                                "treated only as messaging."
+                            ),
+                            "evidence_id": "f1",
+                            "evidence_spans": [
+                                {
+                                    "evidence_id": "f1",
+                                    "source_pack": "findings",
+                                    "text": (
+                                        "The strategy section recommends making "
+                                        "authenticity an operating model rather "
+                                        "than a messaging tactic."
+                                    ),
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "",
+                "linkedin_post": "",
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "f1",
+                            "evidence": (
+                                "The strategy section recommends making "
+                                "authenticity an operating model rather than a "
+                                "messaging tactic."
+                            ),
+                            "quality_grade": "section_summary",
+                        }
+                    ]
+                }
+            },
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(issue.rule_id == "claim_support" for issue in result.issues)
+
+
+def test_claim_support_contrast_scope_boundaries():
+    """Only contrast-governed exclusivity terms lose their strong-claim force."""
+
+    assert _has_unscoped_strong_language(
+        "Brands should use only first-party data rather than third-party cookies."
+    )
+    assert _has_unscoped_strong_language(
+        "Growth reached 42 percent rather than the expected 5 percent."
+    )
+    assert _has_unscoped_strong_language(
+        "Rather than treating it as messaging. It will only strengthen trust."
+    )
+    assert not _has_unscoped_strong_language(
+        "Authenticity should be managed across touchpoints rather than treated "
+        "only as messaging."
+    )
+    assert not _has_unscoped_strong_language(
+        "Brands should invest in owned reviews, not only in paid ratings."
+    )
 
 
 def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(

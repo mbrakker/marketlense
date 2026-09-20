@@ -73,7 +73,7 @@ _AUTOMATIC_REPAIR_DISPOSITIONS = {
     "process_restart",
 }
 _DIAGNOSTIC_TOKEN_CHARS = frozenset(
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-[]"
 )
 
 
@@ -933,7 +933,7 @@ def _read_validation_failure_diagnostic(
         return {}
     try:
         with sqlite3.connect(reports_db) as conn:
-            row = conn.execute(
+            rows = conn.execute(
                 """
                 SELECT stages.stage, stages.failure_code, stages.repair_disposition,
                        stages.output_artifact_ids_json
@@ -943,47 +943,48 @@ def _read_validation_failure_diagnostic(
                 WHERE attempts.validation_run_id=? AND attempts.report_id=?
                   AND stages.failure_code<>''
                 ORDER BY stages.completed_at_utc DESC
-                LIMIT 1
                 """,
                 (validation_run_id, report_id),
-            ).fetchone()
+            ).fetchall()
     except sqlite3.Error:
         return {}
-    if row is None:
-        return {}
-    stage, failure_code, repair_disposition, artifact_ids = row
-    if str(failure_code or "") != outer_code and outer_code == "validation_failed":
-        return {}
-    issue = _read_validation_issue(artifact_ids)
-    if issue is None:
-        return {}
-    affected_section = _diagnostic_token(issue.get("affected_section"))
-    entity_id = _diagnostic_token(issue.get("entity_id"))
-    evidence_ids = issue.get("evidence_ids")
-    evidence_id = (
-        _diagnostic_token(evidence_ids[0])
-        if isinstance(evidence_ids, list) and evidence_ids
-        else ""
-    )
-    rule_id = _diagnostic_token(issue.get("rule_id"))
-    context = {
-        key: value
-        for key, value in (
-            ("affected_section", affected_section),
-            ("evidence_id", evidence_id),
+    for stage, failure_code, repair_disposition, artifact_ids in rows:
+        if outer_code == "validation_failed" and str(failure_code or "") != outer_code:
+            continue
+        issue = _read_validation_issue(artifact_ids)
+        if issue is None:
+            # Terminal checkpoint stages record artifacts that carry no
+            # validation-issues document; keep scanning older failing stages
+            # so a generic outer code cannot hide the retained inner finding.
+            continue
+        affected_section = _diagnostic_token(issue.get("affected_section"))
+        entity_id = _diagnostic_token(issue.get("entity_id"))
+        evidence_ids = issue.get("evidence_ids")
+        evidence_id = (
+            _diagnostic_token(evidence_ids[0])
+            if isinstance(evidence_ids, list) and evidence_ids
+            else ""
         )
-        if value
-    }
-    return {
-        "stage": _diagnostic_token(stage),
-        "outer_code": _diagnostic_token(outer_code),
-        "inner_error_class": "",
-        "validator_rule": rule_id,
-        "artifact_family": affected_section,
-        "claim_or_entity_id": entity_id or evidence_id,
-        "repair_attempt": 1 if repair_disposition == "targeted_repair" else 0,
-        "error_context": context,
-    }
+        rule_id = _diagnostic_token(issue.get("rule_id"))
+        context = {
+            key: value
+            for key, value in (
+                ("affected_section", affected_section),
+                ("evidence_id", evidence_id),
+            )
+            if value
+        }
+        return {
+            "stage": _diagnostic_token(stage),
+            "outer_code": _diagnostic_token(outer_code),
+            "inner_error_class": "",
+            "validator_rule": rule_id,
+            "artifact_family": affected_section,
+            "claim_or_entity_id": entity_id or evidence_id,
+            "repair_attempt": 1 if repair_disposition == "targeted_repair" else 0,
+            "error_context": context,
+        }
+    return {}
 
 
 def _read_validation_issue(artifact_ids: object) -> dict[str, Any] | None:
