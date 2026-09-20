@@ -30323,6 +30323,12 @@
         "publisher_name": {
           "type": "string"
         },
+        "repair_memory": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RepairDelta"
+          },
+          "type": "array"
+        },
         "report_id": {
           "type": "string"
         },
@@ -30390,6 +30396,12 @@
           },
           "type": "array"
         },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_strategy": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -30400,6 +30412,34 @@
       },
       "required": [
         "updated_artifacts"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.FailureFingerprint": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_section": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "affected_section"
       ],
       "type": "object"
     },
@@ -30516,6 +30556,12 @@
         "candidate_audit_path": {
           "type": "string"
         },
+        "failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "plan_mode": {
           "type": "string"
         },
@@ -30528,7 +30574,13 @@
           },
           "type": "array"
         },
+        "repair_delta": {
+          "$ref": "#/$defs/src.contracts.regeneration.RepairDelta"
+        },
         "schema_version": {
+          "type": "string"
+        },
+        "strategy_fingerprint": {
           "type": "string"
         },
         "validation_after_status": {
@@ -30558,6 +30610,12 @@
         "after_sha256": {
           "type": "string"
         },
+        "allowed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "attempt_index": {
           "type": "integer"
         },
@@ -30576,11 +30634,38 @@
           },
           "type": "array"
         },
+        "failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "promotion_outcome": {
+          "type": "string"
+        },
+        "quarantined_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_delta": {
+          "$ref": "#/$defs/src.contracts.regeneration.RepairDelta"
+        },
+        "repair_strategy": {
           "type": "string"
         },
         "schema_version": {
           "type": "string"
+        },
+        "selected_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "transformation_scope": {
           "items": {
@@ -30681,6 +30766,9 @@
           },
           "type": "array"
         },
+        "failure_fingerprint": {
+          "type": "string"
+        },
         "message": {
           "type": "string"
         },
@@ -30771,6 +30859,12 @@
     "src.contracts.regeneration.RegenerationTarget": {
       "additionalProperties": false,
       "properties": {
+        "allowed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "issues": {
           "items": {
             "$ref": "#/$defs/src.contracts.regeneration.RegenerationIssue"
@@ -30783,14 +30877,32 @@
           },
           "type": "array"
         },
+        "quarantined_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "regenerate_steps": {
           "items": {
             "type": "string"
           },
           "type": "array"
         },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_strategy": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
+        },
+        "selected_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target_section": {
           "type": "string"
@@ -30799,6 +30911,34 @@
       "required": [
         "target_section"
       ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.RepairDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "introduced": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
+          },
+          "type": "array"
+        },
+        "persisting": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
+          },
+          "type": "array"
+        },
+        "resolved": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
       "type": "object"
     },
     "src.contracts.remediation.RemediationArtifactReference": {

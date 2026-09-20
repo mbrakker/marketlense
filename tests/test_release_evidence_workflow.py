@@ -50,6 +50,10 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert '--evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in workflow
     assert "out/test_telemetry_ci.json" in workflow
     assert "out/ci_performance_benchmark.json" in workflow
+    benchmark_step = workflow[
+        workflow.index("- name: Build CI performance benchmark") : manifest_index
+    ]
+    assert "always() && hashFiles('out/test_telemetry_ci.json') != ''" in benchmark_step
     assert "out/release_evidence_executive_summary_ci.json" in workflow
     assert "--test-telemetry-json out/test_telemetry_ci.json" in workflow
     assert (

@@ -134,7 +134,7 @@ jobs:
       - name: Prompt fixture corpus regression gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage prompt_fixture_regression -- python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
       - name: Build CI performance benchmark
-        if: ${{ always() }}
+        if: ${{ always() && hashFiles('out/test_telemetry_ci.json') != '' }}
         run: python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json
       - name: Build release evidence manifest
         run: |
