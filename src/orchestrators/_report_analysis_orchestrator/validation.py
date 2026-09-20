@@ -336,8 +336,7 @@ def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDe
             for key in sorted(before_items.keys() - after_items.keys())
         ],
         persisting=[
-            after_items[key]
-            for key in sorted(before_items.keys() & after_items.keys())
+            after_items[key] for key in sorted(before_items.keys() & after_items.keys())
         ],
         introduced=[
             after_items[key] for key in sorted(after_items.keys() - before_items.keys())
@@ -392,10 +391,10 @@ def _scope_validation_report(
         severity="error",
         issues=[
             ValidationIssue(
-            message=(
-                "[regeneration_scope_violation] Targeted repair changed an "
-                "unrelated artifact root"
-            ),
+                message=(
+                    "[regeneration_scope_violation] Targeted repair changed an "
+                    "unrelated artifact root"
+                ),
                 severity="error",
                 affected_section=path,
                 rule_id="regeneration_scope_violation",
@@ -455,9 +454,7 @@ def _candidate_audit(
         promotion_outcome=promotion_outcome,
         validation_issues=_validation_issue_keys(report),
         evidence_lineage=list(candidate_result.evidence_lineage),
-        failure_fingerprints=[
-            _failure_fingerprint(item).key for item in report.issues
-        ],
+        failure_fingerprints=[_failure_fingerprint(item).key for item in report.issues],
         repair_action=(
             "+".join(target.repair_action for target in plan.targets) if plan else ""
         ),
