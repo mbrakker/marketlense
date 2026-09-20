@@ -1,0 +1,22 @@
+{
+  "admission_outcome": "admitted",
+  "awaiting_review": true,
+  "bounded_automatic_repair": false,
+  "final_state": "awaiting_review",
+  "git_sha": "2b4e949769118729305a8e50ca1dd504227df0c9",
+  "input_tokens": 242973,
+  "isolated_fresh_state": true,
+  "model_provider_calls": 24,
+  "operator_intervention": false,
+  "output_tokens": 30024,
+  "publication_readiness": "pass",
+  "publisher_id": "Emplifi",
+  "report_id": "cohort-f62048b469dd784e6e7c",
+  "source_identity_id": "source:dda03b3a0d65814672444674bb59908f",
+  "terminal_failure_code": "",
+  "total_duration_seconds": 268.689,
+  "validation": "pass",
+  "workflow_attempt_count": 1,
+  "workflow_root_id": "878ad475-0909-497e-ad5c-3c9c077ef42c",
+  "cost_usd": 0.084624
+}

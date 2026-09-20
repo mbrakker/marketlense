@@ -1,0 +1,22 @@
+{
+  "admission_outcome": "admitted",
+  "awaiting_review": true,
+  "bounded_automatic_repair": false,
+  "final_state": "awaiting_review",
+  "git_sha": "2b4e949769118729305a8e50ca1dd504227df0c9",
+  "input_tokens": 200181,
+  "isolated_fresh_state": true,
+  "model_provider_calls": 27,
+  "operator_intervention": false,
+  "output_tokens": 35099,
+  "publication_readiness": "pass",
+  "publisher_id": "DoubleVerify",
+  "report_id": "cohort-e854b71d6fb10333b47f",
+  "source_identity_id": "source:6c7377bbcd7e21ffe4683dad478a3fad",
+  "terminal_failure_code": "",
+  "total_duration_seconds": 248.608,
+  "validation": "pass",
+  "workflow_attempt_count": 1,
+  "workflow_root_id": "3b3f5f3f-cb69-44a2-86d8-674a27f6a6ea",
+  "cost_usd": 0.081873
+}
