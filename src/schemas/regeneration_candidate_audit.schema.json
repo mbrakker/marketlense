@@ -30,6 +30,22 @@
     "validation_status": { "type": "string" },
     "promotion_outcome": { "enum": ["candidate", "promoted", "rolled_back"] },
     "validation_issues": { "type": "array", "items": { "type": "string" } },
+    "failure_fingerprints": { "type": "array", "items": { "type": "string", "minLength": 64, "maxLength": 64 } },
+    "repair_action": { "type": "string" },
+    "repair_strategy": { "type": "string" },
+    "allowed_paths": { "type": "array", "items": { "type": "string" } },
+    "selected_evidence_ids": { "type": "array", "items": { "type": "string" } },
+    "quarantined_evidence_ids": { "type": "array", "items": { "type": "string" } },
+    "repair_delta": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "string" },
+        "resolved": { "type": "array" },
+        "persisting": { "type": "array" },
+        "introduced": { "type": "array" }
+      },
+      "additionalProperties": false
+    },
     "evidence_lineage": {
       "type": "array",
       "items": {

@@ -10,9 +10,11 @@ import re
 from typing import Any, Dict, List
 
 from src.contracts.regeneration import (
+    FailureFingerprint,
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
+    repair_strategy_fingerprint,
 )
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
@@ -256,6 +258,12 @@ def _normalize_regeneration_issue(
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )
+    fingerprint = FailureFingerprint(
+        rule_id=issue.rule_id or _extract_rule_id(issue.message),
+        affected_section=issue.affected_section,
+        entity_id=issue.entity_id,
+        evidence_ids=sorted(evidence_ids),
+    )
     return RegenerationIssue(
         rule_id=issue.rule_id or _extract_rule_id(issue.message),
         affected_section=issue.affected_section,
@@ -266,6 +274,7 @@ def _normalize_regeneration_issue(
         evidence_ids=evidence_ids,
         excluded_evidence_ids=excluded_evidence_ids,
         pages=pages,
+        failure_fingerprint=fingerprint.key,
     )
 
 
@@ -350,6 +359,7 @@ def _lookup_quote_grounding(
 def _build_target(
     target_key: str,
     issues: List[RegenerationIssue],
+    rejected_strategy_keys: set[str] | None = None,
 ) -> RegenerationTarget:
     ordered_issues = sorted(
         issues,
@@ -359,12 +369,46 @@ def _build_target(
             issue.affected_section,
         ),
     )
+    failure_fingerprints = [issue.failure_fingerprint for issue in ordered_issues]
+    evidence_ids = sorted(
+        {evidence_id for issue in ordered_issues for evidence_id in issue.evidence_ids}
+    )
+    strategy = "current_evidence"
+    current_key = repair_strategy_fingerprint(
+        failure_fingerprints, strategy, evidence_ids
+    )
+    exhausted = current_key in (rejected_strategy_keys or set())
     return RegenerationTarget(
         target_section=target_key,
         regenerate_steps=_target_steps(target_key),
         prompt_namespaces=_target_prompt_namespaces(target_key),
         issues=ordered_issues,
+        repair_action="REMOVE_CLAIM" if exhausted else "REGENERATE_ITEM",
+        repair_strategy="safe_removal" if exhausted else strategy,
+        allowed_paths=_allowed_paths(target_key),
+        selected_evidence_ids=[] if exhausted else evidence_ids,
+        quarantined_evidence_ids=sorted(
+            {value for issue in ordered_issues for value in issue.excluded_evidence_ids}
+        ),
     )
+
+
+def _allowed_paths(target_key: str) -> List[str]:
+    roots = {
+        "topics": ["toc_entries", "toc_topics", "toc_topics_expanded"],
+        "summary": ["summary"],
+        "insights_bundle": ["insights_candidates", "insights_final"],
+        "key_figures": ["key_figures"],
+        "quotes": ["quotes_final"],
+        "expert_comment": ["expert_comment"],
+        "linkedin_post": ["linkedin_post"],
+    }.get(target_key, [])
+    return roots + [
+        "soft_copy_claim_provenance",
+        "family_status",
+        "_cache",
+        "_repair_evidence_selection",
+    ]
 
 
 def _build_regeneration_plan(
@@ -372,6 +416,7 @@ def _build_regeneration_plan(
     issues: List[ValidationIssue],
     artifacts: Dict[str, Any],
     broad_retry_available: bool,
+    rejected_strategy_keys: set[str] | None = None,
 ) -> RegenerationPlan:
     grouped: Dict[str, List[RegenerationIssue]] = {}
     unmappable: List[RegenerationIssue] = []
@@ -414,7 +459,7 @@ def _build_regeneration_plan(
         ]
     if grouped:
         targets = [
-            _build_target(target_key, grouped[target_key])
+            _build_target(target_key, grouped[target_key], rejected_strategy_keys)
             for target_key in TARGET_ORDER
             if target_key in grouped
         ]
@@ -435,7 +480,7 @@ def _build_regeneration_plan(
         return RegenerationPlan(
             mode="broad",
             targets=[
-                _build_target(target_key, list(unmappable))
+                _build_target(target_key, list(unmappable), rejected_strategy_keys)
                 for target_key in BROAD_TARGETS
             ],
             unmappable_issues=unmappable,

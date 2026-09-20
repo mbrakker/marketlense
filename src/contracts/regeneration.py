@@ -1,11 +1,77 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
+
+
+@dataclass(frozen=True)
+class FailureFingerprint:
+    """Stable, content-free identity for one repairable validation failure."""
+
+    rule_id: str = field(metadata={"doc": "Stable validator rule identifier."})
+    affected_section: str = field(
+        metadata={"doc": "Normalized artifact section or field containing the failure."}
+    )
+    entity_id: str = field(
+        default="",
+        metadata={"doc": "Stable affected public-item identifier when known."},
+    )
+    evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Sorted retained evidence identities involved in the failure."
+        },
+    )
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Failure fingerprint schema version."}
+    )
+
+    @property
+    def key(self) -> str:
+        payload = {
+            "rule_id": self.rule_id.strip().lower(),
+            "affected_section": self.affected_section.strip().lower(),
+            "entity_id": self.entity_id.strip(),
+            "evidence_ids": sorted(
+                {value.strip() for value in self.evidence_ids if value.strip()}
+            ),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
+
+@dataclass(frozen=True)
+class RepairDelta:
+    """Non-canonical memory retained from one candidate attempt."""
+
+    resolved: List[FailureFingerprint] = field(default_factory=list)
+    persisting: List[FailureFingerprint] = field(default_factory=list)
+    introduced: List[FailureFingerprint] = field(default_factory=list)
+    schema_version: str = field(default="1.0")
+
+
+def repair_strategy_fingerprint(
+    failure_fingerprints: List[str], strategy: str, evidence_ids: List[str]
+) -> str:
+    """Return a stable identity for a failed strategy/evidence combination."""
+
+    payload = {
+        "failure_fingerprints": sorted(set(failure_fingerprints)),
+        "strategy": strategy.strip().lower(),
+        "evidence_ids": sorted(
+            {value.strip() for value in evidence_ids if value.strip()}
+        ),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -44,6 +110,9 @@ class RegenerationIssue:
             "doc": "Relevant one-based page numbers associated with the failure."
         },
     )
+    failure_fingerprint: str = field(
+        default="", metadata={"doc": "Stable fingerprint key for retry memory."}
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration issue schema version."}
     )
@@ -64,6 +133,20 @@ class RegenerationTarget:
         default_factory=list,
         metadata={"doc": "Issues grouped under this regeneration target."},
     )
+    repair_action: str = field(
+        default="REGENERATE_ITEM",
+        metadata={"doc": "Cheapest approved repair action for this target."},
+    )
+    repair_strategy: str = field(
+        default="current_evidence",
+        metadata={"doc": "Materially distinct repair strategy."},
+    )
+    allowed_paths: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Artifact roots allowed to change for this candidate."},
+    )
+    selected_evidence_ids: List[str] = field(default_factory=list)
+    quarantined_evidence_ids: List[str] = field(default_factory=list)
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration target schema version."}
     )
@@ -201,6 +284,9 @@ class RegenerationAttemptResult:
             "doc": "Candidate disposition: promoted, rolled_back, or not_attempted."
         },
     )
+    failure_fingerprints: List[str] = field(default_factory=list)
+    repair_delta: RepairDelta = field(default_factory=RepairDelta)
+    strategy_fingerprint: str = field(default="")
     schema_version: str = field(
         default="1.0", metadata={"doc": "Regeneration attempt result schema version."}
     )
@@ -276,6 +362,10 @@ class ArtifactRegenerationRequest(SemanticIdContract):
             "doc": "Source/report URL context recorded with downstream LLM usage."
         },
     )
+    repair_memory: List[RepairDelta] = field(
+        default_factory=list,
+        metadata={"doc": "Rejected candidate deltas that must inform this repair."},
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Artifact regeneration request schema version."}
     )
@@ -311,6 +401,8 @@ class ArtifactRegenerationResponse:
             )
         },
     )
+    repair_action: str = field(default="")
+    repair_strategy: str = field(default="")
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Artifact regeneration response schema version."},
@@ -402,6 +494,13 @@ class RegenerationCandidateAudit:
         default_factory=list,
         metadata={"doc": "Original-to-candidate material evidence continuity."},
     )
+    failure_fingerprints: List[str] = field(default_factory=list)
+    repair_action: str = field(default="")
+    repair_strategy: str = field(default="")
+    allowed_paths: List[str] = field(default_factory=list)
+    selected_evidence_ids: List[str] = field(default_factory=list)
+    quarantined_evidence_ids: List[str] = field(default_factory=list)
+    repair_delta: RepairDelta = field(default_factory=RepairDelta)
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Regeneration candidate-audit schema version."},

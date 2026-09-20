@@ -78,6 +78,16 @@ a deterministic policy or lineage change to request the earlier safe stage.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
+Candidate repair retains a content-free failure fingerprint, declared mutation roots,
+selected/quarantined evidence identities, strategy identity, and before/after repair
+delta. A rolled-back candidate remains audit-only: the next attempt starts from the
+last promoted artifact, cannot repeat its fingerprinted strategy/evidence combination,
+and uses safe removal or abstention when the scoped strategy is exhausted. Deterministic
+claim removal and source-bound corrections do not construct a model client. The
+candidate integrity, retained-claim, full validation, public-editorial, readiness, and
+promotion gates remain authoritative; a candidate that changes an undeclared artifact
+root is rejected as `regeneration_scope_violation` before promotion.
+
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
 sentence after deterministic removal of internal reference tokens. Material

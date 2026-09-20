@@ -6,6 +6,7 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
+    FailureFingerprint,
     RegenerationAttemptResult,
     RegenerationCandidateAudit,
     RegenerationEvidenceLineage,
@@ -13,6 +14,7 @@ from src.contracts.regeneration import (
     RegenerationLoopState,
     RegenerationPlan,
     RegenerationTarget,
+    RepairDelta,
 )
 from src.contracts.run_context import RunContext
 
@@ -183,7 +185,15 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
         )
         == plan
     )
-    assert RegenerationAttemptResult(**attempt_raw) == attempt
+    assert (
+        RegenerationAttemptResult(
+            **{
+                **attempt_raw,
+                "repair_delta": RepairDelta(**attempt_raw["repair_delta"]),
+            }
+        )
+        == attempt
+    )
     assert RegenerationLoopState(**loop_raw) == loop
     assert (
         ArtifactRegenerationRequest(
@@ -226,7 +236,38 @@ def test_regeneration_contracts_roundtrip(assert_no_defaulted_required_fields) -
                     RegenerationEvidenceLineage(**item)
                     for item in audit_raw["evidence_lineage"]
                 ],
+                "repair_delta": RepairDelta(**audit_raw["repair_delta"]),
             }
         )
         == audit
     )
+
+
+def test_failure_fingerprint_is_stable_across_human_message_changes() -> None:
+    first = FailureFingerprint(
+        rule_id="grounding",
+        affected_section="linkedin_post",
+        entity_id="soft_copy:linkedin_post:claim-1",
+        evidence_ids=["f2", "f1"],
+    )
+    second = FailureFingerprint(
+        rule_id="grounding",
+        affected_section="linkedin_post",
+        entity_id="soft_copy:linkedin_post:claim-1",
+        evidence_ids=["f1", "f2"],
+    )
+
+    assert first.key == second.key
+
+
+def test_repair_delta_keeps_typed_failure_fingerprints() -> None:
+    fingerprint = FailureFingerprint(
+        rule_id="grounding",
+        affected_section="summary",
+        entity_id="claim-1",
+        evidence_ids=["f1"],
+    )
+
+    assert RepairDelta(
+        resolved=[], persisting=[fingerprint], introduced=[]
+    ).persisting == [fingerprint]

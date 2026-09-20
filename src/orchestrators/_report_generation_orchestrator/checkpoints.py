@@ -29,6 +29,7 @@ from src.contracts.prompts import PromptLoadRequest
 from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationLoopState,
+    RepairDelta,
 )
 from src.contracts.report_artifacts import (
     ArtifactRef,
@@ -301,6 +302,19 @@ def _regeneration_attempts_from_list(
                 promotion_outcome=str(
                     raw_attempt.get("promotion_outcome") or "not_attempted"
                 ),
+                failure_fingerprints=[
+                    str(item)
+                    for item in raw_attempt.get("failure_fingerprints", [])
+                    if str(item).strip()
+                ],
+                repair_delta=RepairDelta(
+                    **(
+                        raw_attempt.get("repair_delta")
+                        if isinstance(raw_attempt.get("repair_delta"), dict)
+                        else {}
+                    )
+                ),
+                strategy_fingerprint=str(raw_attempt.get("strategy_fingerprint") or ""),
                 schema_version=str(raw_attempt.get("schema_version") or "1.0"),
             )
         )

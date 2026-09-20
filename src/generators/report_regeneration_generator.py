@@ -156,10 +156,6 @@ def regenerate_artifacts(
     analysis_store=report_analysis_store_service,
 ) -> ArtifactRegenerationResponse:
     ctx = request.ctx
-    openai_client = require_injected_model_client(
-        openai_client,
-        scope="artifact_regeneration",
-    )
     safe_artifacts = (
         deepcopy(request.current_artifacts)
         if isinstance(request.current_artifacts, dict)
@@ -1242,6 +1238,10 @@ def _render_regeneration_model(
     ctx: RunContext,
 ) -> Dict[str, Any]:
     request = execution.runtime.request
+    openai_client = require_injected_model_client(
+        execution.runtime.openai_client,
+        scope="artifact_regeneration",
+    )
     prepared = prepare_prompt_bundle(
         namespace=namespace,
         settings=request.settings,
@@ -1281,7 +1281,7 @@ def _render_regeneration_model(
         variables=variables,
         settings=request.settings,
         ctx=ctx,
-        openai_client=execution.runtime.openai_client,
+        openai_client=openai_client,
         prompt_client=execution.runtime.prompt_client,
         allow_vector_store=execution.runtime.artifact_use_vector_store,
         vector_store_id=request.vector_store_id,
@@ -1527,6 +1527,12 @@ def _claim_has_repair_support(
     return bool(grounding_package.get("relevant_evidence"))
 
 
+def _uses_safe_removal(execution: _RegenerationHandlerExecution) -> bool:
+    """A rejected strategy never earns another unsupported paraphrase."""
+
+    return execution.target.repair_action in {"REMOVE_CLAIM", "ABSTAIN"}
+
+
 def _replace_soft_copy_claim(
     text: str, repair: _SoftCopyClaimRepair, replacement: str
 ) -> str:
@@ -1615,6 +1621,10 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         for field, repairs in scoped_repairs.items():
             replacements: Dict[str, str | None] = {}
             for repair in repairs:
+                if _uses_safe_removal(execution):
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
                 claim_grounding = _claim_scoped_grounding_package(execution, repair)
                 if not _claim_has_repair_support(claim_grounding):
                     replacements[repair.claim.claim_id] = None
@@ -1668,6 +1678,12 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             )
         execution.state.regenerated_sections.append("summary")
         execution.state.prompt_namespaces.append(namespace)
+        return
+    if _uses_safe_removal(execution):
+        for field in ("tldr", "card_tldr_compact", "executive_summary"):
+            if field in execution.state.summary:
+                execution.state.summary[field] = ""
+        execution.state.regenerated_sections.append("summary")
         return
     result = _render_regeneration_model(
         execution=execution,
@@ -1868,8 +1884,10 @@ def _handle_expert_comment_regeneration(
     namespace = execution.handler.prompt_namespaces[0]
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}
-        if execution.runtime.request.attempt_index >= 3 and any(
-            issue.rule_id == "grounding" for issue in execution.target.issues
+        if (
+            execution.runtime.request.attempt_index >= 3
+            and any(issue.rule_id == "grounding" for issue in execution.target.issues)
+            or _uses_safe_removal(execution)
         ):
             for repair in claim_repairs:
                 replacements[repair.claim.claim_id] = None
@@ -1943,6 +1961,10 @@ def _handle_expert_comment_regeneration(
     ):
         # An exhausted source-fidelity repair must abstain rather than retain
         # another model-authored causal synthesis.
+        execution.state.expert_comment = ""
+        execution.state.regenerated_sections.append("expert_comment")
+        return
+    if _uses_safe_removal(execution):
         execution.state.expert_comment = ""
         execution.state.regenerated_sections.append("expert_comment")
         return
@@ -2095,6 +2117,10 @@ def _handle_linkedin_post_regeneration(
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}
         for repair in claim_repairs:
+            if _uses_safe_removal(execution):
+                replacements[repair.claim.claim_id] = None
+                _mark_soft_copy_claim_removed(execution, repair)
+                continue
             claim_grounding = _claim_scoped_grounding_package(execution, repair)
             if not _claim_has_repair_support(claim_grounding):
                 replacements[repair.claim.claim_id] = None
@@ -2146,6 +2172,10 @@ def _handle_linkedin_post_regeneration(
         )
         execution.state.regenerated_sections.append("linkedin_post")
         execution.state.prompt_namespaces.append(namespace)
+        return
+    if _uses_safe_removal(execution):
+        execution.state.linkedin_post = ""
+        execution.state.regenerated_sections.append("linkedin_post")
         return
     result = _render_regeneration_model(
         execution=execution,

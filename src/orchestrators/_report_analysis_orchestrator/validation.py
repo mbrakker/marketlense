@@ -13,9 +13,12 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
+    FailureFingerprint,
     RegenerationAttemptResult,
     RegenerationCandidateAudit,
     RegenerationLoopState,
+    RepairDelta,
+    repair_strategy_fingerprint,
 )
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
@@ -28,6 +31,7 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     merge_public_editorial_quality_validation,
@@ -306,6 +310,101 @@ def _candidate_validation_report(
     )
 
 
+def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
+    return FailureFingerprint(
+        rule_id=str(issue.rule_id or "validation").strip(),
+        affected_section=str(issue.affected_section or "").strip(),
+        entity_id=str(issue.entity_id or "").strip(),
+        evidence_ids=sorted(
+            str(value).strip() for value in issue.evidence_ids if str(value).strip()
+        ),
+    )
+
+
+def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDelta:
+    before_items = {
+        _failure_fingerprint(item).key: _failure_fingerprint(item)
+        for item in before.issues
+    }
+    after_items = {
+        _failure_fingerprint(item).key: _failure_fingerprint(item)
+        for item in after.issues
+    }
+    return RepairDelta(
+        resolved=[
+            before_items[key]
+            for key in sorted(before_items.keys() - after_items.keys())
+        ],
+        persisting=[
+            after_items[key]
+            for key in sorted(before_items.keys() & after_items.keys())
+        ],
+        introduced=[
+            after_items[key] for key in sorted(after_items.keys() - before_items.keys())
+        ],
+    )
+
+
+def _plan_strategy_fingerprint(plan) -> str:
+    fingerprints = [
+        issue.failure_fingerprint
+        or _failure_fingerprint(
+            ValidationIssue(
+                message=issue.message,
+                severity=issue.severity,
+                affected_section=issue.affected_section,
+                rule_id=issue.rule_id,
+                entity_id=issue.entity_id,
+                evidence_ids=issue.evidence_ids,
+            )
+        ).key
+        for target in plan.targets
+        for issue in target.issues
+    ]
+    evidence_ids = [
+        evidence_id
+        for target in plan.targets
+        for evidence_id in target.selected_evidence_ids
+    ]
+    strategy = "+".join(target.repair_strategy for target in plan.targets)
+    return repair_strategy_fingerprint(fingerprints, strategy, evidence_ids)
+
+
+def _scope_validation_report(
+    *, before: Dict[str, Any], after: Dict[str, Any], plan
+) -> ValidationReport:
+    allowed = {
+        path.split(".", 1)[0]
+        for target in plan.targets
+        for path in target.allowed_paths
+    }
+    changed = set(_artifact_diff_summary(before, after)["changed_keys"])
+    changed.update(_artifact_diff_summary(before, after)["added_keys"])
+    changed.update(_artifact_diff_summary(before, after)["removed_keys"])
+    violations = sorted(changed - allowed)
+    if not violations:
+        return ValidationReport(
+            schema_version="1.1", status="pass", issues=[], severity="pass"
+        )
+    return ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        severity="error",
+        issues=[
+            ValidationIssue(
+            message=(
+                "[regeneration_scope_violation] Targeted repair changed an "
+                "unrelated artifact root"
+            ),
+                severity="error",
+                affected_section=path,
+                rule_id="regeneration_scope_violation",
+            )
+            for path in violations
+        ],
+    )
+
+
 def _validation_issue_keys(report: ValidationReport) -> list[str]:
     return sorted(
         {
@@ -333,6 +432,8 @@ def _candidate_audit(
     candidate_result: CandidateIntegrityResult,
     validation_report: ValidationReport | None = None,
     promotion_outcome: str = "candidate",
+    plan=None,
+    repair_delta: RepairDelta | None = None,
 ) -> RegenerationCandidateAudit:
     report = validation_report or ValidationReport(
         schema_version="1.1",
@@ -354,6 +455,43 @@ def _candidate_audit(
         promotion_outcome=promotion_outcome,
         validation_issues=_validation_issue_keys(report),
         evidence_lineage=list(candidate_result.evidence_lineage),
+        failure_fingerprints=[
+            _failure_fingerprint(item).key for item in report.issues
+        ],
+        repair_action=(
+            "+".join(target.repair_action for target in plan.targets) if plan else ""
+        ),
+        repair_strategy=(
+            "+".join(target.repair_strategy for target in plan.targets) if plan else ""
+        ),
+        allowed_paths=(
+            sorted({path for target in plan.targets for path in target.allowed_paths})
+            if plan
+            else []
+        ),
+        selected_evidence_ids=(
+            sorted(
+                {
+                    value
+                    for target in plan.targets
+                    for value in target.selected_evidence_ids
+                }
+            )
+            if plan
+            else []
+        ),
+        quarantined_evidence_ids=(
+            sorted(
+                {
+                    value
+                    for target in plan.targets
+                    for value in target.quarantined_evidence_ids
+                }
+            )
+            if plan
+            else []
+        ),
+        repair_delta=repair_delta or RepairDelta(),
     )
 
 
@@ -449,6 +587,8 @@ def _run_validation_regeneration_loop(
     attempts: List[RegenerationAttemptResult] = []
     evidence_paths: Dict[str, str] = {}
     broad_retry_used = False
+    rejected_strategy_keys: set[str] = set()
+    repair_memory: List[RepairDelta] = []
     current_artifacts_path = dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -484,6 +624,7 @@ def _run_validation_regeneration_loop(
             issues=current_validation_report.issues,
             artifacts=working_artifacts,
             broad_retry_available=not broad_retry_used,
+            rejected_strategy_keys=rejected_strategy_keys,
         )
         public_issues = [
             issue
@@ -618,10 +759,15 @@ def _run_validation_regeneration_loop(
                 md5=runtime.md5,
                 publisher_name=runtime.publisher_name,
                 source_url=runtime.source_url,
+                repair_memory=list(repair_memory),
             ),
             **regeneration_kwargs,
         )
         candidate_artifacts = regeneration_response.updated_artifacts
+        # Claim validation is deterministic here.  It enriches the repair
+        # diagnosis without replacing the existing candidate/full validators.
+        validate_retained_claims(working_artifacts, evidence_packs)
+        validate_retained_claims(candidate_artifacts, evidence_packs)
         artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
         candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
         candidate_enforced = bool(candidate_artifacts_path)
@@ -700,6 +846,12 @@ def _run_validation_regeneration_loop(
         candidate_validation_report = _candidate_validation_report(
             candidate_validation_report, candidate_result
         )
+        candidate_validation_report = _merge_public_editorial_quality(
+            candidate_validation_report,
+            _scope_validation_report(
+                before=artifacts_before, after=candidate_artifacts, plan=plan
+            ),
+        )
         editorial_validation, editorial_path = (
             _evaluate_and_store_public_editorial_quality(
                 runtime=runtime,
@@ -722,6 +874,10 @@ def _run_validation_regeneration_loop(
         candidate_validation_report = replace(
             candidate_validation_report, source_path=candidate_validation_path
         )
+        repair_delta = _repair_delta(
+            current_validation_report, candidate_validation_report
+        )
+        strategy_fingerprint = _plan_strategy_fingerprint(plan)
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
         )
@@ -799,6 +955,8 @@ def _run_validation_regeneration_loop(
                 # compound the original failure on every later attempt.
                 working_artifacts = deepcopy(promoted_artifacts)
                 current_validation_report = promoted_validation_report
+                rejected_strategy_keys.add(strategy_fingerprint)
+                repair_memory.append(repair_delta)
             candidate_audit_path = _store_regeneration_candidate_audit(
                 runtime=runtime,
                 dependencies=dependencies,
@@ -812,6 +970,8 @@ def _run_validation_regeneration_loop(
                     candidate_result=candidate_result,
                     validation_report=candidate_validation_report,
                     promotion_outcome=promotion_outcome,
+                    plan=plan,
+                    repair_delta=repair_delta,
                 ),
                 ctx=attempt_ctx,
             )
@@ -840,6 +1000,12 @@ def _run_validation_regeneration_loop(
             candidate_artifacts_path=candidate_artifacts_path,
             candidate_audit_path=candidate_audit_path,
             promotion_outcome=promotion_outcome,
+            failure_fingerprints=[
+                _failure_fingerprint(issue).key
+                for issue in current_validation_report.issues
+            ],
+            repair_delta=repair_delta,
+            strategy_fingerprint=strategy_fingerprint,
         )
         attempts.append(attempt_result)
         logger.info(
