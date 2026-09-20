@@ -49,12 +49,6 @@ LONG_TEST_FILE_ALLOWLIST = {
         "expires_on": "2026-08-31",
         "max_lines": 1330,
     },
-    "tests/_test_validation_generator/cases_01_validation_flags_metric_and_quote.py": {
-        "owner": "quality/repository-hygiene",
-        "reason": "Validation grounding and cache cases require a follow-up split.",
-        "expires_on": "2026-09-30",
-        "max_lines": 1218,
-    },
     "tests/test_report_regeneration_generator.py": {
         "owner": "quality/repository-hygiene",
         "reason": "Targeted regeneration coverage requires a follow-up split.",

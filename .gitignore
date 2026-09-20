@@ -19,6 +19,7 @@ pip-wheel-metadata/
 
 # Unit test / coverage
 .pytest_cache/
+.pytest-*/
 .coverage
 coverage.xml
 mutation_results.json

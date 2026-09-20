@@ -14,7 +14,6 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.generators.public_editorial_quality_generator import (
     _public_text_items,
-    enumerate_public_editorial_items,
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
 )
