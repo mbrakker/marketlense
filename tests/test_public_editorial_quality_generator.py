@@ -693,6 +693,31 @@ def test_public_html_allows_pipe_separated_public_taxonomy_labels() -> None:
     )
 
 
+def test_public_html_allows_short_designator_segment_in_report_title() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html=(
+            "<title>RCP Trends Report | Q1 2026 | MarketBearing</title>"
+            "<p>RCP Trends Report | Q1 2026, page 5</p>"
+        ),
+    )
+
+    assert "public_editorial_quality.malformed_extraction_fragment" not in _rule_ids(
+        report
+    )
+
+
+def test_public_html_still_flags_broken_pipe_extraction_remnants() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html="<p>Revenue | 5</p><p>Brand | A</p>",
+    )
+
+    assert "public_editorial_quality.malformed_extraction_fragment" in _rule_ids(report)
+
+
 def test_public_html_allows_ellipsis_that_closes_a_quoted_prompt() -> None:
     report = evaluate_public_editorial_quality(
         report_id="retained-report",

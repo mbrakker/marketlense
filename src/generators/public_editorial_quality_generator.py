@@ -96,8 +96,13 @@ _PLACEHOLDER = re.compile(
     r"\{\{[^}]+\}\}|\[\[(?:[^\]]+)\]\]|\b(?:todo|tbd|lorem ipsum|insert [a-z]+)\b",
     re.IGNORECASE,
 )
+# Broken extraction cells leave a tiny remnant beside one pipe (for example
+# "platfor | ms" or "Revenue | 5").  A short segment that continues into a
+# number ("Report | Q1 2026") is the renderer's own pipe-separated report
+# title carrying an edition designator, not an extraction fragment.
 _MALFORMED = re.compile(
-    r"\ufffd|\b(?:\w{3,16}\s*\|\s*\w{1,2}|\w{1,2}\s*\|\s*\w{3,16})\b|"
+    r"\ufffd|\b(?:\w{3,16}\s*\|\s*\w{1,2}(?!\s*\d)"
+    r"|\w{1,2}(?!\s*\d)\s*\|\s*\w{3,16})\b|"
     r"(?:\w\s+){5,}\w"
 )
 _MOJIBAKE = re.compile(r"(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â€)")

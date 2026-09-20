@@ -205,3 +205,25 @@ def test_numeric_grounding_rejects_changed_quantity_primitives() -> None:
         assert not _numeric_grounding_match(candidate, evidence), (
             f"Unexpected numeric grounding for {candidate!r} and {evidence!r}"
         )
+
+
+def test_hyphenated_prose_compound_is_not_a_signed_quantity() -> None:
+    parsed = extract_quantities(
+        "Review onboarding promises, first-90-day communication, and support."
+    )
+    assert [quantity.value for quantity in parsed] == [90.0]
+    candidate = extract_quantities("first-90-day communication")[0]
+    bare_ninety = extract_quantities("90")[0]
+    assert quantities_match_numeric_only(candidate, bare_ninety) is True
+
+
+def test_signed_and_spaced_negative_quantities_stay_negative() -> None:
+    attached = extract_quantities("Revenue fell -90 percent.")
+    spaced = extract_quantities("Revenue fell - 9 percent.")
+    assert [quantity.value for quantity in attached] == [-90.0]
+    assert [quantity.value for quantity in spaced] == [-9.0]
+
+
+def test_designation_compound_extracts_positive_year_number() -> None:
+    parsed = extract_quantities("COVID-19-era spending changed.")
+    assert 19.0 in [quantity.value for quantity in parsed]

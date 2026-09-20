@@ -5,7 +5,11 @@ import re
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 
-from src.utils.text_normalization import normalize_for_lookup, normalize_text
+from src.utils.text_normalization import (
+    _PRESERVED_NUMERIC_PUNCT,
+    normalize_for_lookup,
+    normalize_text,
+)
 
 Comparator = str
 
@@ -151,8 +155,33 @@ class CanonicalQuantity:
     timeframe: str
 
 
+def _normalize_for_quantity_extraction(text: str) -> str:
+    """Normalize for quantity parsing without re-spacing hyphens.
+
+    Text normalization pads every hyphen ("first-90-day" becomes
+    "first - 90 - day"), which erases the difference between a hyphenated
+    prose compound and a signed quantity ("fell -9 percent").  The parser
+    needs that distinction, so it applies the same character filter as the
+    lookup normalization while keeping each hyphen attached to its original
+    neighbours.
+    """
+
+    cleaned = []
+    for ch in str(text or ""):
+        if (
+            ch.isalnum()
+            or ch.isspace()
+            or ch in _PRESERVED_NUMERIC_PUNCT
+            or ch in {"-", "/", ":", ">", "<", "=", "~", "≈"}
+        ):
+            cleaned.append(ch)
+        else:
+            cleaned.append(" ")
+    return re.sub(r"\s+", " ", "".join(cleaned)).strip().casefold()
+
+
 def extract_quantities(text: str) -> List[Quantity]:
-    normalized = normalize_for_lookup(text)
+    normalized = _normalize_for_quantity_extraction(text)
     if not normalized:
         return []
     quantities: List[Quantity] = []

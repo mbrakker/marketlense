@@ -574,6 +574,36 @@ def test_align_bindings_keeps_exact_and_unmatched_bindings() -> None:
     assert aligned[1] == unmatched_binding
 
 
+def test_align_bindings_drops_noise_once_coverage_is_complete() -> None:
+    from src.contracts.soft_copy_claim_provenance import (
+        align_soft_copy_claim_bindings_to_sentences,
+        soft_copy_claim_bindings_cover_public_text,
+    )
+
+    post = "Exact sentence here."
+    exact_binding = {
+        "claim": "Exact sentence here.",
+        "classification": "factual",
+        "evidence_ids": ["f1"],
+    }
+    stray_binding = {
+        "claim": "stray model noise",
+        "classification": "interpretive",
+        "evidence_ids": [],
+    }
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=[exact_binding, stray_binding],
+    )
+    assert aligned == [exact_binding]
+    assert soft_copy_claim_bindings_cover_public_text(
+        artifact_family="linkedin_post",
+        public_output=post,
+        claim_bindings=aligned,
+    )
+
+
 def test_align_bindings_dedupes_sentences_keeping_first_declaration() -> None:
     from src.contracts.soft_copy_claim_provenance import (
         align_soft_copy_claim_bindings_to_sentences,

@@ -171,9 +171,11 @@ def align_soft_copy_claim_bindings_to_sentences(
     while models legitimately declare one object per paragraph or clause group.
     Splitting a declared binding distributes its own unchanged classification
     and evidence IDs across the exact public sentences it already covers; it
-    never invents evidence or rewrites declared text. Bindings that do not
-    correspond to the public sentence grid are returned unchanged so the
-    coverage gate can reject them with actionable context.
+    never invents evidence or rewrites declared text. A binding that matches no
+    public sentence carries no provenance for the retained contract; it is
+    dropped when the remaining bindings already cover every material sentence,
+    and kept when they do not so the coverage gate can reject the payload with
+    actionable context.
     """
 
     if not isinstance(claim_bindings, list):
@@ -183,6 +185,7 @@ def align_soft_copy_claim_bindings_to_sentences(
         return [binding for binding in claim_bindings if isinstance(binding, dict)]
     sentences = soft_copy_material_sentences(text)
     aligned: list[dict[str, Any]] = []
+    unmatched: list[dict[str, Any]] = []
     covered_sentences: set[str] = set()
     for binding in claim_bindings:
         if not isinstance(binding, dict):
@@ -192,16 +195,19 @@ def align_soft_copy_claim_bindings_to_sentences(
             continue
         run = _matching_sentence_run(sentences, claim_text)
         if run is None:
-            if claim_text in covered_sentences:
-                continue
-            covered_sentences.add(claim_text)
-            aligned.append(binding)
+            if claim_text not in covered_sentences:
+                covered_sentences.add(claim_text)
+                unmatched.append(binding)
             continue
         for sentence in run:
             if sentence in covered_sentences:
                 continue
             covered_sentences.add(sentence)
             aligned.append({**binding, "claim": sentence})
+    if any(sentence not in covered_sentences for sentence in sentences):
+        # Coverage is incomplete: keep the unmatched bindings so the coverage
+        # gate reports the full payload to the informed repair attempt.
+        return aligned + unmatched
     return aligned
 
 

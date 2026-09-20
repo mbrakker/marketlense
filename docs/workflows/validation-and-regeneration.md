@@ -174,7 +174,11 @@ Ordered source evidence is validated as label/value tuples rather than as an
 independent bag of numeric tokens. The deterministic numeric gate recovers
 period/time order from retained source text where chart extraction emits
 separate ordered label and value runs, and public-copy validation also checks
-explicit period/value and category/value tuples. Every retained primary metric
+explicit period/value and category/value tuples. Quantity extraction keeps a
+hyphen attached to its original neighbours, so a hyphenated prose compound such
+as `first-90-day` is the positive number it names and never parses as a signed
+quantity; an explicit minus still yields a negative quantity that positive
+evidence cannot satisfy. Every retained primary metric
 also preserves its source-bound subject, cohort, denominator, and
 observed/forecast/estimate status when supplied, alongside the existing metric,
 period, geography, unit, and evidence ID. A mismatched year, forecast marker,
