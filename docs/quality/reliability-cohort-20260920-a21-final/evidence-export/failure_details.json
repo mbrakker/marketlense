@@ -1,0 +1,168 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "quotes:section-1",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "affected_section": "quotes:section-1"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "semantic"
+    },
+    {
+      "artifact_family": "metadata.title",
+      "claim_or_entity_id": "metadata:title",
+      "error_context": {
+        "affected_section": "metadata.title"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    },
+    {
+      "artifact_family": "summary",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "summary"
+      },
+      "failure_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "repair_attempt": 0,
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "failure_code": "publish_readiness_failed",
+      "report_id": "cohort-5ceb3b4498de7288ce5a",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "artifact_family": "expert_comment",
+      "claim_or_entity_id": "soft_copy:expert_comment:cf5bf19b2fe5bbb9",
+      "error_context": {
+        "affected_section": "expert_comment"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "repair_attempt": 0,
+      "report_id": "cohort-86858bdcb370266f26c2",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "repair_attempt": 0,
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "insights:ec26-insight-002.so_what",
+      "claim_or_entity_id": "insight:ec26-insight-002:so_what",
+      "error_context": {
+        "affected_section": "insights:ec26-insight-002.so_what"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    },
+    {
+      "artifact_family": "",
+      "claim_or_entity_id": "",
+      "error_context": {},
+      "failure_code": "openai_bad_request",
+      "inner_error_class": "",
+      "outer_code": "openai_bad_request",
+      "repair_attempt": 0,
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "stage": "report_pipeline",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_bindings_incomplete",
+      "repair_attempt": 0,
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "insights:insight-002.text",
+      "claim_or_entity_id": "insight:insight-002:text",
+      "error_context": {
+        "affected_section": "insights:insight-002.text"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-f1652970000cfe246c94",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    }
+  ]
+}

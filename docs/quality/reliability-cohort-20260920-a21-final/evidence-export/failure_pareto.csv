@@ -1,0 +1,5 @@
+failure_code,affected_reports
+validation_failed,5
+soft_copy_claim_provenance_bindings_incomplete,4
+openai_bad_request,1
+publish_readiness_failed,1

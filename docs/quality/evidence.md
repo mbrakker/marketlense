@@ -47,6 +47,9 @@ The read-only reliability exporter writes this retained projection as
 usage attribution, is explicitly `unavailable` with `null` metrics. It must
 not be represented as a zero-cost or zero-success repair cohort.
 
+The current frozen A21 measurement and its complete retained evidence are in
+[`reliability-cohort-20260920-a21-final/`](reliability-cohort-20260920-a21-final/).
+
 The bounded workflow-queue foundation record is retained in
 [workflow-queue-foundation-evidence-2026-07-18.md](workflow-queue-foundation-evidence-2026-07-18.md).
 

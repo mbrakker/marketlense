@@ -1,0 +1,95 @@
+{
+  "stage_records": [
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "validation_failed",
+      "outcome": "failed",
+      "repair_disposition": "targeted_repair",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    },
+    {
+      "failure_code": "",
+      "outcome": "skipped",
+      "repair_disposition": "not_required",
+      "stage": "regeneration"
+    }
+  ],
+  "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870"
+}
