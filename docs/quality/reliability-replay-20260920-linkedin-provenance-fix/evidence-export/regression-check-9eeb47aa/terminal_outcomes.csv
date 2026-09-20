@@ -1,0 +1,6 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+cohort-77bc67b2bc98187d9d58,awaiting_review,,
+cohort-8ef1021c332aa85ba008,failed,,validation_failed
+cohort-979a63a1633a7f2ccc51,failed,,artifact_structured_output_invalid
+cohort-f1652970000cfe246c94,awaiting_review,,
+cohort-f62048b469dd784e6e7c,failed,,artifact_structured_output_invalid

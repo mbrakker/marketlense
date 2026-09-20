@@ -337,6 +337,23 @@ remaining failure Pareto is led by `schema_reference_missing` (6) and
 `artifact_structured_output_invalid` (4); no result was waived, rerun, or
 reclassified.
 
+### Targeted real-report replay — LinkedIn provenance fix verification — 2026-09-20
+
+The bundle in
+[`reliability-replay-20260920-linkedin-provenance-fix/`](reliability-replay-20260920-linkedin-provenance-fix/)
+retains six canonical one-attempt production replay rounds (baseline
+`9c1146dd` through fix `0fd194d8`) for the frozen-cohort members targeted by
+the LinkedIn soft-copy provenance fix, including the Adjust regression
+control. Verbatim per-member runner results and their SHA-256 hashes are
+committed in [`results/`](reliability-replay-20260920-linkedin-provenance-fix/results/),
+with canonical `--cohort-result` exporter projections per round under
+[`evidence-export/`](reliability-replay-20260920-linkedin-provenance-fix/evidence-export/).
+The evidence records that ten of the eleven baseline failures plus the control
+reached `awaiting_review` under the fixed code, that Mintel (source-PDF glyph
+corruption) and Contentstack (model provenance-declaration non-compliance)
+remain blocked with precise typed causes, and that single-run model variance
+flips borderline reports between rounds.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a

@@ -1,0 +1,64 @@
+{
+  "terminal_failures": [
+    {
+      "failure_code": "validation_failed",
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    },
+    {
+      "artifact_family": "summary",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "summary"
+      },
+      "failure_code": "soft_copy_claim_provenance_binding_invalid",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_binding_invalid",
+      "repair_attempt": 0,
+      "report_id": "cohort-4b763ae2286ca69fe8ac",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "artifact_structured_output_invalid",
+      "inner_error_class": "soft_copy_claim_provenance_bindings_incomplete",
+      "outer_code": "artifact_structured_output_invalid",
+      "repair_attempt": 2,
+      "report_id": "cohort-b3cb5f66cccda4420be2",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "artifact_structured_output_invalid",
+      "inner_error_class": "soft_copy_claim_provenance_bindings_incomplete",
+      "outer_code": "artifact_structured_output_invalid",
+      "repair_attempt": 2,
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    },
+    {
+      "failure_code": "validation_failed",
+      "report_id": "cohort-f62048b469dd784e6e7c",
+      "terminal_outcome": "failed",
+      "terminal_stage": ""
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+failure_code,affected_reports
+artifact_structured_output_invalid,2
+validation_failed,2
+soft_copy_claim_provenance_binding_invalid,1

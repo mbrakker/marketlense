@@ -1,0 +1,12 @@
+{
+  "awaiting_review_count": 5,
+  "immutable_cohort_size": 9,
+  "missing_terminal_report_count": 0,
+  "publication_ready_count": 5,
+  "schema_version": "1.0",
+  "terminal_outcome_complete": true,
+  "terminal_outcomes": {
+    "awaiting_review": 5,
+    "failed": 4
+  }
+}

@@ -1,0 +1,4 @@
+failure_code,affected_reports
+publish_readiness_failed,2
+artifact_structured_output_invalid,1
+validation_failed,1

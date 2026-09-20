@@ -1,0 +1,4 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+cohort-076eca6d31e0c1dcddf0,failed,,soft_copy_claim_provenance_bindings_missing
+cohort-4b763ae2286ca69fe8ac,awaiting_review,,
+cohort-b638414df0b1fccea1cd,awaiting_review,,

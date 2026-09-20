@@ -1,0 +1,20 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "linkedin_post",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "linkedin_post"
+      },
+      "failure_code": "soft_copy_claim_provenance_bindings_missing",
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_bindings_missing",
+      "repair_attempt": 0,
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "stage": "artifact_generation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": ""
+    }
+  ]
+}

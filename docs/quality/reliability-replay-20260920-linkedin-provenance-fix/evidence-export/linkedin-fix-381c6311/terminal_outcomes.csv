@@ -1,0 +1,10 @@
+report_id,terminal_outcome,terminal_stage,failure_code
+cohort-076eca6d31e0c1dcddf0,failed,,artifact_structured_output_invalid
+cohort-4b763ae2286ca69fe8ac,awaiting_review,,
+cohort-b10ed6c82b76739a806a,failed,,publish_readiness_failed
+cohort-b3cb5f66cccda4420be2,failed,,publish_readiness_failed
+cohort-b638414df0b1fccea1cd,awaiting_review,,
+cohort-e854b71d6fb10333b47f,awaiting_review,,
+cohort-f1652970000cfe246c94,awaiting_review,,
+cohort-f62048b469dd784e6e7c,awaiting_review,,
+cohort-fb16d52bb8f60827077c,failed,,validation_failed
