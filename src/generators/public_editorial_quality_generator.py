@@ -1202,9 +1202,9 @@ def _metadata_issues(
             if not isinstance(payload, dict):
                 continue
             for field_name in ("publisher", "author"):
-                value = payload.get(field_name)
-                if isinstance(value, dict):
-                    name = str(value.get("name") or "").strip()
+                json_ld_value = payload.get(field_name)
+                if isinstance(json_ld_value, dict):
+                    name = str(json_ld_value.get("name") or "").strip()
                     if name:
                         json_ld_actual[field_name] = name
     if not actual:

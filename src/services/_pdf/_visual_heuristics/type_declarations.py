@@ -29,3 +29,6 @@ _drawing_rects: Any
 _caption_blocks: Callable[..., List[Tuple[fitz.Rect, str]]]
 _compact_top_chart_title_like: Callable[..., bool]
 _chart_axis_label_band_like: Callable[..., bool]
+_panel_chart_has_compact_stat_card_signal: Any
+_panel_component_looks_like_independent_data_panel: Any
+_panel_label_block_looks_like_footer_banner: Any
