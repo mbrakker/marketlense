@@ -150,7 +150,8 @@ required before changing production model-concurrency settings.
 ## PDF candidate worker matrix
 
 `scripts/quality/benchmark_pdf_candidate_parallelism.py` measures the real PDF
-visual-candidate extractor on the committed three-PDF golden corpus. It
+visual-candidate extractor on the committed golden corpus (three retained
+dense reports plus the retained Mintel browser-acquired report). It
 compares every supported worker count from one through eight against the
 five-worker report-pipeline baseline, with two warmups and seven retained
 samples per profile. A profile is eligible only when every source PDF retains

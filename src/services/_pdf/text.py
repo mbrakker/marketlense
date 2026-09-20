@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import re
 from pathlib import Path
@@ -50,8 +51,50 @@ from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 from .page_artifacts import create_page_artifact_cache
 from .shared import EOF_TAIL_BYTES, logger
+from .text_quality import (
+    NativeTextSelection,
+    select_healthier_native_text,
+)
 
 PDF_TEXT_EXCEPTIONS = (OSError, RuntimeError, ValueError, TypeError, AttributeError)
+
+
+def _extract_fitz_page_text(fitz_doc, page_index: int) -> str:
+    """Extract one page with PyMuPDF, returning empty text on failure."""
+    if fitz_doc is None:
+        return ""
+    try:
+        return fitz_doc[page_index].get_text() or ""
+    except PDF_TEXT_EXCEPTIONS:
+        return ""
+
+
+def _resolve_native_page_text(
+    *,
+    primary_text: str,
+    fitz_doc,
+    page_index: int,
+) -> NativeTextSelection:
+    """Choose between the pypdf page text and a PyMuPDF re-extraction.
+
+    Healthy pages keep the canonical pypdf text untouched; the PyMuPDF page
+    text is only extracted when the deterministic malformation detector flags
+    the primary page text.
+    """
+    selection = select_healthier_native_text(primary_text, "")
+    if not selection.primary_reasons or fitz_doc is None:
+        return selection
+    return select_healthier_native_text(
+        primary_text,
+        _extract_fitz_page_text(fitz_doc, page_index),
+    )
+
+
+def _open_fallback_fitz_doc(path: str):
+    try:
+        return fitz.open(path)
+    except (RuntimeError, ValueError, TypeError):
+        return None
 
 
 def check_pdf_eof(request: PdfEofCheckRequest, ctx: RunContext) -> PdfEofCheckResponse:
@@ -379,11 +422,32 @@ def extract_pdf_text(
         chunks = []
         extracted_pages = []
         remaining_chars = max(request.max_chars, 0)
+        fitz_doc = request.pdf_context.fitz_doc if request.pdf_context else None
+        fitz_open_attempted = fitz_doc is not None
+        owns_fitz_doc = False
+        recovered_pages: list[int] = []
+        primary_reasons: set[str] = set()
+        fallback_reasons: set[str] = set()
         for i in range(pages):
             try:
                 text = reader.pages[i].extract_text() or ""
             except PDF_TEXT_EXCEPTIONS:
                 text = ""
+            selection = _resolve_native_page_text(
+                primary_text=text, fitz_doc=fitz_doc, page_index=i
+            )
+            if selection.primary_reasons and not fitz_open_attempted:
+                fitz_open_attempted = True
+                fitz_doc = _open_fallback_fitz_doc(request.path)
+                owns_fitz_doc = fitz_doc is not None
+                selection = _resolve_native_page_text(
+                    primary_text=text, fitz_doc=fitz_doc, page_index=i
+                )
+            if selection.used_fallback:
+                recovered_pages.append(i + 1)
+                primary_reasons.update(selection.primary_reasons)
+                fallback_reasons.update(selection.fallback_reasons)
+            text = selection.text
             chunks.append(text)
             if remaining_chars <= 0:
                 retained_text = ""
@@ -402,6 +466,22 @@ def extract_pdf_text(
             text_density=density,
             pages=extracted_pages,
         )
+        if recovered_pages:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="pdf_text_native_fallback_applied",
+                    module=logger.name,
+                    fields={
+                        "path": request.path,
+                        "extractor": "pymupdf",
+                        "recovered_page_numbers": recovered_pages,
+                        "primary_reason_codes": sorted(primary_reasons),
+                        "fallback_reason_codes": sorted(fallback_reasons),
+                    },
+                )
+            )
         logger.info(
             log_event(
                 ctx,
@@ -417,6 +497,9 @@ def extract_pdf_text(
         )
         return response
     finally:
+        if owns_fitz_doc and fitz_doc is not None:
+            with contextlib.suppress(RuntimeError, ValueError, TypeError):
+                fitz_doc.close()
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
 
@@ -470,10 +553,29 @@ def sample_pdf_text(
     try:
         page_count = len(reader.pages)
         samples = []
+        fitz_doc = request.pdf_context.fitz_doc if request.pdf_context else None
+        fitz_open_attempted = fitz_doc is not None
+        owns_fitz_doc = False
+        recovered_pages: list[int] = []
+        primary_reasons: set[str] = set()
         for idx in request.page_indices:
             if idx < 0 or idx >= page_count:
                 continue
             text = _extract_text(reader, idx)
+            selection = _resolve_native_page_text(
+                primary_text=text, fitz_doc=fitz_doc, page_index=idx
+            )
+            if selection.primary_reasons and not fitz_open_attempted:
+                fitz_open_attempted = True
+                fitz_doc = _open_fallback_fitz_doc(request.path)
+                owns_fitz_doc = fitz_doc is not None
+                selection = _resolve_native_page_text(
+                    primary_text=text, fitz_doc=fitz_doc, page_index=idx
+                )
+            if selection.used_fallback:
+                recovered_pages.append(idx + 1)
+                primary_reasons.update(selection.primary_reasons)
+            text = selection.text
             char_count = len(text)
             word_count = _meaningful_word_count(text)
             confidence_score = _score_native_text_confidence(
@@ -489,6 +591,22 @@ def sample_pdf_text(
                     has_text=bool(text.strip()),
                     word_count=word_count,
                     confidence_score=confidence_score,
+                )
+            )
+        if recovered_pages:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="pdf_text_native_fallback_applied",
+                    module=logger.name,
+                    fields={
+                        "path": request.path,
+                        "extractor": "pymupdf",
+                        "recovered_page_numbers": recovered_pages,
+                        "primary_reason_codes": sorted(primary_reasons),
+                        "fallback_reason_codes": [],
+                    },
                 )
             )
         any_text = any(sample.has_text for sample in samples)
@@ -526,6 +644,9 @@ def sample_pdf_text(
         )
         return response
     finally:
+        if owns_fitz_doc and fitz_doc is not None:
+            with contextlib.suppress(RuntimeError, ValueError, TypeError):
+                fitz_doc.close()
         if owns_reader and reader is not None:
             _close_pypdf_reader(reader)
 

@@ -145,6 +145,9 @@ def text_cache_key(md5: str, settings: IngestSettings) -> str:
             "md5": md5,
             "max_pages": settings.pdf_text_max_pages,
             "max_chars": settings.pdf_text_max_chars,
+            # Native extraction gained the malformed-text recovery pass; text
+            # cached by earlier extractors must not be reused.
+            "extractor_generation": "native-recovery-1",
         }
     )
 

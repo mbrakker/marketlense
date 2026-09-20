@@ -34,6 +34,17 @@
       "baseline_median_seconds": 19.207,
       "runtime_warn_percent": 25.0,
       "runtime_fail_percent": 75.0
+    },
+    {
+      "pdf_path": "tests/fixtures/pdf_benchmark/golden/2026_Global_Food_and_Drink_Predictions.pdf",
+      "report_name": "2026_Global_Food_and_Drink_Predictions",
+      "expected_candidate_count": 0,
+      "expected_pdf_sha256": "0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16",
+      "expected_signature": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "expected_degraded_page_count": 0,
+      "baseline_median_seconds": 1.15,
+      "runtime_warn_percent": 25.0,
+      "runtime_fail_percent": 75.0
     }
   ]
 }
