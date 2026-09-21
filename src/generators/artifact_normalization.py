@@ -2118,12 +2118,25 @@ def _build_evidence_span_index(
         for section in doc_map.get("sections") or []:
             if not isinstance(section, dict):
                 continue
+            key_points = section.get("key_points")
+            direct_key_points = (
+                [_s(point).strip() for point in key_points if _s(point).strip()]
+                if isinstance(key_points, list)
+                else []
+            )
             _register(
                 evidence_id=section.get("id"),
                 source_pack="doc_map",
                 pages=_coerce_span_pages(section),
-                text=_pick_first_non_empty_text(
-                    section.get("summary"), section.get("title"), section.get("heading")
+                text=" ".join(
+                    dict.fromkeys(
+                        value
+                        for value in (
+                            _s(section.get("summary")).strip(),
+                            *direct_key_points,
+                        )
+                        if value
+                    )
                 ),
                 section_id=section.get("id"),
             )

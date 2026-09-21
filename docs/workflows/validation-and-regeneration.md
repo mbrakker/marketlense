@@ -400,6 +400,14 @@ For provenance-classified factual claims, every declared evidence ID must
 resolve (rather than merely one of several IDs); unresolved IDs remain in the
 validation package for diagnosis. Legacy insight, quote, and summary
 claim-evidence-map reference handling keeps its existing semantics.
+
+An explicitly abstained quote family is excluded from semantic and quote
+validation; the legacy report-level quote fallback applies only when no such
+family decision exists. A DocMap section remains a weak summary by default.
+Its canonical span retains both the section summary and its source key points,
+so a numeric summary claim can pass claim-support only when every asserted
+quantity matches that exact retained span. This does not upgrade unrelated
+claims linked to the same section, and absolutist wording remains fail-closed.
 Before this strict reference check, the shared evidence-ID canonicalisation
 boundary resolves valid aliases across summary, insight, quote, editorial-plan,
 and soft-copy provenance references (including retained spans). The editorial

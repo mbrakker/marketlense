@@ -8,6 +8,7 @@ from src.contracts.files import PdfCacheTextReadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationRequest
 from src.services import file_service
+from src.utils.analysis_family import family_is_abstained
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.quantity import extract_quantities, should_ground_quantity
@@ -351,6 +352,8 @@ def load_pdf_text_from_cache(cache_dir: str, md5: str | None, ctx: RunContext) -
 
 def extract_quotes(request: ValidationRequest, insights: Sequence[dict]) -> List[dict]:
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
+    if family_is_abstained(artifacts, "quotes"):
+        return []
     quotes = artifacts.get("quotes_final") or []
     if quotes:
         return quotes

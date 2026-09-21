@@ -4,8 +4,10 @@ import re
 from typing import List
 
 from src.contracts.validation import ValidationIssue
+from src.utils.quantity import extract_quantities
 
 from .models import ValidationRuntime
+from .quantities import all_quantities_supported
 from .shared import ensure_dict, issue, s
 
 RULE_ID = "claim_support"
@@ -126,6 +128,7 @@ def run_claim_support_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
             claim_text=claim_text,
             evidence_ids=referenced_evidence_ids,
             evidence_quality_grades=evidence_quality_grades,
+            evidence_spans=evidence_spans,
         ):
             grades = [
                 evidence_quality_grades.get(item, "unknown")
@@ -264,6 +267,7 @@ def _strong_claim_overstates_support(
     claim_text: str,
     evidence_ids: list[str],
     evidence_quality_grades: dict[str, str],
+    evidence_spans: list[dict],
 ) -> bool:
     if not _has_unscoped_strong_language(claim_text):
         return False
@@ -276,4 +280,37 @@ def _strong_claim_overstates_support(
         return False
     if any(grade in SOURCE_BACKED_GRADES for grade in known_grades):
         return False
+    if _numeric_claim_is_directly_supported(claim_text, evidence_spans):
+        return False
     return all(grade in WEAK_EVIDENCE_GRADES for grade in known_grades)
+
+
+def _numeric_claim_is_directly_supported(
+    claim_text: str, evidence_spans: list[dict]
+) -> bool:
+    """Accept an exact numeric source span without upgrading its whole section.
+
+    A DocMap section is normally a weak summary. Its retained key points can,
+    however, carry an exact value or range. That direct source span supports a
+    numeric claim without treating every claim linked to the same section as
+    source-backed. Absolutist wording still fails closed.
+    """
+
+    strong_matches = list(STRONG_CLAIM_RE.finditer(claim_text))
+    if not strong_matches or any(
+        not _strong_match_is_numeric(match.group(0)) for match in strong_matches
+    ):
+        return False
+    claim_quantities = extract_quantities(claim_text)
+    source_quantities = extract_quantities(
+        " ".join(
+            s(span.get("text")).strip()
+            for span in evidence_spans
+            if isinstance(span, dict) and s(span.get("text")).strip()
+        )
+    )
+    return all_quantities_supported(claim_quantities, source_quantities)
+
+
+def _strong_match_is_numeric(value: str) -> bool:
+    return bool(value) and (value[0].isdigit() or value[0] in {"$", "€", "£"})
