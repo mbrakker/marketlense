@@ -59,6 +59,7 @@ from src.generators.artifact_normalization import (
     preserve_soft_copy_binding_source_displays,
     retain_bound_optional_soft_copy_sentences,
     source_backed_summary_claim_bindings,
+    summary_has_unbound_material_sentences,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -235,6 +236,29 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         soft_copy_claim_bindings=soft_copy_claim_bindings,
     )
+    if not summary_fallback_applied and summary_has_unbound_material_sentences(
+        summary=summary,
+        claim_bindings=soft_copy_claim_bindings.get("summary"),
+    ):
+        summary_fallback_applied = constrain_summary_to_source_backed_claims(
+            summary,
+            require_direct_fallback=True,
+        )
+        if summary_fallback_applied:
+            preserve_public_source_displays(
+                summary=summary,
+                insights_final=insights_final,
+                expert_comment="",
+                linkedin_post="",
+            )
+            soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
+                summary
+            )
+            preserve_soft_copy_binding_source_displays(
+                summary=summary,
+                insights_final=insights_final,
+                soft_copy_claim_bindings=soft_copy_claim_bindings,
+            )
     expert_comment = retain_bound_optional_soft_copy_sentences(
         artifact_family="expert_comment",
         public_text=expert_comment,

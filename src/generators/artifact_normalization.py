@@ -8,6 +8,7 @@ from src.contracts.ingest import IngestSettings
 from src.contracts.soft_copy_claim_provenance import (
     align_soft_copy_claim_bindings_to_sentences,
     soft_copy_material_sentences,
+    soft_copy_public_text,
 )
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.errors import AppError
@@ -684,7 +685,11 @@ def _clear_unproven_metric_metadata(metric: Dict[str, Any]) -> None:
             metric[field_name] = ""
 
 
-def constrain_summary_to_source_backed_claims(summary: Dict[str, Any]) -> bool:
+def constrain_summary_to_source_backed_claims(
+    summary: Dict[str, Any],
+    *,
+    require_direct_fallback: bool = False,
+) -> bool:
     """Fail closed to direct claim copy when a strong claim has weak evidence."""
 
     claims = summary.get("claim_evidence_map") if isinstance(summary, dict) else None
@@ -694,7 +699,7 @@ def constrain_summary_to_source_backed_claims(summary: Dict[str, Any]) -> bool:
     weak_strong_claims = [
         claim for claim in valid_claims if _claim_is_strong_and_weakly_bound(claim)
     ]
-    if not weak_strong_claims:
+    if not weak_strong_claims and not require_direct_fallback:
         return False
     direct_claims = [
         claim for claim in valid_claims if _claim_has_direct_evidence(claim)
@@ -710,6 +715,29 @@ def constrain_summary_to_source_backed_claims(summary: Dict[str, Any]) -> bool:
     summary["card_tldr_compact"] = public_claims[0]
     summary["executive_summary"] = " ".join(public_claims[:3])
     return True
+
+
+def summary_has_unbound_material_sentences(
+    *, summary: Dict[str, Any], claim_bindings: object
+) -> bool:
+    """Return whether final Summary prose exceeds its declared semantics."""
+
+    text = soft_copy_public_text("summary", summary)
+    if not text:
+        return False
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family="summary",
+        public_output=summary,
+        claim_bindings=claim_bindings,
+    )
+    covered = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    return any(
+        sentence not in covered for sentence in soft_copy_material_sentences(text)
+    )
 
 
 def _claim_is_strong_and_weakly_bound(claim: Dict[str, Any]) -> bool:

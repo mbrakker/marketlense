@@ -251,6 +251,45 @@ def test_finalization_derives_summary_fallback_bindings_from_retained_claim_map(
     assert claims[0]["evidence_ids"] == ["f1"]
 
 
+def test_finalization_uses_direct_summary_fallback_for_unbound_copy() -> None:
+    """A complete direct claim map replaces summary prose lacking bindings."""
+    direct = "Revenue reached 7.30%."
+    payload = _assemble_soft_copy(
+        summary={
+            "tldr": "The report changes the planning outlook.",
+            "card_tldr_compact": "Planning outlook changed.",
+            "executive_summary": "Leaders should revisit their planning outlook.",
+            "claim_evidence_map": [
+                {
+                    "claim": direct,
+                    "evidence_id": "f1",
+                    "evidence": direct,
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings"}
+                    ],
+                }
+            ],
+        },
+        evidence_packs={
+            "findings": {"findings": [{"id": "f1", "evidence": direct, "pages": [1]}]}
+        },
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": "The report changes the planning outlook.",
+                    "classification": "interpretive",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+
+    assert payload["summary"]["tldr"] == direct
+    assert payload["summary"]["card_tldr_compact"] == direct
+    assert payload["summary"]["executive_summary"] == direct
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_finalization_invariant_rejects_public_copy_mutated_after_provenance() -> None:
     payload = _assemble_soft_copy(
         expert_comment="Revenue grew by 12%.",
