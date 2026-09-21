@@ -1,0 +1,34 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "",
+      "claim_or_entity_id": "chapter-1",
+      "error_context": {},
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "ias-86858bdcb370266f26c2",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "claim_support"
+    },
+    {
+      "artifact_family": "quotes:multiplatform-strategy",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "affected_section": "quotes:multiplatform-strategy"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "ias-b638414df0b1fccea1cd",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "semantic"
+    }
+  ]
+}
