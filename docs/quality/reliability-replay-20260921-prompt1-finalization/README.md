@@ -29,6 +29,35 @@ The two retained failures are normal downstream semantic/claim-support gates;
 neither is a soft-copy provenance failure. They were not suppressed or retried
 beyond the existing bounded flow.
 
+## Follow-up semantic validation correction
+
+Implementation `9fb54b3495ef0e550ef34182fc155f4cc0c19a2c` fixes the two
+retained downstream failures without changing validation strictness. An
+explicitly abstained quote family no longer falls back to a legacy report quote
+during semantic validation. Canonical DocMap spans retain source key points, and
+a numeric summary claim receives direct support only when every asserted
+quantity matches those retained source spans; the broader section remains a
+weak-evidence source for every other claim.
+
+Fresh isolated production-path replays used the same frozen source identities
+and `scripts/quality/run_ias_first_attempt_canary.py` without editorial-artifact
+reuse:
+
+| Report | Earlier failure | Final outcome | Validation / readiness | Calls / tokens / cost |
+| --- | --- | --- | --- | --- |
+| Adjust | semantic `quotes:multiplatform-strategy` on an empty abstained quote | `awaiting_review` | pass / pass | 33 / 304,532 in, 35,256 out / USD 0.102928 |
+| Algolia | claim support `summary.claim_evidence_map[4]`, `chapter-1` | `awaiting_review` | pass / pass | 39 / 354,573 in, 35,704 out / USD 0.113191 |
+
+Both retained final artifacts pass
+`assert_retained_soft_copy_claims_match_public_copy`. Adjust has an abstained
+quote family, zero retained quotes, and zero semantic quote errors. Algolia has
+zero claim-support errors. The result projection is
+[`results/post-semantic-fix-9fb54b34.json`](results/post-semantic-fix-9fb54b34.json);
+the local retained artifact paths are
+`tmp/reliability-replay-20260921-post-semantic-fix-9fb54b34/ias-first-attempt-asf58c52/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json`
+and
+`tmp/reliability-replay-20260921-post-semantic-fix-9fb54b34/ias-first-attempt-ng0k1ctf/output/2026-20b2c-20ecomme-0ffedeaf63d9/report_analysis/artifacts.json`.
+
 ## Retained final-copy and provenance inspection
 
 The complete final Summary (`tldr`, `card_tldr_compact`, and

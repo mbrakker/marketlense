@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "round": "post-semantic-fix-9fb54b34",
+  "cohort_size": 2,
+  "git_sha": "9fb54b3495ef0e550ef34182fc155f4cc0c19a2c",
+  "reports": [
+    {
+      "admission_outcome": "admitted",
+      "awaiting_review": true,
+      "bounded_automatic_repair": true,
+      "cost": 0.102928,
+      "final_state": "awaiting_review",
+      "git_sha": "9fb54b3495ef0e550ef34182fc155f4cc0c19a2c",
+      "input_tokens": 304532,
+      "isolated_fresh_state": true,
+      "model_provider_calls": 33,
+      "operator_intervention": false,
+      "output_tokens": 35256,
+      "publication_readiness": "pass",
+      "publisher_name": "Adjust",
+      "report_id": "ias-b638414df0b1fccea1cd",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "terminal_failure_code": "",
+      "total_duration_seconds": 269.445,
+      "validation": "pass",
+      "workflow_attempt_count": 1,
+      "workflow_root_id": "5090dbf1-9dee-4c9e-acfa-ec32f5570c7b"
+    },
+    {
+      "admission_outcome": "admitted",
+      "awaiting_review": true,
+      "bounded_automatic_repair": true,
+      "cost": 0.113191,
+      "final_state": "awaiting_review",
+      "git_sha": "9fb54b3495ef0e550ef34182fc155f4cc0c19a2c",
+      "input_tokens": 354573,
+      "isolated_fresh_state": true,
+      "model_provider_calls": 39,
+      "operator_intervention": false,
+      "output_tokens": 35704,
+      "publication_readiness": "pass",
+      "publisher_name": "Algolia",
+      "report_id": "ias-86858bdcb370266f26c2",
+      "source_identity_id": "source:4ea9ae5709898e763efb0945d8d4fa1e",
+      "terminal_failure_code": "",
+      "total_duration_seconds": 441.181,
+      "validation": "pass",
+      "workflow_attempt_count": 1,
+      "workflow_root_id": "da5847a3-2eef-4f6b-a956-718cb3bbf395"
+    }
+  ],
+  "summary": {
+    "failure_code_pareto": {}
+  }
+}
