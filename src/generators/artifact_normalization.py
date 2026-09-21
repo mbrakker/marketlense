@@ -545,6 +545,78 @@ def preserve_public_source_displays(
     )
 
 
+def preserve_soft_copy_binding_source_displays(
+    *,
+    summary: Dict[str, Any],
+    insights_final: List[Dict[str, Any]],
+    soft_copy_claim_bindings: Dict[str, List[Dict[str, Any]]],
+) -> None:
+    """Apply the final public display correction to declared binding text too.
+
+    The correction remains deterministic and does not choose evidence: it only
+    carries a binding's already-validated classification and evidence IDs onto
+    the exact sentence that will be retained.  The provenance builder then
+    derives its ID, hash, and source spans from that corrected sentence.
+    """
+
+    summary_evidence = " ".join(
+        _s(item.get("evidence"))
+        for item in summary.get("claim_evidence_map", [])
+        if isinstance(item, dict) and _s(item.get("evidence")).strip()
+    )
+    downstream_evidence = [summary_evidence]
+    for insight in insights_final:
+        if isinstance(insight, dict) and _s(insight.get("evidence")).strip():
+            downstream_evidence.append(_s(insight.get("evidence")))
+    combined_downstream_evidence = " ".join(downstream_evidence)
+
+    for binding in soft_copy_claim_bindings.get("summary", []):
+        if isinstance(binding, dict):
+            binding["claim"] = _preserve_source_displays(
+                _s(binding.get("claim")), summary_evidence
+            )
+    for family in ("expert_comment", "linkedin_post"):
+        for binding in soft_copy_claim_bindings.get(family, []):
+            if isinstance(binding, dict):
+                binding["claim"] = _preserve_downstream_source_displays(
+                    _s(binding.get("claim")), combined_downstream_evidence
+                )
+
+
+def source_backed_summary_claim_bindings(summary: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Derive fallback-summary bindings solely from retained direct evidence."""
+
+    bindings: List[Dict[str, Any]] = []
+    for claim in summary.get("claim_evidence_map", []):
+        if not isinstance(claim, dict) or not _claim_has_direct_evidence(claim):
+            continue
+        claim_text = _s(claim.get("claim")).strip()
+        evidence_ids = list(
+            dict.fromkeys(
+                evidence_id
+                for evidence_id in [
+                    _s(claim.get("evidence_id")).strip(),
+                    *[
+                        _s(span.get("evidence_id")).strip()
+                        for span in claim.get("evidence_spans") or []
+                        if isinstance(span, dict)
+                        and _span_is_direct(span)
+                    ],
+                ]
+                if evidence_id
+            )
+        )
+        if claim_text:
+            bindings.append(
+                {
+                    "claim": claim_text,
+                    "classification": "factual",
+                    "evidence_ids": evidence_ids,
+                }
+            )
+    return bindings
+
+
 def _preserve_source_displays(text: str, evidence: str) -> str:
     return preserve_unique_source_displays(text, evidence)
 

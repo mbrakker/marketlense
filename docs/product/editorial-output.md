@@ -64,6 +64,13 @@ repaired in one targeted pass; reconstruction applies their original spans
 right-to-left so every unaffected sibling remains byte-identical. Family-wide
 regeneration remains the fallback for ambiguous, family-wide, or incoherent
 failures.
+All deterministic public-copy corrections precede retained-provenance
+derivation. If source-display preservation changes a sentence, its validated
+classification and evidence IDs remain attached while its mechanical claim ID,
+hash, and spans are regenerated against the corrected sentence. Summary
+fallback copy derives factual bindings from the retained direct claim-evidence
+map. A final exact sentence-hash invariant rejects both obsolete provenance and
+public text changed after provenance finalization.
 This internal metadata stays in retained artifacts and checkpoints; it is not
 part of the report payload or WordPress projection.
 

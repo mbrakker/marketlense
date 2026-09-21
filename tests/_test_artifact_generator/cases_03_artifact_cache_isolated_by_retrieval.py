@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from hashlib import sha256
 
 from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
@@ -331,6 +332,7 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
         "quotes_final": [],
         "expert_comment": "",
         "linkedin_post": "",
+        "soft_copy_claim_provenance": {"schema_version": "1.0", "claims": []},
         "source_status": {"not_available": False, "reason": ""},
         "family_status": {
             "summary": {
@@ -343,6 +345,25 @@ def test_load_cached_artifacts_refreshes_derived_family_status(tmp_path):
                 "reason": "summary_claim_span_missing",
             }
         },
+    }
+    summary_claims = ["Grounded TLDR.", "Grounded executive summary."]
+    payload["soft_copy_claim_provenance"] = {
+        "schema_version": "1.0",
+        "claims": [
+            {
+                "schema_version": "1.0",
+                "artifact_family": "summary",
+                "claim_id": f"soft_copy:summary:{sha256(text.encode()).hexdigest()[:16]}",
+                "text_hash": sha256(text.encode()).hexdigest(),
+                "classification": "interpretive",
+                "evidence_ids": [],
+                "source_spans": [],
+                "producing_prompt_identity": {},
+                "generation_attempt": 1,
+                "regeneration_attempt": 0,
+            }
+            for text in summary_claims
+        ],
     }
     cache_path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -459,11 +480,12 @@ def test_load_cached_artifacts_clears_doc_map_only_quotes_after_policy_refresh(
                     }
                 ],
             }
-        ],
-        "expert_comment": "",
-        "linkedin_post": "",
-        "source_status": {"not_available": False, "reason": ""},
-        "family_status": {
+            ],
+            "expert_comment": "",
+            "linkedin_post": "",
+            "soft_copy_claim_provenance": {"schema_version": "1.0", "claims": []},
+            "source_status": {"not_available": False, "reason": ""},
+            "family_status": {
             "quotes": {
                 "schema_version": "1.0",
                 "family": "quotes",
@@ -723,7 +745,7 @@ def test_vector_store_identity_is_part_of_family_reuse_proof(tmp_path) -> None:
     assert summary_input_hashes[0] != summary_input_hashes[1]
 
 
-def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> None:
+def test_fresh_and_cached_soft_copy_share_source_display_finalization(tmp_path) -> None:
     settings = _settings(tmp_path)
     fresh_client = FakeOpenAI(
         {
@@ -740,10 +762,10 @@ def test_persisted_compatible_families_replay_without_model_calls(tmp_path) -> N
             "insights_final": {"insights_final": []},
             "cover_semantics": _cover_semantics_response(),
             "expert_comment": {
-                "expert_comment": "Revenue +10% YoY.",
+                "expert_comment": "Revenue 10% YoY.",
                 "claim_provenance": [
                     {
-                        "claim": "Revenue +10% YoY.",
+                        "claim": "Revenue 10% YoY.",
                         "classification": "factual",
                         "evidence_ids": ["f1"],
                     }
@@ -1114,7 +1136,7 @@ __all__ = [
     "test_generate_artifacts_with_auto_context_preserves_input_evidence",
     "test_compatible_retained_families_make_zero_model_calls",
     "test_vector_store_identity_is_part_of_family_reuse_proof",
-    "test_persisted_compatible_families_replay_without_model_calls",
+    "test_fresh_and_cached_soft_copy_share_source_display_finalization",
     "test_legacy_soft_copy_reuse_regenerates_missing_provenance",
     "test_invalidating_one_family_calls_only_its_model_route",
     "test_editorial_plan_change_invalidates_only_linkedin_family_reuse",

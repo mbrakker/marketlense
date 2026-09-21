@@ -107,7 +107,6 @@ def render_artifact_json_model(
     report_id: str = "",
     prepared_prompt_bundle: PreparedPromptBundle | None = None,
     response_observer: Callable[[Any, float, str], None] | None = None,
-    public_output_normalizer: Callable[[Dict[str, Any]], None] | None = None,
 ) -> Dict[str, Any]:
     """Render one artifact through the shared bounded JSON recovery service."""
     prompt_bundle = prepared_prompt_bundle or prepare_prompt_bundle(
@@ -283,18 +282,18 @@ def render_artifact_json_model(
             root_key=root_key,
             ctx=ctx,
         )
-        public_output = payload.get(root_key)
-        if root_key == "summary":
-            public_output = normalize_artifact_summary(public_output)
-        elif root_key == "linkedin_post":
-            public_output = strip_linkedin_inline_reference_ids(
-                str(public_output or "")
-            )
         if root_key in _SOFT_COPY_ROOTS:
-            # Models legitimately declare one binding per paragraph or clause
-            # group.  Resegment those declared bindings onto the canonical
-            # sentence grid before enforcing per-sentence coverage so the gate
-            # measures evidence declaration, not sentence-splitting variance.
+            # This established structured-output recovery gate verifies the
+            # model envelope but never finalizes provenance. Artifact assembly
+            # still applies all deterministic copy corrections before deriving
+            # the retained canonical sentence grid and claim records.
+            public_output = payload.get(root_key)
+            if root_key == "summary":
+                public_output = normalize_artifact_summary(public_output)
+            elif root_key == "linkedin_post":
+                public_output = strip_linkedin_inline_reference_ids(
+                    str(public_output or "")
+                )
             payload["claim_provenance"] = align_soft_copy_claim_bindings_to_sentences(
                 artifact_family=root_key,
                 public_output=public_output,
@@ -311,9 +310,8 @@ def render_artifact_json_model(
                     code="soft_copy_claim_provenance_bindings_incomplete",
                     message=(
                         "Soft-copy provenance must declare every material "
-                        f"sentence; uncovered sentences: "
-                        f"{len(uncovered_sentences)}; first uncovered sentence "
-                        f"starts: {first_excerpt}"
+                        f"sentence; uncovered sentences: {len(uncovered_sentences)}; "
+                        f"first uncovered sentence starts: {first_excerpt}"
                     ),
                     retryable=False,
                     context={
@@ -339,9 +337,7 @@ def render_artifact_json_model(
         ),
         ctx,
         call_model=call_model,
-        normalize_payload=lambda payload: _normalize_artifact_response(
-            payload, root_key, public_output_normalizer=public_output_normalizer
-        ),
+        normalize_payload=lambda payload: _normalize_artifact_response(payload, root_key),
         validate_payload=validate_payload,
         is_substantive=lambda payload: _artifact_response_substantive(
             payload, root_key
@@ -382,8 +378,6 @@ def _artifact_response_substantive(payload: object, root_key: str) -> bool:
 def _normalize_artifact_response(
     payload: object,
     root_key: str,
-    *,
-    public_output_normalizer: Callable[[Dict[str, Any]], None] | None = None,
 ) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         return payload  # type: ignore[return-value]
@@ -456,6 +450,4 @@ def _normalize_artifact_response(
             if isinstance(bindings, list)
             else []
         )
-    if public_output_normalizer is not None:
-        public_output_normalizer(normalized)
     return normalized

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from copy import deepcopy
 from dataclasses import asdict, replace
 from typing import Any, Dict, List, Optional
 
@@ -55,11 +56,14 @@ from src.generators.artifact_normalization import (
     normalize_artifact_insights,
     normalize_artifact_toc_entries,
     preserve_public_source_displays,
+    preserve_soft_copy_binding_source_displays,
+    source_backed_summary_claim_bindings,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
 from src.generators.soft_copy_claim_provenance import (
+    assert_retained_soft_copy_claims_match_public_copy,
     build_soft_copy_claim_provenance,
     retained_soft_copy_claims_cover_text,
 )
@@ -132,6 +136,7 @@ def assemble_artifacts_payload(
     validate_references: bool = True,
 ) -> Dict[str, Any]:
     del report_name
+    soft_copy_claim_bindings = deepcopy(soft_copy_claim_bindings or {})
     editorial_plan = normalize_artifact_editorial_plan(editorial_plan)
     toc_entries = normalize_artifact_toc_entries(toc_bundle.get("toc_entries"))
     toc_topics = [
@@ -200,7 +205,7 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
     )
-    constrain_summary_to_source_backed_claims(summary)
+    summary_fallback_applied = constrain_summary_to_source_backed_claims(summary)
     if (
         evidence_span_stats.get("bound_count", 0) > 0
         or evidence_span_stats.get("unbound_count", 0) > 0
@@ -219,6 +224,15 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         expert_comment=expert_comment,
         linkedin_post=linkedin_post,
+    )
+    if summary_fallback_applied:
+        soft_copy_claim_bindings["summary"] = source_backed_summary_claim_bindings(
+            summary
+        )
+    preserve_soft_copy_binding_source_displays(
+        summary=summary,
+        insights_final=insights_final,
+        soft_copy_claim_bindings=soft_copy_claim_bindings,
     )
     metric_spine = derive_metric_spine_from_insights(
         insights_final, editorial_plan=editorial_plan, evidence_packs=evidence_packs
@@ -275,7 +289,7 @@ def assemble_artifacts_payload(
             linkedin_post=linkedin_post,
             doc_map=doc_map,
             evidence_packs=evidence_packs,
-            bindings=soft_copy_claim_bindings or {},
+            bindings=soft_copy_claim_bindings,
             prompt_identities=soft_copy_prompt_identities or {},
             generation_attempts=soft_copy_generation_attempts or {},
             existing_provenance=existing_soft_copy_claim_provenance,
@@ -319,6 +333,7 @@ def assemble_artifacts_payload(
         ctx=ctx,
     )
     try:
+        assert_retained_soft_copy_claims_match_public_copy(artifacts_payload)
         _validate_artifact_semantic_fields(artifacts_payload, ctx)
         validate_schema(
             SchemaValidateRequest(
@@ -2313,6 +2328,7 @@ def _adapt_cached_artifacts_payload(
             summary_abstained=family_is_abstained(payload, "summary"),
             ctx=ctx,
         )
+        assert_retained_soft_copy_claims_match_public_copy(payload)
         validate_schema(
             SchemaValidateRequest(
                 schema_version="1.0",

@@ -119,6 +119,26 @@ def _clean_role_name(value: str) -> str:
     return cleaned
 
 
+def _is_publisher_candidate(value: str) -> bool:
+    """Keep source-visible legal prose out of the publisher role.
+
+    A copyright owner can be a sentence or a group of entities.  It remains
+    retained as ``report_owner_name``, but only a bounded organization-like
+    label can become the public publisher identity used by downstream views
+    such as a single-line cover imprint.
+    """
+
+    candidate = _clean_role_name(value)
+    if not candidate or candidate.casefold() in _PLACEHOLDERS:
+        return False
+    words = candidate.split()
+    return (
+        len(candidate) <= 80
+        and len(words) <= 10
+        and not re.search(r"[.!?].+", candidate)
+    )
+
+
 def _unique_names(values: list[str]) -> tuple[str, ...]:
     names: dict[str, str] = {}
     for value in values:
@@ -178,7 +198,7 @@ def extract_source_provenance(
     publisher_candidates: dict[int, list[str]] = {0: [], 1: [], 2: []}
 
     metadata_publisher = _publisher_from_pdf_title(pdf_metadata)
-    if metadata_publisher:
+    if _is_publisher_candidate(metadata_publisher):
         publisher_candidates[0].append(metadata_publisher)
         evidence.append(
             ProvenanceEvidence(
@@ -197,7 +217,7 @@ def extract_source_provenance(
         publisher_match = _PUBLISHER_LINE.match(line)
         if publisher_match:
             value = _clean_role_name(publisher_match.group("value"))
-            if value:
+            if _is_publisher_candidate(value):
                 publisher_candidates[1].append(value)
                 if re.match(r"^\s*a\s+report\s+by", line, re.I):
                     report_by_names.append(value)
@@ -229,7 +249,8 @@ def extract_source_provenance(
             value = _clean_role_name(copyright_match.group("value"))
             if value:
                 owner_names.append(value)
-                publisher_candidates[2].append(value)
+                if _is_publisher_candidate(value):
+                    publisher_candidates[2].append(value)
                 evidence.append(
                     ProvenanceEvidence(
                         "report_owner",

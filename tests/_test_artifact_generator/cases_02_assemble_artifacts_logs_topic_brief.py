@@ -740,7 +740,7 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert client.requests[1].repair_attempt == 1
 
 
-def test_soft_copy_binding_gap_uses_bounded_structured_recovery(tmp_path) -> None:
+def test_soft_copy_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
     class SoftCopyRepairClient:
         def __init__(self) -> None:
             self.requests = []
@@ -798,15 +798,17 @@ def test_soft_copy_binding_gap_uses_bounded_structured_recovery(tmp_path) -> Non
         vector_store_id=None,
     )
 
-    assert len(client.requests) == 2
-    assert client.requests[0].prompt_namespace == "report_vs/artifacts/expert_comment"
+    assert [request.prompt_namespace for request in client.requests] == [
+        "report_vs/artifacts/expert_comment",
+        "report_vs/structured_output/repair",
+    ]
     assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
         "The first supported sentence.",
         "The second supported sentence.",
     ]
 
 
-def test_linkedin_paragraph_bindings_align_onto_sentences_and_hashtags_pass(
+def test_linkedin_paragraph_bindings_are_deferred_to_final_sentence_grid(
     tmp_path,
 ) -> None:
     class ParagraphClaimsClient:
@@ -864,7 +866,7 @@ def test_linkedin_paragraph_bindings_align_onto_sentences_and_hashtags_pass(
     ]
 
 
-def test_linkedin_binding_gap_feedback_names_uncovered_sentence(tmp_path) -> None:
+def test_linkedin_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
     class UncoveredThenRepairedClient:
         def __init__(self) -> None:
             self.requests = []
@@ -931,5 +933,5 @@ __all__ = [
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
     "test_cover_semantics_repairs_one_invalid_structured_response",
-    "test_soft_copy_binding_gap_uses_bounded_structured_recovery",
+    "test_soft_copy_binding_gap_uses_existing_bounded_recovery",
 ]

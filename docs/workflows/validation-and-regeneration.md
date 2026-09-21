@@ -121,6 +121,27 @@ example, U.K. digital media) as one sentence. This normalization changes no
 claim text or evidence binding; a missing sentence or a terminal initialism
 followed by a new capitalized sentence still fails closed.
 
+The one canonical soft-copy finalization boundary runs after all deterministic
+public-copy corrections and before retention: generated copy, source-backed
+fallbacks and source-display preservation, canonical sentence-grid alignment,
+then mechanically derived claim IDs, hashes, and source spans. A source-display
+correction carries the existing validated classification and evidence IDs onto
+the corrected sentence; it never selects new evidence. If the summary fallback
+replaces TLDR, compact TLDR, or executive-summary copy, its factual bindings
+are derived from the retained direct `claim_evidence_map` rows rather than the
+superseded model quotes. Cached artifact reads enforce the same final
+sentence/hash invariant. Any retained provenance hash absent from final public
+copy, or any final material sentence without one retained hash, fails closed.
+Source identity applies the same role separation: copyright or legal ownership
+prose remains retained as source ownership evidence, but only a bounded
+organization-like label may populate the public publisher identity. This keeps
+cover and report-card imprints valid without suppressing the source's legal
+attribution. During targeted regeneration, mechanically assembled projections
+(for example metric spine, key figures, advisory, claim ledgers, and soft-copy
+provenance) may change only when the plan explicitly permits one of their
+declared authored inputs; an unrelated authored root remains a strict scope
+violation.
+
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy
 claim can therefore be repaired or removed by its claim ID while untouched

@@ -64,6 +64,25 @@ __all__ = [
 ]
 
 
+# These roots are assembled mechanically from the authored source roots.  A
+# scoped repair may legitimately change them, but only when it also changes a
+# declared upstream dependency.  They must never become independent repair
+# targets or conceal a mutation to an unrelated authored root.
+_DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
+    "metric_spine": frozenset({"insights_final"}),
+    "topics_covered": frozenset({"toc_entries", "summary", "insights_final"}),
+    "key_figures": frozenset({"insights_final"}),
+    "chart_insight_cards": frozenset({"insights_final"}),
+    "executive_advisory": frozenset(
+        {"summary", "insights_final", "quotes_final"}
+    ),
+    "claim_ledgers": frozenset({"summary", "insights_final", "quotes_final"}),
+    "soft_copy_claim_provenance": frozenset(
+        {"summary", "expert_comment", "linkedin_post"}
+    ),
+}
+
+
 def _evaluate_and_store_public_editorial_quality(
     *,
     runtime: ReportRuntimeState,
@@ -381,7 +400,11 @@ def _scope_validation_report(
     changed = set(_artifact_diff_summary(before, after)["changed_keys"])
     changed.update(_artifact_diff_summary(before, after)["added_keys"])
     changed.update(_artifact_diff_summary(before, after)["removed_keys"])
-    violations = sorted(changed - allowed)
+    violations = sorted(
+        root
+        for root in changed - allowed
+        if not _is_allowed_derived_artifact_change(root=root, allowed=allowed)
+    )
     if not violations:
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
@@ -403,6 +426,12 @@ def _scope_validation_report(
             for path in violations
         ],
     )
+
+
+def _is_allowed_derived_artifact_change(*, root: str, allowed: set[str]) -> bool:
+    """Allow only deterministic projections of an explicitly scoped repair."""
+
+    return bool(_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.get(root, set()) & allowed)
 
 
 def _validation_issue_keys(report: ValidationReport) -> list[str]:

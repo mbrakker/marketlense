@@ -15,6 +15,8 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
     soft_copy_material_sentences,
+    soft_copy_public_text,
+    soft_copy_claim_provenance_from_payload,
 )
 from src.utils.errors import AppError
 
@@ -170,3 +172,42 @@ def retained_soft_copy_claims_cover_text(
     }
     claim_hashes = {claim.text_hash for claim in claims}
     return sentence_hashes == claim_hashes and len(claims) == len(claim_hashes)
+
+
+def assert_retained_soft_copy_claims_match_public_copy(
+    artifacts: dict[str, Any],
+) -> None:
+    """Reject a retained payload whose public soft copy changed after finalization."""
+
+    raw_provenance = artifacts.get("soft_copy_claim_provenance")
+    claims = soft_copy_claim_provenance_from_payload(raw_provenance)
+    for family in sorted(_SUPPORTED_FAMILIES):
+        public_text = soft_copy_public_text(family, artifacts.get(family))
+        family_claims = [
+            claim for claim in claims if claim.artifact_family == family
+        ]
+        if retained_soft_copy_claims_cover_text(
+            text=public_text, claims=family_claims
+        ):
+            continue
+        public_hashes = {
+            _sha256(sentence)
+            for sentence in soft_copy_material_sentences(_normalized_text(public_text))
+        }
+        retained_hashes = {claim.text_hash for claim in family_claims}
+        raise AppError(
+            code="soft_copy_claim_provenance_coverage_invalid",
+            message=(
+                "Retained soft-copy provenance must exactly match final public prose"
+            ),
+            retryable=False,
+            context={
+                "artifact_family": family,
+                "missing_public_sentence_count": len(public_hashes - retained_hashes),
+                "obsolete_provenance_sentence_count": len(
+                    retained_hashes - public_hashes
+                ),
+                "duplicate_provenance_count": len(family_claims)
+                - len(retained_hashes),
+            },
+        )

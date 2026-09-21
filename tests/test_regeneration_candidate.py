@@ -4,6 +4,7 @@ import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,6 +18,9 @@ from src.generators.artifact_normalization import (
 from src.generators.validation.metrics import validate_insight_metrics
 from src.generators.validation.regeneration_candidate import (
     validate_regeneration_candidate,
+)
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _scope_validation_report,
 )
 
 _FIXTURE_ROOT = (
@@ -46,6 +50,36 @@ def _ctx() -> RunContext:
         task_id="task",
         span_id="span",
     )
+
+
+def test_scope_validation_allows_recomputed_projections_but_not_unrelated_authored_roots() -> None:
+    plan = SimpleNamespace(
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr", "insights_final"])]
+    )
+    before = {
+        "summary": {"tldr": "Before."},
+        "insights_final": [{"id": "one", "text": "Before."}],
+        "metric_spine": [{"value": "1"}],
+        "key_figures": [{"figure": "1"}],
+        "cover_semantics": {"title": "Stable"},
+    }
+    candidate = {
+        **deepcopy(before),
+        "summary": {"tldr": "After."},
+        "metric_spine": [{"value": "2"}],
+        "key_figures": [{"figure": "2"}],
+    }
+
+    assert _scope_validation_report(
+        before=before, after=candidate, plan=plan
+    ).status == "pass"
+
+    candidate["cover_semantics"] = {"title": "Unrelated change"}
+
+    report = _scope_validation_report(before=before, after=candidate, plan=plan)
+
+    assert report.status == "fail"
+    assert [issue.affected_section for issue in report.issues] == ["cover_semantics"]
 
 
 def _soft_copy_claim(

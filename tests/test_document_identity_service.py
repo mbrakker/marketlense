@@ -103,6 +103,18 @@ def test_extract_source_provenance_accepts_pdf_text_replacement_for_copyright() 
     assert observed.report_owner_name == "Kepios"
 
 
+def test_extract_source_provenance_does_not_promote_copyright_prose_to_publisher() -> None:
+    observed = extract_source_provenance(
+        "© 2026 Copyright owned by one or more of the KPMG International entities. "
+        "KPMG International entities provide no services to clients."
+    )
+
+    assert observed.publisher_name == ""
+    assert observed.report_owner_name.startswith("Copyright owned by")
+    assert observed.status == "ambiguous"
+    assert "publisher_missing" in observed.issues
+
+
 def test_extract_source_provenance_reports_equal_priority_publisher_conflict() -> None:
     observed = extract_source_provenance(
         "Published by Alpha Research\nPublished by Beta Research",
