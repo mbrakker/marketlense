@@ -120,6 +120,50 @@ def test_finalization_rebuilds_linkedin_provenance_after_range_display_correctio
     assert claim["evidence_ids"] == ["f1"]
 
 
+def test_full_family_finalization_replaces_obsolete_retained_provenance() -> None:
+    """Fresh bindings supersede stale claims from an earlier full-family pass."""
+    prior_text = "Execution readiness was becoming more visible."
+    previous = _assemble_soft_copy(
+        linkedin_post=prior_text,
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": "f1", "evidence": prior_text, "pages": [1]}]
+            }
+        },
+        soft_copy_claim_bindings={
+            "linkedin_post": [
+                {
+                    "claim": prior_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+    final_text = "Execution readiness is becoming more visible."
+    payload = _assemble_soft_copy(
+        linkedin_post=final_text,
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": "f1", "evidence": final_text, "pages": [1]}]
+            }
+        },
+        soft_copy_claim_bindings={
+            "linkedin_post": [
+                {
+                    "claim": final_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+        existing_soft_copy_claim_provenance=previous["soft_copy_claim_provenance"],
+    )
+
+    assert payload["linkedin_post"] == final_text
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_finalization_derives_summary_fallback_bindings_from_retained_claim_map() -> (
     None
 ):

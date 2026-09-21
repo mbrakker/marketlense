@@ -459,6 +459,13 @@ def _soft_copy_claim_provenance_payload(
                         regeneration_attempt=regeneration_attempt,
                     )
             else:
+                # A complete prompt-family output is re-finalized as one
+                # canonical public surface. Its model-declared bindings
+                # therefore replace every earlier retained claim for that
+                # family; carrying an obsolete claim forward would make the
+                # public/provenance invariant fail after a deterministic
+                # correction or a fresh materialization.
+                claims = [claim for claim in claims if claim.artifact_family != family]
                 claims.extend(
                     build_soft_copy_claim_provenance(
                         artifact_family=family,

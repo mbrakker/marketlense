@@ -132,6 +132,12 @@ are derived from the retained direct `claim_evidence_map` rows rather than the
 superseded model quotes. Cached artifact reads enforce the same final
 sentence/hash invariant. Any retained provenance hash absent from final public
 copy, or any final material sentence without one retained hash, fails closed.
+When a complete Summary, Expert Comment, or LinkedIn family is finalized from
+its current semantic bindings, those mechanically rebuilt claims replace every
+prior retained claim for that family. Claim-scoped repairs retain their existing
+lineage rule and replace only the declared repaired claim. This prevents a
+stale hash from an earlier complete-family pass from surviving a deterministic
+public-copy correction.
 The renderer and reusable prompt-family materialization boundary retain the
 model's semantic declarations without deciding sentence coverage against
 pre-correction copy. This prevents a mechanically reconcilable source-display
