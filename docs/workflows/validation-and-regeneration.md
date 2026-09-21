@@ -138,6 +138,11 @@ prior retained claim for that family. Claim-scoped repairs retain their existing
 lineage rule and replace only the declared repaired claim. This prevents a
 stale hash from an earlier complete-family pass from surviving a deterministic
 public-copy correction.
+For optional Expert Comment and LinkedIn copy, finalization may omit an
+unbound sentence only when the same output retains at least one sentence with
+an already declared semantic binding. It never infers a replacement binding;
+completely unbound optional copy stays intact and is rejected by the strict
+provenance gate.
 The renderer and reusable prompt-family materialization boundary retain the
 model's semantic declarations without deciding sentence coverage against
 pre-correction copy. This prevents a mechanically reconcilable source-display

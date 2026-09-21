@@ -164,6 +164,33 @@ def test_full_family_finalization_replaces_obsolete_retained_provenance() -> Non
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_finalization_omits_unbound_linkedin_sentence_before_retention() -> None:
+    """Optional social copy retains only sentences with declared semantics."""
+    supported = "Execution readiness is becoming more visible."
+    payload = _assemble_soft_copy(
+        linkedin_post=(
+            f"{supported} This unsupported bridge must not be retained publicly."
+        ),
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": "f1", "evidence": supported, "pages": [1]}]
+            }
+        },
+        soft_copy_claim_bindings={
+            "linkedin_post": [
+                {
+                    "claim": supported,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+
+    assert payload["linkedin_post"] == supported
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_finalization_derives_summary_fallback_bindings_from_retained_claim_map() -> (
     None
 ):

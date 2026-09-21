@@ -57,6 +57,7 @@ from src.generators.artifact_normalization import (
     normalize_artifact_toc_entries,
     preserve_public_source_displays,
     preserve_soft_copy_binding_source_displays,
+    retain_bound_optional_soft_copy_sentences,
     source_backed_summary_claim_bindings,
 )
 from src.generators.public_editorial_quality_generator import (
@@ -233,6 +234,16 @@ def assemble_artifacts_payload(
         summary=summary,
         insights_final=insights_final,
         soft_copy_claim_bindings=soft_copy_claim_bindings,
+    )
+    expert_comment = retain_bound_optional_soft_copy_sentences(
+        artifact_family="expert_comment",
+        public_text=expert_comment,
+        claim_bindings=soft_copy_claim_bindings.get("expert_comment"),
+    )
+    linkedin_post = retain_bound_optional_soft_copy_sentences(
+        artifact_family="linkedin_post",
+        public_text=linkedin_post,
+        claim_bindings=soft_copy_claim_bindings.get("linkedin_post"),
     )
     metric_spine = derive_metric_spine_from_insights(
         insights_final, editorial_plan=editorial_plan, evidence_packs=evidence_packs

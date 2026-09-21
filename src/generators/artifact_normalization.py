@@ -5,6 +5,10 @@ from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
+from src.contracts.soft_copy_claim_provenance import (
+    align_soft_copy_claim_bindings_to_sentences,
+    soft_copy_material_sentences,
+)
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
@@ -581,6 +585,40 @@ def preserve_soft_copy_binding_source_displays(
                 binding["claim"] = _preserve_downstream_source_displays(
                     _s(binding.get("claim")), combined_downstream_evidence
                 )
+
+
+def retain_bound_optional_soft_copy_sentences(
+    *,
+    artifact_family: str,
+    public_text: str,
+    claim_bindings: object,
+) -> str:
+    """Fail closed by omitting unbound optional public-copy sentences.
+
+    This finalization fallback operates only on Expert Comment and LinkedIn.
+    It keeps the model's already-declared semantic binding intact and never
+    infers classification or evidence for an omitted sentence.
+    """
+
+    if artifact_family not in {"expert_comment", "linkedin_post"}:
+        return public_text
+    sentences = soft_copy_material_sentences(public_text)
+    if not sentences:
+        return public_text
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family=artifact_family,
+        public_output=public_text,
+        claim_bindings=claim_bindings,
+    )
+    covered = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    retained = [sentence for sentence in sentences if sentence in covered]
+    if not retained or len(retained) == len(sentences):
+        return public_text
+    return " ".join(retained)
 
 
 def source_backed_summary_claim_bindings(
