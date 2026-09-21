@@ -15,9 +15,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     SoftCopyPromptFamilyMaterialization,
-    soft_copy_claim_bindings_cover_public_text,
     soft_copy_prompt_family_materialization_from_payload,
-    soft_copy_public_text,
 )
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
@@ -492,27 +490,7 @@ def generate_artifacts(
             reuse is not None
             and reuse.reusable
             and soft_copy_family
-            and (
-                (
-                    retained_soft_copy is None
-                    and bool(
-                        soft_copy_public_text(soft_copy_family, reuse.output_payload)
-                    )
-                )
-                or not soft_copy_claim_bindings_cover_public_text(
-                    artifact_family=soft_copy_family,
-                    public_output=(
-                        retained_soft_copy.public_output
-                        if retained_soft_copy is not None
-                        else reuse.output_payload
-                    ),
-                    claim_bindings=(
-                        retained_soft_copy.claim_provenance
-                        if retained_soft_copy is not None
-                        else []
-                    ),
-                )
-            )
+            and retained_soft_copy is None
         ):
             reuse = None
             family_reuse[namespace]["soft_copy_reuse_rejected"] = True

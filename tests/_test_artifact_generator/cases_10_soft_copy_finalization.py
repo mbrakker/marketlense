@@ -31,7 +31,7 @@ def test_fresh_and_cached_soft_copy_share_source_display_finalization(tmp_path) 
                 "expert_comment": "Revenue 10% YoY.",
                 "claim_provenance": [
                     {
-                        "claim": "Revenue 10% YoY.",
+                        "claim": "Revenue +10% YoY.",
                         "classification": "factual",
                         "evidence_ids": ["f1"],
                     }

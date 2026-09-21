@@ -28,7 +28,6 @@ from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_artifact_family_for_prompt_family,
-    soft_copy_claim_bindings_cover_public_text,
     soft_copy_prompt_family_materialization_from_payload,
 )
 from src.services import report_analysis_store_service
@@ -443,15 +442,7 @@ def read_reusable_prompt_family(
         retained = soft_copy_prompt_family_materialization_from_payload(
             payload["output"]
         )
-        public_output = (
-            retained.public_output if retained is not None else payload["output"]
-        )
-        bindings = retained.claim_provenance if retained is not None else []
-        if not soft_copy_claim_bindings_cover_public_text(
-            artifact_family=artifact_family,
-            public_output=public_output,
-            claim_bindings=bindings,
-        ):
+        if retained is None:
             return _reuse_miss("soft_copy_provenance_missing")
     return PromptFamilyReuseResponse(
         schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,

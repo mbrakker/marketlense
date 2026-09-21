@@ -512,7 +512,9 @@ def test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_link
             "summary": {
                 "tldr": "Grounded TLDR.",
                 "card_tldr_compact": "Grounded TLDR.",
-                "executive_summary": "Growth accelerated (F-001 / IC-004), especially in Q4.",
+                "executive_summary": (
+                    "Growth accelerated (F-001 / IC-004), especially in Q4."
+                ),
                 "claim_evidence_map": [
                     {
                         "claim": "Claim",
@@ -740,7 +742,7 @@ def test_cover_semantics_repairs_one_invalid_structured_response(tmp_path) -> No
     assert client.requests[1].repair_attempt == 1
 
 
-def test_soft_copy_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
+def test_soft_copy_binding_gap_is_deferred_to_finalization(tmp_path) -> None:
     class SoftCopyRepairClient:
         def __init__(self) -> None:
             self.requests = []
@@ -799,12 +801,10 @@ def test_soft_copy_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
     )
 
     assert [request.prompt_namespace for request in client.requests] == [
-        "report_vs/artifacts/expert_comment",
-        "report_vs/structured_output/repair",
+        "report_vs/artifacts/expert_comment"
     ]
     assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
-        "The first supported sentence.",
-        "The second supported sentence.",
+        "The first supported sentence."
     ]
 
 
@@ -933,5 +933,5 @@ __all__ = [
     "test_generate_artifacts_strips_inline_reference_tokens_from_summary_and_linkedin",
     "test_generate_artifacts_uses_vector_path_when_flag_enabled",
     "test_cover_semantics_repairs_one_invalid_structured_response",
-    "test_soft_copy_binding_gap_uses_existing_bounded_recovery",
+    "test_soft_copy_binding_gap_is_deferred_to_finalization",
 ]

@@ -7,24 +7,32 @@ from src.generators._artifact_generator.rendering import render_artifact_json_mo
 from src.generators.evidence_pack_generator import generate_evidence_packs
 from tests._test_artifact_generator._shared import (
     CapturingPromptClient as ArtifactCapturingPromptClient,
+)
+from tests._test_artifact_generator._shared import (
     FakePromptClient as ArtifactPromptClient,
 )
 from tests._test_artifact_generator._shared import _ctx as artifact_ctx
 from tests._test_artifact_generator._shared import _settings as artifact_settings
 from tests._test_evidence_pack_generator._shared import (
     FakeAnalysisStore,
-    FakePromptClient as EvidencePromptClient,
     RoutedOpenAIClient,
-    _ctx as evidence_ctx,
-    _settings as evidence_settings,
     substantive_doc_map,
+)
+from tests._test_evidence_pack_generator._shared import (
+    FakePromptClient as EvidencePromptClient,
+)
+from tests._test_evidence_pack_generator._shared import (
+    _ctx as evidence_ctx,
+)
+from tests._test_evidence_pack_generator._shared import (
+    _settings as evidence_settings,
 )
 
 
-def test_soft_copy_binding_coverage_uses_existing_structured_output_recovery(
+def test_soft_copy_binding_coverage_is_deferred_to_canonical_finalization(
     tmp_path,
 ) -> None:
-    """An unbound model sentence uses the existing bounded recovery path."""
+    """An unbound sentence is retained for the finalization coverage gate."""
 
     class BainEquivalentRecoveryClient:
         def __init__(self, prompt_client) -> None:
@@ -87,27 +95,71 @@ def test_soft_copy_binding_coverage_uses_existing_structured_output_recovery(
     )
 
     assert [request.prompt_namespace for request in client.requests] == [
-        "report_vs/artifacts/linkedin_post",
-        "report_vs/structured_output/repair",
-        "report_vs/structured_output/regenerate",
+        "report_vs/artifacts/linkedin_post"
     ]
-    assert "Tech-led companies contributed another 20%." in str(
-        prompt_client.variables_for_namespace(
-            "report_vs/structured_output/regenerate"
-        ).get("original_response")
-    )
     assert result["linkedin_post"] == (
         "Born-tech companies created 52% of reported growth. "
         "Tech-led companies contributed another 20%."
     )
     assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
-        "Born-tech companies created 52% of reported growth.",
-        "Tech-led companies contributed another 20%.",
+        "Born-tech companies created 52% of reported growth."
+    ]
+
+
+def test_soft_copy_binding_alignment_is_deferred_until_finalization(tmp_path) -> None:
+    """A source-display delta reaches the canonical finalization boundary."""
+
+    class SourceDisplayDeltaClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        def openai_chat_json(self, request, ctx):
+            del ctx
+            self.requests.append(request)
+            payload = {
+                "linkedin_post": "Growth reaches 7.3% in January.",
+                "claim_provenance": [
+                    {
+                        "claim": "Growth reaches 7.30% in January.",
+                        "classification": "factual",
+                        "evidence_ids": ["finding-1"],
+                    }
+                ],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=request.model,
+            )
+
+    client = SourceDisplayDeltaClient()
+    result = render_artifact_json_model(
+        namespace="report_vs/artifacts/linkedin_post",
+        variables={"doc_map_json": "{}"},
+        settings=artifact_settings(tmp_path),
+        ctx=artifact_ctx(),
+        openai_client=client,
+        prompt_client=ArtifactPromptClient(),
+        allow_vector_store=False,
+        vector_store_id=None,
+    )
+
+    assert len(client.requests) == 1
+    assert result["_soft_copy_claim_bindings"] == [
+        {
+            "claim": "Growth reaches 7.30% in January.",
+            "classification": "factual",
+            "evidence_ids": ["finding-1"],
+        }
     ]
 
 
 def test_empty_limitations_is_canonical_optional_pack_abstention(tmp_path) -> None:
-    """An evidence-free optional limitations result is formal abstention, not bad JSON."""
+    """An evidence-free optional limitations result is formal abstention."""
     packs = generate_evidence_packs(
         report_id="r1",
         report_name="report",

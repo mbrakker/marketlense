@@ -132,6 +132,12 @@ are derived from the retained direct `claim_evidence_map` rows rather than the
 superseded model quotes. Cached artifact reads enforce the same final
 sentence/hash invariant. Any retained provenance hash absent from final public
 copy, or any final material sentence without one retained hash, fails closed.
+The renderer and reusable prompt-family materialization boundary retain the
+model's semantic declarations without deciding sentence coverage against
+pre-correction copy. This prevents a mechanically reconcilable source-display
+delta from consuming structured-output recovery calls before finalization; the
+single finalizer remains the only coverage decision and still rejects unknown,
+ambiguous, or genuinely unbound public prose.
 Source identity applies the same role separation: copyright or legal ownership
 prose remains retained as source ownership evidence, but only a bounded
 organization-like label may populate the public publisher identity. This keeps

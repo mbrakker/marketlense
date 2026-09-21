@@ -7,10 +7,6 @@ from typing import Any, Dict, Optional
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.run_context import RunContext
-from src.contracts.soft_copy_claim_provenance import (
-    align_soft_copy_claim_bindings_to_sentences,
-    soft_copy_uncovered_sentences,
-)
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.generators.prompt_preparation import (
     PreparedPromptBundle,
@@ -19,10 +15,6 @@ from src.generators.prompt_preparation import (
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
-)
-from src.generators.artifact_normalization import (
-    normalize_artifact_summary,
-    strip_linkedin_inline_reference_ids,
 )
 from src.services.schema_validator_service import (
     provider_output_schema,
@@ -151,7 +143,9 @@ def render_artifact_json_model(
                 "prompt_system_sha256": prompt_bundle.prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_bundle.prompt_set.user.sha256,
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
                 "partial_count": len(
                     prompt_bundle.dependency_manifest.included_partials
                 ),
@@ -185,10 +179,16 @@ def render_artifact_json_model(
                 "model": prompt_bundle.resolved_model,
                 "routing_tier": prompt_bundle.routing_decision.tier,
                 "routing_policy_source": prompt_bundle.routing_decision.policy_source,
-                "routing_quality_threshold": prompt_bundle.routing_decision.quality_threshold,
-                "same_provider_fallback": prompt_bundle.routing_decision.same_provider_fallback,
+                "routing_quality_threshold": (
+                    prompt_bundle.routing_decision.quality_threshold
+                ),
+                "same_provider_fallback": (
+                    prompt_bundle.routing_decision.same_provider_fallback
+                ),
                 "compaction_enabled": prompt_bundle.routing_decision.compaction_enabled,
-                "compaction_max_input_tokens": prompt_bundle.routing_decision.max_input_tokens,
+                "compaction_max_input_tokens": (
+                    prompt_bundle.routing_decision.max_input_tokens
+                ),
                 "expected_input_tokens": expected_input_tokens,
                 "expected_cost_usd": expected_cost_usd,
                 "pricing_status": pricing_resolution.status,
@@ -203,7 +203,9 @@ def render_artifact_json_model(
                 ),
                 "vector_store_id": vector_store_id or "",
                 "prompt_content_hash": prompt_bundle.prompt_content_hash,
-                "execution_identity": prompt_bundle.execution_identity.execution_identity,
+                "execution_identity": (
+                    prompt_bundle.execution_identity.execution_identity
+                ),
             },
         )
     )
@@ -283,42 +285,13 @@ def render_artifact_json_model(
             ctx=ctx,
         )
         if root_key in _SOFT_COPY_ROOTS:
-            # This established structured-output recovery gate verifies the
-            # model envelope but never finalizes provenance. Artifact assembly
-            # still applies all deterministic copy corrections before deriving
-            # the retained canonical sentence grid and claim records.
-            public_output = payload.get(root_key)
-            if root_key == "summary":
-                public_output = normalize_artifact_summary(public_output)
-            elif root_key == "linkedin_post":
-                public_output = strip_linkedin_inline_reference_ids(
-                    str(public_output or "")
-                )
-            payload["claim_provenance"] = align_soft_copy_claim_bindings_to_sentences(
-                artifact_family=root_key,
-                public_output=public_output,
-                claim_bindings=payload.get("claim_provenance"),
-            )
-            uncovered_sentences = soft_copy_uncovered_sentences(
-                artifact_family=root_key,
-                public_output=public_output,
-                claim_bindings=payload.get("claim_provenance"),
-            )
-            if uncovered_sentences:
-                first_excerpt = " ".join(str(uncovered_sentences[0]).split())[:100]
-                raise AppError(
-                    code="soft_copy_claim_provenance_bindings_incomplete",
-                    message=(
-                        "Soft-copy provenance must declare every material "
-                        f"sentence; uncovered sentences: {len(uncovered_sentences)}; "
-                        f"first uncovered sentence starts: {first_excerpt}"
-                    ),
-                    retryable=False,
-                    context={
-                        "artifact_family": root_key,
-                        "missing_claim_count": len(uncovered_sentences),
-                    },
-                )
+            # Keep the model's semantic declarations intact until artifact
+            # assembly applies every deterministic public-copy transform.
+            # The canonical finalizer then resolves them onto the final
+            # sentence grid and fails closed when coverage is incomplete.
+            # Checking sentence coverage here would reject a binding that a
+            # source-display correction can validly reconcile downstream.
+            pass
         if payload_validator is not None:
             payload_validator(payload)
 
