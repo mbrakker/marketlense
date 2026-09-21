@@ -12,6 +12,7 @@ from src.generators._artifact_generator.generation import (
 )
 from src.generators.artifact_normalization import (
     bind_artifact_evidence_spans,
+    carry_soft_copy_binding_semantics_to_final_sentences,
     constrain_summary_to_source_backed_claims,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
@@ -27,6 +28,33 @@ from src.generators.public_editorial_quality_generator import (
 from src.services.schema_validator_service import validate_output_schema
 from src.utils.errors import AppError
 from src.utils.structured_output import StructuredOutputFailure
+
+
+def test_binding_semantics_follow_a_same_grid_source_display_correction() -> None:
+    """A deterministic display correction changes only the binding's claim text."""
+    original = "Growth reached 7.3% in January."
+    corrected = "Growth reached +7.30% in January 2025."
+
+    carried = carry_soft_copy_binding_semantics_to_final_sentences(
+        artifact_family="expert_comment",
+        original_public_text=original,
+        final_public_text=corrected,
+        original_claim_bindings=[
+            {
+                "claim": original,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+        ],
+    )
+
+    assert carried == [
+        {
+            "claim": corrected,
+            "classification": "factual",
+            "evidence_ids": ["f1"],
+        }
+    ]
 
 
 def test_normalize_artifact_insights_preserves_metric_fields() -> None:
@@ -176,7 +204,9 @@ def test_normalize_artifact_summary_removes_editorial_scaffold_labels() -> None:
     )
 
 
-def test_normalize_artifact_summary_recovers_invalid_compact_copy_from_short_claim() -> None:
+def test_normalize_artifact_summary_recovers_invalid_compact_copy_from_short_claim() -> (
+    None
+):
     summary = normalize_artifact_summary(
         {
             "card_tldr_compact": "This model-provided compact summary exceeds the configured card limit and cannot be safely retained as public reader-facing copy today.",

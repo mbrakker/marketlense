@@ -126,7 +126,7 @@ public-copy corrections and before retention: generated copy, source-backed
 fallbacks and source-display preservation, canonical sentence-grid alignment,
 then mechanically derived claim IDs, hashes, and source spans. A source-display
 correction carries the existing validated classification and evidence IDs onto
-the corrected sentence; it never selects new evidence. If the summary fallback
+the corrected same-grid sentence; it never selects new evidence. If the summary fallback
 replaces TLDR, compact TLDR, or executive-summary copy, its factual bindings
 are derived from the retained direct `claim_evidence_map` rows rather than the
 superseded model quotes. Cached artifact reads enforce the same final

@@ -50,6 +50,7 @@ from src.generators.analysis_store_adapter import (
 from src.generators.artifact_normalization import (
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
+    carry_soft_copy_binding_semantics_to_final_sentences,
     constrain_summary_to_source_backed_claims,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
@@ -208,6 +209,12 @@ def assemble_artifacts_payload(
         evidence_packs=evidence_packs,
     )
     summary_fallback_applied = constrain_summary_to_source_backed_claims(summary)
+    pre_correction_soft_copy = {
+        "summary": deepcopy(summary),
+        "expert_comment": expert_comment,
+        "linkedin_post": linkedin_post,
+    }
+    pre_correction_bindings = deepcopy(soft_copy_claim_bindings)
     if (
         evidence_span_stats.get("bound_count", 0) > 0
         or evidence_span_stats.get("unbound_count", 0) > 0
@@ -269,6 +276,21 @@ def assemble_artifacts_payload(
         public_text=linkedin_post,
         claim_bindings=soft_copy_claim_bindings.get("linkedin_post"),
     )
+    for family, final_public_output in {
+        "summary": summary,
+        "expert_comment": expert_comment,
+        "linkedin_post": linkedin_post,
+    }.items():
+        if family == "summary" and summary_fallback_applied:
+            continue
+        carried = carry_soft_copy_binding_semantics_to_final_sentences(
+            artifact_family=family,
+            original_public_text=pre_correction_soft_copy[family],
+            final_public_text=final_public_output,
+            original_claim_bindings=pre_correction_bindings.get(family),
+        )
+        if carried:
+            soft_copy_claim_bindings[family] = carried
     metric_spine = derive_metric_spine_from_insights(
         insights_final, editorial_plan=editorial_plan, evidence_packs=evidence_packs
     )

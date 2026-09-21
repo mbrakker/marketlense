@@ -622,6 +622,44 @@ def retain_bound_optional_soft_copy_sentences(
     return " ".join(retained)
 
 
+def carry_soft_copy_binding_semantics_to_final_sentences(
+    *,
+    artifact_family: str,
+    original_public_text: object,
+    final_public_text: object,
+    original_claim_bindings: object,
+) -> list[dict[str, Any]]:
+    """Carry declared semantics across a deterministic same-grid correction.
+
+    This never resolves an unknown or ambiguous binding. It applies only when
+    the original public grid is completely and uniquely covered and the final
+    correction retains the same sentence count and order.
+    """
+
+    original_text = soft_copy_public_text(artifact_family, original_public_text)
+    final_text = soft_copy_public_text(artifact_family, final_public_text)
+    original_sentences = soft_copy_material_sentences(original_text)
+    final_sentences = soft_copy_material_sentences(final_text)
+    if not original_sentences or len(original_sentences) != len(final_sentences):
+        return []
+    aligned = align_soft_copy_claim_bindings_to_sentences(
+        artifact_family=artifact_family,
+        public_output=original_public_text,
+        claim_bindings=original_claim_bindings,
+    )
+    binding_by_sentence = {
+        " ".join(str(binding.get("claim") or "").split()): binding
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    if any(sentence not in binding_by_sentence for sentence in original_sentences):
+        return []
+    return [
+        {**binding_by_sentence[original], "claim": final}
+        for original, final in zip(original_sentences, final_sentences, strict=True)
+    ]
+
+
 def source_backed_summary_claim_bindings(
     summary: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
