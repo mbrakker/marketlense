@@ -41,6 +41,7 @@ text: |
   - If something is not clearly supported, omit it
   - Do not reference report pages, sections, evidence packs, evidence IDs, evidence spans, JSON fields, or any internal document structure in `linkedin_post`.
   - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `linkedin_post`, quoting the covered text as its `claim` (one object per sentence or consecutive sentence group; minor punctuation differences are resolved mechanically), a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
+  - Before returning, privately segment the completed post and audit `claim_provenance` coverage. Include attribution, transition, question, and interpretive bridge sentences; if a sentence cannot be classified and bound, omit that sentence from `linkedin_post` rather than omit its private binding.
 
   Output:
   - Valid JSON only, shaped as `{"linkedin_post": "...", "claim_provenance": [{"claim": "...", "classification": "factual", "evidence_ids": ["..."]}]}`

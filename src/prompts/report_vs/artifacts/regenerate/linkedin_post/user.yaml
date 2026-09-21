@@ -45,3 +45,4 @@ text: |
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".
   - `claim_provenance` is private retained metadata. Cover every material sentence or claim with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Bind each object to exact approved evidence IDs; never expose IDs in `linkedin_post`. A factual claim must have at least one evidence ID.
+  - Before returning, privately segment the completed post and audit `claim_provenance` coverage, including attribution, transition, question, and interpretive bridge sentences. Omit any sentence that cannot be classified and bound rather than omitting its private binding.

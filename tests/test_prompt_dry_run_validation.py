@@ -259,6 +259,7 @@ def test_linkedin_prompt_materializes_editorial_plan_and_report_scope(
     assert "no more than four distinct numerical values" in rendered.text
     assert "Do not use bullets" in rendered.text
     assert "The evidence points to" in rendered.text
+    assert "interpretive bridge sentences" in rendered.text
 
 
 def test_linkedin_regeneration_prompt_separates_claim_scope_from_full_post_rules() -> (
