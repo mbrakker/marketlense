@@ -73,9 +73,9 @@ def test_extract_source_provenance_preserves_distinct_explicit_roles() -> None:
         assert observed.publisher_name == expected["publisher_name"], case["id"]
         assert list(observed.author_names) == expected["author_names"], case["id"]
         assert observed.author_kind == expected["author_kind"], case["id"]
-        assert list(observed.data_provider_names) == expected["data_provider_names"], case[
-            "id"
-        ]
+        assert list(observed.data_provider_names) == expected["data_provider_names"], (
+            case["id"]
+        )
         assert observed.report_owner_name == expected["report_owner_name"], case["id"]
 
 
@@ -103,7 +103,9 @@ def test_extract_source_provenance_accepts_pdf_text_replacement_for_copyright() 
     assert observed.report_owner_name == "Kepios"
 
 
-def test_extract_source_provenance_does_not_promote_copyright_prose_to_publisher() -> None:
+def test_extract_source_provenance_does_not_promote_copyright_prose_to_publisher() -> (
+    None
+):
     observed = extract_source_provenance(
         "© 2026 Copyright owned by one or more of the KPMG International entities. "
         "KPMG International entities provide no services to clients."

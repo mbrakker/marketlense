@@ -136,11 +136,12 @@ Source identity applies the same role separation: copyright or legal ownership
 prose remains retained as source ownership evidence, but only a bounded
 organization-like label may populate the public publisher identity. This keeps
 cover and report-card imprints valid without suppressing the source's legal
-attribution. During targeted regeneration, mechanically assembled projections
-(for example metric spine, key figures, advisory, claim ledgers, and soft-copy
-provenance) may change only when the plan explicitly permits one of their
-declared authored inputs; an unrelated authored root remains a strict scope
-violation.
+attribution. During targeted regeneration, only `soft_copy_claim_provenance`
+may change alongside an explicitly scoped Summary, Expert Comment, or LinkedIn
+repair because finalization mechanically rebuilds it from that public copy.
+Every other derived root remains a strict scope violation unless this boundary
+itself verifies its deterministic recomputation from the allowed canonical
+inputs.
 
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy

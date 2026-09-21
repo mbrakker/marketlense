@@ -52,7 +52,9 @@ def _ctx() -> RunContext:
     )
 
 
-def test_scope_validation_allows_recomputed_projections_but_not_unrelated_authored_roots() -> None:
+def test_scope_validation_rejects_tampered_derived_artifact_despite_allowed_dependency() -> (
+    None
+):
     plan = SimpleNamespace(
         targets=[SimpleNamespace(allowed_paths=["summary.tldr", "insights_final"])]
     )
@@ -70,9 +72,32 @@ def test_scope_validation_allows_recomputed_projections_but_not_unrelated_author
         "key_figures": [{"figure": "2"}],
     }
 
-    assert _scope_validation_report(
-        before=before, after=candidate, plan=plan
-    ).status == "pass"
+    report = _scope_validation_report(before=before, after=candidate, plan=plan)
+
+    assert report.status == "fail"
+    assert [issue.affected_section for issue in report.issues] == [
+        "key_figures",
+        "metric_spine",
+    ]
+
+
+def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -> None:
+    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary.tldr"])])
+    before = {
+        "summary": {"tldr": "Before."},
+        "soft_copy_claim_provenance": {"claims": [{"claim_id": "before"}]},
+        "cover_semantics": {"title": "Stable"},
+    }
+    candidate = {
+        **deepcopy(before),
+        "summary": {"tldr": "After."},
+        "soft_copy_claim_provenance": {"claims": [{"claim_id": "after"}]},
+    }
+
+    assert (
+        _scope_validation_report(before=before, after=candidate, plan=plan).status
+        == "pass"
+    )
 
     candidate["cover_semantics"] = {"title": "Unrelated change"}
 

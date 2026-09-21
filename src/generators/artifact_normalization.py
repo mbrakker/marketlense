@@ -583,7 +583,9 @@ def preserve_soft_copy_binding_source_displays(
                 )
 
 
-def source_backed_summary_claim_bindings(summary: Dict[str, Any]) -> List[Dict[str, Any]]:
+def source_backed_summary_claim_bindings(
+    summary: Dict[str, Any],
+) -> List[Dict[str, Any]]:
     """Derive fallback-summary bindings solely from retained direct evidence."""
 
     bindings: List[Dict[str, Any]] = []
@@ -599,8 +601,7 @@ def source_backed_summary_claim_bindings(summary: Dict[str, Any]) -> List[Dict[s
                     *[
                         _s(span.get("evidence_id")).strip()
                         for span in claim.get("evidence_spans") or []
-                        if isinstance(span, dict)
-                        and _span_is_direct(span)
+                        if isinstance(span, dict) and _span_is_direct(span)
                     ],
                 ]
                 if evidence_id

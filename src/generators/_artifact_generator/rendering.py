@@ -337,7 +337,9 @@ def render_artifact_json_model(
         ),
         ctx,
         call_model=call_model,
-        normalize_payload=lambda payload: _normalize_artifact_response(payload, root_key),
+        normalize_payload=lambda payload: _normalize_artifact_response(
+            payload, root_key
+        ),
         validate_payload=validate_payload,
         is_substantive=lambda payload: _artifact_response_substantive(
             payload, root_key

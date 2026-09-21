@@ -64,19 +64,11 @@ __all__ = [
 ]
 
 
-# These roots are assembled mechanically from the authored source roots.  A
-# scoped repair may legitimately change them, but only when it also changes a
-# declared upstream dependency.  They must never become independent repair
-# targets or conceal a mutation to an unrelated authored root.
+# Provenance is the sole retained projection regenerated at this boundary. It
+# is mechanically rebuilt whenever scoped public soft copy changes. Other
+# derived roots remain strict until their deterministic recomputation is
+# performed and verified by this validation boundary.
 _DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
-    "metric_spine": frozenset({"insights_final"}),
-    "topics_covered": frozenset({"toc_entries", "summary", "insights_final"}),
-    "key_figures": frozenset({"insights_final"}),
-    "chart_insight_cards": frozenset({"insights_final"}),
-    "executive_advisory": frozenset(
-        {"summary", "insights_final", "quotes_final"}
-    ),
-    "claim_ledgers": frozenset({"summary", "insights_final", "quotes_final"}),
     "soft_copy_claim_provenance": frozenset(
         {"summary", "expert_comment", "linkedin_post"}
     ),

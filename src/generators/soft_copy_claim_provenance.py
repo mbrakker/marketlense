@@ -183,12 +183,8 @@ def assert_retained_soft_copy_claims_match_public_copy(
     claims = soft_copy_claim_provenance_from_payload(raw_provenance)
     for family in sorted(_SUPPORTED_FAMILIES):
         public_text = soft_copy_public_text(family, artifacts.get(family))
-        family_claims = [
-            claim for claim in claims if claim.artifact_family == family
-        ]
-        if retained_soft_copy_claims_cover_text(
-            text=public_text, claims=family_claims
-        ):
+        family_claims = [claim for claim in claims if claim.artifact_family == family]
+        if retained_soft_copy_claims_cover_text(text=public_text, claims=family_claims):
             continue
         public_hashes = {
             _sha256(sentence)
@@ -207,7 +203,6 @@ def assert_retained_soft_copy_claims_match_public_copy(
                 "obsolete_provenance_sentence_count": len(
                     retained_hashes - public_hashes
                 ),
-                "duplicate_provenance_count": len(family_claims)
-                - len(retained_hashes),
+                "duplicate_provenance_count": len(family_claims) - len(retained_hashes),
             },
         )
