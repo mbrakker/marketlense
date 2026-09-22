@@ -1001,6 +1001,18 @@ def _run_validation_regeneration_loop(
         strategy_fingerprint = _attempt_strategy_fingerprint(
             plan, regeneration_response
         )
+        # The planner reasons over planned strategy/evidence keys, while the
+        # audit records what the attempt actually used. Both are retained so a
+        # rejected candidate rules out its planned combination for every later
+        # attempt regardless of which evidence the generator finally selected.
+        planned_strategy_keys = {
+            repair_strategy_fingerprint(
+                [issue.failure_fingerprint for issue in target.issues],
+                target.repair_strategy,
+                target.selected_evidence_ids,
+            )
+            for target in plan.targets
+        }
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
         )
@@ -1096,6 +1108,7 @@ def _run_validation_regeneration_loop(
                     rejected_strategy_keys
                 )
                 rejected_strategy_keys.add(strategy_fingerprint)
+                rejected_strategy_keys.update(planned_strategy_keys)
                 repair_memory.append(repair_delta)
                 # Deterministic identity corrections are candidate-scoped: a
                 # rolled-back candidate leaves the promoted identity untouched.
