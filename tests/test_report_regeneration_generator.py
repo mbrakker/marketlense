@@ -3652,6 +3652,54 @@ def test_quotes_ladder_rejects_failed_restore_before_rewrite() -> None:
     assert second_plan.targets[0].repair_action == "REGENERATE_ITEM"
 
 
+def test_identity_ladder_abstains_then_exhausts_without_repeats() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message=(
+            "[factual_claim|unsupported_factual_claim] Title not supported: "
+            "Wrong Title."
+        ),
+        severity="error",
+        affected_section="metadata.title",
+    )
+
+    first_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+    assert first_plan.targets[0].repair_strategy == "canonical_identity"
+    assert first_plan.targets[0].repair_action == "COPY_CANONICAL_SOURCE_VALUE"
+
+    fingerprints = [first_plan.targets[0].issues[0].failure_fingerprint]
+    rejected_identity = {
+        repair_strategy_fingerprint(fingerprints, "canonical_identity", [])
+    }
+    second_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_identity,
+    )
+    assert second_plan.targets[0].repair_strategy == "safe_abstain"
+    assert second_plan.targets[0].repair_action == "ABSTAIN"
+
+    rejected_abstain = rejected_identity | {
+        repair_strategy_fingerprint(fingerprints, "safe_abstain", [])
+    }
+    exhausted_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_abstain,
+    )
+    # Every distinct identity strategy is rejected: no targeted plan remains,
+    # so the loop stops with a typed terminal failure instead of repeating.
+    assert exhausted_plan.mode == "skip"
+    assert exhausted_plan.targets == []
+
+
 def test_attempt_strategy_fingerprint_describes_actual_selection() -> None:
     from src.orchestrators._report_analysis_orchestrator.validation import (
         _attempt_strategy_fingerprint,

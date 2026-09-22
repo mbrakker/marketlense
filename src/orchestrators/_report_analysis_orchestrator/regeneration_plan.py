@@ -399,17 +399,30 @@ def _strategy_options(
 
     options: List[tuple[str, str]] = []
     if target_key == "report_identity":
+        # Report identity has exactly one source-provable correction and one
+        # safe terminal.  A generic model rewrite of an identity failure is
+        # never a distinct strategy.
         options.append(("COPY_CANONICAL_SOURCE_VALUE", "canonical_identity"))
+        options.append(("ABSTAIN", "safe_abstain"))
     elif target_key == "quotes" and _issues_support_quote_restore(ordered_issues):
         options.append(("COPY_CANONICAL_SOURCE_VALUE", "canonical_quote_restore"))
+        options.append(("REGENERATE_ITEM", "current_evidence"))
+        if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
+            options.append(("REBIND_EVIDENCE", "alternative_evidence"))
+        options.append(("REMOVE_CLAIM", "safe_removal"))
     elif target_key == "insights_bundle" and _issues_support_metric_copy(
         ordered_issues
     ):
         options.append(("CORRECT_PROTECTED_FACT", "canonical_metric_copy"))
-    options.append(("REGENERATE_ITEM", "current_evidence"))
-    if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
-        options.append(("REBIND_EVIDENCE", "alternative_evidence"))
-    options.append(("REMOVE_CLAIM", "safe_removal"))
+        options.append(("REGENERATE_ITEM", "current_evidence"))
+        if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
+            options.append(("REBIND_EVIDENCE", "alternative_evidence"))
+        options.append(("REMOVE_CLAIM", "safe_removal"))
+    else:
+        options.append(("REGENERATE_ITEM", "current_evidence"))
+        if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
+            options.append(("REBIND_EVIDENCE", "alternative_evidence"))
+        options.append(("REMOVE_CLAIM", "safe_removal"))
     return options
 
 
@@ -437,7 +450,7 @@ def _build_target(
     target_key: str,
     issues: List[RegenerationIssue],
     rejected_strategy_keys: set[str] | None = None,
-) -> RegenerationTarget:
+) -> RegenerationTarget | None:
     ordered_issues = sorted(
         issues,
         key=lambda issue: (
@@ -451,8 +464,8 @@ def _build_target(
         {evidence_id for issue in ordered_issues for evidence_id in issue.evidence_ids}
     )
     rejected = rejected_strategy_keys or set()
-    repair_action = "REMOVE_CLAIM"
-    repair_strategy = "safe_removal"
+    repair_action = ""
+    repair_strategy = ""
     selected_evidence_ids: List[str] = []
     for action, strategy in _strategy_options(target_key, ordered_issues):
         candidate_key = repair_strategy_fingerprint(
@@ -466,6 +479,11 @@ def _build_target(
             [] if action in {"REMOVE_CLAIM", "ABSTAIN"} else evidence_ids
         )
         break
+    if not repair_strategy:
+        # Every materially distinct strategy for this failure was already
+        # rejected. Repeating any of them under another label is prohibited;
+        # the failure stays terminal instead of burning bounded attempts.
+        return None
     return RegenerationTarget(
         target_section=target_key,
         regenerate_steps=_target_steps(target_key),
@@ -529,10 +547,27 @@ def _build_regeneration_plan(
         ]
     if grouped:
         targets = [
-            _build_target(target_key, grouped[target_key], rejected_strategy_keys)
-            for target_key in TARGET_ORDER
-            if target_key in grouped
+            built_target
+            for built_target in (
+                _build_target(target_key, grouped[target_key], rejected_strategy_keys)
+                for target_key in TARGET_ORDER
+                if target_key in grouped
+            )
+            if built_target is not None
         ]
+        if not targets:
+            # Every targetable failure exhausted its distinct strategies; the
+            # remaining issues stay terminal instead of repeating a rejection.
+            return RegenerationPlan(
+                mode="skip",
+                targets=[],
+                unmappable_issues=[
+                    issue
+                    for target_issues in grouped.values()
+                    for issue in target_issues
+                ],
+                broad_retry_allowed=False,
+            )
         return RegenerationPlan(
             mode="targeted",
             targets=targets,
@@ -547,12 +582,24 @@ def _build_regeneration_plan(
             broad_retry_allowed=False,
         )
     if unmappable and broad_retry_available:
-        return RegenerationPlan(
-            mode="broad",
-            targets=[
+        broad_targets = [
+            built_target
+            for built_target in (
                 _build_target(target_key, list(unmappable), rejected_strategy_keys)
                 for target_key in BROAD_TARGETS
-            ],
+            )
+            if built_target is not None
+        ]
+        if not broad_targets:
+            return RegenerationPlan(
+                mode="skip",
+                targets=[],
+                unmappable_issues=unmappable,
+                broad_retry_allowed=False,
+            )
+        return RegenerationPlan(
+            mode="broad",
+            targets=broad_targets,
             unmappable_issues=unmappable,
             broad_retry_allowed=False,
         )

@@ -396,6 +396,7 @@ _DETERMINISTIC_REPAIR_ACTIONS = {
     "canonical_quote_restore": "COPY_CANONICAL_SOURCE_VALUE",
     "canonical_metric_copy": "CORRECT_PROTECTED_FACT",
     "canonical_identity_abstained": "ABSTAIN",
+    "safe_abstain": "ABSTAIN",
 }
 
 
@@ -2059,6 +2060,15 @@ def _handle_report_identity_regeneration(
     """
 
     identity = _public_report_identity(execution.runtime.safe_doc_map)
+    if execution.target.repair_action != "COPY_CANONICAL_SOURCE_VALUE":
+        # The deterministic correction was already rejected for this failure
+        # fingerprint: abstain under the planned terminal strategy instead of
+        # repeating the same correction under another nominal label.
+        execution.state.deterministic_repairs.append(
+            execution.target.repair_strategy or "canonical_identity_abstained"
+        )
+        execution.state.regenerated_sections.append("report_identity")
+        return
     wanted_fields = {
         str(issue.affected_section or "").strip().lower().removeprefix("metadata.")
         for issue in execution.target.issues
@@ -2089,8 +2099,12 @@ def _handle_report_identity_regeneration(
         )
         return
     # No canonical identity is retained: abstain explicitly rather than let a
-    # later broad retry invent a title.
-    execution.state.deterministic_repairs.append("canonical_identity_abstained")
+    # later retry invent a title.
+    execution.state.deterministic_repairs.append(
+        "canonical_identity_abstained"
+        if execution.target.repair_strategy == "canonical_identity"
+        else (execution.target.repair_strategy or "canonical_identity_abstained")
+    )
     execution.state.regenerated_sections.append("report_identity")
 
 

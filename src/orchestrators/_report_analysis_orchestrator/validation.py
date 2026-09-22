@@ -1015,6 +1015,7 @@ def _run_validation_regeneration_loop(
             validation_snapshot_path
         )
         promotion_outcome = "not_attempted"
+        repeated_rejected_strategy = False
         artifacts_path = regeneration_response.artifacts_path
         if candidate_enforced:
             if candidate_validation_report.status == "pass":
@@ -1087,6 +1088,13 @@ def _run_validation_regeneration_loop(
                 # compound the original failure on every later attempt.
                 working_artifacts = deepcopy(promoted_artifacts)
                 current_validation_report = promoted_validation_report
+                # The attempt fingerprint describes the actual strategy and
+                # evidence used.  Re-detecting it here means the attempt
+                # repeated an already-rejected combination under another
+                # nominal label; stop instead of burning further attempts.
+                repeated_rejected_strategy = strategy_fingerprint in (
+                    rejected_strategy_keys
+                )
                 rejected_strategy_keys.add(strategy_fingerprint)
                 repair_memory.append(repair_delta)
                 # Deterministic identity corrections are candidate-scoped: a
@@ -1148,6 +1156,21 @@ def _run_validation_regeneration_loop(
             latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
         )
         attempts.append(attempt_result)
+        if repeated_rejected_strategy:
+            logger.info(
+                log_event(
+                    attempt_ctx,
+                    role="orchestrator",
+                    event="validation_regen_equivalent_strategy_rejected",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "strategy_fingerprint": strategy_fingerprint,
+                    },
+                )
+            )
+            break
         logger.info(
             log_event(
                 attempt_ctx,
