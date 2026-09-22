@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
 from src.contracts.config import AppSettings
@@ -989,9 +990,24 @@ def select_artifact_insights(
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Keep theme coverage, then fill the report's required grounded insight slots."""
+    """Keep theme coverage, then fill the report's required grounded insight slots.
+
+    When a final insight shares a stable ID with a chosen candidate, the
+    candidate is the evidence-anchored source of the protected factual fields
+    (metric value/unit/timeframe/geography/cohort/denominator/observation
+    status and its evidence binding).  The final stage may rewrite editorial
+    wording, but any factual drift it introduces is deterministically
+    reverted to the retained candidate values instead of mutating the fact.
+    """
     plan = normalize_artifact_editorial_plan(editorial_plan)
-    ranked = _ranked_unique_insights(final_insights, candidate_insights)
+    candidate_facts = _candidate_factual_fields(candidate_insights)
+    anchored_finals = [
+        _restore_candidate_factual_fields(item, candidate_facts)
+        if isinstance(item, dict)
+        else item
+        for item in final_insights
+    ]
+    ranked = _ranked_unique_insights(anchored_finals, candidate_insights)
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[tuple[str, str]] = set()
@@ -1013,6 +1029,64 @@ def select_artifact_insights(
             break
         _append_distinct_insight(selected, selected_keys, insight)
     return selected
+
+
+def _candidate_factual_fields(
+    candidate_insights: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Index the retained factual payload of each stable-ID candidate."""
+
+    facts: Dict[str, Dict[str, Any]] = {}
+    for insight in candidate_insights:
+        if not isinstance(insight, dict):
+            continue
+        insight_id = _s(insight.get("id")).strip()
+        metric = insight.get("metric")
+        if (
+            not insight_id
+            or not isinstance(metric, dict)
+            or not _s(metric.get("value")).strip()
+        ):
+            continue
+        facts[insight_id] = {
+            "metric": deepcopy(metric),
+            "evidence_id": _s(insight.get("evidence_id")).strip(),
+        }
+    return facts
+
+
+def _restore_candidate_factual_fields(
+    insight: Dict[str, Any], candidate_facts: Dict[str, Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Deterministically revert final-stage factual drift to the candidate."""
+
+    insight_id = _s(insight.get("id")).strip()
+    candidate = candidate_facts.get(insight_id)
+    if candidate is None:
+        return insight
+    restored = dict(insight)
+    current_metric = restored.get("metric")
+    current_metric = current_metric if isinstance(current_metric, dict) else {}
+    candidate_metric = candidate["metric"]
+    drifted = any(
+        _s(current_metric.get(field_name)).strip()
+        != _s(candidate_metric.get(field_name)).strip()
+        for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+        if _s(candidate_metric.get(field_name)).strip()
+    )
+    if drifted:
+        restored["metric"] = {
+            **current_metric,
+            **{
+                field_name: deepcopy(candidate_metric.get(field_name, ""))
+                for field_name in (*METRIC_FIELDS, *METRIC_BINDING_FIELDS)
+                if field_name in candidate_metric
+            },
+        }
+    candidate_evidence_id = candidate["evidence_id"]
+    if candidate_evidence_id and not _s(restored.get("evidence_id")).strip():
+        restored["evidence_id"] = candidate_evidence_id
+    return restored
 
 
 def build_expert_synthesis_context(

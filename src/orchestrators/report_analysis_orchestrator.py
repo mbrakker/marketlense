@@ -1110,6 +1110,7 @@ def run_report_analysis(
             regeneration_attempts,
             regeneration_loop_state,
             regeneration_paths,
+            payload_identity_overrides,
         ) = _run_validation_regeneration_loop(
             runtime=runtime,
             mode_ctx=mode_ctx,
@@ -1125,6 +1126,10 @@ def run_report_analysis(
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
         )
+        for field_name, value in payload_identity_overrides.items():
+            # Canonical source-identity corrections survive promotion with the
+            # validated candidate; the final public payload must carry them.
+            setattr(base_payload, field_name, str(value))
         mode_evidence_paths.update(regeneration_paths)
         if validation_report.source_path:
             mode_evidence_paths["validation"] = validation_report.source_path

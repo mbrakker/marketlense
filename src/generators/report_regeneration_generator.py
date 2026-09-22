@@ -54,6 +54,10 @@ from src.generators.artifact_prompt_provenance import (
     artifact_family_for_producing_namespace,
     artifact_prompt_identity,
 )
+from src.generators.evidence_compatibility import (
+    CompatibilityQuery,
+    rank_compatible_alternatives,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
@@ -101,6 +105,9 @@ class _RegenerationState:
     soft_copy_evidence_selections: Dict[str, Dict[str, Any]] = field(
         default_factory=dict
     )
+    payload_overrides: Dict[str, Any] = field(default_factory=dict)
+    selected_evidence_ids: List[str] = field(default_factory=list)
+    deterministic_repairs: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -257,6 +264,10 @@ def regenerate_artifacts(
                 grounding_package=grounding_package,
             )
         )
+        # The attempt fingerprint must describe the evidence actually used,
+        # not the planned evidence, so a failed strategy cannot be repeated
+        # under another nominal label.
+        state.selected_evidence_ids.extend(grounding_package.get("evidence_ids") or [])
         logger.info(
             log_event(
                 target_ctx,
@@ -358,6 +369,10 @@ def regenerate_artifacts(
         artifacts_path="",
         artifacts_snapshot_path=candidate_artifacts_path,
         candidate_artifacts_path=candidate_artifacts_path,
+        repair_action=_actual_repair_action(state, request),
+        repair_strategy=_actual_repair_strategy(state, request),
+        selected_evidence_ids=_unique_strings(state.selected_evidence_ids),
+        payload_overrides=deepcopy(state.payload_overrides),
     )
     logger.info(
         log_event(
@@ -374,6 +389,34 @@ def regenerate_artifacts(
         )
     )
     return response
+
+
+_DETERMINISTIC_REPAIR_ACTIONS = {
+    "canonical_identity": "COPY_CANONICAL_SOURCE_VALUE",
+    "canonical_quote_restore": "COPY_CANONICAL_SOURCE_VALUE",
+    "canonical_metric_copy": "CORRECT_PROTECTED_FACT",
+    "canonical_identity_abstained": "ABSTAIN",
+}
+
+
+def _actual_repair_action(
+    state: _RegenerationState, request: ArtifactRegenerationRequest
+) -> str:
+    for label in state.deterministic_repairs:
+        action = _DETERMINISTIC_REPAIR_ACTIONS.get(label)
+        if action:
+            return action
+    targets = request.plan.targets
+    return targets[0].repair_action if targets else "REGENERATE_ITEM"
+
+
+def _actual_repair_strategy(
+    state: _RegenerationState, request: ArtifactRegenerationRequest
+) -> str:
+    if state.deterministic_repairs:
+        return "+".join(dict.fromkeys(state.deterministic_repairs))
+    targets = request.plan.targets
+    return targets[0].repair_strategy if targets else "current_evidence"
 
 
 def _prepare_grounding(
@@ -443,6 +486,19 @@ def _build_grounding_package(
         for issue in target.issues
         for evidence_id in issue.excluded_evidence_ids
     )
+    failed_ids = {
+        _normalized_evidence_id(evidence_id)
+        for evidence_id in (
+            quarantined_ids
+            + [
+                evidence_id
+                for issue in target.issues
+                for evidence_id in issue.evidence_ids
+            ]
+        )
+        if _normalized_evidence_id(evidence_id)
+    }
+    issue_pages = _unique_ints(page for issue in target.issues for page in issue.pages)
     search_text = " ".join(
         part
         for part in (
@@ -451,15 +507,29 @@ def _build_grounding_package(
         )
         if part
     )
-    relevant_evidence = (
-        _replacement_evidence_entries(
+    rebind_to_alternative = target.repair_strategy == "alternative_evidence"
+    if rebind_to_alternative:
+        relevant_evidence = _replacement_evidence_entries(
             evidence_packs=evidence_packs,
-            excluded_evidence_ids=set(quarantined_ids),
+            excluded_evidence_ids=failed_ids,
             search_text=search_text,
+            pages=issue_pages,
+            section=target.target_section,
         )
-        if quarantined_ids
-        else _collect_relevant_evidence_entries(target.issues, evidence_packs, doc_map)
-    )
+    else:
+        relevant_evidence = (
+            _replacement_evidence_entries(
+                evidence_packs=evidence_packs,
+                excluded_evidence_ids=set(quarantined_ids),
+                search_text=search_text,
+                pages=issue_pages,
+                section=target.target_section,
+            )
+            if quarantined_ids
+            else _collect_relevant_evidence_entries(
+                target.issues, evidence_packs, doc_map
+            )
+        )
     if not relevant_evidence and target.target_section in {
         "summary",
         "expert_comment",
@@ -467,7 +537,9 @@ def _build_grounding_package(
     }:
         relevant_evidence = _replacement_evidence_entries(
             evidence_packs=evidence_packs,
-            excluded_evidence_ids=set(quarantined_ids),
+            excluded_evidence_ids=failed_ids
+            if rebind_to_alternative
+            else set(quarantined_ids),
             search_text=" ".join(
                 part
                 for part in (
@@ -477,6 +549,8 @@ def _build_grounding_package(
                 )
                 if part
             ),
+            pages=issue_pages,
+            section=target.target_section,
         )
     evidence_ids = _unique_strings(
         _entry_evidence_id(entry) for entry in relevant_evidence
@@ -494,7 +568,7 @@ def _build_grounding_package(
         ],
         "evidence_ids": evidence_ids,
         "quarantined_evidence_ids": quarantined_ids,
-        "pages": _unique_ints(page for issue in target.issues for page in issue.pages),
+        "pages": issue_pages,
     }
 
 
@@ -545,12 +619,13 @@ def _build_soft_copy_claim_evidence_package(
         selected = resolved(parent_ids)
         strategy = "parent_insight_or_theme" if selected else ""
     if not selected:
-        selected = _lexically_relevant_evidence_entries(
+        selected = _typed_compatible_evidence_entries(
             evidence_by_id=evidence_by_id,
             quarantined_ids=quarantined,
             search_text=" ".join((claim_text, issue.message)),
+            require_relevance=True,
         )
-        strategy = "lexical_fallback" if selected else "abstain"
+        strategy = "typed_compatibility_fallback" if selected else "abstain"
 
     evidence_ids = [_entry_evidence_id(entry) for entry in selected]
     provenance = {
@@ -781,25 +856,76 @@ def _token_overlap(query_tokens: set[str], value: str) -> int:
     return len(query_tokens.intersection(_evidence_query_tokens(value)))
 
 
+def _typed_compatible_evidence_entries(
+    *,
+    evidence_by_id: Dict[str, Dict[str, Any]],
+    quarantined_ids: set[str],
+    search_text: str,
+    metric: Dict[str, Any] | None = None,
+    pages: List[int] | None = None,
+    section: str = "",
+    exclude_ids: set[str] | None = None,
+    require_relevance: bool = False,
+) -> List[Dict[str, Any]]:
+    """Rank retained alternatives with the bounded typed compatibility scorer.
+
+    Replaces the former lexical-only fallback: same-number/wrong-geography,
+    wrong-period, wrong-cohort, wrong-denominator, and forecast-vs-observed
+    near-matches can never outrank compatible evidence, and conflicting or
+    quarantined entries are never returned.
+    """
+
+    def unwrap(entry: Dict[str, Any]) -> Dict[str, Any]:
+        payload = entry.get("entry") if isinstance(entry, dict) else None
+        return payload if isinstance(payload, dict) else entry
+
+    query = CompatibilityQuery(
+        text=search_text,
+        metric=metric or {},
+        pages=pages or [],
+        section=section,
+    )
+    blocked = set(quarantined_ids) | set(exclude_ids or set())
+    ranked = rank_compatible_alternatives(
+        query,
+        [
+            (evidence_id, unwrap(entry))
+            for evidence_id, entry in evidence_by_id.items()
+            if evidence_id not in blocked
+        ],
+        quarantined_ids=sorted(blocked),
+        limit=MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES * 4,
+    )
+    if require_relevance:
+        # A claim-scoped fallback is repair support only when it is relevant
+        # to the failed material through its metric payload or shared tokens;
+        # otherwise the repair abstains instead of inventing support.
+        ranked = [
+            item
+            for item in ranked
+            if item.breakdown.get("token_relevance", 0.0) > 0.0
+            or item.breakdown.get("metric_match", 0.0) > 0.0
+        ]
+    return [
+        evidence_by_id[item.evidence_id]
+        for item in ranked[:MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES]
+    ]
+
+
 def _lexically_relevant_evidence_entries(
     *,
     evidence_by_id: Dict[str, Dict[str, Any]],
     quarantined_ids: set[str],
     search_text: str,
 ) -> List[Dict[str, Any]]:
-    query_tokens = _evidence_query_tokens(search_text)
-    ranked = [
-        (_token_overlap(query_tokens, _dump_json(entry)), evidence_id, entry)
-        for evidence_id, entry in evidence_by_id.items()
-        if evidence_id not in quarantined_ids
-    ]
-    return [
-        entry
-        for overlap, _evidence_id, entry in sorted(
-            ranked, key=lambda item: (-item[0], item[1])
-        )
-        if overlap > 0
-    ][:MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES]
+    """Compatibility-ranked fallback for claim-scoped soft-copy repairs."""
+
+    return _typed_compatible_evidence_entries(
+        evidence_by_id=evidence_by_id,
+        quarantined_ids=quarantined_ids,
+        search_text=search_text,
+        require_relevance=True,
+    )
 
 
 def _replacement_evidence_entries(
@@ -807,32 +933,28 @@ def _replacement_evidence_entries(
     evidence_packs: Dict[str, Any],
     excluded_evidence_ids: set[str],
     search_text: str,
+    pages: List[int] | None = None,
+    section: str = "",
 ) -> List[Dict[str, Any]]:
     """Select bounded, source-retained alternatives after a fidelity failure."""
 
-    query_tokens = {
-        token.strip(".,:;()[]{}\"'").casefold()
-        for token in search_text.split()
-        if len(token.strip(".,:;()[]{}\"'")) >= 4
-    }
-    candidates: List[Dict[str, Any]] = []
-    seen_ids: set[str] = set()
+    evidence_by_id: Dict[str, Dict[str, Any]] = {}
     for pack_name, pack in evidence_packs.items():
-        for entry in _all_pack_entries(pack_name, pack):
-            evidence_id = _entry_evidence_id(entry)
+        for wrapped in _all_pack_entries(pack_name, pack):
+            entry = wrapped.get("entry")
+            if not isinstance(entry, dict):
+                continue
+            evidence_id = _normalized_evidence_id(_entry_evidence_id(wrapped))
             if not evidence_id or evidence_id in excluded_evidence_ids:
                 continue
-            if evidence_id in seen_ids:
-                continue
-            seen_ids.add(evidence_id)
-            candidates.append(entry)
-
-    def rank(entry: Dict[str, Any]) -> tuple[int, str]:
-        serialized = _dump_json(entry).casefold()
-        overlap = sum(token in serialized for token in query_tokens)
-        return (-overlap, _entry_evidence_id(entry))
-
-    return sorted(candidates, key=rank)[:8]
+            evidence_by_id.setdefault(evidence_id, entry)
+    return _typed_compatible_evidence_entries(
+        evidence_by_id=evidence_by_id,
+        quarantined_ids=excluded_evidence_ids,
+        search_text=search_text,
+        pages=pages,
+        section=section,
+    )
 
 
 def _all_pack_entries(pack_name: str, value: Any) -> List[Dict[str, Any]]:
@@ -1717,9 +1839,128 @@ def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> Non
     )
 
 
+_INSIGHT_METRIC_PROVENANCE_FIELDS = (
+    "label",
+    "value",
+    "unit",
+    "trend",
+    "timeframe",
+    "geography",
+    "segment",
+    "sample_size",
+    "confidence",
+    "subject",
+    "cohort",
+    "denominator",
+    "observation_status",
+)
+
+
+def _resolve_failed_insight_id(issue: RegenerationIssue) -> str:
+    entity_id = _s(issue.entity_id).strip()
+    if entity_id.startswith("insight:"):
+        parts = [part for part in entity_id.split(":") if part.strip()]
+        if len(parts) >= 2:
+            return parts[1].split(".", 1)[0].strip()
+    affected = _s(issue.affected_section).strip().casefold()
+    if affected.startswith("insights:"):
+        return affected.split(":", 1)[1].split(".", 1)[0].strip()
+    return ""
+
+
+def _restore_failed_insight_metrics_deterministically(
+    execution: _RegenerationHandlerExecution,
+) -> bool:
+    """Copy protected insight metric fields from their retained binding.
+
+    A final insight whose protected numeric/unit/timeframe/forecast fields
+    drifted from the retained same-stable-ID candidate (or previously promoted
+    final insight) is repaired by deterministically copying the retained
+    canonical metric values.  No model call is consumed.  Any issue that
+    cannot be attributed to one bound insight keeps the generative path.
+    """
+
+    if execution.target.repair_action != "CORRECT_PROTECTED_FACT":
+        return False
+    retained_by_id: Dict[str, Dict[str, Any]] = {}
+    for source in (execution.state.insights_candidates, execution.state.insights_final):
+        for insight in source:
+            if not isinstance(insight, dict):
+                continue
+            insight_id = _s(insight.get("id")).strip()
+            metric = insight.get("metric")
+            if (
+                insight_id
+                and isinstance(metric, dict)
+                and _s(metric.get("value")).strip()
+            ):
+                retained_by_id.setdefault(insight_id, insight)
+    corrected_any = False
+    for issue in execution.target.issues:
+        insight_id = _resolve_failed_insight_id(issue)
+        if not insight_id:
+            return False
+        target_insight = next(
+            (
+                insight
+                for insight in execution.state.insights_final
+                if isinstance(insight, dict)
+                and _s(insight.get("id")).strip() == insight_id
+            ),
+            None,
+        )
+        retained = retained_by_id.get(insight_id)
+        if target_insight is None or retained is None:
+            return False
+        current_metric = target_insight.get("metric")
+        current_metric = current_metric if isinstance(current_metric, dict) else {}
+        retained_metric = retained.get("metric")
+        retained_metric = retained_metric if isinstance(retained_metric, dict) else {}
+        drifted = any(
+            _s(current_metric.get(field_name)).strip()
+            != _s(retained_metric.get(field_name)).strip()
+            for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
+            if _s(retained_metric.get(field_name)).strip()
+        )
+        if not drifted:
+            continue
+        target_insight["metric"] = {
+            **current_metric,
+            **{
+                field_name: deepcopy(retained_metric.get(field_name, ""))
+                for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
+                if field_name in retained_metric
+            },
+        }
+        evidence_id = _s(retained.get("evidence_id")).strip()
+        if evidence_id:
+            target_insight["evidence_id"] = evidence_id
+            execution.state.selected_evidence_ids.append(evidence_id)
+        corrected_any = True
+    if not corrected_any:
+        return False
+    execution.state.deterministic_repairs.append("canonical_metric_copy")
+    execution.state.regenerated_sections.append("insights_final")
+    logger.info(
+        log_event(
+            execution.target_ctx,
+            role="generator",
+            event="artifact_regeneration_insight_metrics_copied",
+            module=logger.name,
+            fields={
+                "report_id": execution.runtime.request.report_id,
+                "model_calls": 0,
+            },
+        )
+    )
+    return True
+
+
 def _handle_insights_bundle_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
+    if _restore_failed_insight_metrics_deterministically(execution):
+        return
     candidates_namespace, final_namespace = execution.handler.prompt_namespaces
     prior_final_insights = deepcopy(execution.state.insights_final)
     candidates_ctx = child_context(
@@ -1805,7 +2046,191 @@ def _handle_insights_bundle_regeneration(
     execution.state.prompt_namespaces.extend([candidates_namespace, final_namespace])
 
 
+def _handle_report_identity_regeneration(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    """Repair report identity from canonical source identity without a model.
+
+    A metadata.title/metadata.publisher grounding failure is uniquely
+    source-provable: the retained doc map already carries the deterministically
+    resolved canonical source title and publisher. Copying that value is the
+    cheapest safe repair; broad regeneration of unrelated families is never
+    justified by an identity mismatch.
+    """
+
+    identity = _public_report_identity(execution.runtime.safe_doc_map)
+    wanted_fields = {
+        str(issue.affected_section or "").strip().lower().removeprefix("metadata.")
+        for issue in execution.target.issues
+    }
+    resolved: Dict[str, Any] = {}
+    for field_name in ("title", "publisher"):
+        if wanted_fields and field_name not in wanted_fields:
+            continue
+        canonical_value = _s(identity.get(field_name)).strip()
+        if canonical_value:
+            resolved[field_name] = canonical_value
+    if resolved:
+        execution.state.payload_overrides.update(resolved)
+        execution.state.deterministic_repairs.append("canonical_identity")
+        execution.state.regenerated_sections.append("report_identity")
+        logger.info(
+            log_event(
+                execution.target_ctx,
+                role="generator",
+                event="artifact_regeneration_identity_repaired",
+                module=logger.name,
+                fields={
+                    "report_id": execution.runtime.request.report_id,
+                    "fields": sorted(resolved),
+                    "model_calls": 0,
+                },
+            )
+        )
+        return
+    # No canonical identity is retained: abstain explicitly rather than let a
+    # later broad retry invent a title.
+    execution.state.deterministic_repairs.append("canonical_identity_abstained")
+    execution.state.regenerated_sections.append("report_identity")
+
+
+def _resolve_failed_quote_entry(
+    execution: _RegenerationHandlerExecution,
+    issue: RegenerationIssue,
+) -> Dict[str, Any] | None:
+    entity_id = _s(issue.entity_id).strip()
+    affected = _s(issue.affected_section).strip().casefold()
+    quote_id = affected.split(":", 1)[1].strip() if ":" in affected else ""
+    message = _s(issue.message)
+    matches: List[Dict[str, Any]] = []
+    for quote in execution.state.quotes_final:
+        if not isinstance(quote, dict):
+            continue
+        candidate_ids = {
+            _s(quote.get("id")).strip(),
+            _s(quote.get("evidence_id")).strip(),
+        }
+        if entity_id and entity_id in candidate_ids:
+            matches.append(quote)
+            continue
+        if quote_id and quote_id in candidate_ids:
+            matches.append(quote)
+            continue
+        quote_text = _normalized_soft_copy_text(_s(quote.get("text")))
+        if quote_text and quote_text in _normalized_soft_copy_text(message):
+            matches.append(quote)
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _failed_quote_entries(
+    execution: _RegenerationHandlerExecution,
+) -> List[tuple[RegenerationIssue, Dict[str, Any]]] | None:
+    """Resolve each failed quote issue to exactly one retained quote entry."""
+
+    resolved: List[tuple[RegenerationIssue, Dict[str, Any]]] = []
+    for issue in execution.target.issues:
+        failed_entry = _resolve_failed_quote_entry(execution, issue)
+        if failed_entry is None:
+            return None
+        resolved.append((issue, failed_entry))
+    return resolved
+
+
+def _retained_quote_candidate_for(
+    execution: _RegenerationHandlerExecution, quote_entry: Dict[str, Any]
+) -> Dict[str, Any] | None:
+    evidence_id = _normalized_evidence_id(quote_entry.get("evidence_id"))
+    if not evidence_id:
+        return None
+    quarantined = {
+        _normalized_evidence_id(value)
+        for value in execution.target.quarantined_evidence_ids
+        if _normalized_evidence_id(value)
+    }
+    if evidence_id in quarantined:
+        return None
+    for candidate in execution.runtime.quote_candidates:
+        if not isinstance(candidate, dict):
+            continue
+        if (
+            _normalized_evidence_id(candidate.get("id") or candidate.get("evidence_id"))
+            == evidence_id
+        ):
+            if not _s(candidate.get("text")).strip():
+                return None
+            return candidate
+    return None
+
+
+def _restore_failed_quotes_deterministically(
+    execution: _RegenerationHandlerExecution,
+) -> bool:
+    """Restore each failed quote verbatim from its retained source candidate.
+
+    Exact source-supported quote failures are uniquely source-provable.  When
+    every failed quote resolves to one retained quote candidate bound to the
+    same evidence id, copying that candidate repairs the failure with zero
+    model calls.  Any ambiguous or unresolvable case returns False so the
+    normal evidence-backed rewrite path runs instead.
+    """
+
+    if execution.target.repair_action != "COPY_CANONICAL_SOURCE_VALUE":
+        return False
+    resolved = _failed_quote_entries(execution)
+    if resolved is None:
+        return False
+    restored: List[Dict[str, Any]] = []
+    for quote in execution.state.quotes_final:
+        match = next(
+            ((issue, entry) for issue, entry in resolved if entry is quote),
+            None,
+        )
+        if match is None:
+            restored.append(quote)
+            continue
+        _issue, failed_entry = match
+        candidate = _retained_quote_candidate_for(execution, failed_entry)
+        if candidate is None:
+            return False
+        repaired = quote
+        repaired["text"] = _s(candidate.get("text")).strip()
+        speaker = _s(candidate.get("speaker")).strip()
+        if speaker:
+            repaired["speaker"] = speaker
+        page = candidate.get("page")
+        if isinstance(page, int) and page > 0:
+            repaired["page"] = page
+        restored.append(repaired)
+        execution.state.selected_evidence_ids.extend(
+            [
+                _s(candidate.get("id") or candidate.get("evidence_id")).strip(),
+                _s(failed_entry.get("evidence_id")).strip(),
+            ]
+        )
+    execution.state.quotes_final = restored
+    execution.state.deterministic_repairs.append("canonical_quote_restore")
+    execution.state.regenerated_sections.append("quotes")
+    logger.info(
+        log_event(
+            execution.target_ctx,
+            role="generator",
+            event="artifact_regeneration_quotes_restored",
+            module=logger.name,
+            fields={
+                "report_id": execution.runtime.request.report_id,
+                "restored_quote_count": len(resolved),
+                "model_calls": 0,
+            },
+        )
+    )
+    return True
+
+
 def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> None:
+    if _restore_failed_quotes_deterministically(execution):
+        return
     namespace = execution.handler.prompt_namespaces[0]
     quarantined_ids = set(
         execution.grounding_package.get("quarantined_evidence_ids") or []
@@ -2350,6 +2775,13 @@ _REGENERATION_HANDLER_REGISTRY: Dict[str, _RegenerationHandler] = {
             "Do not introduce new claims that are absent from the updated summary/insights/quotes.",
         ),
         handle=_handle_linkedin_post_regeneration,
+    ),
+    "report_identity": _RegenerationHandler(
+        target_section="report_identity",
+        prompt_namespaces=(),
+        current_section_payload=lambda artifacts: {},
+        extra_fix_checklist=(),
+        handle=_handle_report_identity_regeneration,
     ),
 }
 

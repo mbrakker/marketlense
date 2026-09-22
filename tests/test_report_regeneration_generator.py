@@ -22,6 +22,7 @@ from src.contracts.regeneration import (
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
+    repair_strategy_fingerprint,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
@@ -50,6 +51,7 @@ from src.generators.soft_copy_claim_provenance import (
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
+from src.contracts.validation import ValidationIssue
 from src.utils.errors import AppError
 
 METRIC = {
@@ -428,13 +430,21 @@ def test_soft_copy_claim_evidence_package_excludes_quarantined_entries() -> None
     assert package["evidence_selection"]["strategy"] == "abstain"
 
 
-def test_soft_copy_claim_evidence_package_uses_only_bounded_lexical_fallback() -> None:
+def test_soft_copy_claim_evidence_package_uses_bounded_typed_compatibility_fallback() -> (
+    None
+):
+    same_number_wrong_geography = {
+        "id": "wrong-geography",
+        "text": "US shoppers increased return rates by 34% in 2023.",
+    }
+    relevant_findings = [
+        {"id": f"relevant-{index}", "text": "Retention planning signal."}
+        for index in range(6)
+    ]
     evidence_packs = {
         "findings": {
-            "findings": [
-                {"id": f"relevant-{index}", "text": "Retention planning signal."}
-                for index in range(6)
-            ]
+            "findings": [same_number_wrong_geography]
+            + relevant_findings
             + [{"id": "irrelevant", "text": "Unrelated commodity price."}]
         }
     }
@@ -457,7 +467,7 @@ def test_soft_copy_claim_evidence_package_uses_only_bounded_lexical_fallback() -
         "relevant-2",
         "relevant-3",
     ]
-    assert package["evidence_selection"]["strategy"] == "lexical_fallback"
+    assert package["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
 
 
 def test_soft_copy_claim_evidence_package_abstains_and_is_repeatable_without_support() -> (
@@ -3189,3 +3199,494 @@ def test_regenerate_artifacts_rejects_unknown_target_section(
         retryable=False,
         severity="error",
     )
+
+
+class _NoModelCallsAllowed:
+    """Fail the test the moment a repair attempts a model call."""
+
+    def __init__(self) -> None:
+        self.calls: list = []
+
+    def openai_chat_json(self, req, ctx):
+        self.calls.append(req)
+        raise AssertionError("Deterministic repair must not call the model")
+
+    def openai_chat_json_with_images(self, req, ctx):
+        self.calls.append(req)
+        raise AssertionError("Deterministic repair must not call the model")
+
+    def openai_respond(self, req, ctx):
+        self.calls.append(req)
+        raise AssertionError("Deterministic repair must not call the model")
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        self.calls.append(req)
+        raise AssertionError("Deterministic repair must not call the model")
+
+
+def _source_backed_artifacts() -> dict:
+    """Current artifacts whose summary prose is backed by its claim map.
+
+    Every summary sentence equals the mapped claim, so assembly reuses the
+    retained provenance instead of triggering the source-backed fallback.
+    """
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["tldr"] = "Old claim."
+    artifacts["summary"]["card_tldr_compact"] = "Old claim."
+    artifacts["summary"]["executive_summary"] = "Old claim."
+    artifacts["summary"]["claim_evidence_map"][0]["claim"] = "Old claim."
+    retained_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family=family,
+            claim_id=(
+                f"soft_copy:{family}:{hashlib.sha256(text.encode()).hexdigest()[:16]}"
+            ),
+            text_hash=hashlib.sha256(text.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=("f1",) if family == "summary" else (),
+            source_spans=(),
+            producing_prompt_identity={"namespace": f"report_vs/artifacts/{family}"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for family, text in (
+            ("summary", "Old claim."),
+            ("expert_comment", "Old expert"),
+            ("linkedin_post", "Old linkedin"),
+        )
+    ]
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        retained_claims
+    )
+    return artifacts
+
+
+def _identity_plan() -> RegenerationPlan:
+    return RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="report_identity",
+                regenerate_steps=[],
+                prompt_namespaces=[],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="metadata.title",
+                        message=(
+                            "[factual_claim|unsupported_factual_claim] The summary "
+                            "title is not supported by retained evidence."
+                        ),
+                        severity="error",
+                    )
+                ],
+                repair_action="COPY_CANONICAL_SOURCE_VALUE",
+                repair_strategy="canonical_identity",
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+
+def test_metadata_title_grounding_failure_routes_to_report_identity_repair() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message=(
+            "[factual_claim|unsupported_factual_claim] Title not supported by "
+            "retained evidence: Wrong Title."
+        ),
+        severity="error",
+        affected_section="metadata.title",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["report_identity"]
+    target = plan.targets[0]
+    assert target.repair_action == "COPY_CANONICAL_SOURCE_VALUE"
+    assert target.repair_strategy == "canonical_identity"
+    assert target.regenerate_steps == []
+    assert target.prompt_namespaces == []
+
+
+def test_report_identity_repair_copies_canonical_title_without_model_calls(
+    tmp_path,
+) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_identity_plan(),
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.payload_overrides == {"title": "Doc title"}
+    assert response.repair_action == "COPY_CANONICAL_SOURCE_VALUE"
+    assert response.repair_strategy == "canonical_identity"
+    assert response.selected_evidence_ids == []
+    assert response.regenerated_sections == ["report_identity"]
+    # Unrelated claim families keep their retained content byte-for-byte;
+    # assembly only adds its deterministic derived provenance (evidence spans).
+    after = response.updated_artifacts
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
+        assert after["summary"][field_name] == current_artifacts["summary"][field_name]
+    assert [
+        (item["id"], item["text"], item["evidence_id"])
+        for item in after["insights_final"]
+    ] == [
+        (item["id"], item["text"], item["evidence_id"])
+        for item in current_artifacts["insights_final"]
+    ]
+    assert [item["text"] for item in after["quotes_final"]] == ["Old quote"]
+    assert after["expert_comment"] == current_artifacts["expert_comment"]
+    assert after["linkedin_post"] == current_artifacts["linkedin_post"]
+
+
+def test_report_identity_repair_abstains_without_canonical_source(tmp_path) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    doc_map = {"doc_id": "doc-1", "sections": []}
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_identity_plan(),
+            current_artifacts=current_artifacts,
+            doc_map=doc_map,
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.payload_overrides == {}
+    assert response.repair_action == "ABSTAIN"
+
+
+def _quotes_plan() -> RegenerationPlan:
+    return RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="quotes",
+                regenerate_steps=["quotes"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/quotes"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="quotes:q1",
+                        message=(
+                            "[factual_claim|misattributed_quote] Quote text is not "
+                            "verbatim: A drifted paraphrase of the source."
+                        ),
+                        severity="error",
+                        evidence_ids=["q1"],
+                    )
+                ],
+                repair_action="COPY_CANONICAL_SOURCE_VALUE",
+                repair_strategy="canonical_quote_restore",
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+
+def test_exact_quote_failure_restores_retained_source_without_model_calls(
+    tmp_path,
+) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    current_artifacts["quotes_final"][0]["text"] = "A drifted paraphrase of the source."
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=_quotes_plan(),
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.repair_action == "COPY_CANONICAL_SOURCE_VALUE"
+    assert response.repair_strategy == "canonical_quote_restore"
+    assert "q1" in response.selected_evidence_ids
+    assert response.regenerated_sections == ["quotes"]
+    restored_quote = response.updated_artifacts["quotes_final"][0]
+    assert restored_quote["text"] == "Old quote"
+    assert restored_quote["speaker"] == "Speaker"
+    assert restored_quote["evidence_id"] == "q1"
+    assert len(response.updated_artifacts["quotes_final"]) == 1
+    for field_name in ("tldr", "card_tldr_compact", "executive_summary"):
+        assert (
+            response.updated_artifacts["summary"][field_name]
+            == current_artifacts["summary"][field_name]
+        )
+
+
+def test_insight_metric_conflict_is_corrected_from_retained_candidate(
+    tmp_path,
+) -> None:
+    openai_client = _NoModelCallsAllowed()
+    current_artifacts = _source_backed_artifacts()
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"][0] = {
+        "id": "f1",
+        "evidence": "Europe margin reached 46% in 2025.",
+        "text": "Europe margin reached 46% in 2025.",
+    }
+    supported_text = "Europe margin reached 46% in 2025."
+    candidate_metric = dict(
+        METRIC, label="Europe margin", value="46%", unit="%", geography="Europe"
+    )
+    drifted_metric = dict(
+        METRIC, label="Drifted label", value="99%", unit="%", geography="Global"
+    )
+    current_artifacts["insights_candidates"] = [
+        {
+            "id": "insight-1",
+            "text": supported_text,
+            "evidence_id": "f1",
+            "evidence": "Europe margin reached 46% in 2025.",
+            "metric": dict(candidate_metric),
+            "pages": [1],
+            "score": 1.0,
+        }
+    ] + current_artifacts["insights_candidates"]
+    current_artifacts["insights_final"][0] = {
+        "id": "insight-1",
+        "text": supported_text,
+        "evidence_id": "f1",
+        "evidence": "Europe margin reached 46% in 2025.",
+        "metric": dict(drifted_metric),
+        "pages": [1],
+    }
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="insights_bundle",
+                regenerate_steps=["insights_candidates", "insights_final"],
+                prompt_namespaces=[
+                    "report_vs/artifacts/regenerate/insights_candidates",
+                    "report_vs/artifacts/regenerate/insights_final",
+                ],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="insights:insight-1.text",
+                        message=(
+                            "[factual_claim|numerically_inconsistent] Protected "
+                            "dimensions: value, geography."
+                        ),
+                        severity="error",
+                        entity_id="insight:insight-1:text",
+                        evidence_ids=["f1"],
+                    )
+                ],
+                repair_action="CORRECT_PROTECTED_FACT",
+                repair_strategy="canonical_metric_copy",
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.repair_action == "CORRECT_PROTECTED_FACT"
+    assert response.repair_strategy == "canonical_metric_copy"
+    assert "f1" in response.selected_evidence_ids
+    repaired_insight = next(
+        insight
+        for insight in response.updated_artifacts["insights_final"]
+        if insight["id"] == "insight-1"
+    )
+    assert repaired_insight["metric"]["value"] == "46%"
+    assert repaired_insight["metric"]["geography"] == "Europe"
+    assert repaired_insight["evidence_id"] == "f1"
+    untouched = next(
+        insight
+        for insight in response.updated_artifacts["insights_final"]
+        if insight["id"] == "insight-2"
+    )
+    assert untouched["metric"] == current_artifacts["insights_final"][1]["metric"]
+
+
+def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message="[factual_claim|unsupported_factual_claim] Unsupported expert claim.",
+        severity="error",
+        affected_section="expert_comment",
+        entity_id="soft_copy:expert_comment:abc",
+        evidence_ids=["f1"],
+    )
+
+    first_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+    assert first_plan.targets[0].repair_strategy == "current_evidence"
+    assert first_plan.targets[0].repair_action == "REGENERATE_ITEM"
+
+    fingerprints = [first_plan.targets[0].issues[0].failure_fingerprint]
+    rejected_current = {
+        repair_strategy_fingerprint(fingerprints, "current_evidence", ["f1"])
+    }
+    second_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_current,
+    )
+    assert second_plan.targets[0].repair_strategy == "alternative_evidence"
+    assert second_plan.targets[0].repair_action == "REBIND_EVIDENCE"
+
+    rejected_alternative = rejected_current | {
+        repair_strategy_fingerprint(fingerprints, "alternative_evidence", ["f1"])
+    }
+    third_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_alternative,
+    )
+    assert third_plan.targets[0].repair_strategy == "safe_removal"
+    assert third_plan.targets[0].repair_action == "REMOVE_CLAIM"
+    assert third_plan.targets[0].selected_evidence_ids == []
+
+
+def test_quotes_ladder_rejects_failed_restore_before_rewrite() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message="[factual_claim|misattributed_quote] Quote not verbatim.",
+        severity="error",
+        affected_section="quotes:q1",
+        evidence_ids=["q1"],
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+    assert plan.targets[0].repair_action == "COPY_CANONICAL_SOURCE_VALUE"
+    assert plan.targets[0].repair_strategy == "canonical_quote_restore"
+
+    fingerprints = [plan.targets[0].issues[0].failure_fingerprint]
+    rejected_restore = {
+        repair_strategy_fingerprint(fingerprints, "canonical_quote_restore", ["q1"])
+    }
+    second_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_restore,
+    )
+    assert second_plan.targets[0].repair_strategy == "current_evidence"
+    assert second_plan.targets[0].repair_action == "REGENERATE_ITEM"
+
+
+def test_attempt_strategy_fingerprint_describes_actual_selection() -> None:
+    from src.orchestrators._report_analysis_orchestrator.validation import (
+        _attempt_strategy_fingerprint,
+        _plan_strategy_fingerprint,
+    )
+
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message="[factual_claim|unsupported_factual_claim] Unsupported claim.",
+        severity="error",
+        affected_section="expert_comment",
+        evidence_ids=["f1"],
+    )
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+    response = SimpleNamespace(
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+        selected_evidence_ids=["f9"],
+        payload_overrides={},
+    )
+
+    actual = _attempt_strategy_fingerprint(plan, response)
+    planned = _plan_strategy_fingerprint(plan)
+
+    assert actual == repair_strategy_fingerprint(
+        [plan.targets[0].issues[0].failure_fingerprint],
+        "alternative_evidence",
+        ["f9"],
+    )
+    assert actual != planned
+    # Legacy responses without actual strategy fall back to the plan view.
+    legacy = SimpleNamespace()
+    assert _attempt_strategy_fingerprint(plan, legacy) == planned

@@ -105,6 +105,34 @@ candidate audits for diagnosis. A rejected regeneration candidate therefore
 cannot be rendered as a public package or replace the artifact/validation pair
 from which the next bounded attempt is planned.
 
+Inside the analysis validation loop, each targeted repair attempt plans the
+smallest mutable unit and resolves its strategy from an ordered, materially
+distinct ladder before any model call:
+
+1. Deterministic canonical correction when the failure is uniquely
+   source-provable — canonical report identity (`metadata.title`,
+   `metadata.publisher`) copied from the retained doc-map identity, an exact
+   quote restored verbatim from its retained quote candidate, or protected
+   insight metric fields copied from the retained same-stable-ID candidate.
+   These repairs make zero model calls, are validated with the candidate, and
+   travel with promotion/rollback as bounded payload identity overrides
+   (`title`/`publisher` only).
+2. A claim-scoped rewrite from the current valid evidence.
+3. A rebind to the best compatible retained alternative, ranked by the bounded
+   typed compatibility scorer (entity/subject, metric value and unit,
+   geography, cohort/denominator, timeframe, observed/forecast status,
+   source-page proximity, bounded lexical relevance). Quarantined evidence and
+   evidence that conflicts on any protected dimension can never win; when no
+   compatible alternative exists the repair abstains instead of inventing
+   support.
+4. Removal/abstention of the unsupported atomic item.
+
+After a rollback, the next attempt restarts from the last promoted artifact and
+the attempt's strategy fingerprint records the repair action, strategy, and
+evidence actually selected by the generator, so a failed combination cannot be
+repeated under another nominal label. Candidate audits retain this fingerprint
+with the typed repair delta.
+
 Before analysis, source preparation resolves one canonical report title using a
 fixed hierarchy: an explicit cover/title-page title, a repeated in-document
 header, clear source content, a clean acquired filename, then only specific,

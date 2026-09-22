@@ -406,6 +406,24 @@ class ArtifactRegenerationResponse:
     )
     repair_action: str = field(default="")
     repair_strategy: str = field(default="")
+    selected_evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Evidence identifiers actually selected and used by this repair "
+                "attempt, not merely planned."
+            )
+        },
+    )
+    payload_overrides: Dict[str, Any] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Deterministic report-payload corrections (title/publisher only) "
+                "resolved from canonical source identity for this candidate."
+            )
+        },
+    )
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Artifact regeneration response schema version."},

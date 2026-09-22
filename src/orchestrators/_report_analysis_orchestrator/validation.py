@@ -381,6 +381,53 @@ def _plan_strategy_fingerprint(plan) -> str:
     return repair_strategy_fingerprint(fingerprints, strategy, evidence_ids)
 
 
+def _attempt_strategy_fingerprint(plan, regeneration_response) -> str:
+    """Fingerprint the strategy/evidence this attempt actually used.
+
+    The generator records the repair action, strategy, and evidence actually
+    selected for the attempt.  A failed attempt therefore can never be retried
+    under a different nominal label with the same effective inputs.
+    """
+
+    strategy = str(getattr(regeneration_response, "repair_strategy", "") or "").strip()
+    actual_evidence = list(
+        getattr(regeneration_response, "selected_evidence_ids", []) or []
+    )
+    if not strategy and not actual_evidence:
+        return _plan_strategy_fingerprint(plan)
+    fingerprints = [
+        issue.failure_fingerprint
+        or _failure_fingerprint(
+            ValidationIssue(
+                message=issue.message,
+                severity=issue.severity,
+                affected_section=issue.affected_section,
+                rule_id=issue.rule_id,
+                entity_id=issue.entity_id,
+                evidence_ids=issue.evidence_ids,
+            )
+        ).key
+        for target in plan.targets
+        for issue in target.issues
+    ]
+    return repair_strategy_fingerprint(fingerprints, strategy, actual_evidence)
+
+
+_PAYLOAD_OVERRIDE_FIELDS = frozenset({"title", "publisher"})
+
+
+def _bounded_payload_overrides(overrides: object) -> Dict[str, str]:
+    """Keep only bounded report-identity corrections from a repair attempt."""
+
+    if not isinstance(overrides, dict):
+        return {}
+    return {
+        str(field_name): str(value)
+        for field_name, value in sorted(overrides.items())
+        if field_name in _PAYLOAD_OVERRIDE_FIELDS and str(value or "").strip()
+    }
+
+
 def _scope_validation_report(
     *, before: Dict[str, Any], after: Dict[str, Any], plan
 ) -> ValidationReport:
@@ -458,12 +505,28 @@ def _candidate_audit(
     repair_delta: RepairDelta | None = None,
     strategy_fingerprint: str = "",
     latency_ms: int | None = None,
+    regeneration_response=None,
 ) -> RegenerationCandidateAudit:
     report = validation_report or ValidationReport(
         schema_version="1.1",
         status="fail" if not candidate_result.passed else "pass",
         issues=list(candidate_result.issues),
         severity="error" if not candidate_result.passed else "pass",
+    )
+    actual_action = (
+        str(getattr(regeneration_response, "repair_action", "") or "").strip()
+        if regeneration_response is not None
+        else ""
+    )
+    actual_strategy = (
+        str(getattr(regeneration_response, "repair_strategy", "") or "").strip()
+        if regeneration_response is not None
+        else ""
+    )
+    actual_evidence_ids = (
+        list(getattr(regeneration_response, "selected_evidence_ids", []) or [])
+        if regeneration_response is not None
+        else []
     )
     return RegenerationCandidateAudit(
         attempt_index=attempt_index,
@@ -481,10 +544,20 @@ def _candidate_audit(
         evidence_lineage=list(candidate_result.evidence_lineage),
         failure_fingerprints=[_failure_fingerprint(item).key for item in report.issues],
         repair_action=(
-            "+".join(target.repair_action for target in plan.targets) if plan else ""
+            actual_action
+            or (
+                "+".join(target.repair_action for target in plan.targets)
+                if plan
+                else ""
+            )
         ),
         repair_strategy=(
-            "+".join(target.repair_strategy for target in plan.targets) if plan else ""
+            actual_strategy
+            or (
+                "+".join(target.repair_strategy for target in plan.targets)
+                if plan
+                else ""
+            )
         ),
         allowed_paths=(
             sorted({path for target in plan.targets for path in target.allowed_paths})
@@ -492,15 +565,19 @@ def _candidate_audit(
             else []
         ),
         selected_evidence_ids=(
-            sorted(
-                {
-                    value
-                    for target in plan.targets
-                    for value in target.selected_evidence_ids
-                }
+            sorted(set(actual_evidence_ids))
+            if actual_evidence_ids
+            else (
+                sorted(
+                    {
+                        value
+                        for target in plan.targets
+                        for value in target.selected_evidence_ids
+                    }
+                )
+                if plan
+                else []
             )
-            if plan
-            else []
         ),
         quarantined_evidence_ids=(
             sorted(
@@ -613,6 +690,7 @@ def _run_validation_regeneration_loop(
     List[RegenerationAttemptResult],
     RegenerationLoopState,
     Dict[str, str],
+    Dict[str, str],
 ]:
     max_attempts = max(1, int(runtime.settings.validation_regeneration_max_attempts))
     attempts: List[RegenerationAttemptResult] = []
@@ -620,6 +698,7 @@ def _run_validation_regeneration_loop(
     broad_retry_used = False
     rejected_strategy_keys: set[str] = set()
     repair_memory: List[RepairDelta] = []
+    promoted_payload_overrides: Dict[str, str] = {}
     current_artifacts_path = dependencies.analysis_pack_path(
         AnalysisPackPathRequest(
             schema_version="1.0",
@@ -827,6 +906,7 @@ def _run_validation_regeneration_loop(
                     current_artifacts_path=candidate_parent_path,
                     candidate_artifacts_path=candidate_artifacts_path,
                     candidate_result=candidate_result,
+                    regeneration_response=regeneration_response,
                 ),
                 ctx=attempt_ctx,
             )
@@ -843,6 +923,14 @@ def _run_validation_regeneration_loop(
         regenerated_payload = merge_artifacts_into_payload(
             deepcopy(base_payload), candidate_artifacts
         )
+        payload_overrides = _bounded_payload_overrides(
+            getattr(regeneration_response, "payload_overrides", {})
+        )
+        if payload_overrides:
+            # Deterministic identity corrections are part of the candidate:
+            # they are validated with it and promoted (or dropped) with it.
+            for field_name, value in payload_overrides.items():
+                setattr(regenerated_payload, field_name, str(value))
         _ensure_report_payload_complete(
             regenerated_payload,
             artifacts=candidate_artifacts,
@@ -910,7 +998,9 @@ def _run_validation_regeneration_loop(
         repair_delta = _repair_delta(
             current_validation_report, candidate_validation_report
         )
-        strategy_fingerprint = _plan_strategy_fingerprint(plan)
+        strategy_fingerprint = _attempt_strategy_fingerprint(
+            plan, regeneration_response
+        )
         evidence_paths[f"public_editorial_quality_regen_attempt_{attempt_index}"] = (
             editorial_path
         )
@@ -955,6 +1045,7 @@ def _run_validation_regeneration_loop(
                             plan=plan,
                             repair_delta=repair_delta,
                             strategy_fingerprint=strategy_fingerprint,
+                            regeneration_response=regeneration_response,
                             latency_ms=max(
                                 0, int((perf_counter() - attempt_started) * 1000)
                             ),
@@ -987,6 +1078,7 @@ def _run_validation_regeneration_loop(
                 promotion_outcome = "promoted"
                 evidence_paths["artifacts"] = artifacts_path
                 evidence_paths["validation"] = canonical_validation_path
+                promoted_payload_overrides = payload_overrides
             else:
                 promotion_outcome = "rolled_back"
                 artifacts_path = current_artifacts_path
@@ -997,6 +1089,9 @@ def _run_validation_regeneration_loop(
                 current_validation_report = promoted_validation_report
                 rejected_strategy_keys.add(strategy_fingerprint)
                 repair_memory.append(repair_delta)
+                # Deterministic identity corrections are candidate-scoped: a
+                # rolled-back candidate leaves the promoted identity untouched.
+                promoted_payload_overrides = {}
             candidate_audit_path = _store_regeneration_candidate_audit(
                 runtime=runtime,
                 dependencies=dependencies,
@@ -1014,6 +1109,7 @@ def _run_validation_regeneration_loop(
                     plan=plan,
                     repair_delta=repair_delta,
                     strategy_fingerprint=strategy_fingerprint,
+                    regeneration_response=regeneration_response,
                     latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
                 ),
                 ctx=attempt_ctx,
@@ -1160,6 +1256,7 @@ def _run_validation_regeneration_loop(
         attempts,
         loop_state,
         evidence_paths,
+        promoted_payload_overrides,
     )
 
 

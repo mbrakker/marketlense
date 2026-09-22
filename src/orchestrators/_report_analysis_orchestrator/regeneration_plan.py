@@ -44,6 +44,12 @@ def _target_section(affected_section: str) -> str:
     section = str(affected_section or "").strip().lower()
     if not section:
         return ""
+    if section in {"metadata.title", "metadata.publisher"} or (
+        section.startswith("metadata.")
+    ):
+        # Report identity fields are repaired from canonical source identity,
+        # never by regenerating an unrelated claim-bearing family.
+        return "report_identity"
     if (
         section.startswith("topics")
         or section.startswith("toc_entries")
@@ -222,6 +228,7 @@ TARGET_ORDER = [
     "quotes",
     "expert_comment",
     "linkedin_post",
+    "report_identity",
 ]
 
 
@@ -308,6 +315,8 @@ def _target_steps(target_key: str) -> List[str]:
 
 
 def _target_prompt_namespaces(target_key: str) -> List[str]:
+    if target_key == "report_identity":
+        return []
     if target_key == "topics":
         return []
     if target_key == "summary":
@@ -356,6 +365,74 @@ def _lookup_quote_grounding(
     return evidence_ids, pages
 
 
+def _allowed_paths(target_key: str) -> List[str]:
+    roots = {
+        "topics": ["toc_entries", "toc_topics", "toc_topics_expanded"],
+        "summary": ["summary"],
+        "insights_bundle": ["insights_candidates", "insights_final"],
+        "key_figures": ["key_figures"],
+        "quotes": ["quotes_final"],
+        "expert_comment": ["expert_comment"],
+        "linkedin_post": ["linkedin_post"],
+        "report_identity": [],
+    }.get(target_key, [])
+    return roots + [
+        "soft_copy_claim_provenance",
+        "family_status",
+        "_cache",
+        "_repair_evidence_selection",
+    ]
+
+
+# Ordered, materially distinct repair strategies per target.  The planner
+# picks the first strategy whose fingerprint was not already rejected, so a
+# retry can never repeat an equivalent failed strategy under another label.
+_ALTERNATIVE_EVIDENCE_TARGETS = frozenset(
+    {"summary", "insights_bundle", "quotes", "expert_comment", "linkedin_post"}
+)
+
+
+def _strategy_options(
+    target_key: str, ordered_issues: List[RegenerationIssue]
+) -> List[tuple[str, str]]:
+    """Return the ordered (repair_action, repair_strategy) ladder for a target."""
+
+    options: List[tuple[str, str]] = []
+    if target_key == "report_identity":
+        options.append(("COPY_CANONICAL_SOURCE_VALUE", "canonical_identity"))
+    elif target_key == "quotes" and _issues_support_quote_restore(ordered_issues):
+        options.append(("COPY_CANONICAL_SOURCE_VALUE", "canonical_quote_restore"))
+    elif target_key == "insights_bundle" and _issues_support_metric_copy(
+        ordered_issues
+    ):
+        options.append(("CORRECT_PROTECTED_FACT", "canonical_metric_copy"))
+    options.append(("REGENERATE_ITEM", "current_evidence"))
+    if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
+        options.append(("REBIND_EVIDENCE", "alternative_evidence"))
+    options.append(("REMOVE_CLAIM", "safe_removal"))
+    return options
+
+
+def _issues_support_quote_restore(ordered_issues: List[RegenerationIssue]) -> bool:
+    """A failed quote can be restored verbatim only from a retained source quote."""
+
+    return all(
+        str(issue.rule_id or "").strip().lower() in {"grounding", "semantic"}
+        and str(issue.severity or "").lower() == "error"
+        for issue in ordered_issues
+    )
+
+
+def _issues_support_metric_copy(ordered_issues: List[RegenerationIssue]) -> bool:
+    """A failed insight metric can be copied only from retained bound evidence."""
+
+    return any(
+        str(issue.rule_id or "").strip().lower() in {"grounding", "numbers", "metrics"}
+        and str(issue.severity or "").lower() == "error"
+        for issue in ordered_issues
+    )
+
+
 def _build_target(
     target_key: str,
     issues: List[RegenerationIssue],
@@ -373,42 +450,35 @@ def _build_target(
     evidence_ids = sorted(
         {evidence_id for issue in ordered_issues for evidence_id in issue.evidence_ids}
     )
-    strategy = "current_evidence"
-    current_key = repair_strategy_fingerprint(
-        failure_fingerprints, strategy, evidence_ids
-    )
-    exhausted = current_key in (rejected_strategy_keys or set())
+    rejected = rejected_strategy_keys or set()
+    repair_action = "REMOVE_CLAIM"
+    repair_strategy = "safe_removal"
+    selected_evidence_ids: List[str] = []
+    for action, strategy in _strategy_options(target_key, ordered_issues):
+        candidate_key = repair_strategy_fingerprint(
+            failure_fingerprints, strategy, evidence_ids
+        )
+        if candidate_key in rejected:
+            continue
+        repair_action = action
+        repair_strategy = strategy
+        selected_evidence_ids = (
+            [] if action in {"REMOVE_CLAIM", "ABSTAIN"} else evidence_ids
+        )
+        break
     return RegenerationTarget(
         target_section=target_key,
         regenerate_steps=_target_steps(target_key),
         prompt_namespaces=_target_prompt_namespaces(target_key),
         issues=ordered_issues,
-        repair_action="REMOVE_CLAIM" if exhausted else "REGENERATE_ITEM",
-        repair_strategy="safe_removal" if exhausted else strategy,
+        repair_action=repair_action,
+        repair_strategy=repair_strategy,
         allowed_paths=_allowed_paths(target_key),
-        selected_evidence_ids=[] if exhausted else evidence_ids,
+        selected_evidence_ids=selected_evidence_ids,
         quarantined_evidence_ids=sorted(
             {value for issue in ordered_issues for value in issue.excluded_evidence_ids}
         ),
     )
-
-
-def _allowed_paths(target_key: str) -> List[str]:
-    roots = {
-        "topics": ["toc_entries", "toc_topics", "toc_topics_expanded"],
-        "summary": ["summary"],
-        "insights_bundle": ["insights_candidates", "insights_final"],
-        "key_figures": ["key_figures"],
-        "quotes": ["quotes_final"],
-        "expert_comment": ["expert_comment"],
-        "linkedin_post": ["linkedin_post"],
-    }.get(target_key, [])
-    return roots + [
-        "soft_copy_claim_provenance",
-        "family_status",
-        "_cache",
-        "_repair_evidence_selection",
-    ]
 
 
 def _build_regeneration_plan(
