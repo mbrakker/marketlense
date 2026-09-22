@@ -42,6 +42,33 @@ pricing:
     cached_input_tokens_per_1k_usd: 0.000005
     output_tokens_per_1k_usd: 0.0004
     tool_call_usd: 0.0025
+  gpt-6-astra:
+    provider: "openai"
+    pricing_version: "openai-2026-09-22.v1"
+    effective_date: "2026-09-22"
+    source_note: "OpenAI GPT-6 Astra model page; standard text-token USD per 1K tokens. Cache-write charges are not separately represented by the rate-card schema."
+    input_tokens_per_1k_usd: 0.01
+    cached_input_tokens_per_1k_usd: 0.001
+    output_tokens_per_1k_usd: 0.05
+    tool_call_usd: 0.0025
+  gpt-6-sol:
+    provider: "openai"
+    pricing_version: "openai-2026-09-22.v1"
+    effective_date: "2026-09-22"
+    source_note: "OpenAI GPT-6 Sol model page; standard text-token USD per 1K tokens. Cache-write charges are not separately represented by the rate-card schema."
+    input_tokens_per_1k_usd: 0.002
+    cached_input_tokens_per_1k_usd: 0.0002
+    output_tokens_per_1k_usd: 0.01
+    tool_call_usd: 0.0025
+  gpt-6-luna:
+    provider: "openai"
+    pricing_version: "openai-2026-09-22.v1"
+    effective_date: "2026-09-22"
+    source_note: "OpenAI GPT-6 Luna model page; standard text-token USD per 1K tokens. Cache-write charges are not separately represented by the rate-card schema."
+    input_tokens_per_1k_usd: 0.0001
+    cached_input_tokens_per_1k_usd: 0.00001
+    output_tokens_per_1k_usd: 0.0005
+    tool_call_usd: 0.0025
   gpt-5.6:
     provider: "openai"
     pricing_version: "openai-2026-08-11.v1"
