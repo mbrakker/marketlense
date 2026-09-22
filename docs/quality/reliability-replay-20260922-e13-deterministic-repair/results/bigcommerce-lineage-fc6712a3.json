@@ -1,0 +1,25 @@
+{
+  "artifacts_path": "C:\\Programing\\Market lense\\tmp\\e13-replay-bigcommerce\\ias-first-attempt-8rngu26r\\output\\ebook-0225-future-commerce-new-modes-guide-en-us-pdf\\report_analysis\\artifacts.json",
+  "failure_diagnostic": null,
+  "isolated_fresh_state": true,
+  "publisher_name": "Bigcommerce",
+  "replay_key": "bigcommerce",
+  "report_id": "cohort-0a019f840c3f89ad0a96",
+  "source_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.bigcommerce.com\\e72f39fe19e5\\ebook_0225_future_commerce_new_modes_guide_en_us.pdf",
+  "terminal": {
+    "automatic_repair": false,
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_readiness": "pass",
+    "terminal_failure_code": "",
+    "total_duration_seconds": 311.093,
+    "validation": "pass",
+    "workflow_attempt_count": 1
+  },
+  "usage": {
+    "cost_usd": 0.077899,
+    "input_tokens": 224260,
+    "model_provider_calls": 26,
+    "output_tokens": 27540
+  }
+}

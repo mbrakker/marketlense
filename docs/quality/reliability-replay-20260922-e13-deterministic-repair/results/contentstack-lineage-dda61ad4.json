@@ -1,0 +1,25 @@
+{
+  "artifacts_path": "C:\\Programing\\Market lense\\tmp\\e13-replay-contentstack\\ias-first-attempt-p_egnse0\\output\\2026-global-connected-consumer-trends-report-pdf\\report_analysis\\artifacts.json",
+  "failure_diagnostic": null,
+  "isolated_fresh_state": true,
+  "publisher_name": "Contentstack",
+  "replay_key": "contentstack",
+  "report_id": "cohort-076eca6d31e0c1dcddf0",
+  "source_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\azure-na-assets.contentstack.com\\de0971e49916\\2026_Global_Connected_Consumer_Trends_Report.pdf",
+  "terminal": {
+    "automatic_repair": false,
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_readiness": "pass",
+    "terminal_failure_code": "",
+    "total_duration_seconds": 286.536,
+    "validation": "pass",
+    "workflow_attempt_count": 1
+  },
+  "usage": {
+    "cost_usd": 0.093425,
+    "input_tokens": 292252,
+    "model_provider_calls": 29,
+    "output_tokens": 29383
+  }
+}

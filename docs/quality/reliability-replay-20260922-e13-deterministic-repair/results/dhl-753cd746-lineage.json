@@ -1,0 +1,63 @@
+{
+  "implementation_sha": "753cd746",
+  "publisher_name": "DHL eCommerce",
+  "report_id": "cohort-9b97626fc83c086961a7",
+  "observation": (
+    "Live validation repair loop exercising the deterministic protected-metric "
+    "repair (CORRECT_PROTECTED_FACT / canonical_metric_copy) on a failed final "
+    "insight, with zero model calls in the repair itself."
+  ),
+  "initial_validation": {
+    "status": "fail",
+    "dominant_errors": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary_claim:claim_2 .. claim_5"
+      }
+    ]
+  },
+  "repair_attempts": [
+    {
+      "attempt": 1,
+      "repair_action": "CORRECT_PROTECTED_FACT",
+      "repair_strategy": "canonical_metric_copy",
+      "model_calls": 0,
+      "promotion_outcome": "rolled_back",
+      "strategy_fingerprint": "bc3fab22eb80...",
+      "repair_delta": {"resolved": 1, "persisting": 3, "introduced": 9}
+    },
+    {
+      "attempt": 2,
+      "repair_action": "CORRECT_PROTECTED_FACT",
+      "repair_strategy": "canonical_metric_copy",
+      "promotion_outcome": "rolled_back",
+      "strategy_fingerprint": "bc3fab22eb80...",
+      "repair_delta": {"resolved": 0, "persisting": 4, "introduced": 9},
+      "note": "Same fingerprint as attempt 1 - planned strategy keys were not yet rejected after rollback. Fixed in dda61ad4."
+    }
+  ],
+  "terminal": {
+    "final_state": "failed",
+    "terminal_failure_code": "validation_failed",
+    "residual_error": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights:insight-ai-adoption-trust-gap.so_what"
+      }
+    ],
+    "duration_seconds": 541.424
+  },
+  "usage": {
+    "model_provider_calls": 38,
+    "input_tokens": 327351,
+    "output_tokens": 44260,
+    "cost_usd": 0.112791
+  },
+  "residual_risk": (
+    "The deterministic metric copy resolved one protected-fact failure but the "
+    "candidate introduced new grounding findings and was rolled back. The "
+    "dda61ad4 rerun of the same immutable source reached awaiting_review in "
+    "one attempt (see dhl-dda61ad4.json), consistent with single-run model "
+    "variance rather than a repair-mechanism regression."
+  )
+}

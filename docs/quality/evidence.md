@@ -392,6 +392,28 @@ record is an outcome measurement, not a claim that an individual model call is
 deterministic; it corrects the prior conclusion that Contentstack was a stable
 non-repairable pipeline/model-contract blocker.
 
+### Targeted real-report replay — E13 deterministic and adaptive repair — 2026-09-22
+
+[`reliability-replay-20260922-e13-deterministic-repair/`](reliability-replay-20260922-e13-deterministic-repair/)
+retains the completion evidence for the remaining E13 repair scope at
+implementation SHA `dda61ad4`: deterministic canonical corrections (report
+identity, exact quotes, protected insight metric fields) with zero model
+calls, the fixed `metadata.title` repair routing, the bounded typed
+compatibility scorer replacing lexical-only alternative-evidence ranking, the
+materially distinct strategy ladder with actual-strategy/evidence
+fingerprints and executed-planned-key rejection, and deterministic
+candidate→final insight factual preservation. All five targeted frozen-cohort
+reports (Bigcommerce, Capgemini, DHL, SimilarWeb, Contentstack) retained
+`awaiting_review` terminal outcomes with zero operator interventions, and the
+record retains the live intermediate rounds that exercised the identity and
+protected-metric repairs and exposed (and verified the fix for) the repeated
+deterministic-strategy hole. The record also documents the pre-existing
+artifact-finalization blocker
+(`soft_copy_claim_provenance_bindings_incomplete` /
+`soft_copy_claim_provenance_coverage_invalid`) that stochastically fails some
+rounds before analysis; it is owned with the A21 soft-copy stream, not with
+E13.
+
 ### Reusable sanitized acquisition-assessment projection
 
 When a completed acquisition assessment has a retained raw current JSONL and a

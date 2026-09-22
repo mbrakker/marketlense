@@ -1,0 +1,68 @@
+{
+  "implementation_sha": "fc6712a3",
+  "publisher_name": "Capgemini Research Institute",
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "observation": (
+    "Live validation repair loop exercising the deterministic report-identity "
+    "repair on the metadata.title grounding failure."
+  ),
+  "initial_validation": {
+    "status": "fail",
+    "dominant_errors": [
+      {"rule_id": "grounding", "affected_section": "metadata.title"},
+      {
+        "rule_id": "grounding",
+        "affected_section": "summary_claim:claim_3 .. claim_5"
+      }
+    ]
+  },
+  "repair_attempts": [
+    {
+      "attempt": 1,
+      "repair_action": "COPY_CANONICAL_SOURCE_VALUE",
+      "repair_strategy": "canonical_identity",
+      "scope": ["report_identity"],
+      "model_calls": 0,
+      "promotion_outcome": "rolled_back",
+      "strategy_fingerprint": "94143067ad42...",
+      "repair_delta": {"resolved": 3, "persisting": 7, "introduced": 12},
+      "candidate_title": "What matters to today's consumer 2026"
+    },
+    {
+      "attempt": 2,
+      "repair_action": "COPY_CANONICAL_SOURCE_VALUE",
+      "repair_strategy": "canonical_identity",
+      "promotion_outcome": "rolled_back",
+      "strategy_fingerprint": "94143067ad42...",
+      "note": "Same fingerprint as attempt 1 - the planner repeated the executed deterministic strategy under the generic ladder label. Fixed in 753cd746 (identity ladder ends in safe_abstain) and dda61ad4 (executed planned strategy keys are rejected)."
+    },
+    {
+      "attempt": 3,
+      "repair_action": "COPY_CANONICAL_SOURCE_VALUE",
+      "repair_strategy": "canonical_identity",
+      "promotion_outcome": "rolled_back",
+      "strategy_fingerprint": "94143067ad42..."
+    }
+  ],
+  "terminal": {
+    "final_state": "failed",
+    "terminal_failure_code": "validation_failed",
+    "residual_error": [
+      {"rule_id": "grounding", "affected_section": "metadata.title"}
+    ],
+    "duration_seconds": 490.191
+  },
+  "usage": {
+    "model_provider_calls": 38,
+    "input_tokens": 379237,
+    "output_tokens": 45043,
+    "cost_usd": 0.118993
+  },
+  "residual_risk": (
+    "The grounding model still rejected the canonical source title on this "
+    "run. The corrected implementation ends such a failure after one "
+    "deterministic correction plus one explicit abstention instead of three "
+    "repeated attempts; the residual title failure then stays a typed "
+    "validation_failed terminal."
+  )
+}

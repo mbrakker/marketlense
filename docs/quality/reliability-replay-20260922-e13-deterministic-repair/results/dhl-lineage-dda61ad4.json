@@ -1,0 +1,25 @@
+{
+  "artifacts_path": "C:\\Programing\\Market lense\\tmp\\e13-replay-dhl\\ias-first-attempt-vmq_adce\\output\\g0-ec-trends-report-2026-pdf\\report_analysis\\artifacts.json",
+  "failure_diagnostic": null,
+  "isolated_fresh_state": true,
+  "publisher_name": "DHL eCommerce",
+  "replay_key": "dhl",
+  "report_id": "cohort-9b97626fc83c086961a7",
+  "source_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.dhl.com\\21a23a924cea\\g0-ec-trends-report-2026.pdf",
+  "terminal": {
+    "automatic_repair": false,
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_readiness": "pass",
+    "terminal_failure_code": "",
+    "total_duration_seconds": 486.462,
+    "validation": "pass",
+    "workflow_attempt_count": 1
+  },
+  "usage": {
+    "cost_usd": 0.088606,
+    "input_tokens": 257335,
+    "model_provider_calls": 32,
+    "output_tokens": 31185
+  }
+}

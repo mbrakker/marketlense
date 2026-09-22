@@ -1,0 +1,25 @@
+{
+  "artifacts_path": "C:\\Programing\\Market lense\\tmp\\e13-replay-capgemini\\ias-first-attempt-kls7jkoq\\output\\final-web-version-report-consumer-trends-2026-pdf\\report_analysis\\artifacts.json",
+  "failure_diagnostic": null,
+  "isolated_fresh_state": true,
+  "publisher_name": "Capgemini Research Institute",
+  "replay_key": "capgemini",
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "source_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.capgemini.com\\c3d75e99ed7c\\Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+  "terminal": {
+    "automatic_repair": false,
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_readiness": "pass",
+    "terminal_failure_code": "",
+    "total_duration_seconds": 281.371,
+    "validation": "pass",
+    "workflow_attempt_count": 1
+  },
+  "usage": {
+    "cost_usd": 0.100562,
+    "input_tokens": 310764,
+    "model_provider_calls": 31,
+    "output_tokens": 32008
+  }
+}

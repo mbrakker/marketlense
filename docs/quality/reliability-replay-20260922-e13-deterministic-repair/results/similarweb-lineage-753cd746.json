@@ -1,0 +1,25 @@
+{
+  "artifacts_path": "C:\\Programing\\Market lense\\tmp\\e13-replay-similarweb\\ias-first-attempt-ld4s_qha\\output\\attachment-the-sales-signals-playbook-4-pdf\\report_analysis\\artifacts.json",
+  "failure_diagnostic": null,
+  "isolated_fresh_state": true,
+  "publisher_name": "SimilarWeb",
+  "replay_key": "similarweb",
+  "report_id": "cohort-f1652970000cfe246c94",
+  "source_path": "C:\\Programing\\Market lense\\out\\browser_downloads\\www.similarweb.com\\5935ab3c37c2\\attachment-The-Sales-Signals-Playbook-4.pdf",
+  "terminal": {
+    "automatic_repair": false,
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_readiness": "pass",
+    "terminal_failure_code": "",
+    "total_duration_seconds": 269.626,
+    "validation": "pass",
+    "workflow_attempt_count": 1
+  },
+  "usage": {
+    "cost_usd": 0.081796,
+    "input_tokens": 208300,
+    "model_provider_calls": 31,
+    "output_tokens": 33684
+  }
+}
