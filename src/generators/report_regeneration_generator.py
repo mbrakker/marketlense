@@ -1448,7 +1448,11 @@ def _record_soft_copy_claim_bindings(
             return
         declared_bindings = [
             item
-            for item in declared_bindings
+            for item in align_soft_copy_claim_bindings_to_text(
+                artifact_family=artifact_family,
+                text=repaired_text,
+                claim_bindings=declared_bindings,
+            )
             if _normalized_soft_copy_text(item.get("claim")) == normalized_repaired
         ]
         if repaired_claim_id != repaired_claim.claim.claim_id:
@@ -1489,14 +1493,16 @@ def _normalized_soft_copy_text(value: object) -> str:
     return " ".join(str(value or "").split())
 
 
-def _valid_claim_replacement(*, text: str, bindings: object) -> bool:
+def _valid_claim_replacement(
+    *, artifact_family: str, text: str, bindings: object
+) -> bool:
     """Accept only one newly bound sentence for a claim-scoped model reply."""
 
     sentences = soft_copy_material_sentences(text)
     if len(sentences) != 1:
         return False
     aligned = align_soft_copy_claim_bindings_to_text(
-        artifact_family="expert_comment", text=text, claim_bindings=bindings
+        artifact_family=artifact_family, text=text, claim_bindings=bindings
     )
     return any(
         _normalized_soft_copy_text(binding.get("claim")) == sentences[0]
@@ -1817,6 +1823,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     else ""
                 )
                 if not _valid_claim_replacement(
+                    artifact_family="summary",
                     text=repaired_text,
                     bindings=result.get("_soft_copy_claim_bindings"),
                 ):
@@ -2417,6 +2424,7 @@ def _handle_expert_comment_regeneration(
                 )
                 repaired_text = _s(result.get("expert_comment"))
                 if not _valid_claim_replacement(
+                    artifact_family="expert_comment",
                     text=repaired_text,
                     bindings=result.get("_soft_copy_claim_bindings"),
                 ):
@@ -2641,6 +2649,7 @@ def _handle_linkedin_post_regeneration(
                 _s(result.get("linkedin_post"))
             )
             if not _valid_claim_replacement(
+                artifact_family="linkedin_post",
                 text=repaired_text,
                 bindings=result.get("_soft_copy_claim_bindings"),
             ):

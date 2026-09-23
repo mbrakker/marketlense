@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import List, Optional, Sequence, Tuple
 
 from src.contracts.report_models import ReportPayload
@@ -72,14 +73,15 @@ def validate_new_numbers(
             artifacts.get("insights_final", []) if isinstance(artifacts, dict) else []
         )
     )
+    linked_insight_evidence: dict[str, str] = {}
     for index, insight in enumerate(insight_items):
         if not isinstance(insight, dict):
             continue
         insight_id = s(insight.get("id") or str(index + 1))
         for field_name in ("text", "so_what", "now_what"):
-            section_texts.append(
-                (s(insight.get(field_name)), f"insights:{insight_id}.{field_name}")
-            )
+            section = f"insights:{insight_id}.{field_name}"
+            section_texts.append((s(insight.get(field_name)), section))
+            linked_insight_evidence[section] = s(insight.get("evidence"))
     figures = artifacts.get("key_figures") if isinstance(artifacts, dict) else []
     for index, figure in enumerate(
         figures if isinstance(figures, list) else [], start=1
@@ -120,6 +122,12 @@ def validate_new_numbers(
                     continue
                 if quantity_supported(
                     quantity, local_evidence_quantities, numeric_only=True
+                ):
+                    continue
+                if _rank_group_label_in_linked_evidence(
+                    quantity=quantity,
+                    sentence=sentence,
+                    evidence=linked_insight_evidence.get(section, ""),
                 ):
                     continue
                 severity = unsupported_quantity_severity(
@@ -163,6 +171,29 @@ def validate_new_numbers(
                 )
             )
     return issues
+
+
+_RANK_GROUP_LABEL = re.compile(
+    r"\btop\s+\d+\s+\w+\b|\b\w+\s+ranked\s+\d+\s*[-–]\s*\d+\b",
+    re.IGNORECASE,
+)
+
+
+def _rank_group_label_in_linked_evidence(
+    *, quantity, sentence: str, evidence: str
+) -> bool:
+    """Ground a cohort label by its exact phrase, not a nearby metric value."""
+
+    if not evidence:
+        return False
+    normalized_evidence = " ".join(re.findall(r"\w+", evidence.casefold()))
+    return any(
+        match.start() <= quantity.start
+        and quantity.end <= match.end()
+        and " ".join(re.findall(r"\w+", match.group().casefold()))
+        in normalized_evidence
+        for match in _RANK_GROUP_LABEL.finditer(sentence)
+    )
 
 
 def _soft_copy_claim_ids_by_sentence(artifacts: object) -> dict[tuple[str, str], str]:

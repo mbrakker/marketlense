@@ -179,6 +179,9 @@ sentence grid as retained provenance, including initialisms such as `U.S.`.
 The grounding inventory carries the model's declared classification as an
 untrusted hint so self-authored advice is evaluated for its factual premises
 without being mistaken for a claim that the source issued that advice.
+The numeric rule treats a ranked cohort label as supported only when its
+complete phrase appears in that insight's linked evidence; an altered rank
+remains a blocking number error even if a similar value appears elsewhere.
 
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy

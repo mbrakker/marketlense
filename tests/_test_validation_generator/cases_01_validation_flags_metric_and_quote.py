@@ -135,6 +135,45 @@ def test_number_issue_identifies_full_soft_copy_claim_with_us_initialism() -> No
     )
 
 
+def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> None:
+    evidence = (
+        "The top 10 companies held 80.8% of revenue. Companies ranked 11–25 held 11.0%."
+    )
+    insight = {
+        "id": "company-concentration",
+        "text": evidence,
+        "evidence": evidence,
+        "evidence_id": "concentration",
+        "so_what": "Revenue is concentrated among the top 10 companies and companies ranked 11–25.",
+    }
+    supported = validate_new_numbers(
+        artifacts={"insights_final": [insight]},
+        insights=[insight],
+        report=_report(),
+        evidence_texts=[],
+        evidence_windows=[],
+    )
+    incorrect = {
+        **insight,
+        "so_what": "Revenue is concentrated among the top 12 companies and companies ranked 11–26.",
+    }
+    rejected = validate_new_numbers(
+        artifacts={"insights_final": [incorrect]},
+        insights=[incorrect],
+        report=_report(),
+        evidence_texts=[],
+        evidence_windows=[],
+    )
+
+    section = "insights:company-concentration.so_what"
+    assert not [issue for issue in supported if issue.affected_section == section]
+    rejected_messages = [
+        issue.message for issue in rejected if issue.affected_section == section
+    ]
+    assert any("Number 12.0 not present" in message for message in rejected_messages)
+    assert any("Number 26.0 not present" in message for message in rejected_messages)
+
+
 def test_number_validation_preserves_ordered_source_period_value_pairs() -> None:
     fixture_path = (
         Path(__file__).resolve().parents[1]
@@ -1021,6 +1060,7 @@ __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
     "test_number_issue_identifies_full_soft_copy_claim_with_us_initialism",
+    "test_number_validation_grounds_rank_labels_in_linked_insight_evidence",
     "test_number_validation_preserves_ordered_source_period_value_pairs",
     "test_validation_uses_retained_source_text_for_ordered_period_value_pairs",
     "test_validation_cache_changes_when_retained_source_text_changes",

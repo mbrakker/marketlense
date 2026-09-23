@@ -850,6 +850,28 @@ class _OverlongClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
         return super().openai_chat_json(req, ctx)
 
 
+class _PunctuationClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
+    def openai_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"expert_comment":"Repaired middle claim."}',
+                parsed_json={
+                    "expert_comment": "Repaired middle claim.",
+                    "claim_provenance": [
+                        {
+                            "claim": "Repaired middle claim!",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id="req-punctuation-claim",
+            )
+        return super().openai_chat_json(req, ctx)
+
+
 class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
     def openai_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
@@ -1597,8 +1619,13 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
     )
 
 
+@pytest.mark.parametrize(
+    "client_type",
+    (_ClaimScopedExpertOpenAIClient, _PunctuationClaimScopedExpertOpenAIClient),
+)
 def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_provenance(
     tmp_path,
+    client_type,
 ) -> None:
     """Removing claim-scoped reconstruction makes this assertion fail."""
     current_artifacts = _current_artifacts()
@@ -1680,7 +1707,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
             source_status=current_artifacts["source_status"],
             categories=["Category"],
         ),
-        openai_client=_ClaimScopedExpertOpenAIClient(),
+        openai_client=client_type(),
         prompt_client=_FakePromptClient(),
     )
 
