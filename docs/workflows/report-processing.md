@@ -137,6 +137,8 @@ An insight or summary repair can also change the evidence displayed in the
 derived topic inventory. Candidate scope validation rebuilds `topics_covered`
 from the unchanged table of contents and the candidate's retained evidence;
 only that exact deterministic change is eligible for promotion.
+The same proof includes chart insight cards derived through key figures when
+a summary repair changes the card inputs.
 
 Before analysis, source preparation resolves one canonical report title using a
 fixed hierarchy: an explicit cover/title-page title, a repeated in-document

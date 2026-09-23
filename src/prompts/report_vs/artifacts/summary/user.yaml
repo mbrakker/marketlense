@@ -6,9 +6,9 @@ schema_snippets:
     pointer: "/properties/summary"
 text: |
   Context:
-  - DocMap JSON: {{ doc_map_json }}
-  - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
+  - Evidence packs JSON: {{ evidence_json }}
+  - DocMap JSON: {{ doc_map_json }}
 
   Source-of-truth summary schema:
   {{ summary_schema }}
@@ -29,7 +29,7 @@ text: |
   }
   `claim_provenance` is retained metadata only: cover every material sentence or claim from the public summary fields with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
-  - Lead the executive summary with the priority-one theme's direct measured finding when present, preserving its cohort, denominator, and period. Bind it in `claim_evidence_map` and `claim_provenance`; otherwise lead descriptively.
+  - Inspect `evidence_json.findings` for a direct measure tied to the priority-one theme. Lead the executive summary with its figures, cohort, denominator, and period; bind it in `claim_evidence_map` and `claim_provenance`. If none exists, lead descriptively.
   - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
   - When source evidence is descriptive, factual statements must remain descriptive. Add analyst interpretation only when it follows without introducing a new factual premise. Recommendations must be explicitly MarketLense-authored, conditional and traceable to supplied evidence. Do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions. If evidence does not support a distinct implication or action, remain descriptive or omit it.
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.

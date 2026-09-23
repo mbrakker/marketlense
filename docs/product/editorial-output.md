@@ -77,6 +77,13 @@ Summary generation leads with the first editorial theme's direct measured
 finding when available, retaining its cohort, denominator, and period. Summary
 regeneration requests one provenance binding per complete sentence and keeps
 numeric source bases worded as the retained evidence states them.
+The summary prompt presents the editorial plan before retained findings and
+asks for a direct priority-theme measure before consulting the broader
+document map for descriptive context.
+Its generation input orders retained findings for the first editorial theme
+ahead of other findings when their finding or section ID matches the theme's
+evidence IDs. The same evidence remains available to other artifact families
+in its original order.
 All deterministic public-copy corrections precede retained-provenance
 derivation. If source-display preservation changes a sentence, its validated
 classification and evidence IDs remain attached while its mechanical claim ID,

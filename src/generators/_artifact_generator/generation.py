@@ -171,6 +171,61 @@ def _execute_artifact_tasks_serial(
     return {task.step_name: render_task(task) for task in tasks}
 
 
+def _summary_prioritized_evidence_json(
+    evidence_packs: Dict[str, Any], editorial_plan: Dict[str, Any]
+) -> str:
+    """Put direct findings for the first theme ahead of broader source context."""
+
+    themes = editorial_plan.get("themes") or []
+    first_theme = next(
+        (
+            theme
+            for theme in themes
+            if isinstance(theme, dict) and theme.get("priority") == 1
+        ),
+        None,
+    )
+    priority_ids = [
+        str(evidence_id).strip().casefold()
+        for evidence_id in (first_theme or {}).get("evidence_ids", [])
+        if str(evidence_id).strip()
+    ]
+    findings_pack = evidence_packs.get("findings")
+    if not priority_ids or not isinstance(findings_pack, dict):
+        return _dump_json(evidence_packs)
+    findings = findings_pack.get("findings")
+    if not isinstance(findings, list):
+        return _dump_json(evidence_packs)
+
+    def priority(row: Any) -> int:
+        if not isinstance(row, dict):
+            return len(priority_ids)
+        identifiers = {
+            str(row.get("id") or "").strip().casefold(),
+            str(row.get("section_id") or "").strip().casefold(),
+        }
+        return next(
+            (
+                index
+                for index, evidence_id in enumerate(priority_ids)
+                if evidence_id in identifiers
+            ),
+            len(priority_ids),
+        )
+
+    ordered = sorted(findings, key=priority)
+    if ordered == findings:
+        return _dump_json(evidence_packs)
+    return _dump_json(
+        {
+            "findings": {**findings_pack, "findings": ordered},
+            **{
+                key: value for key, value in evidence_packs.items() if key != "findings"
+            },
+        }
+    )
+
+
 def generate_artifacts(
     report_id: str,
     doc_map: Dict[str, Any],
@@ -800,6 +855,9 @@ def generate_artifacts(
         evidence_packs=safe_evidence,
     )
     editorial_plan_json = _dump_json(editorial_plan)
+    summary_evidence_json = _summary_prioritized_evidence_json(
+        safe_evidence, editorial_plan
+    )
 
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
@@ -813,7 +871,11 @@ def generate_artifacts(
             schema_version="1.0",
             step_name="summary",
             namespace="report_vs/artifacts/summary",
-            variables={**base_vars, "editorial_plan_json": editorial_plan_json},
+            variables={
+                **base_vars,
+                "evidence_json": summary_evidence_json,
+                "editorial_plan_json": editorial_plan_json,
+            },
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
         ),
         ArtifactRenderTask(

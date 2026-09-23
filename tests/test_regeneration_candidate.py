@@ -205,6 +205,45 @@ def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
     assert any(issue.affected_section == "topics_covered" for issue in issues)
 
 
+def test_summary_repair_allows_only_verified_chart_projection() -> None:
+    before = {
+        "summary": {"tldr": "Old summary."},
+        "chart_insight_cards": [{"caption": "Old chart."}],
+    }
+    candidate = {
+        "summary": {"tldr": "New summary."},
+        "chart_insight_cards": [],
+    }
+    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary"])])
+
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+
+    assert not issues
+    assert "chart_insight_cards" in verified
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=candidate,
+            plan=plan,
+            verified_derived_roots=verified,
+        ).status
+        == "pass"
+    )
+
+    candidate["chart_insight_cards"] = [{"caption": "Invented chart."}]
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+    assert "chart_insight_cards" not in verified
+    assert any(issue.affected_section == "chart_insight_cards" for issue in issues)
+
+
 def _soft_copy_claim(
     *,
     family: str,

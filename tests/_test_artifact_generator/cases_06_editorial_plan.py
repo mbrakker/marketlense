@@ -7,6 +7,9 @@ from dataclasses import replace
 import pytest
 
 from src.generators import artifact_normalization
+from src.generators._artifact_generator.generation import (
+    _summary_prioritized_evidence_json,
+)
 from src.generators._artifact_generator.storage import _artifact_cache_meta
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.errors import AppError
@@ -32,6 +35,30 @@ def _editorial_plan() -> dict[str, object]:
             },
         ],
     }
+
+
+def test_summary_evidence_orders_direct_finding_for_priority_section() -> None:
+    evidence = {
+        "findings": {
+            "findings": [
+                {"id": "other", "section_id": "other-section", "text": "Context."},
+                {
+                    "id": "automation-contribution",
+                    "section_id": "automation-performance",
+                    "text": "Automations accounted for 41% of orders from 2% of sends.",
+                },
+            ]
+        }
+    }
+    plan = {"themes": [{"priority": 1, "evidence_ids": ["automation-performance"]}]}
+
+    ordered = json.loads(_summary_prioritized_evidence_json(evidence, plan))
+
+    assert [row["id"] for row in ordered["findings"]["findings"]] == [
+        "automation-contribution",
+        "other",
+    ]
+    assert evidence["findings"]["findings"][0]["id"] == "other"
 
 
 def test_editorial_plan_normalizes_priority_and_rejects_unknown_evidence_id():
@@ -176,6 +203,30 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
             )
             == expected_plan
         )
+    summary_findings = json.loads(
+        prompt_client.variables_for_namespace("report_vs/artifacts/summary")[
+            "evidence_json"
+        ]
+    )["findings"]["findings"]
+    assert [item["id"] for item in summary_findings] == [
+        "f3",
+        "f1",
+        "f2",
+        "f4",
+        "f5",
+    ]
+    candidate_findings = json.loads(
+        prompt_client.variables_for_namespace(
+            "report_vs/artifacts/insights_candidates"
+        )["evidence_json"]
+    )["findings"]["findings"]
+    assert [item["id"] for item in candidate_findings] == [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+    ]
     assert [item["evidence_id"] for item in payload["insights_final"]] == [
         "f3",
         "f2",
