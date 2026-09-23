@@ -1,12 +1,33 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators.evidence_packs.limitations_strategy import normalize_limitations
+
 from ._shared import *  # noqa: F401,F403
 
 
 def test_strip_json_fence_requires_closing_fence():
     raw = '```json\n{"key":1}\n'
     assert _strip_json_fence(raw) == raw.strip()
+
+
+def test_limitation_pack_removes_provider_file_citation_markers():
+    marker = "\ue200filecite\ue202turn0file6\ue202turn0file7\ue201"
+
+    assert normalize_limitations(
+        [
+            f"Estimates exclude travel. {marker}",
+            {
+                "description": f"Survey used adults. {marker}",
+                "mitigation": "Use the stated base.",
+            },
+            "No citation marker here.",
+        ]
+    ) == [
+        "Estimates exclude travel.",
+        "Survey used adults. Mitigation: Use the stated base.",
+        "No citation marker here.",
+    ]
 
 
 def test_strip_json_fence_strips_allowed_json_fence():
@@ -149,6 +170,7 @@ def test_load_cached_evidence_pack_rejects_identifier_only_doc_map(tmp_path):
 
 __all__ = [
     "test_strip_json_fence_requires_closing_fence",
+    "test_limitation_pack_removes_provider_file_citation_markers",
     "test_strip_json_fence_strips_allowed_json_fence",
     "test_resolve_pack_steps_prepends_doc_map_when_missing",
     "test_resolve_pack_steps_excludes_retired_specialist_families",

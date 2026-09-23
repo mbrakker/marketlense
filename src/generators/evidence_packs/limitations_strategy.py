@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from src.generators.evidence_packs.base import (
     build_list_pack_strategy,
 )
@@ -10,12 +12,20 @@ from src.generators.evidence_packs.common import (
     to_dict,
 )
 
+_FILE_CITATION = re.compile(
+    r"\ue200filecite(?:\ue202turn\d+file\d+)+\ue201", re.IGNORECASE
+)
+
+
+def _public_limitation_text(value: str) -> str:
+    return " ".join(_FILE_CITATION.sub("", value).split())
+
 
 def normalize_limitations(raw_limitations: object) -> list[str]:
     limitations: list[str] = []
     for entry in coerce_pack_items(raw_limitations):
         if isinstance(entry, str):
-            text_value = entry.strip()
+            text_value = _public_limitation_text(entry)
             if text_value:
                 limitations.append(text_value)
             continue
@@ -32,13 +42,15 @@ def normalize_limitations(raw_limitations: object) -> list[str]:
         )
         mitigation = text(item.get("mitigation"))
         if description and mitigation:
-            limitations.append(f"{description} Mitigation: {mitigation}")
+            limitations.append(
+                _public_limitation_text(f"{description} Mitigation: {mitigation}")
+            )
             continue
         if description:
-            limitations.append(description)
+            limitations.append(_public_limitation_text(description))
             continue
         if mitigation:
-            limitations.append(f"Mitigation: {mitigation}")
+            limitations.append(_public_limitation_text(f"Mitigation: {mitigation}"))
     return limitations
 
 

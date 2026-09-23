@@ -26,6 +26,10 @@ Typed contracts live in:
 
 `doc_map` is always enforced as the first pack step.
 
+The `limitations` pack removes OpenAI file-search citation markers from its
+public text during normalization. The limitation wording remains intact; raw
+provider markers are not rendered in the report.
+
 After a usable `doc_map` is generated, the existing single `findings` pack call
 receives a compact JSON projection of its major sections (`id`, `title`,
 `summary`, `key_points`, and `pages`). This guides evidence retrieval across

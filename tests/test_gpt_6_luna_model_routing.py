@@ -56,6 +56,10 @@ def test_canonical_configuration_routes_every_generative_call_to_gpt_6_luna() ->
     )
     assert pricing[LUNA_MODEL].get("disposition", "priced") == "priced"
     assert pricing[OPENROUTER_LUNA_MODEL]["disposition"] == "enabled"
+    for key in (LUNA_MODEL, OPENROUTER_LUNA_MODEL):
+        assert pricing[key]["input_tokens_per_1k_usd"] == 0.0001
+        assert pricing[key]["cached_input_tokens_per_1k_usd"] == 0.00001
+        assert pricing[key]["output_tokens_per_1k_usd"] == 0.0005
 
 
 def test_example_configuration_does_not_reintroduce_a_non_luna_llm_route() -> None:
