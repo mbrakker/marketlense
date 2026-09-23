@@ -187,6 +187,7 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         if namespace in {
             "report_vs/doc_map",
             "report_vs/artifacts/insights_candidates",
+            "report_vs/artifacts/insights_final",
         }:
             assert decision.policy.max_output_tokens == 16_384
 
