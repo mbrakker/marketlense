@@ -13,6 +13,13 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
     evidence_inputs, signal_result, agreement_result = _analysis_inputs()
     prompt_client = FakePromptClient()
     openai_client = FakeOpenAIClient()
+    settings = _settings(tmp_path)
+    settings.llm_execution_policies = {
+        "cross_report_analysis/synthesis": {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "high",
+        }
+    }
     caplog.set_level(
         logging.INFO, logger="market_lense.cross_report_analysis_generator"
     )
@@ -22,7 +29,7 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
         evidence_inputs,
         signal_result,
         agreement_result,
-        _settings(tmp_path),
+        settings,
         run_context,
         prompt_client=prompt_client,
         openai_client=openai_client,
@@ -56,8 +63,9 @@ def test_generate_cross_report_analysis_calls_services_and_returns_contract(
         "request_id": "provider-request-1",
     }
     assert len(openai_client.requests) == 1
-    assert openai_client.requests[0].model == "gpt-5-mini"
-    assert openai_client.requests[0].temperature == 1.0
+    assert openai_client.requests[0].model == "gpt-6-luna"
+    assert openai_client.requests[0].reasoning_effort == "high"
+    assert openai_client.requests[0].temperature is None
     rendered_variables = prompt_client.render_variables[-1]
     assert "full_report_text" not in rendered_variables
     assert "ev-report-a-claim-1" in rendered_variables["evidence_json"]

@@ -31,7 +31,6 @@ from src.contracts.wordpress_entities import (
     SignalPublishProjection,
 )
 from src.contracts.workflow_queue import (
-    AnalyticsProjectionPayload,
     BriefingOpportunityPayload,
     ClaimEmbeddingPayload,
     CoverGenerationPayload,
@@ -53,9 +52,6 @@ from src.contracts.workflow_queue import (
     WorkflowQueueName,
 )
 from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
-from src.orchestrators._workflow_queue_handlers.analytics import (
-    _analytics_projection_handler,
-)
 from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerRegistration,
     WorkflowQueueHandlerResult,
@@ -193,24 +189,6 @@ def _isolated_app_config(tmp_path: Path) -> Path:
         yaml.safe_dump(config_payload, sort_keys=False), encoding="utf-8"
     )
     return config_path
-
-
-def test_analytics_projection_reads_carried_isolated_config_before_work(
-    tmp_path: Path,
-) -> None:
-    missing_config = tmp_path / "missing-app.yaml"
-    with pytest.raises(RuntimeError, match="Config file not found") as err:
-        _analytics_projection_handler(
-            _workflow_job(
-                queue_name="analytics_projection", job_type="analytics_projection.v1"
-            ),
-            AnalyticsProjectionPayload(
-                report_id="report-1",
-                attributes={"config_path": str(missing_config)},
-            ),
-            _ctx(),
-        )
-    assert str(missing_config) in str(err.value)
 
 
 def _seed_projected_signal_source(
@@ -483,40 +461,6 @@ def test_queue_attribute_and_budget_override_parsers_preserve_operator_intent() 
         queue_orchestrator._boolean_attribute(
             MaintenancePayload(attributes={"dry_run": "yes"}), "dry_run", False
         )
-
-
-def test_queue_stage_builder_preserves_workflow_lineage() -> None:
-    job = _workflow_job(
-        queue_name="report_acquisition", job_type="report_acquisition.v1"
-    )
-    stage = queue_orchestrator._stage_child_submission(
-        job=job,
-        payload=SourceIngestPayload(
-            source_artifact_reference="retained:source.pdf",
-            source_content_hash="source-md5",
-            report_id="report-1",
-            processing_version="parser.v2",
-            validation_run_id="validation-1",
-            cohort_id="cohort-1",
-            validation_attempt_number=2,
-            validation_parent_attempt_number=1,
-        ),
-        next_queue="report_selection",
-        next_payload=SourceIngestPayload(
-            source_artifact_reference="retained:source.pdf",
-            source_content_hash="source-md5",
-            report_id="report-1",
-            processing_version="parser.v2",
-        ),
-    )
-    assert stage.idempotency_key == "report-1:report_selection:source-md5:parser.v2"
-    assert stage.root_workflow_id == job.job_id
-    assert stage.correlation_id == job.job_id
-    assert stage.source_identity_id == "source-1"
-    assert stage.payload.validation_run_id == "validation-1"
-    assert stage.payload.cohort_id == "cohort-1"
-    assert stage.payload.validation_attempt_number == 2
-    assert stage.payload.validation_parent_attempt_number == 1
 
 
 def test_operational_handlers_reject_incomplete_inputs_before_external_work() -> None:

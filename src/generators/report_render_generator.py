@@ -99,7 +99,9 @@ def _render_build_provenance(
         "source_md5": str(runtime.md5 or "unknown"),
         "artifact_hash": artifact_hash or "unknown",
         "generation_profile": str(
-            runtime.execution_plan_intent or runtime.ctx.configuration_hash or "unknown"
+            runtime.execution_plan_intent
+            or runtime.ctx.configuration_hash
+            or "unknown"
         ),
         "generated_at_utc": utc_now_iso(),
     }
@@ -387,7 +389,8 @@ def _resolved_report_title(
     source_title = str(getattr(source_resolution, "title", "") or "").strip()
     citation_title = (
         _source_grounded_citation_title(analysis, source_title)
-        if str(getattr(source_resolution, "candidate_source", "") or "") == "filename"
+        if str(getattr(source_resolution, "candidate_source", "") or "")
+        == "filename"
         else ""
     )
     if citation_title:
@@ -502,7 +505,9 @@ def _build_metadata_upsert_request(
         title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
         publisher=(
-            _resolved_public_publisher(runtime, analysis) or payload.publisher or None
+            _resolved_public_publisher(runtime, analysis)
+            or payload.publisher
+            or None
         ),
         taxonomy=payload.taxonomy,
         categories=payload.categories,

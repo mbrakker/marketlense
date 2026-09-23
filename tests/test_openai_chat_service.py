@@ -16,7 +16,7 @@ from src.contracts.openai import (
 from src.contracts.run_context import RunContext
 from src.services import llm_service as svc
 from src.services import openai_accounting_service
-from src.services._llm_service import openai_shared
+from src.services._llm_service import openai_responses, openai_shared
 from src.utils.errors import AppError
 
 
@@ -850,7 +850,7 @@ def test_openai_shared_adapts_responses_and_ocr_payload_boundaries() -> None:
         "seed",
         "temperature",
     }
-    assert openai_shared._coerce_pdf_ocr_pages(
+    assert openai_responses._coerce_pdf_ocr_pages(
         {
             "pages": [
                 {"page_number": "2", "text": "second"},

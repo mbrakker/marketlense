@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.utils.model_resolver import resolve_settings_execution_policy
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -25,6 +27,9 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
             "schema_version": "1.0",
             "md5": runtime.md5,
             "model": runtime.settings.pdf_text_ocr_model,
+            "reasoning_effort": resolve_settings_execution_policy(
+                runtime.settings.pdf_text_ocr_prompt_namespace, runtime.settings
+            ).policy.reasoning_effort,
             "prompt_system_sha256": prompt_set.system.sha256,
             "prompt_user_sha256": prompt_set.user.sha256,
             "chunk_page_count": runtime.settings.pdf_text_ocr_chunk_page_count,
@@ -49,7 +54,7 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
                 {"schema_version": "1.0", "page_number": 1, "text": "cached ocr text"}
             ],
             "raw_text": '{"pages":[{"page_number":1,"text":"cached ocr text"}]}',
-            "model": "gpt-5-mini",
+            "model": runtime.settings.pdf_text_ocr_model,
             "request_id": "req_cached",
         },
         "render_response": {

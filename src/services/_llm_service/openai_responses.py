@@ -6,6 +6,35 @@ from src.services._llm_service.openai_shared import enforce_daily_spend_guardrai
 from src.services._llm_service.openai_client import *
 
 
+def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
+    if not isinstance(payload, dict):
+        return []
+    raw_pages = payload.get("pages")
+    if not isinstance(raw_pages, list):
+        return []
+    pages: list[PdfOcrPageText] = []
+    seen_numbers: set[int] = set()
+    for item in raw_pages:
+        if not isinstance(item, dict):
+            continue
+        try:
+            page_number = int(str(item.get("page_number") or "").strip())
+        except (TypeError, ValueError):
+            continue
+        if page_number < 1 or page_number in seen_numbers:
+            continue
+        seen_numbers.add(page_number)
+        pages.append(
+            PdfOcrPageText(
+                schema_version="1.0",
+                page_number=page_number,
+                text=str(item.get("text") or ""),
+            )
+        )
+    pages.sort(key=lambda page: page.page_number)
+    return pages
+
+
 def openai_ocr_pdf(
     request: OpenAIPdfOcrRequest, ctx: RunContext
 ) -> OpenAIPdfOcrResponse:

@@ -12,6 +12,7 @@ import pytest
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.run_context import RunContext
+from src.contracts.workflow_queue import SourceIngestPayload
 from src.contracts.validation_reliability import (
     ValidationReliabilityBuildRequest,
     ValidationReliabilityWriteRequest,
@@ -25,6 +26,7 @@ from src.orchestrators.ingest_orchestrator import (
     submit_preselected_frozen_validation_cohort,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
+from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
 from src.services.config_service import build_ingest_settings, load_settings
 from src.services.validation_reliability_service import (
     build_validation_reliability_artifact,
@@ -41,7 +43,41 @@ from tests.support.ias_soft_copy_reproduction import (
     IAS_UNSUPPORTED_SOFT_COPY_CLAIMS,
     ias_soft_copy_payload,
 )
-from tests.test_workflow_queue_registry import _isolated_app_config
+from tests.test_workflow_queue_registry import _isolated_app_config, _workflow_job
+
+
+def test_queue_stage_builder_preserves_workflow_lineage() -> None:
+    job = _workflow_job(
+        queue_name="report_acquisition", job_type="report_acquisition.v1"
+    )
+    stage = queue_orchestrator._stage_child_submission(
+        job=job,
+        payload=SourceIngestPayload(
+            source_artifact_reference="retained:source.pdf",
+            source_content_hash="source-md5",
+            report_id="report-1",
+            processing_version="parser.v2",
+            validation_run_id="validation-1",
+            cohort_id="cohort-1",
+            validation_attempt_number=2,
+            validation_parent_attempt_number=1,
+        ),
+        next_queue="report_selection",
+        next_payload=SourceIngestPayload(
+            source_artifact_reference="retained:source.pdf",
+            source_content_hash="source-md5",
+            report_id="report-1",
+            processing_version="parser.v2",
+        ),
+    )
+    assert stage.idempotency_key == "report-1:report_selection:source-md5:parser.v2"
+    assert stage.root_workflow_id == job.job_id
+    assert stage.correlation_id == job.job_id
+    assert stage.source_identity_id == "source-1"
+    assert stage.payload.validation_run_id == "validation-1"
+    assert stage.payload.cohort_id == "cohort-1"
+    assert stage.payload.validation_attempt_number == 2
+    assert stage.payload.validation_parent_attempt_number == 1
 
 
 def _ctx() -> RunContext:
