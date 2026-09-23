@@ -509,7 +509,8 @@ def validate_prompt_dry_run(
                 else policy_decision.policy.temperature
             ),
             reasoning_effort=(
-                "" if fixture.test_only_execution_override
+                ""
+                if fixture.test_only_execution_override
                 else policy_decision.policy.reasoning_effort
             ),
             execution_policy_hash=policy_decision.policy_hash,

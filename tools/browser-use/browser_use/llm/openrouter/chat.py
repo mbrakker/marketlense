@@ -153,9 +153,9 @@ class ChatOpenRouter(BaseChatModel):
 
 		try:
 			model_params = {
-				key: value for key, value in (
-					('temperature', self.temperature), ('top_p', self.top_p), ('seed', self.seed)
-				) if value is not None
+				key: value
+				for key, value in (('temperature', self.temperature), ('top_p', self.top_p), ('seed', self.seed))
+				if value is not None
 			}
 			model_params.update(self.extra_body or {})
 			if output_format is None:

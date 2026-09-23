@@ -364,13 +364,15 @@ def build_openai_browser_use_client(
     )
     effort = str(getattr(settings, "reasoning_effort", "") or "")
     client_kwargs = dict(
-            model=model,
-            api_key=api_key,
-            temperature=None if effort and effort != "none" else getattr(settings, "temperature", None),
-            timeout=getattr(settings, "timeout_seconds", None),
-            max_retries=0,
-            max_completion_tokens=effective_max_tokens,
-        )
+        model=model,
+        api_key=api_key,
+        temperature=None
+        if effort and effort != "none"
+        else getattr(settings, "temperature", None),
+        timeout=getattr(settings, "timeout_seconds", None),
+        max_retries=0,
+        max_completion_tokens=effective_max_tokens,
+    )
     if effort:
         client_kwargs["reasoning_effort"] = effort
     try:

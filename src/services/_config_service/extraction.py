@@ -1,3 +1,4 @@
+# ruff: noqa: F403,F405
 from __future__ import annotations
 
 from src.services._config_service.common import *
@@ -552,5 +553,6 @@ def _resolve_pdf_text_settings(
         ),
     )
     return resolved
+
 
 __all__ = [name for name in globals() if not name.startswith("__")]

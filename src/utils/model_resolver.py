@@ -263,7 +263,9 @@ def _policy_from_mapping(
             retryable=False,
             context={"namespace": namespace_prefix},
         )
-    raw_temperature = raw.get("temperature", default_temperature if not effort else None)
+    raw_temperature = raw.get(
+        "temperature", default_temperature if not effort else None
+    )
     temperature = None if raw_temperature is None else float(raw_temperature)
     if temperature is not None and (temperature < 0 or temperature > 2):
         raise AppError(
@@ -406,7 +408,9 @@ def execution_policies_from_config(
     }
 
 
-def resolve_settings_execution_policy(namespace: str, settings: Any) -> LLMExecutionPolicyDecision:
+def resolve_settings_execution_policy(
+    namespace: str, settings: Any
+) -> LLMExecutionPolicyDecision:
     """Resolve a registered direct-call namespace from canonical runtime settings."""
     model = str(getattr(settings, "openai_model", "") or "")
     temperature = float(getattr(settings, "temperature", 1.0))
@@ -422,8 +426,12 @@ def resolve_settings_execution_policy(namespace: str, settings: Any) -> LLMExecu
         default_timeout_seconds=timeout,
     )
     return resolve_execution_policy(
-        namespace, policies, default_model=model, default_temperature=temperature,
-        default_seed=seed, default_timeout_seconds=timeout,
+        namespace,
+        policies,
+        default_model=model,
+        default_temperature=temperature,
+        default_seed=seed,
+        default_timeout_seconds=timeout,
         require_registered_namespace=bool(policies),
     )
 

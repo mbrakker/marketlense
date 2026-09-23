@@ -19,6 +19,7 @@ from src.utils.candidate_features import candidate_features_payload
 
 from ..ranking import _candidate_quality_signals
 
+
 def _bbox_tuple(values: Any) -> tuple[float, float, float, float]:
     if not isinstance(values, (list, tuple)) or len(values) != 4:
         raise ValueError(f"Expected bbox with 4 coordinates, received: {values!r}")
@@ -29,11 +30,13 @@ def _bbox_tuple(values: Any) -> tuple[float, float, float, float]:
         float(values[3]),
     )
 
+
 def _crop_refine_parallel_workers(settings: IngestSettings, selected_max: int) -> int:
     configured = coerce_int(getattr(settings, "report_worker_limit", 1), 1)
     if configured < 1:
         configured = 1
     return max(1, min(configured, max(1, selected_max), 3))
+
 
 def _crop_refine_profile_key(
     md5: str,
@@ -59,6 +62,7 @@ def _crop_refine_profile_key(
             "prompt_user_sha256": prompt_user_sha256,
         }
     )
+
 
 def _crop_refine_entry_key(
     md5: str,
@@ -93,6 +97,7 @@ def _crop_refine_entry_key(
         }
     )
 
+
 def _crop_refine_cache_path(
     settings: IngestSettings,
     file_id: str,
@@ -110,6 +115,7 @@ def _crop_refine_cache_path(
         ),
         child_context(ctx, task_id=f"{ctx.task_id}:crop_refine_cache_path"),
     ).output_path
+
 
 def _load_crop_refine_cache(
     settings: IngestSettings,
@@ -144,6 +150,7 @@ def _load_crop_refine_cache(
         if entry_key:
             out[entry_key] = row
     return out
+
 
 def _write_crop_refine_cache(
     settings: IngestSettings,

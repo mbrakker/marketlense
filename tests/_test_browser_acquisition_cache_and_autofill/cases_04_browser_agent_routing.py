@@ -20,8 +20,10 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
     from dataclasses import replace as _replace
 
     settings = _replace(
-        _settings(tmp_path), model="gpt-6-luna",
-        openrouter_model="openai/gpt-6-luna", reasoning_effort="low",
+        _settings(tmp_path),
+        model="gpt-6-luna",
+        openrouter_model="openai/gpt-6-luna",
+        reasoning_effort="low",
     )
     request = BrowserReportDownloadRequest(
         schema_version="1.0",
@@ -156,7 +158,9 @@ def test_browser_agent_uses_openai_primary_with_openrouter_fallback(
     assert captured_agent["llm"].kwargs["temperature"] is None
     assert captured_agent["fallback_llm"].kwargs["model"] == "openai/gpt-6-luna"
     assert captured_agent["fallback_llm"].kwargs["temperature"] is None
-    assert captured_agent["fallback_llm"].kwargs["extra_body"]["reasoning_effort"] == "low"
+    assert (
+        captured_agent["fallback_llm"].kwargs["extra_body"]["reasoning_effort"] == "low"
+    )
     assert captured_agent["calculate_cost"] is True
     assert result.final_page_url == "https://example.com/final"
 

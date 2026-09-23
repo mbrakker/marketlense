@@ -60,6 +60,9 @@ variables but resolve model and reasoning effort through this same runtime
 policy. Temperature remains optional for non-reasoning models and explicit
 `reasoning_effort: none` policies; the effective provider controls define the
 execution identity and semantic-cache key.
+Report artifact checkpoints recompute this identity with the same effective
+reasoning effort and supported sampling controls before a retained artifact is
+resumed. A policy change therefore invalidates stale checkpoint reuse.
 Their old model/temperature fields are descriptive only unless a fixture sets
 the explicit `test_only_execution_override` flag.
 

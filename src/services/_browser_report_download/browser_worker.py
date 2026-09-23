@@ -72,9 +72,7 @@ async def _await_browser_settle_without_cancelling(
     timeout_seconds: float,
 ) -> bool:
     task = asyncio.ensure_future(operation)
-    done, pending = await asyncio.wait(
-        {task}, timeout=max(0.01, timeout_seconds)
-    )
+    done, pending = await asyncio.wait({task}, timeout=max(0.01, timeout_seconds))
     if pending:
         task.add_done_callback(_consume_background_task_exception)
         return False
@@ -180,7 +178,9 @@ def _build_settings(payload: dict) -> BrowserDownloadSettings:
         openrouter_api_key=str(payload.get("openrouter_api_key") or ""),
         model=str(payload.get("model") or ""),
         reasoning_effort=str(payload.get("reasoning_effort") or ""),
-        form_value_reasoning_effort=str(payload.get("form_value_reasoning_effort") or ""),
+        form_value_reasoning_effort=str(
+            payload.get("form_value_reasoning_effort") or ""
+        ),
         temperature=float(payload.get("temperature", 0.0)),
         timeout_seconds=float(payload.get("timeout_seconds", 1.0)),
         max_steps=int(payload.get("max_steps", 1)),

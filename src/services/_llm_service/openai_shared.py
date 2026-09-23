@@ -725,12 +725,16 @@ def _strip_json_fence(text: str) -> str:
     return strip_json_fence(text)
 
 
-def _known_unsupported_responses_params(model: str, reasoning_effort: str = "") -> set[str]:
+def _known_unsupported_responses_params(
+    model: str, reasoning_effort: str = ""
+) -> set[str]:
     normalized = str(model or "").strip().lower()
     effort = str(reasoning_effort or "").strip().lower()
     unsupported: set[str] = set()
     for prefix, params in _RESPONSES_UNSUPPORTED_PARAM_PREFIXES.items():
-        if normalized.startswith(prefix) and not (prefix in {"gpt-5", "gpt-6"} and effort == "none"):
+        if normalized.startswith(prefix) and not (
+            prefix in {"gpt-5", "gpt-6"} and effort == "none"
+        ):
             unsupported.update(params)
     if effort and effort != "none":
         unsupported.update({"temperature", "seed", "top_p", "logprobs", "top_logprobs"})
@@ -869,11 +873,13 @@ def _adapt_responses_metadata(
     )
     usage = getattr(resp, "usage", None)
     details = (
-        usage.get("output_tokens_details") if isinstance(usage, dict)
+        usage.get("output_tokens_details")
+        if isinstance(usage, dict)
         else getattr(usage, "output_tokens_details", None)
     )
     reasoning_tokens = (
-        details.get("reasoning_tokens") if isinstance(details, dict)
+        details.get("reasoning_tokens")
+        if isinstance(details, dict)
         else getattr(details, "reasoning_tokens", None)
     )
     return _build_response_metadata(

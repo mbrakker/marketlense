@@ -368,10 +368,12 @@ class BrowserDownloadSettings:
         metadata={"doc": "Loaded browser form identity fields supplied to browser-use."}
     )
     reasoning_effort: str = field(
-        default="", metadata={"doc": "Reasoning effort from the browser-route execution policy."}
+        default="",
+        metadata={"doc": "Reasoning effort from the browser-route execution policy."},
     )
     form_value_reasoning_effort: str = field(
-        default="", metadata={"doc": "Reasoning effort from the form-value execution policy."}
+        default="",
+        metadata={"doc": "Reasoning effort from the form-value execution policy."},
     )
     openrouter_http_referer: Optional[str] = field(
         default=None,

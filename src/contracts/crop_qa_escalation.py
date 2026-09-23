@@ -32,7 +32,9 @@ class CropQaEscalationPolicy:
             "visual_card_boundary_clipped",
             "neighbor_contamination",
         ],
-        metadata={"doc": "Deterministic defect labels that make a crop escalation eligible."},
+        metadata={
+            "doc": "Deterministic defect labels that make a crop escalation eligible."
+        },
     )
     max_escalations: int = field(
         default=2,
@@ -63,7 +65,9 @@ class CropQaEscalationPolicy:
     )
     api_key: str = field(
         default="",
-        metadata={"doc": "Resolved OpenAI API key; empty only when no model call is made."},
+        metadata={
+            "doc": "Resolved OpenAI API key; empty only when no model call is made."
+        },
     )
     cost_ledger_path: str = field(
         default="./out/cost-ledger.jsonl",
@@ -101,35 +105,71 @@ class CropQaEscalationRequest:
 
 @dataclass(frozen=True)
 class CropQaEscalationDecision:
-    schema_version: str = field(metadata={"doc": "Crop QA escalation decision schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Crop QA escalation decision schema version."}
+    )
     candidate_id: str = field(metadata={"doc": "Stable crop candidate identifier."})
-    image_path: str = field(metadata={"doc": "Image crop path evaluated by deterministic QA."})
-    qa_sidecar_path: str = field(metadata={"doc": "Existing deterministic QA sidecar path."})
-    deterministic_score: float | None = field(metadata={"doc": "Deterministic QA score from the sidecar."})
-    deterministic_defects: list[str] = field(metadata={"doc": "Deterministic defect labels from the sidecar."})
-    decision: str = field(metadata={"doc": "Decision: not_escalated, accept, repair, or reject."})
+    image_path: str = field(
+        metadata={"doc": "Image crop path evaluated by deterministic QA."}
+    )
+    qa_sidecar_path: str = field(
+        metadata={"doc": "Existing deterministic QA sidecar path."}
+    )
+    deterministic_score: float | None = field(
+        metadata={"doc": "Deterministic QA score from the sidecar."}
+    )
+    deterministic_defects: list[str] = field(
+        metadata={"doc": "Deterministic defect labels from the sidecar."}
+    )
+    decision: str = field(
+        metadata={"doc": "Decision: not_escalated, accept, repair, or reject."}
+    )
     reason: str = field(metadata={"doc": "Stable machine-readable decision reason."})
-    model_confidence: float | None = field(metadata={"doc": "Model confidence, when provided."})
-    defects: list[str] = field(metadata={"doc": "Model-backed defect labels, when escalated."})
-    repair_instruction: str = field(metadata={"doc": "Bounded repair instruction, when decision is repair."})
-    provider_request_id: str = field(metadata={"doc": "Provider request ID for model-backed decisions."})
-    input_tokens: int | None = field(metadata={"doc": "Provider input tokens, if reported."})
-    output_tokens: int | None = field(metadata={"doc": "Provider output tokens, if reported."})
-    total_tokens: int | None = field(metadata={"doc": "Provider total tokens, if reported."})
-    estimated_cost_usd: float = field(metadata={"doc": "Estimated provider cost for the decision."})
+    model_confidence: float | None = field(
+        metadata={"doc": "Model confidence, when provided."}
+    )
+    defects: list[str] = field(
+        metadata={"doc": "Model-backed defect labels, when escalated."}
+    )
+    repair_instruction: str = field(
+        metadata={"doc": "Bounded repair instruction, when decision is repair."}
+    )
+    provider_request_id: str = field(
+        metadata={"doc": "Provider request ID for model-backed decisions."}
+    )
+    input_tokens: int | None = field(
+        metadata={"doc": "Provider input tokens, if reported."}
+    )
+    output_tokens: int | None = field(
+        metadata={"doc": "Provider output tokens, if reported."}
+    )
+    total_tokens: int | None = field(
+        metadata={"doc": "Provider total tokens, if reported."}
+    )
+    estimated_cost_usd: float = field(
+        metadata={"doc": "Estimated provider cost for the decision."}
+    )
 
 
 @dataclass(frozen=True)
 class CropQaEscalationResponse:
-    schema_version: str = field(metadata={"doc": "Crop QA escalation response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Crop QA escalation response schema version."}
+    )
     decisions: list[CropQaEscalationDecision] = field(
         metadata={"doc": "Per-crop escalation decisions in input order."}
     )
     eligible_count: int = field(metadata={"doc": "Crops eligible for model-backed QA."})
     model_call_count: int = field(metadata={"doc": "Model-backed QA calls performed."})
-    repair_count: int = field(metadata={"doc": "Repair decisions returned by the model."})
-    reject_count: int = field(metadata={"doc": "Reject decisions returned by the model."})
-    escalation_rate: float = field(metadata={"doc": "Model calls divided by candidate count."})
+    repair_count: int = field(
+        metadata={"doc": "Repair decisions returned by the model."}
+    )
+    reject_count: int = field(
+        metadata={"doc": "Reject decisions returned by the model."}
+    )
+    escalation_rate: float = field(
+        metadata={"doc": "Model calls divided by candidate count."}
+    )
 
 
 __all__ = [

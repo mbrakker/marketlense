@@ -19,7 +19,10 @@ from src.generators.report_generation_dependencies import ReportSelectionDepende
 from src.generators.report_generation_shared import logger
 from src.utils.candidate_features import candidate_features, candidate_features_payload
 from src.utils.logging import log_event
-from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
+from src.utils.model_resolver import (
+    effective_sampling_controls,
+    resolve_settings_execution_policy,
+)
 
 from src.generators._report_selection_generator._crop_refine.cache import (
     _bbox_tuple,
@@ -103,7 +106,9 @@ def select_refined_candidate_items(
     crop_refine_cache_rows: dict[str, dict] = {}
     resolved_crop_refine_model = fallback_model
     crop_refine_effort = ""
-    crop_refine_temperature: float | None = float(getattr(settings, "crop_refine_temperature", 0.0))
+    crop_refine_temperature: float | None = float(
+        getattr(settings, "crop_refine_temperature", 0.0)
+    )
     crop_refine_seed = settings.rank_seed
     if crop_refine_enabled:
         crop_refine_prompt_set = dependencies.load_prompt_set(

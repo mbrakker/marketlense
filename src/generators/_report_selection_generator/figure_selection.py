@@ -27,7 +27,10 @@ from src.generators.report_generation_dependencies import ReportSelectionDepende
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.coercion import coerce_float
 from src.utils.logging import log_event
-from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
+from src.utils.model_resolver import (
+    effective_sampling_controls,
+    resolve_settings_execution_policy,
+)
 from src.utils.validation import validate_candidate
 
 from .crop_refine import select_refined_candidate_items
@@ -267,8 +270,10 @@ def _apply_crop_qa_escalation(
         "crop_qa_escalation/publication_strict", runtime.settings
     ).policy
     escalation_temperature, escalation_seed = effective_sampling_controls(
-        escalation_policy.model, escalation_policy.reasoning_effort,
-        escalation_policy.temperature, runtime.settings.rank_seed,
+        escalation_policy.model,
+        escalation_policy.reasoning_effort,
+        escalation_policy.temperature,
+        runtime.settings.rank_seed,
     )
     response = dependencies.crop_qa_escalation(
         CropQaEscalationRequest(

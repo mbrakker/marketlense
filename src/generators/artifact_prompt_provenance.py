@@ -11,6 +11,7 @@ from src.services.prompt_service import build_llm_execution_identity
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.model_resolver import (
+    effective_sampling_controls,
     execution_policies_from_config,
     resolve_execution_policy,
     resolve_routing_policy,
@@ -110,12 +111,16 @@ def current_artifact_prompt_identity(
         if policy.seed_policy == "fixed"
         else getattr(settings, "openai_seed", None)
     )
+    temperature, seed = effective_sampling_controls(
+        policy.model, policy.reasoning_effort, policy.temperature, seed
+    )
     execution_identity = build_llm_execution_identity(
         prompt_content_hash=prompt_set.prompt_content_hash,
         provider=policy.provider,
         model=policy.model,
-        temperature=policy.temperature,
+        temperature=temperature,
         seed=seed,
+        reasoning_effort=policy.reasoning_effort,
         max_output_tokens=policy.max_output_tokens,
         timeout_seconds=policy.timeout_seconds
         if policy.timeout_seconds is not None

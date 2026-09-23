@@ -28,10 +28,16 @@ class _ChatCompletionRun:
 
 
 def _chat_completion_model_kwargs(
-    *, model: str, temperature: float | None, seed: int | None, reasoning_effort: str = ""
+    *,
+    model: str,
+    temperature: float | None,
+    seed: int | None,
+    reasoning_effort: str = "",
 ) -> dict[str, float | int | str]:
     """Select provider controls from the model's resolved inference mode."""
-    temperature, seed = effective_sampling_controls(model, reasoning_effort, temperature, seed)
+    temperature, seed = effective_sampling_controls(
+        model, reasoning_effort, temperature, seed
+    )
     kwargs: dict[str, float | int | str] = {}
     if reasoning_effort:
         kwargs["reasoning_effort"] = reasoning_effort
@@ -78,7 +84,10 @@ def _legacy_chat_completion_call(
         }
         payload_args.update(
             _chat_completion_model_kwargs(
-                model=model, temperature=temperature, seed=seed, reasoning_effort=reasoning_effort
+                model=model,
+                temperature=temperature,
+                seed=seed,
+                reasoning_effort=reasoning_effort,
             )
         )
         if max_output_tokens is not None:
@@ -148,7 +157,12 @@ def _modern_chat_completion_call(
         "response_format": response_format,
     }
     payload_args.update(
-        _chat_completion_model_kwargs(model=model, temperature=temperature, seed=seed, reasoning_effort=reasoning_effort)
+        _chat_completion_model_kwargs(
+            model=model,
+            temperature=temperature,
+            seed=seed,
+            reasoning_effort=reasoning_effort,
+        )
     )
     if max_output_tokens is not None:
         payload_args["max_completion_tokens"] = max_output_tokens
@@ -685,7 +699,9 @@ def openai_chat_json_with_images(
         }
         if request.reasoning_effort:
             payload_args["reasoning"] = {"effort": request.reasoning_effort}
-        known_unsupported = _known_unsupported_responses_params(request.model, request.reasoning_effort)
+        known_unsupported = _known_unsupported_responses_params(
+            request.model, request.reasoning_effort
+        )
         skipped_params: set[str] = set()
         if request.temperature is not None:
             if "temperature" in known_unsupported:

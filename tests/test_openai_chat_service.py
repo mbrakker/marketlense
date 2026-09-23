@@ -109,8 +109,12 @@ def test_gpt6_chat_sends_reasoning_effort_and_omits_sampling(
             calls.append(kwargs)
             return SimpleNamespace(
                 id="chat_gpt6",
-                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
-                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=12, completion_tokens=5, total_tokens=17
+                ),
             )
 
     class _Client:
@@ -119,8 +123,11 @@ def test_gpt6_chat_sends_reasoning_effort_and_omits_sampling(
 
     external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
     request = replace(
-        _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="high",
-        temperature=0.4, seed=7,
+        _chat_request(tmp_path),
+        model="gpt-6-luna",
+        reasoning_effort="high",
+        temperature=0.4,
+        seed=7,
     )
     result = svc.openai_chat_json(request, _ctx())
 
@@ -130,7 +137,9 @@ def test_gpt6_chat_sends_reasoning_effort_and_omits_sampling(
     assert "seed" not in calls[0]
 
 
-def test_gpt6_none_can_send_optional_sampling(external_boundary_mocks_only, tmp_path) -> None:
+def test_gpt6_none_can_send_optional_sampling(
+    external_boundary_mocks_only, tmp_path
+) -> None:
     calls: list[dict] = []
 
     class _Chat:
@@ -138,8 +147,12 @@ def test_gpt6_none_can_send_optional_sampling(external_boundary_mocks_only, tmp_
             calls.append(kwargs)
             return SimpleNamespace(
                 id="chat_none",
-                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
-                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=12, completion_tokens=5, total_tokens=17
+                ),
             )
 
     class _Client:
@@ -148,7 +161,9 @@ def test_gpt6_none_can_send_optional_sampling(external_boundary_mocks_only, tmp_
 
     external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
     request = replace(
-        _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="none",
+        _chat_request(tmp_path),
+        model="gpt-6-luna",
+        reasoning_effort="none",
     )
     svc.openai_chat_json(request, _ctx())
 
@@ -167,8 +182,12 @@ def test_reasoning_effort_changes_semantic_cache_key(
             calls.append(kwargs)
             return SimpleNamespace(
                 id=f"chat_{len(calls)}",
-                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
-                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=12, completion_tokens=5, total_tokens=17
+                ),
             )
 
     class _Client:
@@ -177,8 +196,12 @@ def test_reasoning_effort_changes_semantic_cache_key(
 
     external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
     base = replace(
-        _chat_request(tmp_path), model="gpt-6-luna", temperature=None, seed=None,
-        response_cache_enabled=True, response_cache_dir=str(tmp_path / "cache"),
+        _chat_request(tmp_path),
+        model="gpt-6-luna",
+        temperature=None,
+        seed=None,
+        response_cache_enabled=True,
+        response_cache_dir=str(tmp_path / "cache"),
     )
     low = replace(base, reasoning_effort="low")
     high = replace(base, reasoning_effort="high")
@@ -229,7 +252,9 @@ def test_openai_chat_json_delegates_usage_accounting(
 
     result = svc.openai_chat_json(
         replace(
-            _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="high",
+            _chat_request(tmp_path),
+            model="gpt-6-luna",
+            reasoning_effort="high",
         ),
         _ctx(),
     )

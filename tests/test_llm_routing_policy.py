@@ -204,8 +204,11 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         if namespace == "claim_embedding/generate":
             continue
         decision = resolve_execution_policy(
-            namespace, policies, default_model=ingest["openai_model"],
-            default_temperature=ingest["temperature"], default_seed=ingest["seed"],
+            namespace,
+            policies,
+            default_model=ingest["openai_model"],
+            default_temperature=ingest["temperature"],
+            default_seed=ingest["seed"],
             default_timeout_seconds=ingest["timeout_seconds"],
             require_registered_namespace=True,
         )
@@ -222,12 +225,18 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         ("gpt-6-luna", "ultra", "llm_execution_policy_reasoning_effort_invalid"),
     ],
 )
-def test_gpt6_policy_requires_valid_reasoning_effort(model: str, effort: str, code: str) -> None:
+def test_gpt6_policy_requires_valid_reasoning_effort(
+    model: str, effort: str, code: str
+) -> None:
     with pytest.raises(AppError) as error:
         execution_policies_from_config(
             {"report_vs": {"model": model, "reasoning_effort": effort}},
-            model_overrides={}, legacy_routing={}, default_model=model,
-            default_temperature=1.0, default_seed=None, default_timeout_seconds=600,
+            model_overrides={},
+            legacy_routing={},
+            default_model=model,
+            default_temperature=1.0,
+            default_seed=None,
+            default_timeout_seconds=600,
         )
     assert error.value.code == code
 

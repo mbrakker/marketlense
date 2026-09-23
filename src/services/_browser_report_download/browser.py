@@ -833,7 +833,9 @@ def _derive_grounded_form_option(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 model=request.settings.model,
-                temperature=None if request.settings.form_value_reasoning_effort else 0.0,
+                temperature=None
+                if request.settings.form_value_reasoning_effort
+                else 0.0,
                 reasoning_effort=request.settings.form_value_reasoning_effort,
                 max_output_tokens=400,
                 timeout_seconds=request.settings.timeout_seconds,
@@ -3653,7 +3655,8 @@ def _record_browser_use_usage_row(
         ),
         cache_decision="disabled",
         temperature=(
-            None if request.settings.reasoning_effort not in {"", "none"}
+            None
+            if request.settings.reasoning_effort not in {"", "none"}
             else request.settings.temperature
         ),
         reasoning_effort=request.settings.reasoning_effort,

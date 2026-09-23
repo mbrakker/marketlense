@@ -251,11 +251,18 @@ def test_openai_chat_json_with_images_skips_known_unsupported_params(
 def test_gpt6_responses_send_reasoning_without_sampling(tmp_path, fake_openai) -> None:
     fake_openai.queue_response_text('{"ok":true}')
     request = OpenAIResponseRequest(
-        schema_version="1.0", system_prompt="system", user_prompt="user",
-        vector_store_id="vs_123", model="gpt-6-luna", temperature=0.4,
-        reasoning_effort="high", api_key="key", seed=42,
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_123",
+        model="gpt-6-luna",
+        temperature=0.4,
+        reasoning_effort="high",
+        api_key="key",
+        seed=42,
         cost_ledger_path=str(tmp_path / "ledger.jsonl"),
-        cost_daily_path=str(tmp_path / "daily.json"), model_pricing={},
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={},
     )
 
     svc.openai_respond_with_vector_store(request, _ctx())
@@ -266,16 +273,25 @@ def test_gpt6_responses_send_reasoning_without_sampling(tmp_path, fake_openai) -
     assert "seed" not in call
 
 
-def test_gpt6_image_responses_send_reasoning_without_sampling(tmp_path, fake_openai) -> None:
+def test_gpt6_image_responses_send_reasoning_without_sampling(
+    tmp_path, fake_openai
+) -> None:
     image_path = tmp_path / "test.png"
     image_path.write_bytes(b"fake-image")
     fake_openai.queue_response_text('{"ok":true}')
     request = OpenAIJSONImagePromptRequest(
-        schema_version="1.0", system_prompt="system", user_prompt="user",
-        model="gpt-6-luna", temperature=0.4, reasoning_effort="low",
-        api_key="key", image_paths=[str(image_path)], seed=42,
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        model="gpt-6-luna",
+        temperature=0.4,
+        reasoning_effort="low",
+        api_key="key",
+        image_paths=[str(image_path)],
+        seed=42,
         cost_ledger_path=str(tmp_path / "ledger.jsonl"),
-        cost_daily_path=str(tmp_path / "daily.json"), model_pricing={},
+        cost_daily_path=str(tmp_path / "daily.json"),
+        model_pricing={},
     )
 
     svc.openai_chat_json_with_images(request, _ctx())

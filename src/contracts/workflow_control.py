@@ -1093,7 +1093,8 @@ class ModelCallAuditRecord:
         metadata={"doc": "Validation result for the response."}
     )
     reasoning_effort: str = field(
-        default="", metadata={"doc": "Reasoning effort sent to the provider, if configured."}
+        default="",
+        metadata={"doc": "Reasoning effort sent to the provider, if configured."},
     )
 
 

@@ -448,7 +448,9 @@ class CropRefineRequest:
             "doc": "Canonical budget that governs this crop-refinement provider call."
         }
     )
-    reasoning_effort: str = field(default="", metadata={"doc": "Resolved provider reasoning effort."})
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Resolved provider reasoning effort."}
+    )
     seed: Optional[int] = field(
         default=None,
         metadata={"doc": "Optional deterministic seed for crop refinement."},
@@ -535,9 +537,13 @@ class RankRequest:
         metadata={"doc": "SHA-256 hash of the user prompt template."}
     )
     model: str = field(metadata={"doc": "OpenAI model ID."})
-    temperature: float | None = field(metadata={"doc": "Optional sampling temperature."})
+    temperature: float | None = field(
+        metadata={"doc": "Optional sampling temperature."}
+    )
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
-    reasoning_effort: str = field(default="", metadata={"doc": "Resolved provider reasoning effort."})
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Resolved provider reasoning effort."}
+    )
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )

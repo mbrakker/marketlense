@@ -293,7 +293,9 @@ def openai_respond_with_vector_store(
         payload_args["max_output_tokens"] = request.max_output_tokens
     if request.reasoning_effort:
         payload_args["reasoning"] = {"effort": request.reasoning_effort}
-    known_unsupported = _known_unsupported_responses_params(request.model, request.reasoning_effort)
+    known_unsupported = _known_unsupported_responses_params(
+        request.model, request.reasoning_effort
+    )
     skipped_params: set[str] = set()
     if request.temperature is not None:
         if "temperature" in known_unsupported:

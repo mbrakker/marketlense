@@ -24966,7 +24966,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "total_tokens": {
           "anyOf": [

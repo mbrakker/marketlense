@@ -27,7 +27,10 @@ from src.services.prompt_family_materialization_service import (
 from src.utils.cache_utils import sha256_json
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
-from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
+from src.utils.model_resolver import (
+    effective_sampling_controls,
+    resolve_settings_execution_policy,
+)
 
 if TYPE_CHECKING:
     from src.contracts.report_generation import ReportSelectionState
@@ -340,11 +343,15 @@ def generate_figure_captions(
         ),
         caption_ctx,
     )
-    execution_policy = resolve_settings_execution_policy(prompt_namespace, runtime.settings)
+    execution_policy = resolve_settings_execution_policy(
+        prompt_namespace, runtime.settings
+    )
     resolved_model = execution_policy.policy.model
     reasoning_effort = execution_policy.policy.reasoning_effort
     effective_temperature, effective_seed = effective_sampling_controls(
-        resolved_model, reasoning_effort, execution_policy.policy.temperature,
+        resolved_model,
+        reasoning_effort,
+        execution_policy.policy.temperature,
         runtime.settings.openai_seed,
     )
     prompt_content_hash = str(getattr(prompt_set, "prompt_content_hash", "") or "")

@@ -13,7 +13,8 @@ def test_gpt6_browser_use_sends_reasoning_without_sampling() -> None:
 		async def create(self, **kwargs):
 			calls.append(kwargs)
 			return SimpleNamespace(
-				id='chat_gpt6', usage=None,
+				id='chat_gpt6',
+				usage=None,
 				choices=[SimpleNamespace(message=SimpleNamespace(content='ok'), finish_reason='stop')],
 			)
 
@@ -22,8 +23,12 @@ def test_gpt6_browser_use_sends_reasoning_without_sampling() -> None:
 			return SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
 
 	model = _Model(
-		model='gpt-6-luna', reasoning_effort='low', temperature=0.4,
-		top_p=0.8, frequency_penalty=0.3, seed=42,
+		model='gpt-6-luna',
+		reasoning_effort='low',
+		temperature=0.4,
+		top_p=0.8,
+		frequency_penalty=0.3,
+		seed=42,
 	)
 	result = asyncio.run(model.ainvoke([]))
 
