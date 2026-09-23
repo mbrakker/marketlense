@@ -99,5 +99,3 @@ def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> N
     ]
     assert any("Number 12.0 not present" in message for message in rejected_messages)
     assert any("Number 26.0 not present" in message for message in rejected_messages)
-
-
