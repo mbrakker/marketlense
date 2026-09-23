@@ -149,10 +149,11 @@ and document metadata, and returns only title, edition, publisher candidate,
 confidence, and short evidence. Model evidence is accepted only as a list;
 missing or malformed evidence abstains to an empty evidence set rather than
 interrupting title resolution. It never regenerates editorial artifacts.
-The resolution is checkpointed and is the sole title authority for new source
-preparation: analysis, document-map, and report-store fields cannot replace it.
-Before rendering, a generic/missing final title or a title that conflicts with
-an explicit visible source title is a typed hard failure. Recovery is routed to
+The resolution is checkpointed and is the title authority for new source
+preparation. If it finds no candidate, rendering may use the document-map title
+only when that complete title appears in the retained first-page source text.
+A generic/missing final title or one that conflicts with an explicit visible
+source title remains a typed hard failure. Recovery is routed to
 metadata/identity resolution rather than editorial regeneration. A missing
 verified public source URL does not block that package; the public attribution
 states `Source URL: Not available`.

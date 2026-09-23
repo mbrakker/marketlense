@@ -10,7 +10,7 @@ import pytest
 
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
-from src.contracts.pdf_text import PdfTextExtractResponse
+from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.report_cards import (
     CardCoverAsset,
@@ -401,6 +401,47 @@ def test_resolved_report_title_replaces_source_identifier_with_document_map_titl
     )
 
 
+def test_resolved_report_title_accepts_cover_grounded_document_map_title(
+    tmp_path,
+) -> None:
+    runtime = _runtime(tmp_path, md5="md5")
+    title = "Trust or trepidation?: How Brits feel about generative AI in media"
+    source = replace(
+        _source(runtime),
+        title_resolution=ReportTitleResolution(issues=("generic_title_missing",)),
+        text_response=PdfTextExtractResponse(
+            schema_version="1.0",
+            text=f"GREAT BRITAIN\n{title}/Research Reality",
+            pages_extracted=1,
+            char_count=100,
+            pages=[
+                PdfTextPage(
+                    page_number=1,
+                    text=f"GREAT BRITAIN\n{title}/Research Reality",
+                )
+            ],
+        ),
+    )
+    selection = _selection(runtime, source)
+    analysis = replace(
+        _analysis(runtime, source, selection),
+        evidence_packs={"doc_map": {"title": title}},
+    )
+
+    assert _resolved_report_title(runtime, source, analysis) == title
+    assert (
+        _resolved_report_title(
+            runtime,
+            source,
+            replace(
+                analysis,
+                evidence_packs={"doc_map": {"title": "Unsupported media title"}},
+            ),
+        )
+        == ""
+    )
+
+
 def test_resolved_report_title_rejects_generic_pdf_metadata_and_humanizes_source_name(
     tmp_path,
 ) -> None:
@@ -470,10 +511,10 @@ def test_resolved_report_title_prefers_source_grounded_citation_over_filename_id
         artifacts_payload={
             "claim_ledger": [
                 {
-                        "citation": (
-                            "IAB Europe's Guide to AI in Retail & Commerce Media, "
-                            "Introduction"
-                        )
+                    "citation": (
+                        "IAB Europe's Guide to AI in Retail & Commerce Media, "
+                        "Introduction"
+                    )
                 }
             ]
         },
@@ -820,7 +861,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
-            render_contract_version="2.2",
+        render_contract_version="2.2",
     )
 
     def _read_text(req, ctx):
