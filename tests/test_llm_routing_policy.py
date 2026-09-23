@@ -170,8 +170,8 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         "report_vs/artifacts/editorial_plan": "medium",
         "report_vs/artifacts/insights_candidates": "high",
         "report_vs/artifacts/expert_comment": "high",
-        "report_vs/artifacts/linkedin_post": "high",
-        "report_vs/artifacts/regenerate/linkedin_post": "high",
+        "report_vs/artifacts/linkedin_post": "medium",
+        "report_vs/artifacts/regenerate/linkedin_post": "medium",
     }
     for namespace, expected_effort in expected_artifacts.items():
         decision = resolve_execution_policy(
