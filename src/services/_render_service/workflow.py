@@ -16,6 +16,7 @@ from src.utils.logging import log_event
 from src.utils.slugify import slugify
 
 from .normalization import (
+    _PROVIDER_FILE_CITATION,
     _build_tag_acronym_map,
 )
 from .view import (
@@ -118,6 +119,7 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
         json_ld=json_ld,
         build_provenance_comment=_build_provenance_comment(request.build_provenance),
     )
+    html = _PROVIDER_FILE_CITATION.sub("", html)
     report_name = slugify(request.doc_name)
     out_dir = Path(request.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

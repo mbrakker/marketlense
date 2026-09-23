@@ -316,7 +316,21 @@ def test_render_removes_provider_file_citations_from_public_topics(
                             "subtopics": [f"Conversion increased. {marker}"],
                             "pages": [8],
                         }
-                    ]
+                    ],
+                    "key_figures": [
+                        {
+                            "value": "41%",
+                            "label": "Automated email order share",
+                            "context": f"From 2% of sends. {marker}",
+                        }
+                    ],
+                },
+                "evidence_packs": {
+                    "methods": {
+                        "methods": [
+                            {"description": (f"Analyzes 2023 merchant sends. {marker}")}
+                        ]
+                    }
                 },
             },
             doc_name="automation.pdf",
@@ -332,6 +346,8 @@ def test_render_removes_provider_file_citations_from_public_topics(
     assert "turn0file" not in html
     assert "Automated emails generated 41% of orders from 2% of sends." in html
     assert "Conversion increased." in html
+    assert "From 2% of sends." in html
+    assert "Analyzes 2023 merchant sends." in html
     assert "Pages 8" in html
 
 
