@@ -143,6 +143,68 @@ def test_insight_repair_allows_only_verified_derived_projection() -> None:
     assert any(issue.affected_section == "metric_spine" for issue in issues)
 
 
+def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
+    toc = [
+        {
+            "section_id": "topic-one",
+            "section_title": "Source topic",
+            "pages": [3],
+            "key_points": ["Source topic detail"],
+        }
+    ]
+    before = {
+        "toc_entries": toc,
+        "summary": {},
+        "insights_final": [],
+        "topics_covered": [
+            {
+                "schema_version": "1.0",
+                "topic_id": "topic-one",
+                "topic": "Source topic",
+                "subtopics": ["Source topic detail"],
+                "why_it_matters": "Source topic detail",
+                "evidence_ids": [],
+                "pages": [3],
+                "status": "toc_only",
+            }
+        ],
+    }
+    candidate = deepcopy(before)
+    candidate["insights_final"] = [
+        {"id": "one", "evidence_id": "finding-one", "pages": [3]}
+    ]
+    candidate["topics_covered"][0]["evidence_ids"] = ["finding-one"]
+    candidate["topics_covered"][0]["status"] = "source_backed"
+    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["insights_final"])])
+
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+
+    assert not issues
+    assert "topics_covered" in verified
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=candidate,
+            plan=plan,
+            verified_derived_roots=verified,
+        ).status
+        == "pass"
+    )
+
+    candidate["topics_covered"][0]["evidence_ids"] = ["unrelated"]
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+    assert "topics_covered" not in verified
+    assert any(issue.affected_section == "topics_covered" for issue in issues)
+
+
 def _soft_copy_claim(
     *,
     family: str,

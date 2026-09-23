@@ -19,6 +19,7 @@ from src.generators._artifact_generator.storage import (
     build_chart_insight_cards,
     build_executive_advisory_artifacts,
     build_key_figures,
+    build_topics_covered,
     build_universal_claim_ledger,
     derive_metric_spine_from_insights,
 )
@@ -219,6 +220,7 @@ def _verify_derived_artifact_roots(
 
     roots = (
         "metric_spine",
+        "topics_covered",
         "key_figures",
         "chart_insight_cards",
         "executive_advisory",
@@ -262,6 +264,12 @@ def _verify_derived_artifact_roots(
     )
     expected = {
         "metric_spine": metric_spine,
+        "topics_covered": build_topics_covered(
+            toc_entries=candidate_artifacts.get("toc_entries") or [],
+            evidence_packs=evidence_packs,
+            summary=summary,
+            insights_final=insights,
+        ),
         "key_figures": key_figures,
         "chart_insight_cards": build_chart_insight_cards(
             key_figures=key_figures,

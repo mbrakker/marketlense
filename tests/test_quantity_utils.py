@@ -38,6 +38,14 @@ def test_extract_quantities_captures_generic_units_and_timeframes() -> None:
     assert any("q3 2025" in q.timeframe for q in parsed if q.timeframe)
 
 
+def test_calendar_year_pair_near_percentage_is_not_a_percentage_range() -> None:
+    parsed = extract_quantities(
+        "Q3 and Q4 contributed 54% of total revenue in both 2023 and 2024."
+    )
+
+    assert [(q.value, q.unit_family) for q in parsed] == [(54.0, "percent")]
+
+
 def test_percent_decimal_and_ratio_forms_match() -> None:
     assert _any_match("1 in 10 respondents converted.", "Conversion reached 10%.")
     assert _any_match("Conversion rate was 0.1.", "Conversion reached 10%.")

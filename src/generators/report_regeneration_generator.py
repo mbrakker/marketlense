@@ -5,8 +5,8 @@ import json
 import logging
 import re
 from copy import deepcopy
-from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Dict, List
+from dataclasses import asdict, dataclass, field, replace
+from typing import Any, Callable, Dict, List, Sequence
 
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
@@ -145,6 +145,7 @@ class _SoftCopyClaimRepair:
     start: int
     end: int
     issue: RegenerationIssue
+    issues: tuple[RegenerationIssue, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -661,7 +662,13 @@ def _claim_scoped_grounding_package(
         issue=repair.issue,
         artifacts=_artifact_state_from_state(execution.state),
         evidence_packs=execution.runtime.safe_evidence,
-        quarantined_evidence_ids=tuple(repair.issue.excluded_evidence_ids),
+        quarantined_evidence_ids=tuple(
+            dict.fromkeys(
+                evidence_id
+                for issue in repair.issues or (repair.issue,)
+                for evidence_id in issue.excluded_evidence_ids
+            )
+        ),
         doc_map=execution.runtime.safe_doc_map,
         claim_text=repair.text,
     )
@@ -1093,7 +1100,7 @@ def _current_section_payload(target_section: str, artifacts: Dict[str, Any]) -> 
     )
 
 
-def _issues_json(issues: List[RegenerationIssue]) -> str:
+def _issues_json(issues: Sequence[RegenerationIssue]) -> str:
     return _dump_json([asdict(issue) for issue in issues])
 
 
@@ -1660,10 +1667,20 @@ def _soft_copy_claim_repairs(
                     )
                 ]
             )
-        if matched is None or any(
-            prior.claim.claim_id == matched.claim.claim_id for prior in resolved
-        ):
+        if matched is None:
             return None
+        prior_index = next(
+            (
+                index
+                for index, prior in enumerate(resolved)
+                if prior.claim.claim_id == matched.claim.claim_id
+            ),
+            None,
+        )
+        if prior_index is not None:
+            prior = resolved[prior_index]
+            resolved[prior_index] = replace(prior, issues=prior.issues + (issue,))
+            continue
         resolved.append(
             _SoftCopyClaimRepair(
                 artifact_family=matched.artifact_family,
@@ -1672,6 +1689,7 @@ def _soft_copy_claim_repairs(
                 start=matched.start,
                 end=matched.end,
                 issue=issue,
+                issues=(issue,),
             )
         )
     return resolved
@@ -1806,7 +1824,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                                 "preserve_sibling_claims": True,
                             }
                         ),
-                        "failure_reasons_json": _issues_json([repair.issue]),
+                        "failure_reasons_json": _issues_json(repair.issues),
                         "fix_checklist_json": _fix_checklist_json(execution.target),
                         "grounding_package_json": _dump_json(claim_grounding),
                         "editorial_plan_json": _dump_json(
@@ -2417,7 +2435,7 @@ def _handle_expert_comment_regeneration(
                                 "preserve_sibling_claims": True,
                             }
                         ),
-                        "failure_reasons_json": _issues_json([repair.issue]),
+                        "failure_reasons_json": _issues_json(repair.issues),
                         "fix_checklist_json": _fix_checklist_json(execution.target),
                         "grounding_package_json": _dump_json(claim_grounding),
                     },
@@ -2640,7 +2658,7 @@ def _handle_linkedin_post_regeneration(
                             "preserve_sibling_claims": True,
                         }
                     ),
-                    "failure_reasons_json": _issues_json([repair.issue]),
+                    "failure_reasons_json": _issues_json(repair.issues),
                     "fix_checklist_json": _fix_checklist_json(execution.target),
                     "grounding_package_json": _dump_json(claim_grounding),
                 },

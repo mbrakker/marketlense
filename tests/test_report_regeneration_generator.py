@@ -1620,9 +1620,11 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
     "client_type",
     (_ClaimScopedExpertOpenAIClient, _PunctuationClaimScopedExpertOpenAIClient),
 )
+@pytest.mark.parametrize("issue_count", (1, 2, 4))
 def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_provenance(
     tmp_path,
     client_type,
+    issue_count,
 ) -> None:
     """Removing claim-scoped reconstruction makes this assertion fail."""
     current_artifacts = _current_artifacts()
@@ -1671,6 +1673,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
         }
     }
 
+    prompt_client = _FakePromptClient()
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id="report-1",
@@ -1686,10 +1689,11 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
                             RegenerationIssue(
                                 rule_id="grounding",
                                 affected_section="expert_comment",
-                                message="Unsupported middle sentence.",
+                                message=f"Unsupported middle sentence: issue {index}.",
                                 severity="error",
                                 evidence_ids=["f2"],
                             )
+                            for index in range(issue_count)
                         ],
                     )
                 ],
@@ -1705,13 +1709,17 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
             categories=["Category"],
         ),
         openai_client=client_type(),
-        prompt_client=_FakePromptClient(),
+        prompt_client=prompt_client,
     )
 
     assert response.updated_artifacts["expert_comment"] == (
         "First supported U.S. sentence stays.  Repaired middle claim.  "
         "Third supported sentence stays."
     )
+    failure_reasons = json.loads(
+        prompt_client.render_calls[0]["variables"]["failure_reasons_json"]
+    )
+    assert len(failure_reasons) == issue_count
     selection = response.updated_artifacts["_repair_evidence_selection"][
         f"expert_comment:{original_claims[1].claim_id}"
     ]

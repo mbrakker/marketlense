@@ -349,7 +349,9 @@ class CrossReportRawMetricReference:
     raw_value: str = field(
         metadata={"doc": "Original metric value exactly as projected from source."}
     )
-    unit: str = field(metadata={"doc": "Original metric unit, if available."})
+    unit: str = field(
+        metadata={"doc": "Original metric unit, if available.", "required": False}
+    )
     context: str = field(
         metadata={"doc": "Source-specific metric context and scope statement."}
     )

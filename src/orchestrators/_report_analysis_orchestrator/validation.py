@@ -69,6 +69,7 @@ _DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
         {"summary", "expert_comment", "linkedin_post"}
     ),
     "metric_spine": frozenset({"insights_final"}),
+    "topics_covered": frozenset({"summary", "insights_final"}),
     "key_figures": frozenset({"insights_final", "summary"}),
     "chart_insight_cards": frozenset({"insights_final", "key_figures"}),
     "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),

@@ -38,9 +38,7 @@ _MULT_RE = re.compile(rf"\b(?P<num>{_NUMBER_RE})\s*x\b", re.IGNORECASE)
 # Editorial reports commonly express daily viewing time as H:MM.  Treat that
 # pair as one time quantity, rather than two unrelated bare numbers, so its
 # value and attached forecast/observed timeframe remain groundable together.
-_DURATION_RE = re.compile(
-    r"(?<![\d:])(?P<hours>\d{1,2}):(?P<minutes>[0-5]\d)(?![\d:])"
-)
+_DURATION_RE = re.compile(r"(?<![\d:])(?P<hours>\d{1,2}):(?P<minutes>[0-5]\d)(?![\d:])")
 _MAIN_RE = re.compile(
     rf"(?<![A-Za-z0-9])(?P<prefix>{_COMP_RE})?\s*"
     r"(?P<currency>[$€£¥])?\s*"
@@ -307,9 +305,21 @@ def _extract_ranges(text: str) -> List[Quantity]:
         if low is None or high is None:
             continue
         unit = _clean_unit(match.group("unit"))
-        if unit in {"%", "percent", "pct", "pp", "percentage point", "percentage points"} and re.fullmatch(
-            r"20\d{2}", match.group("low").strip()
+        if (
+            not unit
+            and re.fullmatch(r"20\d{2}", match.group("low").strip())
+            and re.fullmatch(r"20\d{2}", match.group("high").strip())
         ):
+            # A pair of calendar years is a timeframe, not a numeric range.
+            continue
+        if unit in {
+            "%",
+            "percent",
+            "pct",
+            "pp",
+            "percentage point",
+            "percentage points",
+        } and re.fullmatch(r"20\d{2}", match.group("low").strip()):
             # "from 16.3% in 2024 to 17.8%" is a time comparison, not a
             # 2024-to-17.8 percent range.
             continue

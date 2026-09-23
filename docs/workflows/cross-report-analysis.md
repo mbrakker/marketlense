@@ -8,6 +8,11 @@ Cross-report analysis produces Briefings from persisted report projections and e
 
 The workflow selects bounded, source-backed input, prepares evidence deterministically, synthesizes and validates a briefing artifact, persists the result, and can route an approved package to WordPress. It does not normalize metrics across publishers or introduce a separate analytics service.
 
+Projected raw metrics preserve the source value and its unit when supplied. A
+metric whose value already contains its display unit may have an empty separate
+unit field; this remains a valid cross-report input and is never assigned a
+guessed unit.
+
 The WordPress publication target for a Briefing is `wordpress:ml_briefing`.
 
 Queue-driven Briefings are formed only from a durable opportunity with a frozen

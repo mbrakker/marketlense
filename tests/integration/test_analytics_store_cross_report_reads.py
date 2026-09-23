@@ -386,6 +386,47 @@ def test_cross_report_projected_data_read_adapts_blank_projected_publisher(
 
 
 @pytest.mark.integration
+def test_cross_report_projected_data_preserves_metric_without_unit(tmp_path) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    ctx = _ctx()
+    upsert_projection(
+        AnalyticsProjectionUpsertRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            db_path=db_path,
+            batch=_batch(
+                "unitless-report",
+                title="Seasonal Email Outlook",
+                publisher="Publisher A",
+                publisher_id="publisher-a",
+                generated_at_utc="2026-05-01T00:00:00Z",
+                tag="Email",
+                category_id="retail",
+                category_label="Retail",
+            ),
+        ),
+        ctx,
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE report_metrics SET value = '35.9%', unit = '' WHERE report_id = ?",
+            ("unitless-report",),
+        )
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            content_classes=["metric"],
+            minimum_projection_status="projected",
+        ),
+        ctx,
+    )
+
+    assert response.raw_metrics[0].raw_value == "35.9%"
+    assert response.raw_metrics[0].unit == ""
+
+
+@pytest.mark.integration
 def test_cross_report_projected_data_read_can_return_failed_projection_inventory(
     tmp_path,
 ) -> None:

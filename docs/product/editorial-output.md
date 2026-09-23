@@ -69,6 +69,10 @@ repaired in one targeted pass; reconstruction applies their original spans
 right-to-left so every unaffected sibling remains byte-identical. Family-wide
 regeneration remains the fallback for ambiguous, family-wide, or incoherent
 failures.
+Multiple validation findings on the same retained sentence form one scoped
+repair with all findings supplied to the model and one repair-selection lineage.
+Calendar year pairs in nearby percentage prose remain time context rather than
+an invented numeric range.
 All deterministic public-copy corrections precede retained-provenance
 derivation. If source-display preservation changes a sentence, its validated
 classification and evidence IDs remain attached while its mechanical claim ID,

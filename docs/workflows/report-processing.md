@@ -133,6 +133,11 @@ evidence actually selected by the generator, so a failed combination cannot be
 repeated under another nominal label. Candidate audits retain this fingerprint
 with the typed repair delta.
 
+An insight or summary repair can also change the evidence displayed in the
+derived topic inventory. Candidate scope validation rebuilds `topics_covered`
+from the unchanged table of contents and the candidate's retained evidence;
+only that exact deterministic change is eligible for promotion.
+
 Before analysis, source preparation resolves one canonical report title using a
 fixed hierarchy: an explicit cover/title-page title, a repeated in-document
 header, clear source content, a clean acquired filename, then only specific,
