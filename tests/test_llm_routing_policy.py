@@ -165,7 +165,7 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
     expected_artifacts = {
         "report_vs/doc_map": "high",
         "report_vs/evidence_packs": "medium",
-        "report_vs/artifacts/summary": "medium",
+        "report_vs/artifacts/summary": "high",
         "report_vs/artifacts/insights_final": "high",
         "report_vs/artifacts/editorial_plan": "medium",
         "report_vs/artifacts/insights_candidates": "high",

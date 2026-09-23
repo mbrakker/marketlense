@@ -295,7 +295,7 @@ llm_execution_policies:
     schema_version: "1.0"
     provider: openai
     model: "gpt-6-luna"
-    reasoning_effort: medium
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit

@@ -84,6 +84,11 @@ Its generation input orders retained findings for the first editorial theme
 ahead of other findings when their finding or section ID matches the theme's
 evidence IDs. The same evidence remains available to other artifact families
 in its original order.
+Summary generation uses high reasoning effort after repeated medium-effort
+Omnisend canaries omitted the priority automation contrast despite a direct
+retained finding. Summary regeneration retains its separately configured effort.
+Public topic rendering removes provider file citation markers from displayed
+topic prose while retaining the source statement and page attribution.
 All deterministic public-copy corrections precede retained-provenance
 derivation. If source-display preservation changes a sentence, its validated
 classification and evidence IDs remain attached while its mechanical claim ID,

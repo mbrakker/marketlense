@@ -139,8 +139,7 @@ def test_seo_description_keeps_decimals_and_recognizes_real_sentence_boundaries(
 
 def test_seo_description_never_exceeds_its_maximum_length() -> None:
     description = (
-        "A complete source-backed finding ends here. "
-        "Another sentence is excluded."
+        "A complete source-backed finding ends here. Another sentence is excluded."
     )
 
     result = _seo_description(
@@ -297,7 +296,48 @@ def test_render_removes_inline_internal_evidence_tokens_from_public_prose(
     assert "The retained signal is actionable." in html
 
 
-def test_render_preserves_linkedin_paragraphs_without_markdown_emphasis(tmp_path: Path) -> None:
+def test_render_removes_provider_file_citations_from_public_topics(
+    tmp_path: Path,
+) -> None:
+    marker = "\ue200filecite\ue202turn0file4\ue202turn0file2\ue201"
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Automation report",
+                "artifacts": {
+                    "topics_covered": [
+                        {
+                            "topic": "Automated email",
+                            "why_it_matters": (
+                                "Automated emails generated 41% of orders from 2% "
+                                f"of sends. {marker}"
+                            ),
+                            "subtopics": [f"Conversion increased. {marker}"],
+                            "pages": [8],
+                        }
+                    ]
+                },
+            },
+            doc_name="automation.pdf",
+            file_id="automation",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+    assert marker not in html
+    assert "turn0file" not in html
+    assert "Automated emails generated 41% of orders from 2% of sends." in html
+    assert "Conversion increased." in html
+    assert "Pages 8" in html
+
+
+def test_render_preserves_linkedin_paragraphs_without_markdown_emphasis(
+    tmp_path: Path,
+) -> None:
     response = render_report(
         RenderRequest(
             schema_version="1.0",
@@ -321,7 +361,9 @@ def test_render_preserves_linkedin_paragraphs_without_markdown_emphasis(tmp_path
     html = Path(response.html_path).read_text(encoding="utf-8")
 
     assert "*Activate Technology" not in html
-    assert "Activate Technology & Media Outlook: 2026 Edition\n\nThe source-backed" in html
+    assert (
+        "Activate Technology & Media Outlook: 2026 Edition\n\nThe source-backed" in html
+    )
 
 
 def test_render_does_not_repeat_toc_summaries_across_public_sections(
@@ -903,9 +945,7 @@ def test_rendered_report_identity_keeps_title_year_and_labels_distinct_dates(
     assert "Period:" not in html
     assert "Year:" not in html
     json_ld = json.loads(
-        re.search(
-            r'<script type="application/ld\+json">(.*?)</script>', html
-        ).group(1)
+        re.search(r'<script type="application/ld\+json">(.*?)</script>', html).group(1)
     )
     assert json_ld["headline"] == title
 

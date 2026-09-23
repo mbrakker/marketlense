@@ -45,6 +45,9 @@ _INLINE_INTERNAL_REFERENCE = re.compile(
     r"\b(?!(?:q[1-4]|h[12])\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
     re.IGNORECASE,
 )
+_PROVIDER_FILE_CITATION = re.compile(
+    r"\ue200filecite(?:\ue202turn\d+file\d+)+\ue201", re.IGNORECASE
+)
 _PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")
 _LINKEDIN_MARKDOWN_LINK = re.compile(r"\[([^\]\n]+)\]\([^\)\n]+\)")
 _LINKEDIN_MARKDOWN_HEADING = re.compile(r"(?m)^\s{0,3}#{1,6}\s+")
@@ -112,7 +115,10 @@ def _sanitize_public_prose(value: object) -> str:
     text = _s(value)
     if not text:
         return ""
-    sanitized = re.sub(r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", text)).strip()
+    sanitized = _PROVIDER_FILE_CITATION.sub("", text)
+    sanitized = re.sub(
+        r"\s{2,}", " ", _INLINE_INTERNAL_REFERENCE.sub("", sanitized)
+    ).strip()
     if _PUBLIC_TRUNCATION_MARKER.search(sanitized):
         return ""
     return _MECHANICAL_PUBLIC_SCAFFOLD.sub("", sanitized).strip()
@@ -700,11 +706,13 @@ def _coerce_public_topics_covered(
     )
     for raw_item in raw_topics:
         item = _coerce_dict(raw_item)
-        title = _pick_first_text(
-            item.get("topic"),
-            item.get("title"),
-            item.get("display_title"),
-            raw_item if isinstance(raw_item, str) else "",
+        title = _sanitize_public_prose(
+            _pick_first_text(
+                item.get("topic"),
+                item.get("title"),
+                item.get("display_title"),
+                raw_item if isinstance(raw_item, str) else "",
+            )
         )
         if not title:
             continue
@@ -714,15 +722,17 @@ def _coerce_public_topics_covered(
         topics.append(
             {
                 "topic": title,
-                "summary": _pick_first_text(
-                    item.get("why_it_matters"),
-                    item.get("summary"),
-                    "Covered by the source report.",
+                "summary": _sanitize_public_prose(
+                    _pick_first_text(
+                        item.get("why_it_matters"),
+                        item.get("summary"),
+                        "Covered by the source report.",
+                    )
                 ),
                 "subtopics": [
-                    _s(point)
+                    _sanitize_public_prose(point)
                     for point in _coerce_list(item.get("subtopics"))
-                    if _s(point)
+                    if _sanitize_public_prose(point)
                 ][:4],
                 "source_label": f"Pages {', '.join(pages)}" if pages else "",
             }
