@@ -41,6 +41,11 @@ benefits, or mandatory actions. Where evidence cannot support a distinct
 implication or action, the public copy remains descriptive or omits it; the
 existing validators continue to enforce grounding independently.
 
+The Executive Summary names a central measured result or comparison when a
+direct finding or quote supplies one. It retains the subject, period, and
+figures and binds that sentence to the same direct evidence ID in its private
+claim provenance and summary evidence map.
+
 For retained soft-copy families, the artifact keeps private sentence-level
 claim provenance beside the unchanged public prose. The pipeline derives the
 mechanical provenance metadata itself: the canonical sentence grid is
