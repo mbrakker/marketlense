@@ -426,6 +426,7 @@ def valid_soft_copy_evidence_selection(
         not in {
             "claim_evidence_ids",
             "parent_insight_or_theme",
+            "typed_compatibility_fallback",
             "lexical_fallback",
             "abstain",
         }

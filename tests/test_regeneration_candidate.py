@@ -295,8 +295,12 @@ def _refresh_repair_selection_hash(selection: dict[str, object]) -> None:
 
 
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+@pytest.mark.parametrize(
+    "strategy", ["claim_evidence_ids", "typed_compatibility_fallback"]
+)
 def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
     family: str,
+    strategy: str,
 ) -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
     original_claim = _claim_for_family(current, family)
@@ -321,6 +325,11 @@ def test_candidate_allows_repaired_factual_claim_with_explicit_new_lineage(
             repaired_claim_id=str(repaired["claim_id"]),
         )
     }
+    selection = candidate["_repair_evidence_selection"][
+        f"{family}:{original_claim['claim_id']}"
+    ]
+    selection["strategy"] = strategy
+    _refresh_repair_selection_hash(selection)
 
     result = validate_regeneration_candidate(
         current_artifacts=current,

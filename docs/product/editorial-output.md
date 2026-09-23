@@ -73,6 +73,10 @@ Multiple validation findings on the same retained sentence form one scoped
 repair with all findings supplied to the model and one repair-selection lineage.
 Calendar year pairs in nearby percentage prose remain time context rather than
 an invented numeric range.
+Summary generation leads with the first editorial theme's direct measured
+finding when available, retaining its cohort, denominator, and period. Summary
+regeneration requests one provenance binding per complete sentence and keeps
+numeric source bases worded as the retained evidence states them.
 All deterministic public-copy corrections precede retained-provenance
 derivation. If source-display preservation changes a sentence, its validated
 classification and evidence IDs remain attached while its mechanical claim ID,

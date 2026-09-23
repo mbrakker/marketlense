@@ -27,6 +27,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
+    valid_soft_copy_evidence_selection,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -465,6 +466,11 @@ def test_soft_copy_claim_evidence_package_uses_bounded_typed_compatibility_fallb
         "relevant-3",
     ]
     assert package["evidence_selection"]["strategy"] == "typed_compatibility_fallback"
+    assert valid_soft_copy_evidence_selection(
+        f"expert_comment:{_soft_copy_claim().claim_id}",
+        package["evidence_selection"],
+        require_selected_evidence_entries=True,
+    )
 
 
 def test_soft_copy_claim_evidence_package_abstains_and_is_repeatable_without_support() -> (

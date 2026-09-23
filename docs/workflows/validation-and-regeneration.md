@@ -535,6 +535,9 @@ selection records are carried forward across later attempts and a re-repaired
 claim replaces its own record. The hash covers the canonical selected package,
 not just its IDs; this metadata is never projected into public payloads. When
 no support remains, the normal abstention path applies.
+The typed compatibility fallback is a recognized selection strategy in both
+the producer and the retained-selection validator; its full selected-entry
+hash and quarantine checks still apply.
 
 The deterministic candidate check is complete only when all evidence IDs,
 source pages, and material lineage relationships validate. A grounding-provider
