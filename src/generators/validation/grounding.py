@@ -15,6 +15,7 @@ from src.contracts.protected_facts import ProtectedFactComparison
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -627,18 +628,20 @@ def _public_factual_items(
         text: object,
         evidence_ids: Sequence[str] = (),
         evidence_text: object = "",
+        declared_classification: str = "",
     ) -> None:
         claim = sanitize_citation_tokens(s(text))
         if claim:
-            items.append(
-                {
-                    "item_id": item_id,
-                    "section": section,
-                    "text": claim,
-                    "evidence_ids": [value for value in evidence_ids if value],
-                    "retained_evidence": s(evidence_text),
-                }
-            )
+            item = {
+                "item_id": item_id,
+                "section": section,
+                "text": claim,
+                "evidence_ids": [value for value in evidence_ids if value],
+                "retained_evidence": s(evidence_text),
+            }
+            if declared_classification:
+                item["declared_classification"] = declared_classification
+            items.append(item)
 
     def add_soft_copy_sentences(
         family: str,
@@ -649,11 +652,7 @@ def _public_factual_items(
         evidence_by_id: dict[str, str],
     ) -> None:
         public_text = sanitize_citation_tokens(s(text))
-        sentences = [
-            sanitize_citation_tokens(sentence)
-            for sentence in re.split(r"(?<=[.!?])\s+", public_text)
-            if sanitize_citation_tokens(sentence)
-        ]
+        sentences = soft_copy_material_sentences(public_text)
         claims_by_hash: dict[str, list[Any]] = {}
         for claim in soft_copy_claims:
             if claim.artifact_family == family:
@@ -678,6 +677,7 @@ def _public_factual_items(
                         for evidence_id in claim.evidence_ids
                         if evidence_id in evidence_by_id
                     ),
+                    claim.classification,
                 )
             return
         add(

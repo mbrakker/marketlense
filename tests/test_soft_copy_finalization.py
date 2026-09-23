@@ -164,6 +164,64 @@ def test_full_family_finalization_replaces_obsolete_retained_provenance() -> Non
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_regeneration_keeps_unchanged_summary_with_retained_provenance() -> None:
+    """A sibling repair must not replace an already validated summary."""
+    summary = {
+        "tldr": "Revenue grew by 12%.",
+        "card_tldr_compact": "Revenue grew by 12%.",
+        "executive_summary": "Revenue grew by 12%. The report describes retention demand.",
+        "claim_evidence_map": [
+            {
+                "claim": "Revenue grew by 12%.",
+                "evidence_id": "f1",
+                "evidence": "Revenue grew by 12%.",
+                "evidence_spans": [{"evidence_id": "f1", "source_pack": "findings"}],
+            }
+        ],
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "evidence": "Revenue grew by 12%.", "pages": [1]},
+                {
+                    "id": "f2",
+                    "evidence": "The report describes retention demand.",
+                    "pages": [2],
+                },
+            ]
+        }
+    }
+    original = _assemble_soft_copy(
+        summary=summary,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": "Revenue grew by 12%.",
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+                {
+                    "claim": "The report describes retention demand.",
+                    "classification": "factual",
+                    "evidence_ids": ["f2"],
+                },
+            ]
+        },
+    )
+    regenerated = _assemble_soft_copy(
+        summary=summary,
+        evidence_packs=evidence_packs,
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
+    )
+
+    assert regenerated["summary"] == original["summary"]
+    assert (
+        regenerated["soft_copy_claim_provenance"]
+        == original["soft_copy_claim_provenance"]
+    )
+
+
 def test_finalization_omits_unbound_linkedin_sentence_before_retention() -> None:
     """Optional social copy retains only sentences with declared semantics."""
     supported = "Execution readiness is becoming more visible."

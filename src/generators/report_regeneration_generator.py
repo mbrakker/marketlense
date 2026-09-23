@@ -17,6 +17,8 @@ from src.contracts.regeneration import (
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    align_soft_copy_claim_bindings_to_text,
+    soft_copy_material_sentences,
     soft_copy_claim_provenance_from_payload,
     valid_soft_copy_evidence_selection,
 )
@@ -1487,19 +1489,53 @@ def _normalized_soft_copy_text(value: object) -> str:
     return " ".join(str(value or "").split())
 
 
-def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
-    """Return sentence spans without normalising public prose or separators."""
+def _valid_claim_replacement(*, text: str, bindings: object) -> bool:
+    """Accept only one newly bound sentence for a claim-scoped model reply."""
 
-    spans: List[tuple[int, int, str]] = []
+    sentences = soft_copy_material_sentences(text)
+    if len(sentences) != 1:
+        return False
+    aligned = align_soft_copy_claim_bindings_to_text(
+        artifact_family="expert_comment", text=text, claim_bindings=bindings
+    )
+    return any(
+        _normalized_soft_copy_text(binding.get("claim")) == sentences[0]
+        and binding.get("classification")
+        in {"factual", "interpretive", "recommendation"}
+        and (
+            binding.get("classification") != "factual"
+            or bool(binding.get("evidence_ids"))
+        )
+        for binding in aligned
+    )
+
+
+def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
+    """Return byte-preserving spans on the canonical provenance sentence grid."""
+
+    fragments: List[tuple[int, int]] = []
     start = 0
     for separator in re.finditer(r"(?<=[.!?])\s+", text):
         end = separator.start()
-        sentence = text[start:end]
-        if _normalized_soft_copy_text(sentence):
-            spans.append((start, end, sentence))
+        if _normalized_soft_copy_text(text[start:end]):
+            fragments.append((start, end))
         start = separator.end()
     if (tail := text[start:]) and _normalized_soft_copy_text(tail):
-        spans.append((start, len(text), tail))
+        fragments.append((start, len(text)))
+    sentences = soft_copy_material_sentences(text)
+    spans: List[tuple[int, int, str]] = []
+    cursor = 0
+    for sentence in sentences:
+        for end_index in range(cursor, len(fragments)):
+            span_start = fragments[cursor][0]
+            span_end = fragments[end_index][1]
+            candidate = text[span_start:span_end]
+            if _normalized_soft_copy_text(candidate) == sentence:
+                spans.append((span_start, span_end, candidate))
+                cursor = end_index + 1
+                break
+        else:
+            return []
     return spans
 
 
@@ -1780,6 +1816,13 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     if isinstance(repaired_summary, dict)
                     else ""
                 )
+                if not _valid_claim_replacement(
+                    text=repaired_text,
+                    bindings=result.get("_soft_copy_claim_bindings"),
+                ):
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
                 _record_soft_copy_claim_bindings(
                     execution,
                     artifact_family="summary",
@@ -2373,6 +2416,13 @@ def _handle_expert_comment_regeneration(
                     },
                 )
                 repaired_text = _s(result.get("expert_comment"))
+                if not _valid_claim_replacement(
+                    text=repaired_text,
+                    bindings=result.get("_soft_copy_claim_bindings"),
+                ):
+                    replacements[repair.claim.claim_id] = None
+                    _mark_soft_copy_claim_removed(execution, repair)
+                    continue
                 _record_soft_copy_claim_bindings(
                     execution,
                     artifact_family="expert_comment",
@@ -2590,6 +2640,13 @@ def _handle_linkedin_post_regeneration(
             repaired_text = strip_linkedin_inline_reference_ids(
                 _s(result.get("linkedin_post"))
             )
+            if not _valid_claim_replacement(
+                text=repaired_text,
+                bindings=result.get("_soft_copy_claim_bindings"),
+            ):
+                replacements[repair.claim.claim_id] = None
+                _mark_soft_copy_claim_removed(execution, repair)
+                continue
             _record_soft_copy_claim_bindings(
                 execution,
                 artifact_family="linkedin_post",

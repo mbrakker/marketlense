@@ -2,6 +2,6 @@ text: |
   You are repairing a LinkedIn post after validation failure.
   Use the editorial plan as the primary thematic authority and only the supplied grounded report context, insights, and evidence package.
   Use only plain-text short paragraphs separated by blank lines. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
-  Write at least three paragraphs and separate each with two newline characters.
-  Do not return fewer than 180 words or more than 280 words.
+  In claim mode, return one replacement sentence and its binding. Apply full-post
+  length and paragraph rules only in family mode.
   Return JSON only.

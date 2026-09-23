@@ -15,6 +15,13 @@ from src.contracts.soft_copy_claim_provenance import (
     valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationIssue
+from src.generators._artifact_generator.storage import (
+    build_chart_insight_cards,
+    build_executive_advisory_artifacts,
+    build_key_figures,
+    build_universal_claim_ledger,
+    derive_metric_spine_from_insights,
+)
 from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.soft_copy_claim_provenance import (
     retained_soft_copy_claims_cover_text,
@@ -34,6 +41,7 @@ class CandidateIntegrityResult:
 
     issues: list[ValidationIssue]
     evidence_lineage: list[RegenerationEvidenceLineage]
+    verified_derived_roots: frozenset[str] = frozenset()
 
     @property
     def passed(self) -> bool:
@@ -188,7 +196,100 @@ def validate_regeneration_candidate(
         candidate_records=candidate_records,
         issues=issues,
     )
-    return CandidateIntegrityResult(issues=issues, evidence_lineage=lineage)
+    verified_derived_roots, derived_issues = _verify_derived_artifact_roots(
+        current_artifacts=current_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
+    )
+    issues.extend(derived_issues)
+    return CandidateIntegrityResult(
+        issues=issues,
+        evidence_lineage=lineage,
+        verified_derived_roots=verified_derived_roots,
+    )
+
+
+def _verify_derived_artifact_roots(
+    *,
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    evidence_packs: dict[str, Any],
+) -> tuple[frozenset[str], list[ValidationIssue]]:
+    """Verify changed projections against the same deterministic artifact builders."""
+
+    roots = (
+        "metric_spine",
+        "key_figures",
+        "chart_insight_cards",
+        "executive_advisory",
+        "claim_ledgers",
+    )
+    changed = {
+        root
+        for root in roots
+        if current_artifacts.get(root) != candidate_artifacts.get(root)
+    }
+    if not changed:
+        return frozenset(), []
+    insights = candidate_artifacts.get("insights_final") or []
+    summary = candidate_artifacts.get("summary") or {}
+    quotes = candidate_artifacts.get("quotes_final") or []
+    editorial_plan = candidate_artifacts.get("editorial_plan") or {}
+    metric_spine = derive_metric_spine_from_insights(
+        insights, editorial_plan=editorial_plan, evidence_packs=evidence_packs
+    )
+    key_figures = build_key_figures(
+        metric_spine=metric_spine,
+        evidence_packs=evidence_packs,
+        summary=summary,
+        insights_final=insights,
+        editorial_plan=editorial_plan,
+    )
+    executive_advisory = build_executive_advisory_artifacts(
+        summary=summary,
+        insights_final=insights,
+        quotes_final=quotes,
+        metric_spine=metric_spine,
+        evidence_packs=evidence_packs,
+    )
+    claim_ledger = candidate_artifacts.get("claim_ledgers") or []
+    report_id = (
+        str(claim_ledger[0].get("canonical_claim_id") or "").split(":", 1)[0]
+        if isinstance(claim_ledger, list)
+        and claim_ledger
+        and isinstance(claim_ledger[0], dict)
+        else ""
+    )
+    expected = {
+        "metric_spine": metric_spine,
+        "key_figures": key_figures,
+        "chart_insight_cards": build_chart_insight_cards(
+            key_figures=key_figures,
+            evidence_packs=evidence_packs,
+            insights_final=insights,
+        ),
+        "executive_advisory": executive_advisory,
+        "claim_ledgers": build_universal_claim_ledger(
+            report_id=report_id,
+            summary=summary,
+            insights_final=insights,
+            quotes_final=quotes,
+            metric_spine=metric_spine,
+            executive_advisory=executive_advisory,
+        ),
+    }
+    verified = frozenset(
+        root for root in changed if candidate_artifacts.get(root) == expected[root]
+    )
+    return verified, [
+        issue(
+            rule_id="regeneration_derived_projection",
+            message="Candidate derived artifact differs from its canonical builder",
+            severity="error",
+            section=root,
+        )
+        for root in sorted(changed - verified)
+    ]
 
 
 def _validate_soft_copy_claim_provenance(

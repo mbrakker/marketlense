@@ -828,6 +828,28 @@ class _FactualClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
         return super().openai_chat_json(req, ctx)
 
 
+class _OverlongClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
+    def openai_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"expert_comment":"A supported replacement. An extra claim."}',
+                parsed_json={
+                    "expert_comment": "A supported replacement. An extra claim.",
+                    "claim_provenance": [
+                        {
+                            "claim": "A supported replacement.",
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id="req-overlong-claim",
+            )
+        return super().openai_chat_json(req, ctx)
+
+
 class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
     def openai_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
@@ -1581,7 +1603,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     """Removing claim-scoped reconstruction makes this assertion fail."""
     current_artifacts = _current_artifacts()
     sentences = [
-        "First supported sentence stays.",
+        "First supported U.S. sentence stays.",
         "Bad sentence needs repair.",
         "Third supported sentence stays.",
     ]
@@ -1663,7 +1685,7 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     )
 
     assert response.updated_artifacts["expert_comment"] == (
-        "First supported sentence stays.  Repaired middle claim.  "
+        "First supported U.S. sentence stays.  Repaired middle claim.  "
         "Third supported sentence stays."
     )
     selection = response.updated_artifacts["_repair_evidence_selection"][
@@ -1692,6 +1714,83 @@ def test_regeneration_repairs_only_the_failed_expert_claim_and_retains_sibling_p
     assert repaired["producing_prompt_identity"]["namespace"] == (
         "report_vs/artifacts/regenerate/expert_comment"
     )
+
+
+def test_claim_repair_rejects_multisentence_model_output_and_preserves_sibling(
+    tmp_path,
+) -> None:
+    current_artifacts = _current_artifacts()
+    supported = "Supported sibling remains."
+    unsupported = "Unsupported claim needs repair."
+    current_artifacts["expert_comment"] = f"{supported} {unsupported}"
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="interpretive",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate((supported, unsupported), start=1)
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload(claims)["claims"]
+    evidence_packs = _evidence_packs()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="expert_comment",
+                        regenerate_steps=["expert_comment"],
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="grounding",
+                                affected_section="expert_comment",
+                                message="Unsupported claim needs repair.",
+                                severity="error",
+                                entity_id=claims[1].claim_id,
+                            )
+                        ],
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_OverlongClaimScopedExpertOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["expert_comment"] == supported
+    retained = [
+        claim
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    ]
+    assert [claim["claim_id"] for claim in retained] == [claims[0].claim_id]
 
 
 def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(

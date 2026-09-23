@@ -146,6 +146,59 @@ def test_grounding_payload_uses_retained_soft_claim_ids_for_exact_sentences() ->
     }
 
 
+def test_grounding_inventory_preserves_initialism_claims_and_recommendation_type() -> (
+    None
+):
+    sentences = [
+        "U.S. revenue rose in the survey.",
+        "MarketLense recommends comparing the cohorts separately.",
+    ]
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:grounding:{index}",
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification=classification,
+            evidence_ids=("evidence-1",),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, (sentence, classification) in enumerate(
+            zip(sentences, ("factual", "recommendation"), strict=True), start=1
+        )
+    ]
+    artifacts = _artifacts_for("expert_comment", " ".join(sentences))
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
+    )
+    payload = grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="editorial-grounding",
+            report=_report(),
+            artifacts=artifacts,
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        artifacts,
+    )
+    audited = [
+        item
+        for item in payload["public_factual_items"]
+        if item["section"] == "expert_comment"
+    ]
+
+    assert [(item["item_id"], item["declared_classification"]) for item in audited] == [
+        (claims[0].claim_id, "factual"),
+        (claims[1].claim_id, "recommendation"),
+    ]
+
+
 def test_grounding_failure_retains_atomic_public_item_id(tmp_path) -> None:
     text = "Wallet coverage will certainly determine conversion."
 

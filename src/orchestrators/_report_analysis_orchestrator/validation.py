@@ -64,14 +64,15 @@ __all__ = [
 ]
 
 
-# Provenance is the sole retained projection regenerated at this boundary. It
-# is mechanically rebuilt whenever scoped public soft copy changes. Other
-# derived roots remain strict until their deterministic recomputation is
-# performed and verified by this validation boundary.
 _DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
     "soft_copy_claim_provenance": frozenset(
         {"summary", "expert_comment", "linkedin_post"}
     ),
+    "metric_spine": frozenset({"insights_final"}),
+    "key_figures": frozenset({"insights_final", "summary"}),
+    "chart_insight_cards": frozenset({"insights_final", "key_figures"}),
+    "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),
+    "claim_ledgers": frozenset({"insights_final", "summary", "quotes_final"}),
 }
 
 
@@ -429,7 +430,11 @@ def _bounded_payload_overrides(overrides: object) -> Dict[str, str]:
 
 
 def _scope_validation_report(
-    *, before: Dict[str, Any], after: Dict[str, Any], plan
+    *,
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+    plan,
+    verified_derived_roots: frozenset[str] = frozenset(),
 ) -> ValidationReport:
     allowed = {
         path.split(".", 1)[0]
@@ -442,7 +447,11 @@ def _scope_validation_report(
     violations = sorted(
         root
         for root in changed - allowed
-        if not _is_allowed_derived_artifact_change(root=root, allowed=allowed)
+        if not _is_allowed_derived_artifact_change(
+            root=root,
+            allowed=allowed,
+            verified_derived_roots=verified_derived_roots,
+        )
     )
     if not violations:
         return ValidationReport(
@@ -467,10 +476,14 @@ def _scope_validation_report(
     )
 
 
-def _is_allowed_derived_artifact_change(*, root: str, allowed: set[str]) -> bool:
+def _is_allowed_derived_artifact_change(
+    *, root: str, allowed: set[str], verified_derived_roots: frozenset[str]
+) -> bool:
     """Allow only deterministic projections of an explicitly scoped repair."""
 
-    return bool(_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.get(root, set()) & allowed)
+    return bool(_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.get(root, set()) & allowed) and (
+        root == "soft_copy_claim_provenance" or root in verified_derived_roots
+    )
 
 
 def _validation_issue_keys(report: ValidationReport) -> list[str]:
@@ -970,7 +983,10 @@ def _run_validation_regeneration_loop(
         candidate_validation_report = _merge_public_editorial_quality(
             candidate_validation_report,
             _scope_validation_report(
-                before=artifacts_before, after=candidate_artifacts, plan=plan
+                before=artifacts_before,
+                after=candidate_artifacts,
+                plan=plan,
+                verified_derived_roots=candidate_result.verified_derived_roots,
             ),
         )
         editorial_validation, editorial_path = (

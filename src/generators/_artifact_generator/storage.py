@@ -243,9 +243,32 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         soft_copy_claim_bindings=soft_copy_claim_bindings,
     )
-    if not summary_fallback_applied and summary_has_unbound_material_sentences(
-        summary=summary,
-        claim_bindings=soft_copy_claim_bindings.get("summary"),
+    retained_summary_claims = (
+        [
+            claim
+            for claim in soft_copy_claim_provenance_from_payload(
+                existing_soft_copy_claim_provenance
+            )
+            if claim.artifact_family == "summary"
+        ]
+        if isinstance(existing_soft_copy_claim_provenance, dict)
+        and isinstance(existing_soft_copy_claim_provenance.get("claims"), list)
+        else []
+    )
+    summary_already_bound = not soft_copy_claim_bindings.get(
+        "summary"
+    ) and retained_soft_copy_claims_cover_text(
+        text=soft_copy_public_text("summary", summary),
+        claims=retained_summary_claims,
+    )
+    if (
+        not summary_fallback_applied
+        and "summary" not in (soft_copy_repair_texts or {})
+        and not summary_already_bound
+        and summary_has_unbound_material_sentences(
+            summary=summary,
+            claim_bindings=soft_copy_claim_bindings.get("summary"),
+        )
     ):
         summary_fallback_applied = constrain_summary_to_source_backed_claims(
             summary,
@@ -266,16 +289,18 @@ def assemble_artifacts_payload(
                 insights_final=insights_final,
                 soft_copy_claim_bindings=soft_copy_claim_bindings,
             )
-    expert_comment = retain_bound_optional_soft_copy_sentences(
-        artifact_family="expert_comment",
-        public_text=expert_comment,
-        claim_bindings=soft_copy_claim_bindings.get("expert_comment"),
-    )
-    linkedin_post = retain_bound_optional_soft_copy_sentences(
-        artifact_family="linkedin_post",
-        public_text=linkedin_post,
-        claim_bindings=soft_copy_claim_bindings.get("linkedin_post"),
-    )
+    if "expert_comment" not in (soft_copy_repair_texts or {}):
+        expert_comment = retain_bound_optional_soft_copy_sentences(
+            artifact_family="expert_comment",
+            public_text=expert_comment,
+            claim_bindings=soft_copy_claim_bindings.get("expert_comment"),
+        )
+    if "linkedin_post" not in (soft_copy_repair_texts or {}):
+        linkedin_post = retain_bound_optional_soft_copy_sentences(
+            artifact_family="linkedin_post",
+            public_text=linkedin_post,
+            claim_bindings=soft_copy_claim_bindings.get("linkedin_post"),
+        )
     for family, final_public_output in {
         "summary": summary,
         "expert_comment": expert_comment,

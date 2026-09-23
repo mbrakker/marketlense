@@ -1,6 +1,12 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from hashlib import sha256
+
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.generators.validation.claim_support import _has_unscoped_strong_language
 from src.generators.validation.semantic import run_semantic_validation
 
@@ -94,6 +100,39 @@ def test_number_validation_ignores_soft_planning_timeframes():
     )
 
     assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
+def test_number_issue_identifies_full_soft_copy_claim_with_us_initialism() -> None:
+    sentence = "U.S. revenue reached $918 billion."
+    claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:us-revenue",
+        text_hash=sha256(sentence.encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("finding-1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    issues = validate_new_numbers(
+        artifacts={
+            "expert_comment": sentence,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+                [claim]
+            ),
+        },
+        insights=[],
+        report=_report(),
+        evidence_texts=[],
+        evidence_windows=[],
+    )
+
+    assert any(
+        issue.affected_section == "expert_comment" and issue.entity_id == claim.claim_id
+        for issue in issues
+    )
 
 
 def test_number_validation_preserves_ordered_source_period_value_pairs() -> None:
@@ -981,6 +1020,7 @@ def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
 __all__ = [
     "test_validation_flags_metric_and_quote_mismatches",
     "test_number_validation_ignores_soft_planning_timeframes",
+    "test_number_issue_identifies_full_soft_copy_claim_with_us_initialism",
     "test_number_validation_preserves_ordered_source_period_value_pairs",
     "test_validation_uses_retained_source_text_for_ordered_period_value_pairs",
     "test_validation_cache_changes_when_retained_source_text_changes",

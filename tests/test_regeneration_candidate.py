@@ -17,6 +17,7 @@ from src.generators.artifact_normalization import (
 )
 from src.generators.validation.metrics import validate_insight_metrics
 from src.generators.validation.regeneration_candidate import (
+    _verify_derived_artifact_roots,
     validate_regeneration_candidate,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
@@ -105,6 +106,41 @@ def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -
 
     assert report.status == "fail"
     assert [issue.affected_section for issue in report.issues] == ["cover_semantics"]
+
+
+def test_insight_repair_allows_only_verified_derived_projection() -> None:
+    before = {
+        "insights_final": [{"id": "one", "text": "Old claim."}],
+        "metric_spine": [{"value": "stale"}],
+    }
+    candidate = {"insights_final": [], "metric_spine": []}
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["insights_final"])])
+
+    assert not issues
+    assert "metric_spine" in verified
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=candidate,
+            plan=plan,
+            verified_derived_roots=verified,
+        ).status
+        == "pass"
+    )
+
+    candidate["metric_spine"] = [{"value": "invented"}]
+    verified, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+    assert "metric_spine" not in verified
+    assert any(issue.affected_section == "metric_spine" for issue in issues)
 
 
 def _soft_copy_claim(

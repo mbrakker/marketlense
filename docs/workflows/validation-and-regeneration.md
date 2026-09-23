@@ -87,6 +87,11 @@ claim removal and source-bound corrections do not construct a model client. The
 candidate integrity, retained-claim, full validation, public-editorial, readiness, and
 promotion gates remain authoritative; a candidate that changes an undeclared artifact
 root is rejected as `regeneration_scope_violation` before promotion.
+Insight and soft-copy repairs may also change their deterministic projections.
+The candidate gate recomputes the changed metric spine, key figures, chart
+cards, executive advisory, and claim ledger from the candidate's canonical
+inputs. The scope gate permits each changed projection only after exact
+recomputation succeeds; an unrelated or altered projection remains blocked.
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
@@ -136,6 +141,12 @@ If otherwise-final Summary prose exceeds its declared bindings, the same
 source-backed fallback applies when direct retained claim-map rows exist; it
 does not synthesize a semantic binding. Without such direct rows, the existing
 strict provenance failure remains.
+An unchanged Summary with complete retained provenance keeps its original
+copy and bindings during a sibling repair. Claim-scoped repairs keep the
+retained sibling bindings while they validate the replacement sentence; they
+do not apply full-family omission or summary fallback to that partial binding
+set. A claim-mode model reply containing more than one material sentence, or
+missing its private binding, is rejected and the failed claim is removed.
 When a complete Summary, Expert Comment, or LinkedIn family is finalized from
 its current semantic bindings, those mechanically rebuilt claims replace every
 prior retained claim for that family. Claim-scoped repairs retain their existing
@@ -163,6 +174,11 @@ repair because finalization mechanically rebuilds it from that public copy.
 Every other derived root remains a strict scope violation unless this boundary
 itself verifies its deterministic recomputation from the allowed canonical
 inputs.
+Claim repair and numeric and grounding attribution use the same material
+sentence grid as retained provenance, including initialisms such as `U.S.`.
+The grounding inventory carries the model's declared classification as an
+untrusted hint so self-authored advice is evaluated for its factual premises
+without being mistaken for a claim that the source issued that advice.
 
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy

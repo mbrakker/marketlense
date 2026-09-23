@@ -5,6 +5,7 @@ from typing import List, Optional, Sequence, Tuple
 
 from src.contracts.report_models import ReportPayload
 from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_material_sentences,
     soft_copy_claim_provenance_from_payload,
 )
 from src.contracts.validation import ValidationIssue
@@ -94,7 +95,12 @@ def validate_new_numbers(
         if not text:
             continue
         policy = section_policy(section)
-        for sentence in split_sentences(text):
+        sentences = (
+            soft_copy_material_sentences(text)
+            if section in {"expert_comment", "linkedin_post"}
+            else split_sentences(text)
+        )
+        for sentence in sentences:
             sentence_quantities = extract_quantities(sentence)
             if not sentence_quantities:
                 continue

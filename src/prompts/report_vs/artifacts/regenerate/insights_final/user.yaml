@@ -30,6 +30,8 @@ text: |
   - `so_what` must state a report-specific business implication; `now_what` must
     state a concrete, report-specific decision or action. Neither field may be
     empty, generic, or a citation label.
+  - For numeric failures in `so_what` or `now_what`, remove unsupported counts;
+    do not repeat numbers or ranked-group labels already in `text`.
   - Remove unsupported wording rather than hedge it.
   - Do not output unsupported metrics, quotes, or conclusions. Every numeric value must be explicitly supported by the insight's linked retained evidence.
   - Retain at most one public primary metric per insight: `metric.value` must be one complete human-readable metric or one coherent comparison/range, never a semicolon-separated list. When `metric.value` is present, retain or repair `metric.label` as a concise human-readable description of that exact source-backed metric; never use a general multi-metric insight or a different metric's subject. `metric.unit` must be one semantic unit and must not repeat currency symbols or magnitude words already in `metric.value`. Keep additional supporting numbers in `text` and `evidence`.
