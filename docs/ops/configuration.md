@@ -91,6 +91,8 @@ growth rates and retail share. `report_vs` defaults to medium;
 registered production namespaces resolve to a deliberate low, medium, or high
 effort. Non-`none` effort suppresses sampling controls, and execution/cache
 identities, audit records, and usage metadata retain the effective effort.
+The document-map and insight-candidate routes allow 16,384 output tokens because
+live GPT-6 responses exhausted the previous 8,192-token cap on reasoning alone.
 
 Every configured generative route, including
 `publisher_inventory/meaningful_candidate_screen`, is routed and priced as

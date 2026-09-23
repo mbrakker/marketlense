@@ -184,6 +184,11 @@ def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
         assert decision.policy_source == namespace
         assert decision.policy.reasoning_effort == expected_effort
         assert decision.policy.temperature is None
+        if namespace in {
+            "report_vs/doc_map",
+            "report_vs/artifacts/insights_candidates",
+        }:
+            assert decision.policy.max_output_tokens == 16_384
 
     preserved_namespaces = {
         "report_vs/taxonomy": "low",

@@ -336,7 +336,7 @@ llm_execution_policies:
     model: "gpt-6-luna"
     reasoning_effort: high
     seed_policy: inherit
-    max_output_tokens: 8192
+    max_output_tokens: 16384
     retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
@@ -661,7 +661,7 @@ llm_execution_policies:
     model: "gpt-6-luna"
     reasoning_effort: high
     seed_policy: inherit
-    max_output_tokens: 8192
+    max_output_tokens: 16384
     retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
