@@ -83,11 +83,12 @@ Evidence-constrained first-pass artifact families use exact execution-policy
 overrides rather than inheriting the broad `report_vs` policy. GPT-6 Luna uses
 explicit `reasoning_effort` by task: low for narrow extraction, routing, quotes,
 taxonomy, captions, identity resolution, and structured repair; medium for
-evidence packs, summaries, editorial plans, LinkedIn, ranking, discovery, and
-briefings; high for document mapping, insights, expert commentary, grounding
+evidence packs, summaries, editorial plans, ranking, discovery, and briefings;
+high for document mapping, insights, expert commentary, LinkedIn, grounding
 and semantic validation, cross-report analysis, and signals. Document mapping
 uses high effort after live chart evidence showed repeated confusion between
-growth rates and retail share. `report_vs` defaults to medium;
+growth rates and retail share. LinkedIn generation and regeneration use high
+effort after live soft-copy provenance bindings failed. `report_vs` defaults to medium;
 registered production namespaces resolve to a deliberate low, medium, or high
 effort. Non-`none` effort suppresses sampling controls, and execution/cache
 identities, audit records, and usage metadata retain the effective effort.
