@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
@@ -729,6 +731,15 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     assert opportunity_result.result.output_reference.startswith(
         "workflow-opportunity:"
     )
+    with sqlite3.connect(tmp_path / "state.sqlite") as connection:
+        generation_submission_json = connection.execute(
+            "SELECT submission_json FROM workflow_outbox "
+            "WHERE queue_name = 'briefing_generation'"
+        ).fetchone()
+    assert generation_submission_json is not None
+    assert json.loads(generation_submission_json[0])["payload"]["attributes"][
+        "config_path"
+    ] == str(config_path)
 
     embedding_result = queue_orchestrator._claim_embedding_handler(
         _workflow_job(queue_name="claim_embedding", job_type="claim_embedding.v1"),
