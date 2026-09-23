@@ -253,6 +253,7 @@ def _signal_candidate_handler(
                 input_content_hash=_digest(*group.evidence_ids),
                 processing_version=payload.processing_version,
                 attributes={
+                    "config_path": config_path,
                     "category_filters": category_filters,
                     "date_range_end": str(payload.attributes.get("date_range_end", "")),
                     "date_range_start": str(
@@ -379,7 +380,8 @@ def _signal_generation_handler(
             message="Signal generation requires the candidate group's selected topic",
             retryable=False,
         )
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    config_path = str(payload.attributes.get("config_path", "")).strip()
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     projection_result = generate_signal_post_projection(
         SignalPostWorkflowRequest(
             schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -454,6 +456,7 @@ def _signal_generation_handler(
             input_reference=package_path,
             input_content_hash=package.artifact_sha256,
             processing_version=payload.processing_version,
+            attributes={"config_path": config_path},
         ),
         idempotency_key=_digest("signal-cover", package.artifact_sha256),
         deduplication_scope="signal-package-cover",

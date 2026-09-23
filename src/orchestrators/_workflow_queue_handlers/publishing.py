@@ -896,6 +896,7 @@ def _cover_generation_handler(
             input_reference=final_path,
             input_content_hash=final_package.artifact_sha256,
             processing_version=payload.processing_version,
+            attributes={"config_path": config_path},
         ),
         idempotency_key=_digest(
             "publication-readiness", payload.entity_type, final_package.artifact_sha256

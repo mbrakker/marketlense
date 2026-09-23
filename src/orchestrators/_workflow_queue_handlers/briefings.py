@@ -225,6 +225,7 @@ def _briefing_opportunity_handler(
     if opportunity.status in {"eligible", "frozen"}:
         source_set_hash = _digest(*opportunity.source_hashes)
         generation_attributes: dict[str, str | int | bool | list[str]] = {
+            "config_path": config_path,
             "auto_theme": _boolean_attribute(payload, "auto_theme", False),
             "category_filters": _string_list_attribute(payload, "category_filters"),
             "date_range_end": str(payload.attributes.get("date_range_end", "")),
@@ -317,7 +318,8 @@ def _briefing_generation_handler(
             message="Briefing generation requires an eligible frozen source-set manifest",
             retryable=False,
         )
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    config_path = str(payload.attributes.get("config_path", "")).strip()
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     analysis_request = CrossReportAnalysisRequest(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         request_id=_digest(
@@ -391,6 +393,7 @@ def _briefing_generation_handler(
             input_content_hash=package.artifact_sha256,
             processing_version=payload.processing_version,
             prompt_policy_version=payload.prompt_policy_version,
+            attributes={"config_path": config_path},
         ),
         idempotency_key=_digest("briefing-cover", package.artifact_sha256),
         deduplication_scope="briefing-package-cover",

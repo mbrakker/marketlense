@@ -73,6 +73,12 @@ prior validated checkpoint rather than re-running PDF extraction or earlier
 model work. Analytics projection has a projection-only path from validated
 analysis and render checkpoints.
 
+The analytics projection worker reads the configuration path carried by the
+report queue payload when it looks up the projected source. It carries the same
+path through embedding, signal, briefing, cover, and publication-readiness
+jobs, so an isolated validation run keeps its derived reads and writes in the
+run's configured stores.
+
 When the pipeline returns a terminal `error` outcome, the report-stage handler
 persists its typed failure code (the code prefix before an optional detail
 message) on the durable queue job. It does not replace that reason with a

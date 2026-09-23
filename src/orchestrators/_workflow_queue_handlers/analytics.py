@@ -261,10 +261,11 @@ def _analytics_projection_handler(
     """Project a report, then durably fan out only source-linked derived work."""
 
     assert isinstance(payload, AnalyticsProjectionPayload)
+    config_path = str(payload.attributes.get("config_path", "")).strip()
+    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     stage_result = _report_stage_handler(
         resume_from_stage="analysis_complete", projection_only=True
     )(job, payload, ctx)
-    app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
     report_id = payload.report_id or job.report_id
     if not report_id:
         raise AppError(
@@ -309,6 +310,7 @@ def _analytics_projection_handler(
                 input_content_hash=source.content_hash,
                 processing_version=payload.processing_version,
                 attributes={
+                    "config_path": config_path,
                     "embedding_version": "claim-embedding.openai-large-1024.v1",
                     "dimensions": 1024,
                     "batch_size": 25,
@@ -345,7 +347,7 @@ def _analytics_projection_handler(
                         input_reference=f"analytics:report:{report_id}",
                         input_content_hash=source.content_hash,
                         processing_version=payload.processing_version,
-                        attributes={"topic": topic},
+                        attributes={"config_path": config_path, "topic": topic},
                     ),
                     idempotency_key=_digest(
                         "signal-candidate", report_id, source.content_hash, topic
@@ -379,7 +381,10 @@ def _analytics_projection_handler(
                         input_reference=f"analytics:report:{report_id}",
                         input_content_hash=source.content_hash,
                         processing_version=payload.processing_version,
-                        attributes={"publisher_ids": [source.publisher_id]},
+                        attributes={
+                            "config_path": config_path,
+                            "publisher_ids": [source.publisher_id],
+                        },
                     ),
                     idempotency_key=_digest(
                         "briefing-opportunity", topic, source.content_hash

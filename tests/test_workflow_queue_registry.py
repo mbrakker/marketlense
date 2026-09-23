@@ -29,6 +29,7 @@ from src.contracts.wordpress_entities import (
     SignalPublishProjection,
 )
 from src.contracts.workflow_queue import (
+    AnalyticsProjectionPayload,
     BriefingOpportunityPayload,
     ClaimEmbeddingPayload,
     CoverGenerationPayload,
@@ -50,6 +51,9 @@ from src.contracts.workflow_queue import (
     WorkflowQueueName,
 )
 from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
+from src.orchestrators._workflow_queue_handlers.analytics import (
+    _analytics_projection_handler,
+)
 from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerRegistration,
     WorkflowQueueHandlerResult,
@@ -187,6 +191,24 @@ def _isolated_app_config(tmp_path: Path) -> Path:
         yaml.safe_dump(config_payload, sort_keys=False), encoding="utf-8"
     )
     return config_path
+
+
+def test_analytics_projection_reads_carried_isolated_config_before_work(
+    tmp_path: Path,
+) -> None:
+    missing_config = tmp_path / "missing-app.yaml"
+    with pytest.raises(RuntimeError, match="Config file not found") as err:
+        _analytics_projection_handler(
+            _workflow_job(
+                queue_name="analytics_projection", job_type="analytics_projection.v1"
+            ),
+            AnalyticsProjectionPayload(
+                report_id="report-1",
+                attributes={"config_path": str(missing_config)},
+            ),
+            _ctx(),
+        )
+    assert str(missing_config) in str(err.value)
 
 
 def _seed_projected_signal_source(
@@ -610,6 +632,9 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     )
     assert cover_result.result.output_verified is True
     assert cover_result.downstream[0].queue_name == "publication_readiness"
+    assert cover_result.downstream[0].payload.attributes["config_path"] == str(
+        config_path
+    )
     assert Path(cover_result.result.output_reference).is_file()
 
     briefing_path = str(tmp_path / "briefing_publish_package.json")
@@ -637,6 +662,9 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     )
     assert briefing_cover_result.result.output_verified is True
     assert briefing_cover_result.downstream[0].queue_name == "publication_readiness"
+    assert briefing_cover_result.downstream[0].payload.attributes["config_path"] == str(
+        config_path
+    )
 
     ready_result = queue_orchestrator._publication_readiness_handler(
         _workflow_job(
