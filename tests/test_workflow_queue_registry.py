@@ -792,7 +792,7 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
                 "config_path": str(config_path),
                 "topic": "Checkout trust",
                 "publisher_filters": ["publisher-a", "publisher-b"],
-                "generate_signals": False,
+                "generate_signals": True,
             },
         ),
         _ctx(),
@@ -800,7 +800,11 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     assert candidate_result.result.output_verified is True
     assert candidate_result.result.summary["candidate_count"] >= 1
     assert candidate_result.result.summary["group_count"] >= 1
-    assert candidate_result.downstream == []
+    assert candidate_result.downstream
+    assert all(
+        child.payload.attributes["config_path"] == str(config_path)
+        for child in candidate_result.downstream
+    )
 
     publish_submission = WorkflowJobSubmission(
         schema_version="1.0",
