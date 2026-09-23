@@ -193,6 +193,7 @@ def render_browser_report_download_prompt(
                 "task_prompt": log_task_prompt,
                 "model": request.settings.model,
                 "temperature": request.settings.temperature,
+                "reasoning_effort": request.settings.reasoning_effort,
                 "timeout_seconds": request.settings.timeout_seconds,
                 "max_steps": request.settings.max_steps,
                 "candidate_canonical_url": (

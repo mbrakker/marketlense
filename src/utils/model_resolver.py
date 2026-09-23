@@ -104,6 +104,22 @@ def _normalize_namespace(namespace: str) -> str:
     return normalized.strip("/")
 
 
+VALID_REASONING_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+
+
+def effective_sampling_controls(
+    model: str, reasoning_effort: str, temperature: float | None, seed: int | None
+) -> tuple[float | None, int | None]:
+    """Return only sampling controls supported by the resolved inference mode."""
+    family = str(model or "").strip().lower().removeprefix("openai/")
+    effort = str(reasoning_effort or "").strip().lower()
+    if effort and effort != "none":
+        return None, None
+    if not effort and family.startswith(("gpt-5", "gpt-6")):
+        return None, None
+    return temperature, seed
+
+
 def registered_report_generation_namespaces() -> tuple[str, ...]:
     """Return the finite prompt namespaces used by report-generation workflows."""
 
@@ -232,8 +248,24 @@ def _policy_from_mapping(
             retryable=False,
             context={"namespace": namespace_prefix},
         )
-    temperature = float(raw.get("temperature", default_temperature))
-    if temperature < 0 or temperature > 2:
+    effort = str(raw.get("reasoning_effort") or "").strip().lower()
+    if effort and effort not in VALID_REASONING_EFFORTS:
+        raise AppError(
+            code="llm_execution_policy_reasoning_effort_invalid",
+            message="LLM execution policy reasoning_effort is invalid",
+            retryable=False,
+            context={"namespace": namespace_prefix},
+        )
+    if model.lower().removeprefix("openai/").startswith("gpt-6") and not effort:
+        raise AppError(
+            code="llm_execution_policy_reasoning_effort_missing",
+            message="GPT-6 execution policies require explicit reasoning_effort",
+            retryable=False,
+            context={"namespace": namespace_prefix},
+        )
+    raw_temperature = raw.get("temperature", default_temperature if not effort else None)
+    temperature = None if raw_temperature is None else float(raw_temperature)
+    if temperature is not None and (temperature < 0 or temperature > 2):
         raise AppError(
             code="llm_execution_policy_temperature_invalid",
             message="LLM execution policy temperature must be between 0 and 2",
@@ -275,7 +307,7 @@ def _policy_from_mapping(
         max_output_tokens=(
             int(max_output_tokens) if max_output_tokens is not None else None
         ),
-        reasoning_effort=str(raw.get("reasoning_effort") or "").strip(),
+        reasoning_effort=effort,
         structured_output_mode=str(
             raw.get("structured_output_mode") or "json_object"
         ).strip(),
@@ -372,6 +404,28 @@ def execution_policies_from_config(
         )
         for key, value in merged.items()
     }
+
+
+def resolve_settings_execution_policy(namespace: str, settings: Any) -> LLMExecutionPolicyDecision:
+    """Resolve a registered direct-call namespace from canonical runtime settings."""
+    model = str(getattr(settings, "openai_model", "") or "")
+    temperature = float(getattr(settings, "temperature", 1.0))
+    seed = getattr(settings, "openai_seed", None)
+    timeout = getattr(settings, "openai_timeout_seconds", None)
+    policies = execution_policies_from_config(
+        getattr(settings, "llm_execution_policies", {}),
+        model_overrides=getattr(settings, "openai_models", {}),
+        legacy_routing=getattr(settings, "llm_routing", {}),
+        default_model=model,
+        default_temperature=temperature,
+        default_seed=seed,
+        default_timeout_seconds=timeout,
+    )
+    return resolve_execution_policy(
+        namespace, policies, default_model=model, default_temperature=temperature,
+        default_seed=seed, default_timeout_seconds=timeout,
+        require_registered_namespace=bool(policies),
+    )
 
 
 def resolve_execution_policy(

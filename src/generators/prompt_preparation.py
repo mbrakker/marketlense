@@ -15,6 +15,7 @@ from src.contracts.run_context import RunContext
 from src.services.prompt_service import build_llm_execution_identity
 from src.utils.errors import AppError
 from src.utils.model_resolver import (
+    effective_sampling_controls,
     execution_policies_from_config,
     resolve_execution_policy,
     resolve_routing_policy,
@@ -49,9 +50,12 @@ class PreparedPromptBundle:
     execution_identity: LLMExecutionIdentity = field(
         metadata={"doc": "Resolved content and execution compatibility identity."}
     )
-    effective_temperature: float = field(
-        default=0.0,
+    effective_temperature: float | None = field(
+        default=None,
         metadata={"doc": "Resolved temperature sent to the provider."},
+    )
+    effective_reasoning_effort: str = field(
+        default="", metadata={"doc": "Resolved reasoning effort sent to the provider."}
     )
     effective_seed: int | None = field(
         default=None,
@@ -71,6 +75,7 @@ def model_request_identity_fields(bundle: PreparedPromptBundle) -> dict[str, Any
     """Return content-free provenance fields accepted by model request contracts."""
 
     return {
+        "reasoning_effort": bundle.effective_reasoning_effort,
         "prompt_hash": bundle.prompt_content_hash,
         "prompt_content_hash": bundle.prompt_content_hash,
         "prompt_dependency_manifest": asdict(bundle.dependency_manifest),
@@ -183,6 +188,12 @@ def prepare_prompt_bundle(
             else (seed if seed is not None else getattr(settings, "openai_seed", None))
         )
     )
+    resolved_temperature, resolved_seed = effective_sampling_controls(
+        resolved_policy.model,
+        resolved_policy.reasoning_effort,
+        resolved_temperature,
+        resolved_seed,
+    )
     resolved_timeout = (
         resolved_policy.timeout_seconds
         if resolved_policy.timeout_seconds is not None
@@ -203,6 +214,7 @@ def prepare_prompt_bundle(
         model=resolved_policy.model,
         temperature=resolved_temperature,
         seed=resolved_seed,
+        reasoning_effort=resolved_policy.reasoning_effort,
         max_output_tokens=(
             resolved_policy.max_output_tokens
             if resolved_policy.max_output_tokens is not None
@@ -239,6 +251,7 @@ def prepare_prompt_bundle(
         routing_decision=routing_decision,
         execution_policy=execution_policy,
         effective_temperature=resolved_temperature,
+        effective_reasoning_effort=resolved_policy.reasoning_effort,
         effective_seed=resolved_seed,
         effective_max_output_tokens=(
             resolved_policy.max_output_tokens

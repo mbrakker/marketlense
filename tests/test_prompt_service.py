@@ -550,9 +550,10 @@ def test_prompt_content_identity_is_path_independent_and_execution_identity_is_s
     stable = build_llm_execution_identity(
         prompt_content_hash=first.prompt_content_hash,
         provider="openai",
-        model="gpt-5-mini",
-        temperature=0.1,
-        seed=7,
+        model="gpt-6-luna",
+        temperature=None,
+        seed=None,
+        reasoning_effort="low",
         retrieval_mode="chat_json",
         output_contract_schema_version="artifact_json:1.0",
         validator_version="artifacts_schema:3.0",
@@ -560,13 +561,15 @@ def test_prompt_content_identity_is_path_independent_and_execution_identity_is_s
     changed_policy = build_llm_execution_identity(
         prompt_content_hash=second.prompt_content_hash,
         provider="openai",
-        model="gpt-5-mini",
-        temperature=0.2,
-        seed=7,
+        model="gpt-6-luna",
+        temperature=None,
+        seed=None,
+        reasoning_effort="high",
         retrieval_mode="chat_json",
         output_contract_schema_version="artifact_json:1.0",
         validator_version="artifacts_schema:3.0",
     )
 
     assert first.prompt_content_hash == second.prompt_content_hash
+    assert stable.reasoning_effort == "low"
     assert stable.execution_identity != changed_policy.execution_identity

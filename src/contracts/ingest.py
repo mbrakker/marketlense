@@ -217,7 +217,7 @@ class IngestSettings:
         metadata={"doc": "OCR fallback policy: native_first_selective or always."},
     )
     pdf_text_ocr_model: str = field(
-        default="gpt-5.6-luna",
+        default="gpt-6-luna",
         metadata={"doc": "OpenAI model ID used for OCR fallback."},
     )
     pdf_text_ocr_timeout_seconds: float = field(

@@ -27,6 +27,7 @@ from src.generators.report_generation_dependencies import ReportSelectionDepende
 from src.generators.report_generation_shared import logger, read_cache_json
 from src.utils.coercion import coerce_float
 from src.utils.logging import log_event
+from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
 from src.utils.validation import validate_candidate
 
 from .crop_refine import select_refined_candidate_items
@@ -262,6 +263,13 @@ def _apply_crop_qa_escalation(
         paired.append((str(path or "").strip(), candidate))
     if not crops:
         return paths, candidates
+    escalation_policy = resolve_settings_execution_policy(
+        "crop_qa_escalation/publication_strict", runtime.settings
+    ).policy
+    escalation_temperature, escalation_seed = effective_sampling_controls(
+        escalation_policy.model, escalation_policy.reasoning_effort,
+        escalation_policy.temperature, runtime.settings.rank_seed,
+    )
     response = dependencies.crop_qa_escalation(
         CropQaEscalationRequest(
             schema_version="1.0",
@@ -278,9 +286,10 @@ def _apply_crop_qa_escalation(
                 ),
                 max_escalations=runtime.settings.crop_qa_escalation_max_calls,
                 max_repairs=runtime.settings.crop_qa_escalation_max_repairs,
-                model=runtime.settings.rank_model or runtime.settings.openai_model,
-                temperature=runtime.settings.rank_temperature,
-                seed=runtime.settings.rank_seed,
+                model=escalation_policy.model,
+                temperature=escalation_temperature,
+                reasoning_effort=escalation_policy.reasoning_effort,
+                seed=escalation_seed,
                 timeout_seconds=runtime.settings.rank_timeout_seconds,
                 api_key=runtime.settings.openai_api_key,
                 cost_ledger_path=runtime.settings.cost_ledger_path,

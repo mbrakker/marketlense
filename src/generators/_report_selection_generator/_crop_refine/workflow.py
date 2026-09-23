@@ -19,7 +19,7 @@ from src.generators.report_generation_dependencies import ReportSelectionDepende
 from src.generators.report_generation_shared import logger
 from src.utils.candidate_features import candidate_features, candidate_features_payload
 from src.utils.logging import log_event
-from src.utils.model_resolver import resolve_model
+from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
 
 from src.generators._report_selection_generator._crop_refine.cache import (
     _bbox_tuple,
@@ -102,6 +102,9 @@ def select_refined_candidate_items(
     crop_refine_profile: dict[str, Any] = {}
     crop_refine_cache_rows: dict[str, dict] = {}
     resolved_crop_refine_model = fallback_model
+    crop_refine_effort = ""
+    crop_refine_temperature: float | None = float(getattr(settings, "crop_refine_temperature", 0.0))
+    crop_refine_seed = settings.rank_seed
     if crop_refine_enabled:
         crop_refine_prompt_set = dependencies.load_prompt_set(
             PromptLoadRequest(
@@ -134,17 +137,24 @@ def select_refined_candidate_items(
             ),
             ctx,
         )
-        resolved_crop_refine_model = resolve_model(
-            "rank_candidates/crop_refine",
-            getattr(settings, "openai_models", {}),
-            fallback_model,
+        crop_refine_policy = resolve_settings_execution_policy(
+            "rank_candidates/crop_refine", settings
+        )
+        resolved_crop_refine_model = crop_refine_policy.policy.model
+        crop_refine_effort = crop_refine_policy.policy.reasoning_effort
+        crop_refine_temperature, crop_refine_seed = effective_sampling_controls(
+            resolved_crop_refine_model,
+            crop_refine_effort,
+            crop_refine_policy.policy.temperature,
+            settings.rank_seed,
         )
         if md5:
             profile_key = _crop_refine_profile_key(
                 md5,
                 model=resolved_crop_refine_model,
-                temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
-                seed=settings.rank_seed,
+                temperature=crop_refine_temperature,
+                reasoning_effort=crop_refine_effort,
+                seed=crop_refine_seed,
                 mode=crop_refine_mode,
                 prompt_system_sha256=crop_refine_prompt_set.system.sha256,
                 prompt_user_sha256=crop_refine_prompt_set.user.sha256,
@@ -154,8 +164,9 @@ def select_refined_candidate_items(
                 "key": profile_key,
                 "md5": md5,
                 "model": resolved_crop_refine_model,
-                "temperature": float(getattr(settings, "crop_refine_temperature", 0.0)),
-                "seed": settings.rank_seed,
+                "temperature": crop_refine_temperature,
+                "reasoning_effort": crop_refine_effort,
+                "seed": crop_refine_seed,
                 "mode": crop_refine_mode,
                 "prompt_system_sha256": crop_refine_prompt_set.system.sha256,
                 "prompt_user_sha256": crop_refine_prompt_set.user.sha256,
@@ -189,8 +200,9 @@ def select_refined_candidate_items(
                 md5,
                 candidate,
                 model=resolved_crop_refine_model,
-                temperature=float(getattr(settings, "crop_refine_temperature", 0.0)),
-                seed=settings.rank_seed,
+                temperature=crop_refine_temperature,
+                reasoning_effort=crop_refine_effort,
+                seed=crop_refine_seed,
                 mode=crop_refine_mode,
                 prompt_system_sha256=crop_refine_prompt_set.system.sha256,
                 prompt_user_sha256=crop_refine_prompt_set.user.sha256,
@@ -343,9 +355,8 @@ def select_refined_candidate_items(
                     prompt_system_sha256=crop_refine_prompt_set.system.sha256,
                     prompt_user_sha256=crop_refine_prompt_set.user.sha256,
                     model=resolved_crop_refine_model,
-                    temperature=float(
-                        getattr(settings, "crop_refine_temperature", 0.0)
-                    ),
+                    temperature=crop_refine_temperature,
+                    reasoning_effort=crop_refine_effort,
                     api_key=settings.openai_api_key,
                     page_image_path=str(
                         Path(settings.output_dir) / page_render.image_path
@@ -354,7 +365,7 @@ def select_refined_candidate_items(
                     page_width=page_render.page_width,
                     page_height=page_render.page_height,
                     candidates=phase_candidates,
-                    seed=settings.rank_seed,
+                    seed=crop_refine_seed,
                     timeout_seconds=float(
                         getattr(
                             settings,

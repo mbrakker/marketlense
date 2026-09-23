@@ -77,7 +77,7 @@ def openai_ocr_pdf(
             timeout_seconds=request.timeout_seconds,
             operation="ocr_pdf",
         )
-        resp = client.responses.create(
+        response_args: dict[str, Any] = dict(
             model=request.model,
             instructions=request.system_prompt,
             input=[
@@ -97,6 +97,9 @@ def openai_ocr_pdf(
             ],
             text={"format": OPENAI_OCR_RESPONSE_FORMAT},
         )
+        if request.reasoning_effort:
+            response_args["reasoning"] = {"effort": request.reasoning_effort}
+        resp = client.responses.create(**response_args)
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
@@ -140,6 +143,7 @@ def openai_ocr_pdf(
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
         total_tokens=metadata.total_tokens,
+        reasoning_tokens=metadata.reasoning_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
@@ -287,7 +291,9 @@ def openai_respond_with_vector_store(
         }
     if request.max_output_tokens is not None:
         payload_args["max_output_tokens"] = request.max_output_tokens
-    known_unsupported = _known_unsupported_responses_params(request.model)
+    if request.reasoning_effort:
+        payload_args["reasoning"] = {"effort": request.reasoning_effort}
+    known_unsupported = _known_unsupported_responses_params(request.model, request.reasoning_effort)
     skipped_params: set[str] = set()
     if request.temperature is not None:
         if "temperature" in known_unsupported:
@@ -371,6 +377,7 @@ def openai_respond_with_vector_store(
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
         total_tokens=metadata.total_tokens,
+        reasoning_tokens=metadata.reasoning_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,

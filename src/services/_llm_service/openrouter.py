@@ -67,11 +67,9 @@ def build_openrouter_client(
         "max_tokens_cap": _BROWSER_USE_OPENROUTER_MAX_TOKENS_CAP,
         "max_retries": 0,
     }
-    extra_body = (
-        {"max_tokens": effective_max_tokens}
-        if effective_max_tokens is not None
-        else None
-    )
+    extra_body = {"max_tokens": effective_max_tokens} if effective_max_tokens is not None else {}
+    if getattr(settings, "reasoning_effort", ""):
+        extra_body["reasoning_effort"] = settings.reasoning_effort
     logger.info(
         log_event(
             ctx,
@@ -86,9 +84,9 @@ def build_openrouter_client(
             model=model,
             api_key=api_key,
             http_referer=getattr(settings, "openrouter_http_referer", None),
-            temperature=getattr(settings, "temperature", None),
+            temperature=None if getattr(settings, "reasoning_effort", "") not in {"", "none"} else getattr(settings, "temperature", None),
             timeout=getattr(settings, "timeout_seconds", None),
-            extra_body=extra_body,
+            extra_body=extra_body or None,
             max_retries=0,
         )
     except (RuntimeError, OSError, TypeError, ValueError) as exc:
@@ -510,7 +508,7 @@ def _finalize_openrouter_usage_accounting(
 def _openrouter_model(value: object) -> str:
     model = str(value or "").strip()
     if not model:
-        return "openai/gpt-5.6-luna"
+        return "openai/gpt-6-luna"
     if "/" in model:
         return model
     return f"openai/{model}"

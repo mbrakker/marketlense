@@ -412,7 +412,7 @@ def load_browser_download_settings(
     model = _normalize_openai_browser_model(
         browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
-        or _default_config_value("browser_download", "model", fallback="gpt-5.6-luna")
+        or _default_config_value("browser_download", "model", fallback="gpt-6-luna")
     )
     if not model:
         resolver.missing.append("browser_download.model|env:BROWSER_DOWNLOAD_MODEL")
@@ -422,7 +422,7 @@ def load_browser_download_settings(
         or browser_download.get("model")
         or _env_value("BROWSER_DOWNLOAD_MODEL")
         or _default_config_value(
-            "browser_download", "openrouter_model", fallback="openai/gpt-5.6-luna"
+            "browser_download", "openrouter_model", fallback="openai/gpt-6-luna"
         )
     )
 
@@ -450,6 +450,16 @@ def load_browser_download_settings(
         schema_version=str(data.get("schema_version", "1.0")),
         openrouter_api_key=openrouter_api_key,
         model=model,
+        reasoning_effort=str(
+            (data.get("llm_execution_policies", {}) or {})
+            .get("browser_report_download/browser_route", {})
+            .get("reasoning_effort", "")
+        ),
+        form_value_reasoning_effort=str(
+            (data.get("llm_execution_policies", {}) or {})
+            .get("browser_report_download/form_value_derivation", {})
+            .get("reasoning_effort", "")
+        ),
         temperature=_to_float(
             browser_download.get("temperature")
             if not _is_missing(browser_download.get("temperature"))

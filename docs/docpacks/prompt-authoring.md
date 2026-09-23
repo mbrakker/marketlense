@@ -56,7 +56,10 @@ identity compatibility is required.
 provider-call policy inventory. Resolution is exact namespace then longest
 approved prefix; provider retries are forbidden there because workflow retry
 policy remains orchestrator-owned. Prompt dry-run fixtures render retained
-variables but resolve model and temperature through this same runtime policy.
+variables but resolve model and reasoning effort through this same runtime
+policy. Temperature remains optional for non-reasoning models and explicit
+`reasoning_effort: none` policies; the effective provider controls define the
+execution identity and semantic-cache key.
 Their old model/temperature fields are descriptive only unless a fixture sets
 the explicit `test_only_execution_override` flag.
 

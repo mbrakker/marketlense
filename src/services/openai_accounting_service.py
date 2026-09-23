@@ -150,6 +150,8 @@ def _usage_metadata(
         "policy_hash": request.policy_hash,
         "producer_build_identity": request.producer_build_identity,
         "repair_attempt": max(0, int(request.repair_attempt or 0)),
+        "reasoning_effort": request.reasoning_effort,
+        "reasoning_tokens": request.reasoning_tokens,
     }
     metadata.update(request.extra or {})
     return metadata

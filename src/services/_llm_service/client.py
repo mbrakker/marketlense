@@ -21,7 +21,7 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 _T = TypeVar("_T")
-_BROWSER_USE_OPENAI_MODEL_DEFAULT = "gpt-5.6-luna"
+_BROWSER_USE_OPENAI_MODEL_DEFAULT = "gpt-6-luna"
 
 
 def _default_provider_operations() -> LLMProviderOperations:
@@ -347,6 +347,7 @@ def build_openai_browser_use_client(
         "provider": "openai",
         "model": model,
         "temperature": getattr(settings, "temperature", None),
+        "reasoning_effort": getattr(settings, "reasoning_effort", ""),
         "timeout_seconds": getattr(settings, "timeout_seconds", None),
         "configured_max_tokens": max_tokens,
         "effective_max_tokens": effective_max_tokens,
@@ -361,15 +362,19 @@ def build_openai_browser_use_client(
             fields=fields,
         )
     )
-    try:
-        client = client_factory(
+    effort = str(getattr(settings, "reasoning_effort", "") or "")
+    client_kwargs = dict(
             model=model,
             api_key=api_key,
-            temperature=getattr(settings, "temperature", None),
+            temperature=None if effort and effort != "none" else getattr(settings, "temperature", None),
             timeout=getattr(settings, "timeout_seconds", None),
             max_retries=0,
             max_completion_tokens=effective_max_tokens,
         )
+    if effort:
+        client_kwargs["reasoning_effort"] = effort
+    try:
+        client = client_factory(**client_kwargs)
     except (RuntimeError, OSError, TypeError, ValueError) as exc:
         logger.info(
             log_event(

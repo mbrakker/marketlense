@@ -60,6 +60,7 @@ from src.utils.errors import AppError
 from src.utils.costing import resolve_model_pricing
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
+from src.utils.model_resolver import effective_sampling_controls
 
 logger = logging.getLogger("market_lense.llm_service.openai")
 SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION = "1.0"
@@ -227,6 +228,7 @@ _RESPONSES_UNSUPPORTED_PARAM_PREFIXES: dict[str, tuple[str, ...]] = {
     # caller-supplied temperature.
     "": ("seed",),
     "gpt-5": ("temperature",),
+    "gpt-6": ("temperature",),
 }
 OPENAI_OCR_RESPONSE_FORMAT = {
     "type": "json_schema",
@@ -377,10 +379,20 @@ def _semantic_response_cache_spec(
             "context": context or {},
         }
     )
+    effort = str(getattr(request, "reasoning_effort", "") or "")
+    temperature, seed = effective_sampling_controls(
+        str(getattr(request, "model", "") or ""),
+        effort,
+        getattr(request, "temperature", None),
+        getattr(request, "seed", None),
+    )
     params_payload = {
         "schema_version": SEMANTIC_RESPONSE_CACHE_SCHEMA_VERSION,
         "operation": operation,
         **params,
+        "temperature": temperature,
+        "seed": seed,
+        "reasoning_effort": effort,
     }
     params_hash = _sha256_payload(params_payload)
     key = _sha256_payload(
@@ -713,12 +725,15 @@ def _strip_json_fence(text: str) -> str:
     return strip_json_fence(text)
 
 
-def _known_unsupported_responses_params(model: str) -> set[str]:
+def _known_unsupported_responses_params(model: str, reasoning_effort: str = "") -> set[str]:
     normalized = str(model or "").strip().lower()
+    effort = str(reasoning_effort or "").strip().lower()
     unsupported: set[str] = set()
     for prefix, params in _RESPONSES_UNSUPPORTED_PARAM_PREFIXES.items():
-        if normalized.startswith(prefix):
+        if normalized.startswith(prefix) and not (prefix in {"gpt-5", "gpt-6"} and effort == "none"):
             unsupported.update(params)
+    if effort and effort != "none":
+        unsupported.update({"temperature", "seed", "top_p", "logprobs", "top_logprobs"})
     return unsupported
 
 
@@ -778,6 +793,7 @@ class _OpenAIResponseMetadata:
     cached_input_tokens: int | None
     parsed_json: dict | None
     parse_strategy: str
+    reasoning_tokens: int | None = None
 
 
 def _parse_response_json(
@@ -806,6 +822,7 @@ def _build_response_metadata(
     total_tokens: int | None,
     cached_input_tokens: int | None,
     recover_json_object: bool,
+    reasoning_tokens: int | None = None,
 ) -> _OpenAIResponseMetadata:
     parsed_json, parse_strategy = _parse_response_json(
         text,
@@ -826,6 +843,7 @@ def _build_response_metadata(
         cached_input_tokens=cached_input_tokens,
         parsed_json=parsed_json,
         parse_strategy=parse_strategy,
+        reasoning_tokens=reasoning_tokens,
     )
 
 
@@ -839,6 +857,7 @@ def _adapt_chat_completion_metadata(run: Any) -> _OpenAIResponseMetadata:
         total_tokens=run.total_tokens,
         cached_input_tokens=run.cached_input_tokens,
         recover_json_object=False,
+        reasoning_tokens=getattr(run, "reasoning_tokens", None),
     )
 
 
@@ -847,6 +866,15 @@ def _adapt_responses_metadata(
 ) -> _OpenAIResponseMetadata:
     input_tokens, output_tokens, tool_calls, total_tokens = _extract_responses_usage(
         resp
+    )
+    usage = getattr(resp, "usage", None)
+    details = (
+        usage.get("output_tokens_details") if isinstance(usage, dict)
+        else getattr(usage, "output_tokens_details", None)
+    )
+    reasoning_tokens = (
+        details.get("reasoning_tokens") if isinstance(details, dict)
+        else getattr(details, "reasoning_tokens", None)
     )
     return _build_response_metadata(
         text=_extract_responses_output_text(resp),
@@ -857,6 +885,7 @@ def _adapt_responses_metadata(
         total_tokens=total_tokens,
         cached_input_tokens=None,
         recover_json_object=recover_json_object,
+        reasoning_tokens=reasoning_tokens,
     )
 
 

@@ -726,11 +726,10 @@ def generate_cross_report_analysis(
             system_prompt=prompt_bundle.system_prompt,
             user_prompt=prompt_bundle.user_prompt,
             model=prompt_bundle.resolved_model,
-            temperature=float(
-                getattr(settings, "cross_report_analysis_temperature", 1.0)
-            ),
+            temperature=prompt_bundle.effective_temperature,
+            reasoning_effort=prompt_bundle.effective_reasoning_effort,
             api_key=str(getattr(settings, "openai_api_key", "")),
-            seed=getattr(settings, "openai_seed", None),
+            seed=prompt_bundle.effective_seed,
             timeout_seconds=float(
                 getattr(settings, "cross_report_analysis_timeout_seconds", 600.0)
             ),

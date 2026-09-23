@@ -455,7 +455,8 @@ def test_llm_client_logs_replayable_model_call_audit_record(
 
     result = client.openai_chat_json(
         SimpleNamespace(
-            model="gpt-5-mini",
+            model="gpt-6-luna",
+            reasoning_effort="none",
             temperature=0.2,
             seed=42,
             system_prompt="system prompt",
@@ -482,7 +483,8 @@ def test_llm_client_logs_replayable_model_call_audit_record(
     assert fields["prompt_namespace"] == "report_vs/doc_map"
     assert fields["prompt_hash"] == "prompt-hash"
     assert fields["rendered_prompt_redaction_hash"]
-    assert fields["model"] == "gpt-5-mini"
+    assert fields["model"] == "gpt-6-luna"
+    assert fields["reasoning_effort"] == "none"
     assert fields["seed_supported"] is True
     assert fields["schema_name"] == "doc_map"
     response_id = cast(dict[str, Any], fields["response_id"])

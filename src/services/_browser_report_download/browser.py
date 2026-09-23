@@ -833,7 +833,8 @@ def _derive_grounded_form_option(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 model=request.settings.model,
-                temperature=0.0,
+                temperature=None if request.settings.form_value_reasoning_effort else 0.0,
+                reasoning_effort=request.settings.form_value_reasoning_effort,
                 max_output_tokens=400,
                 timeout_seconds=request.settings.timeout_seconds,
                 api_key=request.settings.openai_api_key,
@@ -3651,7 +3652,11 @@ def _record_browser_use_usage_row(
             llm_clients=llm_clients,
         ),
         cache_decision="disabled",
-        temperature=request.settings.temperature,
+        temperature=(
+            None if request.settings.reasoning_effort not in {"", "none"}
+            else request.settings.temperature
+        ),
+        reasoning_effort=request.settings.reasoning_effort,
         seed=None,
         timeout_seconds=request.settings.timeout_seconds,
         call_ordinal=int(extra.get("browser_usage_entry_index") or 0),

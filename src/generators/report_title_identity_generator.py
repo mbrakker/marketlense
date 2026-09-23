@@ -90,6 +90,7 @@ def resolve_ambiguous_report_title(
                 user_prompt=prompt.user_prompt,
                 model=prompt.resolved_model,
                 temperature=prompt.effective_temperature,
+                reasoning_effort=prompt.effective_reasoning_effort,
                 api_key=runtime.settings.openai_api_key,
                 image_paths=[str(image_path)],
                 seed=prompt.effective_seed,

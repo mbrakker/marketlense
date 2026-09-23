@@ -23,9 +23,8 @@ ingest:
     include_items_from_all_drives: true
     drive_id: ""
     list_mode: "metadata"
-  openai_model: "gpt-5.6-luna"
+  openai_model: "gpt-6-luna"
   temperature: 1.0
-  taxonomy_temperature: 1.0
   timeout_seconds: 600
   llm:
     retries: 0
@@ -63,14 +62,13 @@ ingest:
     ocr_fallback:
       enabled: false
       policy: "native_first_selective"
-      model: "gpt-5.6-luna"
+      model: "gpt-6-luna"
       timeout_seconds: 600
       prompt_namespace: "pdf_text/ocr_fallback"
       cache_enabled: true
       chunk_page_count: 8
   figure_captions:
     enabled: false
-    temperature: 0.2
     timeout_seconds: 600
     prompt_namespace: "report_vs/figure_caption"
     max_chars: 500
@@ -114,46 +112,46 @@ ingest:
     global_min_interval_ms: 250
 
 openai_models:
-  report_vs/artifacts: "gpt-5.6-luna"
-  report_vs/artifacts/summary: "gpt-5.6-luna"
-  report_vs/artifacts/cover_semantics: "gpt-5.6-luna"
-  report_vs/artifacts/cover_semantics_repair: "gpt-5.6-luna"
-  report_vs/artifacts/insights_candidates: "gpt-5.6-luna"
-  report_vs/artifacts/insights_final: "gpt-5.6-luna"
-  report_vs/artifacts/quotes: "gpt-5.6-luna"
-  report_vs/artifacts/expert_comment: "gpt-5.6-luna"
-  report_vs/artifacts/linkedin_post: "gpt-5.6-luna"
-  report_vs/doc_map: "gpt-5.6-luna"
-  report_vs/evidence_packs: "gpt-5.6-luna"
-  report_vs/evidence_packs/scope: "gpt-5.6-luna"
-  report_vs/evidence_packs/findings: "gpt-5.6-luna"
-  report_vs/evidence_packs/limitations: "gpt-5.6-luna"
-  report_vs/evidence_packs/methods: "gpt-5.6-luna"
-  report_vs/evidence_packs/quote_candidates: "gpt-5.6-luna"
-  report_vs/figure_caption: "gpt-5.6-luna"
-  report_vs/identity_resolution: "gpt-5.6-luna"
-  report_vs/validate/grounding: "gpt-5.6-luna"
-  report_vs/taxonomy: "gpt-5.6-luna"
-  rank_candidates: "gpt-5.6-luna"
-  rank_candidates/crop_refine: "gpt-5.6-luna"
+  report_vs/artifacts: "gpt-6-luna"
+  report_vs/artifacts/summary: "gpt-6-luna"
+  report_vs/artifacts/cover_semantics: "gpt-6-luna"
+  report_vs/artifacts/cover_semantics_repair: "gpt-6-luna"
+  report_vs/artifacts/insights_candidates: "gpt-6-luna"
+  report_vs/artifacts/insights_final: "gpt-6-luna"
+  report_vs/artifacts/quotes: "gpt-6-luna"
+  report_vs/artifacts/expert_comment: "gpt-6-luna"
+  report_vs/artifacts/linkedin_post: "gpt-6-luna"
+  report_vs/doc_map: "gpt-6-luna"
+  report_vs/evidence_packs: "gpt-6-luna"
+  report_vs/evidence_packs/scope: "gpt-6-luna"
+  report_vs/evidence_packs/findings: "gpt-6-luna"
+  report_vs/evidence_packs/limitations: "gpt-6-luna"
+  report_vs/evidence_packs/methods: "gpt-6-luna"
+  report_vs/evidence_packs/quote_candidates: "gpt-6-luna"
+  report_vs/figure_caption: "gpt-6-luna"
+  report_vs/identity_resolution: "gpt-6-luna"
+  report_vs/validate/grounding: "gpt-6-luna"
+  report_vs/taxonomy: "gpt-6-luna"
+  rank_candidates: "gpt-6-luna"
+  rank_candidates/crop_refine: "gpt-6-luna"
 
 llm_routing:
   report_vs/artifacts:
-    model: "gpt-5.6-luna"
+    model: "gpt-6-luna"
     tier: routine_structured
     max_input_tokens: 48000
     compaction_enabled: true
     quality_threshold: 0.80
     same_provider_fallback: true
   report_vs/evidence_packs:
-    model: "gpt-5.6-luna"
+    model: "gpt-6-luna"
     tier: evidence_sensitive
     max_input_tokens: 64000
     compaction_enabled: true
     quality_threshold: 0.90
     same_provider_fallback: true
   rank_candidates:
-    model: "gpt-5.6-luna"
+    model: "gpt-6-luna"
     tier: quality_ranked
     max_input_tokens: 32000
     compaction_enabled: true
@@ -170,8 +168,8 @@ llm_execution_policies:
   browser_report_download/browser_route:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 2048
     retrieval_mode: chat_json
@@ -180,12 +178,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "browser_route.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   browser_report_download/form_value_derivation:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 400
     retrieval_mode: chat_json
@@ -194,12 +192,12 @@ llm_execution_policies:
     structured_output_mode: json_schema
     structured_output_schema_identity: "form_value_derivation_v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   crop_qa_escalation/publication_strict:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 1024
     retrieval_mode: chat_json
@@ -208,12 +206,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "crop_qa_escalation.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   cross_report_analysis/synthesis:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.2
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: chat_json
@@ -222,12 +220,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "cross_report_analysis.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   pdf_text/ocr_fallback:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 16000
     retrieval_mode: chat_json
@@ -236,12 +234,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "pdf_text_ocr.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   publisher_inventory/discovery:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: chat_json
@@ -250,12 +248,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "publisher_inventory_discovery.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   publisher_inventory/meaningful_candidate_screen:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 2048
     retrieval_mode: chat_json
@@ -264,12 +262,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "publisher_inventory_candidate_screen.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 1.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -277,14 +275,14 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   # Evidence-constrained public artifact families use exact policies so their
   # sampling does not inherit future changes to unrelated report_vs workloads.
   report_vs/evidence_packs:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -292,12 +290,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/summary:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -305,12 +303,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/insights_final:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -318,12 +316,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/editorial_plan:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.3
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -331,12 +329,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/insights_candidates:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.4
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -344,12 +342,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/expert_comment:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.4
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -357,12 +355,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/linkedin_post:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.5
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -370,12 +368,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/regenerate/linkedin_post:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -383,12 +381,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/artifacts/cover_semantics_repair:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 1024
     retrieval_mode: inherit
@@ -397,12 +395,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "cover_semantics.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/validate:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 2048
     retrieval_mode: inherit
@@ -410,12 +408,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/taxonomy:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: file_search
@@ -423,12 +421,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/taxonomy_repair:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: file_search
@@ -437,12 +435,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "taxonomy.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/structured_output:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 8192
     retrieval_mode: inherit
@@ -451,12 +449,12 @@ llm_execution_policies:
     structured_output_mode: json_schema
     structured_output_schema_identity: "structured_output_recovery.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/context_category_fit:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: file_search
@@ -465,12 +463,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "context_category_fit.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/context_category_fit_repair:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: file_search
@@ -479,12 +477,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "context_category_fit.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/figure_caption:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 1024
     retrieval_mode: chat_json
@@ -493,12 +491,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "figure_caption.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   report_vs/identity_resolution:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 512
     retrieval_mode: chat_json
@@ -507,12 +505,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "report_title_identity.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   rank_candidates:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: inherit
@@ -520,12 +518,12 @@ llm_execution_policies:
     provider_retry_count: 0
     structured_output_mode: json_object
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   rank_candidates/crop_refine:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.0
+    model: "gpt-6-luna"
+    reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 1024
     retrieval_mode: chat_json
@@ -534,15 +532,15 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "crop_refine.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   # Reserved explicit production execution identities for current generic
   # generation actions. They do not alter routing and are retained so a new
   # caller cannot silently inherit compatibility controls.
   signal_generation/synthesis:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.2
+    model: "gpt-6-luna"
+    reasoning_effort: high
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: chat_json
@@ -551,12 +549,12 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "signal_generation.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
   briefing_generation/synthesis:
     schema_version: "1.0"
     provider: openai
-    model: "gpt-5.6-luna"
-    temperature: 0.2
+    model: "gpt-6-luna"
+    reasoning_effort: medium
     seed_policy: inherit
     max_output_tokens: 4096
     retrieval_mode: chat_json
@@ -565,7 +563,139 @@ llm_execution_policies:
     structured_output_mode: json_object
     structured_output_schema_identity: "briefing_generation.v1"
     fallback_policy: same_provider_only
-    pricing_key: "gpt-5.6-luna"
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/cover_semantics:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: low
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/quotes:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: low
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/regenerate/expert_comment:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: high
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/regenerate/insights_candidates:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: high
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/regenerate/insights_final:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: high
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/regenerate/quotes:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: low
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/artifacts/regenerate/summary:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: medium
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/doc_map:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: medium
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/structured_output/regenerate:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: medium
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_schema
+    structured_output_schema_identity: "structured_output_recovery.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
+  report_vs/structured_output/repair:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: low
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_schema
+    structured_output_schema_identity: "structured_output_recovery.v1"
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
   claim_embedding/generate:
     schema_version: "2.0"
     provider: openai
@@ -585,8 +715,7 @@ llm_execution_policies:
     pricing_key: "text-embedding-3-large"
 
 rank:
-  model: "gpt-5.6-luna"
-  temperature: 1.0
+  model: "gpt-6-luna"
   timeout_seconds: 7200
   seed: null
   max_candidates: 40
@@ -604,7 +733,6 @@ rank:
   crop_qa_escalation_max_score: 82.0
   crop_qa_escalation_max_calls: 2
   crop_qa_escalation_max_repairs: 1
-  crop_refine_temperature: 0.0
   crop_refine_timeout_seconds: 7200
 
 publish:
@@ -625,10 +753,9 @@ publish:
     limit_decision: "stop"
 
 browser_download:
-  model: "gpt-5.6-luna"
-  openrouter_model: "openai/gpt-5.6-luna"
+  model: "gpt-6-luna"
+  openrouter_model: "openai/gpt-6-luna"
   identity_config_path: "./browser_download_identity.yaml"
-  temperature: 0.0
   timeout_seconds: 180
   max_steps: 30
   run_budget:
@@ -716,8 +843,7 @@ mailbox_acquisition:
   imap_mailbox: "INBOX"
 
 publisher_discovery:
-  model: "openai/gpt-5.6-luna"
-  temperature: 0.0
+  model: "openai/gpt-6-luna"
   timeout_seconds: 360
   max_steps: 30
   output_dir: "./out/publisher_inventory_discovery"
@@ -737,8 +863,7 @@ publisher_discovery:
     jitter_seconds: 0.25
   candidate_screening:
     enabled: true
-    model: "gpt-5.6-luna"
-    temperature: 1.0
+    model: "gpt-6-luna"
     timeout_seconds: 120
     batch_size: 10
     prompt_namespace: "publisher_inventory/meaningful_candidate_screen"
@@ -769,8 +894,7 @@ cross_report_analysis:
   max_evidence_items: 48
   max_prompt_chars: 60000
   prompt_namespace: "cross_report_analysis/synthesis"
-  model: "gpt-5.6-luna"
-  temperature: 1.0
+  model: "gpt-6-luna"
   timeout_seconds: 600
   cache_enabled: true
   auto_theme_enabled: true

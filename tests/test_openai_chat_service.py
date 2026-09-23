@@ -99,6 +99,97 @@ def test_openai_chat_json_uses_modern_chat_completion(
     assert captured_payloads[0]["seed"] == 7
 
 
+def test_gpt6_chat_sends_reasoning_effort_and_omits_sampling(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    calls: list[dict] = []
+
+    class _Chat:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(
+                id="chat_gpt6",
+                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
+                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+            )
+
+    class _Client:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_Chat())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
+    request = replace(
+        _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="high",
+        temperature=0.4, seed=7,
+    )
+    result = svc.openai_chat_json(request, _ctx())
+
+    assert result.parsed_json == {"ok": True}
+    assert calls[0]["reasoning_effort"] == "high"
+    assert "temperature" not in calls[0]
+    assert "seed" not in calls[0]
+
+
+def test_gpt6_none_can_send_optional_sampling(external_boundary_mocks_only, tmp_path) -> None:
+    calls: list[dict] = []
+
+    class _Chat:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(
+                id="chat_none",
+                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
+                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+            )
+
+    class _Client:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_Chat())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
+    request = replace(
+        _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="none",
+    )
+    svc.openai_chat_json(request, _ctx())
+
+    assert calls[0]["reasoning_effort"] == "none"
+    assert calls[0]["temperature"] == 0.1
+    assert calls[0]["seed"] == 7
+
+
+def test_reasoning_effort_changes_semantic_cache_key(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    calls: list[dict] = []
+
+    class _Chat:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(
+                id=f"chat_{len(calls)}",
+                choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
+                usage=SimpleNamespace(prompt_tokens=12, completion_tokens=5, total_tokens=17),
+            )
+
+    class _Client:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_Chat())
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
+    base = replace(
+        _chat_request(tmp_path), model="gpt-6-luna", temperature=None, seed=None,
+        response_cache_enabled=True, response_cache_dir=str(tmp_path / "cache"),
+    )
+    low = replace(base, reasoning_effort="low")
+    high = replace(base, reasoning_effort="high")
+    svc.openai_chat_json(low, _ctx())
+    svc.openai_chat_json(low, _ctx())
+    svc.openai_chat_json(high, _ctx())
+
+    assert len(calls) == 2
+    assert [call["reasoning_effort"] for call in calls] == ["low", "high"]
+
+
 def test_openai_chat_json_delegates_usage_accounting(
     external_boundary_mocks_only, tmp_path
 ) -> None:
@@ -111,6 +202,7 @@ def test_openai_chat_json_delegates_usage_accounting(
                 completion_tokens=5,
                 total_tokens=17,
                 prompt_tokens_details=SimpleNamespace(cached_tokens=8),
+                completion_tokens_details=SimpleNamespace(reasoning_tokens=2),
             )
             message = SimpleNamespace(content=json.dumps({"ok": True}))
             choice = SimpleNamespace(message=message)
@@ -135,16 +227,25 @@ def test_openai_chat_json_delegates_usage_accounting(
         openai_accounting_service, "record_usage", _record_usage
     )
 
-    result = svc.openai_chat_json(_chat_request(tmp_path), _ctx())
+    result = svc.openai_chat_json(
+        replace(
+            _chat_request(tmp_path), model="gpt-6-luna", reasoning_effort="high",
+        ),
+        _ctx(),
+    )
 
     assert result.parsed_json == {"ok": True}
     assert len(captured_accounting) == 1
     accounting_request, accounting_ctx = captured_accounting[0]
     assert accounting_ctx == _ctx()
     assert accounting_request.step_name == "openai_chat_json"
-    assert accounting_request.model == "gpt-4.1-mini"
+    assert accounting_request.model == "gpt-6-luna"
+    assert accounting_request.reasoning_effort == "high"
+    assert accounting_request.temperature is None
+    assert accounting_request.seed is None
     assert accounting_request.input_tokens == 12
     assert accounting_request.output_tokens == 5
+    assert accounting_request.reasoning_tokens == 2
     assert accounting_request.cached_input_tokens == 8
     assert accounting_request.cache_decision == "provider_hit"
     assert accounting_request.tool_calls == 0

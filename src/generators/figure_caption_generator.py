@@ -27,7 +27,7 @@ from src.services.prompt_family_materialization_service import (
 from src.utils.cache_utils import sha256_json
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
-from src.utils.model_resolver import resolve_model
+from src.utils.model_resolver import effective_sampling_controls, resolve_settings_execution_policy
 
 if TYPE_CHECKING:
     from src.contracts.report_generation import ReportSelectionState
@@ -340,10 +340,12 @@ def generate_figure_captions(
         ),
         caption_ctx,
     )
-    resolved_model = resolve_model(
-        prompt_namespace,
-        getattr(runtime.settings, "openai_models", {}),
-        runtime.settings.openai_model,
+    execution_policy = resolve_settings_execution_policy(prompt_namespace, runtime.settings)
+    resolved_model = execution_policy.policy.model
+    reasoning_effort = execution_policy.policy.reasoning_effort
+    effective_temperature, effective_seed = effective_sampling_controls(
+        resolved_model, reasoning_effort, execution_policy.policy.temperature,
+        runtime.settings.openai_seed,
     )
     prompt_content_hash = str(getattr(prompt_set, "prompt_content_hash", "") or "")
     if not prompt_content_hash:
@@ -359,9 +361,11 @@ def generate_figure_captions(
     )
     configuration_policy_hash = sha256_json(
         {
-            "temperature": runtime.settings.figure_caption_temperature,
+            "temperature": effective_temperature,
+            "reasoning_effort": reasoning_effort,
             "max_chars": runtime.settings.figure_caption_max_chars,
-            "seed": runtime.settings.openai_seed,
+            "seed": effective_seed,
+            "execution_policy_hash": execution_policy.policy_hash,
         }
     )
     execution_identity = sha256_json(
@@ -446,7 +450,8 @@ def generate_figure_captions(
                     "user_prompt": user_render.text,
                     "context_bundle": context_bundle,
                     "model": resolved_model,
-                    "temperature": runtime.settings.figure_caption_temperature,
+                    "temperature": effective_temperature,
+                    "reasoning_effort": reasoning_effort,
                 },
             )
         )
@@ -547,10 +552,11 @@ def generate_figure_captions(
                         system_prompt=system_render.text,
                         user_prompt=user_render.text,
                         model=resolved_model,
-                        temperature=runtime.settings.figure_caption_temperature,
+                        temperature=effective_temperature,
+                        reasoning_effort=reasoning_effort,
                         api_key=runtime.settings.openai_api_key,
                         image_paths=[str(image_path)],
-                        seed=runtime.settings.openai_seed,
+                        seed=effective_seed,
                         timeout_seconds=runtime.settings.figure_caption_timeout_seconds,
                         cost_ledger_path=runtime.settings.cost_ledger_path,
                         cost_daily_path=runtime.settings.cost_daily_path,
@@ -716,7 +722,8 @@ def generate_figure_captions(
         "schema_version": "1.0",
         "prompt_namespace": prompt_namespace,
         "model": resolved_model,
-        "temperature": runtime.settings.figure_caption_temperature,
+        "temperature": effective_temperature,
+        "reasoning_effort": reasoning_effort,
         "max_chars": runtime.settings.figure_caption_max_chars,
         "results": results,
     }

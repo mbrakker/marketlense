@@ -13,6 +13,7 @@ from src.services._llm_service.context_compaction import (
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
+from src.utils.model_resolver import effective_sampling_controls
 
 
 @dataclass(frozen=True)
@@ -23,15 +24,19 @@ class _ChatCompletionRun:
     completion_tokens: int | None
     total_tokens: int | None
     cached_input_tokens: int | None
+    reasoning_tokens: int | None = None
 
 
 def _chat_completion_model_kwargs(
-    *, model: str, temperature: float, seed: int | None
-) -> dict[str, float | int]:
-    """GPT-5 Chat Completions accepts provider defaults, not caller sampling knobs."""
-    if str(model).strip().lower().startswith("gpt-5"):
-        return {}
-    kwargs: dict[str, float | int] = {"temperature": temperature}
+    *, model: str, temperature: float | None, seed: int | None, reasoning_effort: str = ""
+) -> dict[str, float | int | str]:
+    """Select provider controls from the model's resolved inference mode."""
+    temperature, seed = effective_sampling_controls(model, reasoning_effort, temperature, seed)
+    kwargs: dict[str, float | int | str] = {}
+    if reasoning_effort:
+        kwargs["reasoning_effort"] = reasoning_effort
+    if temperature is not None:
+        kwargs["temperature"] = temperature
     if seed is not None:
         kwargs["seed"] = seed
     return kwargs
@@ -44,8 +49,9 @@ def _legacy_chat_completion_call(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    temperature: float,
+    temperature: float | None,
     seed: int | None,
+    reasoning_effort: str,
     max_output_tokens: int | None,
     response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
@@ -72,7 +78,7 @@ def _legacy_chat_completion_call(
         }
         payload_args.update(
             _chat_completion_model_kwargs(
-                model=model, temperature=temperature, seed=seed
+                model=model, temperature=temperature, seed=seed, reasoning_effort=reasoning_effort
             )
         )
         if max_output_tokens is not None:
@@ -86,6 +92,7 @@ def _legacy_chat_completion_call(
         payload = resp["choices"][0]["message"]["content"]
         usage = resp.get("usage") or {}
         prompt_tokens_details = usage.get("prompt_tokens_details") or {}
+        completion_tokens_details = usage.get("completion_tokens_details") or {}
         return _ChatCompletionRun(
             payload=payload,
             request_id=resp.get("id"),
@@ -93,6 +100,7 @@ def _legacy_chat_completion_call(
             completion_tokens=usage.get("completion_tokens"),
             total_tokens=usage.get("total_tokens"),
             cached_input_tokens=prompt_tokens_details.get("cached_tokens"),
+            reasoning_tokens=completion_tokens_details.get("reasoning_tokens"),
         )
     finally:
         if had_timeout_attr:
@@ -118,8 +126,9 @@ def _modern_chat_completion_call(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    temperature: float,
+    temperature: float | None,
     seed: int | None,
+    reasoning_effort: str,
     max_output_tokens: int | None,
     response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
@@ -139,7 +148,7 @@ def _modern_chat_completion_call(
         "response_format": response_format,
     }
     payload_args.update(
-        _chat_completion_model_kwargs(model=model, temperature=temperature, seed=seed)
+        _chat_completion_model_kwargs(model=model, temperature=temperature, seed=seed, reasoning_effort=reasoning_effort)
     )
     if max_output_tokens is not None:
         payload_args["max_completion_tokens"] = max_output_tokens
@@ -147,6 +156,9 @@ def _modern_chat_completion_call(
     usage = getattr(resp, "usage", None)
     prompt_tokens_details = (
         getattr(usage, "prompt_tokens_details", None) if usage is not None else None
+    )
+    completion_tokens_details = (
+        getattr(usage, "completion_tokens_details", None) if usage is not None else None
     )
     return _ChatCompletionRun(
         payload=resp.choices[0].message.content or "",
@@ -161,6 +173,7 @@ def _modern_chat_completion_call(
         if usage is not None
         else None,
         cached_input_tokens=getattr(prompt_tokens_details, "cached_tokens", None),
+        reasoning_tokens=getattr(completion_tokens_details, "reasoning_tokens", None),
     )
 
 
@@ -171,8 +184,9 @@ def _run_chat_completion(
     model: str,
     system_prompt: str,
     user_prompt: str,
-    temperature: float,
+    temperature: float | None,
     seed: int | None,
+    reasoning_effort: str,
     max_output_tokens: int | None,
     response_format: dict[str, Any],
 ) -> _ChatCompletionRun:
@@ -185,6 +199,7 @@ def _run_chat_completion(
             user_prompt=user_prompt,
             temperature=temperature,
             seed=seed,
+            reasoning_effort=reasoning_effort,
             max_output_tokens=max_output_tokens,
             response_format=response_format,
         )
@@ -197,6 +212,7 @@ def _run_chat_completion(
             user_prompt=user_prompt,
             temperature=temperature,
             seed=seed,
+            reasoning_effort=reasoning_effort,
             max_output_tokens=max_output_tokens,
             response_format=response_format,
         )
@@ -250,6 +266,7 @@ def analyze_report(
             user_prompt=request.user_prompt,
             temperature=request.temperature,
             seed=request.seed,
+            reasoning_effort=request.reasoning_effort,
             max_output_tokens=request.max_output_tokens,
             response_format={"type": "json_object"},
         )
@@ -283,6 +300,7 @@ def analyze_report(
         output_tokens=completion_tokens,
         total_tokens=total_tokens,
         cached_input_tokens=int(cached_tokens) if cached_tokens is not None else None,
+        reasoning_tokens=run.reasoning_tokens,
         tool_calls=tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
@@ -482,6 +500,7 @@ def openai_chat_json(
             user_prompt=request.user_prompt,
             temperature=request.temperature,
             seed=request.seed,
+            reasoning_effort=request.reasoning_effort,
             max_output_tokens=request.max_output_tokens,
             response_format=response_format,
         )
@@ -511,6 +530,7 @@ def openai_chat_json(
         output_tokens=metadata.output_tokens,
         total_tokens=metadata.total_tokens,
         cached_input_tokens=metadata.cached_input_tokens,
+        reasoning_tokens=metadata.reasoning_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,
@@ -663,7 +683,9 @@ def openai_chat_json_with_images(
                 {"role": "user", "content": user_content},
             ],
         }
-        known_unsupported = _known_unsupported_responses_params(request.model)
+        if request.reasoning_effort:
+            payload_args["reasoning"] = {"effort": request.reasoning_effort}
+        known_unsupported = _known_unsupported_responses_params(request.model, request.reasoning_effort)
         skipped_params: set[str] = set()
         if request.temperature is not None:
             if "temperature" in known_unsupported:
@@ -731,6 +753,7 @@ def openai_chat_json_with_images(
         input_tokens=metadata.input_tokens,
         output_tokens=metadata.output_tokens,
         total_tokens=metadata.total_tokens,
+        reasoning_tokens=metadata.reasoning_tokens,
         tool_calls=metadata.tool_calls,
         cost_ledger_path=request.cost_ledger_path,
         cost_daily_path=request.cost_daily_path,

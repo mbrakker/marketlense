@@ -75,6 +75,7 @@ def evaluate_crop_qa_escalation(
                 user_prompt=_render_user_prompt(prompt_payload, crop, sidecar, ctx),
                 model=policy.model,
                 temperature=policy.temperature,
+                reasoning_effort=policy.reasoning_effort,
                 api_key=policy.api_key,
                 image_paths=[_crop_image_path(crop)],
                 seed=policy.seed,

@@ -90,6 +90,9 @@ class LLMExecutionIdentity:
     seed: int | None = field(
         metadata={"doc": "Configured deterministic seed, if supported."}
     )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Reasoning effort sent to the provider, if configured."}
+    )
     output_controls: Dict[str, Any] = field(
         default_factory=dict,
         metadata={"doc": "Stable output and token controls for the invocation."},
@@ -373,9 +376,12 @@ class PromptDryRunResult:
         default="",
         metadata={"doc": "Representative model identifier recorded by the fixture."},
     )
-    temperature: float = field(
-        default=0.0,
+    temperature: float | None = field(
+        default=None,
         metadata={"doc": "Resolved runtime or explicitly test-only temperature."},
+    )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Resolved runtime reasoning effort; empty for a test-only override."}
     )
     execution_policy_hash: str = field(
         default="", metadata={"doc": "Resolved runtime policy identity."}

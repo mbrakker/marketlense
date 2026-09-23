@@ -115,6 +115,16 @@ pricing:
     cached_input_tokens_per_1k_usd: 0.00002
     output_tokens_per_1k_usd: 0.0012
     tool_call_usd: 0.0
+  openai/gpt-6-luna:
+    provider: "openrouter"
+    disposition: "enabled"
+    pricing_version: "openrouter-2026-09-22.v1"
+    effective_date: "2026-09-22"
+    source_note: "OpenRouter GPT-6 Luna standard route pricing; USD per 1K text tokens."
+    input_tokens_per_1k_usd: 0.0001
+    cached_input_tokens_per_1k_usd: 0.00001
+    output_tokens_per_1k_usd: 0.0005
+    tool_call_usd: 0.0
   text-embedding-3-large:
     provider: "openai"
     pricing_version: "openai-2026-08-26.v1"

@@ -186,10 +186,15 @@ class ChatOpenAI(BaseChatModel):
 			if self.service_tier is not None:
 				model_params['service_tier'] = self.service_tier
 
-			if self.reasoning_models and any(str(m).lower() in str(self.model).lower() for m in self.reasoning_models):
+			model_name = str(self.model).lower()
+			is_reasoning_model = model_name.startswith(('gpt-5', 'gpt-6')) or (
+				self.reasoning_models and any(str(m).lower() in model_name for m in self.reasoning_models)
+			)
+			if is_reasoning_model:
 				model_params['reasoning_effort'] = self.reasoning_effort
-				model_params.pop('temperature', None)
-				model_params.pop('frequency_penalty', None)
+				if self.reasoning_effort != 'none':
+					for key in ('temperature', 'frequency_penalty', 'top_p', 'seed'):
+						model_params.pop(key, None)
 
 			if output_format is None:
 				# Return string response

@@ -1094,6 +1094,9 @@
         "failure_forensics_policy": {
           "type": "string"
         },
+        "form_value_reasoning_effort": {
+          "type": "string"
+        },
         "headed": {
           "type": "boolean"
         },
@@ -1144,6 +1147,9 @@
           "type": "integer"
         },
         "private_api_playbook_promotion_mode": {
+          "type": "string"
+        },
+        "reasoning_effort": {
           "type": "string"
         },
         "reports_db": {
@@ -17543,6 +17549,9 @@
         "quality_profile": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -17557,7 +17566,14 @@
           ]
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -22208,7 +22224,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -24824,6 +24847,9 @@
         "publisher_name": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "report_name": {
           "type": "string"
         },
@@ -24847,7 +24873,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -25158,6 +25191,9 @@
         "publisher_name": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "report_name": {
           "type": "string"
         },
@@ -25207,7 +25243,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -25328,6 +25371,9 @@
         "publisher_name": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "repair_attempt": {
           "type": "integer"
         },
@@ -25396,7 +25442,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -25465,6 +25518,9 @@
           "type": "string"
         },
         "publisher_name": {
+          "type": "string"
+        },
+        "reasoning_effort": {
           "type": "string"
         },
         "report_name": {
@@ -25668,6 +25724,9 @@
         "publisher_name": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "repair_attempt": {
           "type": "integer"
         },
@@ -25726,7 +25785,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -25973,6 +26039,19 @@
         },
         "publisher_name": {
           "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "reasoning_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "repair_attempt": {
           "type": "integer"
@@ -28496,6 +28575,9 @@
         "provider": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "retrieval_mode": {
           "type": "string"
         },
@@ -28742,6 +28824,9 @@
         "namespace": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "render_runtime_ms": {
           "type": "number"
         },
@@ -28761,7 +28846,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "user_path": {
           "type": "string"
@@ -30384,6 +30476,10 @@
         "candidate_artifacts_path": {
           "type": "string"
         },
+        "payload_overrides": {
+          "additionalProperties": {},
+          "type": "object"
+        },
         "prompt_namespaces": {
           "items": {
             "type": "string"
@@ -30404,6 +30500,12 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "selected_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "updated_artifacts": {
           "additionalProperties": {},
@@ -32365,6 +32467,9 @@
         "prompt_user_sha256": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -32401,7 +32506,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -33029,6 +33141,9 @@
         "prompt_user_sha256": {
           "type": "string"
         },
+        "reasoning_effort": {
+          "type": "string"
+        },
         "response_cache_dir": {
           "type": "string"
         },
@@ -33072,7 +33187,14 @@
           "type": "string"
         },
         "temperature": {
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "timeout_seconds": {
           "anyOf": [
@@ -46549,6 +46671,9 @@
           "type": "string"
         },
         "provider_decision": {
+          "type": "string"
+        },
+        "reasoning_effort": {
           "type": "string"
         },
         "rendered_prompt_redaction_hash": {

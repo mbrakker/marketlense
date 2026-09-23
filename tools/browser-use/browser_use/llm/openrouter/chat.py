@@ -152,16 +152,19 @@ class ChatOpenRouter(BaseChatModel):
 					system_content.append({'type': 'text', 'text': schema_text})
 
 		try:
+			model_params = {
+				key: value for key, value in (
+					('temperature', self.temperature), ('top_p', self.top_p), ('seed', self.seed)
+				) if value is not None
+			}
+			model_params.update(self.extra_body or {})
 			if output_format is None:
 				# Return string response
 				response = await self.get_client().chat.completions.create(
 					model=self.model,
 					messages=openrouter_messages,
-					temperature=self.temperature,
-					top_p=self.top_p,
-					seed=self.seed,
 					extra_headers=extra_headers,
-					**(self.extra_body or {}),
+					**model_params,
 				)
 
 				usage = self._get_usage(response)
@@ -176,12 +179,9 @@ class ChatOpenRouter(BaseChatModel):
 				response = await self.get_client().chat.completions.create(
 					model=self.model,
 					messages=openrouter_messages,
-					temperature=self.temperature,
-					top_p=self.top_p,
-					seed=self.seed,
 					response_format={'type': 'json_object'},
 					extra_headers=extra_headers,
-					**(self.extra_body or {}),
+					**model_params,
 				)
 
 				if response.choices[0].message.content is None:

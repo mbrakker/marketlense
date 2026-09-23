@@ -4,6 +4,7 @@ import hashlib
 from typing import Any
 
 from src.contracts.workflow_control import ModelCallAuditRecord, ModelCallReplayBundle
+from src.utils.model_resolver import effective_sampling_controls
 
 
 def build_model_call_audit_record(
@@ -29,6 +30,12 @@ def build_model_call_audit_record(
         normalized_seed = int(seed) if seed is not None else None
     except (TypeError, ValueError):
         normalized_seed = None
+    actual_temperature, normalized_seed = effective_sampling_controls(
+        str(getattr(request, "model", "") or ""),
+        str(getattr(request, "reasoning_effort", "") or ""),
+        getattr(request, "temperature", None),
+        normalized_seed,
+    )
     return ModelCallAuditRecord(
         schema_version="1.0",
         operation=str(operation),
@@ -44,7 +51,8 @@ def build_model_call_audit_record(
         model=str(
             getattr(response, "model", "") or getattr(request, "model", "") or ""
         ),
-        temperature=getattr(request, "temperature", None),
+        temperature=actual_temperature,
+        reasoning_effort=str(getattr(request, "reasoning_effort", "") or ""),
         seed=normalized_seed,
         seed_supported=normalized_seed is not None,
         schema_name=str(getattr(request, "schema_name", "") or ""),
@@ -83,6 +91,7 @@ def build_model_call_replay_bundle(
             "rendered_prompt_redaction_hash": audit_record.rendered_prompt_redaction_hash,
             "model": audit_record.model,
             "temperature": audit_record.temperature,
+            "reasoning_effort": audit_record.reasoning_effort,
             "seed": audit_record.seed,
             "schema_name": audit_record.schema_name,
             "schema_version": audit_record.output_schema_version,
@@ -102,6 +111,7 @@ def audit_record_fields(record: ModelCallAuditRecord) -> dict[str, object]:
         "rendered_prompt_redaction_hash": record.rendered_prompt_redaction_hash,
         "model": record.model,
         "temperature": record.temperature,
+        "reasoning_effort": record.reasoning_effort,
         "seed": record.seed,
         "seed_supported": record.seed_supported,
         "schema_name": record.schema_name,

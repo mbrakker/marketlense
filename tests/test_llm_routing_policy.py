@@ -105,20 +105,20 @@ def test_execution_policy_uses_longest_prefix_and_changes_identity() -> None:
     policies = execution_policies_from_config(
         {
             "report_vs": {
-                "model": "gpt-5-mini",
-                "temperature": 0.4,
+                "model": "gpt-6-luna",
+                "reasoning_effort": "medium",
                 "timeout_seconds": 60,
             },
             "report_vs/validate": {
-                "model": "gpt-5-mini",
-                "temperature": 0.0,
+                "model": "gpt-6-luna",
+                "reasoning_effort": "high",
                 "timeout_seconds": 60,
                 "structured_output_schema_identity": "validation.v1",
             },
         },
         model_overrides={},
         legacy_routing={},
-        default_model="gpt-5-mini",
+        default_model="gpt-6-luna",
         default_temperature=1.0,
         default_seed=None,
         default_timeout_seconds=600,
@@ -127,7 +127,7 @@ def test_execution_policy_uses_longest_prefix_and_changes_identity() -> None:
     validation = resolve_execution_policy(
         "report_vs/validate/grounding",
         policies,
-        default_model="gpt-5-mini",
+        default_model="gpt-6-luna",
         default_temperature=1.0,
         default_seed=None,
         default_timeout_seconds=600,
@@ -135,18 +135,20 @@ def test_execution_policy_uses_longest_prefix_and_changes_identity() -> None:
     artifact = resolve_execution_policy(
         "report_vs/artifacts/summary",
         policies,
-        default_model="gpt-5-mini",
+        default_model="gpt-6-luna",
         default_temperature=1.0,
         default_seed=None,
         default_timeout_seconds=600,
     )
 
     assert validation.policy_source == "report_vs/validate"
-    assert validation.policy.temperature == 0.0
+    assert validation.policy.reasoning_effort == "high"
+    assert artifact.policy.reasoning_effort == "medium"
+    assert validation.policy.temperature is None
     assert validation.policy_hash != artifact.policy_hash
 
 
-def test_public_artifact_execution_policies_use_exact_namespace_temperatures() -> None:
+def test_production_execution_policies_use_explicit_reasoning_effort() -> None:
     config_path = Path(__file__).resolve().parents[1] / "src" / "config" / "app.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     ingest = config["ingest"]
@@ -161,15 +163,15 @@ def test_public_artifact_execution_policies_use_exact_namespace_temperatures() -
     )
 
     expected_artifacts = {
-        "report_vs/evidence_packs": 0.0,
-        "report_vs/artifacts/summary": 0.0,
-        "report_vs/artifacts/insights_final": 0.0,
-        "report_vs/artifacts/editorial_plan": 0.3,
-        "report_vs/artifacts/insights_candidates": 0.4,
-        "report_vs/artifacts/expert_comment": 0.4,
-        "report_vs/artifacts/linkedin_post": 0.5,
+        "report_vs/evidence_packs": "medium",
+        "report_vs/artifacts/summary": "medium",
+        "report_vs/artifacts/insights_final": "high",
+        "report_vs/artifacts/editorial_plan": "medium",
+        "report_vs/artifacts/insights_candidates": "high",
+        "report_vs/artifacts/expert_comment": "high",
+        "report_vs/artifacts/linkedin_post": "medium",
     }
-    for namespace, expected_temperature in expected_artifacts.items():
+    for namespace, expected_effort in expected_artifacts.items():
         decision = resolve_execution_policy(
             namespace,
             policies,
@@ -179,14 +181,15 @@ def test_public_artifact_execution_policies_use_exact_namespace_temperatures() -
             default_timeout_seconds=ingest["timeout_seconds"],
         )
         assert decision.policy_source == namespace
-        assert decision.policy.temperature == expected_temperature
+        assert decision.policy.reasoning_effort == expected_effort
+        assert decision.policy.temperature is None
 
     preserved_namespaces = {
-        "report_vs/taxonomy": 0.0,
-        "report_vs/figure_caption": 0.0,
-        "browser_report_download/browser_route": 0.0,
+        "report_vs/taxonomy": "low",
+        "report_vs/figure_caption": "low",
+        "browser_report_download/browser_route": "low",
     }
-    for namespace, expected_temperature in preserved_namespaces.items():
+    for namespace, expected_effort in preserved_namespaces.items():
         decision = resolve_execution_policy(
             namespace,
             policies,
@@ -196,7 +199,37 @@ def test_public_artifact_execution_policies_use_exact_namespace_temperatures() -
             default_timeout_seconds=ingest["timeout_seconds"],
         )
         assert decision.policy_source == namespace
-        assert decision.policy.temperature == expected_temperature
+        assert decision.policy.reasoning_effort == expected_effort
+    for namespace in registered_production_llm_namespaces():
+        if namespace == "claim_embedding/generate":
+            continue
+        decision = resolve_execution_policy(
+            namespace, policies, default_model=ingest["openai_model"],
+            default_temperature=ingest["temperature"], default_seed=ingest["seed"],
+            default_timeout_seconds=ingest["timeout_seconds"],
+            require_registered_namespace=True,
+        )
+        assert decision.policy.reasoning_effort in {"low", "medium", "high"}
+        assert decision.policy.model == "gpt-6-luna"
+        assert decision.policy.temperature is None
+
+
+@pytest.mark.parametrize(
+    ("model", "effort", "code"),
+    [
+        ("gpt-6-luna", "", "llm_execution_policy_reasoning_effort_missing"),
+        ("openai/gpt-6-luna", "", "llm_execution_policy_reasoning_effort_missing"),
+        ("gpt-6-luna", "ultra", "llm_execution_policy_reasoning_effort_invalid"),
+    ],
+)
+def test_gpt6_policy_requires_valid_reasoning_effort(model: str, effort: str, code: str) -> None:
+    with pytest.raises(AppError) as error:
+        execution_policies_from_config(
+            {"report_vs": {"model": model, "reasoning_effort": effort}},
+            model_overrides={}, legacy_routing={}, default_model=model,
+            default_temperature=1.0, default_seed=None, default_timeout_seconds=600,
+        )
+    assert error.value.code == code
 
 
 def test_legacy_exact_model_override_retains_inherited_execution_controls() -> None:

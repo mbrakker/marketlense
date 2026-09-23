@@ -11,6 +11,7 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service
+from src.utils.model_resolver import effective_sampling_controls
 
 
 def _semantic_usage_action(*, step_name: str, source_request: Any | None) -> str:
@@ -47,6 +48,7 @@ def record_usage_accounting(
     model_pricing: dict,
     request_id: str | None,
     cached_input_tokens: int | None = None,
+    reasoning_tokens: int | None = None,
     provider: str = "openai",
     action: str | None = None,
     reservation_operation: str = "",
@@ -77,6 +79,12 @@ def record_usage_accounting(
     execution_identity = (
         str(getattr(source, "execution_identity", "") or "").strip()
         or f"direct-{step_name}-v1"
+    )
+    actual_temperature, actual_seed = effective_sampling_controls(
+        model,
+        str(getattr(source, "reasoning_effort", "") or ""),
+        getattr(source, "temperature", None),
+        getattr(source, "seed", None),
     )
     return openai_accounting_service.record_usage(
         OpenAIUsageAccountingRequest(
@@ -128,8 +136,10 @@ def record_usage_accounting(
                 getattr(source, "provider_decision", "") or "openai_primary"
             ),
             cache_decision=cache_decision,
-            temperature=getattr(source, "temperature", None),
-            seed=getattr(source, "seed", None),
+            temperature=actual_temperature,
+            reasoning_effort=str(getattr(source, "reasoning_effort", "") or ""),
+            reasoning_tokens=reasoning_tokens,
+            seed=actual_seed,
             timeout_seconds=getattr(source, "timeout_seconds", None),
             call_ordinal=call_ordinal,
             parse_status=parse_status,

@@ -40,11 +40,13 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
             cfg_data["llm_execution_policies"] = {
                 "report_vs": {
                     "provider": "openai",
-                    "model": "gpt-5-mini",
-                    "temperature": 0.0,
+                    "model": "gpt-6-luna",
+                    "reasoning_effort": "medium",
                     "provider_retry_count": 0,
                 }
             }
+            cfg_data["openai_models"] = {"report_vs": "gpt-6-luna"}
+            cfg_data["llm_routing"] = {"report_vs": {"provider": "openai"}}
             Path(cfg_path).write_text(yaml.safe_dump(cfg_data), encoding="utf-8")
 
             with (
@@ -319,7 +321,7 @@ class TestConfigService01DefaultsUseVectorMode(_TestConfigServiceBase):
                 "cross_report_analysis/synthesis",
                 default_settings.cross_report_analysis_prompt_namespace,
             )
-            self.assertEqual("gpt-5.6-luna", default_settings.cross_report_analysis_model)
+            self.assertEqual("gpt-6-luna", default_settings.cross_report_analysis_model)
             self.assertEqual(1.0, default_settings.cross_report_analysis_temperature)
             self.assertEqual(
                 600.0, default_settings.cross_report_analysis_timeout_seconds

@@ -508,6 +508,10 @@ def validate_prompt_dry_run(
                 if fixture.test_only_execution_override
                 else policy_decision.policy.temperature
             ),
+            reasoning_effort=(
+                "" if fixture.test_only_execution_override
+                else policy_decision.policy.reasoning_effort
+            ),
             execution_policy_hash=policy_decision.policy_hash,
             execution_policy_source=policy_decision.policy_source,
         )
@@ -721,6 +725,7 @@ def build_llm_execution_identity(
     model: str,
     temperature: float | None,
     seed: int | None,
+    reasoning_effort: str = "",
     max_output_tokens: int | None = None,
     timeout_seconds: float | None = None,
     provider_retry_count: int = 0,
@@ -744,6 +749,7 @@ def build_llm_execution_identity(
         model=str(model or "").strip(),
         temperature=None if temperature is None else float(temperature),
         seed=None if seed is None else int(seed),
+        reasoning_effort=str(reasoning_effort or "").strip(),
         output_controls={
             "max_output_tokens": (
                 None if max_output_tokens is None else int(max_output_tokens)

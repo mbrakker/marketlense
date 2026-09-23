@@ -66,7 +66,7 @@ class LLMExecutionPolicy:
     )
     provider: str = field(metadata={"doc": "Approved provider identifier."})
     model: str = field(metadata={"doc": "Provider-local model identifier."})
-    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    temperature: float | None = field(metadata={"doc": "Optional legacy sampling temperature."})
     seed_policy: SeedPolicy = field(
         default="inherit", metadata={"doc": "How the configured seed is resolved."}
     )

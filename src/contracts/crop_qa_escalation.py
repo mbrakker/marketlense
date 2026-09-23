@@ -43,12 +43,15 @@ class CropQaEscalationPolicy:
         metadata={"doc": "Maximum repair recommendations allowed for this batch."},
     )
     model: str = field(
-        default="gpt-5.6-luna",
+        default="gpt-6-luna",
         metadata={"doc": "Model used for image-backed crop QA escalation."},
     )
-    temperature: float = field(
+    temperature: float | None = field(
         default=0.0,
         metadata={"doc": "Sampling temperature for crop QA escalation."},
+    )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Reasoning effort from the execution policy."}
     )
     seed: int | None = field(
         default=None,

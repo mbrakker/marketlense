@@ -367,6 +367,12 @@ class BrowserDownloadSettings:
     identity_profile: BrowserDownloadIdentity = field(
         metadata={"doc": "Loaded browser form identity fields supplied to browser-use."}
     )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Reasoning effort from the browser-route execution policy."}
+    )
+    form_value_reasoning_effort: str = field(
+        default="", metadata={"doc": "Reasoning effort from the form-value execution policy."}
+    )
     openrouter_http_referer: Optional[str] = field(
         default=None,
         metadata={
@@ -378,7 +384,7 @@ class BrowserDownloadSettings:
         metadata={"doc": "OpenAI API key used by the browser-use primary LLM."},
     )
     openrouter_model: str = field(
-        default="openai/gpt-5.6-luna",
+        default="openai/gpt-6-luna",
         metadata={"doc": "OpenRouter model slug used by the browser-use fallback LLM."},
     )
     max_tokens: int = field(

@@ -29,6 +29,7 @@ from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.model_resolver import resolve_settings_execution_policy
 
 
 def recover_pdf_text_with_ocr(
@@ -49,6 +50,9 @@ def recover_pdf_text_with_ocr(
         artifact_family="source_ocr",
     )
     prompt_namespace = runtime.settings.pdf_text_ocr_prompt_namespace
+    reasoning_effort = resolve_settings_execution_policy(
+        prompt_namespace, runtime.settings
+    ).policy.reasoning_effort
     prompt_set = dependencies.load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -91,6 +95,7 @@ def recover_pdf_text_with_ocr(
                 "schema_version": "1.0",
                 "md5": runtime.md5,
                 "model": runtime.settings.pdf_text_ocr_model,
+                "reasoning_effort": reasoning_effort,
                 "prompt_system_sha256": prompt_set.system.sha256,
                 "prompt_user_sha256": prompt_set.user.sha256,
                 "chunk_page_count": runtime.settings.pdf_text_ocr_chunk_page_count,
@@ -236,6 +241,7 @@ def recover_pdf_text_with_ocr(
             chunk_ctx=chunk_ctx,
             prompt_namespace=prompt_namespace,
             prompt_hash=prompt_set.user.sha256,
+            reasoning_effort=reasoning_effort,
         )
         chunk_pages = _map_chunk_pages(chunk, chunk_response.pages)
         aggregated_pages.extend(chunk_pages)
@@ -349,6 +355,7 @@ def _run_ocr_chunk(
     chunk_ctx,
     prompt_namespace: str,
     prompt_hash: str,
+    reasoning_effort: str,
 ) -> OpenAIPdfOcrResponse:
     if not attempted_models:
         raise AppError(
@@ -389,6 +396,7 @@ def _run_ocr_chunk(
                 model=candidate_model,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
+                reasoning_effort=reasoning_effort,
                 timeout_seconds=runtime.settings.pdf_text_ocr_timeout_seconds,
                 cost_ledger_path=runtime.settings.cost_ledger_path,
                 cost_daily_path=runtime.settings.cost_daily_path,

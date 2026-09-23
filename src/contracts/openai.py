@@ -197,6 +197,12 @@ class OpenAIUsageAccountingRequest:
         default=None,
         metadata={"doc": "Sampling temperature used for the call, if known."},
     )
+    reasoning_effort: str = field(
+        default="", metadata={"doc": "Reasoning effort used for the call, if known."}
+    )
+    reasoning_tokens: Optional[int] = field(
+        default=None, metadata={"doc": "Reasoning output tokens reported by the provider, if available."}
+    )
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Seed used for the call, if configured."}
     )
@@ -384,8 +390,9 @@ class OpenAIAnalyzeRequest:
         metadata={"doc": "SHA-256 hash of the user prompt template."}
     )
     model: str = field(metadata={"doc": "OpenAI model ID."})
-    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    temperature: Optional[float] = field(metadata={"doc": "Optional sampling temperature."})
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    reasoning_effort: str = field(default="", metadata={"doc": "Provider reasoning effort, if configured."})
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
@@ -477,8 +484,9 @@ class OpenAIResponseRequest:
         metadata={"doc": "Vector store identifier for file search."}
     )
     model: str = field(metadata={"doc": "OpenAI model ID."})
-    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    temperature: Optional[float] = field(metadata={"doc": "Optional sampling temperature."})
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    reasoning_effort: str = field(default="", metadata={"doc": "Provider reasoning effort, if configured."})
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
@@ -638,8 +646,9 @@ class OpenAIJSONPromptRequest:
     system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
     user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
     model: str = field(metadata={"doc": "OpenAI model ID."})
-    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    temperature: Optional[float] = field(metadata={"doc": "Optional sampling temperature."})
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
+    reasoning_effort: str = field(default="", metadata={"doc": "Provider reasoning effort, if configured."})
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
@@ -811,11 +820,12 @@ class OpenAIJSONImagePromptRequest:
     system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
     user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
     model: str = field(metadata={"doc": "OpenAI model ID."})
-    temperature: float = field(metadata={"doc": "Sampling temperature."})
+    temperature: Optional[float] = field(metadata={"doc": "Optional sampling temperature."})
     api_key: str = field(metadata={"doc": "OpenAI API key (secret, loaded from env)."})
     image_paths: List[str] = field(
         metadata={"doc": "Filesystem paths to images provided as visual context."}
     )
+    reasoning_effort: str = field(default="", metadata={"doc": "Provider reasoning effort, if configured."})
     seed: Optional[int] = field(
         default=None, metadata={"doc": "Optional seed for deterministic sampling."}
     )
@@ -895,6 +905,7 @@ class OpenAIPdfOcrRequest:
     model: str = field(metadata={"doc": "OpenAI model ID used for OCR."})
     system_prompt: str = field(metadata={"doc": "Rendered system prompt text."})
     user_prompt: str = field(metadata={"doc": "Rendered user prompt text."})
+    reasoning_effort: str = field(default="", metadata={"doc": "Provider reasoning effort, if configured."})
     timeout_seconds: Optional[float] = field(
         default=None,
         metadata={"doc": "Request timeout in seconds for the OCR call, if set."},

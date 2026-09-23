@@ -361,6 +361,7 @@ def test_prompt_dry_run_uses_the_runtime_execution_policy() -> None:
     result = response.results[0]
     assert result.model == expected.policy.model
     assert result.temperature == expected.policy.temperature
+    assert result.reasoning_effort == expected.policy.reasoning_effort
     assert result.execution_policy_hash == expected.policy_hash
 
 
@@ -373,7 +374,8 @@ def test_linkedin_publication_copy_uses_the_configured_execution_policy() -> Non
     )
 
     result = response.results[0]
-    assert result.temperature == 0.5
+    assert result.temperature is None
+    assert result.reasoning_effort == "medium"
 
 
 def test_validate_prompt_dry_run_rejects_missing_fixture(

@@ -535,7 +535,7 @@ def _resolve_pdf_text_settings(
         ocr_fallback_cfg.get("model"),
         str(
             _default_config_value(
-                "ingest", "pdf_text", "ocr_fallback", "model", fallback="gpt-5.6-luna"
+                "ingest", "pdf_text", "ocr_fallback", "model", fallback="gpt-6-luna"
             )
         ),
     )

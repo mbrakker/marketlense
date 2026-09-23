@@ -6,8 +6,8 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LUNA_MODEL = "gpt-5.6-luna"
-OPENROUTER_LUNA_MODEL = "openai/gpt-5.6-luna"
+LUNA_MODEL = "gpt-6-luna"
+OPENROUTER_LUNA_MODEL = "openai/gpt-6-luna"
 EMBEDDING_MODEL = "text-embedding-3-large"
 
 
@@ -23,7 +23,7 @@ def _model_values(value: object, *, path: str = "") -> Iterator[tuple[str, str]]
         yield from _model_values(child, path=child_path)
 
 
-def test_canonical_configuration_routes_every_generative_call_to_gpt_5_6_luna() -> None:
+def test_canonical_configuration_routes_every_generative_call_to_gpt_6_luna() -> None:
     config = yaml.safe_load(
         (REPO_ROOT / "src" / "config" / "app.yaml").read_text(encoding="utf-8")
     )
