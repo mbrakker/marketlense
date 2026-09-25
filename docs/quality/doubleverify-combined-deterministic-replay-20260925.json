@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0",
+  "requested_head_sha": "3637bda9e04da2c8c33cc8af059b4a1656dfe27d",
+  "replay_code_sha": "96fb3014be8c44cd7501da03130767f755b3fbf4",
+  "source_run": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0",
+  "terminal_result": "passed_candidate_validation_not_promoted",
+  "original_issue_ids": [
+    "public_editorial_quality.metric_label_relationship:expert_comment",
+    "public_editorial_quality.metric_label_relationship:linkedin_post"
+  ],
+  "strategy_sequence": [
+    {
+      "attempt": 1,
+      "action": "REGENERATE_ITEM",
+      "strategy": "current_evidence",
+      "targets": ["expert_comment", "linkedin_post"],
+      "retained_outcome": "rolled_back",
+      "retained_issue_ids": [
+        "artifact_quality:summary.executive_summary",
+        "artifact_quality:summary.tldr",
+        "grounding:metadata.title",
+        "metrics:insights:q1-regional-ad-attention-index",
+        "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:af6e36a977754ce4"
+      ],
+      "current_identity_grounding": {
+        "title_payload_field": false,
+        "publisher_payload_field": false,
+        "metadata_identity_items": []
+      }
+    },
+    {
+      "attempt": 2,
+      "action": "REBIND_EVIDENCE",
+      "strategy": "alternative_evidence",
+      "targets": ["expert_comment", "linkedin_post"],
+      "retained_outcome": "rolled_back",
+      "retained_issue_ids": [
+        "artifact_quality:summary.executive_summary",
+        "artifact_quality:summary.tldr",
+        "metrics:insights:q1-regional-ad-attention-index",
+        "numbers:linkedin_post",
+        "public_editorial_quality.metric_label_relationship:linkedin_post",
+        "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:8b6f013bc11d1a17"
+      ],
+      "retained_numbers_errors": [
+        "Number 125.0 not present in report or evidence",
+        "Number 82.0 not present in report or evidence"
+      ],
+      "promotion": "rejected"
+    },
+    {
+      "attempt": 3,
+      "action": "REMOVE_CLAIM",
+      "strategy": "safe_removal",
+      "targets": ["expert_comment", "linkedin_post"],
+      "actual_regenerated_sections": ["expert_comment", "linkedin_post"],
+      "allowed_roots": [
+        "_cache",
+        "_repair_evidence_selection",
+        "expert_comment",
+        "family_status",
+        "linkedin_post",
+        "soft_copy_claim_provenance"
+      ],
+      "candidate_integrity_issue_ids": [],
+      "scope_validation_issue_ids": [],
+      "audit_validation_status": "pass",
+      "audit_promotion_outcome": "candidate",
+      "audit_issue_ids": []
+    }
+  ],
+  "provider_usage": {
+    "provider_calls": 0,
+    "model_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cost_usd": 0
+  },
+  "soft_copy_claim_counts": {
+    "summary": {"before": 7, "after": 7},
+    "expert_comment": {"before": 4, "after": 0},
+    "linkedin_post": {"before": 12, "after": 11}
+  },
+  "metadata_identity": {
+    "public_title_before": "QuarterlyBenchmarksQ1 2026",
+    "public_title_after": "QuarterlyBenchmarksQ1 2026",
+    "canonical_doc_map_title": "Quarterly Benchmarks Q1 2026",
+    "public_publisher_before": "",
+    "public_publisher_after": "",
+    "canonical_doc_map_publisher": "",
+    "normalization_match": true,
+    "attempt_3_grounding_title_field": false,
+    "attempt_3_grounding_publisher_field": false
+  },
+  "attempt_3_validation": {
+    "candidate_integrity": "pass",
+    "mutation_scope": "pass",
+    "retained_soft_copy_provenance": "pass",
+    "public_editorial_quality": "pass",
+    "retained_claim_unsupported_factual_count": 0,
+    "retained_claim_unresolved_factual_count": 22,
+    "retained_claim_readiness_status": "not_publishable",
+    "linkedin_contains_125": false,
+    "linkedin_contains_82": false,
+    "final_validation_issue_ids": []
+  },
+  "artifact_hashes_sha256": {
+    "original_artifacts": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b",
+    "retained_candidate_1": "411383b30aec0b88adb4e89b1fa8180360ff5ba5e8f4ec22f4b3760f1569d3f7",
+    "retained_candidate_2": "f9ede2b95d426ae5e1c97ed91d7e83c93c730197e33ee4bdd67e574f747bfef0",
+    "retained_audit_1": "16318826b2d4dd6fa0830412020a0256d829e2621f7ceb7dcd38d344667d43de",
+    "retained_audit_2": "4ea6735098f38f287f76a0fceaf5f37b38257d49a0b9911ab4c5b8469ff845e4",
+    "candidate_3": "1c3fd65c49055ba258196830a16846538de169c55dfeb5f47ed07a0f4e8bc6a5",
+    "candidate_audit_3": "7638c9fbf3c3e145b7f4c615f2384b2bd514d63edef33b431bd7c356c86c95cd",
+    "combined_replay_validation": "597cdf541c6a730ec4316486603249c48b59ac86b13a46ac19788223cf47dd3f"
+  },
+  "retained_candidate_paths": {
+    "candidate_3": "tmp/dv-combined-replay-96fb3014/out/dv-qualityandattentionbenchmark-q1-2026/report_analysis/artifacts_regen_candidate_3.json",
+    "candidate_audit_3": "tmp/dv-combined-replay-96fb3014/out/dv-qualityandattentionbenchmark-q1-2026/report_analysis/regeneration_candidate_audit_3.json",
+    "validation_output": "tmp/dv-combined-replay-96fb3014/out/dv-qualityandattentionbenchmark-q1-2026/report_analysis/combined_replay_validation.json"
+  },
+  "warnings": [
+    "The retained-claim check left 22 factual claims unresolved because this replay made no semantic-model calls; unsupported factual count was zero. This replay is not a publish-readiness result.",
+    "The retained full attempt-2 validation rejects both 125 and 82. A separate inline smoke built with the generic test ReportPayload rejected 82 only and is not treated as equivalent to the retained production validation input."
+  ],
+  "live_report_or_publication_run": false,
+  "twenty_report_cohort_run": false,
+  "closure_assessment": "The retained failure path is deterministically closed through candidate validation; ready for one final isolated live closure canary."
+}
