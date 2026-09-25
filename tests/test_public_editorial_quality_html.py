@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from copy import deepcopy
 from pathlib import Path
 
@@ -92,6 +94,44 @@ def test_public_html_allows_ellipsis_that_closes_a_quoted_prompt() -> None:
     )
 
     assert "public_editorial_quality.literal_truncation" not in _rule_ids(report)
+
+
+def test_mintel_source_heading_ellipsis_is_complete_public_prose() -> None:
+    fixture = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/public_editorial/mintel_2026_readiness_ellipsis.json"
+        ).read_text(encoding="utf-8")
+    )
+    source = (
+        Path(__file__).parent
+        / "fixtures/pdf_benchmark/golden/2026_Global_Food_and_Drink_Predictions.pdf"
+    )
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == fixture["source_sha256"]
+    assert fixture["artifact_toc_entry"]["section_title"] == fixture["source_heading"]
+    assert fixture["source_heading"].casefold() in fixture["rendered_html"].casefold()
+    report = evaluate_public_editorial_quality(
+        report_id=fixture["report_id"],
+        artifacts=_retained_artifacts(),
+        html=fixture["rendered_html"],
+    )
+
+    assert report.status == "pass"
+    assert fixture["before_quality_rule_id"] not in _rule_ids(report)
+
+
+def test_public_html_still_blocks_terminal_ellipsis_and_mechanical_scaffold() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report",
+        artifacts=_retained_artifacts(),
+        html="<p>Observation: demand rose...</p>",
+    )
+
+    assert report.status == "fail"
+    assert {
+        "public_editorial_quality.literal_truncation",
+        "public_editorial_quality.mechanical_editorial_scaffold",
+    } <= _rule_ids(report)
 
 
 def test_public_html_source_section_requires_a_public_original_source_link() -> None:

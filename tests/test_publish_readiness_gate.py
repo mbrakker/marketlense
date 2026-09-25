@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
@@ -596,3 +598,55 @@ def test_publish_readiness_blocks_generic_title_and_wrong_publisher_identity() -
     ]
     assert "incorrect_publisher_author_attribution" in fidelity.detail
     assert "incorrect_report_identity" in fidelity.detail
+
+
+def test_mintel_rendered_heading_passes_all_three_original_readiness_rules() -> None:
+    fixture = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/public_editorial/mintel_2026_readiness_ellipsis.json"
+        ).read_text(encoding="utf-8")
+    )
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    html = html.replace("</body>", fixture["rendered_html"] + "</body>")
+
+    readiness = evaluate_publish_readiness(
+        report_id=fixture["report_id"],
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    assert readiness.status == "pass"
+    assert all(
+        result.status == "pass"
+        for result in readiness.rule_results
+        if result.rule_id in fixture["before_readiness_rule_ids"]
+    )
+
+
+def test_rendered_scaffolding_projects_canonical_html_issues() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    for bad_html in ("<p>Demand rose...</p>", "<p>Observation: demand rose.</p>"):
+        readiness = evaluate_publish_readiness(
+            report_id="report-1",
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            validation_report=ValidationReport(schema_version="1.1", status="pass"),
+            final_html=html.replace("</body>", bad_html + "</body>"),
+            final_html_path="",
+            category_ids=["markets"],
+            provenance=provenance,
+        )
+        failed = {
+            result.rule_id
+            for result in readiness.rule_results
+            if result.status == "fail"
+        }
+        assert "publish_readiness.rendered_scaffolding" in failed
+        assert "publish_readiness.editorial_quality" in failed
+        assert ("publish_readiness.source_fidelity" in failed) == ("..." in bad_html)

@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "source_sha256": "0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16",
+  "source_identity_id": "source:4903a7aedf42d978f33da5188f523bb6",
+  "root_cause": "The retained section_05 heading uses an intentional in-sentence ellipsis before a complete question. The public-editorial truncation rule interpreted both rendered occurrences as literal truncation; the separate readiness regex interpreted the same occurrences as scaffolding.",
+  "before": {
+    "run_directory": "tmp/a21-mintel-residual-canary-20260925/ias-first-attempt-tpkhzee9",
+    "report_id": "cohort-b3cb5f66cccda4420be2",
+    "html_sha256": "fa816acb39e3cd0c19a55b43f2868a22f8556bcc89278f2c2c73b1577ea1f80b",
+    "validation": "pass",
+    "readiness": "fail",
+    "failed_readiness_rules": [
+      "publish_readiness.editorial_quality",
+      "publish_readiness.rendered_scaffolding",
+      "publish_readiness.source_fidelity"
+    ],
+    "quality_issues_reproduced_from_final_html": [
+      {
+        "rule_id": "public_editorial_quality.literal_truncation",
+        "severity": "error",
+        "hard_fail_class": "malformed_or_truncated_public_claim",
+        "affected_artifact": "rendered_html",
+        "affected_field": "html",
+        "public_item_id": "rendered_html:html",
+        "evidence_ids": [],
+        "explanation": "contains a literal truncation ellipsis"
+      },
+      {
+        "rule_id": "public_editorial_quality.literal_truncation",
+        "severity": "error",
+        "hard_fail_class": "malformed_or_truncated_public_claim",
+        "affected_artifact": "rendered_html",
+        "affected_field": "html",
+        "public_item_id": "rendered_html:html",
+        "evidence_ids": [],
+        "explanation": "renders a literal truncation ellipsis"
+      }
+    ],
+    "matched_text": [
+      "Once You’ve Read the Predictions… What’s Next?",
+      "5. Once you’ve read the Predictions… what’s next?"
+    ],
+    "regex_matches": {
+      "_MECHANICAL": false,
+      "_ELLIPSIS": true,
+      "_MECHANICAL_SCAFFOLD": false,
+      "_LITERAL_TRUNCATION": true
+    },
+    "regeneration_candidate_audits": []
+  },
+  "source_metadata_comparison": {
+    "retained_doc_map_title": "2026 Global Food & Drink Predictions",
+    "rendered_title": "2026 Global Food & Drink Predictions",
+    "retained_publisher": "Mintel",
+    "rendered_publisher": "Mintel",
+    "retained_author": "",
+    "rendered_author": "",
+    "retained_edition": "2026 in source title",
+    "rendered_edition": "2026",
+    "retained_publication_date_status": "unknown",
+    "rendered_publication_date": "",
+    "metadata_identity_hard_fail": false
+  },
+  "after": {
+    "run_directory": "tmp/mintel-readiness-fixed-20260925/ias-first-attempt-vod00rtp",
+    "report_id": "ias-b3cb5f66cccda4420be2",
+    "html_sha256": "fa2e01839c3286e0ae1079181059f99e8b1d6f6d2f6f0e17c518dfad3435ad31",
+    "validation": "pass",
+    "readiness": "pass",
+    "final_state": "awaiting_review",
+    "failed_readiness_rules": [],
+    "public_editorial_quality_issues": [],
+    "hard_fail_count": 0,
+    "model_provider_calls": 29,
+    "input_tokens": 182070,
+    "output_tokens": 29455,
+    "cost_usd": 0.032934,
+    "publication_enabled": false
+  }
+}

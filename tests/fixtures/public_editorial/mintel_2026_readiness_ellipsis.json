@@ -1,0 +1,18 @@
+{
+  "source_sha256": "0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16",
+  "report_id": "cohort-b3cb5f66cccda4420be2",
+  "source_heading": "Once you’ve read the Predictions… what’s next?",
+  "artifact_toc_entry": {
+    "section_id": "section_05",
+    "section_title": "Once you’ve read the Predictions… what’s next?",
+    "display_title": "Once you’ve read the Predictions… what’s next?"
+  },
+  "rendered_html": "<h3>Once You’ve Read the Predictions… What’s Next?</h3><p><strong>5. Once you’ve read the Predictions… what’s next?</strong></p>",
+  "before_quality_rule_id": "public_editorial_quality.literal_truncation",
+  "before_public_item_id": "rendered_html:html",
+  "before_readiness_rule_ids": [
+    "publish_readiness.editorial_quality",
+    "publish_readiness.rendered_scaffolding",
+    "publish_readiness.source_fidelity"
+  ]
+}

@@ -112,7 +112,7 @@ _MECHANICAL_SCAFFOLD = re.compile(
     r"immediate implication)\s*:",
     re.IGNORECASE,
 )
-_LITERAL_TRUNCATION = re.compile(r"(?:\.\.\.|…)(?![\"'”’])")
+_LITERAL_TRUNCATION = re.compile(r"(?:\.\.\.|…)(?![\"'”’])\s*$")
 _PRIVATE_OPERATIONAL_REFERENCE = re.compile(
     r"(?:https?://(?:drive\.google\.com|localhost|127\.0\.0\.1)\S*|"
     r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|(?:^|[\"'])/(?:out|cache|state)/))",
@@ -678,7 +678,11 @@ def _html_issues(
 ) -> list[PublicEditorialQualityIssue]:
     visible_text = _visible_html_text(html)
     item = _item("rendered_html", "html", visible_text, [], "", evidence_text="")
-    issues = _text_issues(report_id, item)
+    issues = [
+        issue
+        for issue in _text_issues(report_id, item)
+        if issue.rule_id != "public_editorial_quality.literal_truncation"
+    ]
     if _MECHANICAL_SCAFFOLD.search(visible_text):
         issues.append(
             _issue(
@@ -688,7 +692,16 @@ def _html_issues(
                 "renders mechanical editorial scaffolding",
             )
         )
-    if _LITERAL_TRUNCATION.search(visible_text):
+    document = BeautifulSoup(html, "html.parser")
+    for element in document(("head", "script", "style", "template")):
+        element.decompose()
+    if any(
+        _LITERAL_TRUNCATION.search(node.get_text(" ", strip=True))
+        for node in document.select(
+            "p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, "
+            "div, section, article, main, body"
+        )
+    ):
         issues.append(
             _issue(
                 report_id,

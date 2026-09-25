@@ -45,8 +45,6 @@ _FILENAME_TITLE = re.compile(
     r"(?:^|\s)[^\s]+\.(?:pdf|html?|json|png|jpe?g|webp)(?:\s|$)", re.IGNORECASE
 )
 _DUPLICATED_YEAR = re.compile(r"\b(20\d{2})\D{0,4}\1\b")
-_ELLIPSIS = re.compile(r"(?:\.\.\.|…)")
-_MECHANICAL = re.compile(r"\b(?:answer|observation)\s*:", re.IGNORECASE)
 _NON_PUBLIC_CARD_STATUSES = {
     "abstained",
     "limited",
@@ -419,24 +417,19 @@ def evaluate_publish_readiness(
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
     results.append(_evidence_fidelity_result(safe_artifacts, safe_packs, final_html))
     results.append(_regeneration_result(regeneration_attempts))
-    results.append(
-        _source_fidelity_result(
-            evaluate_public_editorial_quality(
-                report_id=str(report_id),
-                artifacts=safe_artifacts,
-                html=final_html,
-                html_path=final_html_path,
-                metadata_evidence=metadata_evidence,
-            )
-        )
+    quality = evaluate_public_editorial_quality(
+        report_id=str(report_id),
+        artifacts=safe_artifacts,
+        html=final_html,
+        html_path=final_html_path,
+        metadata_evidence=metadata_evidence,
     )
+    results.append(_source_fidelity_result(quality))
     results.append(_figure_linkage_result(safe_artifacts, safe_packs, final_html))
     results.extend(
         _html_results(
-            report_id=report_id,
-            artifacts=safe_artifacts,
+            quality=quality,
             final_html=final_html,
-            final_html_path=final_html_path,
         )
     )
     results.append(_build_traceability_result(final_html))
@@ -892,14 +885,8 @@ def _figure_linkage_result(
 
 
 def _html_results(
-    *, report_id: str, artifacts: dict[str, Any], final_html: str, final_html_path: str
+    *, quality: PublicEditorialQualityReport, final_html: str
 ) -> list[PublishReadinessRuleResult]:
-    quality = evaluate_public_editorial_quality(
-        report_id=report_id,
-        artifacts=artifacts,
-        html=final_html,
-        html_path=final_html_path,
-    )
     editorial_result = _editorial_result(quality)
     document = BeautifulSoup(final_html, "html.parser")
     surfaces = _html_surfaces(document)
@@ -927,7 +914,15 @@ def _html_results(
                 [name for name, _ in surfaces],
             )
         )
-    if _MECHANICAL.search(joined) or _ELLIPSIS.search(joined):
+    scaffold_issue_ids = {
+        "public_editorial_quality.mechanical_editorial_scaffold",
+        "public_editorial_quality.literal_truncation",
+    }
+    if any(
+        issue.affected_artifact == "rendered_html"
+        and issue.rule_id in scaffold_issue_ids
+        for issue in quality.issues
+    ):
         results.append(
             _fail(
                 "publish_readiness.rendered_scaffolding",
@@ -1028,7 +1023,9 @@ def _build_traceability_result(html: str) -> PublishReadinessRuleResult:
         )
     present = {
         match.group(1): match.group(2).strip()
-        for match in re.finditer(r"^\s{2}([a-z0-9_]+):\s*(.*?)\s*$", block, re.MULTILINE)
+        for match in re.finditer(
+            r"^\s{2}([a-z0-9_]+):\s*(.*?)\s*$", block, re.MULTILINE
+        )
     }
     missing = [field for field in _BUILD_PROVENANCE_FIELDS if not present.get(field)]
     if missing:
