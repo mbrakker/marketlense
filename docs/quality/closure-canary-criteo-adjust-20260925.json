@@ -1,0 +1,142 @@
+{
+  "schema_version": "marketlense_closure_canary/1.0",
+  "date": "2026-09-25",
+  "purpose": "Two-report isolated production-path closure before the 20-report cohort",
+  "runner": "scripts.quality.ias_live_canary_runner.run_first_attempt_canary",
+  "path": "canonical queue/supervisor, discovery through publication-readiness; publication disabled",
+  "fresh_isolated_state_per_run": true,
+  "source_manifest": "docs/quality/reliability-cohort-20260919-a21-final/frozen_cohort.json",
+  "source_hashes_verified_against_manifest": true,
+  "target_commits": {
+    "Criteo": "9a0cf4f",
+    "Adjust": "009bb1c6"
+  },
+  "tests": {
+    "before_canaries": "159 focused tests passed",
+    "after_safe_removal_fix": "213 relevant tests passed",
+    "after_lineage_fix": "213 relevant tests and 52 lineage/contract tests passed",
+    "final_focused_command": "py -3.12 -m pytest -q tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_soft_copy_claim_provenance.py tests/test_soft_copy_finalization.py",
+    "final_focused_result": "122 passed in 6.41s"
+  },
+  "reports": {
+    "Criteo": {
+      "title": "The Advertiser Guide to New and Emerging Channels for 2023",
+      "source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf",
+      "source_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "source_sha256": "17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c",
+      "tested_sha": "009bb1c6fc139c55610b9b457f888a8180c81427",
+      "run_directory": "tmp/closure-canary-20260925/Criteo/ias-first-attempt-zv09em7s",
+      "artifact_sha256": "ba5199ba6dfed06150c801a4ecfad6f3b39ee71840d3b589ace3021d11d09aa2",
+      "outcome": "awaiting_review",
+      "validation": "pass",
+      "readiness": "pass",
+      "workflow_attempts": 1,
+      "regeneration_attempts": 0,
+      "regeneration_strategies": [],
+      "terminal_reason": "ready_for_human_review",
+      "provider_calls": 22,
+      "input_tokens": 194812,
+      "output_tokens": 42651,
+      "cost_usd": 0.040807,
+      "compact_tldr": "In the US, 94% of media agency professionals agreed their brand clients should explore new digital media channels.",
+      "compact_tldr_words": 18,
+      "compact_tldr_evidence": "channel-exploration-and-retail-roi, page 5",
+      "acceptance": {
+        "no_card_tldr_compact_invalid": true,
+        "canonical_artifacts_retained": true,
+        "compact_tldr_contract": true,
+        "abstention_schema_readiness_if_needed": "not exercised; valid source-backed summary generated",
+        "validation_readiness_awaiting_review": true
+      }
+    },
+    "Adjust": {
+      "title": "mobile-app-trends-2026-pdf",
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "source_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "runs": [
+        {
+          "tested_sha": "009bb1c6fc139c55610b9b457f888a8180c81427",
+          "run_directory": "tmp/closure-canary-20260925/Adjust/ias-first-attempt-qrmjf7qr",
+          "outcome": "failed",
+          "validation": "fail",
+          "readiness": "fail",
+          "terminal_reason": "soft_copy_claim_provenance_coverage_invalid during third safe-removal candidate assembly",
+          "provider_calls": 37,
+          "strategies": [
+            {"attempt": 1, "action": "REGENERATE_ITEM", "strategy": "current_evidence", "fingerprint": "02396d017f10146f820bcb4b5ca28796e491646ba3ac594327128f8a1f8585c6", "outcome": "rolled_back"},
+            {"attempt": 2, "action": "REBIND_EVIDENCE", "strategy": "alternative_evidence", "fingerprint": "73f593fe279ac10550907b1e316c110725e6c8007a3db0b205dced44c27b08e5", "outcome": "rolled_back"},
+            {"attempt": 3, "action": "REMOVE_CLAIM", "strategy": "safe_removal", "planned_fingerprint": "7046b2b4a0bd78f81a429d25661430c494c53920b26ee31d65db40ecace3af03", "fingerprint_origin": "deterministically reconstructed from retained validation and rejected-strategy memory", "outcome": "assembly_exception_before_candidate_audit"}
+          ],
+          "root_cause": "Family-wide LinkedIn abstention cleared public copy but retained stale soft-copy claim provenance when a claim-level numeric error and family-level quality warning co-occurred."
+        },
+        {
+          "tested_sha": "93bdc9e5fdcc1d1e892dcfb92f731b665bdbcef8",
+          "run_directory": "tmp/closure-canary-20260925/Adjust-rerun/ias-first-attempt-81jj9zvy",
+          "outcome": "failed",
+          "validation": "fail",
+          "readiness": "fail",
+          "terminal_reason": "validation_failed: metadata.title grounding after distinct identity strategies exhausted",
+          "provider_calls": 38,
+          "strategies": [
+            {"attempt": 1, "action": "COPY_CANONICAL_SOURCE_VALUE", "strategy": "canonical_identity", "fingerprint": "94143067ad429ddc6dcc89b6ba6e81113610d6ce7c255fdf162e5943007cf2d2", "outcome": "rolled_back"},
+            {"attempt": 2, "action": "ABSTAIN", "strategy": "safe_abstain", "fingerprint": "efc95130e19d59c096a100f423e3ddc9a504b992402fb385be50a955cfd3b1a1", "outcome": "rolled_back"}
+          ],
+          "stop_condition": "Planner returned skip: no third materially distinct report-identity strategy; the three-attempt ceiling is an upper bound."
+        },
+        {
+          "tested_sha": "bb693e95b36453bb2111a5ba1b0f1bc83a816c0b",
+          "run_directory": "tmp/closure-canary-20260925/Adjust-final/ias-first-attempt-ehvplkmb",
+          "artifact_sha256": "d9b35ae2003fd1dcf3cc43bf3af1134463ee1fb216c5acc8bf781b5ebd265988",
+          "outcome": "awaiting_review",
+          "validation": "pass",
+          "readiness": "pass",
+          "workflow_attempts": 1,
+          "terminal_reason": "ready_for_human_review",
+          "provider_calls": 36,
+          "input_tokens": 311433,
+          "output_tokens": 55441,
+          "cost_usd": 0.058583,
+          "strategies": [
+            {"attempt": 1, "action": "COPY_CANONICAL_SOURCE_VALUE", "strategy": "canonical_identity", "fingerprint": "0292dd823b441bdf093a860bedc22ca9a9e2e0afab27ef8255bb26593d685ced", "outcome": "promoted", "candidate_validation": "pass", "audit_lineage_entries": 38, "soft_copy_lineage_entries": 23}
+          ]
+        }
+      ],
+      "unsupported_numeric_probe": {
+        "type": "deterministic component check on final frozen-source artifacts; not a live regeneration attempt",
+        "candidate": "Replace source-backed 10.04 minutes with unsupported 1016.8 minutes in one LinkedIn factual sentence",
+        "gate": "regeneration_claim_support",
+        "candidate_validation": "fail",
+        "promotion": "rolled_back",
+        "claim_id": "soft_copy:linkedin_post:4f43881df7e40824",
+        "selected_evidence_ids": ["ecommerce-finding-keeping-users"],
+        "source_pages": [27, 29],
+        "audit_path": "tmp/closure-adjust-numeric-probe-audit.json"
+      },
+      "acceptance": {
+        "unsupported_1016_8_absent_from_canonical_artifacts": true,
+        "unsupported_numeric_repair_rejected_with_lineage": true,
+        "distinct_alternative_evidence_then_safe_removal": "observed in initial run; third candidate assembly defect fixed and focused-test verified; final run required identity repair only",
+        "no_equivalent_rejected_strategy_repeated": true,
+        "final_numeric_claims_source_supported": true,
+        "validation_readiness_awaiting_review": true
+      }
+    }
+  },
+  "prior_replay_comparison": {
+    "record": "docs/quality/prompt1-closure-replays-20260925.json",
+    "tested_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+    "Criteo": "Failed card_tldr_compact_invalid before canonical artifacts retention; now pass and awaiting_review.",
+    "Adjust": "Failed numbers on unsupported expert_comment 1016.8 after one recorded targeted repair; current runs have no 1016.8 in canonical artifacts and final run passes.",
+    "historical_attempt_limit": "Old scalar replay record does not retain candidate audits, strategy fingerprints, repair memory, or stop condition, so its exact one-repair stop reason cannot be reconstructed. New runs show third safe-removal attempt entered in one case and strategy exhaustion after two distinct attempts in another; no loop-control defect proven."
+  },
+  "retained_claim_validation": {
+    "provenance_coverage": "pass on both final canonical artifacts",
+    "adjust_independent_checker": "not_publishable: 4 unsupported factual and 11 unresolved results, including two false-positive direction checks on a sentence reproduced exactly from selected evidence; production validation/readiness both pass",
+    "comparison": "The earlier successful Adjust replay on SHA 0144111c also reported independent checker not_publishable with 5 unsupported factual and 15 unresolved results; no regression attributable to these fixes.",
+    "remaining_defect": "Independent retained-claim direction matching can misclassify a sentence containing both rising sessions and falling session length; follow up separately before treating that checker as a publication gate."
+  },
+  "runtime_changes_after_both_passed": false,
+  "both_observed_failures_closed": true,
+  "next_step": "Run the full 20-report regression cohort"
+}
