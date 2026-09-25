@@ -1397,11 +1397,23 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
             return "attaches a retained metric value to a different source period"
 
     evidence_category_pairs = _structured_category_value_pairs(evidence_text)
+    ordered_table_relationships = _ordered_category_row_value_pairs(evidence_text)
+    validated_table_claims = {
+        (region, category)
+        for region, category, value in ordered_table_relationships
+        if value in _values_near_label(text, region)
+        and value in _values_near_label(text, category)
+    }
     evidence_values_by_category: dict[str, set[str]] = {}
     if len(evidence_category_pairs) >= 2:
         for category, value in evidence_category_pairs:
             evidence_values_by_category.setdefault(category, set()).add(value)
         for category, values in evidence_values_by_category.items():
+            if any(
+                category in {region, column}
+                for region, column in validated_table_claims
+            ):
+                continue
             for value in _values_near_label(text, category):
                 if value not in values:
                     return (
@@ -1435,6 +1447,69 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
                     "attaches a retained metric value to a different source denominator"
                 )
     return ""
+
+
+def _ordered_category_row_value_pairs(text: str) -> set[tuple[str, str, str]]:
+    """Bind compact table rows to explicit labels established by a prior row.
+
+    Some retained evidence serializes the first row as labeled cells and later
+    rows as positional values (for example ``APAC: X 1, Y 2; EMEA: 3, 4``).
+    Infer only when the labeled row has unique columns and each compact row has
+    exactly the same number of numeric cells. Ambiguous or incomplete rows do
+    not create relationships.
+    """
+
+    column_labels: list[str] = []
+    relationships: set[tuple[str, str, str]] = set()
+    row_pattern = re.compile(
+        r"^\s*(?P<region>[A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*){0,2})"
+        r"\s*:\s*(?P<cells>.+?)\s*$"
+    )
+    for fragment in re.split(r"[;\n]|(?<=[.!?])\s+", text):
+        row = row_pattern.match(fragment)
+        if not row:
+            continue
+        region = _normalized_relationship_label(row.group("region"))
+        cells = row.group("cells")
+        explicit = [
+            match
+            for match in _CAPITALIZED_CATEGORY_VALUE_PAIR.finditer(cells)
+            if not _is_year_value(
+                _normalized_relationship_value(match.group("value"))
+            )
+        ]
+        if len(explicit) >= 2:
+            labels = [
+                _normalized_relationship_label(match.group("label"))
+                for match in explicit
+            ]
+            if len(labels) == len(set(labels)):
+                column_labels = labels
+                relationships.update(
+                    (
+                        region,
+                        label,
+                        _normalized_relationship_value(match.group("value")),
+                    )
+                    for label, match in zip(labels, explicit, strict=True)
+                )
+            else:
+                column_labels = []
+            continue
+
+        if not column_labels:
+            continue
+        values = [
+            _normalized_relationship_value(match.group(0))
+            for match in re.finditer(_RELATIONSHIP_VALUE, cells)
+        ]
+        if len(values) != len(column_labels) or any(_is_year_value(v) for v in values):
+            continue
+        relationships.update(
+            (region, label, value)
+            for label, value in zip(column_labels, values, strict=True)
+        )
+    return relationships
 
 
 def _period_value_pairs(text: str) -> set[tuple[str, str]]:

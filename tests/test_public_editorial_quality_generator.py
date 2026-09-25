@@ -13,7 +13,12 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.generators.public_editorial_quality_generator import (
+    _metric_label_relationship_explanation,
+    _ordered_category_row_value_pairs,
+    _period_value_pairs,
     _public_text_items,
+    _structured_category_value_pairs,
+    _subject_value_relationships,
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
 )
@@ -50,7 +55,7 @@ def _rule_ids(report) -> set[str]:
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v5"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v6"
 
 
 def _temporal_artifacts(*, text: str, evidence: str) -> dict:
@@ -170,6 +175,81 @@ def test_ordered_category_value_series_rejects_swapped_values_and_categories() -
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
         swapped_category
     )
+
+
+def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:
+    fixture = _relationship_fixture("doubleverify_emea_engagement.json")
+    evidence = fixture["evidence"]
+    valid_text = fixture["public_text"]
+
+    assert _period_value_pairs(evidence) == set()
+    assert _structured_category_value_pairs(evidence)
+    assert _subject_value_relationships(evidence) == set()
+    assert (
+        "emea",
+        "engagement",
+        "116",
+    ) in _ordered_category_row_value_pairs(evidence)
+    assert _metric_label_relationship_explanation(valid_text, evidence) == ""
+    valid_report = evaluate_public_editorial_quality(
+        report_id="doubleverify-emea",
+        artifacts=_temporal_artifacts(text=valid_text, evidence=evidence),
+    )
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        valid_report
+    )
+
+    claims = {
+        "wrong_region": valid_text.replace("EMEA's", "APAC's"),
+        "wrong_category": valid_text.replace("Engagement Index", "Exposure Index"),
+        "wrong_value": valid_text.replace("at 116", "at 117"),
+    }
+    for claim in claims.values():
+        report = evaluate_public_editorial_quality(
+            report_id="doubleverify-emea",
+            artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+        )
+        assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+            report
+        )
+
+    wrong_value = evaluate_public_editorial_quality(
+        report_id="doubleverify-emea-numeric",
+        artifacts=_temporal_artifacts(
+            text=valid_text.replace("at 116", "at 117"), evidence=evidence
+        ),
+    )
+    assert "public_editorial_quality.unsupported_numeric_claim" in _rule_ids(
+        wrong_value
+    )
+
+    wrong_period = evaluate_public_editorial_quality(
+        report_id="doubleverify-emea-period",
+        artifacts=_temporal_artifacts(
+            text="EMEA Engagement Index: 116 in Q2 2026.",
+            evidence="EMEA Engagement Index: 116 in Q1 2026.",
+        ),
+    )
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        wrong_period
+    )
+
+
+def test_doubleverify_ordered_row_does_not_authorize_adjacent_values() -> None:
+    fixture = _relationship_fixture("doubleverify_emea_engagement.json")
+    evidence = (
+        fixture["evidence"].replace("EMEA: 110, 104, 116", "EMEA: 110, 104, 115")
+        + " The adjacent technology table reports Technology Engagement Index 116."
+    )
+    report = evaluate_public_editorial_quality(
+        report_id="doubleverify-emea",
+        artifacts=_temporal_artifacts(
+            text=fixture["public_text"],
+            evidence=evidence,
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(report)
 
 
 def test_same_value_under_multiple_categories_requires_its_claimed_category() -> None:

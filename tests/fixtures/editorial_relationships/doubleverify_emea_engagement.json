@@ -1,0 +1,20 @@
+{
+  "insight_id": "q1-2026-emea-engagement-index",
+  "evidence_id": "s7",
+  "page": 9,
+  "public_text": "The regional table reports EMEA's Engagement Index at 116; the index is normalized to 100, DV's average for a 28-day rolling window.",
+  "evidence": "Reports regional Ad Attention, Exposure, and Engagement Index results and attention-index performance by vertical. It states that the indices are normalized to 100, the DV average for a 28-day rolling window. APAC: Ad Attention 109, Exposure 112, Engagement 107; EMEA: 110, 104, 116. LATAM: Ad Attention 101, Exposure 106, Engagement 96; North America: 99, 98, 99. The listed top verticals are Technology (107), Energy & Utilities (107), and Retail, Home & Fashion (106); the bottom three are Automotive (97), Travel (96), and Telecom (90).",
+  "source_page_text": "Overall Global Attention Benchmarks\nAd Attention Index | Exposure Index | Engagement Index\nAPAC | 109 | 112 | 107\nEMEA | 110 | 104 | 116\nLATAM | 101 | 106 | 96\nNorth America | 99 | 98 | 99\nDV's Attention Indices are normalized to 100, which represents the average value across DV for a 28-day rolling window.",
+  "metric": {
+    "label": "EMEA Engagement Index",
+    "value": "116",
+    "unit": "index",
+    "timeframe": "Q1 2026; DV-average normalization uses a 28-day rolling window",
+    "geography": "EMEA",
+    "segment": "Engagement",
+    "subject": "Engagement Index",
+    "cohort": "",
+    "denominator": "",
+    "evidence_id": "s7"
+  }
+}

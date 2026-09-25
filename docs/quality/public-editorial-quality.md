@@ -129,6 +129,14 @@ omits its intervening unit or source-relative timeframe, the same pass restores
 that exact source range display. It abstains if more than one retained display
 has those endpoints.
 
+Metric relationship validation recognizes compact regional tables only when a
+preceding row explicitly supplies unique category labels and each positional
+row has exactly the same number of numeric cells. The inferred
+region/category/value binding prevents the first cell after a row label from
+being treated as the row's only value. A mismatched region, category, period,
+cohort, denominator, or ambiguous/incomplete row remains a blocker; an
+adjacent value cannot authorize a claim.
+
 Before this pass evaluates an insight, its displayed evidence is rebound from
 the uniquely linked canonical evidence span; model-supplied evidence prose is
 not an authority for public grounding. If a final-insight body contains a
