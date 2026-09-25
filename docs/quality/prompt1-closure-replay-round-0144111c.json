@@ -1,0 +1,222 @@
+{
+  "aggregate": {
+    "all_same_sha": true,
+    "awaiting_review": 3,
+    "distinct_source_identities": 4,
+    "full_acceptance_passed": false,
+    "operator_interventions": 0,
+    "provenance_error_codes_observed": {
+      "soft_copy_claim_provenance_bindings_incomplete": 0,
+      "soft_copy_claim_provenance_coverage_invalid": 0
+    },
+    "publish_readiness_pass": 3,
+    "reports": 4,
+    "retained_soft_copy_claim_assertion_pass": 3,
+    "total_cost_usd": 0.189466,
+    "total_duration_seconds": 1489.969,
+    "total_input_tokens": 1046804,
+    "total_model_provider_calls": 119,
+    "total_output_tokens": 170714,
+    "validation_pass": 3
+  },
+  "codeql_conclusion": "success",
+  "codeql_run_id": 36108472385,
+  "codeql_url": "https://github.com/mbrakker/marketlense/actions/runs/36108472385",
+  "execution": {
+    "fresh_isolated_state_per_source": true,
+    "one_first_attempt_per_source": true,
+    "parser_warnings": {
+      "count": 10,
+      "publisher": "Criteo",
+      "warning_code": "Ignoring wrong pointing object 9 0 (offset 0)"
+    },
+    "publication_performed": false,
+    "runner": "scripts/quality/ias_live_canary_runner.py::run_first_attempt_canary",
+    "source_hashes_verified_against_manifest": true,
+    "source_manifest": "docs/quality/reliability-cohort-20260919-a21-final/frozen_cohort.json",
+    "workflow": "canonical isolated production queue and supervisor path"
+  },
+  "github_ci_conclusion": "success",
+  "github_ci_run_id": 36108473460,
+  "github_ci_url": "https://github.com/mbrakker/marketlense/actions/runs/36108473460",
+  "implementation_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+  "reports": [
+    {
+      "awaiting_review": true,
+      "bounded_automatic_repair": false,
+      "canonical_artifacts_path": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-ru209rnu/output/kpmg-2026-global-ma-outlook-pdf/report_analysis/artifacts.json",
+      "cost_usd": 0.046829,
+      "duration_seconds": 329.125,
+      "failure_diagnostic": null,
+      "final_state": "awaiting_review",
+      "git_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+      "input_tokens": 282124,
+      "isolated_run_reference": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-ru209rnu",
+      "model_provider_calls": 31,
+      "operator_intervention": false,
+      "output_tokens": 37233,
+      "provenance_error_code_retained_json_occurrences": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provenance_error_code_usage_counts": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provider_repairs_by_stage": [
+        {
+          "distinct_request_ids": 1,
+          "input_tokens": 14349,
+          "output_tokens": 1868,
+          "stage": "validation_grounding_model_repair",
+          "usage_rows": 1
+        }
+      ],
+      "publication_readiness": "pass",
+      "publisher": "KPMG",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "retained_soft_copy_claim_assertion": "pass",
+      "source_content_md5": "2acb4a56e14add5d7717f34c378f9091",
+      "source_content_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+      "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+      "terminal_failure_code": "",
+      "validation": "pass",
+      "workflow_attempt_count": 1
+    },
+    {
+      "awaiting_review": true,
+      "bounded_automatic_repair": true,
+      "canonical_artifacts_path": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-gdedp65k/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json",
+      "cost_usd": 0.053274,
+      "duration_seconds": 415.781,
+      "failure_diagnostic": null,
+      "final_state": "awaiting_review",
+      "git_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+      "input_tokens": 295165,
+      "isolated_run_reference": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-gdedp65k",
+      "model_provider_calls": 33,
+      "operator_intervention": false,
+      "output_tokens": 48083,
+      "provenance_error_code_retained_json_occurrences": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provenance_error_code_usage_counts": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provider_repairs_by_stage": [
+        {
+          "distinct_request_ids": 2,
+          "input_tokens": 38750,
+          "output_tokens": 2158,
+          "stage": "validation_grounding_model_repair",
+          "usage_rows": 2
+        }
+      ],
+      "publication_readiness": "pass",
+      "publisher": "Adjust",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "retained_soft_copy_claim_assertion": "pass",
+      "source_content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_content_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "terminal_failure_code": "",
+      "validation": "pass",
+      "workflow_attempt_count": 1
+    },
+    {
+      "awaiting_review": true,
+      "bounded_automatic_repair": true,
+      "canonical_artifacts_path": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-han0t2pv/output/2026-20b2c-20ecommerce-20ai-20trends-ebook-en-2-pdf/report_analysis/artifacts.json",
+      "cost_usd": 0.053439,
+      "duration_seconds": 487.454,
+      "failure_diagnostic": null,
+      "final_state": "awaiting_review",
+      "git_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+      "input_tokens": 307092,
+      "isolated_run_reference": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-han0t2pv",
+      "model_provider_calls": 35,
+      "operator_intervention": false,
+      "output_tokens": 46030,
+      "provenance_error_code_retained_json_occurrences": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provenance_error_code_usage_counts": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provider_repairs_by_stage": [
+        {
+          "distinct_request_ids": 2,
+          "input_tokens": 36022,
+          "output_tokens": 3678,
+          "stage": "validation_grounding_model_repair",
+          "usage_rows": 2
+        }
+      ],
+      "publication_readiness": "pass",
+      "publisher": "Algolia",
+      "report_id": "cohort-86858bdcb370266f26c2",
+      "retained_soft_copy_claim_assertion": "pass",
+      "source_content_md5": "86858bdcb370266f26c29b40316a4db0",
+      "source_content_sha256": "d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50",
+      "source_identity_id": "source:4ea9ae5709898e763efb0945d8d4fa1e",
+      "source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf",
+      "terminal_failure_code": "",
+      "validation": "pass",
+      "workflow_attempt_count": 1
+    },
+    {
+      "awaiting_review": false,
+      "bounded_automatic_repair": false,
+      "canonical_artifacts_path": null,
+      "cost_usd": 0.035924,
+      "duration_seconds": 257.609,
+      "failure_detail": "The existing summary.card_tldr_compact contract rejected the generated value before canonical artifacts.json was persisted. The contract requires a complete sentence of 1 to 18 words. No provider repair call or manual repair followed.",
+      "failure_diagnostic": {
+        "artifact_family": "",
+        "claim_or_entity_id": "",
+        "error_context": {
+          "field": "summary.card_tldr_compact"
+        },
+        "inner_error_class": "",
+        "outer_code": "card_tldr_compact_invalid",
+        "repair_attempt": 0,
+        "stage": "report_pipeline",
+        "validator_rule": ""
+      },
+      "final_state": "failed",
+      "git_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+      "input_tokens": 162423,
+      "isolated_run_reference": "out/prompt1-closure-green-sha-20260925/ias-first-attempt-vip9femd",
+      "model_provider_calls": 20,
+      "operator_intervention": false,
+      "output_tokens": 39368,
+      "provenance_error_code_retained_json_occurrences": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provenance_error_code_usage_counts": {
+        "soft_copy_claim_provenance_bindings_incomplete": 0,
+        "soft_copy_claim_provenance_coverage_invalid": 0
+      },
+      "provider_repairs_by_stage": [],
+      "publication_readiness": "fail",
+      "publisher": "Criteo",
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "retained_soft_copy_claim_assertion": "not_executable_canonical_artifacts_missing",
+      "source_content_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "source_content_sha256": "17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c",
+      "source_identity_id": "source:81027fd399837b2cbd3cefa2abca222b",
+      "source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf",
+      "terminal_failure_code": "card_tldr_compact_invalid",
+      "validation": "fail",
+      "workflow_attempt_count": 1
+    }
+  ],
+  "schema_version": "prompt1-closure-replay-round/1.0"
+}

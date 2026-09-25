@@ -70,7 +70,19 @@
       "failure": "src/generators/artifact_generator.py mutation score 66.6667 versus baseline 100.0000; surviving Or->And mutant at src/generators/_artifact_generator/generation.py:194",
       "root_cause": "The malformed-findings-pack behavior test was not exported in the split module __all__, so the facade omitted it from pytest and mutation-gate runs.",
       "correction": "Export both summary-evidence tests; focused suite collects 79 tests and artifact_generator mutation target kills 3/3 selected mutants (100%).",
-      "correction_commit": "pending"
+      "correction_commit": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4"
+    },
+    "github_run_green_sha": {
+      "run_id": 36108473460,
+      "head_sha": "0144111c8ef43f2ccc74e4fdaa1c00754ff591c4",
+      "url": "https://github.com/mbrakker/marketlense/actions/runs/36108473460",
+      "conclusion": "success",
+      "pytest_summary": "5979 passed in 398.79s",
+      "skipped_steps": [
+        "WordPress staging REST gate"
+      ],
+      "codeql_run_id": 36108472385,
+      "codeql_conclusion": "success"
     }
   },
   "reports": [
@@ -322,5 +334,7 @@
       "downloaded_at_utc": "2026-06-10T22:22:21.988580+00:00",
       "validation_stage_repair_dispositions": []
     }
-  ]
+  ],
+  "same_sha_replay_round": "prompt1-closure-replay-round-0144111c.json",
+  "latest_acceptance_status": "not_met: three reports passed all replay checks; Criteo failed card_tldr_compact_invalid before canonical artifacts.json persistence"
 }
