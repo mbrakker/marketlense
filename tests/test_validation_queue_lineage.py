@@ -651,7 +651,10 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     frozen_cohort = json.loads(cohort_manifest.read_text(encoding="utf-8"))
     member = frozen_cohort["members"][0]
     assert member["md5_checksum"] == source_hash
-    assert member["source_identity_id"] == prepared.admission_decisions[0].source_identity_id
+    assert (
+        member["source_identity_id"]
+        == prepared.admission_decisions[0].source_identity_id
+    )
     assert member["publisher_id"] == "Industry Analytics Summit"
     reports_db = settings.reports_db
     state_db = settings.state_db
@@ -666,8 +669,7 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     assert payload.validation_run_id == response.validation_run_id
     assert payload.cohort_id == response.cohort_id
     assert (
-        payload.source_identity_id
-        == prepared.admission_decisions[0].source_identity_id
+        payload.source_identity_id == prepared.admission_decisions[0].source_identity_id
     )
     assert payload.source_content_hash == source_hash
     worker_result = run_workflow_worker_once(
@@ -788,7 +790,14 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         stage for stage in entity.stages if stage.to_state == "awaiting_review"
     )
     assert awaiting_review_stage.eventual_success is True
-    analysis_dir = next((tmp_path / "out").glob("*/report_analysis"))
+    analysis_dirs = sorted((tmp_path / "out").glob("*/report_analysis"))
+    artifact_dirs = [
+        directory
+        for directory in analysis_dirs
+        if (directory / "artifacts.json").is_file()
+    ]
+    assert len(artifact_dirs) == 1, [str(directory) for directory in analysis_dirs]
+    analysis_dir = artifact_dirs[0]
     artifacts = json.loads(
         (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
     )
