@@ -4,9 +4,151 @@ from __future__ import annotations
 import json
 
 from src.generators._artifact_generator.rendering import render_artifact_json_model
-from src.generators._artifact_generator.storage import _validate_cover_semantics
+from src.generators._artifact_generator.storage import (
+    _validate_artifact_semantic_fields,
+    _validate_cover_semantics,
+)
 
 from ._shared import *  # noqa: F401,F403
+
+
+def _assemble_summary_with_direct_claims(direct_claims):
+    summary = {
+        "tldr": "An unsupported forecast claim will determine future growth.",
+        "card_tldr_compact": "The report has a grounded outlook.",
+        "executive_summary": (
+            "An unsupported forecast claim will determine future growth."
+        ),
+        "claim_evidence_map": [
+            {
+                "claim": "The unsupported forecast guarantees $375B in growth.",
+                "evidence_id": "section-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "section-1",
+                        "source_pack": "doc_map",
+                        "text": "The section reviews the market outlook.",
+                    }
+                ],
+            },
+            *[
+                {
+                    "claim": claim,
+                    "evidence_id": f"direct-{index}",
+                    "evidence": claim,
+                    "evidence_spans": [
+                        {
+                            "evidence_id": f"direct-{index}",
+                            "source_pack": "quote_candidates",
+                            "text": claim,
+                        }
+                    ],
+                }
+                for index, claim in enumerate(direct_claims, start=1)
+            ],
+        ],
+    }
+    family_status = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+    family_status["summary"] = {
+        "schema_version": "1.0",
+        "family": "summary",
+        "source": "artifact",
+        "status": "generated",
+        "confidence_score": 1.0,
+        "policy_action": "keep",
+        "reason": "",
+    }
+    return assemble_artifacts_payload(
+        report_id="criteo-summary-fallback",
+        report_name="Criteo summary fallback",
+        doc_map={
+            "sections": [
+                {
+                    "id": "section-1",
+                    "title": "Market outlook",
+                    "summary": "The section reviews the market outlook.",
+                    "key_points": [],
+                    "pages": [1],
+                }
+            ]
+        },
+        evidence_packs={
+            "findings": [],
+            "quote_candidates": {
+                "quote_candidates": [
+                    {"id": f"direct-{index}", "text": claim, "page": index}
+                    for index, claim in enumerate(direct_claims, start=1)
+                ]
+            },
+        },
+        toc_bundle={"toc_entries": []},
+        editorial_plan=_default_editorial_plan(),
+        summary=summary,
+        cover_semantics=_cover_semantics(),
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+        source_status={"not_available": False, "reason": ""},
+        family_status=family_status,
+        ctx=_ctx(),
+        soft_copy_claim_bindings={"summary": []},
+        validate_references=False,
+    )
+
+
+def test_direct_summary_fallback_uses_short_source_claim_for_compact_tldr() -> None:
+    long_direct_claim = (
+        "Criteo says commerce media plans now span multiple retailer networks, "
+        "formats, measurement systems, and audience strategies across the global "
+        "advertising market."
+    )
+    short_direct_claim = "Retailer networks are expanding."
+
+    payload = _assemble_summary_with_direct_claims(
+        [long_direct_claim, short_direct_claim]
+    )
+
+    assert payload["summary"]["tldr"] == long_direct_claim
+    assert payload["summary"]["executive_summary"].startswith(long_direct_claim)
+    assert payload["summary"]["card_tldr_compact"] == short_direct_claim
+    _validate_artifact_semantic_fields(payload, _ctx())
+
+
+def test_direct_summary_fallback_keeps_normal_short_claim_as_compact_tldr() -> None:
+    short_direct_claim = "Retailer networks are expanding."
+
+    payload = _assemble_summary_with_direct_claims([short_direct_claim])
+
+    assert payload["summary"]["card_tldr_compact"] == short_direct_claim
+
+
+def test_direct_summary_fallback_fails_when_no_short_source_claim_exists() -> None:
+    long_direct_claim = (
+        "Criteo says commerce media plans now span multiple retailer networks, "
+        "formats, measurement systems, and audience strategies across the global "
+        "advertising market."
+    )
+
+    payload = _assemble_summary_with_direct_claims([long_direct_claim])
+
+    assert payload["family_status"]["summary"]["status"] == "abstained"
+    assert payload["family_status"]["summary"]["policy_action"] == "abstain"
+    assert payload["summary"] == {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    _validate_artifact_semantic_fields(payload, _ctx())
 
 
 def test_assemble_artifacts_logs_topic_brief_mapping_audit(

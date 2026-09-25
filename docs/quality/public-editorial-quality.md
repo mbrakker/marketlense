@@ -96,10 +96,14 @@ First-run artifact assembly removes editorial scaffold labels from executive-sum
 
 When a model produces an invalid compact card TLDR, normalization may replace it
 only with a complete, already evidence-linked claim that meets the configured
-word limit. It never truncates or invents a compact sentence; if no such claim
-exists, the card-TLDR gate remains a release blocker. After three failed
-grounding repairs for Expert View, that optional family abstains rather than
-retaining speculative causal synthesis.
+word limit. The final direct-source summary fallback keeps `tldr` and
+`executive_summary` grounded in its direct claims and selects the first complete
+direct claim within the 18-word limit for `card_tldr_compact`. It never
+truncates or invents a compact sentence; if no suitable direct claim exists,
+the summary family abstains with its public summary fields empty, and the
+artifact remains valid without summary claims. After three failed grounding
+repairs for Expert View, that optional family abstains rather than retaining
+speculative causal synthesis.
 
 Once all public-copy families have generated and before canonical artifact
 assembly validates or retains them, a deterministic source-display pass preserves

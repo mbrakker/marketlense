@@ -1,8 +1,11 @@
+import pytest
+
 from src.generators.artifact_normalization import (
     constrain_summary_to_source_backed_claims,
     preserve_public_source_displays,
     select_artifact_insights,
 )
+from src.utils.errors import AppError
 
 
 def test_preservation_replaces_an_unsupported_insight_number_and_clears_metric() -> (
@@ -54,7 +57,10 @@ def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claim
                     {
                         "evidence_id": "quote-1",
                         "source_pack": "quote_candidates",
-                        "text": "The report forecasts almost $375B in global growth dollars.",
+                        "text": (
+                            "The report forecasts almost $375B in global growth "
+                            "dollars."
+                        ),
                     }
                 ],
             },
@@ -83,6 +89,52 @@ def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claim
     assert [claim["evidence_id"] for claim in summary["claim_evidence_map"]] == [
         "quote-1"
     ]
+
+
+def test_summary_constraint_fails_before_mutation_without_short_direct_sentence() -> (
+    None
+):
+    long_direct_claim = (
+        "Criteo says commerce media plans now span multiple retailer networks, "
+        "formats, measurement systems, and audience strategies across the global "
+        "advertising market."
+    )
+    summary = {
+        "tldr": "Unsupported growth will reshape the market.",
+        "card_tldr_compact": "Existing compact copy remains valid.",
+        "executive_summary": "Unsupported growth will reshape the market.",
+        "claim_evidence_map": [
+            {
+                "claim": "The unsupported forecast guarantees $375B in growth.",
+                "evidence_id": "section-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "section-1",
+                        "source_pack": "doc_map",
+                        "text": "The section reviews the market outlook.",
+                    }
+                ],
+            },
+            {
+                "claim": long_direct_claim,
+                "evidence_id": "quote-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "quote-1",
+                        "source_pack": "quote_candidates",
+                        "text": long_direct_claim,
+                    }
+                ],
+            },
+        ],
+    }
+    original = {**summary, "claim_evidence_map": list(summary["claim_evidence_map"])}
+
+    with pytest.raises(AppError) as captured:
+        constrain_summary_to_source_backed_claims(summary)
+
+    assert captured.value.code == "card_tldr_compact_invalid"
+    assert summary == original
 
 
 def test_select_artifact_insights_preserves_chosen_candidate_factual_fields():

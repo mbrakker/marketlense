@@ -107,6 +107,31 @@ def _dump_json(value: Any) -> str:
     return dump_json_text(value)
 
 
+def _abstain_summary_without_short_direct_claim(
+    *,
+    summary: Dict[str, Any],
+    family_status: Dict[str, Dict[str, Any]],
+) -> None:
+    """Abstain the summary family when no direct claim can fill compact copy."""
+
+    summary.clear()
+    summary.update(
+        {
+            "tldr": "",
+            "card_tldr_compact": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        }
+    )
+    family_status["summary"].update(
+        {
+            "status": "abstained",
+            "policy_action": "abstain",
+            "reason": "summary_no_short_direct_claim",
+        }
+    )
+
+
 def assemble_artifacts_payload(
     *,
     report_id: str,
@@ -208,7 +233,17 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
     )
-    summary_fallback_applied = constrain_summary_to_source_backed_claims(summary)
+    try:
+        summary_fallback_applied = constrain_summary_to_source_backed_claims(summary)
+    except AppError as exc:
+        if exc.code != "card_tldr_compact_invalid":
+            raise
+        _abstain_summary_without_short_direct_claim(
+            summary=summary,
+            family_status=family_status,
+        )
+        soft_copy_claim_bindings["summary"] = []
+        summary_fallback_applied = False
     pre_correction_soft_copy = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,
@@ -270,10 +305,20 @@ def assemble_artifacts_payload(
             claim_bindings=soft_copy_claim_bindings.get("summary"),
         )
     ):
-        summary_fallback_applied = constrain_summary_to_source_backed_claims(
-            summary,
-            require_direct_fallback=True,
-        )
+        try:
+            summary_fallback_applied = constrain_summary_to_source_backed_claims(
+                summary,
+                require_direct_fallback=True,
+            )
+        except AppError as exc:
+            if exc.code != "card_tldr_compact_invalid":
+                raise
+            _abstain_summary_without_short_direct_claim(
+                summary=summary,
+                family_status=family_status,
+            )
+            soft_copy_claim_bindings["summary"] = []
+            summary_fallback_applied = False
         if summary_fallback_applied:
             preserve_public_source_displays(
                 summary=summary,

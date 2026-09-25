@@ -483,7 +483,12 @@ def normalize_artifact_summary(value: Any) -> Dict[str, Any]:
 
 def _is_complete_short_sentence(value: str, *, limit: int) -> bool:
     text = " ".join(value.split())
-    return bool(text) and len(text.split()) <= limit and text.endswith((".", "?", "!"))
+    return (
+        bool(text)
+        and len(text.split()) <= limit
+        and not text.endswith(("...", "\u2026"))
+        and text.endswith((".", "?", "!"))
+    )
 
 
 def preserve_public_source_displays(
@@ -749,9 +754,29 @@ def constrain_summary_to_source_backed_claims(
     public_claims = [claim for claim in public_claims if claim]
     if not public_claims:
         return False
+    compact_claim = next(
+        (
+            claim
+            for claim in public_claims
+            if _is_complete_short_sentence(claim, limit=18)
+        ),
+        None,
+    )
+    if compact_claim is None:
+        raise AppError(
+            code="card_tldr_compact_invalid",
+            message=(
+                "summary.card_tldr_compact must be a complete sentence of 1 to 18 words"
+            ),
+            retryable=False,
+            context={
+                "field": "summary.card_tldr_compact",
+                "word_count": len(" ".join(public_claims[0].split()).split()),
+            },
+        )
     summary["claim_evidence_map"] = direct_claims
     summary["tldr"] = public_claims[0]
-    summary["card_tldr_compact"] = public_claims[0]
+    summary["card_tldr_compact"] = compact_claim
     summary["executive_summary"] = " ".join(public_claims[:3])
     return True
 
