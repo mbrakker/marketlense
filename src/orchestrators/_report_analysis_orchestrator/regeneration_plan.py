@@ -471,16 +471,17 @@ def _build_target(
     repair_strategy = ""
     selected_evidence_ids: List[str] = []
     for action, strategy in _strategy_options(target_key, ordered_issues):
+        strategy_evidence_ids = (
+            [] if action in {"REMOVE_CLAIM", "ABSTAIN"} else evidence_ids
+        )
         candidate_key = repair_strategy_fingerprint(
-            failure_fingerprints, strategy, evidence_ids
+            failure_fingerprints, strategy, strategy_evidence_ids
         )
         if candidate_key in rejected:
             continue
         repair_action = action
         repair_strategy = strategy
-        selected_evidence_ids = (
-            [] if action in {"REMOVE_CLAIM", "ABSTAIN"} else evidence_ids
-        )
+        selected_evidence_ids = strategy_evidence_ids
         break
     if not repair_strategy:
         # Every materially distinct strategy for this failure was already

@@ -96,7 +96,9 @@ source pages, compatible protected facts, and no deterministic public-editorial
 issue. If none qualifies, regeneration fails with
 `insight_safe_removal_no_replacement`; it does not restore the removed roster
 member or generate replacement prose. The ordinary candidate and full
-validation gates still decide promotion.
+validation gates still decide promotion. The planner fingerprints removal with
+its empty selected-evidence set, so a rejected removal exhausts that strategy
+instead of presenting the same stable-ID deletion again.
 Insight and soft-copy repairs may also change their deterministic projections.
 The candidate gate recomputes the changed metric spine, key figures, chart
 cards, executive advisory, and claim ledger from the candidate's canonical

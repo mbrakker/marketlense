@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.regeneration import repair_strategy_fingerprint
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -169,6 +170,39 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
     )
     assert [item.rule_id for item in copied_quality.issues] == [
         "public_editorial_quality.unsupported_numeric_claim"
+    ]
+
+
+def test_doubleverify_duplicate_strategy_ladder_stops_after_safe_removal() -> None:
+    case = _case("doubleverify")
+    issue = ValidationIssue(**case["blocking_issues"][0])
+    rejected: set[str] = set()
+    sequence = []
+    for _ in range(4):
+        plan = _build_regeneration_plan(
+            issues=[issue],
+            artifacts=case["artifacts"],
+            broad_retry_available=False,
+            rejected_strategy_keys=rejected,
+        )
+        if not plan.targets:
+            sequence.append((plan.mode, ""))
+            break
+        target = plan.targets[0]
+        sequence.append((target.repair_action, target.repair_strategy))
+        rejected.add(
+            repair_strategy_fingerprint(
+                [item.failure_fingerprint for item in target.issues],
+                target.repair_strategy,
+                target.selected_evidence_ids,
+            )
+        )
+
+    assert sequence == [
+        ("REGENERATE_ITEM", "current_evidence"),
+        ("REBIND_EVIDENCE", "alternative_evidence"),
+        ("REMOVE_CLAIM", "safe_removal"),
+        ("skip", ""),
     ]
 
 
