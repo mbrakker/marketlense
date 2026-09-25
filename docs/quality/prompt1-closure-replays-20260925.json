@@ -32,7 +32,7 @@
     "full_acceptance_passed": false
   },
   "ci": {
-    "full_ci_on_implementation_sha": "not run before explicit publication; GitHub CI is expected to run after push",
+    "full_ci_on_implementation_sha": "failed on evidence commit 0670dcedda9ba2fa6cc2a8d77db2148271e9fa6b; see github run record",
     "previous_github_failure_set": "4 failures on base SHA: long test-file ownership plus the three A21 artifact-directory fixture failures; all four causes addressed in this candidate",
     "exact_candidate_sha_regressions": [
       {
@@ -46,6 +46,17 @@
     ],
     "full_local_suite_same_implementation_tree": {
       "result": "5972 passed, 1 skipped, 24 subtests passed; 4 Windows environment/timing failures (two path-length limits, one sub-microsecond runtime threshold, one zero-duration benchmark median)"
+    },
+    "github_run": {
+      "run_id": 36104257693,
+      "head_sha": "0670dcedda9ba2fa6cc2a8d77db2148271e9fa6b",
+      "url": "https://github.com/mbrakker/marketlense/actions/runs/36104257693",
+      "conclusion": "failure",
+      "pytest_summary": "5976 passed, 1 failed",
+      "failed_test": "tests/test_validation_queue_lineage.py::test_a21_full_chain_from_frozen_cohort_through_awaiting_review[clean]",
+      "failure": "The full-chain test reached the reliability assertion with eventual_success=True and operator_intervention=False, but entity.first_pass was False.",
+      "captured_warning": "pypdf FloatObject could not convert malformed numeric token b'0.00-6165227'; it substituted 0.0.",
+      "focused_reproduction": "The A21 lineage module passed 4 tests under Linux Python 3.12.3 with xdist; failure has not reproduced in the isolated focused run."
     }
   },
   "reports": [

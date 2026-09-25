@@ -18,7 +18,11 @@ KPMG and Algolia reached `awaiting_review`; both validation and publish readines
 
 On the exact candidate SHA, the render ownership plus A21 lineage suites passed (**50 passed**), including the three named A21 fixtures. The regeneration/finalisation/provenance regression suite passed (**76 passed**), including the prior 19 soft-copy/regeneration provenance regressions. The full local suite against the same implementation tree reached 5,972 passed, 1 skipped, and 24 subtests passed, with four Windows-specific path/timing failures; full CI has not been certified green on this candidate SHA.
 
-## Diagnosed failures
+## Full GitHub CI result
+
+GitHub CI run [36104257693](https://github.com/mbrakker/marketlense/actions/runs/36104257693) on evidence commit `0670dcedda9ba2fa6cc2a8d77db2148271e9fa6b` failed in the default pytest suite: **5,976 passed, 1 failed**. The remaining failure is the `clean` A21 full-chain case: eventual success was true and operator intervention was false, but the retained reliability entity reported `first_pass=False`. The log also contains a pypdf warning about malformed numeric token `0.00-6165227` being replaced with `0.0`. A focused Linux xdist run of the A21 module passed all four tests, so the full-suite-only cause remains under investigation.
+
+## Diagnosed replay failures
 
 - **Adjust:** one bounded targeted repair was attempted. Semantic validation ended `validation_failed`: the `numbers` rule rejected unsupported numeric claim `1016.8` in `expert_comment`; retained `validation.json` had no evidence IDs. The retained soft-copy provenance assertion passed. Publish readiness failed as a consequence.
 - **Criteo:** report analysis ended `card_tldr_compact_invalid`; `summary.card_tldr_compact` did not satisfy the existing complete-sentence, 1-to-18-word contract. The canonical `artifacts.json` was never retained, so the retained-claim assertion could not execute. Publish readiness failed as a consequence. The source parser also emitted 10 repeated malformed-object warnings (`Ignoring wrong pointing object 9 0 (offset 0)`), while ingestion continued.

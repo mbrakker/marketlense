@@ -930,5 +930,25 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
         assert entity.first_pass is False
         assert entity.bounded_recovery is True
     else:
-        assert entity.first_pass is True
+        assert entity.first_pass is True, {
+            "awaiting_review_first_failure_code": awaiting_review_stage.first_failure_code,
+            "awaiting_review_first_failure_stage": awaiting_review_stage.first_failure_stage,
+            "awaiting_review_recovery_type": awaiting_review_stage.recovery_type,
+            "awaiting_review_attempts_required": awaiting_review_stage.attempts_required,
+            "awaiting_review_terminal_disposition": (
+                awaiting_review_stage.terminal_disposition
+            ),
+            "first_attempt_stage_details": [
+                {
+                    "to_state": stage.to_state,
+                    "first_pass": stage.first_pass,
+                    "first_failure_code": stage.first_failure_code,
+                    "first_failure_stage": stage.first_failure_stage,
+                    "recovery_type": stage.recovery_type,
+                    "attempts_required": stage.attempts_required,
+                    "terminal_disposition": stage.terminal_disposition,
+                }
+                for stage in entity.stages
+            ],
+        }
         assert entity.bounded_recovery is False
