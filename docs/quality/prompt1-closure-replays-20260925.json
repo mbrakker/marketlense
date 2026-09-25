@@ -57,6 +57,20 @@
       "failure": "The full-chain test reached the reliability assertion with eventual_success=True and operator_intervention=False, but entity.first_pass was False.",
       "captured_warning": "pypdf FloatObject could not convert malformed numeric token b'0.00-6165227'; it substituted 0.0.",
       "focused_reproduction": "The A21 lineage module passed 4 tests under Linux Python 3.12.3 with xdist; failure has not reproduced in the isolated focused run."
+    },
+    "github_run_after_diagnostic": {
+      "run_id": 36105838744,
+      "head_sha": "b761061ff07227f4909edd33bb2818fb06e29ea8",
+      "url": "https://github.com/mbrakker/marketlense/actions/runs/36105838744",
+      "conclusion": "failure",
+      "pytest": "passed",
+      "coverage": "passed",
+      "mutation_execution": "passed",
+      "quality_non_regression": "failed",
+      "failure": "src/generators/artifact_generator.py mutation score 66.6667 versus baseline 100.0000; surviving Or->And mutant at src/generators/_artifact_generator/generation.py:194",
+      "root_cause": "The malformed-findings-pack behavior test was not exported in the split module __all__, so the facade omitted it from pytest and mutation-gate runs.",
+      "correction": "Export both summary-evidence tests; focused suite collects 79 tests and artifact_generator mutation target kills 3/3 selected mutants (100%).",
+      "correction_commit": "pending"
     }
   },
   "reports": [

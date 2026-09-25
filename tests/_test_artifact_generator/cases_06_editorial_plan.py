@@ -61,6 +61,15 @@ def test_summary_evidence_orders_direct_finding_for_priority_section() -> None:
     assert evidence["findings"]["findings"][0]["id"] == "other"
 
 
+def test_summary_evidence_preserves_invalid_findings_pack() -> None:
+    evidence = {"findings": ["unavailable"], "scope": {"pages": [1, 2]}}
+    plan = {"themes": [{"priority": 1, "evidence_ids": ["finding-1"]}]}
+
+    serialized = _summary_prioritized_evidence_json(evidence, plan)
+
+    assert json.loads(serialized) == evidence
+
+
 def test_editorial_plan_normalizes_priority_and_rejects_unknown_evidence_id():
     normalize = getattr(
         artifact_normalization, "normalize_artifact_editorial_plan", None
@@ -735,6 +744,8 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
 
 
 __all__ = [
+    "test_summary_evidence_orders_direct_finding_for_priority_section",
+    "test_summary_evidence_preserves_invalid_findings_pack",
     "test_editorial_plan_normalizes_priority_and_rejects_unknown_evidence_id",
     "test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert",
     "test_editorial_plan_keeps_current_metric_and_central_publisher_forecast",
