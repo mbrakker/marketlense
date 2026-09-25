@@ -354,6 +354,23 @@ def regenerate_artifacts(
         regeneration_attempt=request.attempt_index,
         validate_references=False,
     )
+    changed_roots = {
+        str(path).split(".", 1)[0]
+        for target in request.plan.targets
+        for path in target.allowed_paths
+    }
+    derived_inputs = {
+        "topics_covered": {"summary", "insights_final"},
+        "claim_ledgers": {"summary", "insights_final", "quotes_final"},
+    }
+    for artifact_root, input_roots in derived_inputs.items():
+        if (
+            artifact_root in safe_artifacts
+            and not changed_roots.intersection(input_roots)
+        ):
+            updated_artifacts[artifact_root] = deepcopy(
+                safe_artifacts[artifact_root]
+            )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
         updated_artifacts["_repair_evidence_selection"] = {

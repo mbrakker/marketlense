@@ -189,6 +189,12 @@ Ambiguous, cross-family, incomplete, or changed-evidence cases remain blocked;
 the validator never chooses between candidate records or treats identifier
 normalization as a waiver.
 
+Targeted regeneration preserves derived artifact roots whose inputs are outside
+the declared mutation scope. In particular, `topics_covered` remains byte-for-
+byte unchanged for soft-copy-only repairs; it is reassembled only when `summary`
+or `insights_final` is in scope. Candidate scope validation therefore measures
+the requested repair instead of unrelated projection enrichment.
+
 Final-insight regeneration also keeps its fixed-size roster one-to-one with
 the prior material stable IDs. A duplicate model ID cannot displace another
 retained insight: the duplicate or newly introduced slot is deterministically

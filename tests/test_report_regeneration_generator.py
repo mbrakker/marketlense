@@ -1234,6 +1234,30 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
     repair_strategy: str,
 ) -> None:
     current = _current_artifacts()
+    current["topics_covered"] = [
+        {
+            "schema_version": "1.0",
+            "topic_id": "untouched",
+            "topic": "Untouched topic",
+            "subtopics": [],
+            "why_it_matters": "Retained unchanged topic summary.",
+            "evidence_ids": ["retained-topic-evidence"],
+            "pages": [1],
+            "status": "source_backed",
+        }
+    ]
+    current["claim_ledgers"] = [
+        {
+            "schema_version": "1.0",
+            "canonical_claim_id": "untouched-claim",
+            "claim_text": "An unchanged retained claim.",
+            "artifact_section": "insights_final",
+            "evidence_ids": ["retained-claim-evidence"],
+            "support_type": "direct",
+            "confidence": "high",
+            "risk": "low",
+        }
+    ]
     original_claims = current["soft_copy_claim_provenance"]["claims"]
     sibling_claims = [
         claim for claim in original_claims if claim["artifact_family"] != artifact_family
@@ -1258,6 +1282,7 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
                         target_section=artifact_family,
                         repair_action=repair_action,
                         repair_strategy=repair_strategy,
+                        allowed_paths=[artifact_family],
                         issues=[
                             RegenerationIssue(
                                 rule_id=issue_rule_id,
@@ -1298,6 +1323,12 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
         family: soft_copy_public_text(family, updated[family])
         for family in sibling_copy
     } == sibling_copy
+    if artifact_family in {"expert_comment", "linkedin_post"}:
+        assert updated["topics_covered"] == current["topics_covered"]
+        assert updated["claim_ledgers"] == current["claim_ledgers"]
+    else:
+        assert updated["topics_covered"] != current["topics_covered"]
+        assert updated["claim_ledgers"] != current["claim_ledgers"]
     assert [
         claim
         for claim in updated["soft_copy_claim_provenance"]["claims"]
