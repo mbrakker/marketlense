@@ -138,6 +138,11 @@ distinct ladder before any model call:
    support.
 4. Removal/abstention of the unsupported atomic item.
 
+When a LinkedIn post cannot be repaired at claim scope and the safe-removal
+strategy clears the whole post, its retained soft-copy claims are cleared with
+the public text. The provenance coverage check remains required before the
+candidate is stored or promoted.
+
 After a rollback, the next attempt restarts from the last promoted artifact and
 the attempt's strategy fingerprint records the repair action, strategy, and
 evidence actually selected by the generator, so a failed combination cannot be

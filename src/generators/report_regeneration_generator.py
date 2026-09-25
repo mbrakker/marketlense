@@ -2691,6 +2691,7 @@ def _handle_linkedin_post_regeneration(
         return
     if _uses_safe_removal(execution):
         execution.state.linkedin_post = ""
+        execution.state.replaced_soft_copy_families.append("linkedin_post")
         execution.state.regenerated_sections.append("linkedin_post")
         return
     result = _render_regeneration_model(

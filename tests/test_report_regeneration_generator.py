@@ -1156,6 +1156,64 @@ def _evidence_packs() -> dict:
     }
 
 
+def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="linkedin_post",
+                        repair_action="REMOVE_CLAIM",
+                        repair_strategy="safe_removal",
+                        issues=[
+                            RegenerationIssue(
+                                rule_id="numbers",
+                                affected_section="linkedin_post",
+                                message="Unsupported numeric claim.",
+                                severity="error",
+                                entity_id=current["soft_copy_claim_provenance"]["claims"][-1]["claim_id"],
+                                evidence_ids=["f1"],
+                            ),
+                            RegenerationIssue(
+                                rule_id="artifact_quality",
+                                affected_section="linkedin_post",
+                                message="The whole post needs review.",
+                                severity="warning",
+                                entity_id="linkedin_post",
+                            ),
+                        ],
+                    )
+                ],
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["linkedin_post"] == ""
+    assert not any(
+        claim["artifact_family"] == "linkedin_post"
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    )
+    assert Path(response.candidate_artifacts_path).is_file()
+
+
 def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_untouched_sections(
     tmp_path,
 ):
