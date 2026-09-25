@@ -99,6 +99,13 @@ public text changed after provenance finalization.
 This internal metadata stays in retained artifacts and checkpoints; it is not
 part of the report payload or WordPress projection.
 
+When regeneration removes an entire Summary, Expert View, or LinkedIn family,
+the previous provenance claims for that family are retired with its public
+prose. Claim-scoped removal retires only the named claim, preserving every
+untouched sibling claim and its provenance. Candidate assembly then verifies
+that each remaining family has an exact claim cover, including an empty cover
+for an abstained family.
+
 Prompt-family materialization retains a private soft-copy envelope alongside
 the family’s unchanged public value: declared claim bindings, the producing
 prompt identity, and generation attempt. Reuse rebuilds source spans from the

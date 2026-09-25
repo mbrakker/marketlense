@@ -1493,10 +1493,15 @@ def _record_soft_copy_claim_bindings(
     execution.state.soft_copy_generation_attempts[artifact_family] = max(
         1, int(result.get("_soft_copy_generation_attempt") or 1)
     )
-    if (
-        repaired_claim is None
-        and artifact_family not in execution.state.replaced_soft_copy_families
-    ):
+    if repaired_claim is None:
+        _mark_soft_copy_family_replaced(execution, artifact_family)
+
+
+def _mark_soft_copy_family_replaced(
+    execution: _RegenerationHandlerExecution, artifact_family: str
+) -> None:
+    """Retire every prior provenance claim when a family is replaced or removed."""
+    if artifact_family not in execution.state.replaced_soft_copy_families:
         execution.state.replaced_soft_copy_families.append(artifact_family)
 
 
@@ -1871,6 +1876,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         for field in ("tldr", "card_tldr_compact", "executive_summary"):
             if field in execution.state.summary:
                 execution.state.summary[field] = ""
+        _mark_soft_copy_family_replaced(execution, "summary")
         execution.state.regenerated_sections.append("summary")
         return
     result = _render_regeneration_model(
@@ -2613,10 +2619,12 @@ def _handle_expert_comment_regeneration(
         # An exhausted source-fidelity repair must abstain rather than retain
         # another model-authored causal synthesis.
         execution.state.expert_comment = ""
+        _mark_soft_copy_family_replaced(execution, "expert_comment")
         execution.state.regenerated_sections.append("expert_comment")
         return
     if _uses_safe_removal(execution):
         execution.state.expert_comment = ""
+        _mark_soft_copy_family_replaced(execution, "expert_comment")
         execution.state.regenerated_sections.append("expert_comment")
         return
     expert_synthesis_context = build_expert_synthesis_context(
@@ -2834,7 +2842,7 @@ def _handle_linkedin_post_regeneration(
         return
     if _uses_safe_removal(execution):
         execution.state.linkedin_post = ""
-        execution.state.replaced_soft_copy_families.append("linkedin_post")
+        _mark_soft_copy_family_replaced(execution, "linkedin_post")
         execution.state.regenerated_sections.append("linkedin_post")
         return
     result = _render_regeneration_model(

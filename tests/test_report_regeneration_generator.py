@@ -27,6 +27,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
+    soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
 from src.generators.public_editorial_quality_generator import (
@@ -34,19 +35,20 @@ from src.generators.public_editorial_quality_generator import (
     validation_issues_from_public_editorial_quality,
 )
 from src.generators.report_regeneration_generator import (
-    _build_regeneration_state,
     _build_grounding_package,
+    _build_regeneration_state,
     _build_soft_copy_claim_evidence_package,
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
     regenerate_artifacts,
 )
+from src.generators.soft_copy_claim_provenance import (
+    assert_retained_soft_copy_claims_match_public_copy,
+    retained_soft_copy_claims_cover_text,
+)
 from src.generators.validation.regeneration_candidate import (
     validate_regeneration_candidate,
-)
-from src.generators.soft_copy_claim_provenance import (
-    retained_soft_copy_claims_cover_text,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
@@ -1211,7 +1213,109 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
         claim["artifact_family"] == "linkedin_post"
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
     )
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
     assert Path(response.candidate_artifacts_path).is_file()
+
+
+@pytest.mark.parametrize(
+    ("artifact_family", "issue_rule_id", "repair_action", "repair_strategy"),
+    [
+        ("summary", "artifact_quality", "REMOVE_CLAIM", "safe_removal"),
+        ("expert_comment", "artifact_quality", "REMOVE_CLAIM", "safe_removal"),
+        ("expert_comment", "grounding", "REGENERATE_ITEM", "current_evidence"),
+        ("linkedin_post", "artifact_quality", "REMOVE_CLAIM", "safe_removal"),
+    ],
+)
+def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
+    tmp_path,
+    artifact_family: str,
+    issue_rule_id: str,
+    repair_action: str,
+    repair_strategy: str,
+) -> None:
+    current = _current_artifacts()
+    original_claims = current["soft_copy_claim_provenance"]["claims"]
+    sibling_claims = [
+        claim for claim in original_claims if claim["artifact_family"] != artifact_family
+    ]
+    sibling_copy = {
+        family: soft_copy_public_text(family, current[family])
+        for family in ("summary", "expert_comment", "linkedin_post")
+        if family != artifact_family
+    }
+    openai_client = _FakeOpenAIClient()
+    prompt_client = _FakePromptClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section=artifact_family,
+                        repair_action=repair_action,
+                        repair_strategy=repair_strategy,
+                        issues=[
+                            RegenerationIssue(
+                                rule_id=issue_rule_id,
+                                affected_section=artifact_family,
+                                message="Remove the failed soft-copy family.",
+                                severity="error",
+                                entity_id=artifact_family,
+                            )
+                        ],
+                    )
+                ],
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+
+    updated = response.updated_artifacts
+    if artifact_family == "summary":
+        assert all(
+            not updated["summary"].get(field)
+            for field in ("tldr", "card_tldr_compact", "executive_summary")
+        )
+    else:
+        assert updated[artifact_family] == ""
+    assert not any(
+        claim["artifact_family"] == artifact_family
+        for claim in updated["soft_copy_claim_provenance"]["claims"]
+    )
+    assert {
+        family: soft_copy_public_text(family, updated[family])
+        for family in sibling_copy
+    } == sibling_copy
+    assert [
+        claim
+        for claim in updated["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != artifact_family
+    ] == sibling_claims
+    assert_retained_soft_copy_claims_match_public_copy(updated)
+    candidate_integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=updated,
+        evidence_packs=_evidence_packs(),
+        ctx=_ctx(),
+    )
+    assert not any(
+        issue.rule_id == "soft_copy_claim_provenance"
+        for issue in candidate_integrity.issues
+    )
+    assert openai_client.calls == []
+    assert prompt_client.render_calls == []
 
 
 def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_untouched_sections(
@@ -2252,6 +2356,7 @@ def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_ca
     assert original_claims[0].claim_id in claim_ids
     assert original_claims[1].claim_id not in claim_ids
     assert original_claims[2].claim_id in claim_ids
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
 
 def test_regeneration_repairs_multiple_exact_claim_ids_without_churning_siblings(
