@@ -1,0 +1,301 @@
+{
+  "schema_version": "prompt1-closure-replay-evidence/1.0",
+  "recorded_at_utc": "2026-09-25T06:30:26+00:00",
+  "implementation_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+  "base_sha": "ebd6f3caa241344b26c5004fe78e5d817055a107",
+  "candidate_commit_location": "isolated worktree branch prompt1-closure; publication later authorized explicitly by the user",
+  "execution": {
+    "runner": "scripts/quality/ias_live_canary_runner.py::run_first_attempt_canary",
+    "workflow": "canonical isolated production queue and supervisor path",
+    "fresh_isolated_state_per_report": true,
+    "one_first_attempt_per_report": true,
+    "max_duration_seconds_per_report": 7200,
+    "publication_performed": false,
+    "source_manifest": "docs/quality/reliability-cohort-20260919-a21-final/frozen_cohort.json",
+    "source_hashes_verified_against_manifest": true,
+    "parser_stderr_observation": "Criteo run emitted 10 repeated \"Ignoring wrong pointing object 9 0 (offset 0)\" warnings; ingestion continued."
+  },
+  "aggregate": {
+    "reports": 4,
+    "all_same_sha": true,
+    "awaiting_review": 2,
+    "validation_pass": 2,
+    "publish_readiness_pass": 2,
+    "retained_soft_copy_claims_assertion_pass": 3,
+    "total_model_provider_calls": 128,
+    "total_input_tokens": 1161010,
+    "total_output_tokens": 178002,
+    "total_cost_usd": 0.204251,
+    "total_duration_seconds": 1616.672,
+    "operator_interventions": 0,
+    "provenance_error_codes_observed": [],
+    "full_acceptance_passed": false
+  },
+  "ci": {
+    "full_ci_on_implementation_sha": "not run before explicit publication; GitHub CI is expected to run after push",
+    "previous_github_failure_set": "4 failures on base SHA: long test-file ownership plus the three A21 artifact-directory fixture failures; all four causes addressed in this candidate",
+    "exact_candidate_sha_regressions": [
+      {
+        "command": "py -3.12 -m pytest -q tests/test_render_service_artifacts.py tests/test_long_test_file_ownership.py tests/test_validation_queue_lineage.py",
+        "result": "passed: 50 tests in 68.59s; includes all three A21 full-chain fixtures"
+      },
+      {
+        "command": "py -3.12 -m pytest -q tests/test_report_regeneration_generator.py tests/test_soft_copy_finalization.py tests/test_soft_copy_claim_provenance.py",
+        "result": "passed: 76 tests in 2.55s; includes the prior 19 soft-copy/regeneration provenance regressions"
+      }
+    ],
+    "full_local_suite_same_implementation_tree": {
+      "result": "5972 passed, 1 skipped, 24 subtests passed; 4 Windows environment/timing failures (two path-length limits, one sub-microsecond runtime threshold, one zero-duration benchmark median)"
+    }
+  },
+  "reports": [
+    {
+      "publisher": "KPMG",
+      "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+      "source_content_md5": "2acb4a56e14add5d7717f34c378f9091",
+      "source_content_sha256": "a97f4478327c50e9815102de229ad35bc22c3dce8f88cd49a75027e16ea08589",
+      "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "git_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+      "admission_outcome": "admitted",
+      "workflow_attempt_count": 1,
+      "final_state": "awaiting_review",
+      "awaiting_review": true,
+      "validation": "pass",
+      "publication_readiness": "pass",
+      "bounded_automatic_repair": false,
+      "operator_intervention": false,
+      "repair_provider_events": [
+        {
+          "stage": "validation_grounding_model_repair",
+          "count": 1
+        }
+      ],
+      "model_provider_calls": 32,
+      "input_tokens": 291196,
+      "output_tokens": 39543,
+      "cost_usd": 0.048892,
+      "duration_seconds": 358.328,
+      "terminal_failure_code": "",
+      "failure_diagnostic": null,
+      "queue_failures": [],
+      "canonical_artifacts_json": [
+        "output\\kpmg-2026-global-ma-outlook-pdf\\report_analysis\\artifacts.json"
+      ],
+      "retained_soft_copy_claims_assertion": "pass",
+      "provenance_error_codes_observed": [],
+      "usage_error_codes": [],
+      "isolated_run_reference": "KPMG/ias-first-attempt-ojro5u7s",
+      "source_domain": "kpmg.com",
+      "report_name": "2026 Global M&A Outlook",
+      "landing_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "source_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "downloaded_at_utc": "2026-06-10T21:56:38.335410+00:00",
+      "validation_stage_repair_dispositions": []
+    },
+    {
+      "publisher": "Adjust",
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "source_content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_content_sha256": "ffbaadb6a91b99aec5cfacdbf8b1059046b0fcdeff49fac1eb3a3edfe9f0c7d3",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "git_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+      "admission_outcome": "admitted",
+      "workflow_attempt_count": 1,
+      "final_state": "failed",
+      "awaiting_review": false,
+      "validation": "fail",
+      "publication_readiness": "fail",
+      "bounded_automatic_repair": true,
+      "operator_intervention": false,
+      "repair_provider_events": [
+        {
+          "stage": "validation_grounding_model_repair",
+          "count": 4
+        }
+      ],
+      "model_provider_calls": 40,
+      "input_tokens": 371154,
+      "output_tokens": 60314,
+      "cost_usd": 0.066703,
+      "duration_seconds": 537.75,
+      "terminal_failure_code": "validation_failed",
+      "failure_diagnostic": {
+        "stage": "semantic_validation",
+        "outer_code": "validation_failed",
+        "inner_error_class": "",
+        "validator_rule": "numbers",
+        "artifact_family": "expert_comment",
+        "claim_or_entity_id": "soft_copy:expert_comment:0843e807700038f1",
+        "repair_attempt": 1,
+        "error_context": {
+          "affected_section": "expert_comment"
+        },
+        "finding": "The numbers validator rejected unsupported numeric claim 1016.8 in expert_comment; retained validation.json listed no evidence IDs.",
+        "automatic_targeted_repair_attempts": 1
+      },
+      "queue_failures": [
+        {
+          "queue": "report_render",
+          "job_type": "report_render.v1",
+          "error_code": "validation_failed",
+          "error_summary": "validation_failed",
+          "terminal_reason": "validation_failed"
+        }
+      ],
+      "canonical_artifacts_json": [
+        "output\\mobile-app-trends-2026-pdf\\report_analysis\\artifacts.json"
+      ],
+      "retained_soft_copy_claims_assertion": "pass",
+      "provenance_error_codes_observed": [],
+      "usage_error_codes": [],
+      "isolated_run_reference": "Adjust/ias-first-attempt-c766oeas",
+      "source_domain": "www.adjust.com",
+      "report_name": "mobile-app-trends-2026-pdf",
+      "landing_page_url": "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+      "source_page_url": "https://www.adjust.com/resources/ebooks",
+      "downloaded_at_utc": "2026-07-24T06:25:52.296472+00:00",
+      "validation_stage_repair_dispositions": [
+        {
+          "stage": "grounding_validation",
+          "disposition": "targeted_repair",
+          "count": 1
+        },
+        {
+          "stage": "regeneration",
+          "disposition": "targeted_repair",
+          "count": 1
+        },
+        {
+          "stage": "semantic_validation",
+          "disposition": "targeted_repair",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "publisher": "Algolia",
+      "source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf",
+      "source_content_md5": "86858bdcb370266f26c29b40316a4db0",
+      "source_content_sha256": "d00f64fbeed9f004ca391f3195bf7f8d43804c08040da3ca3ec3a19e4771ab50",
+      "source_identity_id": "source:4ea9ae5709898e763efb0945d8d4fa1e",
+      "report_id": "cohort-86858bdcb370266f26c2",
+      "git_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+      "admission_outcome": "admitted",
+      "workflow_attempt_count": 1,
+      "final_state": "awaiting_review",
+      "awaiting_review": true,
+      "validation": "pass",
+      "publication_readiness": "pass",
+      "bounded_automatic_repair": true,
+      "operator_intervention": false,
+      "repair_provider_events": [
+        {
+          "stage": "validation_grounding_model_repair",
+          "count": 2
+        }
+      ],
+      "model_provider_calls": 36,
+      "input_tokens": 304529,
+      "output_tokens": 38200,
+      "cost_usd": 0.04927,
+      "duration_seconds": 444.609,
+      "terminal_failure_code": "",
+      "failure_diagnostic": null,
+      "queue_failures": [],
+      "canonical_artifacts_json": [
+        "output\\2026-20b2c-20ecommerce-20ai-20trends-ebook-en-2-pdf\\report_analysis\\artifacts.json"
+      ],
+      "retained_soft_copy_claims_assertion": "pass",
+      "provenance_error_codes_observed": [],
+      "usage_error_codes": [],
+      "isolated_run_reference": "Algolia/ias-first-attempt-3mie25b8",
+      "source_domain": "www.algolia.com",
+      "report_name": "2026%20B2C%20ecommerce%20AI%20trends eBook EN 2",
+      "landing_page_url": "https://www.algolia.com/resources/asset/ebook-2026-b2c-ecommerce-ai-trends",
+      "source_page_url": "https://www.algolia.com/resources?reports=",
+      "downloaded_at_utc": "2026-07-06T08:00:41Z",
+      "validation_stage_repair_dispositions": [
+        {
+          "stage": "grounding_validation",
+          "disposition": "targeted_repair",
+          "count": 1
+        },
+        {
+          "stage": "regeneration",
+          "disposition": "targeted_repair",
+          "count": 1
+        },
+        {
+          "stage": "semantic_validation",
+          "disposition": "targeted_repair",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "publisher": "Criteo",
+      "source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf",
+      "source_content_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "source_content_sha256": "17cf2e92c8804e35274faf3dd416db2fe6e4a81d7aa92418ada8ba90ee77c00c",
+      "source_identity_id": "source:81027fd399837b2cbd3cefa2abca222b",
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "git_sha": "54745e9b19c93469f6a422df387cb842462c3fc0",
+      "admission_outcome": "admitted",
+      "workflow_attempt_count": 1,
+      "final_state": "failed",
+      "awaiting_review": false,
+      "validation": "fail",
+      "publication_readiness": "fail",
+      "bounded_automatic_repair": false,
+      "operator_intervention": false,
+      "repair_provider_events": [
+        {
+          "stage": "artifact_summary_model_repair",
+          "count": 1
+        }
+      ],
+      "model_provider_calls": 20,
+      "input_tokens": 194131,
+      "output_tokens": 39945,
+      "cost_usd": 0.039386,
+      "duration_seconds": 275.985,
+      "terminal_failure_code": "card_tldr_compact_invalid",
+      "failure_diagnostic": {
+        "stage": "report_pipeline",
+        "outer_code": "card_tldr_compact_invalid",
+        "inner_error_class": "",
+        "validator_rule": "",
+        "artifact_family": "",
+        "claim_or_entity_id": "",
+        "repair_attempt": 0,
+        "error_context": {
+          "field": "summary.card_tldr_compact"
+        },
+        "finding": "Artifact generation rejected summary.card_tldr_compact because it did not satisfy the complete-sentence, 1-to-18-word contract. Canonical artifacts.json was never retained.",
+        "compact_tldr_word_count": "not_exposed_by_terminal_diagnostic"
+      },
+      "queue_failures": [
+        {
+          "queue": "report_analysis",
+          "job_type": "report_analysis.v1",
+          "error_code": "card_tldr_compact_invalid",
+          "error_summary": "summary.card_tldr_compact must be a complete sentence of 1 to 18 words",
+          "terminal_reason": "card_tldr_compact_invalid"
+        }
+      ],
+      "canonical_artifacts_json": [],
+      "retained_soft_copy_claims_assertion": "not_executable_canonical_artifacts_missing",
+      "provenance_error_codes_observed": [],
+      "usage_error_codes": [],
+      "isolated_run_reference": "Criteo/ias-first-attempt-u6ydt0cg",
+      "source_domain": "www.criteo.com",
+      "report_name": "The Advertiser Guide to New and Emerging Channels for 2023",
+      "landing_page_url": "https://www.criteo.com/wp-content/uploads/2023/01/Agency-Guide-Report-Criteo.pdf",
+      "source_page_url": "https://www.criteo.com/resources?format=Data+Report%2CGuide%2CIndustry+Report",
+      "downloaded_at_utc": "2026-06-10T22:22:21.988580+00:00",
+      "validation_stage_repair_dispositions": []
+    }
+  ]
+}
