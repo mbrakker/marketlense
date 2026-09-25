@@ -340,3 +340,60 @@ def test_doubleverify_safe_removal_rejects_unsupported_numeric_retained_candidat
 
     assert error.value.code == "insight_safe_removal_no_replacement"
     assert execution.state.prompt_namespaces == []
+
+
+def test_candidate_gate_authorizes_only_the_deliberately_removed_insight() -> None:
+    case = _case("doubleverify")
+    removed_id = "insight-regional-attention-index"
+    candidate = deepcopy(case["artifacts"])
+    for section in ("insights_candidates", "insights_final"):
+        candidate[section] = [
+            item for item in candidate[section] if item["id"] != removed_id
+        ]
+    replacement = {
+        "id": "independent-retained-finding",
+        "text": "The source describes a separate channel comparison method.",
+        "evidence_id": "independent-retained-finding",
+        "evidence": "The source describes a separate channel comparison method.",
+        "pages": [12],
+    }
+    for section in ("insights_candidates", "insights_final"):
+        candidate[section].append(deepcopy(replacement))
+    case["evidence_packs"]["doc_map"]["sections"].append(
+        {"id": replacement["id"], "summary": replacement["evidence"], "pages": [12]}
+    )
+
+    denied = _candidate_check(case, candidate)
+    allowed = validate_regeneration_candidate(
+        current_artifacts=case["artifacts"],
+        candidate_artifacts=candidate,
+        evidence_packs=case["evidence_packs"],
+        ctx=_context(),
+        removed_insight_ids=(removed_id,),
+    )
+    assert not denied.passed
+    assert allowed.passed
+    assert any(
+        item.entity_id == removed_id and not item.candidate_evidence_ids
+        for item in allowed.evidence_lineage
+    )
+
+    candidate["insights_final"].append(
+        next(
+            deepcopy(item)
+            for item in case["artifacts"]["insights_final"]
+            if item["id"] == removed_id
+        )
+    )
+    reintroduced = validate_regeneration_candidate(
+        current_artifacts=case["artifacts"],
+        candidate_artifacts=candidate,
+        evidence_packs=case["evidence_packs"],
+        ctx=_context(),
+        removed_insight_ids=(removed_id,),
+    )
+    assert not reintroduced.passed
+    assert any(
+        issue.rule_id == "regeneration_removed_insight_reintroduced"
+        for issue in reintroduced.issues
+    )

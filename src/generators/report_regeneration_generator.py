@@ -70,6 +70,7 @@ from src.services import prompt_service, report_analysis_store_service
 from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import string_value as _s
+from src.utils.editorial_identity import failed_insight_id
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_text as _dump_json
 from src.utils.logging import child_context, log_event
@@ -1928,18 +1929,6 @@ _INSIGHT_METRIC_PROVENANCE_FIELDS = (
 )
 
 
-def _resolve_failed_insight_id(issue: RegenerationIssue) -> str:
-    entity_id = _s(issue.entity_id).strip()
-    if entity_id.startswith("insight:"):
-        parts = [part for part in entity_id.split(":") if part.strip()]
-        if len(parts) >= 2:
-            return parts[1].split(".", 1)[0].strip()
-    affected = _s(issue.affected_section).strip()
-    if affected.casefold().startswith("insights:"):
-        return affected.split(":", 1)[1].split("~", 1)[0].split(".", 1)[0].strip()
-    return ""
-
-
 def _restore_failed_insight_metrics_deterministically(
     execution: _RegenerationHandlerExecution,
 ) -> bool:
@@ -1969,7 +1958,7 @@ def _restore_failed_insight_metrics_deterministically(
                 retained_by_id.setdefault(insight_id, insight)
     corrected_any = False
     for issue in execution.target.issues:
-        insight_id = _resolve_failed_insight_id(issue)
+        insight_id = failed_insight_id(issue.entity_id, issue.affected_section)
         if not insight_id:
             return False
         target_insight = next(
@@ -2127,7 +2116,8 @@ def _remove_failed_insight_with_retained_replacement(
     """Remove one failed stable ID and fill its slot from retained source copy."""
 
     failed_ids = {
-        _resolve_failed_insight_id(issue) for issue in execution.target.issues
+        failed_insight_id(issue.entity_id, issue.affected_section)
+        for issue in execution.target.issues
     }
     failed_ids.discard("")
     final_ids = {

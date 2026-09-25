@@ -73,6 +73,7 @@ def validate_regeneration_candidate(
     candidate_artifacts: dict[str, Any],
     evidence_packs: dict[str, Any],
     ctx: RunContext,
+    removed_insight_ids: Sequence[str] = (),
 ) -> CandidateIntegrityResult:
     """Validate candidate schema, IDs, source pages, and material continuity.
 
@@ -148,6 +149,23 @@ def validate_regeneration_candidate(
     )
     candidate_by_key = {record.key: record for record in candidate_records}
     current_by_key = {record.key: record for record in current_records}
+    authorized_removals = {
+        value.strip() for value in removed_insight_ids if value.strip()
+    }
+
+    for insight_id in sorted(authorized_removals):
+        for section in ("insights_candidates", "insights_final"):
+            if (section, insight_id) in candidate_by_key:
+                issues.append(
+                    issue(
+                        rule_id="regeneration_removed_insight_reintroduced",
+                        message="Deliberately removed insight ID reappeared in the candidate.",
+                        severity="error",
+                        section=f"{section}:{insight_id}",
+                        repair_target="insights_bundle",
+                        entity_id=insight_id,
+                    )
+                )
 
     for record in candidate_records:
         if not record.material:
@@ -188,6 +206,12 @@ def validate_regeneration_candidate(
             continue
         candidate = candidate_by_key.get(key)
         if candidate is not None and candidate.evidence_ids:
+            continue
+        if (
+            candidate is None
+            and original.entity_kind in {"insights_candidates", "insights_final"}
+            and original.entity_id in authorized_removals
+        ):
             continue
         if _has_unique_evidence_continuity_match(original, candidate_records):
             continue

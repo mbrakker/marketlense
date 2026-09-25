@@ -51,6 +51,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.utils.cache_utils import sha256_json
+from src.utils.editorial_identity import failed_insight_id
 from src.utils.logging import child_context, log_event
 
 __all__ = [
@@ -897,6 +898,13 @@ def _run_validation_regeneration_loop(
                 candidate_artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 ctx=attempt_ctx,
+                removed_insight_ids=tuple(
+                    failed_insight_id(issue.entity_id, issue.affected_section)
+                    for target in plan.targets
+                    if target.target_section == "insights_bundle"
+                    and target.repair_action == "REMOVE_CLAIM"
+                    for issue in target.issues
+                ),
             )
             if candidate_enforced
             else CandidateIntegrityResult(issues=[], evidence_lineage=[])

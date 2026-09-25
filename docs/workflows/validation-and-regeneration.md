@@ -99,6 +99,10 @@ member or generate replacement prose. The ordinary candidate and full
 validation gates still decide promotion. The planner fingerprints removal with
 its empty selected-evidence set, so a rejected removal exhausts that strategy
 instead of presenting the same stable-ID deletion again.
+The candidate continuity gate receives the planned atomic removal ID and
+permits only that missing insight binding. It records the removed item in
+lineage and rejects its reintroduction; schema, reference, source-page,
+derived-root, and all other continuity checks still apply.
 Insight and soft-copy repairs may also change their deterministic projections.
 The candidate gate recomputes the changed metric spine, key figures, chart
 cards, executive advisory, and claim ledger from the candidate's canonical
