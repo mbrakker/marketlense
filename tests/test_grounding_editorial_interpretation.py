@@ -326,3 +326,114 @@ def test_grounding_fails_closed_for_underspecified_editorial_rejections(
     assert len(issues) == 1
     assert issues[0].severity == "error"
     assert "unsupported_factual_claim" in issues[0].message
+
+
+def _identity_grounding_payload(title: str, publisher: str = "", doc_map=None):
+    from dataclasses import replace
+
+    report = replace(_report(), title=title, publisher=publisher)
+    artifacts = _artifacts_for("expert_comment", "Expert comment.")
+    return grounding_payload(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="identity-grounding",
+            report=report,
+            artifacts=artifacts,
+            evidence_packs={
+                "doc_map": (
+                    doc_map
+                    if doc_map is not None
+                    else {
+                        "title": "Quarterly Benchmarks Q1 2026",
+                        "publisher": "Canonical Publisher Inc.",
+                    }
+                )
+            },
+        ),
+        artifacts,
+    )
+
+
+def test_canonical_report_identity_is_not_sent_for_probabilistic_grounding() -> None:
+    payload = _identity_grounding_payload(
+        "QuarterlyBenchmarksQ1 2026", "Canonical Publisher Inc."
+    )
+
+    assert "title" not in payload
+    assert "publisher" not in payload
+    assert not {"metadata:title", "metadata:publisher"} & {
+        item["item_id"] for item in payload["public_factual_items"]
+    }
+
+
+def test_canonical_identity_matching_accepts_policy_normalized_forms() -> None:
+    payload = _identity_grounding_payload(
+        " quarterly-benchmarks q1 2026 ", "CANONICAL-PUBLISHER, INC."
+    )
+
+    assert not {"metadata:title", "metadata:publisher"} & {
+        item["item_id"] for item in payload["public_factual_items"]
+    }
+
+
+@pytest.mark.parametrize(
+    ("title", "publisher", "doc_map", "expected"),
+    [
+        (
+            "Different Report Q1 2026",
+            "Canonical Publisher Inc.",
+            None,
+            {"metadata:title"},
+        ),
+        ("Quarterly Report", "Canonical Publisher Inc.", None, {"metadata:title"}),
+        (
+            "Report",
+            "Canonical Publisher Inc.",
+            {"title": "Report", "publisher": "Canonical Publisher Inc."},
+            {"metadata:title"},
+        ),
+        (
+            "QuarterlyBenchmarksQ1 2026",
+            "Wrong Publisher",
+            None,
+            {"metadata:publisher"},
+        ),
+        (
+            "QuarterlyBenchmarksQ1 2026",
+            "Canonical Publisher Inc.",
+            {},
+            {"metadata:title", "metadata:publisher"},
+        ),
+        (
+            "QuarterlyBenchmarksQ1 2026",
+            "Canonical Publisher Inc.",
+            {
+                "title": "Quarterly Benchmarks Q1 2026",
+                "document_title": "Other Report Q1 2026",
+                "publisher": "Canonical Publisher Inc.",
+            },
+            {"metadata:title"},
+        ),
+    ],
+)
+def test_unproven_or_mismatched_identity_remains_in_grounding_inventory(
+    title, publisher, doc_map, expected
+) -> None:
+    payload = _identity_grounding_payload(title, publisher, doc_map)
+
+    assert expected <= {item["item_id"] for item in payload["public_factual_items"]}
+
+
+def test_unrelated_candidate_changes_cannot_reintroduce_identity_grounding() -> None:
+    before = _identity_grounding_payload(
+        "QuarterlyBenchmarksQ1 2026", "Canonical Publisher Inc."
+    )
+    candidate = _identity_grounding_payload(
+        "QuarterlyBenchmarksQ1 2026", "Canonical Publisher Inc."
+    )
+
+    assert before == candidate
+    assert not any(
+        item["item_id"].startswith("metadata:")
+        for item in candidate["public_factual_items"]
+    )

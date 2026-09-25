@@ -20,6 +20,7 @@ from src.contracts.soft_copy_claim_provenance import (
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.report_title_resolution_generator import is_generic_report_title
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -576,10 +577,16 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
         if isinstance(summary, dict)
         else [],
     }
+    title_is_canonical = _matches_canonical_doc_map_identity(
+        request.report.title, request.evidence_packs.get("doc_map"), field="title"
+    )
+    publisher_is_canonical = _matches_canonical_doc_map_identity(
+        request.report.publisher,
+        request.evidence_packs.get("doc_map"),
+        field="publisher",
+    )
     payload = {
         "tldr": request.report.tldr,
-        "title": request.report.title,
-        "publisher": request.report.publisher,
         "insights_final": insights,
         "quotes_final": artifacts.get("quotes_final")
         if isinstance(artifacts, dict)
@@ -595,14 +602,67 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
     # This remains one batched grounding call.  The explicit inventory prevents
     # public projections such as figures and downstream prose from becoming
     # invisible merely because they are not top-level analysis artifacts.
+    if not title_is_canonical and request.report.title:
+        payload["title"] = request.report.title
+    if not publisher_is_canonical and request.report.publisher:
+        payload["publisher"] = request.report.publisher
     payload["public_factual_items"] = _public_factual_items(
         artifacts=artifacts,
-        report_title=request.report.title,
-        publisher=request.report.publisher,
+        report_title=("" if title_is_canonical else request.report.title),
+        publisher=("" if publisher_is_canonical else request.report.publisher),
         insights=insights,
         summary=summary_clean,
     )
     return payload
+
+
+def _matches_canonical_doc_map_identity(
+    public_value: object, doc_map: object, *, field: str
+) -> bool:
+    """Match only an unambiguous, non-generic DocMap identity value."""
+    public_key = _identity_match_key(public_value)
+    if not public_key or not isinstance(doc_map, dict):
+        return False
+    candidate = doc_map
+    for key in ("doc_map", "docmap", "docMap"):
+        wrapped = doc_map.get(key)
+        if isinstance(wrapped, dict):
+            candidate = wrapped
+            break
+    document = candidate.get("document")
+    document = document if isinstance(document, dict) else {}
+    aliases = (
+        ("title", "report_title", "document_title", "document_name", "name")
+        if field == "title"
+        else (
+            "publisher", "document_publisher", "document_organization",
+            "document_organisation", "organization", "organisation",
+        )
+    )
+    values = [str(candidate.get(key) or "").strip() for key in aliases]
+    if field == "title":
+        values.extend(
+            str(document.get(key) or "").strip()
+            for key in ("title", "name")
+        )
+    else:
+        values.extend(
+            str(document.get(key) or "").strip()
+            for key in ("publisher", "organization", "organisation")
+        )
+    values = [value for value in values if value]
+    canonical_keys = {_identity_match_key(value) for value in values}
+    if len(canonical_keys) != 1:
+        return False
+    canonical_value = values[0]
+    if field == "title" and is_generic_report_title(canonical_value):
+        return False
+    return public_key == next(iter(canonical_keys))
+
+
+def _identity_match_key(value: object) -> str:
+    """Apply the punctuation/casing normalization used by source title matching."""
+    return re.sub(r"[^a-z0-9]", "", s(value).casefold())
 
 
 def _public_factual_items(

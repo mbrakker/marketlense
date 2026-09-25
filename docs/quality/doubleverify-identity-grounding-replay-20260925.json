@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "base_code_sha": "dfac595af7b9a0dbe655c30c0ca4f1450130c1f8",
+  "retained_run": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0",
+  "report_analysis_path": "tmp\\doubleverify-closure-canary-20260925\\ias-first-attempt-kua5gsl0\\output\\dv-qualityandattentionbenchmark-q1-2026-pdf\\report_analysis",
+  "replay": "Deterministic grounding payload construction from retained original and candidate_1 artifacts; no external/provider call.",
+  "candidate_scope": [
+    "expert_comment",
+    "linkedin_post"
+  ],
+  "public_title": "QuarterlyBenchmarksQ1 2026",
+  "canonical_doc_map_title": "Quarterly Benchmarks Q1 2026",
+  "normalized_title_key": "quarterlybenchmarksq12026",
+  "public_publisher": "",
+  "canonical_doc_map_publisher": "",
+  "title_unchanged_across_original_and_candidate": true,
+  "publisher_unchanged_across_original_and_candidate": true,
+  "initial_validation_issue_ids": [
+    "artifact_quality:expert_comment",
+    "artifact_quality:summary.tldr",
+    "artifact_quality:summary.executive_summary",
+    "metrics:insights:q1-regional-ad-attention-index",
+    "metrics:insights:q1-regional-ad-attention-index",
+    "public_editorial_quality.metric_label_relationship:soft_copy:expert_comment:48d499ca7ce4fa59",
+    "public_editorial_quality.metric_label_relationship:soft_copy:linkedin_post:00af9c6339c40c80"
+  ],
+  "candidate_1_before_issue_ids": [
+    "artifact_quality:summary.executive_summary",
+    "artifact_quality:summary.tldr",
+    "grounding:metadata.title",
+    "metrics:insights:q1-regional-ad-attention-index",
+    "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:af6e36a977754ce4"
+  ],
+  "candidate_1_after_grounding_metadata_issue_ids": [],
+  "candidate_1_after_metadata_identity_items": [],
+  "candidate_1_after_provider_payload_has_title_or_publisher": false,
+  "unchanged_family_sha256": {
+    "summary": "64cc32db8e60458f0e95bb2f73edb2ee53e44896b01189b55aacad5e7822d899",
+    "insights_candidates": "fd793a9175e3ab7c29475a0bf88335504e000ffaf1753ead6ff43059b0d401a4",
+    "insights_final": "7e23b282a061d0c02fde6e72a3ea95265d610f9762b746e0a0fa9230ccabe7bf",
+    "quotes_final": "b3d25ac9b35a1d8043634ec64f61ad5415e6f90d4ef6922f8a34da4a2fcfd39c"
+  },
+  "retained_artifact_sha256": {
+    "original_artifacts.json": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b",
+    "candidate_1_artifacts.json": "411383b30aec0b88adb4e89b1fa8180360ff5ba5e8f4ec22f4b3760f1569d3f7",
+    "doc_map.json": "e6278958fc24acdab218095d693ff9ebf40118f8fec71604f18ee0ff4f3f7e22",
+    "candidate_1_validation.json": "bd3d946373535302705af50ed0c29ea95a47b6e067dc88081408b316ea512472"
+  },
+  "artifacts_modified_by_replay": false,
+  "scope_note": "Replay verifies grounding payload identity suppression and retained value equality. Other candidate validation findings are retained in candidate_1_before_issue_ids and were not re-evaluated by this focused deterministic replay.",
+  "grounding_rejected_value": "QuarterlyBenchmarksQ1 2026",
+  "grounding_rejected_issue_id": "grounding:metadata.title"
+}

@@ -6,6 +6,15 @@
 
 The report pipeline produces source-attributed HTML and structured report artifacts. Editorial content is generated from validated report evidence and is subject to schema, completeness, and publication validation before WordPress side effects occur.
 
+Report identity grounding uses the retained DocMap as a deterministic authority.
+When the public title or publisher matches one unambiguous canonical DocMap value
+under the established identity normalization, the grounding provider does not
+adjudicate that identity as an evidence claim. Generic titles, conflicting or
+missing DocMap identity, and public values that differ from the canonical value
+remain subject to the existing identity and publication-readiness checks. This
+prevents unrelated artifact regeneration from changing title or publisher
+grounding outcomes; it does not relax metadata fidelity requirements.
+
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
 The single Editorial Plan treats the DocMap as the authority for report breadth.
