@@ -87,6 +87,16 @@ claim removal and source-bound corrections do not construct a model client. The
 candidate integrity, retained-claim, full validation, public-editorial, readiness, and
 promotion gates remain authoritative; a candidate that changes an undeclared artifact
 root is rejected as `regeneration_scope_violation` before promotion.
+For an atomic failed final insight, `REMOVE_CLAIM/safe_removal` resolves its
+stable ID from the validation issue, excludes that ID from both final and
+candidate pools, and leaves sibling insights and their shared evidence intact.
+It makes no insight-model call. A required final slot is filled only by a
+distinct retained candidate or finding with a known evidence ID, matching
+source pages, compatible protected facts, and no deterministic public-editorial
+issue. If none qualifies, regeneration fails with
+`insight_safe_removal_no_replacement`; it does not restore the removed roster
+member or generate replacement prose. The ordinary candidate and full
+validation gates still decide promotion.
 Insight and soft-copy repairs may also change their deterministic projections.
 The candidate gate recomputes the changed metric spine, key figures, chart
 cards, executive advisory, and claim ledger from the candidate's canonical

@@ -18,8 +18,8 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
-    soft_copy_material_sentences,
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
     valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationRequest
@@ -61,6 +61,9 @@ from src.generators.evidence_compatibility import (
     rank_compatible_alternatives,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.public_editorial_quality_generator import (
+    evaluate_public_editorial_quality,
+)
 from src.generators.validation.evidence import retrieve_evidence_windows
 from src.generators.validation.preparation import prepare_validation_inputs
 from src.services import prompt_service, report_analysis_store_service
@@ -1931,9 +1934,9 @@ def _resolve_failed_insight_id(issue: RegenerationIssue) -> str:
         parts = [part for part in entity_id.split(":") if part.strip()]
         if len(parts) >= 2:
             return parts[1].split(".", 1)[0].strip()
-    affected = _s(issue.affected_section).strip().casefold()
-    if affected.startswith("insights:"):
-        return affected.split(":", 1)[1].split(".", 1)[0].strip()
+    affected = _s(issue.affected_section).strip()
+    if affected.casefold().startswith("insights:"):
+        return affected.split(":", 1)[1].split("~", 1)[0].split(".", 1)[0].strip()
     return ""
 
 
@@ -2028,6 +2031,9 @@ def _restore_failed_insight_metrics_deterministically(
 def _handle_insights_bundle_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
+    if _uses_safe_removal(execution):
+        _remove_failed_insight_with_retained_replacement(execution)
+        return
     if _restore_failed_insight_metrics_deterministically(execution):
         return
     candidates_namespace, final_namespace = execution.handler.prompt_namespaces
@@ -2113,6 +2119,153 @@ def _handle_insights_bundle_regeneration(
         ["insights_candidates", "insights_final"]
     )
     execution.state.prompt_namespaces.extend([candidates_namespace, final_namespace])
+
+
+def _remove_failed_insight_with_retained_replacement(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    """Remove one failed stable ID and fill its slot from retained source copy."""
+
+    failed_ids = {
+        _resolve_failed_insight_id(issue) for issue in execution.target.issues
+    }
+    failed_ids.discard("")
+    final_ids = {
+        _s(item.get("id")).strip()
+        for item in execution.state.insights_final
+        if isinstance(item, dict)
+    }
+    if len(failed_ids) != 1 or not failed_ids <= final_ids:
+        raise AppError(
+            code="insight_safe_removal_target_unresolved",
+            message="Safe removal requires one existing failed final insight ID.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    failed_id = next(iter(failed_ids))
+    retained_final = [
+        deepcopy(item)
+        for item in execution.state.insights_final
+        if isinstance(item, dict) and _s(item.get("id")).strip() != failed_id
+    ]
+    retained_candidates = [
+        deepcopy(item)
+        for item in execution.state.insights_candidates
+        if isinstance(item, dict) and _s(item.get("id")).strip() != failed_id
+    ]
+    target_count = max(
+        REQUIRED_REPORT_PAYLOAD_INSIGHTS,
+        len(execution.state.editorial_plan["themes"]),
+    )
+    evidence_by_id = _retained_evidence_entries_by_id(
+        execution.runtime.safe_evidence, execution.runtime.safe_doc_map
+    )
+    pool = [
+        *retained_candidates,
+        *fallback_artifact_insights_from_findings(
+            execution.runtime.safe_evidence.get("findings"), limit=target_count * 2
+        ),
+    ]
+    selected = retained_final
+    replacement = None
+    if len(selected) < target_count:
+        occupied_ids = {_s(item.get("id")).strip() for item in selected}
+        for candidate in pool:
+            candidate_id = _s(candidate.get("id")).strip()
+            evidence_id = _normalized_evidence_id(candidate.get("evidence_id"))
+            if (
+                not candidate_id
+                or candidate_id == failed_id
+                or candidate_id in occupied_ids
+                or not _s(candidate.get("text")).strip()
+                or not _s(candidate.get("evidence")).strip()
+                or evidence_id not in evidence_by_id
+            ):
+                continue
+            support = evidence_by_id[evidence_id]
+            support_pages = set(support.get("pages") or [])
+            candidate_pages = set(candidate.get("pages") or [])
+            if support_pages and (
+                not candidate_pages or not candidate_pages <= support_pages
+            ):
+                continue
+            compatible = rank_compatible_alternatives(
+                CompatibilityQuery(
+                    text=_s(candidate.get("text")),
+                    metric=candidate.get("metric")
+                    if isinstance(candidate.get("metric"), dict)
+                    else {},
+                    pages=tuple(candidate_pages),
+                ),
+                [
+                    (
+                        evidence_id,
+                        {"text": candidate["evidence"], "pages": list(candidate_pages)},
+                    )
+                ],
+                limit=1,
+            )
+            if not compatible:
+                continue
+            proposed = select_artifact_insights(
+                final_insights=[*retained_final, candidate],
+                candidate_insights=[],
+                editorial_plan=execution.state.editorial_plan,
+            )
+            if len(proposed) != target_count or candidate_id not in {
+                _s(item.get("id")).strip() for item in proposed
+            }:
+                continue
+            quality = evaluate_public_editorial_quality(
+                report_id=execution.runtime.request.report_id,
+                artifacts={"insights_final": proposed},
+            )
+            if any(
+                issue.affected_artifact == "insights_final" for issue in quality.issues
+            ):
+                continue
+            selected = proposed
+            replacement = deepcopy(candidate)
+            break
+        if replacement is None:
+            raise AppError(
+                code="insight_safe_removal_no_replacement",
+                message=(
+                    "No distinct supported retained insight can fill the removed "
+                    "final slot."
+                ),
+                retryable=False,
+                context={
+                    "report_id": execution.runtime.request.report_id,
+                    "insight_id": failed_id,
+                },
+            )
+    execution.state.insights_candidates = retained_candidates
+    if replacement is not None and _s(replacement.get("id")).strip() not in {
+        _s(item.get("id")).strip() for item in retained_candidates
+    }:
+        execution.state.insights_candidates.append(replacement)
+    execution.state.insights_final = selected
+    execution.state.regenerated_sections.extend(
+        ["insights_candidates", "insights_final"]
+    )
+    execution.state.deterministic_repairs.append("safe_removal")
+    logger.info(
+        log_event(
+            execution.target_ctx,
+            role="generator",
+            event="artifact_regeneration_insight_removed",
+            module=logger.name,
+            fields={
+                "report_id": execution.runtime.request.report_id,
+                "removed_insight_id": failed_id,
+                "replacement_insight_id": _s(replacement.get("id"))
+                if replacement
+                else "",
+                "model_calls": 0,
+            },
+        )
+    )
 
 
 def _handle_report_identity_regeneration(
