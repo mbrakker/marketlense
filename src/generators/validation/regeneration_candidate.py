@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
+from src.contracts.claim_validation import ClaimValidationResult
 from src.contracts.regeneration import RegenerationEvidenceLineage
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
@@ -24,6 +25,7 @@ from src.generators._artifact_generator.storage import (
     derive_metric_spine_from_insights,
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.soft_copy_claim_provenance import (
     retained_soft_copy_claims_cover_text,
 )
@@ -138,6 +140,12 @@ def validate_regeneration_candidate(
         evidence_packs=evidence_packs,
         issues=issues,
     )
+    _validate_changed_soft_copy_quantities(
+        current_artifacts=current_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
+        issues=issues,
+    )
     candidate_by_key = {record.key: record for record in candidate_records}
     current_by_key = {record.key: record for record in current_records}
 
@@ -207,6 +215,66 @@ def validate_regeneration_candidate(
         issues=issues,
         evidence_lineage=lineage,
         verified_derived_roots=verified_derived_roots,
+    )
+
+
+def _validate_changed_soft_copy_quantities(
+    *,
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    evidence_packs: dict[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    """Use retained-claim checks for numeric factual copy changed by repair."""
+
+    current_claims, _ = _soft_copy_claims(current_artifacts)
+    candidate_claims, candidate_error = _soft_copy_claims(candidate_artifacts)
+    if candidate_error:
+        return  # The provenance check reports malformed or missing lineage.
+    changed = {
+        (claim.artifact_family, claim.claim_id): claim
+        for claim in candidate_claims
+        if claim not in current_claims and claim.classification == "factual"
+    }
+    if not changed:
+        return
+    package = validate_retained_claims(candidate_artifacts, evidence_packs)
+    for result in package.results:
+        claim = changed.get((result.candidate.source_family, result.candidate.claim_id))
+        if claim is None or not result.candidate.factual:
+            continue
+        if not _failed_numeric_support(result):
+            continue
+        issues.append(
+            ValidationIssue(
+                message=(
+                    "[regeneration_claim_support] Factual soft-copy quantity or "
+                    "timeframe is not entailed by its selected retained evidence."
+                ),
+                severity="error",
+                affected_section=f"{claim.artifact_family}:{claim.claim_id}",
+                rule_id="regeneration_claim_support",
+                repair_target=claim.artifact_family,
+                entity_id=claim.claim_id,
+                evidence_ids=list(claim.evidence_ids),
+            )
+        )
+
+
+def _failed_numeric_support(result: ClaimValidationResult) -> bool:
+    if result.candidate.kind != "numeric":
+        return False
+    return any(
+        check.status == "failed"
+        and check.name
+        in {
+            "number_value_unit_match",
+            "protected_fact_value_consistency",
+            "protected_fact_unit_currency_consistency",
+            "protected_fact_magnitude_consistency",
+            "protected_fact_timeframe_consistency",
+        }
+        for check in result.checks
     )
 
 

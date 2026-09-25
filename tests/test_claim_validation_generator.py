@@ -24,6 +24,41 @@ def test_retained_claim_validation_indexes_legacy_finding_excerpt() -> None:
     assert package.results[0].status == "supported"
 
 
+def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
+    claim = "Adjust data covers the top 5,000 apps."
+    package = validate_retained_claims(
+        {
+            "expert_comment": claim,
+            "soft_copy_claim_provenance": {
+                "schema_version": "1.0",
+                "claims": [
+                    _soft_copy_claim(
+                        artifact_family="expert_comment",
+                        text=claim,
+                        classification="factual",
+                        evidence_ids=["methodology"],
+                    )
+                ],
+            },
+        },
+        {
+            "doc_map": {
+                "sections": [
+                    {
+                        "id": "methodology",
+                        "title": "Methodology",
+                        "summary": "The report describes the analysis scope.",
+                        "key_points": ["Adjust data covers the top 5,000 apps."],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert package.results[0].status == "supported"
+    assert package.semantic_validation_count == 0
+
+
 def _evidence() -> dict:
     return {
         "findings": {

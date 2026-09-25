@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import replace
 from typing import List, Optional, Sequence, Tuple
 
 from src.contracts.report_models import ReportPayload
 from src.contracts.soft_copy_claim_provenance import (
-    soft_copy_material_sentences,
+    SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
 )
 from src.contracts.validation import ValidationIssue
-from src.utils.quantity import extract_quantities, should_ground_quantity
 from src.utils.errors import AppError
+from src.utils.quantity import extract_quantities, should_ground_quantity
 
 from .evidence import retrieve_evidence_windows, split_sentences
 from .models import EvidenceWindow, ValidationRuntime
@@ -50,7 +52,7 @@ def validate_new_numbers(
         insights, report, artifacts, evidence_texts
     )
     windows = list(evidence_windows or [])
-    soft_copy_claim_ids = _soft_copy_claim_ids_by_sentence(artifacts)
+    soft_copy_claims = _soft_copy_claims_by_sentence(artifacts)
     summary = artifacts.get("summary") if isinstance(artifacts, dict) else {}
     summary = summary if isinstance(summary, dict) else {}
     section_texts: List[Tuple[str, str]] = [
@@ -139,15 +141,17 @@ def validate_new_numbers(
                 if key in seen:
                     continue
                 seen.add(key)
+                claim = soft_copy_claims.get((section, _normalized_text_hash(sentence)))
                 issues.append(
-                    issue(
-                        rule_id=RULE_ID,
-                        message=f"Number {quantity.value} not present in report or evidence",
-                        severity=severity,
-                        section=section,
-                        entity_id=soft_copy_claim_ids.get(
-                            (section, _normalized_text_hash(sentence)), ""
+                    replace(
+                        issue(
+                            rule_id=RULE_ID,
+                            message=f"Number {quantity.value} not present in report or evidence",
+                            severity=severity,
+                            section=section,
+                            entity_id=claim.claim_id if claim else "",
                         ),
+                        evidence_ids=list(claim.evidence_ids) if claim else [],
                     )
                 )
         unsupported_pairs = unsupported_period_time_pairs(text, source_text)
@@ -196,7 +200,9 @@ def _rank_group_label_in_linked_evidence(
     )
 
 
-def _soft_copy_claim_ids_by_sentence(artifacts: object) -> dict[tuple[str, str], str]:
+def _soft_copy_claims_by_sentence(
+    artifacts: object,
+) -> dict[tuple[str, str], SoftCopyClaimProvenance]:
     """Keep a soft-copy validator failure claim-scoped for E13 regeneration."""
     if not isinstance(artifacts, dict):
         return {}
@@ -206,11 +212,17 @@ def _soft_copy_claim_ids_by_sentence(artifacts: object) -> dict[tuple[str, str],
         )
     except (AppError, TypeError, ValueError):
         return {}
-    return {
-        (claim.artifact_family, claim.text_hash): claim.claim_id
-        for claim in claims
-        if claim.artifact_family in {"expert_comment", "linkedin_post"}
-    }
+    mapped: dict[tuple[str, str], SoftCopyClaimProvenance] = {}
+    ambiguous: set[tuple[str, str]] = set()
+    for claim in claims:
+        if claim.artifact_family not in {"expert_comment", "linkedin_post"}:
+            continue
+        key = (claim.artifact_family, claim.text_hash)
+        if key in mapped:
+            ambiguous.add(key)
+        else:
+            mapped[key] = claim
+    return {key: claim for key, claim in mapped.items() if key not in ambiguous}
 
 
 def _normalized_text_hash(text: str) -> str:

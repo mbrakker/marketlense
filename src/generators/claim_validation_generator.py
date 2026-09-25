@@ -130,8 +130,11 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                         "evidence",
                         "excerpt",
                         "quote",
+                        "quote_text",
                         "description",
                         "summary",
+                        "title",
+                        "key_points",
                     )
                     if str(item.get(key) or "").strip()
                 )

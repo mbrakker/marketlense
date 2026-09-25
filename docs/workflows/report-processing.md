@@ -105,6 +105,17 @@ candidate audits for diagnosis. A rejected regeneration candidate therefore
 cannot be rendered as a public package or replace the artifact/validation pair
 from which the next bounded attempt is planned.
 
+Before a regeneration candidate can be promoted, the deterministic candidate
+gate checks changed factual soft-copy claims against their selected retained
+evidence using the retained-claim validator. A changed numeric claim whose
+value or unit is not entailed produces a claim-scoped
+`regeneration_claim_support` issue with its stable claim ID and evidence IDs.
+Interpretive and recommendation claims remain outside this factual quantity
+gate. The normal numbers, grounding, and semantic validators still run on the
+candidate; a failed candidate remains an audited snapshot and never replaces
+canonical `artifacts.json`. When a numbers issue has an unambiguous retained
+soft-copy claim, it carries that claim's evidence IDs for the repair planner.
+
 Inside the analysis validation loop, each targeted repair attempt plans the
 smallest mutable unit and resolves its strategy from an ordered, materially
 distinct ladder before any model call:

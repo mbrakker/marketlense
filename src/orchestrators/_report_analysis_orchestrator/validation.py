@@ -32,7 +32,6 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
-from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     merge_public_editorial_quality_validation,
@@ -889,10 +888,6 @@ def _run_validation_regeneration_loop(
             **regeneration_kwargs,
         )
         candidate_artifacts = regeneration_response.updated_artifacts
-        # Claim validation is deterministic here.  It enriches the repair
-        # diagnosis without replacing the existing candidate/full validators.
-        validate_retained_claims(working_artifacts, evidence_packs)
-        validate_retained_claims(candidate_artifacts, evidence_packs)
         artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
         candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
         candidate_enforced = bool(candidate_artifacts_path)

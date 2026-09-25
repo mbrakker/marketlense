@@ -15,7 +15,9 @@ from src.generators.artifact_normalization import (
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
 )
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.validation.metrics import validate_insight_metrics
+from src.generators.validation.numbers import validate_new_numbers
 from src.generators.validation.regeneration_candidate import (
     _verify_derived_artifact_roots,
     validate_regeneration_candidate,
@@ -23,6 +25,7 @@ from src.generators.validation.regeneration_candidate import (
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _scope_validation_report,
 )
+from tests._test_validation_generator._shared import _report
 
 _FIXTURE_ROOT = (
     Path(__file__).parent
@@ -331,6 +334,146 @@ def _refresh_repair_selection_hash(selection: dict[str, object]) -> None:
             hash_payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True
         ).encode("utf-8")
     ).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("replacement", "expected_pass"),
+    [
+        ("Adjust spend reached 1016.8 million in 2025.", False),
+        ("Adjust spend reached 1000.0 million in 2025.", True),
+        ("Adjust spend reached 1000.0 million in 2026.", False),
+    ],
+)
+def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
+    replacement: str, expected_pass: bool
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    original = "Adjust spend reached 999.0 million in 2025."
+    current["expert_comment"] = original
+    old_claim = _soft_copy_claim(
+        family="expert_comment", text=original, evidence_id="qc_002"
+    )
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [old_claim]
+    candidate = deepcopy(current)
+    candidate["expert_comment"] = replacement
+    repaired = _soft_copy_claim(
+        family="expert_comment", text=replacement, regeneration_attempt=1
+    )
+    repaired["repaired_from_claim_id"] = old_claim["claim_id"]
+    repaired["producing_prompt_identity"]["namespace"] = (
+        "report_vs/artifacts/regenerate/expert_comment"
+    )
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in candidate["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + [repaired]
+    selection = _complete_repair_selection(
+        original_claim_id=str(old_claim["claim_id"]),
+        repaired_claim_id=str(repaired["claim_id"]),
+    )
+    selection["strategy"] = "typed_compatibility_fallback"
+    selection["direct_evidence_ids"] = ["qc_002"]
+    selection["quarantined_evidence_ids"] = ["qc_002"]
+    selection["selected_evidence_entries"] = [
+        {
+            "id": "qc_001",
+            "page": 6,
+            "text": "Adjust spend reached 1000.0 million in 2025.",
+        }
+    ]
+    _refresh_repair_selection_hash(selection)
+    candidate["_repair_evidence_selection"] = {
+        f"expert_comment:{old_claim['claim_id']}": selection
+    }
+    for quote in evidence_packs["quote_candidates"]["quote_candidates"]:
+        if quote["id"] in {"qc_001", "qc_002"}:
+            source_value = "1000.0" if quote["id"] == "qc_001" else "900.0"
+            quote["quote_text"] = (
+                f"Adjust spend reached {source_value} million in 2025."
+            )
+
+    original_result = validate_retained_claims(current, evidence_packs)
+    assert any(
+        result.candidate.claim_id == old_claim["claim_id"]
+        and result.status == "unsupported"
+        and "quantity_not_entailed" in result.reasons
+        for result in original_result.results
+    )
+    number_issues = validate_new_numbers(
+        artifacts=current,
+        insights=[],
+        report=_report(),
+        evidence_texts=[
+            quote["quote_text"]
+            for quote in evidence_packs["quote_candidates"]["quote_candidates"]
+            if quote["id"] in {"qc_001", "qc_002"}
+        ],
+    )
+    assert any(
+        issue.affected_section == "expert_comment"
+        and issue.rule_id == "numbers"
+        and issue.entity_id == old_claim["claim_id"]
+        for issue in number_issues
+    )
+    sibling_before = _claim_for_family(current, "linkedin_post")
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert result.passed is expected_pass
+    assert _claim_for_family(candidate, "linkedin_post") == sibling_before
+    assert selection["quarantined_evidence_ids"] == ["qc_002"]
+    assert repaired["evidence_ids"] == ["qc_001"]
+    support_issues = [
+        issue
+        for issue in result.issues
+        if issue.rule_id == "regeneration_claim_support"
+    ]
+    if expected_pass:
+        assert not support_issues
+    else:
+        assert len(support_issues) == 1
+        assert support_issues[0].affected_section == (
+            f"expert_comment:{repaired['claim_id']}"
+        )
+        assert support_issues[0].entity_id == repaired["claim_id"]
+        assert support_issues[0].evidence_ids == ["qc_001"]
+
+
+def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    candidate["expert_comment"] = "Adjust could reach 1016.8 million."
+    claim = _soft_copy_claim(
+        family="expert_comment",
+        text=candidate["expert_comment"],
+        regeneration_attempt=1,
+    )
+    claim["classification"] = "interpretive"
+    candidate["soft_copy_claim_provenance"]["claims"] = [
+        retained
+        for retained in candidate["soft_copy_claim_provenance"]["claims"]
+        if retained["artifact_family"] != "expert_comment"
+    ] + [claim]
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert result.passed
+    assert not any(
+        issue.rule_id == "regeneration_claim_support" for issue in result.issues
+    )
 
 
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])

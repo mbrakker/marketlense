@@ -57,7 +57,48 @@ def test_number_issue_identifies_full_soft_copy_claim_with_us_initialism() -> No
     )
 
     assert any(
-        issue.affected_section == "expert_comment" and issue.entity_id == claim.claim_id
+        issue.affected_section == "expert_comment"
+        and issue.entity_id == claim.claim_id
+        and issue.evidence_ids == ["finding-1"]
+        for issue in issues
+    )
+
+
+def test_number_issue_omits_ambiguous_soft_copy_provenance() -> None:
+    sentence = "U.S. revenue reached $918 billion."
+    claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="expert_comment",
+            claim_id=f"soft_copy:expert_comment:{index}",
+            text_hash=sha256(sentence.encode()).hexdigest(),
+            classification="factual",
+            evidence_ids=(f"finding-{index}",),
+            source_spans=(),
+            producing_prompt_identity={
+                "namespace": "report_vs/artifacts/expert_comment"
+            },
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index in (1, 2)
+    ]
+
+    issues = validate_new_numbers(
+        artifacts={
+            "expert_comment": sentence,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(claims),
+        },
+        insights=[],
+        report=_report(),
+        evidence_texts=[],
+        evidence_windows=[],
+    )
+
+    assert any(
+        issue.affected_section == "expert_comment"
+        and not issue.entity_id
+        and not issue.evidence_ids
         for issue in issues
     )
 
