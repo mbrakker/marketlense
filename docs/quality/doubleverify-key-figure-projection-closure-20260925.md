@@ -103,7 +103,12 @@ Deterministic replay of the retained `artifacts.json` and candidate 3 with the
 current public-editorial-quality evaluator returns `pass` with no issue IDs.
 The retained pre-fix diagnostic had only
 `public_editorial_quality.metric_label_relationship:insights:q1-2026-emea-engagement-index`
-as a public-editorial-quality issue.
+as a public-editorial-quality issue. Replaying the retained candidate through
+`validate_report` in `inline_deterministic` mode, with its retained evidence
+packs and the already-closed invalid 50% key figure removed, returns `pass`
+with warning-only `family_confidence:quotes` and `artifact_quality:summary.tldr`
+plus informational `deferred_grounding_required:validation`. No provider call
+was made.
 
 ## Verification
 
