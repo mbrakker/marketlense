@@ -435,7 +435,9 @@ class RegenerationEvidenceLineage:
     """Evidence continuity retained for one material candidate entity."""
 
     entity_kind: str = field(
-        metadata={"doc": "Artifact family: summary_claim, insight, or quote."}
+        metadata={
+            "doc": "Artifact family: summary claim, insight, quote, or soft-copy claim."
+        }
     )
     entity_id: str = field(
         metadata={"doc": "Stable original claim or insight identity within its family."}

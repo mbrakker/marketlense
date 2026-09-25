@@ -115,6 +115,8 @@ gate. The normal numbers, grounding, and semantic validators still run on the
 candidate; a failed candidate remains an audited snapshot and never replaces
 canonical `artifacts.json`. When a numbers issue has an unambiguous retained
 soft-copy claim, it carries that claim's evidence IDs for the repair planner.
+Candidate audits also retain original and selected evidence IDs and source
+pages for each soft-copy claim, including a rejected numeric repair.
 
 Inside the analysis validation loop, each targeted repair attempt plans the
 smallest mutable unit and resolves its strategy from an ordered, materially

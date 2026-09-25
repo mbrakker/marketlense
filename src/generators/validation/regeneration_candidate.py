@@ -205,6 +205,9 @@ def validate_regeneration_candidate(
         candidate_records=candidate_records,
         issues=issues,
     )
+    lineage.extend(
+        _soft_copy_evidence_lineage(current_artifacts, candidate_artifacts, issues)
+    )
     verified_derived_roots, derived_issues = _verify_derived_artifact_roots(
         current_artifacts=current_artifacts,
         candidate_artifacts=candidate_artifacts,
@@ -898,6 +901,69 @@ def _build_lineage(
                 if candidate
                 else [],
                 validation_issues=_issues_for_record(issues, entity_kind, entity_id),
+            )
+        )
+    return lineage
+
+
+def _soft_copy_evidence_lineage(
+    current_artifacts: dict[str, Any],
+    candidate_artifacts: dict[str, Any],
+    issues: Sequence[ValidationIssue],
+) -> list[RegenerationEvidenceLineage]:
+    """Retain selected evidence for changed and removed public soft-copy claims."""
+
+    current_claims, _ = _soft_copy_claims(current_artifacts)
+    candidate_claims, _ = _soft_copy_claims(candidate_artifacts)
+    current_by_id = {claim.claim_id: claim for claim in current_claims}
+    linked_original_ids: set[str] = set()
+    lineage: list[RegenerationEvidenceLineage] = []
+    for claim in sorted(candidate_claims, key=lambda item: item.claim_id):
+        original_id = claim.repaired_from_claim_id or claim.claim_id
+        original = current_by_id.get(original_id)
+        if original is not None:
+            linked_original_ids.add(original_id)
+        lineage.append(
+            RegenerationEvidenceLineage(
+                entity_kind="soft_copy_claim",
+                entity_id=claim.claim_id,
+                original_evidence_ids=list(original.evidence_ids) if original else [],
+                candidate_evidence_ids=list(claim.evidence_ids),
+                original_source_pages=_positive_ints(
+                    span.get("page") for span in original.source_spans
+                )
+                if original
+                else [],
+                candidate_source_pages=_positive_ints(
+                    span.get("page") for span in claim.source_spans
+                ),
+                validation_issues=sorted(
+                    {
+                        item.rule_id
+                        for item in issues
+                        if item.entity_id in {claim.claim_id, original_id}
+                    }
+                ),
+            )
+        )
+    for original in sorted(current_claims, key=lambda item: item.claim_id):
+        if original.claim_id in linked_original_ids:
+            continue
+        lineage.append(
+            RegenerationEvidenceLineage(
+                entity_kind="soft_copy_claim",
+                entity_id=original.claim_id,
+                original_evidence_ids=list(original.evidence_ids),
+                original_source_pages=_positive_ints(
+                    span.get("page") for span in original.source_spans
+                ),
+                validation_issues=sorted(
+                    {
+                        item.rule_id
+                        for item in issues
+                        if item.entity_id == original.claim_id
+                    }
+                ),
             )
         )
     return lineage

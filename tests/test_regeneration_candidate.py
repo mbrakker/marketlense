@@ -437,6 +437,16 @@ def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
         for issue in result.issues
         if issue.rule_id == "regeneration_claim_support"
     ]
+    claim_lineage = next(
+        item
+        for item in result.evidence_lineage
+        if item.entity_kind == "soft_copy_claim"
+        and item.entity_id == repaired["claim_id"]
+    )
+    assert claim_lineage.original_evidence_ids == ["qc_002"]
+    assert claim_lineage.candidate_evidence_ids == ["qc_001"]
+    assert claim_lineage.original_source_pages == [6]
+    assert claim_lineage.candidate_source_pages == [6]
     if expected_pass:
         assert not support_issues
     else:
@@ -446,6 +456,7 @@ def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
         )
         assert support_issues[0].entity_id == repaired["claim_id"]
         assert support_issues[0].evidence_ids == ["qc_001"]
+        assert "regeneration_claim_support" in claim_lineage.validation_issues
 
 
 def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> None:
