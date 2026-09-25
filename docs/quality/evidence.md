@@ -342,6 +342,12 @@ live canary.
 
 ### Final A21 frozen 20-report validation — 2026-09-19
 
+The [current-HEAD historical failure closure audit](a21-20260919-historical-failure-closure-audit.md)
+reconciles all 15 terminal failures individually against later retained
+observations, focused regressions, and the limits of the frozen evidence. It
+does not rerun the cohort or claim that a later passing model call proves a
+probabilistic failure class impossible.
+
 The final bundle in
 [`reliability-cohort-20260919-a21-final/`](reliability-cohort-20260919-a21-final/)
 reused the exact immutable cohort and source hashes from official baseline
