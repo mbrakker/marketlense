@@ -421,6 +421,11 @@ def _strategy_options(
         if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
             options.append(("REBIND_EVIDENCE", "alternative_evidence"))
         options.append(("REMOVE_CLAIM", "safe_removal"))
+    elif target_key == "key_figures":
+        # Key Figures are rebuilt deterministically from retained metrics and
+        # bound evidence. The numeric-fidelity selector omits every invalid
+        # projection, so a removal-labeled rebuild would be equivalent.
+        options.append(("REGENERATE_ITEM", "current_evidence"))
     else:
         options.append(("REGENERATE_ITEM", "current_evidence"))
         if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:

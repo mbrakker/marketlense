@@ -209,6 +209,19 @@ and their wording is the failed field. The targeted insight repair keeps that
 source available while the candidate quality and promotion gates still reject
 an unchanged duplicate or a new unsupported claim.
 
+Key Figures are rebuilt deterministically from retained metric and evidence
+inputs. Before selection, each rendered numeric display must match every
+quantity in the evidence text bound to that metric's `evidence_id`, including
+unit, comparator, and range semantics. A figure whose display drops a source
+qualifier such as “at least” is omitted; unrelated report or evidence numbers
+cannot authorize it. Existing label/value relationship and context checks still
+apply. A targeted `REGENERATE_ITEM/current_evidence` rebuild makes no model
+call, and the normal candidate and full-validation gates remain authoritative.
+The Key Figure ladder offers no separate `REMOVE_CLAIM/safe_removal` strategy:
+the fidelity-filtered rebuild already excludes invalid projections, so a
+removal-labeled rebuild would have the same transformation. When no valid
+retained metric remains, the projection can contain fewer than five figures.
+
 Run `python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"`
 before any live A21 canary; it is the required deterministic queue-to-A21 gate
 and performs no external publication.

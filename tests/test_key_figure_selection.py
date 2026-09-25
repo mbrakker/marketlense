@@ -5,9 +5,14 @@ import pytest
 
 from src.generators._artifact_generator.storage import build_key_figures
 
-
 _FIXTURE_PATH = (
     Path(__file__).parent / "fixtures" / "key_figure_selection" / "scenarios.json"
+)
+_DOUBLEVERIFY_FIXTURE_PATH = (
+    Path(__file__).parent
+    / "fixtures"
+    / "key_figure_selection"
+    / "doubleverify_threshold_projection.json"
 )
 
 
@@ -73,16 +78,15 @@ def test_key_figure_selection_preserves_forecast_and_observed_source_context(
     ]
 
 
-def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fidelity() -> (
-    None
-):
+def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fidelity(
+) -> None:
     figures = build_key_figures(
         metric_spine=[
             {
                 "metric_id": "temporal-mismatch",
                 "evidence_id": "temporal-mismatch",
                 "label": "Average daily social-video time in 2024E",
-                "value": "0:48 in 2024E",
+                "value": "0:48",
                 "unit": "",
                 "timeframe": "2024E",
                 "confidence": "high",
@@ -93,7 +97,7 @@ def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fi
             {
                 "id": "temporal-mismatch",
                 "evidence_id": "temporal-mismatch",
-                "text": "Average daily social-video time reaches 0:52 in 2024E.",
+                "text": "Average daily social-video time reaches 0:48 in 2024E.",
                 "evidence": (
                     "Average daily social-video time: 2023 0:48; "
                     "2024E 0:52; 2028E 0:57."
@@ -103,6 +107,156 @@ def test_key_figure_selection_rejects_a_metric_that_fails_source_relationship_fi
     )
 
     assert figures == []
+
+
+def test_doubleverify_threshold_projection_is_omitted_from_its_bound_evidence() -> None:
+    fixture = json.loads(_DOUBLEVERIFY_FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    figures = build_key_figures(
+        metric_spine=fixture["metric_spine"],
+        evidence_packs={},
+        insights_final=fixture["insights_final"],
+    )
+
+    assert not any(
+        figure["figure_id"] == "display-viewability-duration-criterion-retained-5"
+        for figure in figures
+    )
+    apac_sibling = next(
+        figure
+        for figure in figures
+        if figure["figure_id"] == "q1-2026-apac-authentic-viewable-rate"
+    )
+    assert (
+        apac_sibling["figure"],
+        apac_sibling["evidence_id"],
+        apac_sibling["source_page"],
+    ) == ("63%", "s2", 3)
+    assert any(
+        insight["evidence_id"] == "s4"
+        and "at least 50%" in insight["evidence"]
+        for insight in fixture["insights_final"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("metric_id", "label", "value", "evidence"),
+    [
+        (
+            "percent",
+            "Retailers using the tool",
+            "75%",
+            "75% of retailers use the tool.",
+        ),
+        (
+            "duration",
+            "Daily viewing duration",
+            "0:48",
+            "Daily viewing duration was 0:48.",
+        ),
+        (
+            "currency",
+            "Annual spend",
+            "$918 billion",
+            "Annual spend reached $918 billion.",
+        ),
+        ("range", "Growth range", "10-15%", "Growth is forecast in the 10-15% range."),
+    ],
+)
+def test_key_figure_selection_retains_values_supported_by_bound_evidence(
+    metric_id: str, label: str, value: str, evidence: str
+) -> None:
+    figures = build_key_figures(
+        metric_spine=[
+            {
+                "metric_id": metric_id,
+                "evidence_id": metric_id,
+                "label": label,
+                "value": value,
+                "confidence": "high",
+            }
+        ],
+        evidence_packs={},
+        insights_final=[
+            {"id": metric_id, "evidence_id": metric_id, "evidence": evidence}
+        ],
+    )
+
+    assert [figure["figure_id"] for figure in figures] == [metric_id]
+
+
+def test_unrelated_evidence_number_does_not_support_key_figure() -> None:
+    figures = build_key_figures(
+        metric_spine=[
+            {
+                "metric_id": "unsupported-bound-value",
+                "evidence_id": "claim-source",
+                "label": "Retailers using the tool",
+                "value": "75%",
+                "confidence": "high",
+            }
+        ],
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "evidence_id": "other-source",
+                        "evidence": "75% of firms reported growth.",
+                    }
+                ]
+            }
+        },
+        insights_final=[
+            {
+                "id": "unsupported-bound-value",
+                "evidence_id": "claim-source",
+                "evidence": "Retailers use the tool.",
+            }
+        ],
+    )
+
+    assert figures == []
+
+
+def test_unsupported_top_ranked_metric_does_not_block_next_valid_metric() -> None:
+    metrics = [
+        {
+            "metric_id": "unsupported-top",
+            "evidence_id": "unsupported-top",
+            "label": "Retailers using the tool",
+            "value": "91%",
+            "confidence": "high",
+        },
+        {
+            "metric_id": "supported-next",
+            "evidence_id": "supported-next",
+            "label": "Teams using AI in campaign workflows",
+            "value": "75%",
+            "confidence": "high",
+        },
+    ]
+    figures = build_key_figures(
+        metric_spine=metrics,
+        evidence_packs={},
+        summary={"executive_summary": "Retailers are using the tool."},
+        insights_final=[
+            {
+                "id": metric["metric_id"],
+                "evidence_id": metric["evidence_id"],
+                "evidence": evidence,
+            }
+            for metric, evidence in zip(
+                metrics,
+                [
+                    "Only 75% of firms report growth.",
+                    "75% of teams use AI in workflows.",
+                ],
+                strict=True,
+            )
+        ],
+    )
+
+    assert [figure["figure_id"] for figure in figures] == ["supported-next"]
 
 
 def test_key_figure_selection_considers_metrics_beyond_the_metric_spine_cap() -> None:
@@ -136,7 +290,10 @@ def test_key_figure_selection_considers_metrics_beyond_the_metric_spine_cap() ->
             "evidence": (
                 "In 2026, 68% of Europe retailers are exploring AI for commerce media."
                 if metric["metric_id"].startswith("adoption")
-                else "In 2026, 75% of Europe retail-media teams use AI in campaign workflows."
+                else (
+                    "In 2026, 75% of Europe retail-media teams use AI "
+                    "in campaign workflows."
+                )
             ),
             "metric": metric,
         }

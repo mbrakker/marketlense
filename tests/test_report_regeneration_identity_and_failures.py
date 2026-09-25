@@ -21,12 +21,12 @@ from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.utils.errors import AppError
 from tests.test_report_regeneration_generator import (
     METRIC,
-    _FakeOpenAIClient,
-    _FakePromptClient,
     _build_regeneration_plan,
     _ctx,
     _current_artifacts,
     _evidence_packs,
+    _FakeOpenAIClient,
+    _FakePromptClient,
     _settings,
 )
 
@@ -711,6 +711,40 @@ def test_identity_ladder_abstains_then_exhausts_without_repeats() -> None:
     )
     # Every distinct identity strategy is rejected: no targeted plan remains,
     # so the loop stops with a typed terminal failure instead of repeating.
+    assert exhausted_plan.mode == "skip"
+    assert exhausted_plan.targets == []
+
+
+def test_key_figure_ladder_has_one_deterministic_rebuild_strategy() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="numbers",
+        message="[numbers] Number 50.0 not present in report or evidence.",
+        severity="error",
+        affected_section="key_figures:4.figure",
+        entity_id="display-viewability-duration-criterion-retained-5",
+        evidence_ids=["s4"],
+    )
+
+    first_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+    assert first_plan.targets[0].repair_strategy == "current_evidence"
+    assert first_plan.targets[0].repair_action == "REGENERATE_ITEM"
+
+    fingerprints = [first_plan.targets[0].issues[0].failure_fingerprint]
+    rejected_current = {
+        repair_strategy_fingerprint(fingerprints, "current_evidence", ["s4"])
+    }
+    exhausted_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_current,
+    )
+
     assert exhausted_plan.mode == "skip"
     assert exhausted_plan.targets == []
 

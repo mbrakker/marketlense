@@ -140,3 +140,28 @@ def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> N
     ]
     assert any("Number 12.0 not present" in message for message in rejected_messages)
     assert any("Number 26.0 not present" in message for message in rejected_messages)
+
+
+def test_number_validation_still_rejects_exact_key_figure_from_threshold_evidence(
+) -> None:
+    evidence = "At least 50% of the ad must be in view for one second."
+    figure = {
+        "figure_id": "display-viewability-duration-criterion-retained-5",
+        "label": "Display viewability threshold",
+        "figure": "50%",
+        "evidence_id": "s4",
+    }
+
+    issues = validate_new_numbers(
+        artifacts={"key_figures": [figure]},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=[],
+    )
+
+    assert any(
+        issue.rule_id == "numbers"
+        and issue.affected_section == "key_figures:1.figure"
+        for issue in issues
+    )

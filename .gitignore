@@ -29,6 +29,8 @@ mutation_cov_*/
 tests/fixtures/*
 !tests/fixtures/editorial_temporal/
 !tests/fixtures/editorial_temporal/*.json
+!tests/fixtures/key_figure_selection/
+!tests/fixtures/key_figure_selection/doubleverify_threshold_projection.json
 !tests/fixtures/low_text_status.json
 !tests/fixtures/docpacks/
 !tests/fixtures/docpacks/golden/

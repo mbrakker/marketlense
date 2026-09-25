@@ -70,6 +70,7 @@ from src.generators.soft_copy_claim_provenance import (
     build_soft_copy_claim_provenance,
     retained_soft_copy_claims_cover_text,
 )
+from src.generators.validation.quantities import quantity_supported
 from src.services import file_service
 from src.services.prompt_service import build_llm_execution_identity
 from src.services.schema_validator_service import (
@@ -90,6 +91,7 @@ from src.utils.model_resolver import (
 )
 from src.utils.numeric_display import numeric_metadata_for_complete_display
 from src.utils.public_metric_display import normalize_public_metric_display
+from src.utils.quantity import extract_quantities
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -1534,6 +1536,18 @@ def _select_key_figure_metrics(
             break
         evidence_id = _s(metric.get("evidence_id")).strip()
         evidence_text = evidence_text_by_id.get(evidence_id, "")
+        display = _key_figure_display(
+            value=_s(metric.get("value")).strip(),
+            unit=_s(metric.get("unit")).strip(),
+            evidence_text=evidence_text,
+        )
+        display_quantities = extract_quantities(display)
+        evidence_quantities = extract_quantities(evidence_text)
+        if not display_quantities or not all(
+            quantity_supported(quantity, evidence_quantities, numeric_only=True)
+            for quantity in display_quantities
+        ):
+            continue
         if (
             _key_figure_score(
                 metric=metric,

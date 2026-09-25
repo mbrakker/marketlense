@@ -1,0 +1,75 @@
+{
+  "metric_spine": [
+    {
+      "metric_id": "q1-2026-apac-authentic-viewable-rate",
+      "label": "APAC Authentic Viewable Rate",
+      "value": "63%",
+      "unit": "",
+      "timeframe": "Q1 2026",
+      "segment": "Authentic Viewable Rate",
+      "geography": "APAC",
+      "subject": "Authentic Viewable Rate",
+      "confidence": "source_backed",
+      "evidence_id": "s2"
+    },
+    {
+      "metric_id": "q1-2026-north-america-video-viewable-rate",
+      "label": "North America Video Viewable Rate",
+      "value": "88%",
+      "unit": "",
+      "timeframe": "Q1 2026",
+      "segment": "Video",
+      "geography": "North America",
+      "subject": "Video Viewable Rate",
+      "confidence": "source_backed",
+      "evidence_id": "s2"
+    },
+    {
+      "metric_id": "q1-2026-emea-engagement-index",
+      "label": "EMEA Engagement Index",
+      "value": "116",
+      "unit": "index",
+      "timeframe": "Q1 2026; DV-average normalization uses a 28-day rolling window",
+      "segment": "Engagement",
+      "geography": "EMEA",
+      "subject": "Engagement Index",
+      "confidence": "source_backed",
+      "evidence_id": "s7"
+    }
+  ],
+  "insights_final": [
+    {
+      "id": "q1-2026-apac-authentic-viewable-rate",
+      "text": "The regional quality benchmark reports APAC's Authentic Viewable Rate at 63%.",
+      "evidence_id": "s2",
+      "evidence": "Compares regional quality rates across APAC, EMEA, LATAM, and North America, including authentic viewability, fraud/SIVT, brand suitability, and display and video viewability. The table reports five measures for each of the four regions. North America has the highest authentic viewable rate shown (76%) and video viewable rate (88%); APAC has the lowest authentic viewable rate (63%).",
+      "pages": [3],
+      "metric": {
+        "label": "APAC Authentic Viewable Rate",
+        "value": "63%",
+        "unit": "",
+        "timeframe": "Q1 2026",
+        "geography": "APAC",
+        "segment": "Authentic Viewable Rate",
+        "subject": "Authentic Viewable Rate",
+        "confidence": "source_backed"
+      }
+    },
+    {
+      "id": "display-viewability-duration-criterion",
+      "text": "The glossary defines display viewability as at least 50% of the ad in view for one second.",
+      "evidence_id": "s4",
+      "evidence": "Defines quality and video measurement terms, including authentic viewability, blocking, fraud/SIVT, brand suitability, out-of-geo violations, and video completion. A second glossary page explains video filtering, viewability, CTV fully on-screen, audible rate, and AVOC. Authentic Viewable Rate is defined using authentic viewable impressions divided by measured impressions. The glossary defines violation and blocking measures and describes their relation to brand settings and fraud. Display and video viewability use IAB and MRC criteria: at least 50% of the ad in view for one second for display or two seconds for video.",
+      "pages": [5, 6],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "confidence": ""
+      }
+    }
+  ]
+}
