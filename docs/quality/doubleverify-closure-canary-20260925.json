@@ -1,0 +1,303 @@
+{
+  "schema_version": "marketlense_doubleverify_closure_canary/1.0",
+  "purpose": "Final isolated production-path DoubleVerify closure canary; one report only; publication disabled.",
+  "code_sha": "c89e1af249be771acb515a8d255f56c43c4b359c",
+  "source": {
+    "path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+    "frozen_manifest": "docs/quality/reliability-cohort-20260920-a21-final/frozen_cohort.json",
+    "md5": "e854b71d6fb10333b47fd518a6e51cf9",
+    "sha256": "99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e"
+  },
+  "run": {
+    "isolated_fresh_state": true,
+    "run_directory": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0",
+    "publication_attempted": false,
+    "manual_artifact_edits": false,
+    "terminal_state": "failed",
+    "awaiting_review": false,
+    "workflow_attempt_count": 1,
+    "validation": "fail",
+    "publication_readiness": "fail",
+    "terminal_failure_code": "soft_copy_claim_provenance_coverage_invalid",
+    "failure_diagnostic": {
+      "artifact_family": "expert_comment",
+      "claim_or_entity_id": "",
+      "error_context": {
+        "artifact_family": "expert_comment"
+      },
+      "inner_error_class": "",
+      "outer_code": "soft_copy_claim_provenance_coverage_invalid",
+      "repair_attempt": 0,
+      "stage": "artifact_generation",
+      "validator_rule": ""
+    }
+  },
+  "usage": {
+    "provider_calls": 34,
+    "input_tokens": 296835,
+    "output_tokens": 52553,
+    "estimated_cost_usd": 0.055678
+  },
+  "initial_validation": {
+    "status": "fail",
+    "issue_ids": [
+      "artifact_quality:expert_comment",
+      "artifact_quality:summary.executive_summary",
+      "artifact_quality:summary.tldr",
+      "metrics:insights:q1-regional-ad-attention-index",
+      "public_editorial_quality.metric_label_relationship:expert_comment",
+      "public_editorial_quality.metric_label_relationship:linkedin_post"
+    ]
+  },
+  "initial_public_editorial_quality": {
+    "status": "fail",
+    "issue_ids": [
+      "public_editorial_quality.metric_label_relationship:expert_comment",
+      "public_editorial_quality.metric_label_relationship:linkedin_post"
+    ]
+  },
+  "regeneration": {
+    "attempts": [
+      {
+        "attempt": 1,
+        "action": "REGENERATE_ITEM",
+        "strategy": "current_evidence",
+        "strategy_fingerprint": "53c029d24a1d873534eedbf3ee89ee985bcb4b18755f9ba6d5d672a5467b6d3c",
+        "transformation_scope": [
+          "expert_comment",
+          "linkedin_post"
+        ],
+        "before_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+        "candidate_sha256": "8038e613288fbf0e493ff6b394b8add22b87df6aa344421c6a959727ad586f41",
+        "promotion_outcome": "rolled_back",
+        "candidate_validation_issue_ids": [
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "grounding:metadata.title",
+          "metrics:insights:q1-regional-ad-attention-index",
+          "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:af6e36a977754ce4"
+        ],
+        "final_attempt_issue_ids": [
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "grounding:metadata.title",
+          "metrics:insights:q1-regional-ad-attention-index",
+          "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:af6e36a977754ce4"
+        ]
+      },
+      {
+        "attempt": 2,
+        "action": "REBIND_EVIDENCE",
+        "strategy": "alternative_evidence",
+        "strategy_fingerprint": "3d52b3c7c0d9ea432af7b78e7c5b55bab22194bcec46b22699e9196254b432bb",
+        "transformation_scope": [
+          "expert_comment",
+          "linkedin_post"
+        ],
+        "before_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+        "candidate_sha256": "2cd0a4b4ed1b23176a8fcf79d9bf8bcd47ada65a8babc57f30a4c8de0ac46763",
+        "promotion_outcome": "rolled_back",
+        "candidate_validation_issue_ids": [
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "metrics:insights:q1-regional-ad-attention-index",
+          "numbers:linkedin_post",
+          "public_editorial_quality.metric_label_relationship:linkedin_post",
+          "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:8b6f013bc11d1a17"
+        ],
+        "final_attempt_issue_ids": [
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "metrics:insights:q1-regional-ad-attention-index",
+          "numbers:linkedin_post",
+          "public_editorial_quality.metric_label_relationship:linkedin_post",
+          "soft_copy_claim_provenance:expert_comment:soft_copy:expert_comment:8b6f013bc11d1a17"
+        ]
+      }
+    ],
+    "equivalent_strategy_repeated": false,
+    "canonical_artifacts_after_rollback_sha256": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b"
+  },
+  "acceptance_checks": {
+    "duplicate_insight": {
+      "result": "not_observed_in_this_run",
+      "initial_issue": false
+    },
+    "shared_global_quality_benchmarks_evidence_quarantine": {
+      "result": "not_exercised_by_this_run",
+      "evidence_id_present_in_run_artifacts": false
+    },
+    "unsupported_numeric_or_factual_repair_candidate": {
+      "result": "observed_and_rejected",
+      "details": [
+        "candidate 1: unsupported metadata.title QuarterlyBenchmarksQ1 2026",
+        "candidate 2: unsupported LinkedIn values 125 and 82"
+      ],
+      "promotion": "both candidates rolled back"
+    },
+    "invalid_50_percent_key_figure": {
+      "result": "not_observed_in_this_run",
+      "invalid_figure_id_present": false,
+      "numbers_key_figures_issue": false
+    },
+    "emea_engagement_index_116_exact_binding": {
+      "result": "not_verified_in_this_run",
+      "reason": "Fresh artifacts contain a regional aggregate insight and s8 binding; no standalone EMEA Engagement Index=116 metric bound to s7/page 9 was emitted. Initial quality errors affected expert_comment and linkedin_post."
+    },
+    "reintroduced_removed_insight_stable_id": {
+      "result": "not_observed_in_this_run",
+      "removed_stable_id": "insight-q1-2026-emea-quality",
+      "present_in_final_artifacts": false
+    },
+    "final_rendered_html": {
+      "result": "not_produced",
+      "reason": "Workflow failed in artifact generation before render."
+    }
+  },
+  "warnings_and_info": [
+    {
+      "id": "artifact_quality:expert_comment",
+      "severity": "warning",
+      "blocking": false
+    },
+    {
+      "id": "artifact_quality:summary.tldr",
+      "severity": "warning",
+      "blocking": false
+    },
+    {
+      "id": "artifact_quality:summary.executive_summary",
+      "severity": "warning",
+      "blocking": false
+    },
+    {
+      "id": "metrics:insights:q1-regional-ad-attention-index",
+      "severity": "info",
+      "blocking": false
+    },
+    {
+      "id": "pdf_parser:wrong_pointing_object",
+      "severity": "warning",
+      "blocking": false,
+      "occurrence": "repeated parser notices during source preparation"
+    }
+  ],
+  "blocking_findings": [
+    "Initial canonical validation failed with two public_editorial_quality.metric_label_relationship errors (expert_comment and linkedin_post).",
+    "Both regeneration candidates were rolled back after candidate validation failures.",
+    "Terminal failure: soft_copy_claim_provenance_coverage_invalid; no successful readiness record or rendered HTML."
+  ],
+  "retained_artifact_count": 94,
+  "artifact_hashes": {
+    "source_pdf_sha256": "99f0cc4f7787cac52b7f89eefa7659053b3703ea100b9e0522fa500c64463d7e",
+    "result.json": "849e89e707dbc9d1f561c5c042ee7e5e8dec0942867540d4b255614569f7f63a",
+    "config/app.yaml": "9d461ca194a1e4baa00068067a8b7837c8589f128ed4f6711b8f4b035f2e54cd",
+    "output/.../report_analysis/artifacts.json": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b",
+    "output/.../report_analysis/validation.json": "f7e9ca41bdcdf99e73a71ef46be0f8e10ed9c4b6c36acde015a372fd79d6d5a6",
+    "output/.../report_analysis/public_editorial_quality_before.json": "2b5bc64570e7b54a93e72161ff06e9bcfdee1a318e5de1f9b4a453d86b58f18f",
+    "output/.../report_analysis/regeneration_candidate_audit_1.json": "16318826b2d4dd6fa0830412020a0256d829e2621f7ceb7dcd38d344667d43de",
+    "output/.../report_analysis/regeneration_candidate_audit_2.json": "4ea6735098f38f287f76a0fceaf5f37b38257d49a0b9911ab4c5b8469ff845e4",
+    "output/.../report_analysis/artifacts_regen_candidate_1.json": "411383b30aec0b88adb4e89b1fa8180360ff5ba5e8f4ec22f4b3760f1569d3f7",
+    "output/.../report_analysis/artifacts_regen_candidate_2.json": "f9ede2b95d426ae5e1c97ed91d7e83c93c730197e33ee4bdd67e574f747bfef0",
+    "state/llm_usage.sqlite": "ad443416ef98968b0e2c35dd12bdd0e88cc7b84bec42cbfe2c7311668cd0d28c",
+    "state/llm_cost_ledger.jsonl": "10dab7a99c4603ee9176d64e048c371277328ddd908cf2d0a63e1ae4a87724bd"
+  },
+  "all_retained_run_file_sha256": {
+    "cache/pdf_cache/e854b71d6fb10333b47fd518a6e51cf9/contents_4aa8ef365df5d201e9dacc6a007bf577dacb122c51805a2a5265edbb86833353.json": "bcf96ca91d7d0e1c9e4794a246cdd82db7fb34d338b4f669a8f0682f3586417e",
+    "cache/pdf_cache/e854b71d6fb10333b47fd518a6e51cf9/pdf_info_56ff514d0de4d63f2cfaf48672b8fb9acd68442ae2eb8ccc927c64fa34747518.json": "aeefc87af38291bc6662512708c8044f316e1a9fe67d4382bba60a4ad12531f2",
+    "cache/pdf_cache/e854b71d6fb10333b47fd518a6e51cf9/text_247507bfdfc8b961f0b5ebd7b84abae405ef23f68039374767fe71bfcfad6f86.json": "b624f52fa585da29a292b882429ff66fd1bcf99d6d78e8e6423aa8b2f771eb61",
+    "cache/semantic_responses/openai_chat_json/38492218fc186d3526ac8ec48444a4cec7ca11c2a76009b9ab37e3452f58c272.json": "fcb1cac6ac0a9e5180403c76738ed6677dfd6863812acb2160107bbd28605530",
+    "cache/semantic_responses/openai_chat_json/983def6b5ed0d556268fc186acc2c9a8ce4f16a17430fd3b4745846f229cb90c.json": "2c4f6da96c04ea59c51a8e67745d81801ccf1753bde0f42d34e383be8c1f92f2",
+    "cohort/source.json": "c728fb327568cd3e90400f861c2a372091554aeb72e7979db7c36fdbb45845da",
+    "config/app.yaml": "9d461ca194a1e4baa00068067a8b7837c8589f128ed4f6711b8f4b035f2e54cd",
+    "output/.checkpoints/report_generation/cohort-e854b71d6fb10333b47f/selection_complete.json": "8905f6382ee415d44cb484495a8a101f28b177ba04a01819b7f2ee2e124cee9b",
+    "output/.checkpoints/report_generation/cohort-e854b71d6fb10333b47f/source_prepared.json": "a5c4ca4de7cae14ee7212993444a60ed2e35d76d05e5ba568b4545e17fb98b0a",
+    "output/admission/4cec64fd-6823-4d99-8051-efa118bd306c-ca06ec341ab9058e.json": "48f739788ecb4a2036d586083aa12364eedc4b77ddac062249fd4e4ecca39188",
+    "output/admission/795bdb15-becc-48a4-b645-10c8c85f3b0c-2034a90060e3b4cd.json": "ca2420a8028c2356e67d18e34e48bab8a5948e5108ddc643369839df519c737e",
+    "output/dv-qualityandattentionbenchmark-q1-2026/report_analysis/prompt_family_report_vs_context_category_fit.json": "75555706af77be99743155a57ff5bdbada47a466fe0d311ec44aa06b1529b38c",
+    "output/dv-qualityandattentionbenchmark-q1-2026/report_analysis/prompt_family_report_vs_validate_semantic.json": "e130e6cb65b4dc813e112ec9ab9d1e843bb338e873de8027e17cbafb14ef5598",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/assets/dv-qualityandattentionbenchmark-q1-2026-pdf.png": "b640a3e8b6558c586545fa7d130bbd6d801d799545da7b4bb117274340a11698",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/assets/dv-qualityandattentionbenchmark-q1-2026-pdf.png.fingerprint.json": "4b9caa1cdf01d57913a3aa202da59aa18d4e9f5fc3155e28a74198e3fe0b700e",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/assets/preview-contents-c49d0f2ab23a.png": "e6f622216b28bcbc690902e253ddb4ccc4496f0ac41cedf3bd857663bfae3334",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/assets/preview-contents-c49d0f2ab23a.png.fingerprint.json": "dabd7af0559e9b89cdbebd7e20ecc60ce5405cc185af2a86179266dbf514d2c0",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/artifacts.json": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/artifacts_regen_candidate_1.json": "411383b30aec0b88adb4e89b1fa8180360ff5ba5e8f4ec22f4b3760f1569d3f7",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/artifacts_regen_candidate_2.json": "f9ede2b95d426ae5e1c97ed91d7e83c93c730197e33ee4bdd67e574f747bfef0",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/context_category_fit.json": "420dc82707ade8c35e83b76e8f9f82bca1331f302b5c30ed62446639b455ec35",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/crop_refine.json": "cf2e364c1ff0f0b5f72d9ee892a859f2952bbd7a969f6cecc5fcdc0664e9c7ac",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/doc_map.json": "e6278958fc24acdab218095d693ff9ebf40118f8fec71604f18ee0ff4f3f7e22",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/evidence_fidelity.json": "15a3e70760f7e354fd0b66381a889b131af656a39d7833aa5d679cbf1e72a7e8",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/findings.json": "3366545ee19233400c5c2d1ab09b7dfb84c7ce6438eafd0dc497d028d5a3bc47",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/limitations.json": "9a2eb0520dac9a9270d549f7c615d2afa9f92201b58f355b24ae5d3703b7d3f4",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/methods.json": "0a3480b712e156114127c753c7df4c9764926ec659f5ad422f75389227ed90cb",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_doc_map.json": "5cf369747b5e8fd88755585fe1449127a268c5ede9257553b6c77765baa8bca9",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_findings.json": "869a82e5fb28b0d5618cf56e366ea905fd027cc5de9da0502c4cce4d5354b574",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_limitations.json": "750adeeefabca220251d79d7e718082f2b940a7bb0173478fcb8db87fb21d919",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_methods.json": "622b45d1a1746c54de1db45b0a0403be85ce439da67cc6d65745962cbf7e525c",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_quote_candidates.json": "532024e1928413d91c0409570ad083c97070210cbf038ce26268344c727a260e",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_scope.json": "58a15b18d9701f815e92381319ee6566a7de600ed19e602ad9c5bea51112fbd2",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_taxonomy.json": "9e7ca5da5fe02f2188130b58d7e0664de5cc2ecebe54e0361cce0a73dfb1c102",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_validate_semantic.json": "681c3e79e519a4b0a7c62c852657ab11361bb28e95383e34525aebc525812462",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/public_editorial_quality_before.json": "2b5bc64570e7b54a93e72161ff06e9bcfdee1a318e5de1f9b4a453d86b58f18f",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/public_editorial_quality_regen_attempt_1.json": "65d548ded6f55e50e88571caf04910667c5a73ce239e46c417dd23938821ba44",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/public_editorial_quality_regen_attempt_2.json": "6cd67a76012d4a776a6007c632122ef168fe37eea8d9bd1a982a9f7628e1a330",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/quote_candidates.json": "de02fa4504c92a1c825cbe59ebf4561bbe58eefa18728e96c64a852c5f2a8e13",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_1.json": "16318826b2d4dd6fa0830412020a0256d829e2621f7ceb7dcd38d344667d43de",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_2.json": "4ea6735098f38f287f76a0fceaf5f37b38257d49a0b9911ab4c5b8469ff845e4",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/report_context.json": "98159948924eb6c1b1b73ae75151bd4f56b0b711b588bc4390c11043ad4f5daa",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/scope.json": "13594398158dab820b82e16d7a82cf08e645a01f50869330db579bc52d53a6e2",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation.json": "f7e9ca41bdcdf99e73a71ef46be0f8e10ed9c4b6c36acde015a372fd79d6d5a6",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation_regen_attempt_1.json": "3ba7d1cf6f4aeb4c94a77b353b250564365f17f962fd401577f718a139ad5022",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation_regen_attempt_2.json": "f45381b01ff058d5b2ed949db45b047548b65d2fa24880e489ac26e815f07672",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation_regen_candidate_1.json": "bd3d946373535302705af50ed0c29ea95a47b6e067dc88081408b316ea512472",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation_regen_candidate_2.json": "22ab43963c236c225457b6e3f22e34b29857c4a793da63534bcf33a7217b7e14",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/slices/dv-qualityandattentionbenchmark-q1-2026-pdf-table-8-0.png": "0bb34a440e4fa3a3c9ac4cbebb811ae0f2a5381bd6f481fe94578335ab0a2c7e",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/slices/dv-qualityandattentionbenchmark-q1-2026-pdf-table-8-0.png.fingerprint.json": "cf1eaacbe59a93a75f0bf182e16ef1cecd5f19a3a67bba0837922742c2343485",
+    "output/dv-qualityandattentionbenchmark-q1-2026-pdf/slices/dv-qualityandattentionbenchmark-q1-2026-pdf-table-8-0.png.qa.json": "51f2b9dd7f531532d182d6a9becd967a8b7531d7b4e74f1a65547e13436b6237",
+    "output/preflight/4cec64fd-6823-4d99-8051-efa118bd306c.llm_policy_matrix.json": "0cd539fb0058713a981014fc96f63b6ae75430e0233f6f9bc2c40f7c7cd83047",
+    "output/preflight/795bdb15-becc-48a4-b645-10c8c85f3b0c.llm_policy_matrix.json": "c2f38b6d886e934c00fcbe9ce37dc896a05db43d3ad7b95dcdca2c73b00a41e6",
+    "result.json": "849e89e707dbc9d1f561c5c042ee7e5e8dec0942867540d4b255614569f7f63a",
+    "state/llm_cost_daily.json": "27653ac2ea1019231c6f64d9c43f429d39bb70ad9f2483c4c996e53c7cd4f311",
+    "state/llm_cost_ledger.jsonl": "10dab7a99c4603ee9176d64e048c371277328ddd908cf2d0a63e1ae4a87724bd",
+    "state/llm_cost_ledger.segments/00000000000000000001.jsonl": "13b2755e40aeb427bfd760b490ab32f93bec83f8fe71f55989b5d85abdb7d4dd",
+    "state/llm_cost_ledger.segments/00000000000000000002.jsonl": "96c67d57adfb6a041a5e9a396b9ae0bd4b31a1a1c2639b75fabb278a304eced9",
+    "state/llm_cost_ledger.segments/00000000000000000003.jsonl": "7b98b6dddbe3539283d7d747708be1f699e15887006a48511dbe89e60d176d2f",
+    "state/llm_cost_ledger.segments/00000000000000000004.jsonl": "ebaacc6dbb6522079365501ea6a5e736c172efa4446fe4f7e905300c7f566c05",
+    "state/llm_cost_ledger.segments/00000000000000000005.jsonl": "72eee2f26c844441d6b26652f534d82e7725d35bee4e71f540ebe4f96b323667",
+    "state/llm_cost_ledger.segments/00000000000000000006.jsonl": "80baacd6fe2a859bcb79cbbb26a58678361f30700e29929952e65436658360f5",
+    "state/llm_cost_ledger.segments/00000000000000000007.jsonl": "5fd17c6c60320ac9d2269e00b827a769d756c9f61b513f1b4c1f84c70593b55f",
+    "state/llm_cost_ledger.segments/00000000000000000008.jsonl": "97ce3f5f63a3826e78c890c433972fb39850b026838c5f23505aeba8a81157ff",
+    "state/llm_cost_ledger.segments/00000000000000000009.jsonl": "287801577d8f2d94ada752e94dc128f82a53dcc5ee55bbbb84373a4675f86c8b",
+    "state/llm_cost_ledger.segments/00000000000000000010.jsonl": "09b2383b58245b898fa3b64da950568507ef2a7020203a7d7b59507f229023ff",
+    "state/llm_cost_ledger.segments/00000000000000000011.jsonl": "ee1b2ea7c23ea3de7de12a4839a5127c225774f7a0c944d879345b7b1fb022c9",
+    "state/llm_cost_ledger.segments/00000000000000000012.jsonl": "aa1cfee23bd1a76e8df601178ef3c8fb0cca2fbae80263b205a81adad3beda4f",
+    "state/llm_cost_ledger.segments/00000000000000000013.jsonl": "b78506902e136c3f83275a4997b0ed6ffd1c04ffbf1c28189dfec325fad152ff",
+    "state/llm_cost_ledger.segments/00000000000000000014.jsonl": "0d0e69a5e4e07f63251015b933df5625054fc00f28c95136c0abf63deae45b68",
+    "state/llm_cost_ledger.segments/00000000000000000015.jsonl": "d33f18ff32d69662ccd95ddf96e512190ac5d8999e19ed3b0bbda9d55269d6d1",
+    "state/llm_cost_ledger.segments/00000000000000000016.jsonl": "0ac27c8e11e5e2297b251f822540edf4a72b662c29ca29dff3f3754b22cbbaa1",
+    "state/llm_cost_ledger.segments/00000000000000000017.jsonl": "7a43601acc156f667acf9a153aaff28ca21d9cb5adacdac4c5e9f0f907d9942d",
+    "state/llm_cost_ledger.segments/00000000000000000018.jsonl": "fa635068376369e04d10a726704c3292874b8f5951ef8cb423e91d2c4a9496e8",
+    "state/llm_cost_ledger.segments/00000000000000000019.jsonl": "f498169b046fc1c23b2909258761a20c72eba85c4e91eb99bb757c91412f555f",
+    "state/llm_cost_ledger.segments/00000000000000000020.jsonl": "ce3d11edfc9fea404d28ed69e8914a5daf979315d5d647b224a1ca44519b9906",
+    "state/llm_cost_ledger.segments/00000000000000000021.jsonl": "3504f6db7a92062ec6b028aa30a3da0c22308f7f852201f4ed8b3d66f424f398",
+    "state/llm_cost_ledger.segments/00000000000000000022.jsonl": "6357a7c3e95dad9ddba8503327378b66497405af757442e7618409f6550653cd",
+    "state/llm_cost_ledger.segments/00000000000000000023.jsonl": "2ffe1b1917cda6eeed1b64c049302322672a6a04491a2fef7afbadd5294f0bed",
+    "state/llm_cost_ledger.segments/00000000000000000024.jsonl": "21be2f7f4f36a12ac399c1e2910da75297cbe5c9652590869d7a3da11ec94808",
+    "state/llm_cost_ledger.segments/00000000000000000025.jsonl": "2db0a9dd72a42ef45fc1e54790b3131a0fc76173dbc388cf33bf5bb21464340a",
+    "state/llm_cost_ledger.segments/00000000000000000026.jsonl": "68c0a7106b7193f2c5866a8d6aca338ad0e66645c6d727d79891187c99b51975",
+    "state/llm_cost_ledger.segments/00000000000000000027.jsonl": "eb6e89b71dd0398e3552e27ff4b75cd06f395cc2fbdafbbcec29f85bb741dfcf",
+    "state/llm_cost_ledger.segments/00000000000000000028.jsonl": "950c20a0538ae5508e445858ce37a998afc9b4c16034f4d413de96388d77ac8a",
+    "state/llm_cost_ledger.segments/00000000000000000029.jsonl": "57c476b64f25107b4303a384bee166b4ead31e48761152ce53f1e3d15cbdd3f7",
+    "state/llm_cost_ledger.segments/00000000000000000030.jsonl": "16d04a18d34e44186f492b1314f618f9718bb1176951ee95adb3445a2c98d24a",
+    "state/llm_cost_ledger.segments/00000000000000000031.jsonl": "1263ad12b5d5a54e9d4d93c81a79562ecbc7a1bfb0a25546aca54d1552fb064c",
+    "state/llm_cost_ledger.segments/00000000000000000032.jsonl": "a032e3454121fa1d295c309e16e56fc2c660361d81bb2a115a1541089083b5d2",
+    "state/llm_cost_ledger.segments/00000000000000000033.jsonl": "caadea789e10c63d634239ccf3270b608cef604633245ddbca98010afb659acb",
+    "state/llm_cost_ledger.segments/00000000000000000034.jsonl": "a8cfc6c10723830a94f4d7b5c592b81ca5ad705a84c7e4501566b33338bcafce",
+    "state/llm_cost_ledger.segments/00000000000000000035.jsonl": "237c18658ebee8e6f0699ff4e6ea97e4f64bd1ceffa681d10b723b4a5176926a",
+    "state/llm_usage.sqlite": "ad443416ef98968b0e2c35dd12bdd0e88cc7b84bec42cbfe2c7311668cd0d28c",
+    "state/reports.sqlite": "651a89fdeeb7dc9d1eb85932dd855546be814538dda2751bb7f573f30d2affdc",
+    "state/workflow.sqlite": "067493ad65ec7b0bd2a024d068b0b5b5bb77c1a939d188b26ae99fc31e7820b8"
+  },
+  "closure_result": "failed_not_closed",
+  "doubleverify_fully_closed": false
+}
