@@ -1,0 +1,1079 @@
+{
+  "schema_version": "1.0",
+  "source_run_sha": "c89c545d",
+  "cases": {
+    "stackadapt": {
+      "report_id": "cohort-8ef1021c332aa85ba008",
+      "source_sha256": {
+        "artifacts.json": "be894114aa20f75512a7bdad519be0a9f3c3ec20da6a7b8d7398c78dbcba27f9",
+        "validation.json": "e5419b3df0baa662ee1aebe88cd3b84c45898b68e13a2f1cbc26b7bc926d0cae"
+      },
+      "blocking_issues": [
+        {
+          "schema_version": "1.0",
+          "message": "[semantic] Semantic check: quote f1 not supported (The quote text is empty, so there is no claim to compare with the evidence.)",
+          "severity": "error",
+          "affected_section": "quotes:f1",
+          "rule_id": "semantic",
+          "repair_target": "",
+          "entity_id": "",
+          "evidence_ids": []
+        }
+      ],
+      "artifacts": {
+        "schema_version": "3.0",
+        "toc_topics": [],
+        "editorial_plan": {
+          "report_thesis": "Retained source theme",
+          "themes": [
+            {
+              "theme": "Theme 1",
+              "priority": 1,
+              "evidence_ids": [
+                "f1",
+                "f2",
+                "1",
+                "2"
+              ]
+            },
+            {
+              "theme": "Theme 2",
+              "priority": 2,
+              "evidence_ids": [
+                "3"
+              ]
+            },
+            {
+              "theme": "Theme 3",
+              "priority": 3,
+              "evidence_ids": [
+                "4"
+              ]
+            },
+            {
+              "theme": "Theme 4",
+              "priority": 4,
+              "evidence_ids": [
+                "5"
+              ]
+            },
+            {
+              "theme": "Theme 5",
+              "priority": 5,
+              "evidence_ids": [
+                "6",
+                "7"
+              ]
+            }
+          ]
+        },
+        "summary": {
+          "tldr": "",
+          "card_tldr_compact": "",
+          "executive_summary": "",
+          "claim_evidence_map": []
+        },
+        "cover_semantics": {
+          "evidence_shape": "system",
+          "direction": "rising",
+          "geography_scope": "regional",
+          "evidence_density": "balanced",
+          "domain_layer": "grid",
+          "selection_reason": "The evidence describes a rising, interconnected operating system linking fragmented discovery touch points, data, creative, programmatic activation, and measurement, supported by both qualitative frameworks and quantified spend data."
+        },
+        "insights_candidates": [
+          {
+            "id": "ic_001",
+            "text": "Retail discovery and purchase now occur across feeds, streaming content, articles, entertainment, social, search, and other environments, while linear funnels have collapsed.",
+            "evidence_id": "f1",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "ic_003",
+            "text": "Seven core channels represented 99% of programmatic media spend among StackAdapt retail advertisers in 2025.",
+            "evidence_id": "3",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "id": "ic_005",
+            "text": "The report identifies first-party and contextual data as central to privacy-safe retail marketing as signal loss and the decline of cookies continue.",
+            "evidence_id": "4",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          {
+            "id": "ic_006",
+            "text": "The report defines sustained relevance through four connected capabilities: intelligence, adaptation, orchestration, and consistent brand presence.",
+            "evidence_id": "5",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              16,
+              17
+            ]
+          },
+          {
+            "id": "ic_007",
+            "text": "The report presents programmatic as the operating engine connecting shopper-intent activation, dynamic creative, brand impact, performance outcomes, and full-journey measurement.",
+            "evidence_id": "6",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              18,
+              19
+            ]
+          }
+        ],
+        "insights_final": [
+          {
+            "id": "ic_001",
+            "text": "Retail discovery and purchase now span feeds, streaming content, articles, entertainment, social, search, and other environments, while linear funnels have collapsed.",
+            "evidence_id": "f1",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "ic_003",
+            "text": "This section presents StackAdapt internal data on how retail marketers allocated programmatic budgets in 2025. It shows concentration in scalable channels that support reach, relevance, continuity, and measurable outcomes across the collapsed customer journey.",
+            "evidence_id": "3",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "id": "ic_005",
+            "text": "The report identifies first-party and contextual data as central to privacy-safe retail marketing.",
+            "evidence_id": "4",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          {
+            "id": "ic_006",
+            "text": "The report defines sustained relevance through four connected capabilities: intelligence, adaptation, orchestration, and consistent brand presence.",
+            "evidence_id": "5",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              16,
+              17
+            ]
+          },
+          {
+            "id": "ic_007",
+            "text": "The report presents programmatic as the operating engine connecting shopper-intent activation, dynamic creative, brand impact, performance outcomes, and full-journey measurement.",
+            "evidence_id": "6",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              18,
+              19
+            ]
+          }
+        ],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "family_status": {
+          "quotes": {
+            "schema_version": "1.0",
+            "family": "quotes",
+            "source": "artifact",
+            "status": "abstained",
+            "confidence_score": 0.65,
+            "policy_action": "regenerate",
+            "reason": "quotes_missing_verbatim_source"
+          }
+        }
+      },
+      "candidate_attempt_1": {
+        "schema_version": "3.0",
+        "toc_topics": [],
+        "editorial_plan": {
+          "report_thesis": "Retained source theme",
+          "themes": [
+            {
+              "theme": "Theme 1",
+              "priority": 1,
+              "evidence_ids": [
+                "f1",
+                "f2",
+                "1",
+                "2"
+              ]
+            },
+            {
+              "theme": "Theme 2",
+              "priority": 2,
+              "evidence_ids": [
+                "3"
+              ]
+            },
+            {
+              "theme": "Theme 3",
+              "priority": 3,
+              "evidence_ids": [
+                "4"
+              ]
+            },
+            {
+              "theme": "Theme 4",
+              "priority": 4,
+              "evidence_ids": [
+                "5"
+              ]
+            },
+            {
+              "theme": "Theme 5",
+              "priority": 5,
+              "evidence_ids": [
+                "6",
+                "7"
+              ]
+            }
+          ]
+        },
+        "summary": {
+          "tldr": "",
+          "card_tldr_compact": "",
+          "executive_summary": "",
+          "claim_evidence_map": []
+        },
+        "cover_semantics": {
+          "evidence_shape": "system",
+          "direction": "rising",
+          "geography_scope": "regional",
+          "evidence_density": "balanced",
+          "domain_layer": "grid",
+          "selection_reason": "The evidence describes a rising, interconnected operating system linking fragmented discovery touch points, data, creative, programmatic activation, and measurement, supported by both qualitative frameworks and quantified spend data."
+        },
+        "insights_candidates": [
+          {
+            "id": "ic_001",
+            "text": "Retail discovery and purchase now occur across feeds, streaming content, articles, entertainment, social, search, and other environments, while linear funnels have collapsed.",
+            "evidence_id": "f1",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "ic_003",
+            "text": "Seven core channels represented 99% of programmatic media spend among StackAdapt retail advertisers in 2025.",
+            "evidence_id": "3",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "id": "ic_005",
+            "text": "The report identifies first-party and contextual data as central to privacy-safe retail marketing as signal loss and the decline of cookies continue.",
+            "evidence_id": "4",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          {
+            "id": "ic_006",
+            "text": "The report defines sustained relevance through four connected capabilities: intelligence, adaptation, orchestration, and consistent brand presence.",
+            "evidence_id": "5",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              16,
+              17
+            ]
+          },
+          {
+            "id": "ic_007",
+            "text": "The report presents programmatic as the operating engine connecting shopper-intent activation, dynamic creative, brand impact, performance outcomes, and full-journey measurement.",
+            "evidence_id": "6",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              18,
+              19
+            ]
+          }
+        ],
+        "insights_final": [
+          {
+            "id": "ic_001",
+            "text": "Retail discovery and purchase now span feeds, streaming content, articles, entertainment, social, search, and other environments, while linear funnels have collapsed.",
+            "evidence_id": "f1",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "ic_003",
+            "text": "This section presents StackAdapt internal data on how retail marketers allocated programmatic budgets in 2025. It shows concentration in scalable channels that support reach, relevance, continuity, and measurable outcomes across the collapsed customer journey.",
+            "evidence_id": "3",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "id": "ic_005",
+            "text": "The report identifies first-party and contextual data as central to privacy-safe retail marketing.",
+            "evidence_id": "4",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          {
+            "id": "ic_006",
+            "text": "The report defines sustained relevance through four connected capabilities: intelligence, adaptation, orchestration, and consistent brand presence.",
+            "evidence_id": "5",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              16,
+              17
+            ]
+          },
+          {
+            "id": "ic_007",
+            "text": "The report presents programmatic as the operating engine connecting shopper-intent activation, dynamic creative, brand impact, performance outcomes, and full-journey measurement.",
+            "evidence_id": "6",
+            "evidence": "Retained evidence redacted.",
+            "pages": [
+              18,
+              19
+            ]
+          }
+        ],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "family_status": {
+          "quotes": {
+            "schema_version": "1.0",
+            "family": "quotes",
+            "source": "artifact",
+            "status": "abstained",
+            "confidence_score": 0.0,
+            "policy_action": "regenerate",
+            "reason": "quotes_missing"
+          }
+        }
+      },
+      "evidence_packs": {
+        "doc_map": {
+          "sections": [
+            {
+              "id": "1",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            },
+            {
+              "id": "2",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            },
+            {
+              "id": "3",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "id": "4",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15
+              ]
+            },
+            {
+              "id": "5",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                16,
+                17
+              ]
+            },
+            {
+              "id": "6",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                18,
+                19
+              ]
+            },
+            {
+              "id": "7",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            },
+            {
+              "id": "f1",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                3
+              ]
+            },
+            {
+              "id": "f2",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            }
+          ]
+        }
+      },
+      "candidate_audits": [
+        {
+          "attempt_index": 1,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[semantic] Semantic check: quote f1 not supported (The quote text is empty, so there is no claim to compare with the evidence.)",
+              "severity": "error",
+              "affected_section": "quotes:f1",
+              "rule_id": "semantic",
+              "repair_target": "",
+              "entity_id": "",
+              "evidence_ids": []
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_1.json": "a4b362b95b645fab27e09a79168dcd2cf569dec15b44d784a76e803afee1004d",
+            "validation_regen_candidate_1.json": "e94af8c6e011a30f280fccd5fd2b246763773d331c55ab721549e5b5ead37cb6",
+            "regeneration_candidate_audit_1.json": "f8d72e3210c2fc12c7285a7652e433666840c2dbc86b2e2e84ad784517563f3c"
+          },
+          "quotes_final_count": 0
+        },
+        {
+          "attempt_index": 2,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[semantic] Semantic check: quote f1 not supported (The quote text is empty, so there is no claim to compare with the evidence.)",
+              "severity": "error",
+              "affected_section": "quotes:f1",
+              "rule_id": "semantic",
+              "repair_target": "",
+              "entity_id": "",
+              "evidence_ids": []
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_2.json": "784b8af967fb271fc9141751091ece03f9b6050b2c3c42c98f5a5a3a428a6ce0",
+            "validation_regen_candidate_2.json": "88bff25254e8e29fa762047811d7acde3c7c417d532109d43e050e0459cc3a41",
+            "regeneration_candidate_audit_2.json": "e2ec28c55c389f6396ba2923345f59ffdfcc0942f498a6bfec9de3fa7b6e6a6e"
+          },
+          "quotes_final_count": 0
+        },
+        {
+          "attempt_index": 3,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[semantic] Semantic check: quote f1 not supported (The quote text is empty, so there is no claim to compare with the evidence.)",
+              "severity": "error",
+              "affected_section": "quotes:f1",
+              "rule_id": "semantic",
+              "repair_target": "",
+              "entity_id": "",
+              "evidence_ids": []
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_3.json": "7030c595e1c0fedf0f10cc8ed4e755fe22813f03d5ca30c57585718e023e81ae",
+            "validation_regen_candidate_3.json": "1b15ac1cf91a65f27bdbc49bddf0df579900f198bf9e8c17afd629afa9399bed",
+            "regeneration_candidate_audit_3.json": "8973935dccbadc49e26bfef34d5315155b4ae76a68dad42a2c462333444b5cd8"
+          },
+          "quotes_final_count": 0
+        }
+      ],
+      "quote_candidate_ids": [
+        "quote_001",
+        "quote_002",
+        "quote_003",
+        "quote_004",
+        "quote_005",
+        "quote_006"
+      ]
+    },
+    "doubleverify": {
+      "report_id": "cohort-e854b71d6fb10333b47f",
+      "source_sha256": {
+        "artifacts.json": "235063f9f000700fe42e4d09a09ac6a9b25db16b68a5e8350df0afd69031c3cf",
+        "validation.json": "a0974172270f5abba7fd09eae8e3dde819344bfe80f5e3ee37fe32184bca103d"
+      },
+      "blocking_issues": [
+        {
+          "schema_version": "1.0",
+          "message": "[public_editorial_quality.duplicate_insight] duplicates a prior insight by normalized claim content",
+          "severity": "error",
+          "affected_section": "insights:insight-q1-2026-emea-quality~insights:insight-q1-2026-apac-quality",
+          "rule_id": "public_editorial_quality.duplicate_insight",
+          "repair_target": "insights_bundle",
+          "entity_id": "insight:insight-q1-2026-emea-quality:text",
+          "evidence_ids": [
+            "global-quality-benchmarks"
+          ]
+        }
+      ],
+      "artifacts": {
+        "schema_version": "3.0",
+        "toc_topics": [],
+        "editorial_plan": {
+          "report_thesis": "Retained source theme",
+          "themes": [
+            {
+              "theme": "Theme 1",
+              "priority": 1,
+              "evidence_ids": [
+                "global-quality-benchmarks"
+              ]
+            },
+            {
+              "theme": "Theme 2",
+              "priority": 2,
+              "evidence_ids": [
+                "global-video-benchmarks"
+              ]
+            },
+            {
+              "theme": "Theme 3",
+              "priority": 3,
+              "evidence_ids": [
+                "overall-global-attention-benchmarks",
+                "regional-performance"
+              ]
+            },
+            {
+              "theme": "Theme 4",
+              "priority": 4,
+              "evidence_ids": [
+                "about-dv-authentic-attention",
+                "attention-metrics-glossary"
+              ]
+            }
+          ]
+        },
+        "summary": {
+          "tldr": "",
+          "card_tldr_compact": "",
+          "executive_summary": "",
+          "claim_evidence_map": []
+        },
+        "cover_semantics": {
+          "evidence_shape": "comparison",
+          "direction": "neutral",
+          "geography_scope": "regional",
+          "evidence_density": "metric_rich",
+          "domain_layer": "grid",
+          "selection_reason": "The report is dominated by metric-rich comparisons of media quality and attention indices across APAC, EMEA, LATAM, and North America."
+        },
+        "insights_candidates": [
+          {
+            "id": "insight-q1-2026-apac-quality",
+            "text": "In Q1 2026, APAC recorded a 63% authentic viewable rate, a 0.4% fraud/SIVT violation rate, an 8.0% brand suitability violation rate, a 64% display viewable rate, and an 84% video viewable rate.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "insight-video-benchmark-ctv-exclusion",
+            "text": "DoubleVerify’s global video benchmarks cover tag-based open-web data and explicitly exclude connected TV.",
+            "evidence_id": "global-video-benchmarks",
+            "evidence": "Provides global video benchmark results excluding connected TV, using DV’s internal tag-based open-web data.",
+            "pages": [
+              4
+            ]
+          },
+          {
+            "id": "insight-regional-attention-index",
+            "text": "The Q1 2026 global attention benchmarks report Attention Index scores of 109 for APAC, 110 for EMEA, 101 for LATAM, and 99 for North America.",
+            "evidence_id": "overall-global-attention-benchmarks",
+            "evidence": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "pages": [
+              9
+            ]
+          },
+          {
+            "id": "insight-attention-measurement-scale",
+            "text": "The report’s Attention Index aggregates more than 50 data points, and its attention benchmarks are normalized to 100 using a 28-day rolling window.",
+            "evidence_id": "attention-metrics-glossary",
+            "evidence": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "pages": [
+              11
+            ]
+          },
+          {
+            "id": "insight-q1-2026-emea-quality",
+            "text": "In Q1 2026, EMEA recorded a 68% authentic viewable rate, a 0.4% fraud/SIVT violation rate, a 6.3% brand suitability violation rate, a 70% display viewable rate, and an 84% video viewable rate.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          }
+        ],
+        "insights_final": [
+          {
+            "id": "insight-q1-2026-apac-quality",
+            "text": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "insight-video-benchmark-ctv-exclusion",
+            "text": "DoubleVerify’s global video benchmarks cover tag-based open-web data and explicitly exclude connected TV.",
+            "evidence_id": "global-video-benchmarks",
+            "evidence": "Provides global video benchmark results excluding connected TV, using DV’s internal tag-based open-web data.",
+            "pages": [
+              4
+            ]
+          },
+          {
+            "id": "insight-regional-attention-index",
+            "text": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "evidence_id": "overall-global-attention-benchmarks",
+            "evidence": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "pages": [
+              9
+            ]
+          },
+          {
+            "id": "insight-attention-measurement-scale",
+            "text": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "evidence_id": "attention-metrics-glossary",
+            "evidence": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "pages": [
+              11
+            ]
+          },
+          {
+            "id": "insight-q1-2026-emea-quality",
+            "text": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          }
+        ],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": ""
+      },
+      "candidate_attempt_1": {
+        "schema_version": "3.0",
+        "toc_topics": [],
+        "editorial_plan": {
+          "report_thesis": "Retained source theme",
+          "themes": [
+            {
+              "theme": "Theme 1",
+              "priority": 1,
+              "evidence_ids": [
+                "global-quality-benchmarks"
+              ]
+            },
+            {
+              "theme": "Theme 2",
+              "priority": 2,
+              "evidence_ids": [
+                "global-video-benchmarks"
+              ]
+            },
+            {
+              "theme": "Theme 3",
+              "priority": 3,
+              "evidence_ids": [
+                "overall-global-attention-benchmarks",
+                "regional-performance"
+              ]
+            },
+            {
+              "theme": "Theme 4",
+              "priority": 4,
+              "evidence_ids": [
+                "about-dv-authentic-attention",
+                "attention-metrics-glossary"
+              ]
+            }
+          ]
+        },
+        "summary": {
+          "tldr": "",
+          "card_tldr_compact": "",
+          "executive_summary": "",
+          "claim_evidence_map": []
+        },
+        "cover_semantics": {
+          "evidence_shape": "comparison",
+          "direction": "neutral",
+          "geography_scope": "regional",
+          "evidence_density": "metric_rich",
+          "domain_layer": "grid",
+          "selection_reason": "The report is dominated by metric-rich comparisons of media quality and attention indices across APAC, EMEA, LATAM, and North America."
+        },
+        "insights_candidates": [
+          {
+            "id": "insight-q1-2026-apac-quality",
+            "text": "In Q1 2026, APAC recorded a 63% authentic viewable rate, a 0.4% fraud/SIVT violation rate, an 8.0% brand suitability violation rate, a 64% display viewable rate, and an 84% video viewable rate.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "insight-video-benchmark-ctv-exclusion",
+            "text": "DoubleVerify’s global video benchmarks use internal tag-based open-web data and exclude connected TV, so they should not be treated as a CTV performance benchmark.",
+            "evidence_id": "global-video-benchmarks",
+            "evidence": "Provides global video benchmark results excluding connected TV, using DV’s internal tag-based open-web data.",
+            "pages": [
+              4
+            ]
+          },
+          {
+            "id": "insight-regional-attention-index",
+            "text": "The Q1 2026 global attention benchmarks report Attention Index scores of 109 for APAC, 110 for EMEA, 101 for LATAM, and 99 for North America.",
+            "evidence_id": "overall-global-attention-benchmarks",
+            "evidence": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "pages": [
+              9
+            ]
+          },
+          {
+            "id": "insight-attention-measurement-scale",
+            "text": "The report’s Attention Index aggregates more than 50 data points, and its attention benchmarks are normalized to 100 using a 28-day rolling window.",
+            "evidence_id": "attention-metrics-glossary",
+            "evidence": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "pages": [
+              11
+            ]
+          },
+          {
+            "id": "insight-q1-2026-emea-quality",
+            "text": "In Q1 2026, EMEA recorded a 68% authentic viewable rate, a 0.4% fraud/SIVT violation rate, a 6.3% brand suitability violation rate, a 70% display viewable rate, and an 84% video viewable rate.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          }
+        ],
+        "insights_final": [
+          {
+            "id": "insight-q1-2026-apac-quality",
+            "text": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          },
+          {
+            "id": "insight-video-benchmark-ctv-exclusion",
+            "text": "DoubleVerify’s global video benchmarks use internal tag-based open-web data and exclude connected TV, so they should not be treated as a CTV performance benchmark.",
+            "evidence_id": "global-video-benchmarks",
+            "evidence": "Provides global video benchmark results excluding connected TV, using DV’s internal tag-based open-web data.",
+            "pages": [
+              4
+            ]
+          },
+          {
+            "id": "insight-regional-attention-index",
+            "text": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "evidence_id": "overall-global-attention-benchmarks",
+            "evidence": "Reports attention benchmark indices by region and highlights attention performance by industry vertical.",
+            "pages": [
+              9
+            ]
+          },
+          {
+            "id": "insight-attention-measurement-scale",
+            "text": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "evidence_id": "attention-metrics-glossary",
+            "evidence": "Defines the attention measurement framework and its component indices, including attention, exposure, engagement, prominence, intensity, user presence, and ad interaction.",
+            "pages": [
+              11
+            ]
+          },
+          {
+            "id": "insight-q1-2026-emea-quality",
+            "text": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "evidence_id": "global-quality-benchmarks",
+            "evidence": "Presents regional benchmarks for authentic viewability, fraud or SIVT violations, brand suitability violations, display viewability, and video viewability.",
+            "pages": [
+              3
+            ]
+          }
+        ],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": ""
+      },
+      "evidence_packs": {
+        "doc_map": {
+          "sections": [
+            {
+              "id": "about-dv-authentic-attention",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            },
+            {
+              "id": "attention-metrics-glossary",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                11
+              ]
+            },
+            {
+              "id": "global-quality-benchmarks",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                3
+              ]
+            },
+            {
+              "id": "global-video-benchmarks",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                4
+              ]
+            },
+            {
+              "id": "overall-global-attention-benchmarks",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                9
+              ]
+            },
+            {
+              "id": "regional-performance",
+              "summary": "Retained evidence redacted.",
+              "pages": [
+                1
+              ]
+            }
+          ]
+        }
+      },
+      "candidate_audits": [
+        {
+          "attempt_index": 1,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[public_editorial_quality.duplicate_insight] duplicates a prior insight by normalized claim content",
+              "severity": "error",
+              "affected_section": "insights:insight-q1-2026-emea-quality~insights:insight-q1-2026-apac-quality",
+              "rule_id": "public_editorial_quality.duplicate_insight",
+              "repair_target": "insights_bundle",
+              "entity_id": "insight:insight-q1-2026-emea-quality:text",
+              "evidence_ids": [
+                "global-quality-benchmarks"
+              ]
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_1.json": "d4e1802289254c0056bac63c65513bf08475f6d14472611c39421f4fde8f3e8e",
+            "validation_regen_candidate_1.json": "5763d2081bbb83f453f77632738a096345c77f4a0feab6abcf011e8f9babcac2",
+            "regeneration_candidate_audit_1.json": "8c2659de3debbea2f6dbb2cdb4a16f6c3dd096db0b1578b72fc8532675661879"
+          },
+          "duplicate_pair_text_sha256": {
+            "insight-q1-2026-apac-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165",
+            "insight-q1-2026-emea-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165"
+          }
+        },
+        {
+          "attempt_index": 2,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[numbers] Number 100.0 not present in report or evidence",
+              "severity": "error",
+              "affected_section": "linkedin_post",
+              "rule_id": "numbers",
+              "repair_target": "",
+              "entity_id": "soft_copy:linkedin_post:ff7f27f2b5ce5183",
+              "evidence_ids": []
+            },
+            {
+              "schema_version": "1.0",
+              "message": "[grounding] [factual_claim|unsupported_factual_claim] The evidence establishes that the benchmark excludes connected TV and uses internal tag-based open-web data, but it does not explicitly establish that this prevents direct equivalence between the environments.: The benchmark’s open-web scope limits its use for connected-TV decisions and prevents direct equivalence between the two environments.",
+              "severity": "error",
+              "affected_section": "insights:insight-video-benchmark-ctv-exclusion.so_what",
+              "rule_id": "grounding",
+              "repair_target": "",
+              "entity_id": "insight:insight-video-benchmark-ctv-exclusion:so_what",
+              "evidence_ids": []
+            },
+            {
+              "schema_version": "1.0",
+              "message": "[public_editorial_quality.duplicate_insight] duplicates a prior insight by normalized claim content",
+              "severity": "error",
+              "affected_section": "insights:insight-q1-2026-emea-quality~insights:insight-q1-2026-apac-quality",
+              "rule_id": "public_editorial_quality.duplicate_insight",
+              "repair_target": "insights_bundle",
+              "entity_id": "insight:insight-q1-2026-emea-quality:text",
+              "evidence_ids": [
+                "global-quality-benchmarks"
+              ]
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_2.json": "40a8ebe9de4256a9d9dfff41312689a1f4450d1a65e7efa6070e699e264b4e19",
+            "validation_regen_candidate_2.json": "1bd621f0b66dcff2a7643bd6dee611112bcd90cf74846e9a115f3140fa50e395",
+            "regeneration_candidate_audit_2.json": "99e5d00735e58ddc80363210168cc769ce829e8402282e7703075d4da12a27d1"
+          },
+          "duplicate_pair_text_sha256": {
+            "insight-q1-2026-apac-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165",
+            "insight-q1-2026-emea-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165"
+          }
+        },
+        {
+          "attempt_index": 3,
+          "promotion_outcome": "rolled_back",
+          "validation_status": "fail",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "blocking_issues": [
+            {
+              "schema_version": "1.0",
+              "message": "[numbers] Number 100.0 not present in report or evidence",
+              "severity": "error",
+              "affected_section": "linkedin_post",
+              "rule_id": "numbers",
+              "repair_target": "",
+              "entity_id": "soft_copy:linkedin_post:ff7f27f2b5ce5183",
+              "evidence_ids": []
+            },
+            {
+              "schema_version": "1.0",
+              "message": "[grounding] [factual_claim|unsupported_factual_claim] The evidence establishes that the benchmark excludes connected TV and uses open-web data, but does not establish that applying it to CTV would misstate channel quality.: The benchmark’s stated scope does not include connected-TV video performance, so applying it to CTV could misstate channel quality.",
+              "severity": "error",
+              "affected_section": "insights:insight-video-benchmark-ctv-exclusion.so_what",
+              "rule_id": "grounding",
+              "repair_target": "",
+              "entity_id": "insight:insight-video-benchmark-ctv-exclusion:so_what",
+              "evidence_ids": []
+            },
+            {
+              "schema_version": "1.0",
+              "message": "[public_editorial_quality.duplicate_insight] duplicates a prior insight by normalized claim content",
+              "severity": "error",
+              "affected_section": "insights:insight-q1-2026-emea-quality~insights:insight-q1-2026-apac-quality",
+              "rule_id": "public_editorial_quality.duplicate_insight",
+              "repair_target": "insights_bundle",
+              "entity_id": "insight:insight-q1-2026-emea-quality:text",
+              "evidence_ids": [
+                "global-quality-benchmarks"
+              ]
+            }
+          ],
+          "source_sha256": {
+            "artifacts_regen_candidate_3.json": "51ee0655c432ff2fc1d1a7b2f8dd9844e518554d0478bc1dfc9d5efeb4d2d4fd",
+            "validation_regen_candidate_3.json": "9f7624c1b930deffe521cd576a73cf9fd6e9e82daea38f62a03d74f8979ce0d0",
+            "regeneration_candidate_audit_3.json": "65b6188f92e0f0630309067cf9d03d74f4abf38e3e490e9c4dfc1d61ca4ffe05"
+          },
+          "duplicate_pair_text_sha256": {
+            "insight-q1-2026-apac-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165",
+            "insight-q1-2026-emea-quality": "4a1a7376e417d480fadd2ac8084e293a229d00f32f84172fed1959aa44f06165"
+          }
+        }
+      ]
+    }
+  }
+}

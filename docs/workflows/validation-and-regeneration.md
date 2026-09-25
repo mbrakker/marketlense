@@ -186,8 +186,14 @@ remains a blocking number error even if a similar value appears elsewhere.
 For a blocking targetable finding, warning-only findings in unrelated artifact
 families are not allowed to widen the regeneration plan. A retained soft-copy
 claim can therefore be repaired or removed by its claim ID while untouched
-summary and LinkedIn copy retain their bytes and provenance. Run
-`python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"`
+summary and LinkedIn copy retain their bytes and provenance.
+Duplicate-insight quality findings identify the affected stable insight but do
+not quarantine its evidence ID: two insights can legitimately share one source,
+and their wording is the failed field. The targeted insight repair keeps that
+source available while the candidate quality and promotion gates still reject
+an unchanged duplicate or a new unsupported claim.
+
+Run `python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"`
 before any live A21 canary; it is the required deterministic queue-to-A21 gate
 and performs no external publication.
 

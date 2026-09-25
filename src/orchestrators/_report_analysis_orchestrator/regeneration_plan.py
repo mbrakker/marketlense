@@ -289,6 +289,9 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     """Keep a rejected binding out of the next atomic repair prompt."""
 
     rule_id = str(issue.rule_id or "").strip().lower()
+    if rule_id == "public_editorial_quality.duplicate_insight":
+        # The wording duplicates a sibling; their shared source is still valid.
+        return False
     return str(issue.severity or "").strip().lower() == "error" and (
         rule_id == "grounding"
         or rule_id in {"numbers", "metrics"}

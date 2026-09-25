@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "scope": "one isolated Mintel production-path canary; publication disabled",
+  "git_sha": "6a43e110dd4fe6d3646ee21a0f37d9752763c0c7",
+  "report_id": "cohort-b3cb5f66cccda4420be2",
+  "source_pdf_sha256": "0d10fa30d4df83b8ec74a63db363b5bd98eb52497e5cc9a2300152d9713d6b16",
+  "run_directory": "tmp/a21-mintel-residual-canary-20260925/ias-first-attempt-tpkhzee9",
+  "isolated_fresh_state": true,
+  "workflow_attempt_count": 1,
+  "model_provider_calls": 33,
+  "estimated_cost_usd": 0.038503,
+  "validation": "pass",
+  "publication_readiness": "fail",
+  "final_state": "failed",
+  "terminal_failure_code": "publish_readiness_failed",
+  "failed_queue": "report_render",
+  "failed_readiness_rules": [
+    "publish_readiness.editorial_quality",
+    "publish_readiness.rendered_scaffolding",
+    "publish_readiness.source_fidelity"
+  ],
+  "provider_request_summary": {
+    "model": "gpt-6-luna",
+    "completed_usage_events": 33,
+    "openai_bad_request_events": 0,
+    "context_category_fit_policy_hash": "d0a29780e6029dc5d80a177417cff33b35dbddc24fd352a747fc4a1cba0252c6"
+  },
+  "limitations": [
+    "The original 89b4fc4c rejected request ID, exact namespace, rejected parameter and provider response body were not retained.",
+    "A passing analysis validation on one current request sequence does not prove the old rejected request shape is unreachable."
+  ]
+}
