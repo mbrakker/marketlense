@@ -1,0 +1,216 @@
+{
+  "schema_version": "1.0",
+  "recorded_date": "2026-09-26",
+  "implementation_sha": "09df2bac76111e44b8e811337c83a1995c791954",
+  "disposition": "measurement_incomplete_e13_remains_active",
+  "frozen_corpus": {
+    "case_count": 7,
+    "manifest_count": 3,
+    "manifest_sha256": {
+      "baseline-a21-five.json": "d23482c46e0d8498bdf5dd0727472dfbc5c8da17d80443fba2ab43a0d68f12c4",
+      "baseline-mobile-editorial.json": "83b73c0b8fd0fe9dd6e54450fe7db132f5aea9c0bb495b7a01631dbdb0c4c428",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a586f229704a04aa2ebdda6bbcd5bdf7de74974bd15b5405ad64fbd5b8fc7363"
+    },
+    "overlapping_failure_class_case_counts": {
+      "summary": 4,
+      "insight_metric": 7,
+      "quote": 3,
+      "expert_view": 6,
+      "linkedin": 4,
+      "public_editorial_hard_failure": 2
+    }
+  },
+  "baseline_metrics_by_incompatible_cohort": [
+    {
+      "manifest": "baseline-a21-five.json",
+      "cases": 5,
+      "retained_rejected_attempts": 15,
+      "valid_success_at_1": {"count": 0, "denominator": 5, "rate": 0.0},
+      "valid_success_at_3": {"count": 0, "denominator": 5, "rate": 0.0},
+      "residual_failure_odds": {"value": null, "state": "unbounded"},
+      "repeated_candidate_hash_groups": 1,
+      "repeated_candidate_hash_excess": 1,
+      "repeated_failure_strategy_evidence_groups": 1,
+      "repeated_failure_strategy_evidence_excess": 1,
+      "usage": {
+        "attribution": "report_case_aggregate",
+        "repair_attempt_attribution": "unavailable",
+        "model_calls": 32,
+        "input_tokens": 235970,
+        "output_tokens": 51700,
+        "estimated_cost_usd": 0.109236,
+        "latency_ms_total_from_retained_attempt_audits": 1168447,
+        "latency_ms_mean_from_retained_attempt_audits": 77896.47
+      }
+    },
+    {
+      "manifest": "baseline-mobile-editorial.json",
+      "cases": 1,
+      "retained_rejected_attempts": 2,
+      "valid_success_at_1": {"count": 0, "denominator": 1, "rate": 0.0},
+      "valid_success_at_3": {"count": 0, "denominator": 1, "rate": 0.0},
+      "residual_failure_odds": {"value": null, "state": "unbounded"},
+      "repeated_candidate_hash_groups": 0,
+      "repeated_candidate_hash_excess": 0,
+      "repeated_failure_strategy_evidence_groups": 0,
+      "repeated_failure_strategy_evidence_excess": 0,
+      "usage": {
+        "attribution": "report_case_aggregate",
+        "repair_attempt_attribution": "unavailable",
+        "model_calls": 11,
+        "input_tokens": 119933,
+        "output_tokens": 23322,
+        "estimated_cost_usd": 0.051973,
+        "latency_ms_total_from_retained_attempt_audits": 189300,
+        "latency_ms_mean_from_retained_attempt_audits": 94650.0
+      }
+    },
+    {
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "cases": 1,
+      "retained_rejected_attempts": 2,
+      "valid_success_at_1": {"count": 0, "denominator": 1, "rate": 0.0},
+      "valid_success_at_3": {"count": 0, "denominator": 1, "rate": 0.0},
+      "residual_failure_odds": {"value": null, "state": "unbounded"},
+      "repeated_candidate_hash_groups": 0,
+      "repeated_candidate_hash_excess": 0,
+      "repeated_failure_strategy_evidence_groups": 0,
+      "repeated_failure_strategy_evidence_excess": 0,
+      "usage": {
+        "attribution": "unavailable",
+        "model_calls": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "estimated_cost_usd": null,
+        "latency_ms_total_from_retained_attempt_audits": 80976,
+        "latency_ms_mean_from_retained_attempt_audits": 40488.0
+      }
+    }
+  ],
+  "current_replay": {
+    "status": "unavailable_no_scorecard_artifact",
+    "frozen_manifest_denominator": 7,
+    "cases_reaching_scorecard": 0,
+    "benchmark_denominator_complete": false,
+    "success_at_1": null,
+    "success_at_3": null,
+    "current_residual_failure_odds": {"value": null, "state": "unavailable"},
+    "residual_odds_reduction_factor": {"value": null, "state": "unavailable"},
+    "new_hard_failure_count_and_rate": null,
+    "out_of_scope_mutation_count": null,
+    "unsupported_evidence_introduction_count": null,
+    "repeated_candidate_hash_count": null,
+    "repeated_failure_strategy_evidence_count": null,
+    "deterministic_vs_model_repair_share": null,
+    "abstention_and_removal_counts": null,
+    "failure_class_distribution": null,
+    "current_replay_comparison_status": "unavailable_incompatible_identities_and_incomplete_seed"
+  },
+  "retained_input_preflight": {
+    "cases_checked": 7,
+    "cases_with_incomplete_replay_seed": 7,
+    "missing_required_fields": {
+      "figure.title": 7,
+      "figure.evidence": 7
+    },
+    "interpretation": "The frozen manifests retain promoted artifacts and evidence packs, but not the complete pre-repair ReportPayload. The replay runner initializes the figure section as enabled; the canonical completeness gate rejects each reconstructed seed before candidate validation. No figure fields were invented and the production completeness or validation gates were not bypassed."
+  },
+  "diagnostic_replay_attempt": {
+    "manifest": "baseline-a21-five.json",
+    "attempted_cases_before_stop": 1,
+    "scorecard_cases_produced": 0,
+    "terminal_code": "report_payload_incomplete",
+    "missing_fields": ["figure.title", "figure.evidence"],
+    "candidate_validation_and_promotion_reached": false,
+    "candidate_audit_diagnostic": {
+      "audit_present": true,
+      "attempt_index": 1,
+      "validation_status": "fail",
+      "promotion_outcome": "candidate",
+      "mutation_scope_result": "not_evaluated",
+      "evidence_lineage_result": "not_evaluated",
+      "introduced_hard_failure_count": null,
+      "selected_evidence_count": 1
+    },
+    "observed_provider_usage_not_comparable_to_a_valid_replay": {
+      "attribution": "failed_candidate_generation_only",
+      "model_calls": 3,
+      "input_tokens": 9238,
+      "output_tokens": 2079,
+      "estimated_cost_usd": 0.001963,
+      "latency_ms": null
+    }
+  },
+  "per_failure_class_current_results": [
+    {"failure_class": "summary", "frozen_cases": 4, "scored_cases": null, "success_at_3": null, "status": "unavailable"},
+    {"failure_class": "insight_metric", "frozen_cases": 7, "scored_cases": null, "success_at_3": null, "status": "unavailable"},
+    {"failure_class": "quote", "frozen_cases": 3, "scored_cases": null, "success_at_3": null, "status": "unavailable"},
+    {"failure_class": "expert_view", "frozen_cases": 6, "scored_cases": null, "success_at_3": null, "status": "unavailable"},
+    {"failure_class": "linkedin", "frozen_cases": 4, "scored_cases": null, "success_at_3": null, "status": "unavailable"},
+    {"failure_class": "public_editorial_hard_failure", "frozen_cases": 2, "scored_cases": null, "success_at_3": null, "status": "unavailable"}
+  ],
+  "isolated_discovery_to_publish_readiness_canary": {
+    "implementation_sha": "09df2bac76111e44b8e811337c83a1995c791954",
+    "result": "pass",
+    "workflow_attempt_count": 1,
+    "validation": "pass",
+    "publication_readiness": "pass",
+    "final_state": "awaiting_review",
+    "publication_enabled": false,
+    "model_provider_calls": 40,
+    "input_tokens": 263961,
+    "output_tokens": 50057,
+    "cost_usd": 0.051427,
+    "duration_seconds": 361.934
+  },
+  "acceptance_criteria_disposition": {
+    "manifest_and_baseline_hashes_retained": "supported",
+    "zero_out_of_scope_mutation": "unavailable_current_replay_did_not_reach_candidate_validation",
+    "zero_unsupported_evidence_introduction": "unavailable_current_replay_did_not_reach_candidate_validation",
+    "no_repeated_rejected_hash_or_strategy_evidence_combination": "unavailable_current_replay; one repeated group of each is retained in the A21 baseline",
+    "uniquely_provable_deterministic_repairs_use_zero_model_calls": "unavailable_current_replay",
+    "compatible_evidence_preferred_or_abstention": "unavailable_current_replay",
+    "valid_success_at_3_at_least_90_percent": "not_demonstrated",
+    "residual_failure_odds_reduction_or_high_baseline_ceiling_rule": "unavailable; current cohort comparison is fail-closed and historical identities are incompatible",
+    "new_hard_failures_below_2_percent": "unavailable_current_replay",
+    "no_weaker_validator_broader_scope_exceptions_or_retry_increase": "no such change was made for this measurement; runtime behavior remains unverified by the incomplete benchmark",
+    "compatible_before_after_usage_and_cost_comparison": "unavailable; diagnostic replay usage is not comparable and historical repair-attempt attribution is incomplete",
+    "e13_closure": "not_supported; keep Active"
+  },
+  "commands_and_checks": [
+    {"command": "Inline Python read-only verification using replay_validation_repair_benchmark._benchmark_manifest and _case_paths for all three frozen manifests", "result": "passed; self-hashes and all input file hashes/canonical artifact hashes verified for 7 cases"},
+    {"command": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-repair-live/09df2bac/a21 --implementation-sha 09df2bac76111e44b8e811337c83a1995c791954", "result": "stopped before scorecard output at report_payload_incomplete; see diagnostic_replay_attempt"},
+    {"command": "python -m pytest -q tests/test_lineage_regeneration.py tests/test_replay_validation_repair_benchmark.py tests/test_regeneration_contracts.py tests/test_report_regeneration_identity_and_failures.py tests/test_regeneration_candidate.py tests/test_report_regeneration_generator.py tests/test_schema_validator.py tests/test_validation_reliability_service.py tests/test_validation_queue_lineage.py tests/test_validation_run_manifest.py tests/test_validation_repair_scorecard.py", "result": "209 passed in 120.58s"},
+    {"command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-required-workflow-09df2bac --source \"tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf\" --max-duration-seconds 7200", "result": "passed on exact implementation SHA; one attempt, validation/readiness pass, publication disabled"},
+    {"command": "python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json", "result": "passed"},
+    {"command": "python scripts/ci/check_architecture_imports.py", "result": "passed"},
+    {"command": "python scripts/ci/check_role_io_boundaries.py", "result": "passed"},
+    {"command": "python scripts/ci/check_forbidden_patching.py", "result": "passed"},
+    {"command": "python scripts/ci/check_bounded_logging.py", "result": "passed"},
+    {"command": "python scripts/ci/check_service_boundary_map.py", "result": "passed"},
+    {"command": "python scripts/ci/check_repository_hygiene.py", "result": "passed"},
+    {"command": "python scripts/ci/check_backlog_source.py", "result": "passed after the E13 measurement/TODO update; 30 active register items, no duplicate or missing detail sections"},
+    {"command": "python scripts/ci/check_formatting.py", "result": "passed"},
+    {"command": "python scripts/ci/check_ruff_lint.py", "result": "passed"},
+    {"command": "python scripts/ci/run_type_check.py", "result": "passed; 764 source files"},
+    {"command": "python -m pytest -q tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py", "result": "33 passed"},
+    {"command": "python -m pytest -q tests/test_llm_service.py tests/test_llm_routing_policy.py", "result": "7 passed"},
+    {"command": "python -m pytest -q tests/test_prompt_fixture_corpus_regression.py", "result": "7 passed"},
+    {"command": "python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3", "result": "passed; 91,931 current tokens vs 91,728 baseline, USD 0.021920 vs USD 0.021900; aggregate prompt fixtures, not repair-attributable"},
+    {"command": "python scripts/ci/check_documentation.py --check-generated", "result": "failed on 12 pre-existing stale line anchors in simplification.md; no changed document is implicated"}
+  ],
+  "documentation_gate_existing_findings": [
+    "src/services/_workflow_queue_service/health.py#L215",
+    "src/services/_workflow_queue_service/health.py#L257",
+    "src/_cli/workflow_queue.py#L308",
+    "src/contracts/workflow_queue.py#L540",
+    "src/_cli/workflow_queue.py#L324",
+    "src/services/_workflow_queue_service/health.py#L177",
+    "src/services/_workflow_queue_service/health.py#L267",
+    "src/services/_workflow_queue_service/health.py#L273",
+    "docs/architecture/role-boundaries.md#L34",
+    "AGENTS.md#L232",
+    "docs/quality/evidence.md#L41",
+    "src/orchestrators/publish_orchestrator.py#L1300"
+  ]
+}

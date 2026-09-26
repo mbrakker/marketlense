@@ -44,8 +44,48 @@ the existing deterministic patch checks. The scorecard retains its normal
 validation, evidence, mutation-scope, promotion, and rollback gates. It does
 not author replacement copy or raise the configured retry limit.
 
-The exact implementation SHA, per-cohort final metrics, per-failure-class
-results, commands and test outcomes, and acceptance-criteria disposition will
-be added here after the frozen replays and required quality gates complete.
-No success, compatibility, or closure claim is made before those results are
-retained.
+## Final measurement disposition — 2026-09-26
+
+The implementation was replayed at exact SHA
+`09df2bac76111e44b8e811337c83a1995c791954`. The A21 replay stopped in its
+first case with `report_payload_incomplete` because the reconstructed payload
+had no `figure.title` or `figure.evidence`. A hash-only preflight of all seven
+frozen cases found the same missing fields in every case. The original
+artifacts and six evidence packs are retained and hash-pinned, but the complete
+pre-repair `ReportPayload` that production has after figure selection is not in
+the frozen inputs. Candidate validation and promotion were therefore not
+reached; the retained candidate audit records mutation scope and evidence
+lineage as `not_evaluated`, so it cannot establish either safety result. No
+figure prose was invented and no production completeness, validation, or retry
+gate was bypassed.
+
+The attempted first case made 3 model calls (9,238 input tokens, 2,079 output
+tokens, USD 0.001963) before that completeness check. These calls are diagnostic
+generation usage, not a repair scorecard result, and are not comparable with
+the aggregate historical usage. Current success, residual odds, newly
+introduced hard failures, scope violations, unsupported evidence, repetition,
+abstention, repair-mode share, per-class results, and comparable latency/cost
+are `unavailable`, not zero. No current scorecard artifact was produced.
+
+The retained baseline contains 7 cases and 19 rejected candidate attempts.
+Valid success@1 and success@3 were both 0/7. The three cohorts remain separate
+because their identities are incompatible; residual baseline odds are
+unbounded at zero success. A21 retains one repeated candidate-hash group and
+one repeated failure/strategy/evidence group. Historical per-attempt usage is
+unavailable for A21 and mobile, and all usage is unavailable for the
+DoubleVerify cohort. The result JSON retains per-cohort calls, tokens, cost,
+latency, class coverage, failed-run usage, command outcomes, and the exact
+acceptance disposition: [2026-09-26 result](results/2026-09-26-09df2bac.json)
+(SHA-256 `1cf12dc7a0a09ae4ea69cd46cfdcc155d9b8052b80a015c923b42c8598a71e6b`).
+
+The isolated discovery-to-publish readiness canary passed on the same SHA in
+one attempt and ended at `awaiting_review`; validation and publication
+readiness passed, and publication remained disabled. It did not exercise
+repair and is not counted in repair metrics.
+
+E13 remains **Active**. Closure requires a retained complete pre-repair
+`ReportPayload` for each immutable case, followed by a same-corpus replay on a
+new exact implementation SHA. Until then, the quantitative repair criteria are
+not demonstrated. The quality check `check_documentation.py --check-generated`
+also continues to report 12 pre-existing stale line anchors in
+`simplification.md`; none point to files changed for this work.
