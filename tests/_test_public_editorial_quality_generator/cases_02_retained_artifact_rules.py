@@ -235,6 +235,10 @@ def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
     assert "key_figures:1.why_it_matters" in affected_fields
     assert plan.mode == "targeted"
     assert [target.target_section for target in plan.targets] == ["key_figures"]
+    assert plan.targets[0].allowed_paths == [
+        "key_figures[0].label",
+        "key_figures[0].why_it_matters",
+    ]
 
 
 @pytest.mark.parametrize("display", ["$1.3T", "€2.4bn", "12.5%"])

@@ -362,6 +362,10 @@ def test_key_figure_relationship_failure_regenerates_only_key_figure_selection()
 
     assert [target.target_section for target in plan.targets] == ["key_figures"]
     assert plan.targets[0].regenerate_steps == ["key_figures"]
+    assert plan.targets[0].allowed_paths == [
+        "key_figures[0].figure",
+        "key_figures[0].why_it_matters",
+    ]
 
 
 def test_public_text_items_includes_compact_summary_tldr_with_summary_evidence() -> (

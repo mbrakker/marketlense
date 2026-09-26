@@ -328,12 +328,48 @@ def test_planner_skips_an_insight_failure_without_a_resolved_leaf() -> None:
     assert plan.broad_retry_allowed is False
 
 
+def test_planner_abstains_when_any_issue_in_an_atomic_target_is_unresolved() -> None:
+    artifacts = _insight_artifacts()
+    issues = [
+        ValidationIssue(
+            message="A retained field has an exact target.",
+            severity="error",
+            affected_section="insights:insight-1.text",
+            rule_id="grounding",
+            repair_target="insights_bundle",
+            entity_id="insight:insight-1:text",
+        ),
+        ValidationIssue(
+            message="A family-level issue has no item identity.",
+            severity="error",
+            affected_section="insights_final",
+            rule_id="artifact_quality",
+            repair_target="insights_bundle",
+        ),
+    ]
+
+    assert _allowed_paths("insights_bundle", issues, artifacts, "REGENERATE_ITEM") == []
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "skip"
+    assert plan.targets == []
+    assert plan.broad_retry_allowed is False
+
+
 def test_ambiguous_writable_path_abstains_before_provider_is_required() -> None:
     artifacts = _insight_artifacts()
     artifacts["insights_final"][1]["id"] = "insight-1"
     issue = _insight_issue("so_what")
     target = _target(["insights_final[item=insight-1].so_what"], [issue])
 
+    assert (
+        _allowed_paths("insights_bundle", [issue], artifacts, "REGENERATE_ITEM")
+        == []
+    )
     assert _required_repair_protected_fields(artifacts, target) == []
 
     execution = SimpleNamespace(

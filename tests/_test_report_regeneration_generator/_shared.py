@@ -120,6 +120,12 @@ def _legacy_repair_path_value(payload, path):
             return _MISSING_REPAIR_FIXTURE_PATH
         if not selector:
             continue
+        if selector.isdigit() and isinstance(current, list):
+            index = int(selector)
+            if index >= len(current):
+                return _MISSING_REPAIR_FIXTURE_PATH
+            current = current[index]
+            continue
         selector_key, separator, selector_value = selector.partition("=")
         if separator and selector_key == "claim_index":
             if not isinstance(current, str):

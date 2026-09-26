@@ -86,7 +86,9 @@ class RepairDecision:
     )
     protected_fields: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Artifact paths that must remain unchanged."},
+        metadata={
+            "doc": "Retained scalar leaf paths outside repair scope that must remain unchanged."
+        },
     )
     changed_paths: List[str] = field(
         default_factory=list,
@@ -235,7 +237,9 @@ class RegenerationTarget:
     )
     allowed_paths: List[str] = field(
         default_factory=list,
-        metadata={"doc": "Artifact roots allowed to change for this candidate."},
+        metadata={
+            "doc": "Exact retained scalar leaf paths allowed to change for this candidate."
+        },
     )
     selected_evidence_ids: List[str] = field(default_factory=list)
     quarantined_evidence_ids: List[str] = field(default_factory=list)
@@ -616,7 +620,12 @@ class RegenerationCandidateAudit:
     failure_fingerprints: List[str] = field(default_factory=list)
     repair_action: str = field(default="")
     repair_strategy: str = field(default="")
-    allowed_paths: List[str] = field(default_factory=list)
+    allowed_paths: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact scalar leaf paths declared writable by the repair planner."
+        },
+    )
     verified_dependent_paths: List[str] = field(
         default_factory=list,
         metadata={

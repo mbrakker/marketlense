@@ -93,12 +93,34 @@ def regenerate_artifacts(request, **kwargs):
             affected_section = (
                 "summary.executive_summary" if family == "summary" else family
             )
+            claim_id = ""
+            evidence_ids: list[str] = []
+            if family in {"expert_comment", "linkedin_post"}:
+                provenance = request.current_artifacts.get(
+                    "soft_copy_claim_provenance", {}
+                )
+                claims = (
+                    provenance.get("claims", []) if isinstance(provenance, dict) else []
+                )
+                claim = next(
+                    (
+                        item
+                        for item in claims
+                        if isinstance(item, dict)
+                        and item.get("artifact_family") == family
+                    ),
+                    {},
+                )
+                claim_id = str(claim.get("claim_id") or "")
+                evidence_ids = list(claim.get("evidence_ids") or [])
             issues = [
                 RegenerationIssue(
                     rule_id="test_fixture_repair",
                     affected_section=affected_section,
                     message="A deterministic test fixture requested repair.",
                     severity="error",
+                    entity_id=claim_id,
+                    evidence_ids=evidence_ids,
                 )
             ]
         planned = _build_target(
@@ -1827,10 +1849,7 @@ def test_regenerate_artifacts_expert_comment_uses_grounded_synthesis_context(
     variables = prompt_client.render_calls[0]["variables"]
     assert "summary_json" not in variables
     context = json.loads(variables["expert_synthesis_context_json"])
-    assert [theme["theme"] for theme in context["themes"]] == [
-        "Primary evidence",
-        "Margin evidence",
-    ]
+    assert [theme["theme"] for theme in context["themes"]] == ["Primary evidence"]
     assert context["insight_implications"] == [
         {
             "evidence_id": "f1",
@@ -1895,8 +1914,7 @@ def test_regenerate_artifacts_linkedin_post_receives_editorial_plan(tmp_path):
     ) == {
         "report_thesis": "The report's retained evidence changes planning.",
         "themes": [
-            {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
-            {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
+            {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]}
         ],
     }
 
@@ -1959,8 +1977,15 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
     )
 
     claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    repaired_text = response.repair_decisions[0].minimal_patch[0].value
+    repaired_hash = hashlib.sha256(
+        " ".join(str(repaired_text).split()).encode("utf-8")
+    ).hexdigest()
     regenerated = next(
-        item for item in claims if item["artifact_family"] == "expert_comment"
+        item
+        for item in claims
+        if item["artifact_family"] == "expert_comment"
+        and item["text_hash"] == repaired_hash
     )
     retained = next(
         item for item in claims if item["artifact_family"] == "linkedin_post"
@@ -3353,7 +3378,7 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
     )
 
 
-def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(
+def test_quote_leaf_repair_preserves_metadata_and_candidate_rejects_unsupported_text(
     tmp_path,
 ):
     prompt_client = _FakePromptClient()
@@ -3402,13 +3427,26 @@ def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(
     )
 
     assert response.regenerated_sections == ["quotes"]
-    assert response.updated_artifacts["quotes_final"] == []
-    assert (
-        response.updated_artifacts["family_status"]["quotes"]["status"] == "abstained"
+    original_quote = _current_artifacts()["quotes_final"][0]
+    repaired_quote = response.updated_artifacts["quotes_final"][0]
+    assert repaired_quote["text"] == "A paraphrased section summary"
+    assert {key: value for key, value in repaired_quote.items() if key != "text"} == {
+        key: value for key, value in original_quote.items() if key != "text"
+    }
+    assert response.repair_decisions[0].changed_paths == ["quotes_final[0].text"]
+
+    candidate_result = validate_regeneration_candidate(
+        current_artifacts=_current_artifacts(),
+        candidate_artifacts=response.updated_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        planned_prompt_namespaces=("report_vs/artifacts/regenerate/quotes",),
+        actual_prompt_namespaces=tuple(response.prompt_namespaces),
     )
-    assert (
-        response.updated_artifacts["family_status"]["quotes"]["reason"]
-        == "quotes_missing"
+    assert any(
+        issue.rule_id == "retained_claim.evidence_reference_completeness"
+        and issue.affected_section == "quotes:q1.text"
+        for issue in candidate_result.issues
     )
 
 

@@ -2369,7 +2369,6 @@ def _repair_leaf_paths(value: Any, path: str) -> set[str]:
                             "insight_id",
                             "key_figure_id",
                             "claim_id",
-                            "evidence_id",
                         )
                         if str(child.get(key) or "").strip()
                     ),
@@ -2752,6 +2751,15 @@ def _uses_safe_removal(execution: _RegenerationHandlerExecution) -> bool:
     """A rejected strategy never earns another unsupported paraphrase."""
 
     return execution.target.repair_action in {"REMOVE_CLAIM", "ABSTAIN"}
+
+
+def _has_soft_copy_claim_leaf_target(
+    execution: _RegenerationHandlerExecution,
+) -> bool:
+    return any(
+        re.fullmatch(r".+\[claim_index=\d+\]", path)
+        for path in execution.target.allowed_paths
+    )
 
 
 def _replace_soft_copy_claim(
@@ -3724,6 +3732,12 @@ def _resolve_failed_quote_entry(
     affected = _s(issue.affected_section).strip().casefold()
     quote_id = affected.split(":", 1)[1].strip() if ":" in affected else ""
     message = _s(issue.message)
+    if quote_id.isdigit():
+        index = int(quote_id) - 1
+        if 0 <= index < len(execution.state.quotes_final):
+            quote = execution.state.quotes_final[index]
+            if isinstance(quote, dict):
+                return quote
     matches: List[Dict[str, Any]] = []
     for quote in execution.state.quotes_final:
         if not isinstance(quote, dict):
@@ -4045,6 +4059,8 @@ def _handle_expert_comment_regeneration(
         artifact_family="expert_comment",
         text=execution.state.expert_comment,
     )
+    if claim_repairs is None and _has_soft_copy_claim_leaf_target(execution):
+        raise _repair_decision_error(execution, "repair_scope_partition_invalid")
     namespace = execution.handler.prompt_namespaces[0]
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}
@@ -4274,6 +4290,8 @@ def _handle_linkedin_post_regeneration(
         artifact_family="linkedin_post",
         text=execution.state.linkedin_post,
     )
+    if claim_repairs is None and _has_soft_copy_claim_leaf_target(execution):
+        raise _repair_decision_error(execution, "repair_scope_partition_invalid")
     namespace = execution.handler.prompt_namespaces[0]
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}

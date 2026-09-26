@@ -78,6 +78,12 @@ to be recorded and checked through the existing verified-derived-path audit;
 they do not become model-writable paths. This contract change is measured
 against the unchanged seven-case manifests after the implementation commit.
 
+An atomic target is planned as a unit: if any issue in that target has no exact
+leaf resolution, the planner abstains for the whole target instead of dropping
+the unresolved issue and widening the remaining repair to its family. Stable
+item selectors and positional selectors must resolve to the same retained
+leaves in planning, protected-field calculation, patching, and scope comparison.
+
 ## Measurement status
 
 The implementation commit must be measured after it is committed, using its

@@ -482,7 +482,7 @@ def test_model_repair_changes_only_the_identified_quote(tmp_path) -> None:
                 ],
                 repair_action="REGENERATE_ITEM",
                 repair_strategy="current_evidence",
-                allowed_paths=["quotes_final[item=q1].text"],
+                allowed_paths=["quotes_final[0].text"],
             )
         ],
         unmappable_issues=[],
@@ -868,19 +868,27 @@ def test_identity_ladder_abstains_then_exhausts_without_repeats() -> None:
 
 
 def test_key_figure_ladder_has_one_deterministic_rebuild_strategy() -> None:
+    artifacts = _current_artifacts()
+    artifacts["key_figures"] = [
+        {
+            "key_figure_id": "display-viewability-duration-criterion-retained-5",
+            "figure": "50.0",
+            "evidence_id": "s4",
+        }
+    ]
     issue = ValidationIssue(
         schema_version="1.1",
         rule_id="numbers",
         message="[numbers] Number 50.0 not present in report or evidence.",
         severity="error",
-        affected_section="key_figures:4.figure",
-        entity_id="display-viewability-duration-criterion-retained-5",
+        affected_section="key_figures:display-viewability-duration-criterion-retained-5.figure",
+        entity_id="key_figure:display-viewability-duration-criterion-retained-5:figure",
         evidence_ids=["s4"],
     )
 
     first_plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
     )
     assert first_plan.targets[0].repair_strategy == "current_evidence"
@@ -892,7 +900,7 @@ def test_key_figure_ladder_has_one_deterministic_rebuild_strategy() -> None:
     }
     exhausted_plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
         rejected_strategy_keys=rejected_current,
     )

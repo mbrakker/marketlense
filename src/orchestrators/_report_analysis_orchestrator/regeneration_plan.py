@@ -399,6 +399,15 @@ def _allowed_paths(
         return sorted(set(family_roots))
 
     resolved = [_issue_allowed_path(target_key, issue, artifacts) for issue in issues]
+    if target_key in {
+        "summary",
+        "insights_bundle",
+        "key_figures",
+        "quotes",
+        "expert_comment",
+        "linkedin_post",
+    } and any(not path for path in resolved):
+        return []
     paths: set[str] = set()
     for path in resolved:
         if not path:
@@ -499,15 +508,7 @@ def _issue_allowed_path(
             if root:
                 field = _insight_issue_field(entity_id, affected)
                 items = final if root == "insights_final" else candidates
-                item = next(
-                    (
-                        candidate
-                        for candidate in items
-                        if isinstance(candidate, dict)
-                        and insight_entity_id(candidate) == insight_id
-                    ),
-                    None,
-                )
+                item = _item_at_identity_path(items, item_path)
                 return (
                     f"{root}{item_path}.{field}"
                     if (
@@ -525,20 +526,11 @@ def _issue_allowed_path(
         if identity:
             items = artifacts.get("quotes_final") or []
             root, item_path = _identified_item_path("quotes_final", items, identity)
-            item = next(
-                (
-                    candidate
-                    for candidate in items
-                    if isinstance(candidate, dict)
-                    and (
-                        str(candidate.get("id") or "").strip() == identity
-                        or str(candidate.get("evidence_id") or "").strip() == identity
-                    )
-                ),
-                None,
-            )
-            if root and isinstance(item, dict) and not isinstance(
-                item.get("text"), (dict, list)
+            item = _item_at_identity_path(items, item_path)
+            if (
+                root
+                and isinstance(item, dict)
+                and not isinstance(item.get("text"), (dict, list))
             ):
                 return f"{root}{item_path}.text"
         return ""
@@ -546,27 +538,20 @@ def _issue_allowed_path(
         identity = _public_item_identity(entity_id, "key_figure") or _section_identity(
             affected, "key_figures"
         )
+        field = _key_figure_issue_field(entity_id, affected)
         if identity:
             root, item_path = _identified_item_path(
                 "key_figures", artifacts.get("key_figures") or [], identity
             )
             items = artifacts.get("key_figures") or []
-            item = next(
-                (
-                    candidate
-                    for candidate in items
-                    if isinstance(candidate, dict)
-                    and str(
-                        candidate.get("key_figure_id") or candidate.get("id") or ""
-                    ).strip()
-                    == identity
-                ),
-                None,
-            )
-            if root and isinstance(item, dict) and not isinstance(
-                item.get("figure"), (dict, list)
+            item = _item_at_identity_path(items, item_path)
+            if (
+                root
+                and field
+                and isinstance(item, dict)
+                and _has_scalar_leaf(item, field)
             ):
-                return f"{root}{item_path}.figure"
+                return f"{root}{item_path}.{field}"
         return ""
     if target_key in {"expert_comment", "linkedin_post"}:
         claim_path = _soft_copy_claim_path(
@@ -626,7 +611,11 @@ def _identified_item_path(root: str, items: object, identity: str) -> tuple[str,
         if not isinstance(item, dict):
             continue
         stable_id = str(
-            item.get("id") or item.get("insight_id") or item.get("key_figure_id") or ""
+            item.get("id")
+            or item.get("insight_id")
+            or item.get("key_figure_id")
+            or item.get("claim_id")
+            or ""
         ).strip()
         if stable_id and stable_id == identity:
             return root, f"[item={stable_id}]"
@@ -647,6 +636,39 @@ def _insight_issue_field(entity_id: str, affected: str) -> str:
         return match.group(1).strip()
     match = re.match(r"^insights_(?:final|candidates)\[\d+\]\.(.+)$", affected)
     return match.group(1).strip() if match else ""
+
+
+def _key_figure_issue_field(entity_id: str, affected: str) -> str:
+    match = re.match(r"^key_figure:[^:]+:(.+)$", entity_id)
+    if match:
+        return match.group(1).strip()
+    match = re.match(r"^key_figures:[^.:]+\.(.+)$", affected)
+    return match.group(1).strip() if match else ""
+
+
+def _item_at_identity_path(items: object, item_path: str) -> Dict[str, Any] | None:
+    if not isinstance(items, list):
+        return None
+    index_match = re.fullmatch(r"\[(\d+)\]", item_path)
+    if index_match:
+        index = int(index_match.group(1))
+        item = items[index] if index < len(items) else None
+        return item if isinstance(item, dict) else None
+    identity_match = re.fullmatch(r"\[item=(.+)\]", item_path)
+    if not identity_match:
+        return None
+    identity = identity_match.group(1)
+    matches = [
+        item
+        for item in items
+        if isinstance(item, dict)
+        and identity
+        in {
+            str(item.get(field) or "").strip()
+            for field in ("id", "insight_id", "key_figure_id", "claim_id")
+        }
+    ]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _has_scalar_leaf(value: Dict[str, Any], field_path: str) -> bool:
@@ -835,7 +857,14 @@ def _build_target(
     )
     if (
         target_key
-        in {"summary", "insights_bundle", "quotes", "expert_comment", "linkedin_post"}
+        in {
+            "summary",
+            "insights_bundle",
+            "key_figures",
+            "quotes",
+            "expert_comment",
+            "linkedin_post",
+        }
         and repair_action != "ABSTAIN"
         and not allowed_paths
     ):
