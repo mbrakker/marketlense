@@ -73,7 +73,12 @@ failure class is derived from the planner's issue list. Replacement values
 cross that provider boundary as JSON-encoded strings and are parsed before
 the existing deterministic patch checks. The scorecard retains its normal
 validation, evidence, mutation-scope, promotion, and rollback gates. It does
-not author replacement copy or raise the configured retry limit.
+not author replacement copy or raise the configured retry limit. A
+non-retryable typed `AppError` from one case is retained on that case's
+final-validation stage with its stable failure code and a bounded safe reason,
+then replay continues to the next independent frozen case. The case remains
+failed, and this does not create a candidate audit or count as repair success.
+Retryable errors still propagate and stop the replay.
 
 ## Prior measurement disposition — 2026-09-26, implementation SHA `09df2bac76111e44b8e811337c83a1995c791954`
 

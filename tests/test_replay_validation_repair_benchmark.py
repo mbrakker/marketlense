@@ -15,6 +15,7 @@ from scripts.quality.replay_validation_repair_benchmark import (
     _pre_repair_base_payload,
     _preflight_benchmark_cases,
     _report_payload_from_frozen_state,
+    _terminal_case_failure,
     _validation_report,
 )
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
@@ -26,6 +27,7 @@ from src.orchestrators._report_generation_orchestrator.checkpoints import (
 )
 from src.services.llm_service import LLMServiceClient
 from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
 
 
 def test_benchmark_manifest_requires_its_frozen_self_hash(tmp_path: Path) -> None:
@@ -101,6 +103,33 @@ def test_benchmark_builds_production_model_clients_for_both_repair_stages() -> N
     assert isinstance(validation_client, LLMServiceClient)
     assert isinstance(regeneration_client, LLMServiceClient)
     assert validation_client is not regeneration_client
+
+
+def test_terminal_nonretryable_case_failure_is_retained_without_content() -> None:
+    error = AppError(
+        "regeneration_repair_decision_invalid",
+        "provider generated an unsafe response",
+        context={"reason": "patch_target_not_atomic", "content": "sensitive"},
+    )
+
+    assert _terminal_case_failure(error) == {
+        "failure_code": "regeneration_repair_decision_invalid",
+        "failure_reason": "patch_target_not_atomic",
+    }
+
+
+def test_terminal_case_failure_propagates_retryable_errors() -> None:
+    error = AppError(
+        "provider_unavailable",
+        "retry later",
+        retryable=True,
+        context={"reason": "busy"},
+    )
+
+    with pytest.raises(AppError) as raised:
+        _terminal_case_failure(error)
+
+    assert raised.value is error
 
 
 def test_benchmark_schema_identity_includes_the_private_repair_response_schema() -> (

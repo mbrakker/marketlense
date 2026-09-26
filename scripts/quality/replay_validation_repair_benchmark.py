@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from copy import deepcopy
@@ -64,6 +65,7 @@ from src.services.validation_reliability_service import (
     write_validation_reliability_artifact,
 )
 from src.utils.cache_utils import sha256_json
+from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
 _SCHEMA_IDENTITY_PATHS = (
@@ -72,6 +74,7 @@ _SCHEMA_IDENTITY_PATHS = (
     "src/schemas/regeneration_repair_decision.schema.json",
     "src/schemas/validation_report.schema.json",
 )
+_SAFE_FAILURE_REASON = re.compile(r"^[a-z0-9_]{1,80}$")
 
 
 def _sha256(path: Path) -> str:
@@ -173,6 +176,15 @@ def _validation_report(payload: dict[str, Any]) -> ValidationReport:
         severity="error",
         issues=issues,
     )
+
+
+def _terminal_case_failure(error: AppError) -> dict[str, str]:
+    if error.retryable:
+        raise error
+    context = error.context if isinstance(error.context, dict) else {}
+    raw_reason = str(context.get("reason") or "")
+    reason = raw_reason if _SAFE_FAILURE_REASON.fullmatch(raw_reason) else ""
+    return {"failure_code": error.code, "failure_reason": reason}
 
 
 def _case_paths(case: dict[str, Any], workspace: Path) -> tuple[dict[str, Path], Path]:
@@ -658,31 +670,38 @@ def replay_benchmark(
             ),
             case_ctx,
         )
-        (
-            _,
-            final_validation,
-            attempts,
-            loop_state,
-            _,
-            _,
-        ) = _run_validation_regeneration_loop(
-            runtime=runtime,
-            mode_ctx=case_ctx,
-            base_payload=base_payload,
-            current_artifacts=artifacts,
-            current_validation_report=initial_validation,
-            evidence_packs=evidence_packs,
-            source_status=(
-                artifacts.get("source_status")
-                if isinstance(artifacts.get("source_status"), dict)
-                else {}
-            ),
-            category_labels=base_payload.categories,
-            vector_store_id=None,
-            dependencies=dependencies,
-            validation_openai_client=validation_model_client,
-            regeneration_openai_client=regeneration_model_client,
-        )
+        terminal_failure: dict[str, str] | None = None
+        try:
+            (
+                _,
+                final_validation,
+                attempts,
+                loop_state,
+                _,
+                _,
+            ) = _run_validation_regeneration_loop(
+                runtime=runtime,
+                mode_ctx=case_ctx,
+                base_payload=base_payload,
+                current_artifacts=artifacts,
+                current_validation_report=initial_validation,
+                evidence_packs=evidence_packs,
+                source_status=(
+                    artifacts.get("source_status")
+                    if isinstance(artifacts.get("source_status"), dict)
+                    else {}
+                ),
+                category_labels=base_payload.categories,
+                vector_store_id=None,
+                dependencies=dependencies,
+                validation_openai_client=validation_model_client,
+                regeneration_openai_client=regeneration_model_client,
+            )
+        except AppError as error:
+            terminal_failure = _terminal_case_failure(error)
+            final_validation = initial_validation
+            attempts = []
+            loop_state = None
         end = datetime.now(timezone.utc).isoformat()
         record_validation_run_manifest_stage(
             ValidationRunManifestRecordRequest(
@@ -709,9 +728,15 @@ def replay_benchmark(
                     terminal_outcome="succeeded"
                     if final_validation.status == "pass"
                     else "failed",
-                    failure_code=""
-                    if final_validation.status == "pass"
-                    else "validation_failed",
+                    failure_code=(
+                        ""
+                        if final_validation.status == "pass"
+                        else (
+                            terminal_failure["failure_code"]
+                            if terminal_failure
+                            else "validation_failed"
+                        )
+                    ),
                     retryable=False,
                     repair_disposition="targeted_repair",
                     duplicate_disposition="none",
@@ -728,9 +753,19 @@ def replay_benchmark(
             json.dumps(
                 {
                     "case_id": str(case.get("case_id") or report_id),
-                    "attempt_count": len(attempts),
+                    "attempt_count": (
+                        len(attempts) if terminal_failure is None else None
+                    ),
                     "final_status": final_validation.status,
-                    "max_reached": loop_state.max_reached,
+                    "max_reached": (
+                        loop_state.max_reached if loop_state is not None else None
+                    ),
+                    "terminal_failure_code": (
+                        terminal_failure["failure_code"] if terminal_failure else ""
+                    ),
+                    "terminal_failure_reason": (
+                        terminal_failure["failure_reason"] if terminal_failure else ""
+                    ),
                 },
                 sort_keys=True,
             )
