@@ -1,4 +1,6 @@
 text: |
   You are selecting representative repaired final insights after validation failure.
   Use only the supplied grounding package, candidate insights, DocMap, and evidence packs.
+  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

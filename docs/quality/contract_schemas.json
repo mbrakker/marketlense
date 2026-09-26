@@ -30508,6 +30508,12 @@
         "repair_action": {
           "type": "string"
         },
+        "repair_decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RepairDecision"
+          },
+          "type": "array"
+        },
         "repair_strategy": {
           "type": "string"
         },
@@ -30799,6 +30805,12 @@
         "repair_action": {
           "type": "string"
         },
+        "repair_decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RepairDecision"
+          },
+          "type": "array"
+        },
         "repair_delta": {
           "$ref": "#/$defs/src.contracts.regeneration.RepairDelta"
         },
@@ -31078,20 +31090,98 @@
       ],
       "type": "object"
     },
+    "src.contracts.regeneration.RepairDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "claim_provenance": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "diagnosed_failure_class": {
+          "type": "string"
+        },
+        "evidence_ids_used": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "minimal_patch": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RepairPatchOperation"
+          },
+          "type": "array"
+        },
+        "protected_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_strategy": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "diagnosed_failure_class",
+        "repair_action",
+        "repair_strategy"
+      ],
+      "type": "object"
+    },
     "src.contracts.regeneration.RepairDelta": {
       "additionalProperties": false,
       "properties": {
+        "candidate_sha256": {
+          "type": "string"
+        },
+        "evidence_ids_used": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence_lineage_result": {
+          "type": "string"
+        },
+        "input_sha256": {
+          "type": "string"
+        },
         "introduced": {
           "items": {
             "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
           },
           "type": "array"
         },
+        "mutation_scope_result": {
+          "type": "string"
+        },
         "persisting": {
           "items": {
             "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
           },
           "type": "array"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "repair_strategy": {
+          "type": "string"
         },
         "resolved": {
           "items": {
@@ -31101,9 +31191,59 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "severity_changes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.RepairSeverityChange"
+          },
+          "type": "array"
+        },
+        "strategy_fingerprint": {
+          "type": "string"
+        },
+        "validator_identity": {
+          "type": "string"
         }
       },
       "required": [],
+      "type": "object"
+    },
+    "src.contracts.regeneration.RepairPatchOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "op",
+        "path",
+        "value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.regeneration.RepairSeverityChange": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "failure_fingerprint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "failure_fingerprint",
+        "before",
+        "after"
+      ],
       "type": "object"
     },
     "src.contracts.remediation.RemediationArtifactReference": {
@@ -39114,6 +39254,9 @@
       "additionalProperties": false,
       "properties": {
         "allow_abstention": {
+          "type": "boolean"
+        },
+        "allow_model_recovery": {
           "type": "boolean"
         },
         "artifact_family": {

@@ -40,6 +40,12 @@ class StructuredOutputExecutionRequest:
         default=False,
         metadata={"doc": "Whether a formal downstream abstention is permitted."},
     )
+    allow_model_recovery: bool = field(
+        default=True,
+        metadata={
+            "doc": "Whether invalid primary output may trigger more provider calls."
+        },
+    )
     terminal_failure_code: str = field(
         default="structured_output_recovery_exhausted",
         metadata={"doc": "Typed permanent failure code when recovery is exhausted."},

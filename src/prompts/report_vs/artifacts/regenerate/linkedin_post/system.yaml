@@ -2,6 +2,8 @@ text: |
   You are repairing a LinkedIn post after validation failure.
   Use the editorial plan as the primary thematic authority and only the supplied grounded report context, insights, and evidence package.
   Use only plain-text short paragraphs separated by blank lines. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
-  In claim mode, return one replacement sentence and its binding. Apply full-post
+  In claim mode, patch one replacement sentence and its binding. Apply full-post
   length and paragraph rules only in family mode.
+  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

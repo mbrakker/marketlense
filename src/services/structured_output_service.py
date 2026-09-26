@@ -150,6 +150,34 @@ def execute_structured_output(
         model_pricing=model_pricing,
     )
 
+    if not request.allow_model_recovery:
+        final_error = deterministic.error_class or initial.error_class
+        failure_context = deterministic.bounded_context or initial.bounded_context
+        _record_outcome(
+            request,
+            ctx,
+            result=_result(None, "recovery_disabled", 1, final_error, primary),
+            repair_responses=(),
+            elapsed_repair_ms=(time.perf_counter() - recovery_started) * 1000,
+            terminal="failure",
+            model_pricing=model_pricing,
+        )
+        raise StructuredOutputFailure(
+            code=request.terminal_failure_code,
+            failure_context=failure_context,
+            message=(
+                f"{request.artifact_family} did not produce a substantive "
+                "schema-valid JSON artifact in its single provider call"
+            ),
+            artifact_family=request.artifact_family,
+            response_text=str(primary.text or ""),
+            schema_errors=_join_errors(
+                initial.error_detail, deterministic.error_detail
+            ),
+            repair_attempt=0,
+            error_class=final_error,
+        )
+
     original_response = str(primary.text or "")
     exact_errors = _join_errors(initial.error_detail, deterministic.error_detail)
     repaired = _call_model(

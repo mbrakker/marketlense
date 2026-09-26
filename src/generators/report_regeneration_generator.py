@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List, Sequence
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
+    RepairDecision,
+    RepairPatchOperation,
     RegenerationIssue,
     RegenerationTarget,
 )
@@ -21,6 +23,7 @@ from src.contracts.soft_copy_claim_provenance import (
     align_soft_copy_claim_bindings_to_text,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
+    soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationRequest
@@ -114,6 +117,7 @@ class _RegenerationState:
     )
     payload_overrides: Dict[str, Any] = field(default_factory=dict)
     selected_evidence_ids: List[str] = field(default_factory=list)
+    repair_decisions: List[RepairDecision] = field(default_factory=list)
     deterministic_repairs: List[str] = field(default_factory=list)
 
 
@@ -262,6 +266,7 @@ def regenerate_artifacts(
             doc_map=safe_doc_map,
         )
         handler = _resolve_regeneration_handler(target.target_section)
+        repair_decision_count = len(state.repair_decisions)
         handler.handle(
             _RegenerationHandlerExecution(
                 handler=handler,
@@ -275,7 +280,19 @@ def regenerate_artifacts(
         # The attempt fingerprint must describe the evidence actually used,
         # not the planned evidence, so a failed strategy cannot be repeated
         # under another nominal label.
-        state.selected_evidence_ids.extend(grounding_package.get("evidence_ids") or [])
+        target_decisions = [
+            decision for decision in state.repair_decisions[repair_decision_count:]
+        ]
+        if target_decisions:
+            state.selected_evidence_ids.extend(
+                evidence_id
+                for decision in target_decisions
+                for evidence_id in decision.evidence_ids_used
+            )
+        else:
+            state.selected_evidence_ids.extend(
+                grounding_package.get("evidence_ids") or []
+            )
         logger.info(
             log_event(
                 target_ctx,
@@ -404,6 +421,7 @@ def regenerate_artifacts(
         repair_action=_actual_repair_action(state, request),
         repair_strategy=_actual_repair_strategy(state, request),
         selected_evidence_ids=_unique_strings(state.selected_evidence_ids),
+        repair_decisions=list(state.repair_decisions),
         payload_overrides=deepcopy(state.payload_overrides),
     )
     logger.info(
@@ -435,6 +453,10 @@ _DETERMINISTIC_REPAIR_ACTIONS = {
 def _actual_repair_action(
     state: _RegenerationState, request: ArtifactRegenerationRequest
 ) -> str:
+    if state.repair_decisions:
+        return "+".join(
+            dict.fromkeys(item.repair_action for item in state.repair_decisions)
+        )
     for label in state.deterministic_repairs:
         action = _DETERMINISTIC_REPAIR_ACTIONS.get(label)
         if action:
@@ -456,6 +478,10 @@ def _actual_repair_action(
 def _actual_repair_strategy(
     state: _RegenerationState, request: ArtifactRegenerationRequest
 ) -> str:
+    if state.repair_decisions:
+        return "+".join(
+            dict.fromkeys(item.repair_strategy for item in state.repair_decisions)
+        )
     if state.deterministic_repairs:
         return "+".join(dict.fromkeys(state.deterministic_repairs))
     targets = request.plan.targets
@@ -1253,7 +1279,11 @@ def _preserve_atomic_target_families(
         for allowed_path in paths:
             merged_family = _copy_allowed_mutation_path(
                 original_family=merged_family,
-                target_family=updated_artifacts.get(root, family_state[root]),
+                target_family=(
+                    family_state[root]
+                    if root in state.soft_copy_repair_texts
+                    else updated_artifacts.get(root, family_state[root])
+                ),
                 full_path=allowed_path,
                 root=root,
             )
@@ -1275,6 +1305,20 @@ def _copy_allowed_mutation_path(
     path = full_path[len(root) :].lstrip(".")
     if not path:
         return deepcopy(target_family)
+    item_root_match = re.fullmatch(r"\[(?:item=)?([^\]]+)\]", path)
+    if (
+        item_root_match
+        and isinstance(original_family, list)
+        and isinstance(target_family, list)
+    ):
+        selector = item_root_match.group(1)
+        original_index = _mutation_list_index(original_family, selector)
+        target_index = _mutation_list_index(target_family, selector)
+        if original_index is not None and (
+            target_index is None or target_family[target_index] is None
+        ):
+            original_family.pop(original_index)
+            return original_family
     claim_index_match = re.search(r"\[claim_index=(\d+)\]$", path)
     if claim_index_match:
         field_path = path[: claim_index_match.start()]
@@ -1683,12 +1727,41 @@ def _render_regeneration_model(
     namespace: str,
     variables: Dict[str, Any],
     ctx: RunContext,
+    repair_call: bool = True,
 ) -> Dict[str, Any]:
     request = execution.runtime.request
     openai_client = require_injected_model_client(
         execution.runtime.openai_client,
         scope="artifact_regeneration",
     )
+    active_target = _active_repair_target(execution, variables)
+    if repair_call:
+        variables = {
+            **variables,
+            "repair_context_json": _dump_json(
+                {
+                    "allowed_paths": active_target.allowed_paths,
+                    "repair_action": execution.target.repair_action,
+                    "repair_strategy": execution.target.repair_strategy,
+                    "quarantined_evidence_ids": list(
+                        execution.target.quarantined_evidence_ids
+                    ),
+                    "failure_classes": sorted(
+                        {
+                            issue.rule_id
+                            for issue in execution.target.issues
+                            if issue.rule_id
+                        }
+                    ),
+                    "required_protected_fields": _required_repair_protected_fields(
+                        _current_repair_artifacts(execution.state), active_target
+                    ),
+                }
+            ),
+            "prior_repair_memory_json": _dump_json(
+                _repair_memory_prompt_payload(request.repair_memory)
+            ),
+        }
     prepared = prepare_prompt_bundle(
         namespace=namespace,
         settings=request.settings,
@@ -1723,7 +1796,7 @@ def _render_regeneration_model(
     artifact_family = artifact_family_for_producing_namespace(namespace)
     execution.state.producing_prompt_identities[artifact_family] = identity
     execution.state.regeneration_prompt_requirements[artifact_family] = namespace
-    return render_artifact_json_model(
+    result = render_artifact_json_model(
         namespace=namespace,
         variables=variables,
         settings=request.settings,
@@ -1736,7 +1809,603 @@ def _render_regeneration_model(
         report_name=request.report_name,
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
+        response_contract_name=("regeneration_repair_decision" if repair_call else ""),
     )
+    if not repair_call:
+        return result
+    call_grounding = variables.get("grounding_package_json")
+    try:
+        decision_grounding = json.loads(call_grounding) if call_grounding else None
+    except (TypeError, ValueError):
+        decision_grounding = None
+    if not isinstance(decision_grounding, dict):
+        decision_grounding = execution.grounding_package
+    decision = _validated_repair_decision(
+        result.get("repair_decision"),
+        execution=execution,
+        current_artifacts=_current_repair_artifacts(execution.state),
+        grounding_package=decision_grounding,
+        target=active_target,
+    )
+    patched_artifacts = _apply_repair_decision_patch(
+        current_artifacts=_current_repair_artifacts(execution.state),
+        decision=decision,
+    )
+    execution.state.repair_decisions.append(decision)
+    root_key = {
+        "report_vs/artifacts/regenerate/summary": "summary",
+        "report_vs/artifacts/regenerate/insights_candidates": "insights_candidates",
+        "report_vs/artifacts/regenerate/insights_final": "insights_final",
+        "report_vs/artifacts/regenerate/quotes": "quotes_final",
+        "report_vs/artifacts/regenerate/expert_comment": "expert_comment",
+        "report_vs/artifacts/regenerate/linkedin_post": "linkedin_post",
+    }.get(namespace)
+    if not root_key or root_key not in patched_artifacts:
+        raise _repair_decision_error(execution, "repair_patch_root_unresolved")
+    claim_index_operation = next(
+        (
+            operation
+            for operation in decision.minimal_patch
+            if re.search(r"\[claim_index=\d+\]$", operation.path)
+        ),
+        None,
+    )
+    if claim_index_operation is not None and root_key in {
+        "summary",
+        "expert_comment",
+        "linkedin_post",
+    }:
+        replacement = claim_index_operation.value
+        if root_key == "summary":
+            field = claim_index_operation.path.split(".", 1)[1].split("[", 1)[0]
+            root_value: Any = {field: replacement}
+        else:
+            root_value = replacement
+    else:
+        root_value = patched_artifacts[root_key]
+    return {
+        root_key: root_value,
+        "_soft_copy_claim_bindings": deepcopy(decision.claim_provenance),
+        "_repair_decision": decision,
+    }
+
+
+def _active_repair_target(
+    execution: _RegenerationHandlerExecution, variables: Dict[str, Any]
+) -> RegenerationTarget:
+    """Narrow multi-claim planner scope to the one claim in this provider call."""
+
+    raw_scope = variables.get("claim_repair_scope_json")
+    try:
+        scope = json.loads(raw_scope) if raw_scope else {}
+    except (TypeError, ValueError):
+        scope = {}
+    if not isinstance(scope, dict):
+        return execution.target
+    mode = scope.get("mode")
+    paths = list(execution.target.allowed_paths)
+    active_path = ""
+    if mode == "claim":
+        failed_claim = _s(scope.get("failed_claim")).strip()
+        family = execution.target.target_section
+        field = _s(scope.get("field")).strip()
+        stable_paths = [
+            path
+            for path in paths
+            if "[claim_index=" in path
+            or ("[item=" in path and path.rsplit(".", 1)[-1] in {"text", "claim"})
+        ]
+        matches = []
+        for path in stable_paths:
+            found, value = _read_repair_path(
+                _current_repair_artifacts(execution.state), path
+            )
+            if found and isinstance(value, str) and value.strip() == failed_claim:
+                matches.append(path)
+        if len(matches) == 1:
+            active_path = matches[0]
+        elif not matches and failed_claim:
+            if family == "summary" and field in {
+                "tldr",
+                "card_tldr_compact",
+                "executive_summary",
+            }:
+                base_path = f"summary.{field}"
+                found, text = _read_repair_path(
+                    _current_repair_artifacts(execution.state), base_path
+                )
+            elif family in {"expert_comment", "linkedin_post"}:
+                base_path = family
+                found, text = _read_repair_path(
+                    _current_repair_artifacts(execution.state), base_path
+                )
+            else:
+                base_path, found, text = "", False, ""
+            sentence_matches = (
+                [
+                    (index, sentence)
+                    for index, (_start, _end, sentence) in enumerate(
+                        _soft_copy_sentence_spans(text)
+                    )
+                    if _normalized_soft_copy_text(sentence)
+                    == _normalized_soft_copy_text(failed_claim)
+                ]
+                if found and isinstance(text, str)
+                else []
+            )
+            candidate_path = (
+                f"{base_path}[claim_index={sentence_matches[0][0]}]"
+                if len(sentence_matches) == 1
+                else ""
+            )
+            if candidate_path and any(
+                candidate_path == allowed
+                or candidate_path.startswith(allowed + ".")
+                or candidate_path.startswith(allowed + "[")
+                for allowed in paths
+            ):
+                active_path = candidate_path
+    elif mode == "claim_map_item":
+        claim_id = _s(scope.get("claim_id")).strip()
+        matches = [
+            path
+            for path in paths
+            if f"[item={claim_id}]" in path or f"[{claim_id}]" in path
+        ]
+        if len(matches) == 1:
+            active_path = matches[0]
+        elif not matches and claim_id:
+            claims = execution.state.summary.get("claim_evidence_map")
+            claims = claims if isinstance(claims, list) else []
+            indexed_matches = [
+                (index, claim)
+                for index, claim in enumerate(claims)
+                if isinstance(claim, dict)
+                and claim_id
+                in {
+                    _s(claim.get("id")).strip(),
+                    _s(claim.get("claim_id")).strip(),
+                    str(index + 1),
+                }
+            ]
+            fields_to_change = scope.get("fields_to_change")
+            field = (
+                _s(fields_to_change[0]).strip()
+                if isinstance(fields_to_change, list) and fields_to_change
+                else "claim"
+            )
+            if len(indexed_matches) == 1 and field == "claim":
+                index, claim = indexed_matches[0]
+                identity = _s(claim.get("id") or claim.get("claim_id")).strip()
+                item_selector = f"item={identity}" if identity else str(index)
+                candidate_path = f"summary.claim_evidence_map[{item_selector}].claim"
+                if any(
+                    candidate_path == allowed
+                    or candidate_path.startswith(allowed + ".")
+                    or candidate_path.startswith(allowed + "[")
+                    for allowed in paths
+                ):
+                    active_path = candidate_path
+    if not active_path:
+        if mode in {"claim", "claim_map_item"}:
+            raise _repair_decision_error(
+                execution, "atomic_repair_target_unresolved_or_ambiguous"
+            )
+        return execution.target
+    raw_grounding = variables.get("grounding_package_json")
+    try:
+        grounding = json.loads(raw_grounding) if raw_grounding else {}
+    except (TypeError, ValueError):
+        grounding = {}
+    quarantined = (
+        list(grounding.get("quarantined_evidence_ids", []))
+        if isinstance(grounding, dict)
+        else list(execution.target.quarantined_evidence_ids)
+    )
+    return replace(
+        execution.target,
+        allowed_paths=[active_path],
+        quarantined_evidence_ids=quarantined,
+    )
+
+
+def _current_repair_artifacts(state: _RegenerationState) -> Dict[str, Any]:
+    return {
+        "summary": deepcopy(state.summary),
+        "insights_candidates": deepcopy(state.insights_candidates),
+        "insights_final": deepcopy(state.insights_final),
+        "quotes_final": deepcopy(state.quotes_final),
+        "expert_comment": state.expert_comment,
+        "linkedin_post": state.linkedin_post,
+    }
+
+
+def _repair_memory_prompt_payload(memory) -> List[Dict[str, Any]]:
+    """Return bounded, content-free retry memory for the next model call."""
+
+    def identities(values) -> List[Dict[str, Any]]:
+        return [
+            {
+                "fingerprint": item.key,
+                "rule_id": item.rule_id,
+                "affected_section": item.affected_section,
+                "entity_id": item.entity_id,
+                "evidence_ids": item.evidence_ids[:8],
+            }
+            for item in values[:8]
+        ]
+
+    return [
+        {
+            "resolved": identities(delta.resolved),
+            "persisting": identities(delta.persisting),
+            "introduced": identities(delta.introduced),
+            "severity_changes": [
+                {
+                    "failure_fingerprint": item.failure_fingerprint,
+                    "before": item.before,
+                    "after": item.after,
+                }
+                for item in delta.severity_changes[:8]
+            ],
+            "mutation_scope_result": delta.mutation_scope_result,
+            "evidence_lineage_result": delta.evidence_lineage_result,
+            "repair_action": delta.repair_action,
+            "repair_strategy": delta.repair_strategy,
+            "strategy_fingerprint": delta.strategy_fingerprint,
+            "evidence_ids_used": delta.evidence_ids_used[:8],
+            "candidate_sha256": delta.candidate_sha256,
+            "input_sha256": delta.input_sha256,
+            "validator_identity": delta.validator_identity,
+        }
+        for delta in memory[-3:]
+    ]
+
+
+def _repair_decision_error(
+    execution: _RegenerationHandlerExecution, reason: str
+) -> AppError:
+    return AppError(
+        code="regeneration_repair_decision_invalid",
+        message="Model repair decision or minimal patch failed deterministic validation.",
+        retryable=False,
+        context={
+            "report_id": execution.runtime.request.report_id,
+            "target_section": execution.target.target_section,
+            "reason": reason,
+        },
+    )
+
+
+def _validated_repair_decision(
+    payload: object,
+    *,
+    execution: _RegenerationHandlerExecution,
+    current_artifacts: Dict[str, Any],
+    grounding_package: Dict[str, Any],
+    target: RegenerationTarget | None = None,
+) -> RepairDecision:
+    if not isinstance(payload, dict):
+        raise _repair_decision_error(execution, "decision_missing")
+    try:
+        raw_patch = payload["minimal_patch"]
+        if not isinstance(raw_patch, list):
+            raise TypeError("minimal_patch_not_array")
+        patch = [
+            RepairPatchOperation(
+                op=str(item["op"]),
+                path=str(item["path"]),
+                value=deepcopy(item["value"]),
+            )
+            for item in raw_patch
+            if isinstance(item, dict)
+        ]
+        if len(patch) != len(raw_patch):
+            raise TypeError("minimal_patch_operation_invalid")
+        decision = RepairDecision(
+            schema_version=str(payload["schema_version"]),
+            diagnosed_failure_class=str(payload["diagnosed_failure_class"]).strip(),
+            repair_action=str(payload["repair_action"]).strip(),
+            repair_strategy=str(payload["repair_strategy"]).strip(),
+            evidence_ids_used=[
+                str(value).strip() for value in payload["evidence_ids_used"]
+            ],
+            protected_fields=[
+                str(value).strip() for value in payload["protected_fields"]
+            ],
+            changed_paths=[str(value).strip() for value in payload["changed_paths"]],
+            minimal_patch=patch,
+            claim_provenance=[
+                dict(value)
+                for value in payload["claim_provenance"]
+                if isinstance(value, dict)
+            ],
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _repair_decision_error(execution, "decision_contract_invalid") from exc
+
+    target = target or execution.target
+    failure_classes = {issue.rule_id for issue in target.issues if issue.rule_id}
+    if decision.diagnosed_failure_class not in failure_classes:
+        raise _repair_decision_error(execution, "failure_class_not_in_plan")
+    if (
+        decision.repair_action != target.repair_action
+        or decision.repair_strategy != target.repair_strategy
+    ):
+        raise _repair_decision_error(execution, "strategy_not_in_plan")
+    if not target.allowed_paths:
+        raise _repair_decision_error(execution, "allowed_paths_missing")
+    if not decision.minimal_patch or any(
+        item.op != "replace" or not item.path for item in decision.minimal_patch
+    ):
+        raise _repair_decision_error(execution, "patch_operation_unsupported")
+    operation_paths = [item.path for item in decision.minimal_patch]
+    if len(operation_paths) != len(set(operation_paths)) or set(
+        decision.changed_paths
+    ) != set(operation_paths):
+        raise _repair_decision_error(execution, "changed_paths_do_not_match_patch")
+    if not decision.evidence_ids_used == list(
+        dict.fromkeys(decision.evidence_ids_used)
+    ):
+        raise _repair_decision_error(execution, "duplicate_evidence_identity")
+    package_ids = {
+        str(value).strip()
+        for value in grounding_package.get("evidence_ids", [])
+        if str(value).strip()
+    }
+    quarantined = {
+        str(value).strip()
+        for value in (
+            list(target.quarantined_evidence_ids)
+            + list(grounding_package.get("quarantined_evidence_ids", []))
+        )
+        if str(value).strip()
+    }
+    if not set(decision.evidence_ids_used) <= package_ids or set(
+        decision.evidence_ids_used
+    ).intersection(quarantined):
+        raise _repair_decision_error(execution, "evidence_not_retained_or_quarantined")
+    for claim in decision.claim_provenance:
+        if not set(claim.get("evidence_ids") or []) <= set(decision.evidence_ids_used):
+            raise _repair_decision_error(execution, "claim_evidence_not_declared_used")
+
+    required_protected = _required_repair_protected_fields(current_artifacts, target)
+    if set(decision.protected_fields) != set(required_protected):
+        raise _repair_decision_error(execution, "protected_fields_incomplete")
+    candidate = deepcopy(current_artifacts)
+    for operation in decision.minimal_patch:
+        if not any(
+            operation.path == allowed
+            or operation.path.startswith(allowed + ".")
+            or operation.path.startswith(allowed + "[")
+            for allowed in target.allowed_paths
+        ):
+            raise _repair_decision_error(
+                execution, "changed_path_outside_allowed_paths"
+            )
+        found, previous = _read_repair_path(candidate, operation.path)
+        if not found:
+            raise _repair_decision_error(
+                execution, "patch_target_unresolved_or_ambiguous"
+            )
+        family_root_replacement = operation.path in target.allowed_paths and not any(
+            "." in path or "[" in path for path in target.allowed_paths
+        )
+        if (
+            isinstance(previous, (dict, list))
+            and not operation.path.endswith(".metric")
+            and not family_root_replacement
+        ):
+            raise _repair_decision_error(execution, "patch_target_not_atomic")
+        if (
+            isinstance(operation.value, (dict, list))
+            and not operation.path.endswith(".metric")
+            and not family_root_replacement
+        ):
+            raise _repair_decision_error(execution, "patch_value_over_broad")
+        if not _write_repair_path(candidate, operation.path, operation.value):
+            raise _repair_decision_error(execution, "patch_application_failed")
+    if not _repair_protected_fields_preserved(
+        before=current_artifacts, after=candidate, paths=required_protected
+    ):
+        raise _repair_decision_error(execution, "protected_field_changed")
+    return decision
+
+
+def _repair_protected_fields_preserved(
+    *, before: Dict[str, Any], after: Dict[str, Any], paths: List[str]
+) -> bool:
+    claim_paths: Dict[str, List[int]] = {}
+    exact_paths: List[str] = []
+    for path in paths:
+        match = re.fullmatch(r"(.+)\[claim_index=(\d+)\]", path)
+        if match:
+            base_path, raw_index = match.groups()
+            claim_paths.setdefault(base_path, []).append(int(raw_index))
+        else:
+            exact_paths.append(path)
+    for path in exact_paths:
+        before_found, before_value = _read_repair_path(before, path)
+        after_found, after_value = _read_repair_path(after, path)
+        if not before_found or not after_found or before_value != after_value:
+            return False
+    for base_path, indices in claim_paths.items():
+        before_found, before_text = _read_repair_path(before, base_path)
+        after_found, after_text = _read_repair_path(after, base_path)
+        if (
+            not before_found
+            or not after_found
+            or not isinstance(before_text, str)
+            or not isinstance(after_text, str)
+        ):
+            return False
+        before_spans = _soft_copy_sentence_spans(before_text)
+        after_spans = _soft_copy_sentence_spans(after_text)
+        required_values = [
+            before_text[start:end].strip()
+            for index in indices
+            if index < len(before_spans)
+            for start, end, *_ in [before_spans[index]]
+        ]
+        candidate_values = [
+            after_text[start:end].strip() for start, end, *_ in after_spans
+        ]
+        remaining = list(candidate_values)
+        for expected in required_values:
+            if expected not in remaining:
+                return False
+            remaining.remove(expected)
+    return True
+
+
+def _apply_repair_decision_patch(
+    *, current_artifacts: Dict[str, Any], decision: RepairDecision
+) -> Dict[str, Any]:
+    """Apply only operations already proven legal against this promoted state."""
+
+    patched = deepcopy(current_artifacts)
+    for operation in decision.minimal_patch:
+        if not _write_repair_path(patched, operation.path, operation.value):
+            raise AppError(
+                code="regeneration_repair_decision_invalid",
+                message="Validated repair patch could not be applied to its target.",
+                retryable=False,
+                context={"reason": "patch_application_failed"},
+            )
+    return patched
+
+
+def _required_repair_protected_fields(
+    artifacts: Dict[str, Any], target: RegenerationTarget
+) -> List[str]:
+    protected: set[str] = set()
+    for allowed in target.allowed_paths:
+        claim_match = re.fullmatch(r"(.+)\[claim_index=(\d+)\]", allowed)
+        if claim_match:
+            base_path, raw_index = claim_match.groups()
+            found, text = _read_repair_path(artifacts, base_path)
+            if found and isinstance(text, str):
+                for index in range(len(_soft_copy_sentence_spans(text))):
+                    if index != int(raw_index):
+                        protected.add(f"{base_path}[claim_index={index}]")
+            summary = artifacts.get("summary")
+            if base_path.startswith("summary.") and isinstance(summary, dict):
+                field_name = base_path.split(".", 1)[1]
+                protected.update(
+                    f"summary.{key}" for key in summary if key != field_name
+                )
+            continue
+        item_match = re.match(r"^([^\[]+\[[^\]]+\])(?:\.(.*))?$", allowed)
+        if item_match:
+            item_path, suffix = item_match.groups()
+            found, item = _read_repair_path(artifacts, item_path)
+            if not found or not isinstance(item, dict):
+                continue
+            mutable_fields = set()
+            if suffix:
+                mutable_fields.add(suffix.split(".", 1)[0])
+            elif target.target_section == "quotes":
+                mutable_fields.add("text")
+            elif target.target_section == "insights_bundle":
+                if target.repair_action == "REBIND_EVIDENCE":
+                    mutable_fields.update(
+                        {"evidence_id", "evidence", "evidence_spans", "pages"}
+                    )
+                else:
+                    mutable_fields.update(
+                        _insight_repair_field(issue.entity_id, issue.affected_section)
+                        for issue in target.issues
+                    )
+            elif target.target_section == "summary":
+                mutable_fields.update({"claim", "evidence_id", "evidence", "pages"})
+            protected.update(
+                f"{item_path}.{key}" for key in item if key not in mutable_fields
+            )
+            continue
+        root, separator, suffix = allowed.partition(".")
+        if separator and root == "summary":
+            summary = artifacts.get("summary")
+            mutable = {suffix.split(".", 1)[0]}
+            if isinstance(summary, dict):
+                protected.update(
+                    f"summary.{key}" for key in summary if key not in mutable
+                )
+    return sorted(protected)
+
+
+def _read_repair_path(value: Any, path: str) -> tuple[bool, Any]:
+    claim_match = re.fullmatch(r"(.+)\[claim_index=(\d+)\]", path)
+    if claim_match:
+        base_path, raw_index = claim_match.groups()
+        found, text = _read_repair_path(value, base_path)
+        if not found or not isinstance(text, str):
+            return False, None
+        spans = _soft_copy_sentence_spans(text)
+        index = int(raw_index)
+        return (
+            (True, text[spans[index][0] : spans[index][1]])
+            if index < len(spans)
+            else (False, None)
+        )
+    tokens = _mutation_path_tokens(path)
+    if not tokens:
+        return False, None
+    current = value
+    for key, selector in tokens:
+        if not isinstance(current, dict) or key not in current:
+            return False, None
+        current = current[key]
+        if selector is None:
+            continue
+        if not isinstance(current, list):
+            return False, None
+        if selector.isdigit():
+            index = int(selector)
+            if index >= len(current):
+                return False, None
+        else:
+            matches = [
+                index
+                for index, item in enumerate(current)
+                if isinstance(item, dict)
+                and selector
+                in {
+                    _s(item.get(field)).strip()
+                    for field in (
+                        "id",
+                        "insight_id",
+                        "key_figure_id",
+                        "claim_id",
+                        "evidence_id",
+                    )
+                }
+            ]
+            if len(matches) != 1:
+                return False, None
+            index = matches[0]
+        current = current[index]
+    return True, current
+
+
+def _write_repair_path(value: Dict[str, Any], path: str, replacement: Any) -> bool:
+    claim_match = re.fullmatch(r"(.+)\[claim_index=(\d+)\]", path)
+    if claim_match:
+        base_path, raw_index = claim_match.groups()
+        found, text = _read_repair_path(value, base_path)
+        if not found or not isinstance(text, str) or not isinstance(replacement, str):
+            return False
+        spans = _soft_copy_sentence_spans(text)
+        index = int(raw_index)
+        if index >= len(spans):
+            return False
+        start, end = spans[index][:2]
+        _write_mutation_path(value, base_path, text[:start] + replacement + text[end:])
+        return True
+    found, _ = _read_repair_path(value, path)
+    if not found:
+        return False
+    _write_mutation_path(value, path, replacement)
+    return True
 
 
 def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> None:
@@ -1879,7 +2548,9 @@ def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
     return spans
 
 
-MAX_SOFT_COPY_CLAIM_REPAIRS = 4
+# Keep one model decision per claim while supporting the largest retained
+# multi-claim failure fixture (six distinct claims) without family rewrites.
+MAX_SOFT_COPY_CLAIM_REPAIRS = 6
 
 
 def _soft_copy_claim_repairs(
@@ -1892,11 +2563,7 @@ def _soft_copy_claim_repairs(
     """Resolve every distinct, unambiguous failed sentence in one soft family."""
 
     target_issues = issues if issues is not None else execution.target.issues
-    if (
-        not target_issues
-        or len(target_issues) > MAX_SOFT_COPY_CLAIM_REPAIRS
-        or not text
-    ):
+    if not target_issues or not text:
         return None
     try:
         claims = soft_copy_claim_provenance_from_payload(
@@ -2019,7 +2686,7 @@ def _soft_copy_claim_repairs(
                 issues=(issue,),
             )
         )
-    return resolved
+    return resolved if len(resolved) <= MAX_SOFT_COPY_CLAIM_REPAIRS else None
 
 
 def _claim_has_repair_support(
@@ -2355,15 +3022,90 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
     )
-    _record_soft_copy_claim_bindings(
-        execution,
-        artifact_family="summary",
-        namespace=namespace,
-        result=result,
-    )
+    if not _record_atomic_summary_claim_bindings(
+        execution, namespace=namespace, result=result
+    ):
+        _record_soft_copy_claim_bindings(
+            execution,
+            artifact_family="summary",
+            namespace=namespace,
+            result=result,
+        )
     execution.state.summary = normalize_artifact_summary(result.get("summary"))
     execution.state.regenerated_sections.append("summary")
     execution.state.prompt_namespaces.append(namespace)
+
+
+def _record_atomic_summary_claim_bindings(
+    execution: _RegenerationHandlerExecution,
+    *,
+    namespace: str,
+    result: Dict[str, Any],
+) -> bool:
+    """Retain unchanged summary claims around a field-scoped model patch."""
+
+    decision = result.get("_repair_decision")
+    repaired_summary = result.get("summary")
+    if not isinstance(decision, RepairDecision) or not isinstance(
+        repaired_summary, dict
+    ):
+        return False
+    patch_operations = [
+        operation
+        for operation in decision.minimal_patch
+        if operation.path
+        in {
+            "summary.tldr",
+            "summary.card_tldr_compact",
+            "summary.executive_summary",
+        }
+        and isinstance(operation.value, str)
+    ]
+    if not patch_operations:
+        return False
+    declared_bindings = result.get("_soft_copy_claim_bindings")
+    if not isinstance(declared_bindings, list) or not declared_bindings:
+        return False
+
+    public_sentences = set(
+        soft_copy_material_sentences(soft_copy_public_text("summary", repaired_summary))
+    )
+    retained_claims = soft_copy_claim_provenance_from_payload(
+        execution.state.existing_soft_copy_claim_provenance
+    )
+    # Hashes in the retained contract are over normalized sentence text. Derive
+    # the live hashes and retire only prior claims no longer present anywhere in
+    # the public summary family.
+    public_hashes = {
+        hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
+        for sentence in public_sentences
+    }
+    stale_claim_ids = [
+        claim.claim_id
+        for claim in retained_claims
+        if claim.artifact_family == "summary" and claim.text_hash not in public_hashes
+    ]
+    replaced_claim_ids = execution.state.replaced_soft_copy_claim_ids.setdefault(
+        "summary", []
+    )
+    replaced_claim_ids.extend(
+        claim_id for claim_id in stale_claim_ids if claim_id not in replaced_claim_ids
+    )
+    execution.state.soft_copy_claim_bindings.setdefault("summary", []).extend(
+        dict(binding) for binding in declared_bindings if isinstance(binding, dict)
+    )
+    execution.state.soft_copy_prompt_identities["summary"] = dict(
+        execution.state.prompt_identities.get(namespace) or {}
+    )
+    execution.state.soft_copy_generation_attempts["summary"] = max(
+        1, int(result.get("_soft_copy_generation_attempt") or 1)
+    )
+    execution.state.soft_copy_repair_texts.setdefault("summary", []).extend(
+        operation.value.strip()
+        for operation in patch_operations
+        if operation.value.strip()
+    )
+    return True
 
 
 def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> None:
@@ -3212,6 +3954,7 @@ def _handle_cover_semantics_regeneration(
         execution=execution,
         namespace=namespace,
         ctx=execution.target_ctx,
+        repair_call=False,
         variables={
             **execution.runtime.base_vars,
             "summary_json": _dump_json(execution.state.summary),
@@ -3246,11 +3989,7 @@ def _handle_expert_comment_regeneration(
     namespace = execution.handler.prompt_namespaces[0]
     if claim_repairs is not None:
         replacements: Dict[str, str | None] = {}
-        if (
-            execution.runtime.request.attempt_index >= 3
-            and any(issue.rule_id == "grounding" for issue in execution.target.issues)
-            or _uses_safe_removal(execution)
-        ):
+        if _uses_safe_removal(execution):
             for repair in claim_repairs:
                 replacements[repair.claim.claim_id] = None
                 _mark_soft_copy_claim_removed(execution, repair)
@@ -3325,15 +4064,6 @@ def _handle_expert_comment_regeneration(
         )
         execution.state.regenerated_sections.append("expert_comment")
         execution.state.prompt_namespaces.append(namespace)
-        return
-    if execution.runtime.request.attempt_index >= 3 and any(
-        issue.rule_id == "grounding" for issue in execution.target.issues
-    ):
-        # An exhausted source-fidelity repair must abstain rather than retain
-        # another model-authored causal synthesis.
-        execution.state.expert_comment = ""
-        _mark_soft_copy_family_replaced(execution, "expert_comment")
-        execution.state.regenerated_sections.append("expert_comment")
         return
     if _uses_safe_removal(execution):
         execution.state.expert_comment = ""

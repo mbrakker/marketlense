@@ -15,6 +15,10 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
     RepairDelta,
+    RepairDecision,
+    RepairPatchOperation,
+    RepairSeverityChange,
+    candidate_rejection_fingerprint,
 )
 from src.contracts.run_context import RunContext
 
@@ -273,6 +277,78 @@ def test_repair_delta_keeps_typed_failure_fingerprints() -> None:
     ).persisting == [fingerprint]
 
 
+def test_private_repair_decision_and_monotonic_delta_round_trip() -> None:
+    decision = RepairDecision(
+        diagnosed_failure_class="grounding",
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        evidence_ids_used=["f1"],
+        protected_fields=["insights_final[item=i1].metric"],
+        changed_paths=["insights_final[item=i1].text"],
+        minimal_patch=[
+            RepairPatchOperation(
+                op="replace",
+                path="insights_final[item=i1].text",
+                value="A grounded replacement.",
+            )
+        ],
+    )
+    delta = RepairDelta(
+        resolved=[],
+        persisting=[],
+        introduced=[],
+        severity_changes=[
+            RepairSeverityChange(
+                failure_fingerprint="a" * 64,
+                before="error",
+                after="warning",
+            )
+        ],
+        mutation_scope_result="pass",
+        evidence_lineage_result="pass",
+        repair_action=decision.repair_action,
+        repair_strategy=decision.repair_strategy,
+        evidence_ids_used=list(decision.evidence_ids_used),
+        strategy_fingerprint="b" * 64,
+        candidate_sha256="c" * 64,
+    )
+
+    decision_raw = asdict(decision)
+    decision_raw["minimal_patch"] = [
+        RepairPatchOperation(**item) for item in decision_raw["minimal_patch"]
+    ]
+    delta_raw = asdict(delta)
+    delta_raw["severity_changes"] = [
+        RepairSeverityChange(**item) for item in delta_raw["severity_changes"]
+    ]
+    assert RepairDecision(**decision_raw) == decision
+    assert RepairDelta(**delta_raw) == delta
+
+
+def test_candidate_hash_rejection_identity_changes_with_material_inputs() -> None:
+    baseline = candidate_rejection_fingerprint(
+        candidate_sha256="a" * 64,
+        input_sha256="b" * 64,
+        validator_identity="candidate-validator:3.0",
+    )
+
+    assert baseline == candidate_rejection_fingerprint(
+        candidate_sha256="a" * 64,
+        input_sha256="b" * 64,
+        validator_identity="candidate-validator:3.0",
+    )
+    assert baseline != candidate_rejection_fingerprint(
+        candidate_sha256="a" * 64,
+        input_sha256="c" * 64,
+        validator_identity="candidate-validator:3.0",
+    )
+    assert baseline != candidate_rejection_fingerprint(
+        candidate_sha256="a" * 64,
+        input_sha256="b" * 64,
+        validator_identity="candidate-validator:3.1",
+    )
+
+
 def test_legacy_candidate_audit_defaults_new_repair_fields() -> None:
     retained_v1_audit = {
         "attempt_index": 1,
@@ -295,3 +371,4 @@ def test_legacy_candidate_audit_defaults_new_repair_fields() -> None:
     assert audit.selected_evidence_ids == []
     assert audit.quarantined_evidence_ids == []
     assert audit.repair_delta == RepairDelta()
+    assert audit.repair_decisions == []

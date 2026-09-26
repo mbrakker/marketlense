@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from types import SimpleNamespace
 
 import pytest
@@ -12,10 +11,6 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
     repair_strategy_fingerprint,
-)
-from src.contracts.soft_copy_claim_provenance import (
-    SoftCopyClaimProvenance,
-    soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationIssue
 from src.generators.report_regeneration_generator import regenerate_artifacts
@@ -30,13 +25,16 @@ from tests.test_report_regeneration_generator import (
     _FakePromptClient,
     _settings,
 )
+from ._test_report_regeneration_identity_and_failures._shared import (
+    _source_backed_artifacts,
+)
 
 
 def test_regenerate_artifacts_propagates_retryable_app_error(
     tmp_path, assert_app_error
 ):
     class _RetryingOpenAI(_FakeOpenAIClient):
-        def openai_chat_json(self, req, ctx):
+        def _legacy_chat_json(self, req, ctx):
             del req, ctx
             raise AppError(
                 code="openai_chat_failed",
@@ -240,45 +238,6 @@ class _NoModelCallsAllowed:
         raise AssertionError("Deterministic repair must not call the model")
 
 
-def _source_backed_artifacts() -> dict:
-    """Current artifacts whose summary prose is backed by its claim map.
-
-    Every summary sentence equals the mapped claim, so assembly reuses the
-    retained provenance instead of triggering the source-backed fallback.
-    """
-
-    artifacts = _current_artifacts()
-    artifacts["summary"]["tldr"] = "Old claim."
-    artifacts["summary"]["card_tldr_compact"] = "Old claim."
-    artifacts["summary"]["executive_summary"] = "Old claim."
-    artifacts["summary"]["claim_evidence_map"][0]["claim"] = "Old claim."
-    retained_claims = [
-        SoftCopyClaimProvenance(
-            schema_version="1.0",
-            artifact_family=family,
-            claim_id=(
-                f"soft_copy:{family}:{hashlib.sha256(text.encode()).hexdigest()[:16]}"
-            ),
-            text_hash=hashlib.sha256(text.encode()).hexdigest(),
-            classification="interpretive",
-            evidence_ids=("f1",) if family == "summary" else (),
-            source_spans=(),
-            producing_prompt_identity={"namespace": f"report_vs/artifacts/{family}"},
-            generation_attempt=1,
-            regeneration_attempt=0,
-        )
-        for family, text in (
-            ("summary", "Old claim."),
-            ("expert_comment", "Old expert"),
-            ("linkedin_post", "Old linkedin"),
-        )
-    ]
-    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
-        retained_claims
-    )
-    return artifacts
-
-
 def _identity_plan() -> RegenerationPlan:
     return RegenerationPlan(
         mode="targeted",
@@ -475,7 +434,7 @@ def test_model_repair_changes_only_the_identified_final_insight(tmp_path) -> Non
 
 def test_model_repair_changes_only_the_identified_quote(tmp_path) -> None:
     class _AtomicQuoteOpenAIClient(_FakeOpenAIClient):
-        def openai_chat_json(self, req, ctx):
+        def _legacy_chat_json(self, req, ctx):
             del ctx
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -523,7 +482,7 @@ def test_model_repair_changes_only_the_identified_quote(tmp_path) -> None:
                 ],
                 repair_action="REGENERATE_ITEM",
                 repair_strategy="current_evidence",
-                allowed_paths=["quotes_final[item=q1]"],
+                allowed_paths=["quotes_final[item=q1].text"],
             )
         ],
         unmappable_issues=[],
@@ -974,3 +933,6 @@ def test_attempt_strategy_fingerprint_describes_actual_selection() -> None:
     # Legacy responses without actual strategy fall back to the plan view.
     legacy = SimpleNamespace()
     assert _attempt_strategy_fingerprint(plan, legacy) == planned
+
+
+from ._test_report_regeneration_identity_and_failures.cases_01_atomic_model_repair import *  # noqa: F401,F403

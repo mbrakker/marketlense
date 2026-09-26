@@ -1,5 +1,6 @@
 includes:
   - "report_vs/artifacts/regenerate/_partials/critique_first.yaml"
+  - "report_vs/artifacts/regenerate/_partials/repair_decision_contract.yaml"
 text: |
   Context:
   - Attempt index: {{ attempt_index }}
@@ -11,13 +12,12 @@ text: |
   - Validator failures JSON: {{ failure_reasons_json }}
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
+  - Repair context JSON: {{ repair_context_json }}
+  - Prior repair memory JSON: {{ prior_repair_memory_json }}
 
   Task:
-  Return a JSON object with:
-  {
-    "linkedin_post": "<grounded LinkedIn post>",
-    "claim_provenance": [{"claim": "<material sentence quoted from linkedin_post>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<approved evidence id>"]}]
-  }
+  Repair only the declared LinkedIn item/claim and return the structured
+  private `repair_decision` envelope defined in the included contract.
 
   Requirements:
   - Fix the listed failures directly.
@@ -44,5 +44,7 @@ text: |
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".
-  - `claim_provenance` is private retained metadata. Cover every material sentence or claim with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Bind each object to exact approved evidence IDs; never expose IDs in `linkedin_post`. A factual claim must have at least one evidence ID.
+  - `repair_decision.claim_provenance` is private retained metadata. Cover each
+    patched material sentence with its exact approved evidence IDs; never
+    expose IDs in public prose. A factual claim must have at least one ID.
   - Before returning, privately segment the completed post and audit `claim_provenance` coverage, including attribution, transition, question, and interpretive bridge sentences. Omit any sentence that cannot be classified and bound rather than omitting its private binding.

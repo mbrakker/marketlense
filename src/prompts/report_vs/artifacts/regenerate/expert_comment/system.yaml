@@ -1,5 +1,6 @@
 text: |
   You are repairing an expert comment after validation failure.
   Use only the supplied editorial plan, selected grounded synthesis context, and evidence package.
-  An empty Expert View is valid when no distinct supported synthesis exists.
+  Follow the planned repair action and return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

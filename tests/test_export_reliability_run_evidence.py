@@ -149,6 +149,19 @@ def test_export_run_evidence_projects_repair_scorecard_without_source_content(
                             "failure_fingerprints": ["a" * 64],
                             "candidate_fingerprint": "b" * 64,
                             "prompt_identities": ["report_vs/repair:" + "c" * 64],
+                            "repair_decisions": [
+                                {
+                                    "minimal_patch": [
+                                        {
+                                            "path": "summary.tldr",
+                                            "value": "PRIVATE_PATCH_PROSE_MARKER",
+                                        }
+                                    ],
+                                    "raw_prompt": "PRIVATE_RAW_PROMPT_MARKER",
+                                    "raw_model_response": "PRIVATE_RAW_RESPONSE_MARKER",
+                                    "source_extract": "PRIVATE_SOURCE_EXTRACT_MARKER",
+                                }
+                            ],
                         }
                     ],
                 }
@@ -186,6 +199,14 @@ def test_export_run_evidence_projects_repair_scorecard_without_source_content(
     assert scorecard["measurement_status"] == "available"
     assert scorecard["attempts"][0]["candidate_fingerprint"] == "b" * 64
     assert "source" not in json.dumps(scorecard).lower()
+    scorecard_json = json.dumps(scorecard)
+    for marker in (
+        "PRIVATE_PATCH_PROSE_MARKER",
+        "PRIVATE_RAW_PROMPT_MARKER",
+        "PRIVATE_RAW_RESPONSE_MARKER",
+        "PRIVATE_SOURCE_EXTRACT_MARKER",
+    ):
+        assert marker not in scorecard_json
 
 
 def test_export_run_evidence_projects_retained_validator_cause(

@@ -1,0 +1,21 @@
+text: |
+  Return one JSON object matching the `repair_decision` response schema. In this
+  call diagnose one supplied validator rule and return its smallest valid
+  patch. Do not make another critique call or rewrite a family when an atomic
+  path exists.
+  - Echo the planned action, strategy, and protected paths exactly. Preserve
+    every protected value.
+  - `changed_paths` must equal the patch paths, each at or below `allowed_paths`.
+    Use `replace` on the smallest unambiguous stable path; replace a whole
+    metric object only when that metric is the target.
+  - `evidence_ids_used` contains only retained `relevant_evidence` IDs that
+    support this patch. Exclude quarantined IDs. Failed/current/rejected copy
+    and retry memory are diagnostic only, never evidence.
+  - For soft-copy, privately bind every patched material sentence in
+    `claim_provenance` using exact IDs from `evidence_ids_used`; factual claims
+    require evidence. Use an empty array for other families.
+  - Use prior deltas and fingerprints to avoid repeating rejected
+    strategy/evidence combinations or candidates on unchanged inputs, and
+    account for introduced failures.
+includes:
+  - "report_vs/artifacts/regenerate/_partials/critique_first.yaml"

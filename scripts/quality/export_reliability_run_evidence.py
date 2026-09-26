@@ -36,6 +36,69 @@ _FAILURE_CONTEXT_FIELDS = {
 _SAFE_DIAGNOSTIC_TOKEN_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
 )
+_REPAIR_SCORECARD_FIELDS = (
+    "schema_version",
+    "measurement_status",
+    "cohort_compatible",
+    "repair_chain_count",
+    "repair_attempt_count",
+    "success_at_1_count",
+    "success_at_1_rate",
+    "success_at_3_count",
+    "success_at_3_rate",
+    "rolled_back_attempt_count",
+    "abstention_or_removal_attempt_count",
+    "out_of_scope_mutation_attempt_count",
+    "repeated_failed_strategy_evidence_attempt_count",
+    "repeated_failed_candidate_attempt_count",
+    "incompatible_audit_count",
+)
+_REPAIR_ATTEMPT_FIELDS = (
+    "schema_version",
+    "report_id",
+    "attempt_index",
+    "failure_rule_ids",
+    "failure_fingerprints",
+    "resolved_failure_fingerprints",
+    "persisting_failure_fingerprints",
+    "introduced_failure_fingerprints",
+    "strategy_fingerprint",
+    "candidate_fingerprint",
+    "repair_action",
+    "repair_strategy",
+    "evidence_fingerprints",
+    "validation_status",
+    "promotion_outcome",
+    "successful",
+    "abstention_or_removal",
+    "out_of_scope_mutation",
+    "repair_mode",
+    "usage_attribution",
+    "model_call_count",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "estimated_cost_usd",
+    "latency_ms",
+    "prompt_identities",
+    "configuration_hash",
+    "policy_hash",
+    "producer_build_identity",
+)
+_REPAIR_MODE_FIELDS = (
+    "schema_version",
+    "repair_mode",
+    "attempt_count",
+    "successful_attempt_count",
+    "success_rate",
+    "metric_attribution",
+    "model_call_count",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "estimated_cost_usd",
+    "latency_ms",
+)
 
 
 def _bounded_diagnostic_token(value: object) -> str:
@@ -129,7 +192,7 @@ def _write_json(path: Path, payload: Any) -> None:
 def _repair_effectiveness_projection(
     *, artifact_dir: Path, validation_run_id: str
 ) -> dict[str, Any]:
-    """Project the retained, content-free repair scorecard without recomputing it."""
+    """Project only the typed content-free scorecard fields without recomputing it."""
 
     run_hash = hashlib.sha256(validation_run_id.encode("utf-8")).hexdigest()
     path = artifact_dir / "validation-runs" / run_hash / "reliability_telemetry.json"
@@ -154,7 +217,21 @@ def _repair_effectiveness_projection(
             "measurement_status": "unavailable",
             "reason": "retained_repair_scorecard_missing",
         }
-    return scorecard
+    projection = {
+        key: scorecard[key] for key in _REPAIR_SCORECARD_FIELDS if key in scorecard
+    }
+    for field_name, allowed_fields in (
+        ("attempts", _REPAIR_ATTEMPT_FIELDS),
+        ("mode_metrics", _REPAIR_MODE_FIELDS),
+    ):
+        values = scorecard.get(field_name)
+        if isinstance(values, list):
+            projection[field_name] = [
+                {key: item[key] for key in allowed_fields if key in item}
+                for item in values
+                if isinstance(item, dict)
+            ]
+    return projection
 
 
 def _authoritative_frozen_cohort_projection(

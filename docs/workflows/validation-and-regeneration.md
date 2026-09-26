@@ -90,6 +90,24 @@ item and field available for a summary claim or variant, insight and metric, key
 figure, quote, Expert View claim, or LinkedIn claim. When identity cannot be
 resolved unambiguously, the planner uses the existing family-level repair.
 
+Each model-assisted repair call returns one private `repair_decision` with the
+diagnosed failure class, selected action and strategy, retained evidence IDs actually
+used, protected fields, changed paths, minimal replacement patch, and soft-copy
+provenance where applicable. The generator validates evidence, quarantine, scope,
+protected fields, and one unambiguous target before applying that patch to the current
+promoted artifact. Current failed copy and rejected candidate copy are diagnostic
+context only; they are never evidence. The same model response contains diagnosis and
+patch, so this contract adds no critique call. Malformed decisions and invalid or broad
+patches fail closed before candidate persistence.
+
+After a rollback, the next plan and prompt receive a bounded `RepairDelta` containing
+resolved, persisting, and introduced issue fingerprints, severity transitions,
+mutation-scope and evidence-lineage outcomes, and the actual action, strategy, evidence
+IDs, and rejection identities. Partial improvement remains retry memory. It does not
+change canonical artifacts. A repeated candidate hash for the same promoted input and
+validator identity is rejected, and exhaustion follows the existing typed safe
+removal, abstention, or failure strategy rather than attempt-number rules.
+
 The scope gate compares exact changed paths, including nested fields and stable
 list-item identities, against each target's declared `allowed_paths`. It rejects
 changed siblings and undeclared nested fields as `regeneration_scope_violation`
@@ -286,15 +304,22 @@ The deterministic [public editorial quality diagnostics](../quality/public-edito
 
 ## Repair-effectiveness measurement
 
-Each retained regeneration candidate audit carries only content-free measurement
+Each retained regeneration candidate audit carries content-free measurement
 identity: report, validation-run, cohort, workflow, configuration, policy, and
 producer-build identities; failure and strategy fingerprints; candidate hash;
 validator rule classes; evidence-ID fingerprints; promotion result; typed
 resolved/persisting/introduced delta; scoped-mutation signal; and elapsed
-milliseconds. It never retains source
-prose, rendered prompts, or model responses. The audit is observational: it
-does not make model calls or change regeneration, validation, retry, promotion,
-or rollback decisions.
+milliseconds. It also retains the private structured repair decision and
+minimal patch needed to audit the attempt. It does not retain rendered prompts,
+source extracts, or unstructured provider responses. Public artifacts and the
+read-only scorecard omit private repair decisions and unpublished diagnostics.
+The audit is observational: it does not make model calls or change
+regeneration, validation, retry, promotion, or rollback decisions.
+
+Repair prompts carry the allowed paths, protected fields, planned action and
+strategy, and bounded content-free retry memory. The prompt-fixture corpus
+baseline is measured against this structured repair contract; the current
+baseline records the updated input-token footprint.
 
 The canonical `reliability_telemetry.json` aggregates compatible audits into a
 repair scorecard. It reports repair-chain and attempt denominators, success at
@@ -641,8 +666,10 @@ validation issue codes, transformation scope, before/after canonical hashes,
 and per-family hashes for claim-bearing siblings that are byte-equivalent across
 the candidate. It records exact `allowed_paths` and any recomputed
 `verified_dependent_paths`; the latter is optional when reading older audit
-records. It also retains candidate/current artifact paths and whether the
-attempt was promoted or rolled back. Promotion uses the canonical atomic
+records. It also retains the private structured repair decision, typed repair
+delta, candidate/current artifact paths, and whether the attempt was promoted or
+rolled back. Public artifacts and the read-only E13 scorecard do not expose prompts,
+source prose, model responses, or unpublished repair diagnostics. Promotion uses the canonical atomic
 artifact store only after every gate passes, so the prior current artifact stays
 recoverable until the atomic replacement succeeds. A failed candidate remains
 retained for diagnosis while the existing current artifact remains publishable

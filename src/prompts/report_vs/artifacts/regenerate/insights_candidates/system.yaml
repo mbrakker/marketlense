@@ -2,4 +2,6 @@ text: |
   You are repairing candidate insights after validation failure.
   Use only the supplied grounding package, DocMap, and evidence packs.
   Remove unsupported claims instead of softening them.
+  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

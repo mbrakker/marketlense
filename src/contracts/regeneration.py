@@ -48,12 +48,86 @@ class FailureFingerprint:
 
 
 @dataclass(frozen=True)
+class RepairSeverityChange:
+    """Severity transition for a stable issue fingerprint."""
+
+    failure_fingerprint: str = field(
+        metadata={"doc": "Stable issue identity whose severity changed."}
+    )
+    before: str = field(
+        metadata={"doc": "Severity before the candidate: error|warning|info."}
+    )
+    after: str = field(
+        metadata={"doc": "Severity after the candidate: error|warning|info."}
+    )
+
+
+@dataclass(frozen=True)
+class RepairPatchOperation:
+    """One atomic replacement in a private model-assisted repair patch."""
+
+    op: str = field(metadata={"doc": "Supported patch operation; currently replace."})
+    path: str = field(metadata={"doc": "Exact artifact path intentionally changed."})
+    value: Any = field(metadata={"doc": "Replacement value at the declared path."})
+
+
+@dataclass(frozen=True)
+class RepairDecision:
+    """Private structured decision returned alongside a model repair patch."""
+
+    diagnosed_failure_class: str = field(
+        metadata={"doc": "Validator failure class diagnosed by this repair call."}
+    )
+    repair_action: str = field(metadata={"doc": "Planner-approved repair action."})
+    repair_strategy: str = field(metadata={"doc": "Planner-approved repair strategy."})
+    evidence_ids_used: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Retained, non-quarantined evidence IDs actually used."},
+    )
+    protected_fields: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Artifact paths that must remain unchanged."},
+    )
+    changed_paths: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Exact artifact paths intentionally changed by the patch."},
+    )
+    minimal_patch: List[RepairPatchOperation] = field(
+        default_factory=list,
+        metadata={"doc": "Smallest legal replacement patch for the promoted artifact."},
+    )
+    claim_provenance: List[Dict[str, Any]] = field(
+        default_factory=list,
+        metadata={"doc": "Private provenance bindings for patched soft-copy claims."},
+    )
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Private repair decision schema version."}
+    )
+
+
+@dataclass(frozen=True)
 class RepairDelta:
-    """Non-canonical memory retained from one candidate attempt."""
+    """Non-canonical monotonic evaluation and retry memory for one attempt."""
 
     resolved: List[FailureFingerprint] = field(default_factory=list)
     persisting: List[FailureFingerprint] = field(default_factory=list)
     introduced: List[FailureFingerprint] = field(default_factory=list)
+    severity_changes: List[RepairSeverityChange] = field(default_factory=list)
+    mutation_scope_result: str = field(
+        default="not_evaluated",
+        metadata={"doc": "pass|fail|not_evaluated result for mutation scope."},
+    )
+    evidence_lineage_result: str = field(
+        default="not_evaluated",
+        metadata={"doc": "pass|fail|not_evaluated result for evidence and lineage."},
+    )
+    repair_action: str = field(default="")
+    repair_strategy: str = field(default="")
+    evidence_ids_used: List[str] = field(default_factory=list)
+    strategy_fingerprint: str = field(default="")
+    candidate_sha256: str = field(default="")
+    input_sha256: str = field(default="")
+    validator_identity: str = field(default="")
     schema_version: str = field(
         default="1.0", metadata={"doc": "Repair-delta schema version."}
     )
@@ -70,6 +144,21 @@ def repair_strategy_fingerprint(
         "evidence_ids": sorted(
             {value.strip() for value in evidence_ids if value.strip()}
         ),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def candidate_rejection_fingerprint(
+    *, candidate_sha256: str, input_sha256: str, validator_identity: str
+) -> str:
+    """Identify a rejected output only for the exact material input/validator."""
+
+    payload = {
+        "candidate_sha256": candidate_sha256.strip().lower(),
+        "input_sha256": input_sha256.strip().lower(),
+        "validator_identity": validator_identity.strip(),
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -415,6 +504,12 @@ class ArtifactRegenerationResponse:
             )
         },
     )
+    repair_decisions: List[RepairDecision] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Private decisions for model-assisted patches in this attempt."
+        },
+    )
     payload_overrides: Dict[str, Any] = field(
         default_factory=dict,
         metadata={
@@ -533,6 +628,12 @@ class RegenerationCandidateAudit:
     selected_evidence_ids: List[str] = field(default_factory=list)
     quarantined_evidence_ids: List[str] = field(default_factory=list)
     repair_delta: RepairDelta = field(default_factory=RepairDelta)
+    repair_decisions: List[RepairDecision] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Private model repair decisions retained for retry and audit."
+        },
+    )
     report_id: str = field(default="")
     validation_run_id: str = field(default="")
     cohort_id: str = field(default="")

@@ -397,6 +397,27 @@ _UNSUPPORTED_SOFT_COPY_CLAIM = (
 _REPAIRED_SOFT_COPY_CLAIM = "Planning should retain the source evidence."
 
 
+def _json_prompt_value(call: dict, label: str) -> object:
+    """Read one JSON fixture variable from the rendered repair prompt."""
+
+    decoder = json.JSONDecoder()
+    marker = f"{label}:"
+    for message in call.get("messages", []):
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str):
+            continue
+        start = content.find(marker)
+        if start < 0:
+            continue
+        value_start = start + len(marker)
+        try:
+            value, _end = decoder.raw_decode(content[value_start:].lstrip())
+        except ValueError:
+            continue
+        return value
+    return None
+
+
 def _full_chain_response_factory(
     *,
     repair_soft_copy: bool = False,
@@ -458,6 +479,7 @@ def _full_chain_chat_response_factory(
     """Return the legacy chat-completions fixture used by artifact generation."""
 
     soft_copy_calls = {"expert_comment": 0, "linkedin_post": 0}
+    repair_claim_calls = {"expert_comment": 0, "linkedin_post": 0}
 
     def respond(call: dict) -> SimpleNamespace:
         response_format = call["response_format"]
@@ -473,12 +495,82 @@ def _full_chain_chat_response_factory(
                 id="fixture-chat-rank-candidates",
             )
         else:
-            response = _full_chain_model_response(
-                {"text": {"format": {"name": schema_name}}}
-            )
-            payload = json.loads(response.output_text)
+            if schema_name == "regeneration_repair_decision_v1":
+                repair_context = _json_prompt_value(call, "Repair context JSON")
+                failures = _json_prompt_value(call, "Validator failures JSON")
+                if not isinstance(repair_context, dict):
+                    raise AssertionError("repair fixture is missing its typed context")
+                allowed_paths = repair_context.get("allowed_paths") or []
+                if len(allowed_paths) != 1:
+                    raise AssertionError(
+                        f"repair fixture expects one atomic target, got {allowed_paths!r}"
+                    )
+                path = str(allowed_paths[0])
+                family = path.split(".", 1)[0].split("[", 1)[0]
+                if family in repair_claim_calls:
+                    repair_claim_calls[family] += 1
+                replacement = (
+                    _REPAIRED_SOFT_COPY_CLAIM
+                    if family == "expert_comment" and repair_claim_calls[family] == 1
+                    else (
+                        "Read the report as an input to planning."
+                        if family == "linkedin_post"
+                        else ""
+                    )
+                )
+                # These fixture repairs are recommendations, not claims that
+                # rely on a cited source span. Do not invent lineage IDs from
+                # the wider prompt package.
+                used_ids: list[str] = []
+                diagnosed_failure = (
+                    str(failures[0].get("rule_id") or "grounding")
+                    if isinstance(failures, list)
+                    and failures
+                    and isinstance(failures[0], dict)
+                    else "grounding"
+                )
+                decision = {
+                    "schema_version": "1.0",
+                    "diagnosed_failure_class": diagnosed_failure,
+                    "repair_action": repair_context["repair_action"],
+                    "repair_strategy": repair_context["repair_strategy"],
+                    "evidence_ids_used": used_ids if replacement else [],
+                    "protected_fields": repair_context["required_protected_fields"],
+                    "changed_paths": [path],
+                    "minimal_patch": [
+                        {"op": "replace", "path": path, "value": replacement}
+                    ],
+                    "claim_provenance": (
+                        [
+                            {
+                                "claim": replacement,
+                                "classification": "recommendation",
+                                "evidence_ids": used_ids,
+                            }
+                        ]
+                        if replacement
+                        else []
+                    ),
+                }
+                payload = {"repair_decision": decision}
+                response = FakeOpenAIResult(
+                    output_text=json.dumps(payload),
+                    usage={
+                        "input_tokens": 10,
+                        "output_tokens": 10,
+                        "total_tool_calls": 0,
+                    },
+                    id="fixture-regeneration-repair-decision",
+                )
+            else:
+                response = _full_chain_model_response(
+                    {"text": {"format": {"name": schema_name}}}
+                )
+                payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
-            if reproduce_ias_soft_copy and family in soft_copy_calls:
+            if schema_name == "regeneration_repair_decision_v1":
+                pass
+            elif reproduce_ias_soft_copy and family in soft_copy_calls:
                 soft_copy_calls[family] += 1
                 payload = ias_soft_copy_payload(
                     family,

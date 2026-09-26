@@ -1,5 +1,6 @@
 includes:
   - "report_vs/artifacts/regenerate/_partials/critique_first.yaml"
+  - "report_vs/artifacts/regenerate/_partials/repair_decision_contract.yaml"
 text: |
   Context:
   - Attempt index: {{ attempt_index }}
@@ -10,27 +11,12 @@ text: |
   - Fix checklist JSON: {{ fix_checklist_json }}
   - Grounding package JSON: {{ grounding_package_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
+  - Repair context JSON: {{ repair_context_json }}
+  - Prior repair memory JSON: {{ prior_repair_memory_json }}
 
   Task:
-  Return a JSON object with:
-  {
-    "summary": {
-      "tldr": "<one complete sentence, maximum 45 words>",
-      "card_tldr_compact": "<one complete sentence, maximum 18 words>",
-      "executive_summary": "<grounded executive summary>",
-      "claim_evidence_map": [
-        {
-          "claim": "<concise supported claim>",
-          "evidence_id": "<single existing evidence id>",
-          "evidence": "<supporting excerpt or grounded paraphrase>",
-          "pages": [<page numbers if known>]
-        }
-      ]
-    },
-    "claim_provenance": [
-      {"claim": "<material sentence quoted from the public summary fields>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<approved evidence id>"]}
-    ]
-  }
+  Repair the named summary claim/field and return only the structured private
+  `repair_decision` envelope defined in the included contract.
 
   Requirements:
   - Treat the current summary as failed copy, not source evidence. Use only
@@ -51,4 +37,6 @@ text: |
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
   - Do not introduce unsupported numbers, entities, quotes, or conclusions. A numeric value may appear only when it is explicitly supported by that claim's linked retained evidence.
-  - `claim_provenance` is private metadata. Return one object for each complete sentence in `tldr`, `card_tldr_compact`, and `executive_summary`, copying each sentence into `claim`. Use exact approved evidence IDs; factual sentences need at least one. Never expose IDs in public prose.
+  - `repair_decision.claim_provenance` is private metadata for the patched
+    sentence(s). Bind exact approved evidence IDs; factual sentences need at
+    least one. Never expose IDs in public prose.

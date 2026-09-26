@@ -21,6 +21,8 @@ from src.contracts.regeneration import (
     RegenerationCandidateAudit,
     RegenerationLoopState,
     RepairDelta,
+    RepairSeverityChange,
+    candidate_rejection_fingerprint,
     repair_strategy_fingerprint,
 )
 from src.contracts.report_analysis import (
@@ -399,13 +401,13 @@ def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
 
 
 def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDelta:
+    before_by_key = {_failure_fingerprint(item).key: item for item in before.issues}
+    after_by_key = {_failure_fingerprint(item).key: item for item in after.issues}
     before_items = {
-        _failure_fingerprint(item).key: _failure_fingerprint(item)
-        for item in before.issues
+        key: _failure_fingerprint(item) for key, item in before_by_key.items()
     }
     after_items = {
-        _failure_fingerprint(item).key: _failure_fingerprint(item)
-        for item in after.issues
+        key: _failure_fingerprint(item) for key, item in after_by_key.items()
     }
     return RepairDelta(
         resolved=[
@@ -418,6 +420,47 @@ def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDe
         introduced=[
             after_items[key] for key in sorted(after_items.keys() - before_items.keys())
         ],
+        severity_changes=[
+            RepairSeverityChange(
+                failure_fingerprint=key,
+                before=before_by_key[key].severity,
+                after=after_by_key[key].severity,
+            )
+            for key in sorted(before_items.keys() & after_items.keys())
+            if before_by_key[key].severity != after_by_key[key].severity
+        ],
+    )
+
+
+def _candidate_validator_identity(runtime: ReportRuntimeState) -> str:
+    """Stable identity for the deterministic and semantic promotion gates."""
+
+    return ":".join(
+        (
+            "regeneration-candidate-v1",
+            str(runtime.ctx.configuration_hash or ""),
+            str(runtime.ctx.policy_hash or ""),
+        )
+    )
+
+
+def _append_candidate_hash_repeat_issue(
+    report: ValidationReport,
+) -> ValidationReport:
+    issue = ValidationIssue(
+        message=(
+            "[regeneration_candidate_hash_repeat] Candidate content repeated for "
+            "the same promoted input and validator identity after rejection."
+        ),
+        severity="error",
+        affected_section="regeneration_candidate",
+        rule_id="regeneration_candidate_hash_repeat",
+    )
+    return replace(
+        report,
+        status="fail",
+        severity="error",
+        issues=[*report.issues, issue],
     )
 
 
@@ -821,6 +864,11 @@ def _candidate_audit(
             else []
         ),
         repair_delta=repair_delta or RepairDelta(),
+        repair_decisions=(
+            list(getattr(regeneration_response, "repair_decisions", []) or [])
+            if regeneration_response is not None
+            else []
+        ),
         report_id=str(runtime.ctx.report_id or runtime.file.file_id),
         validation_run_id=str(runtime.ctx.validation_run_id or ""),
         cohort_id=str(runtime.ctx.cohort_id or ""),
@@ -927,6 +975,7 @@ def _run_validation_regeneration_loop(
     evidence_paths: Dict[str, str] = {}
     broad_retry_used = False
     rejected_strategy_keys: set[str] = set()
+    rejected_candidate_hashes: set[str] = set()
     repair_memory: List[RepairDelta] = []
     promoted_payload_overrides: Dict[str, str] = {}
     current_artifacts_path = dependencies.analysis_pack_path(
@@ -1233,6 +1282,19 @@ def _run_validation_regeneration_loop(
         candidate_validation_report = _merge_public_editorial_quality(
             candidate_validation_report, editorial_validation
         )
+        candidate_input_sha256 = sha256_json(artifacts_before)
+        candidate_sha256 = sha256_json(candidate_artifacts)
+        validator_identity = _candidate_validator_identity(runtime)
+        rejection_fingerprint = candidate_rejection_fingerprint(
+            candidate_sha256=candidate_sha256,
+            input_sha256=candidate_input_sha256,
+            validator_identity=validator_identity,
+        )
+        repeated_candidate_hash = rejection_fingerprint in rejected_candidate_hashes
+        if repeated_candidate_hash:
+            candidate_validation_report = _append_candidate_hash_repeat_issue(
+                candidate_validation_report
+            )
         candidate_validation_path = _store_validation_snapshot(
             runtime=runtime,
             dependencies=dependencies,
@@ -1248,6 +1310,41 @@ def _run_validation_regeneration_loop(
         )
         strategy_fingerprint = _attempt_strategy_fingerprint(
             plan, regeneration_response
+        )
+        scope_failed = any(
+            issue.rule_id == "regeneration_scope_violation"
+            for issue in candidate_validation_report.issues
+        )
+        lineage_failure_rules = {
+            "grounding",
+            "soft_copy_claim_provenance",
+            "regeneration_source_page",
+            "regeneration_claim_support",
+        }
+        evidence_lineage_failed = bool(
+            any(item.validation_issues for item in candidate_result.evidence_lineage)
+            or any(
+                item.rule_id in lineage_failure_rules
+                for item in candidate_result.issues
+            )
+        )
+        repair_delta = replace(
+            repair_delta,
+            mutation_scope_result="fail" if scope_failed else "pass",
+            evidence_lineage_result="fail" if evidence_lineage_failed else "pass",
+            repair_action=str(
+                getattr(regeneration_response, "repair_action", "") or ""
+            ),
+            repair_strategy=str(
+                getattr(regeneration_response, "repair_strategy", "") or ""
+            ),
+            evidence_ids_used=list(
+                getattr(regeneration_response, "selected_evidence_ids", []) or []
+            ),
+            strategy_fingerprint=strategy_fingerprint,
+            candidate_sha256=candidate_sha256,
+            input_sha256=candidate_input_sha256,
+            validator_identity=validator_identity,
         )
         # The planner reasons over planned strategy/evidence keys, while the
         # audit records what the attempt actually used. Both are retained so a
@@ -1358,6 +1455,7 @@ def _run_validation_regeneration_loop(
                 rejected_strategy_keys.add(strategy_fingerprint)
                 rejected_strategy_keys.update(planned_strategy_keys)
                 repair_memory.append(repair_delta)
+                rejected_candidate_hashes.add(rejection_fingerprint)
                 # Deterministic identity corrections are candidate-scoped: a
                 # rolled-back candidate leaves the promoted identity untouched.
                 promoted_payload_overrides = {}
@@ -1417,17 +1515,22 @@ def _run_validation_regeneration_loop(
             latency_ms=max(0, int((perf_counter() - attempt_started) * 1000)),
         )
         attempts.append(attempt_result)
-        if repeated_rejected_strategy:
+        if repeated_rejected_strategy or repeated_candidate_hash:
             logger.info(
                 log_event(
                     attempt_ctx,
                     role="orchestrator",
-                    event="validation_regen_equivalent_strategy_rejected",
+                    event=(
+                        "validation_regen_rejected_candidate_hash_repeated"
+                        if repeated_candidate_hash
+                        else "validation_regen_equivalent_strategy_rejected"
+                    ),
                     module=logger.name,
                     fields={
                         "file_id": runtime.file.file_id,
                         "attempt_index": attempt_index,
                         "strategy_fingerprint": strategy_fingerprint,
+                        "candidate_sha256": candidate_sha256,
                     },
                 )
             )

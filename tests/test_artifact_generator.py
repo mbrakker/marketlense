@@ -11,3 +11,4 @@ from ._test_artifact_generator.cases_07_ias_summary_provenance import *  # noqa:
 from ._test_artifact_generator.cases_08_topic_briefs import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_09_unknown_evidence import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_10_soft_copy_finalization import *  # noqa: F401,F403
+from ._test_artifact_generator.cases_11_soft_copy_binding_recovery import *  # noqa: F401,F403

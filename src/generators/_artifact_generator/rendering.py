@@ -99,6 +99,7 @@ def render_artifact_json_model(
     report_id: str = "",
     prepared_prompt_bundle: PreparedPromptBundle | None = None,
     response_observer: Callable[[Any, float, str], None] | None = None,
+    response_contract_name: str = "",
 ) -> Dict[str, Any]:
     """Render one artifact through the shared bounded JSON recovery service."""
     prompt_bundle = prepared_prompt_bundle or prepare_prompt_bundle(
@@ -218,9 +219,13 @@ def render_artifact_json_model(
             context={"namespace": namespace},
         )
     output_schema = (
-        _soft_copy_provider_output_schema(root_key)
-        if root_key in _SOFT_COPY_ROOTS
-        else provider_output_schema("artifacts", root_key)
+        provider_output_schema(response_contract_name)
+        if response_contract_name
+        else (
+            _soft_copy_provider_output_schema(root_key)
+            if root_key in _SOFT_COPY_ROOTS
+            else provider_output_schema("artifacts", root_key)
+        )
     )
     resolved_report_id = str(report_id or getattr(ctx, "report_id", "") or report_name)
 
@@ -252,7 +257,11 @@ def render_artifact_json_model(
             report_name=report_name,
             source_url=source_url,
             output_schema=output_schema,
-            output_schema_identity=f"artifact_{root_key}_v1",
+            output_schema_identity=(
+                f"{response_contract_name}_v1"
+                if response_contract_name
+                else f"artifact_{root_key}_v1"
+            ),
             repair_attempt=(
                 repair_attempt
                 if mode == "primary" and repair_attempt
@@ -278,12 +287,20 @@ def render_artifact_json_model(
         return response
 
     def validate_payload(payload: Dict[str, Any]) -> None:
-        validate_output_schema(
-            payload={root_key: payload.get(root_key)},
-            schema_name="artifacts",
-            root_key=root_key,
-            ctx=ctx,
-        )
+        if response_contract_name:
+            validate_output_schema(
+                payload=payload,
+                schema_name=response_contract_name,
+                root_key="",
+                ctx=ctx,
+            )
+        else:
+            validate_output_schema(
+                payload={root_key: payload.get(root_key)},
+                schema_name="artifacts",
+                root_key=root_key,
+                ctx=ctx,
+            )
         if root_key in _SOFT_COPY_ROOTS:
             # Keep the model's semantic declarations intact until artifact
             # assembly applies every deterministic public-copy transform.
@@ -300,30 +317,50 @@ def render_artifact_json_model(
             schema_version="1.0",
             report_id=resolved_report_id,
             artifact_family=root_key,
-            schema_name="artifacts",
-            schema_root_key=root_key,
+            schema_name=response_contract_name or "artifacts",
+            schema_root_key="" if response_contract_name else root_key,
             model=prompt_bundle.resolved_model,
             workflow="report_analysis",
             prompt_family=prompt_bundle.routing_decision.namespace,
-            allow_abstention=root_key in _ARTIFACT_ABSTAINABLE_ROOTS,
+            allow_abstention=(
+                not response_contract_name and root_key in _ARTIFACT_ABSTAINABLE_ROOTS
+            ),
+            allow_model_recovery=not bool(response_contract_name),
             terminal_failure_code="artifact_structured_output_invalid",
         ),
         ctx,
         call_model=call_model,
-        normalize_payload=lambda payload: _normalize_artifact_response(
-            payload, root_key
+        normalize_payload=(
+            (lambda payload: dict(payload) if isinstance(payload, dict) else payload)
+            if response_contract_name
+            else (lambda payload: _normalize_artifact_response(payload, root_key))
         ),
         validate_payload=validate_payload,
-        is_substantive=lambda payload: _artifact_response_substantive(
-            payload, root_key
+        is_substantive=(
+            (
+                lambda payload: (
+                    isinstance(payload, dict)
+                    and isinstance(payload.get("repair_decision"), dict)
+                )
+            )
+            if response_contract_name
+            else (lambda payload: _artifact_response_substantive(payload, root_key))
         ),
         model_pricing=settings.model_pricing,
-        is_formal_abstention=lambda payload: (
-            root_key in _ARTIFACT_ABSTAINABLE_ROOTS
-            and not _artifact_response_substantive(payload, root_key)
+        is_formal_abstention=(
+            None
+            if response_contract_name
+            else (
+                lambda payload: (
+                    root_key in _ARTIFACT_ABSTAINABLE_ROOTS
+                    and not _artifact_response_substantive(payload, root_key)
+                )
+            )
         ),
     )
     result = dict(recovery.payload)
+    if response_contract_name:
+        return result
     if root_key in _SOFT_COPY_ROOTS:
         result["_soft_copy_claim_bindings"] = list(
             result.pop("claim_provenance", [])

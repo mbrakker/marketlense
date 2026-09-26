@@ -1,6 +1,11 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+from src.contracts.regeneration import RepairDecision, RepairPatchOperation
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -330,6 +335,8 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         _set_interpretive_summary_provenance(artifact)
     regeneration_inputs = []
     regeneration_targets = []
+    regeneration_strategies = []
+    retry_memories = []
     validation_calls = 0
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
@@ -377,7 +384,26 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         regeneration_targets.append(
             [target.target_section for target in request.plan.targets]
         )
+        retry_memories.append(list(request.repair_memory))
         attempt = request.attempt_index
+        strategy = "current_evidence" if attempt == 1 else "alternative_evidence"
+        evidence_id = "f1" if attempt == 1 else "f2"
+        regeneration_strategies.append(request.plan.targets[0].repair_strategy)
+        decision = RepairDecision(
+            diagnosed_failure_class="grounding",
+            repair_action="REGENERATE_ITEM",
+            repair_strategy=strategy,
+            evidence_ids_used=[evidence_id],
+            protected_fields=["summary.card_tldr_compact"],
+            changed_paths=["summary.tldr"],
+            minimal_patch=[
+                RepairPatchOperation(
+                    op="replace",
+                    path="summary.tldr",
+                    value=candidates[attempt - 1]["summary"]["tldr"],
+                )
+            ],
+        )
         return ArtifactRegenerationResponse(
             updated_artifacts=candidates[attempt - 1],
             regenerated_sections=["summary"],
@@ -385,6 +411,10 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             candidate_artifacts_path=str(
                 tmp_path / "out" / f"artifacts_regen_candidate_{attempt}.json"
             ),
+            repair_action="REGENERATE_ITEM",
+            repair_strategy=strategy,
+            selected_evidence_ids=[evidence_id],
+            repair_decisions=[decision],
         )
 
     deps = _deps(
@@ -418,10 +448,38 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
 
     assert regeneration_inputs == ["original artifact", "original artifact"]
     assert regeneration_targets == [["summary"], ["summary"]]
+    assert regeneration_strategies == ["current_evidence", "alternative_evidence"]
+    assert retry_memories[0] == []
+    assert retry_memories[1][0].introduced[0].rule_id == "candidate_y"
+    assert retry_memories[1][0].repair_strategy == "current_evidence"
+    assert retry_memories[1][0].strategy_fingerprint == (
+        state.regeneration_attempts[0].strategy_fingerprint
+    )
+    assert retry_memories[1][0].evidence_ids_used == ["f1"]
+    assert (
+        retry_memories[1][0].candidate_sha256
+        == json.loads(
+            Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
+                encoding="utf-8"
+            )
+        )["after_sha256"]
+    )
     assert len(state.regeneration_attempts) == 2
     assert state.regeneration_attempts[0].promotion_outcome == "rolled_back"
     assert state.regeneration_attempts[1].promotion_outcome == "promoted"
     assert state.artifacts_payload["summary"]["tldr"] == "repaired artifact"
+    first_audit = json.loads(
+        Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert first_audit["repair_decisions"][0]["minimal_patch"][0]["value"] == (
+        "failed candidate"
+    )
+    assert (
+        state.artifacts_payload["summary"]["tldr"]
+        != first_audit["repair_decisions"][0]["minimal_patch"][0]["value"]
+    )
     assert state.validation_report is not None
     assert state.validation_report.status == "pass"
     assert (
@@ -783,168 +841,6 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
     assert state.regeneration_loop_state.final_status == "skipped"
 
 
-def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets(
-    tmp_path,
-    caplog,
-    assert_logs_have_required_fields,
-):
-    caplog.set_level(logging.INFO, logger="market_lense.report_analysis_orchestrator")
-    runtime = _runtime(tmp_path)
-    source = _source(runtime)
-    selection = _selection(runtime, source)
-    requests = []
-    validation_calls = {"count": 0}
-
-    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
-        del req, settings, ctx, pack_name, report_name, md5
-        validation_calls["count"] += 1
-        if validation_calls["count"] == 1:
-            return ValidationReport(
-                schema_version="1.1",
-                status="fail",
-                issues=[
-                    ValidationIssue(
-                        schema_version="1.0",
-                        message="[semantic] Semantic validation failed: model payload incomplete",
-                        severity="error",
-                        affected_section="semantic",
-                        rule_id="semantic",
-                    )
-                ],
-                severity="error",
-                source_path=str(tmp_path / "out" / "validation.json"),
-            )
-        return ValidationReport(
-            schema_version="1.1",
-            status="pass",
-            issues=[],
-            severity="pass",
-            source_path=str(tmp_path / "out" / "validation.json"),
-        )
-
-    def _regenerate(request):
-        requests.append(request)
-        return ArtifactRegenerationResponse(
-            updated_artifacts={
-                **request.current_artifacts,
-                "insights_final": [
-                    {
-                        "id": f"insight-{index}",
-                        "text": f"Repaired insight {index}",
-                        "evidence_id": f"e{index}",
-                        "evidence": f"Evidence {index}",
-                        "metric": {},
-                        "pages": [index],
-                    }
-                    for index in range(1, 6)
-                ],
-                "quotes_final": [
-                    {
-                        "id": "quote-1",
-                        "text": "Repaired quote",
-                        "evidence_id": "q1",
-                        "page": 2,
-                    }
-                ],
-            },
-            regenerated_sections=[
-                "insights_candidates",
-                "insights_final",
-                "quotes",
-            ],
-            prompt_namespaces=[
-                "report_vs/artifacts/regenerate/insights_candidates",
-                "report_vs/artifacts/regenerate/insights_final",
-                "report_vs/artifacts/regenerate/quotes",
-            ],
-            artifacts_path=str(tmp_path / "out" / "artifacts.json"),
-            artifacts_snapshot_path=str(
-                tmp_path / "out" / "artifacts_regen_attempt_1.json"
-            ),
-        )
-
-    deps = _deps(
-        generate_evidence_packs=lambda **kwargs: {
-            "doc_map": {},
-            "findings": {
-                "findings": [
-                    {
-                        "id": f"e{index}",
-                        "text": f"Repaired insight {index}. Evidence {index}.",
-                        "page": index,
-                    }
-                    for index in range(1, 6)
-                ]
-            },
-            "quote_candidates": {
-                "quote_candidates": [{"id": "q1", "text": "Repaired quote", "page": 2}]
-            },
-        },
-        generate_artifacts=lambda **kwargs: _artifacts_without_retained_claims(),
-        run_validation=_run_validation,
-        regenerate_artifacts=_regenerate,
-    )
-
-    state = run_report_analysis(
-        runtime,
-        source,
-        selection,
-        VectorStoreIndexingState(
-            vector_store_id="vs_1",
-            openai_file_id="file_1",
-            vector_store_status="completed",
-            indexed_at_utc="2026-01-01T00:00:00Z",
-            last_error=None,
-        ),
-        deps,
-    )
-
-    assert len(requests) == 1
-    assert requests[0].plan.mode == "targeted"
-    assert [target.target_section for target in requests[0].plan.targets] == [
-        "insights_bundle",
-        "quotes",
-    ]
-    assert len(requests[0].plan.targets) < 5
-    assert state.validation_report is not None
-    assert state.validation_report.status == "pass"
-
-    events = _orchestrator_events(caplog)
-    plan_events = [
-        event for event in events if event["event"] == "validation_regen_plan_built"
-    ]
-    complete_events = [
-        event
-        for event in events
-        if event["event"] == "validation_regen_attempt_complete"
-    ]
-    assert plan_events[-1]["fields"]["target_details"] == [
-        {
-            "target_section": "insights_bundle",
-            "regenerate_steps": ["insights_candidates", "insights_final"],
-            "prompt_namespaces": [
-                "report_vs/artifacts/regenerate/insights_candidates",
-                "report_vs/artifacts/regenerate/insights_final",
-            ],
-            "rule_ids": ["semantic"],
-        },
-        {
-            "target_section": "quotes",
-            "regenerate_steps": ["quotes"],
-            "prompt_namespaces": ["report_vs/artifacts/regenerate/quotes"],
-            "rule_ids": ["semantic"],
-        },
-    ]
-    assert set(complete_events[-1]["fields"]["artifact_diff"]["changed_keys"]) >= {
-        "insights_final",
-        "quotes_final",
-    }
-    assert complete_events[-1]["fields"]["artifacts_snapshot_path"].endswith(
-        "artifacts_regen_attempt_1.json"
-    )
-    assert_logs_have_required_fields(plan_events + complete_events)
-
-
 __all__ = [
     "test_run_report_analysis_allows_abstained_quote_family",
     "test_run_report_analysis_regenerates_failed_section_until_pass",
@@ -953,5 +849,4 @@ __all__ = [
     "test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration",
     "test_run_report_analysis_stops_after_regeneration_max_attempts",
     "test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures",
-    "test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets",
 ]

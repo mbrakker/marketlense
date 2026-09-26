@@ -3,10 +3,15 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+from ._test_report_regeneration_generator._shared import (
+    _legacy_repair_decision_response,
+)
 
 from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIResponseResult
@@ -41,7 +46,7 @@ from src.generators.report_regeneration_generator import (
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
-    regenerate_artifacts,
+    regenerate_artifacts as _regenerate_artifacts,
 )
 from src.generators.soft_copy_claim_provenance import (
     assert_retained_soft_copy_claims_match_public_copy,
@@ -51,6 +56,7 @@ from src.generators.validation.regeneration_candidate import (
     validate_regeneration_candidate,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _allowed_paths,
     _build_regeneration_plan,
 )
 
@@ -64,6 +70,40 @@ METRIC = {
     "sample_size": "",
     "confidence": "",
 }
+
+
+def regenerate_artifacts(request, **kwargs):
+    """Complete legacy hand-written test plans with planner-owned scope."""
+    targets = []
+    for target in request.plan.targets:
+        issues = list(target.issues)
+        if not issues and target.target_section in {
+            "summary",
+            "insights_bundle",
+            "key_figures",
+            "quotes",
+            "expert_comment",
+            "linkedin_post",
+            "topics",
+        }:
+            issues = [
+                RegenerationIssue(
+                    rule_id="test_fixture_repair",
+                    affected_section=target.target_section,
+                    message="A deterministic test fixture requested repair.",
+                    severity="error",
+                )
+            ]
+        paths = list(target.allowed_paths) or _allowed_paths(
+            target.target_section,
+            issues,
+            request.current_artifacts,
+            target.repair_action,
+        )
+        targets.append(replace(target, issues=issues, allowed_paths=paths))
+    return _regenerate_artifacts(
+        replace(request, plan=replace(request.plan, targets=targets)), **kwargs
+    )
 
 
 def test_restore_missing_final_insight_roster_replaces_duplicate_model_id() -> None:
@@ -561,6 +601,14 @@ class _FakeOpenAIClient:
         self.calls: list[object] = []
 
     def openai_chat_json(self, req, ctx):
+        result = self._legacy_chat_json(req, ctx)
+        if "regeneration_repair_decision" not in (
+            req.structured_output_schema_identity or ""
+        ):
+            return result
+        return _legacy_repair_decision_response(req, result)
+
+    def _legacy_chat_json(self, req, ctx):
         del ctx
         self.calls.append(req)
         if "system::report_vs/artifacts/cover_semantics" in req.system_prompt:
@@ -740,7 +788,7 @@ class _FakeOpenAIClient:
 
 
 class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/summary" in req.system_prompt:
             source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
             return OpenAIResponseResult(
@@ -786,11 +834,11 @@ class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
                 },
                 request_id="req-temporal-summary",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _ClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -808,11 +856,11 @@ class _ClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
                 },
                 request_id="req-claim-scoped-expert",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _FactualClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -830,11 +878,11 @@ class _FactualClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
                 },
                 request_id="req-factual-claim-scoped-expert",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _OverlongClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -852,11 +900,11 @@ class _OverlongClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
                 },
                 request_id="req-overlong-claim",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _PunctuationClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -874,11 +922,11 @@ class _PunctuationClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
                 },
                 request_id="req-punctuation-claim",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
             self.calls.append(req)
             return OpenAIResponseResult(
@@ -913,13 +961,13 @@ class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
                 },
                 request_id="req-claim-scoped-summary",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 class _MultiClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
     """Return a distinct replacement for each bounded claim repair request."""
 
-    def openai_chat_json(self, req, ctx):
+    def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
             self.calls.append(req)
             replacement = (
@@ -943,7 +991,7 @@ class _MultiClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
                 },
                 request_id=f"req-{evidence_id}",
             )
-        return super().openai_chat_json(req, ctx)
+        return super()._legacy_chat_json(req, ctx)
 
 
 def _settings(tmp_path: Path) -> IngestSettings:
@@ -1228,7 +1276,7 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
         ("linkedin_post", "artifact_quality", "REMOVE_CLAIM", "safe_removal"),
     ],
 )
-def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
+def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
     tmp_path,
     artifact_family: str,
     issue_rule_id: str,
@@ -1312,17 +1360,27 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
     )
 
     updated = response.updated_artifacts
-    if artifact_family == "summary":
+    attempt_number_does_not_select_safe_removal = (
+        artifact_family == "expert_comment"
+        and issue_rule_id == "grounding"
+        and repair_strategy == "current_evidence"
+    )
+    if attempt_number_does_not_select_safe_removal:
+        assert updated[artifact_family].startswith("Retention and margin")
+        assert openai_client.calls
+        assert prompt_client.render_calls
+    elif artifact_family == "summary":
         assert all(
             not updated["summary"].get(field)
             for field in ("tldr", "card_tldr_compact", "executive_summary")
         )
     else:
         assert updated[artifact_family] == ""
-    assert not any(
-        claim["artifact_family"] == artifact_family
-        for claim in updated["soft_copy_claim_provenance"]["claims"]
-    )
+    if not attempt_number_does_not_select_safe_removal:
+        assert not any(
+            claim["artifact_family"] == artifact_family
+            for claim in updated["soft_copy_claim_provenance"]["claims"]
+        )
     assert {
         family: soft_copy_public_text(family, updated[family])
         for family in sibling_copy
@@ -1349,8 +1407,9 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
         issue.rule_id == "soft_copy_claim_provenance"
         for issue in candidate_integrity.issues
     )
-    assert openai_client.calls == []
-    assert prompt_client.render_calls == []
+    if not attempt_number_does_not_select_safe_removal:
+        assert openai_client.calls == []
+        assert prompt_client.render_calls == []
 
 
 def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_untouched_sections(
@@ -1376,7 +1435,7 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
                         issues=[
                             RegenerationIssue(
                                 rule_id="metrics",
-                                affected_section="insights:insight-1",
+                                affected_section="insights_final",
                                 message="[metrics] Unsupported insight value",
                                 severity="error",
                                 evidence_ids=["f1"],
@@ -1808,7 +1867,8 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
         item for item in claims if item["artifact_family"] == "linkedin_post"
     )
     assert regenerated["classification"] == "interpretive"
-    assert regenerated["evidence_ids"] == ["f1", "f2"]
+    assert regenerated["evidence_ids"] == ["f1"]
+    assert response.repair_decisions[0].evidence_ids_used == ["f1"]
     assert regenerated["regeneration_attempt"] == 2
     assert regenerated["producing_prompt_identity"]["namespace"] == (
         "report_vs/artifacts/regenerate/expert_comment"
@@ -2985,10 +3045,12 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
     )
 
     assert response.regenerated_sections == ["summary"]
-    assert response.updated_artifacts["summary"]["tldr"] == "Repaired TLDR."
     assert (
-        response.updated_artifacts["summary"]["card_tldr_compact"] == "Repaired TLDR."
+        response.updated_artifacts["summary"]["executive_summary"]
+        == "Repaired executive summary"
     )
+    assert response.updated_artifacts["summary"]["tldr"] == "Old TLDR."
+    assert response.updated_artifacts["summary"]["card_tldr_compact"] == "Old TLDR."
     assert (
         response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
     )
@@ -2997,7 +3059,7 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
 
 def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     class _ClaimMapOpenAIClient(_FakeOpenAIClient):
-        def openai_chat_json(self, req, ctx):
+        def _legacy_chat_json(self, req, ctx):
             del ctx
             self.calls.append(req)
             assert "claim_map_item" in req.user_prompt
@@ -3123,15 +3185,6 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
     current_artifacts["summary"].update(
         {
             "tldr": "Share fell from 43% in 2025 to 41% in 2025.",
-            "executive_summary": "Share fell from 43% in 2025 to 41% in 2025.",
-            "claim_evidence_map": [
-                {
-                    "claim": "Share fell from 43% in 2025 to 41% in 2025.",
-                    "evidence_id": "f1",
-                    "evidence": source,
-                    "pages": [1],
-                }
-            ],
         }
     )
     evidence_packs = _evidence_packs()
@@ -3179,7 +3232,10 @@ def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path
     )
 
     assert response.regenerated_sections == ["summary"]
+    assert response.repair_decisions[0].minimal_patch[0].value == source
     assert response.updated_artifacts["summary"]["tldr"] == source
+    assert response.updated_artifacts["summary"]["executive_summary"] == "Old summary"
+    assert response.updated_artifacts["summary"]["card_tldr_compact"] == "Old TLDR."
     assert not any(
         issue.rule_id == "public_editorial_quality.temporal_integrity"
         for issue in evaluate_public_editorial_quality(

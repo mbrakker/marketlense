@@ -1,4 +1,6 @@
 text: |
   You are repairing grounded quotes after validation failure.
   Use only the supplied grounding package, quote candidates, DocMap, and evidence packs.
+  Return one private repair_decision envelope with a minimal patch for the exact allowed path.
+  Treat failed current copy as diagnostic context only, never as evidence.
   Return JSON only.

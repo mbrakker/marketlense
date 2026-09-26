@@ -33,6 +33,9 @@ shared:
     [{"id":"check-1","instruction":"Tie each claim to explicit evidence identifiers."}]
   grounding_package_json: &grounding_package_json >-
     {"findings":[{"claim":"Wallet adoption is increasing across enterprise checkout flows.","evidence_ids":["f1"]}],"quotes":[{"quote_id":"q1","speaker":"Lead Analyst"}]}
+  repair_context_json: &repair_context_json >-
+    {"allowed_paths":["expert_comment[claim_index=0]"],"repair_action":"REGENERATE_ITEM","repair_strategy":"current_evidence","quarantined_evidence_ids":[],"failure_classes":["grounding"],"required_protected_fields":[]}
+  prior_repair_memory_json: &prior_repair_memory_json "[]"
   cross_report_request_json: &cross_report_request_json >-
     {"request_id":"cross-report-fixture","topic":"AI commerce adoption","auto_theme":true,"category_filters":["Retail"],"tag_filters":["AI"],"publisher_filters":[],"date_range_start":"2026-05-01","date_range_end":"2026-05-31","publication_mode":"generate_only"}
   cross_report_selected_theme_json: &cross_report_selected_theme_json >-
@@ -340,6 +343,8 @@ fixtures:
       attempt_index: 2
       current_section_text: *current_section_text
       claim_repair_scope_json: '{"mode":"family"}'
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
@@ -355,6 +360,8 @@ fixtures:
     user_variables:
       target_section: "insights_candidates"
       attempt_index: 2
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       current_section_json: *current_section_json
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
@@ -371,6 +378,8 @@ fixtures:
     user_variables:
       target_section: "insights_final"
       attempt_index: 2
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       current_section_json: *current_section_json
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
@@ -391,6 +400,8 @@ fixtures:
       attempt_index: 2
       current_section_text: *current_section_text
       claim_repair_scope_json: '{"mode":"family"}'
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
       grounding_package_json: *grounding_package_json
@@ -405,6 +416,8 @@ fixtures:
     user_variables:
       target_section: "quotes"
       attempt_index: 2
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       current_section_json: *current_section_json
       failure_reasons_json: *failure_reasons_json
       fix_checklist_json: *fix_checklist_json
@@ -421,6 +434,8 @@ fixtures:
     user_variables:
       target_section: "summary"
       attempt_index: 2
+      repair_context_json: *repair_context_json
+      prior_repair_memory_json: *prior_repair_memory_json
       current_section_json: *current_section_json
       claim_repair_scope_json: '{"mode":"family"}'
       failure_reasons_json: *failure_reasons_json
