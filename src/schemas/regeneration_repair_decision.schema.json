@@ -45,7 +45,7 @@
             "type": "object",
             "required": ["op", "path", "value"],
             "properties": {
-              "op": {"const": "replace"},
+              "op": {"type": "string", "const": "replace"},
               "path": {"type": "string", "minLength": 1},
               "value": {
                 "type": ["string", "number", "boolean", "object", "array", "null"]

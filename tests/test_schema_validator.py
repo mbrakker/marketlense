@@ -169,6 +169,9 @@ def test_repair_decision_provider_schema_omits_unsupported_keywords():
     assert "uniqueItems" not in evidence_ids
     assert "minLength" not in evidence_ids["items"]
 
+    patch_op = repair["minimal_patch"]["items"]["properties"]["op"]
+    assert patch_op["type"] == "string"
+
 
 def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids():
     payload = {

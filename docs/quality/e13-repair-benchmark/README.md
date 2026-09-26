@@ -32,9 +32,10 @@ production validation-regeneration loop, with the same scoped validation and
 artifact-regeneration model service clients used by the report workflow. The
 provider schema projection uses the API-supported strict subset; the full
 canonical schema remains authoritative when the response is validated. The
-scorecard retains its normal validation, evidence, mutation-scope, promotion,
-and rollback gates. It does not author replacement copy or raise the
-configured retry limit.
+repair decision's fixed `replace` operation is explicitly typed as a string
+for strict structured output. The scorecard retains its normal validation,
+evidence, mutation-scope, promotion, and rollback gates. It does not author
+replacement copy or raise the configured retry limit.
 
 The exact implementation SHA, per-cohort final metrics, per-failure-class
 results, commands and test outcomes, and acceptance-criteria disposition will
