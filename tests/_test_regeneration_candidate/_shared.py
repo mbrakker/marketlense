@@ -49,6 +49,8 @@ from src.generators.validation.regeneration_candidate import (
 
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _candidate_audit,
+    _failure_fingerprint,
+    _repair_delta,
     _scope_validation_report,
     _with_retained_claim_repair_diagnostics,
 )
@@ -128,6 +130,17 @@ def _soft_copy_artifacts() -> tuple[dict, dict, dict]:
         ],
     }
     return current, deepcopy(current), evidence_packs
+
+
+def _baseline_retained_claim_warnings(
+    artifacts: dict, evidence_packs: dict
+) -> dict[str, str]:
+    """Model unrelated findings already accepted as warnings in these fixtures."""
+
+    return {
+        _failure_fingerprint(issue).key: "warning"
+        for issue in retained_claim_repair_issues(artifacts, evidence_packs)
+    }
 
 
 def _claim_for_family(artifacts: dict, family: str) -> dict:

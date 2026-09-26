@@ -259,6 +259,139 @@ def test_retained_claim_diagnostics_are_structured_before_and_after_repair() -> 
     assert all(issue.rule_id.startswith("retained_claim.") for issue in diagnostics)
 
 
+def _retained_claim_severity_fixture() -> tuple[dict, dict]:
+    return (
+        {
+            "summary": {
+                "tldr": "Keep this section stable.",
+                "claim_evidence_map": [
+                    {
+                        "id": "summary-claim-1",
+                        "claim": "European loyalty reached 99% in 2023.",
+                        "evidence_id": "finding-1",
+                    }
+                ],
+            }
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "text": "European loyalty reached 49% in 2024.",
+                    }
+                ]
+            }
+        },
+    )
+
+
+@pytest.mark.parametrize("baseline_severity", ["error", "warning"])
+def test_unchanged_retained_claim_preserves_promoted_baseline_severity(
+    baseline_severity: str,
+) -> None:
+    artifacts, evidence_packs = _retained_claim_severity_fixture()
+    baseline_diagnostics = retained_claim_repair_issues(artifacts, evidence_packs)
+    baseline_severities = {
+        _failure_fingerprint(issue).key: baseline_severity
+        for issue in baseline_diagnostics
+    }
+
+    candidate = validate_regeneration_candidate(
+        current_artifacts=artifacts,
+        candidate_artifacts=deepcopy(artifacts),
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        baseline_retained_claim_severities=baseline_severities,
+    )
+
+    number_issue = next(
+        issue
+        for issue in candidate.issues
+        if issue.rule_id == "retained_claim.number_value_unit_match"
+    )
+    assert number_issue.severity == baseline_severity
+
+
+def test_changed_retained_claim_with_new_unsupported_fact_is_an_error() -> None:
+    artifacts, evidence_packs = _retained_claim_severity_fixture()
+    baseline_diagnostics = retained_claim_repair_issues(artifacts, evidence_packs)
+    baseline_severities = {
+        _failure_fingerprint(issue).key: "warning"
+        for issue in baseline_diagnostics
+    }
+    candidate_artifacts = deepcopy(artifacts)
+    candidate_artifacts["summary"]["claim_evidence_map"][0][
+        "id"
+    ] = "summary-claim-2"
+    candidate_artifacts["summary"]["claim_evidence_map"][0][
+        "claim"
+    ] = "European loyalty reached 88% in 2022."
+
+    candidate = validate_regeneration_candidate(
+        current_artifacts=artifacts,
+        candidate_artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        baseline_retained_claim_severities=baseline_severities,
+    )
+
+    introduced_claim_issue = next(
+        issue
+        for issue in candidate.issues
+        if issue.rule_id == "retained_claim.number_value_unit_match"
+        and issue.entity_id == "summary_claim:summary-claim-2"
+    )
+    assert introduced_claim_issue.severity == "error"
+    delta = _repair_delta(
+        ValidationReport(
+            schema_version="1.1", status="fail", issues=baseline_diagnostics
+        ),
+        ValidationReport(
+            schema_version="1.1", status="fail", issues=candidate.issues
+        ),
+    )
+    assert _failure_fingerprint(introduced_claim_issue).key in {
+        fingerprint.key for fingerprint in delta.introduced
+    }
+
+
+def test_repaired_retained_claim_fingerprint_moves_to_resolved() -> None:
+    artifacts, evidence_packs = _retained_claim_severity_fixture()
+    baseline_diagnostics = retained_claim_repair_issues(artifacts, evidence_packs)
+    baseline_severities = {
+        _failure_fingerprint(issue).key: issue.severity
+        for issue in baseline_diagnostics
+    }
+    repaired_artifacts = deepcopy(artifacts)
+    repaired_artifacts["summary"]["claim_evidence_map"][0][
+        "claim"
+    ] = "European loyalty reached 49% in 2024."
+    candidate_diagnostics = retained_claim_repair_issues(
+        repaired_artifacts,
+        evidence_packs,
+        previous_artifacts=artifacts,
+        baseline_retained_claim_severities=baseline_severities,
+    )
+    delta = _repair_delta(
+        ValidationReport(
+            schema_version="1.1", status="fail", issues=baseline_diagnostics
+        ),
+        ValidationReport(
+            schema_version="1.1", status="pass", issues=candidate_diagnostics
+        ),
+    )
+
+    resolved_keys = {item.key for item in delta.resolved}
+    repaired_claim_keys = {
+        _failure_fingerprint(issue).key
+        for issue in baseline_diagnostics
+        if issue.entity_id == "summary_claim:summary-claim-1"
+    }
+    assert repaired_claim_keys
+    assert repaired_claim_keys <= resolved_keys
+
+
 def test_candidate_verifies_only_prompt_cache_metadata_used_by_repair() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     namespace = "report_vs/artifacts/regenerate/expert_comment"

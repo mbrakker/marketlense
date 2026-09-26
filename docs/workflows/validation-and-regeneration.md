@@ -575,8 +575,11 @@ for failed evidence-completeness, protected-fact, number/unit, timeframe, quote,
 and other supported checks. These diagnostics carry the affected field, stable
 item or claim identity, and retained evidence IDs; diagnosis makes no model
 call. Candidate integrity repeats the same deterministic checks before
-promotion. An unchanged pre-existing claim failure is retained as a warning in
-the candidate so a scoped repair does not have to rewrite unrelated content.
+promotion and compares each finding's existing failure fingerprint and
+severity with the promoted validation report. A matching baseline error remains
+an error until repaired or removed through an authorized repair path. A finding
+remains a warning only when that same fingerprint was already non-blocking in
+the promoted baseline; a new or changed factual failure is an error.
 
 Every next repair plan is built from that matching promoted artifact and
 validation pair. A rejected candidate leaves both members unchanged; its

@@ -400,6 +400,26 @@ def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
     )
 
 
+def _retained_claim_severity_by_fingerprint(
+    report: ValidationReport,
+) -> Dict[str, str]:
+    """Return the strongest promoted severity for each retained-claim finding."""
+
+    severity_rank = {"info": 0, "warning": 1, "error": 2}
+    severities: Dict[str, str] = {}
+    for issue in report.issues:
+        if not str(issue.rule_id or "").startswith("retained_claim."):
+            continue
+        severity = str(issue.severity or "").strip().lower()
+        if severity not in severity_rank:
+            continue
+        fingerprint = _failure_fingerprint(issue).key
+        existing = severities.get(fingerprint)
+        if existing is None or severity_rank[severity] > severity_rank[existing]:
+            severities[fingerprint] = severity
+    return severities
+
+
 def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDelta:
     before_by_key = {_failure_fingerprint(item).key: item for item in before.issues}
     after_by_key = {_failure_fingerprint(item).key: item for item in after.issues}
@@ -1270,6 +1290,9 @@ def _run_validation_regeneration_loop(
                     for namespace in target.prompt_namespaces
                 ),
                 actual_prompt_namespaces=tuple(regeneration_response.prompt_namespaces),
+                baseline_retained_claim_severities=(
+                    _retained_claim_severity_by_fingerprint(current_validation_report)
+                ),
                 removed_insight_ids=tuple(
                     failed_insight_id(issue.entity_id, issue.affected_section)
                     for target in plan.targets

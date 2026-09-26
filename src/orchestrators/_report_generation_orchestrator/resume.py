@@ -84,6 +84,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _merge_public_editorial_quality,
     _promote_regeneration_candidate,
+    _retained_claim_severity_by_fingerprint,
     _run_validation_with_fallback,
     _store_regeneration_candidate_audit,
     _store_validation_snapshot,
@@ -1344,6 +1345,11 @@ def _resume_prompt_family_repair(
             candidate_artifacts=candidate_artifacts,
             evidence_packs=analysis.evidence_packs,
             ctx=repair_ctx,
+            baseline_retained_claim_severities=(
+                _retained_claim_severity_by_fingerprint(analysis.validation_report)
+                if analysis.validation_report is not None
+                else {}
+            ),
         )
         if candidate_enforced
         else CandidateIntegrityResult(issues=[], evidence_lineage=[])

@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 from src.contracts.regeneration import RepairDecision, RepairPatchOperation
+from src.generators.validation.regeneration_candidate import (
+    retained_claim_repair_issues,
+)
 
 from ._shared import *  # noqa: F401,F403
 
@@ -293,6 +297,132 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
         )
     )
     assert candidate_audit["validation_issues"] == ["candidate_y:linkedin_post"]
+
+
+@pytest.mark.parametrize(
+    ("baseline_retained_severity", "expected_outcome"),
+    [("error", "rolled_back"), ("warning", "promoted")],
+)
+def test_candidate_promotion_preserves_promoted_retained_claim_severity(
+    tmp_path, baseline_retained_severity: str, expected_outcome: str
+) -> None:
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=1
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    evidence_packs = {
+        "doc_map": {"docMap": {"title": "Doc Title"}},
+        "findings": {
+            "findings": [
+                {
+                    "id": "f1",
+                    "text": "European loyalty reached 49% in 2024.",
+                    "pages": [1],
+                },
+                *[{"id": f"f{index}", "pages": [index]} for index in range(2, 6)],
+            ]
+        },
+        "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
+    }
+    original = _artifacts_without_retained_claims(
+        summary={
+            "tldr": "Broken summary",
+            "card_tldr_compact": "Stable summary card text",
+            "executive_summary": "Current summary",
+            "claim_evidence_map": [
+                {
+                    "id": "summary-claim-1",
+                    "claim": "European loyalty reached 99% in 2023.",
+                    "evidence_id": "f1",
+                    "evidence": "European loyalty reached 49% in 2024.",
+                    "pages": [1],
+                }
+            ],
+        }
+    )
+    _set_interpretive_summary_provenance(original)
+    candidate = deepcopy(original)
+    candidate["summary"]["tldr"] = "Repaired summary"
+    _set_interpretive_summary_provenance(candidate)
+    retained_issues = [
+        replace(issue, severity=baseline_retained_severity)
+        for issue in retained_claim_repair_issues(original, evidence_packs)
+    ]
+    validation_calls = 0
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        nonlocal validation_calls
+        del req, settings, ctx, pack_name, report_name, md5
+        validation_calls += 1
+        if validation_calls == 1:
+            return ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                issues=[
+                    ValidationIssue(
+                        schema_version="1.0",
+                        message="[grounding] Broken summary text",
+                        severity="error",
+                        affected_section="summary.tldr",
+                        rule_id="grounding",
+                        repair_target="summary",
+                    ),
+                    *retained_issues,
+                ],
+                severity="error",
+            )
+        return ValidationReport(
+            schema_version="1.1", status="pass", issues=[], severity="pass"
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: evidence_packs,
+        generate_artifacts=lambda **kwargs: original,
+        run_validation=_run_validation,
+        regenerate_artifacts=lambda request: ArtifactRegenerationResponse(
+            updated_artifacts=candidate,
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            candidate_artifacts_path=str(
+                tmp_path / "out" / "artifacts_regen_candidate_1.json"
+            ),
+        ),
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert len(state.regeneration_attempts) == 1
+    assert state.regeneration_attempts[0].promotion_outcome == expected_outcome
+    assert state.artifacts_payload["summary"]["tldr"] == (
+        "Repaired summary" if expected_outcome == "promoted" else "Broken summary"
+    )
+    if expected_outcome == "rolled_back":
+        assert any(
+            item.rule_id == "retained_claim.number_value_unit_match"
+            for item in state.regeneration_attempts[0].repair_delta.persisting
+        )
+    else:
+        assert any(
+            issue.rule_id == "retained_claim.number_value_unit_match"
+            and issue.severity == "warning"
+            for issue in state.validation_report.issues
+        )
 
 
 def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback(
@@ -849,6 +979,7 @@ __all__ = [
     "test_run_report_analysis_allows_abstained_quote_family",
     "test_run_report_analysis_regenerates_failed_section_until_pass",
     "test_run_report_analysis_rolls_back_failed_candidate_regeneration",
+    "test_candidate_promotion_preserves_promoted_retained_claim_severity",
     "test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback",
     "test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration",
     "test_run_report_analysis_stops_after_regeneration_max_attempts",

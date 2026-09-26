@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
-from src.contracts.regeneration import RegenerationEvidenceLineage
+from src.contracts.regeneration import FailureFingerprint, RegenerationEvidenceLineage
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
@@ -78,6 +78,7 @@ def validate_regeneration_candidate(
     removed_insight_ids: Sequence[str] = (),
     planned_prompt_namespaces: Sequence[str] = (),
     actual_prompt_namespaces: Sequence[str] = (),
+    baseline_retained_claim_severities: Mapping[str, str] | None = None,
 ) -> CandidateIntegrityResult:
     """Validate candidate schema, IDs, source pages, and material continuity.
 
@@ -152,6 +153,7 @@ def validate_regeneration_candidate(
             candidate_artifacts,
             evidence_packs,
             previous_artifacts=current_artifacts,
+            baseline_retained_claim_severities=baseline_retained_claim_severities,
         )
     )
     candidate_by_key = {record.key: record for record in candidate_records}
@@ -376,6 +378,7 @@ def retained_claim_repair_issues(
     evidence_packs: dict[str, Any],
     *,
     previous_artifacts: dict[str, Any] | None = None,
+    baseline_retained_claim_severities: Mapping[str, str] | None = None,
 ) -> list[ValidationIssue]:
     """Return stable deterministic repair findings without semantic validation."""
 
@@ -427,12 +430,25 @@ def retained_claim_repair_issues(
             and previous.candidate.text_hash == candidate.text_hash
             and previous.candidate.evidence_references == candidate.evidence_references
         )
-        issue_severity = "warning" if unchanged_claim else "error"
         for check in result.checks:
             if check.status != "failed":
                 continue
             rule_id = f"retained_claim.{check.name}"
             reason = check.reason or "deterministic_check_failed"
+            fingerprint = FailureFingerprint(
+                rule_id=rule_id,
+                affected_section=affected,
+                entity_id=entity_id,
+                evidence_ids=evidence_ids,
+            ).key
+            baseline_severity = (baseline_retained_claim_severities or {}).get(
+                fingerprint
+            )
+            issue_severity = (
+                baseline_severity
+                if unchanged_claim and baseline_severity in {"warning", "info"}
+                else "error"
+            )
             issues.append(
                 ValidationIssue(
                     message=(
@@ -469,7 +485,7 @@ def retained_claim_repair_issues(
                         "[regeneration_claim_support] Factual soft-copy quantity or "
                         "timeframe is not entailed by its selected retained evidence."
                     ),
-                    severity=issue_severity,
+                    severity="error",
                     affected_section=(
                         f"{changed_claim.artifact_family}:{changed_claim.claim_id}"
                     ),

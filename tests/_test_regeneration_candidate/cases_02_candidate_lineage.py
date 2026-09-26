@@ -4,6 +4,21 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
+_validate_regeneration_candidate = validate_regeneration_candidate
+
+
+def validate_regeneration_candidate(**kwargs):
+    """Supply the warning baseline for pre-existing fixture findings."""
+
+    kwargs.setdefault(
+        "baseline_retained_claim_severities",
+        _baseline_retained_claim_warnings(
+            kwargs["current_artifacts"], kwargs["evidence_packs"]
+        ),
+    )
+    return _validate_regeneration_candidate(**kwargs)
+
+
 @pytest.mark.parametrize(
     ("replacement", "expected_pass"),
     [
