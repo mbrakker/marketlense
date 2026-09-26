@@ -8,7 +8,6 @@
       "type": "object",
       "required": [
         "schema_version",
-        "diagnosed_failure_class",
         "repair_action",
         "repair_strategy",
         "evidence_ids_used",
@@ -19,7 +18,6 @@
       ],
       "properties": {
         "schema_version": {"type": "string"},
-        "diagnosed_failure_class": {"type": "string", "minLength": 1},
         "repair_action": {"type": "string", "minLength": 1},
         "repair_strategy": {"type": "string", "minLength": 1},
         "evidence_ids_used": {

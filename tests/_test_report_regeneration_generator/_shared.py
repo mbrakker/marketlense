@@ -83,7 +83,6 @@ def _legacy_repair_decision_response(req, result):
             )
     decision = {
         "schema_version": "1.0",
-        "diagnosed_failure_class": context["failure_classes"][0],
         "repair_action": context["repair_action"],
         "repair_strategy": context["repair_strategy"],
         "evidence_ids_used": used_evidence_ids,

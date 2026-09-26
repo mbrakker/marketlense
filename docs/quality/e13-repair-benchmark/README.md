@@ -37,12 +37,12 @@ artifact-regeneration model service clients used by the report workflow. The
 provider schema projection uses the API-supported strict subset; the full
 canonical schema remains authoritative when the response is validated. The
 repair decision's fixed `replace` operation is explicitly typed as a string
-for strict structured output. This response contract is identified as v2.
-Replacement values cross that provider boundary as JSON-encoded strings and
-are parsed before the existing deterministic patch checks. The scorecard
-retains its normal validation, evidence, mutation-scope, promotion, and
-rollback gates. It does not author replacement copy or raise the configured
-retry limit.
+for strict structured output. The response contract is identified as v3; its
+failure class is derived from the planner's issue list. Replacement values
+cross that provider boundary as JSON-encoded strings and are parsed before
+the existing deterministic patch checks. The scorecard retains its normal
+validation, evidence, mutation-scope, promotion, and rollback gates. It does
+not author replacement copy or raise the configured retry limit.
 
 The exact implementation SHA, per-cohort final metrics, per-failure-class
 results, commands and test outcomes, and acceptance-criteria disposition will

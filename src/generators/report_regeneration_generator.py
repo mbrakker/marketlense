@@ -1810,7 +1810,7 @@ def _render_regeneration_model(
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
         response_contract_name=("regeneration_repair_decision" if repair_call else ""),
-        response_contract_identity_version="v2",
+        response_contract_identity_version="v3",
     )
     if not repair_call:
         return result
@@ -2088,6 +2088,12 @@ def _validated_repair_decision(
 ) -> RepairDecision:
     if not isinstance(payload, dict):
         raise _repair_decision_error(execution, "decision_missing")
+    target = target or execution.target
+    planned_failure_class = next(
+        (issue.rule_id for issue in target.issues if issue.rule_id), ""
+    )
+    if not planned_failure_class:
+        raise _repair_decision_error(execution, "failure_class_not_in_plan")
     try:
         raw_patch = payload["minimal_patch"]
         if not isinstance(raw_patch, list):
@@ -2105,7 +2111,7 @@ def _validated_repair_decision(
             raise TypeError("minimal_patch_operation_invalid")
         decision = RepairDecision(
             schema_version=str(payload["schema_version"]),
-            diagnosed_failure_class=str(payload["diagnosed_failure_class"]).strip(),
+            diagnosed_failure_class=planned_failure_class,
             repair_action=str(payload["repair_action"]).strip(),
             repair_strategy=str(payload["repair_strategy"]).strip(),
             evidence_ids_used=[
@@ -2125,7 +2131,6 @@ def _validated_repair_decision(
     except (KeyError, TypeError, ValueError) as exc:
         raise _repair_decision_error(execution, "decision_contract_invalid") from exc
 
-    target = target or execution.target
     failure_classes = {issue.rule_id for issue in target.issues if issue.rule_id}
     if decision.diagnosed_failure_class not in failure_classes:
         raise _repair_decision_error(execution, "failure_class_not_in_plan")

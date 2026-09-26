@@ -87,7 +87,6 @@ def _atomic_insight_decision(
 ) -> dict:
     return {
         "schema_version": "1.0",
-        "diagnosed_failure_class": "grounding",
         "repair_action": "REGENERATE_ITEM",
         "repair_strategy": "current_evidence",
         "evidence_ids_used": list(evidence_ids or ["f1"]),
@@ -142,7 +141,7 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
     repaired = response.updated_artifacts["insights_final"]
     assert len(client.calls) == 1
     assert client.calls[0].structured_output_schema_identity == (
-        "regeneration_repair_decision_v2"
+        "regeneration_repair_decision_v3"
     )
     assert repaired[0]["text"] == "Repaired final insight"
     assert repaired[0]["metric"] == before[0]["metric"]
@@ -150,6 +149,7 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
     assert response.repair_decisions[0].changed_paths == [
         "insights_final[item=insight-1].text"
     ]
+    assert response.repair_decisions[0].diagnosed_failure_class == "grounding"
 
 
 def test_model_repair_rejects_illegal_sibling_patch_before_candidate_write(

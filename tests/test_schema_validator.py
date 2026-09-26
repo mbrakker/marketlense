@@ -167,6 +167,7 @@ def test_repair_decision_provider_schema_omits_unsupported_keywords():
     schema = provider_output_schema("regeneration_repair_decision")
     repair = schema["properties"]["repair_decision"]["properties"]
 
+    assert "diagnosed_failure_class" not in repair
     evidence_ids = repair["evidence_ids_used"]
     assert "uniqueItems" not in evidence_ids
     assert "minLength" not in evidence_ids["items"]
@@ -182,7 +183,6 @@ def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids()
     payload = {
         "repair_decision": {
             "schema_version": "1.0",
-            "diagnosed_failure_class": "grounding",
             "repair_action": "replace",
             "repair_strategy": "evidence_alignment",
             "evidence_ids_used": ["finding:1", "finding:1"],

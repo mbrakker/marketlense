@@ -462,9 +462,8 @@ def _full_chain_chat_response_factory(
                 id="fixture-chat-rank-candidates",
             )
         else:
-            if schema_name == "regeneration_repair_decision_v2":
+            if schema_name == "regeneration_repair_decision_v3":
                 repair_context = _json_prompt_value(call, "Repair context JSON")
-                failures = _json_prompt_value(call, "Validator failures JSON")
                 if not isinstance(repair_context, dict):
                     raise AssertionError("repair fixture is missing its typed context")
                 allowed_paths = repair_context.get("allowed_paths") or []
@@ -489,16 +488,8 @@ def _full_chain_chat_response_factory(
                 # rely on a cited source span. Do not invent lineage IDs from
                 # the wider prompt package.
                 used_ids: list[str] = []
-                diagnosed_failure = (
-                    str(failures[0].get("rule_id") or "grounding")
-                    if isinstance(failures, list)
-                    and failures
-                    and isinstance(failures[0], dict)
-                    else "grounding"
-                )
                 decision = {
                     "schema_version": "1.0",
-                    "diagnosed_failure_class": diagnosed_failure,
                     "repair_action": repair_context["repair_action"],
                     "repair_strategy": repair_context["repair_strategy"],
                     "evidence_ids_used": used_ids if replacement else [],
@@ -539,7 +530,7 @@ def _full_chain_chat_response_factory(
                 )
                 payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
-            if schema_name == "regeneration_repair_decision_v2":
+            if schema_name == "regeneration_repair_decision_v3":
                 pass
             elif reproduce_ias_soft_copy and family in soft_copy_calls:
                 soft_copy_calls[family] += 1
