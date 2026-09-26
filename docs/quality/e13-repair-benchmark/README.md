@@ -367,3 +367,45 @@ helpers do not participate at that stage. Both runs kept publication disabled.
 Their usage, run directories, parser warning, and terminal outcomes are
 retained in the result. E13 remains **Active**: no reproducible case succeeded,
 and neither required-workflow canary run passed.
+
+## Deterministic validation telemetry — 2026-09-27, implementation SHA `bd8f2927`
+
+The unchanged three manifests were replayed at exact implementation SHA
+`bd8f29277cba42a97e3bdaf756cbbd31ebef757d`; their hashes match the frozen
+values above. Five candidate attempts had deterministic hard failures in both
+the baseline and current replay. Before the fast-fail change, all five still
+ran semantic/grounding validation. Afterward, all five were recorded as
+deterministic rejections and skipped those provider validations while retaining
+candidate audits, scope results, `RepairDelta`, rollback, and retry memory.
+
+| Cohort | Deterministic hard rejects before / after | Candidate semantic/grounding provider calls before / after | Repair attempts before / after | Success@1 before / after | Success@3 before / after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| A21 | 2 / 2 | 4 / 0 | 2 / 2 | 0/2 / 0/1 | 0/2 / 0/1 |
+| Mobile editorial | 0 / 0 | 0 / 0 | 0 / 0 | 0/1 / 0/1 | 0/1 / 0/1 |
+| DoubleVerify | 3 / 3 | 6 / 0 | 3 / 3 | 0/1 / 0/1 | 0/1 / 0/1 |
+| **Total** | **5 / 5** | **10 / 0** | **5 / 5** | **0/4 / 0/3** | **0/4 / 0/3** |
+
+The skipped candidate validations avoided 10 provider calls, 180,612 input
+tokens, 17,787 output tokens, and USD 0.026245 in the baseline usage ledger.
+The current scorecards attribute zero semantic/grounding candidate calls,
+tokens, and cost to the five rejected attempts. Mobile stopped at
+`regeneration_target_item_unchanged` before candidate validation, so its
+candidate-specific counters remain unavailable. The success denominator fell
+from four to three because one A21 case no longer reproduced; no repair
+succeeded in either replay.
+
+The new factual-introduction counters report 0 unknown/hallucinated evidence,
+0 unsupported-claim evidence, and 0 provenance/lineage introductions across
+the five audited candidate attempts. The baseline did not persist these split
+counters, so its counts were reconstructed from retained audit issues and
+introduced fingerprints with the same explicit rule/reason classifier. The
+mobile case has no candidate audit and remains unavailable for these counts.
+
+The required isolated IAS workflow passed at this SHA in one attempt, with
+validation and publication readiness passing, terminal state `awaiting_review`,
+and publication disabled. A PDF float-parse message appeared during the run;
+the canonical workflow continued and completed successfully. E13 remains
+**Active** because success@1/@3 and repair-success thresholds remain unmet.
+Exact commands, bounded metrics, scorecard hashes, and canary evidence are in
+the [2026-09-27 measurement](results/2026-09-27-bd8f2927.json) (SHA-256
+recorded in its [sidecar](results/2026-09-27-bd8f2927.json.sha256)).

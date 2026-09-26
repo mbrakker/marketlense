@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.0",
+  "recorded_date": "2026-09-27",
+  "baseline_implementation_sha": "f4d288bcc2cce511ec70ecadd9d70d32be6ff5e4",
+  "implementation_sha": "bd8f29277cba42a97e3bdaf756cbbd31ebef757d",
+  "disposition": "deterministic_candidate_validation_short_circuit_verified_e13_remains_active",
+  "frozen_corpus": {
+    "case_count": 7,
+    "manifest_count": 3,
+    "frozen_inputs_modified": false,
+    "manifest_sha256": {
+      "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+    }
+  },
+  "candidate_validation": {
+    "deterministic_hard_rejections_before": 5,
+    "deterministic_hard_rejections_after": 5,
+    "semantic_grounding_provider_calls_before": 10,
+    "semantic_grounding_provider_calls_after": 0,
+    "semantic_grounding_provider_calls_avoided": 10,
+    "input_tokens_before": 180612,
+    "input_tokens_after": 0,
+    "output_tokens_before": 17787,
+    "output_tokens_after": 0,
+    "total_tokens_avoided": 198399,
+    "estimated_cost_usd_before": 0.026245,
+    "estimated_cost_usd_after": 0.0,
+    "deterministic_rejections_after_by_scorecard": 5,
+    "validation_invocations_skipped_after_by_scorecard": 5,
+    "candidate_audit_count_before": 5,
+    "candidate_audit_count_after": 5
+  },
+  "introduced_factual_failure_categories": {
+    "unit": "candidate attempts with an introduced hard failure fingerprint",
+    "before_method": "Reconstructed from retained candidate validation issues and RepairDelta introduced fingerprints using the current explicit rule/reason classifier.",
+    "after_method": "Read from the new bounded scorecard counters.",
+    "before": {
+      "unknown_or_hallucinated_evidence_introduction": 0,
+      "unsupported_claim_evidence_introduction": 0,
+      "provenance_or_lineage_introduction": 0
+    },
+    "after": {
+      "unknown_or_hallucinated_evidence_introduction": 0,
+      "unsupported_claim_evidence_introduction": 0,
+      "provenance_or_lineage_introduction": 0
+    },
+    "mobile_case": "unavailable because it stopped before candidate validation"
+  },
+  "cohorts": [
+    {
+      "manifest": "baseline-a21-five.json",
+      "manifest_sha256": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "case_count": 5,
+      "before": {
+        "reproducible": 2,
+        "no_longer_reproducible": 3,
+        "repair_attempts": 2,
+        "deterministic_hard_rejections": 2,
+        "success_at_1": {"count": 0, "denominator": 2},
+        "success_at_3": {"count": 0, "denominator": 2}
+      },
+      "after": {
+        "reproducible": 1,
+        "no_longer_reproducible": 4,
+        "repair_attempts": 2,
+        "deterministic_hard_rejections": 2,
+        "semantic_grounding_provider_calls": 0,
+        "success_at_1": {"count": 0, "denominator": 1},
+        "success_at_3": {"count": 0, "denominator": 1},
+        "scorecard_sha256": "7cc01b36391aa5fd63514532cc557041086fdc7d9d9c33bd2cefe1ec3c6aa8dd"
+      }
+    },
+    {
+      "manifest": "baseline-mobile-editorial.json",
+      "manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "case_count": 1,
+      "before": {
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "repair_attempts": 0,
+        "success_at_1": {"count": 0, "denominator": 1},
+        "success_at_3": {"count": 0, "denominator": 1}
+      },
+      "after": {
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "repair_attempts": 0,
+        "candidate_validation_reached": false,
+        "terminal_failure_code": "regeneration_target_item_unchanged",
+        "success_at_1": {"count": 0, "denominator": 1},
+        "success_at_3": {"count": 0, "denominator": 1},
+        "scorecard_sha256": "1785ed6edb6ef868c67be2d36a5d0531223401490a6342cfad0053866ac0a3fc"
+      }
+    },
+    {
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+      "case_count": 1,
+      "before": {
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "repair_attempts": 3,
+        "deterministic_hard_rejections": 3,
+        "success_at_1": {"count": 0, "denominator": 1},
+        "success_at_3": {"count": 0, "denominator": 1}
+      },
+      "after": {
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "repair_attempts": 3,
+        "deterministic_hard_rejections": 3,
+        "semantic_grounding_provider_calls": 0,
+        "success_at_1": {"count": 0, "denominator": 1},
+        "success_at_3": {"count": 0, "denominator": 1},
+        "scorecard_sha256": "522ffaf305758edbcec1fa6d08a48b3c48315cf60225ee3f89d5f77908a17492"
+      }
+    }
+  ],
+  "required_workflow_canary": {
+    "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-first-attempt-canary-bd8f2927 --max-duration-seconds 3600",
+    "all_runs_passed": true,
+    "publication_performed": false,
+    "workflow_attempt_count": 1,
+    "final_state": "awaiting_review",
+    "validation": "pass",
+    "publication_readiness": "pass",
+    "cost_usd": 0.049597,
+    "model_provider_calls": 38,
+    "input_tokens": 263017,
+    "output_tokens": 46875,
+    "recoverable_pdf_parse_message": "A PDF float-parse message appeared; the canonical workflow completed with validation and publication-readiness passing."
+  },
+  "verification": {
+    "focused_tests": {
+      "scorecard_and_candidate": "77 passed",
+      "retained_claim_and_scope_short_circuit": "3 passed"
+    },
+    "broader_suite": {
+      "command": "pytest tests/test_regeneration_contracts.py tests/test_regeneration_candidate.py tests/test_report_analysis_generator.py tests/test_validation.py tests/test_validation_generator.py tests/test_validation_repair_scorecard.py tests/test_validation_reliability_service.py tests/test_validation_soft_copy_numbers.py tests/test_validation_number_temporal_context.py tests/test_validation_doc_map_evidence.py tests/test_validation_evidence_retrieval.py tests/test_validation_pdf_cache_retry.py -q --tb=short",
+      "passed": 198,
+      "failed": 9,
+      "same_nine_failures_reproduced_on_untouched_baseline": true
+    },
+    "contract_schema_snapshot": "passed",
+    "ruff_check_ignore_existing_e501_b905": "passed",
+    "ruff_format_check": "passed",
+    "git_diff_check": "passed"
+  },
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-repair-live/2026-09-27-telemetry-after-bd8f2927/a21 --implementation-sha bd8f29277cba42a97e3bdaf756cbbd31ebef757d",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-repair-live/2026-09-27-telemetry-after-bd8f2927/mobile --implementation-sha bd8f29277cba42a97e3bdaf756cbbd31ebef757d",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-repair-live/2026-09-27-telemetry-after-bd8f2927/doubleverify --implementation-sha bd8f29277cba42a97e3bdaf756cbbd31ebef757d"
+  ],
+  "closure_disposition": {
+    "e13_closed": false,
+    "reason": "The replay verifies telemetry attribution and deterministic fast-fail behavior, but no repair succeeded and the E13 success thresholds remain unmet.",
+    "thresholds_met": false
+  }
+}
