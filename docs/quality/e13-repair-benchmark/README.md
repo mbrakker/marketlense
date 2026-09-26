@@ -30,6 +30,8 @@ exact full SHA. Each manifest is replayed independently by
 `scripts/quality/replay_validation_repair_benchmark.py` through the existing
 production validation-regeneration loop, with the same scoped validation and
 artifact-regeneration model service clients used by the report workflow. The
+provider schema projection uses the API-supported strict subset; the full
+canonical schema remains authoritative when the response is validated. The
 scorecard retains its normal validation, evidence, mutation-scope, promotion,
 and rollback gates. It does not author replacement copy or raise the
 configured retry limit.

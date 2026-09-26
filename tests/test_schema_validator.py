@@ -161,6 +161,43 @@ def test_provider_schema_types_const_values_for_strict_openai_responses():
     assert classification == {"const": "factual_claim", "type": "string"}
 
 
+def test_repair_decision_provider_schema_omits_unsupported_keywords():
+    schema = provider_output_schema("regeneration_repair_decision")
+    repair = schema["properties"]["repair_decision"]["properties"]
+
+    evidence_ids = repair["evidence_ids_used"]
+    assert "uniqueItems" not in evidence_ids
+    assert "minLength" not in evidence_ids["items"]
+
+
+def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids():
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "diagnosed_failure_class": "grounding",
+            "repair_action": "replace",
+            "repair_strategy": "evidence_alignment",
+            "evidence_ids_used": ["finding:1", "finding:1"],
+            "protected_fields": [],
+            "changed_paths": ["summary.tldr"],
+            "minimal_patch": [
+                {"op": "replace", "path": "summary.tldr", "value": "Updated"}
+            ],
+            "claim_provenance": [],
+        }
+    }
+
+    with pytest.raises(AppError):
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="regeneration_repair_decision",
+            ),
+            _ctx(),
+        )
+
+
 def test_validate_evidence_references_passes_for_known_ids():
     artifacts_payload = {
         "summary": {

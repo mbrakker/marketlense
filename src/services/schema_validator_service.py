@@ -20,7 +20,18 @@ SCHEMAS_ROOT = Path(__file__).resolve().parents[1] / "schemas"
 _SCHEMA_CACHE: Dict[str, dict] = {}
 _VALIDATOR_CACHE: Dict[str, Draft202012Validator] = {}
 _PROVIDER_OMITTED_PROPERTIES = frozenset({"_cache", "family_status"})
-_PROVIDER_OMITTED_CONSTRAINTS = frozenset({"allOf", "if", "then", "else", "not"})
+_PROVIDER_OMITTED_CONSTRAINTS = frozenset(
+    {
+        "allOf",
+        "if",
+        "then",
+        "else",
+        "not",
+        "uniqueItems",
+        "minLength",
+        "maxLength",
+    }
+)
 
 
 def _load_schema(name: str) -> dict:
@@ -68,7 +79,9 @@ def output_schema_fragment(schema_name: str, root_key: str = "") -> dict:
             context={"schema": schema_name, "root_key": root},
         )
     return {
-        "$schema": schema.get("$schema", "https://json-schema.org/draft/2020-12/schema"),
+        "$schema": schema.get(
+            "$schema", "https://json-schema.org/draft/2020-12/schema"
+        ),
         "type": "object",
         "required": [root],
         "additionalProperties": False,
@@ -103,8 +116,9 @@ def _strict_provider_schema(value: Any) -> Any:
         }:
             continue
         # OpenAI's strict response-format subset accepts ``anyOf`` but rejects
-        # ``oneOf`` and conditional constraints. Canonical validation keeps
-        # those exact constraints after the provider returns its response.
+        # ``oneOf``, conditional constraints, and several JSON Schema keywords.
+        # Canonical validation keeps those exact constraints after the provider
+        # returns its response.
         provider_key = "anyOf" if key == "oneOf" else key
         if key == "properties" and isinstance(item, dict):
             projected[provider_key] = {
