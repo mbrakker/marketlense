@@ -18,14 +18,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
-from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.regeneration import FailureFingerprint
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.contracts.validation_reliability import (
+    ValidationReliabilityBenchmarkCaseAttribution,
     ValidationReliabilityBuildRequest,
+    ValidationReliabilityValidationIdentity,
     ValidationReliabilityWriteRequest,
 )
 from src.contracts.validation_run_manifest import (
@@ -36,19 +42,21 @@ from src.contracts.validation_run_manifest import (
 from src.generators._report_generation_dependencies.analysis import (
     ReportAnalysisDependencies,
 )
+from src.generators.normalize_generator import normalize_report
 from src.generators.report_generation_shared import (
     merge_artifacts_into_payload,
     resolve_doc_map_metadata,
 )
-from src.generators.normalize_generator import normalize_report
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _candidate_validator_identity,
+    _run_validation_regeneration_loop,
+    _validate_regeneration_baseline,
+)
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _report_payload_from_dict,
-)
-from src.orchestrators._report_analysis_orchestrator.validation import (
-    _run_validation_regeneration_loop,
 )
 from src.orchestrators.admission_preflight_orchestrator import (
     admission_configuration_hash,
@@ -176,6 +184,74 @@ def _validation_report(payload: dict[str, Any]) -> ValidationReport:
         severity="error",
         issues=issues,
     )
+
+
+def _validation_failure_keys(
+    report: ValidationReport, *, hard_only: bool = True
+) -> set[str]:
+    return {
+        FailureFingerprint(
+            rule_id=str(issue.rule_id or "validation").strip(),
+            affected_section=str(issue.affected_section or "").strip(),
+            entity_id=str(issue.entity_id or "").strip(),
+            evidence_ids=sorted(
+                str(value).strip() for value in issue.evidence_ids if str(value).strip()
+            ),
+        ).key
+        for issue in report.issues
+        if not hard_only or str(issue.severity or "").lower() == "error"
+    }
+
+
+def _benchmark_validation_before(
+    *,
+    historical: ValidationReport,
+    current: ValidationReport,
+    historical_failure_fingerprints: list[str] | tuple[str, ...] = (),
+) -> tuple[str, ValidationReport]:
+    """Classify historical failure reproduction and return only current validation."""
+
+    historical_keys = set(historical_failure_fingerprints) or _validation_failure_keys(
+        historical
+    )
+    reproduced = bool(historical_keys & _validation_failure_keys(current))
+    return (
+        "reproducible" if reproduced else "no_longer_reproducible",
+        current,
+    )
+
+
+def _persisted_candidate_audit_count(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+) -> int:
+    count = 0
+    for attempt_index in range(
+        1, max(1, int(runtime.settings.validation_regeneration_max_attempts)) + 1
+    ):
+        path = dependencies.analysis_pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                pack_name=f"regeneration_candidate_audit_{attempt_index}",
+                report_slug=runtime.report_name,
+            ),
+            runtime.ctx,
+        ).output_path
+        if not Path(path).is_file():
+            continue
+        audit = _read_json(Path(path))
+        if (
+            str(audit.get("report_id") or "") == str(runtime.file.file_id)
+            and str(audit.get("validation_run_id") or "")
+            == str(runtime.ctx.validation_run_id or "")
+            and str(audit.get("cohort_id") or "") == str(runtime.ctx.cohort_id or "")
+            and str(audit.get("workflow_run_id") or "") == str(runtime.ctx.run_id or "")
+        ):
+            count += 1
+    return count
 
 
 def _terminal_case_failure(error: AppError) -> dict[str, str]:
@@ -527,7 +603,7 @@ def _preflight_benchmark_cases(
                 "artifacts": artifacts,
                 "evidence_packs": evidence_packs,
                 "report_context": report_context,
-                "initial_validation": initial_validation,
+                "historical_validation": initial_validation,
                 "case_ctx": case_ctx,
                 "base_payload": base_payload,
                 "initial_payload": initial_payload,
@@ -620,12 +696,15 @@ def replay_benchmark(
     validation_model_client, regeneration_model_client = _build_repair_model_clients(
         isolated_settings
     )
+    benchmark_case_attributions: list[
+        ValidationReliabilityBenchmarkCaseAttribution
+    ] = []
     for prepared in prepared_cases:
         case = prepared["case"]
         artifacts = prepared["artifacts"]
         evidence_packs = prepared["evidence_packs"]
         report_context = prepared["report_context"]
-        initial_validation = prepared["initial_validation"]
+        historical_validation = prepared["historical_validation"]
         case_ctx = prepared["case_ctx"]
         base_payload = prepared["base_payload"]
         report_id = str(case["report_id"])
@@ -659,6 +738,34 @@ def replay_benchmark(
             source_report_name=str(report_context.get("title") or report_slug),
             source_url=str(report_context.get("source_url") or ""),
         )
+        current_validation = _validate_regeneration_baseline(
+            runtime=runtime,
+            mode_ctx=case_ctx,
+            base_payload=base_payload,
+            current_artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=None,
+            dependencies=dependencies,
+            validation_openai_client=validation_model_client,
+        )
+        if any(
+            not issue.rule_id
+            and issue.affected_section == "validation"
+            and issue.message.startswith("Validation error:")
+            for issue in current_validation.issues
+        ):
+            raise AppError(
+                code="validation_baseline_unavailable",
+                message="Current baseline validation did not complete",
+                retryable=True,
+            )
+        reproducibility_status, validation_before = _benchmark_validation_before(
+            historical=historical_validation,
+            current=current_validation,
+            historical_failure_fingerprints=case.get(
+                "initial_failure_fingerprints", []
+            ),
+        )
         dependencies.analysis_store_pack(
             AnalysisStorePackRequest(
                 schema_version="1.0",
@@ -671,37 +778,42 @@ def replay_benchmark(
             case_ctx,
         )
         terminal_failure: dict[str, str] | None = None
-        try:
-            (
-                _,
-                final_validation,
-                attempts,
-                loop_state,
-                _,
-                _,
-            ) = _run_validation_regeneration_loop(
-                runtime=runtime,
-                mode_ctx=case_ctx,
-                base_payload=base_payload,
-                current_artifacts=artifacts,
-                current_validation_report=initial_validation,
-                evidence_packs=evidence_packs,
-                source_status=(
-                    artifacts.get("source_status")
-                    if isinstance(artifacts.get("source_status"), dict)
-                    else {}
-                ),
-                category_labels=base_payload.categories,
-                vector_store_id=None,
-                dependencies=dependencies,
-                validation_openai_client=validation_model_client,
-                regeneration_openai_client=regeneration_model_client,
-            )
-        except AppError as error:
-            terminal_failure = _terminal_case_failure(error)
-            final_validation = initial_validation
+        if reproducibility_status == "no_longer_reproducible":
+            final_validation = validation_before
             attempts = []
             loop_state = None
+        else:
+            try:
+                (
+                    _,
+                    final_validation,
+                    attempts,
+                    loop_state,
+                    _,
+                    _,
+                ) = _run_validation_regeneration_loop(
+                    runtime=runtime,
+                    mode_ctx=case_ctx,
+                    base_payload=base_payload,
+                    current_artifacts=artifacts,
+                    current_validation_report=validation_before,
+                    evidence_packs=evidence_packs,
+                    source_status=(
+                        artifacts.get("source_status")
+                        if isinstance(artifacts.get("source_status"), dict)
+                        else {}
+                    ),
+                    category_labels=base_payload.categories,
+                    vector_store_id=None,
+                    dependencies=dependencies,
+                    validation_openai_client=validation_model_client,
+                    regeneration_openai_client=regeneration_model_client,
+                )
+            except AppError as error:
+                terminal_failure = _terminal_case_failure(error)
+                final_validation = validation_before
+                attempts = []
+                loop_state = None
         end = datetime.now(timezone.utc).isoformat()
         record_validation_run_manifest_stage(
             ValidationRunManifestRecordRequest(
@@ -738,7 +850,11 @@ def replay_benchmark(
                         )
                     ),
                     retryable=False,
-                    repair_disposition="targeted_repair",
+                    repair_disposition=(
+                        "not_reproducible"
+                        if reproducibility_status == "no_longer_reproducible"
+                        else "targeted_repair"
+                    ),
                     duplicate_disposition="none",
                     supersession_state="current",
                     idempotency_state="new",
@@ -753,6 +869,7 @@ def replay_benchmark(
             json.dumps(
                 {
                     "case_id": str(case.get("case_id") or report_id),
+                    "historical_reproducibility": reproducibility_status,
                     "attempt_count": (
                         len(attempts) if terminal_failure is None else None
                     ),
@@ -770,6 +887,49 @@ def replay_benchmark(
                 sort_keys=True,
             )
         )
+        candidate_audit_count = max(
+            sum(bool(attempt.candidate_audit_path) for attempt in attempts),
+            _persisted_candidate_audit_count(
+                runtime=runtime,
+                dependencies=dependencies,
+            ),
+        )
+        candidate_validation_attempt_count = max(len(attempts), candidate_audit_count)
+        current_validation_identity = ValidationReliabilityValidationIdentity(
+            schema_version="1.0",
+            validator_identity=_candidate_validator_identity(runtime),
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+            producer_build_identity=producer_build_identity,
+        )
+        benchmark_case_attributions.append(
+            ValidationReliabilityBenchmarkCaseAttribution(
+                schema_version="1.0",
+                case_id=str(case.get("case_id") or report_id),
+                report_id=report_id,
+                reproducibility_status=reproducibility_status,
+                historical_failure_fingerprints=tuple(
+                    sorted(
+                        str(value)
+                        for value in case.get("initial_failure_fingerprints", [])
+                    )
+                ),
+                current_baseline_failure_fingerprints=tuple(
+                    sorted(_validation_failure_keys(validation_before))
+                ),
+                current_baseline_issue_fingerprints=tuple(
+                    sorted(_validation_failure_keys(validation_before, hard_only=False))
+                ),
+                baseline_validation_identity=current_validation_identity,
+                candidate_validation_identity=(
+                    current_validation_identity
+                    if candidate_validation_attempt_count
+                    else None
+                ),
+                candidate_validation_attempt_count=candidate_validation_attempt_count,
+                candidate_audit_count=candidate_audit_count,
+            )
+        )
 
     artifact = build_validation_reliability_artifact(
         ValidationReliabilityBuildRequest(
@@ -780,6 +940,7 @@ def replay_benchmark(
             repair_evidence_root=str(base_output),
             repair_benchmark_manifest_path=str(manifest_path.resolve()),
             current_schema_identity_sha256=_schema_identity_sha256(workspace),
+            repair_benchmark_case_attributions=tuple(benchmark_case_attributions),
         ),
         root_ctx,
     )
@@ -800,6 +961,9 @@ def replay_benchmark(
         "scorecard_path": written.artifact_path,
         "scorecard_sha256": written.artifact_hash,
         "scorecard": asdict(artifact.repair_scorecard),
+        "benchmark_case_attributions": [
+            asdict(case_attribution) for case_attribution in benchmark_case_attributions
+        ],
     }
 
 
@@ -816,18 +980,26 @@ def main() -> int:
     )
     result.pop("scorecard_path", None)
     summary = result.pop("scorecard")
+    scored_attempts = summary.get("attempts") or []
     result["scorecard"] = {
         name: summary.get(name)
         for name in (
             "measurement_status",
+            "benchmark_case_count",
             "repair_chain_count",
             "repair_attempt_count",
             "success_at_1_count",
             "success_at_1_rate",
             "success_at_3_count",
             "success_at_3_rate",
+            "reproducible_case_count",
+            "no_longer_reproducible_case_count",
+            "success_denominator",
             "out_of_scope_mutation_attempt_count",
+            "hard_failure_introduction_count",
             "hard_failure_introduction_attempt_count",
+            "resolved_failure_observation_count",
+            "persisting_failure_observation_count",
             "unsupported_evidence_introduction_attempt_count",
             "baseline_success_at_3_rate",
             "baseline_residual_failure_odds_state",
@@ -843,6 +1015,14 @@ def main() -> int:
             "latency_ms",
         )
     }
+    result["scorecard"]["resolved_failure_observation_count"] = sum(
+        len(attempt.get("resolved_failure_fingerprints") or [])
+        for attempt in scored_attempts
+    )
+    result["scorecard"]["persisting_failure_observation_count"] = sum(
+        len(attempt.get("persisting_failure_fingerprints") or [])
+        for attempt in scored_attempts
+    )
     print(json.dumps(result, ensure_ascii=True, sort_keys=True, separators=(",", ":")))
     return 0
 

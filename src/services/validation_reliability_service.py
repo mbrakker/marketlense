@@ -18,6 +18,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.validation_reliability import (
     ValidationFailureParetoEntry,
     ValidationReliabilityArtifact,
+    ValidationReliabilityBenchmarkCaseAttribution,
     ValidationReliabilityBuildRequest,
     ValidationReliabilityFailureCode,
     ValidationReliabilityFailureTransition,
@@ -36,7 +37,7 @@ from src.services._report_store_service.connection import _metadata_conn
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-_SCHEMA_VERSION = "1.1"
+_SCHEMA_VERSION = "1.2"
 _REQUEST_SCHEMA_VERSION = "1.0"
 _STATE_SEQUENCE: tuple[str, ...] = (
     "admitted",
@@ -746,6 +747,22 @@ def _repair_scorecard(
     benchmark_case_count = (
         len(benchmark_manifest["cases"]) if benchmark_manifest is not None else None
     )
+    benchmark_case_attributions = tuple(request.repair_benchmark_case_attributions)
+    if benchmark_case_attributions and (
+        benchmark_manifest is None
+        or not _benchmark_case_attributions_valid(
+            benchmark_case_attributions,
+            manifest=benchmark_manifest,
+            run=run,
+        )
+    ):
+        return _unavailable_repair_scorecard(
+            incompatible_audit_count=1,
+            benchmark_case_count=benchmark_case_count,
+            benchmark_manifest_sha256=benchmark_manifest_sha256,
+            baseline_identity_sha256=benchmark_baseline_identity_sha256,
+            benchmark_comparison_status="incompatible",
+        )
 
     root_text = request.repair_evidence_root.strip()
     if not root_text:
@@ -789,6 +806,26 @@ def _repair_scorecard(
             continue
         raw_audits.append((path, payload))
 
+    if benchmark_case_attributions:
+        attribution_by_report = {
+            case.report_id: case for case in benchmark_case_attributions
+        }
+        for _, audit in raw_audits:
+            attribution = attribution_by_report.get(str(audit.get("report_id") or ""))
+            expected_identity = (
+                attribution.candidate_validation_identity
+                if attribution is not None
+                else None
+            )
+            observed_identity = (audit.get("repair_delta") or {}).get(
+                "validator_identity"
+            )
+            if (
+                expected_identity is None
+                or str(observed_identity or "") != expected_identity.validator_identity
+            ):
+                incompatible_count += 1
+
     if incompatible_count:
         return _unavailable_repair_scorecard(
             incompatible_audit_count=incompatible_count,
@@ -797,7 +834,7 @@ def _repair_scorecard(
             baseline_identity_sha256=benchmark_baseline_identity_sha256,
             benchmark_comparison_status="incompatible",
         )
-    if not raw_audits:
+    if not raw_audits and not benchmark_case_attributions:
         if benchmark_manifest is not None and benchmark_manifest.get("cases"):
             return _unavailable_repair_scorecard(
                 incompatible_audit_count=0,
@@ -914,6 +951,10 @@ def _repair_scorecard(
     chains: dict[str, list[ValidationReliabilityRepairAttempt]] = defaultdict(list)
     for attempt in repair_attempts:
         chains[attempt.report_id].append(attempt)
+    if benchmark_case_attributions:
+        for case in benchmark_case_attributions:
+            if case.reproducibility_status == "reproducible":
+                chains.setdefault(case.report_id, [])
     for entries in chains.values():
         entries.sort(key=lambda item: item.attempt_index)
     chain_count = len(chains)
@@ -984,6 +1025,7 @@ def _repair_scorecard(
         run=run,
         manifest_sha256=benchmark_manifest_sha256,
         current_schema_identity_sha256=request.current_schema_identity_sha256,
+        case_attributions=benchmark_case_attributions,
     )
     attempt_by_key = {
         (item.report_id, item.attempt_index, item.candidate_fingerprint): item
@@ -1015,9 +1057,9 @@ def _repair_scorecard(
         repair_chain_count=chain_count,
         repair_attempt_count=len(repair_attempts),
         success_at_1_count=success_at_1,
-        success_at_1_rate=_rate(success_at_1, chain_count),
+        success_at_1_rate=(_rate(success_at_1, chain_count) if chain_count else None),
         success_at_3_count=success_at_3,
-        success_at_3_rate=_rate(success_at_3, chain_count),
+        success_at_3_rate=(_rate(success_at_3, chain_count) if chain_count else None),
         rolled_back_attempt_count=sum(
             item.promotion_outcome == "rolled_back" for item in repair_attempts
         ),
@@ -1131,6 +1173,24 @@ def _repair_scorecard(
         ],
         attempts=tuple(repair_attempts),
         mode_metrics=_repair_mode_metrics(repair_attempts),
+        reproducible_case_count=(
+            sum(
+                case.reproducibility_status == "reproducible"
+                for case in benchmark_case_attributions
+            )
+            if benchmark_case_attributions
+            else None
+        ),
+        no_longer_reproducible_case_count=(
+            sum(
+                case.reproducibility_status == "no_longer_reproducible"
+                for case in benchmark_case_attributions
+            )
+            if benchmark_case_attributions
+            else None
+        ),
+        success_denominator=(chain_count if benchmark_case_attributions else None),
+        benchmark_case_attributions=benchmark_case_attributions,
     )
 
 
@@ -1332,6 +1392,88 @@ def _read_repair_benchmark_manifest(path: Path) -> tuple[dict[str, Any] | None, 
     return payload, declared_hash
 
 
+def _benchmark_case_attributions_valid(
+    attributions: tuple[ValidationReliabilityBenchmarkCaseAttribution, ...],
+    *,
+    manifest: dict[str, Any],
+    run: dict[str, Any],
+) -> bool:
+    expected_cases = {
+        str(case["report_id"]): case for case in manifest.get("cases", [])
+    }
+    if len(attributions) != len(expected_cases):
+        return False
+    observed_reports: set[str] = set()
+    for case in attributions:
+        report_id = str(case.report_id)
+        frozen_case = expected_cases.get(report_id)
+        if (
+            frozen_case is None
+            or report_id in observed_reports
+            or case.schema_version != "1.0"
+            or str(case.case_id) != str(frozen_case.get("case_id") or report_id)
+            or case.reproducibility_status
+            not in {"reproducible", "no_longer_reproducible"}
+            or any(
+                isinstance(count, bool) or not isinstance(count, int) or count < 0
+                for count in (
+                    case.candidate_validation_attempt_count,
+                    case.candidate_audit_count,
+                )
+            )
+            or case.candidate_audit_count > case.candidate_validation_attempt_count
+        ):
+            return False
+        observed_reports.add(report_id)
+        historical = tuple(
+            sorted(
+                {str(value) for value in frozen_case["initial_failure_fingerprints"]}
+            )
+        )
+        current = tuple(
+            sorted({str(value) for value in case.current_baseline_failure_fingerprints})
+        )
+        current_issues = tuple(
+            sorted({str(value) for value in case.current_baseline_issue_fingerprints})
+        )
+        if (
+            tuple(sorted(set(case.historical_failure_fingerprints))) != historical
+            or len(current) != len(case.current_baseline_failure_fingerprints)
+            or len(current_issues) != len(case.current_baseline_issue_fingerprints)
+            or not set(current).issubset(current_issues)
+            or any(not _safe_hash(value) for value in (*current, *current_issues))
+        ):
+            return False
+        reproduced = bool(set(historical) & set(current))
+        if (case.reproducibility_status == "reproducible") != reproduced:
+            return False
+        identity = case.baseline_validation_identity
+        if (
+            identity.schema_version != "1.0"
+            or not _safe_repair_token(identity.validator_identity)
+            or not _safe_repair_token(identity.configuration_hash)
+            or not _safe_repair_token(identity.policy_hash)
+            or not _safe_repair_token(identity.producer_build_identity)
+            or identity.configuration_hash != str(run.get("configuration_hash") or "")
+            or identity.policy_hash != str(run.get("policy_hash") or "")
+            or identity.producer_build_identity
+            != str(run.get("producer_build_identity") or "")
+        ):
+            return False
+        candidate_identity = case.candidate_validation_identity
+        if case.candidate_validation_attempt_count == 0:
+            if candidate_identity is not None:
+                return False
+        elif (
+            case.reproducibility_status != "reproducible"
+            or candidate_identity is None
+            or candidate_identity.schema_version != "1.0"
+            or candidate_identity != identity
+        ):
+            return False
+    return observed_reports == set(expected_cases)
+
+
 def _audit_has_safe_benchmark_fields(audit: dict[str, Any]) -> bool:
     delta = audit.get("repair_delta")
     return bool(
@@ -1365,6 +1507,7 @@ def _benchmark_comparison_metrics(
     run: dict[str, Any],
     manifest_sha256: str,
     current_schema_identity_sha256: str,
+    case_attributions: tuple[ValidationReliabilityBenchmarkCaseAttribution, ...] = (),
 ) -> dict[str, Any]:
     defaults: dict[str, Any] = {
         "benchmark_case_count": None,
@@ -1393,6 +1536,17 @@ def _benchmark_comparison_metrics(
 
     cases = manifest["cases"]
     report_ids = {str(case["report_id"]) for case in cases}
+    attribution_by_report = {case.report_id: case for case in case_attributions}
+    attributed_replay = bool(case_attributions)
+    reproducible_report_ids = (
+        {
+            case.report_id
+            for case in case_attributions
+            if case.reproducibility_status == "reproducible"
+        }
+        if attributed_replay
+        else report_ids
+    )
     baseline_attempts: list[ValidationReliabilityRepairAttempt] = []
     baseline_identity = manifest["baseline_identity"]
     baseline_ids_compatible = True
@@ -1457,15 +1611,27 @@ def _benchmark_comparison_metrics(
     for audit in current_audits:
         current_by_report[str(audit.get("report_id") or "")].append(audit)
     current_report_ids = set(current_by_report)
-    input_hashes_match = current_report_ids == report_ids
-    fingerprints_match = current_report_ids == report_ids
+    expected_audit_report_ids = (
+        {case.report_id for case in case_attributions if case.candidate_audit_count > 0}
+        if attributed_replay
+        else report_ids
+    )
+    input_hashes_match = current_report_ids == expected_audit_report_ids
+    fingerprints_match = current_report_ids == expected_audit_report_ids
     for case in cases:
         report_id = str(case["report_id"])
         audits = sorted(
             current_by_report.get(report_id, []),
             key=lambda item: int(item.get("attempt_index") or 0),
         )
-        if not audits:
+        attribution = attribution_by_report.get(report_id)
+        if attributed_replay and attribution is not None:
+            if len(audits) != attribution.candidate_audit_count:
+                input_hashes_match = False
+                fingerprints_match = False
+            if not audits:
+                continue
+        elif not audits:
             input_hashes_match = False
             fingerprints_match = False
             continue
@@ -1477,6 +1643,17 @@ def _benchmark_comparison_metrics(
         delta = first.get("repair_delta")
         if not isinstance(delta, dict):
             fingerprints_match = False
+        elif attributed_replay and attribution is not None:
+            observed = tuple(
+                sorted(
+                    set(_fingerprints_from_delta(delta.get("resolved")))
+                    | set(_fingerprints_from_delta(delta.get("persisting")))
+                )
+            )
+            expected = tuple(
+                sorted(set(attribution.current_baseline_issue_fingerprints))
+            )
+            fingerprints_match = fingerprints_match and observed == expected
         else:
             observed = tuple(
                 sorted(
@@ -1489,13 +1666,13 @@ def _benchmark_comparison_metrics(
 
     case_count = len(cases)
     current_case_attempts_complete = True
-    for report_id in report_ids:
+    for report_id in reproducible_report_ids:
         indexes = sorted(
             item.attempt_index
             for item in current_attempts
             if item.report_id == report_id
         )
-        if not indexes or indexes != list(range(1, len(indexes) + 1)):
+        if indexes and indexes != list(range(1, len(indexes) + 1)):
             current_case_attempts_complete = False
     baseline_case_attempts_complete = True
     for report_id in report_ids:
@@ -1506,10 +1683,17 @@ def _benchmark_comparison_metrics(
         )
         if not indexes or indexes != list(range(1, len(indexes) + 1)):
             baseline_case_attempts_complete = False
-    current_validator_identities = {
-        str((audit.get("repair_delta") or {}).get("validator_identity") or "")
-        for audit in current_audits
-    }
+    current_validator_identities = (
+        {
+            case.baseline_validation_identity.validator_identity
+            for case in case_attributions
+        }
+        if attributed_replay
+        else {
+            str((audit.get("repair_delta") or {}).get("validator_identity") or "")
+            for audit in current_audits
+        }
+    )
     current_identity_compatible = (
         str(run.get("configuration_hash") or "")
         == str(baseline_identity.get("configuration_hash") or "")
@@ -1520,17 +1704,30 @@ def _benchmark_comparison_metrics(
         and current_validator_identities
         == {str(baseline_identity.get("validator_identity") or "")}
     )
-    denominator_complete = (
-        baseline_ids_compatible
-        and current_identity_compatible
-        and len(baseline_case_reports) == case_count
-        and current_report_ids == report_ids
-        and len({item.report_id for item in current_attempts}) == case_count
-        and current_case_attempts_complete
-        and baseline_case_attempts_complete
-        and input_hashes_match
-        and fingerprints_match
-    )
+    if attributed_replay:
+        denominator_complete = (
+            len(attribution_by_report) == case_count
+            and set(attribution_by_report) == report_ids
+            and len(baseline_case_reports) == case_count
+            and current_report_ids == expected_audit_report_ids
+            and {item.report_id for item in current_attempts} <= reproducible_report_ids
+            and current_case_attempts_complete
+            and baseline_case_attempts_complete
+            and input_hashes_match
+            and fingerprints_match
+        )
+    else:
+        denominator_complete = (
+            baseline_ids_compatible
+            and current_identity_compatible
+            and len(baseline_case_reports) == case_count
+            and current_report_ids == report_ids
+            and len({item.report_id for item in current_attempts}) == case_count
+            and current_case_attempts_complete
+            and baseline_case_attempts_complete
+            and input_hashes_match
+            and fingerprints_match
+        )
     baseline_usage = manifest.get("baseline_usage")
     baseline_usage_metrics: dict[str, Any] = {}
     usage_status = "unavailable"
@@ -1604,11 +1801,23 @@ def _benchmark_comparison_metrics(
             for rule_id, count in sorted(baseline_class_counts.items())
         ),
         "benchmark_comparison_status": (
-            "paired" if denominator_complete else "incompatible"
+            "paired"
+            if (
+                denominator_complete
+                and baseline_ids_compatible
+                and current_identity_compatible
+                and len(reproducible_report_ids) == case_count
+            )
+            else "incompatible"
         ),
         **baseline_usage_metrics,
     }
-    if denominator_complete:
+    if (
+        denominator_complete
+        and baseline_ids_compatible
+        and current_identity_compatible
+        and len(reproducible_report_ids) == case_count
+    ):
         result.update(
             _residual_odds_reduction(
                 baseline=baseline_odds,
@@ -1617,7 +1826,11 @@ def _benchmark_comparison_metrics(
                     any(item.successful for item in values[:3])
                     for values in _group_repair_attempts(current_attempts).values()
                 ),
-                current_denominator=len(_group_repair_attempts(current_attempts)),
+                current_denominator=(
+                    len(reproducible_report_ids)
+                    if attributed_replay
+                    else len(_group_repair_attempts(current_attempts))
+                ),
             )
         )
     return result

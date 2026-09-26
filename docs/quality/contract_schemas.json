@@ -42393,11 +42393,85 @@
       ],
       "type": "object"
     },
+    "src.contracts.validation_reliability.ValidationReliabilityBenchmarkCaseAttribution": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_validation_identity": {
+          "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityValidationIdentity"
+        },
+        "candidate_audit_count": {
+          "type": "integer"
+        },
+        "candidate_validation_attempt_count": {
+          "type": "integer"
+        },
+        "candidate_validation_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityValidationIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "case_id": {
+          "type": "string"
+        },
+        "current_baseline_failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current_baseline_issue_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "historical_failure_fingerprints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "reproducibility_status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "case_id",
+        "report_id",
+        "reproducibility_status",
+        "historical_failure_fingerprints",
+        "current_baseline_failure_fingerprints",
+        "current_baseline_issue_fingerprints",
+        "baseline_validation_identity",
+        "candidate_validation_identity",
+        "candidate_validation_attempt_count",
+        "candidate_audit_count"
+      ],
+      "type": "object"
+    },
     "src.contracts.validation_reliability.ValidationReliabilityBuildRequest": {
       "additionalProperties": false,
       "properties": {
         "current_schema_identity_sha256": {
           "type": "string"
+        },
+        "repair_benchmark_case_attributions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityBenchmarkCaseAttribution"
+          },
+          "type": "array"
         },
         "repair_benchmark_manifest_path": {
           "type": "string"
@@ -43249,6 +43323,12 @@
         "baseline_usage_attribution": {
           "type": "string"
         },
+        "benchmark_case_attributions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.validation_reliability.ValidationReliabilityBenchmarkCaseAttribution"
+          },
+          "type": "array"
+        },
         "benchmark_case_count": {
           "anyOf": [
             {
@@ -43395,6 +43475,16 @@
             }
           ]
         },
+        "no_longer_reproducible_case_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "out_of_scope_mutation_attempt_count": {
           "anyOf": [
             {
@@ -43446,6 +43536,16 @@
           ]
         },
         "repeated_failed_strategy_evidence_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reproducible_case_count": {
           "anyOf": [
             {
               "type": "integer"
@@ -43515,6 +43615,16 @@
           "anyOf": [
             {
               "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "success_denominator": {
+          "anyOf": [
+            {
+              "type": "integer"
             },
             {
               "type": "null"
@@ -43631,6 +43741,34 @@
         "eligible_entity_count",
         "completed_entity_count",
         "conversion_rate"
+      ],
+      "type": "object"
+    },
+    "src.contracts.validation_reliability.ValidationReliabilityValidationIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration_hash": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "producer_build_identity": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validator_identity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "validator_identity",
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity"
       ],
       "type": "object"
     },

@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+import scripts.quality.replay_validation_repair_benchmark as replay_benchmark
 from scripts.quality.replay_validation_repair_benchmark import (
     _SCHEMA_IDENTITY_PATHS,
     _benchmark_manifest,
@@ -20,8 +21,13 @@ from scripts.quality.replay_validation_repair_benchmark import (
 )
 from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
+from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.normalize_generator import normalize_report
 from src.generators.report_generation_shared import merge_artifacts_into_payload
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _introduced_hard_failure_count,
+    _repair_delta,
+)
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _report_payload_from_dict,
 )
@@ -95,6 +101,83 @@ def test_benchmark_reuses_the_retained_initial_validation_failures() -> None:
     assert report.status == "fail"
     assert report.issues[0].rule_id == "grounding"
     assert report.issues[0].repair_target == "summary"
+
+
+def _validation_report_with(*rule_ids: str) -> ValidationReport:
+    return ValidationReport(
+        schema_version="1.0",
+        status="fail" if rule_ids else "pass",
+        severity="error" if rule_ids else "pass",
+        issues=[
+            ValidationIssue(
+                message=rule_id,
+                severity="error",
+                affected_section="summary.tldr",
+                rule_id=rule_id,
+                repair_target="summary",
+                entity_id="summary:1",
+                evidence_ids=["finding:1"],
+            )
+            for rule_id in rule_ids
+        ],
+    )
+
+
+def test_current_baseline_detects_a_rule_missing_from_historical_validation() -> None:
+    historical = _validation_report_with("historical_rule")
+    current_baseline = _validation_report_with("historical_rule", "current_rule")
+
+    disposition, validation_before = replay_benchmark._benchmark_validation_before(
+        historical=historical,
+        current=current_baseline,
+    )
+    delta = _repair_delta(validation_before, current_baseline)
+
+    assert disposition == "reproducible"
+    assert validation_before is current_baseline
+    assert delta.introduced == []
+    assert delta.resolved == []
+    assert _introduced_hard_failure_count(validation_before, current_baseline) == 0
+    assert {item.rule_id for item in delta.persisting} == {
+        "historical_rule",
+        "current_rule",
+    }
+
+
+def test_unchanged_candidate_has_zero_failure_delta_under_current_validator() -> None:
+    current_baseline = _validation_report_with("current_rule")
+
+    delta = _repair_delta(current_baseline, current_baseline)
+
+    assert delta.introduced == []
+    assert delta.resolved == []
+    assert _introduced_hard_failure_count(current_baseline, current_baseline) == 0
+    assert {item.rule_id for item in delta.persisting} == {"current_rule"}
+
+
+def test_candidate_only_failure_is_introduced_against_current_baseline() -> None:
+    current_baseline = _validation_report_with("current_rule")
+    candidate = _validation_report_with("current_rule", "candidate_rule")
+
+    delta = _repair_delta(current_baseline, candidate)
+
+    assert [item.rule_id for item in delta.introduced] == ["candidate_rule"]
+    assert _introduced_hard_failure_count(current_baseline, candidate) == 1
+    assert delta.resolved == []
+    assert [item.rule_id for item in delta.persisting] == ["current_rule"]
+
+
+def test_historical_failure_absent_from_current_baseline_is_not_reproducible() -> None:
+    historical = _validation_report_with("historical_rule")
+    current_baseline = _validation_report_with("current_rule")
+
+    disposition, validation_before = replay_benchmark._benchmark_validation_before(
+        historical=historical,
+        current=current_baseline,
+    )
+
+    assert disposition == "no_longer_reproducible"
+    assert validation_before is current_baseline
 
 
 def test_benchmark_builds_production_model_clients_for_both_repair_stages() -> None:

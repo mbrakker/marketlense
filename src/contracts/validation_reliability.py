@@ -217,6 +217,36 @@ class ValidationReliabilityRepairFailureClass(SemanticIdContract):
 
 
 @dataclass(frozen=True)
+class ValidationReliabilityValidationIdentity(SemanticIdContract):
+    """Current validator and run identities for one benchmark validation side."""
+
+    schema_version: str = field(metadata={"doc": "Validation identity schema version."})
+    validator_identity: str
+    configuration_hash: str
+    policy_hash: str
+    producer_build_identity: str
+
+
+@dataclass(frozen=True)
+class ValidationReliabilityBenchmarkCaseAttribution(SemanticIdContract):
+    """Content-free current-validator attribution for one frozen benchmark case."""
+
+    schema_version: str = field(
+        metadata={"doc": "Benchmark case attribution schema version."}
+    )
+    case_id: str
+    report_id: str
+    reproducibility_status: str
+    historical_failure_fingerprints: tuple[str, ...]
+    current_baseline_failure_fingerprints: tuple[str, ...]
+    current_baseline_issue_fingerprints: tuple[str, ...]
+    baseline_validation_identity: ValidationReliabilityValidationIdentity
+    candidate_validation_identity: ValidationReliabilityValidationIdentity | None
+    candidate_validation_attempt_count: int
+    candidate_audit_count: int
+
+
+@dataclass(frozen=True)
 class ValidationReliabilityRepairScorecard(SemanticIdContract):
     """Cohort-compatible effectiveness measurement for retained repair attempts."""
 
@@ -277,6 +307,12 @@ class ValidationReliabilityRepairScorecard(SemanticIdContract):
     ]
     attempts: tuple[ValidationReliabilityRepairAttempt, ...]
     mode_metrics: tuple[ValidationReliabilityRepairModeMetric, ...]
+    reproducible_case_count: int | None = None
+    no_longer_reproducible_case_count: int | None = None
+    success_denominator: int | None = None
+    benchmark_case_attributions: tuple[
+        ValidationReliabilityBenchmarkCaseAttribution, ...
+    ] = ()
 
 
 @dataclass(frozen=True)
@@ -318,6 +354,9 @@ class ValidationReliabilityBuildRequest(SemanticIdContract):
     repair_evidence_root: str = ""
     repair_benchmark_manifest_path: str = ""
     current_schema_identity_sha256: str = ""
+    repair_benchmark_case_attributions: tuple[
+        ValidationReliabilityBenchmarkCaseAttribution, ...
+    ] = ()
 
 
 @dataclass(frozen=True)

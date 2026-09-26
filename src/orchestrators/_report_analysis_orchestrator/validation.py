@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import inspect
 import re
-from difflib import SequenceMatcher
 from copy import deepcopy
 from dataclasses import asdict, replace
+from difflib import SequenceMatcher
 from time import perf_counter
 from typing import Any, Dict, List, Optional
 
@@ -31,6 +31,7 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.semantic_ids import ReportId
+from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
 from src.contracts.validation import (
     ValidationIssue,
     ValidationReport,
@@ -48,7 +49,6 @@ from src.generators.validation.regeneration_candidate import (
     retained_claim_repair_issues,
     validate_regeneration_candidate,
 )
-from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
@@ -430,6 +430,22 @@ def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDe
             if before_by_key[key].severity != after_by_key[key].severity
         ],
     )
+
+
+def _introduced_hard_failure_count(
+    before: ValidationReport, after: ValidationReport
+) -> int:
+    before_keys = {
+        _failure_fingerprint(issue).key
+        for issue in before.issues
+        if str(issue.severity or "").lower() == "error"
+    }
+    after_keys = {
+        _failure_fingerprint(issue).key
+        for issue in after.issues
+        if str(issue.severity or "").lower() == "error"
+    }
+    return len(after_keys - before_keys)
 
 
 def _candidate_validator_identity(runtime: ReportRuntimeState) -> str:
@@ -954,6 +970,76 @@ def _promote_regeneration_candidate(
     ).output_path
 
 
+def _validate_regeneration_baseline(
+    *,
+    runtime: ReportRuntimeState,
+    mode_ctx,
+    base_payload,
+    current_artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    vector_store_id: Optional[str],
+    dependencies: ReportAnalysisDependencies,
+    source_text: str = "",
+    validation_openai_client=None,
+) -> ValidationReport:
+    """Run the current production validation stack on unchanged artifacts."""
+
+    baseline_ctx = child_context(
+        mode_ctx, task_id=f"{mode_ctx.task_id}:validation_regen_baseline"
+    )
+    baseline_payload = merge_artifacts_into_payload(
+        deepcopy(base_payload), current_artifacts
+    )
+    _ensure_report_payload_complete(
+        baseline_payload,
+        artifacts=current_artifacts,
+        ctx=baseline_ctx,
+        file_id=runtime.file.file_id,
+        stage="validation_regen_baseline",
+    )
+    baseline_integrity = validate_regeneration_candidate(
+        current_artifacts=current_artifacts,
+        candidate_artifacts=current_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=baseline_ctx,
+    )
+    validation = _run_validation_with_fallback(
+        runtime=runtime,
+        mode_ctx=baseline_ctx,
+        dependencies=dependencies,
+        validation_req=ValidationRequest(
+            schema_version="1.0",
+            report_id=ReportId(runtime.file.file_id),
+            report=baseline_payload,
+            artifacts=current_artifacts,
+            evidence_packs=evidence_packs,
+            vector_store_id=vector_store_id,
+            source_id=str(runtime.ctx.source_identity_id or "").strip(),
+            deterministic_grounding_passed=baseline_integrity.passed,
+            publisher_name=runtime.publisher_name,
+            report_name=runtime.source_report_name or runtime.report_title,
+            source_url=runtime.source_url,
+            source_text=source_text,
+        ),
+        pack_name="validation_regen_baseline",
+        openai_client=validation_openai_client,
+    )
+    validation = _candidate_validation_report(validation, baseline_integrity)
+    editorial_validation, _ = _evaluate_and_store_public_editorial_quality(
+        runtime=runtime,
+        dependencies=dependencies,
+        artifacts=current_artifacts,
+        pack_name="public_editorial_quality_regen_baseline",
+        ctx=baseline_ctx,
+    )
+    validation = _merge_public_editorial_quality(validation, editorial_validation)
+    return _with_retained_claim_repair_diagnostics(
+        validation,
+        current_artifacts,
+        evidence_packs,
+    )
+
+
 def _run_validation_regeneration_loop(
     *,
     runtime: ReportRuntimeState,
@@ -1318,20 +1404,10 @@ def _run_validation_regeneration_loop(
         repair_delta = _repair_delta(
             current_validation_report, candidate_validation_report
         )
-        before_hard_failure_keys = {
-            _failure_fingerprint(issue).key
-            for issue in current_validation_report.issues
-            if str(issue.severity or "").lower() == "error"
-        }
-        after_hard_failure_keys = {
-            _failure_fingerprint(issue).key
-            for issue in candidate_validation_report.issues
-            if str(issue.severity or "").lower() == "error"
-        }
         repair_delta = replace(
             repair_delta,
-            introduced_hard_failure_count=len(
-                after_hard_failure_keys - before_hard_failure_keys
+            introduced_hard_failure_count=_introduced_hard_failure_count(
+                current_validation_report, candidate_validation_report
             ),
         )
         strategy_fingerprint = _attempt_strategy_fingerprint(

@@ -58,6 +58,28 @@ unmerged pre-repair base payload and original artifacts into the existing
 validation-regeneration loop; production validation, evidence, semantic,
 editorial, scope, promotion, rollback, and retry limits remain in force.
 
+## Same-validator repair attribution
+
+For each reconstructed case, replay validates the unchanged original artifacts
+and merged payload through the current production candidate-integrity,
+semantic-validation, public-editorial, and retained-claim checks before it
+starts regeneration. That current report is the loop's `validation_before`;
+the frozen historical validation remains provenance and is never supplied to
+the planner or repair-delta calculation. Candidate deltas and hard-failure
+counts therefore compare reports produced by the same current validator
+implementation and run configuration.
+
+A frozen case is `reproducible` when a current hard-error fingerprint matches
+one of its pinned historical target fingerprints. If none matches, replay
+retains the case in the seven-case corpus, labels it
+`no_longer_reproducible`, and skips repair planning. Reproducible cases form
+the success@1/@3 denominator, including cases that stop before a candidate is
+audited; non-reproducible cases are excluded from both repair successes and
+failures. The generated reliability scorecard retains historical and current
+fingerprints plus baseline and candidate validator, configuration, policy,
+and build identities for each case. Historical cohort comparisons remain
+incompatible when their frozen identities do not match the current run.
+
 ## Atomic writable-path contract
 
 The repair planner resolves each model repair to exact retained scalar leaves
