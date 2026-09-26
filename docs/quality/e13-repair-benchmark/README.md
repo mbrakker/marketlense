@@ -28,9 +28,11 @@ same workflow run; the validator identity is unavailable there as well.
 The implementation commit must be measured after it is committed, using its
 exact full SHA. Each manifest is replayed independently by
 `scripts/quality/replay_validation_repair_benchmark.py` through the existing
-production validation-regeneration loop. The scorecard retains its normal
-validation, evidence, mutation-scope, promotion, and rollback gates. It does
-not author replacement copy or raise the configured retry limit.
+production validation-regeneration loop, with the same scoped validation and
+artifact-regeneration model service clients used by the report workflow. The
+scorecard retains its normal validation, evidence, mutation-scope, promotion,
+and rollback gates. It does not author replacement copy or raise the
+configured retry limit.
 
 The exact implementation SHA, per-cohort final metrics, per-failure-class
 results, commands and test outcomes, and acceptance-criteria disposition will

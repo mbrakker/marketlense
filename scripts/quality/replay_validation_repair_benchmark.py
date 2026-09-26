@@ -44,7 +44,7 @@ from src.orchestrators.admission_preflight_orchestrator import (
     admission_configuration_hash,
     admission_policy_hash,
 )
-from src.services import config_service
+from src.services import config_service, llm_service
 from src.services.report_store_service import (
     create_validation_run_manifest,
     record_validation_run_manifest_stage,
@@ -122,6 +122,14 @@ def _root_context(
         stage="regeneration",
         configuration_hash=configuration_hash,
         policy_hash=policy_hash,
+    )
+
+
+def _build_repair_model_clients(settings: Any) -> tuple[Any, Any]:
+    """Build the same scoped model service clients used by report workflows."""
+    return (
+        llm_service.build_client_for_settings(settings, scope="validation"),
+        llm_service.build_client_for_settings(settings, scope="artifact_regeneration"),
     )
 
 
@@ -259,6 +267,9 @@ def replay_benchmark(
         root_ctx,
     )
     dependencies = ReportAnalysisDependencies.default()
+    validation_model_client, regeneration_model_client = _build_repair_model_clients(
+        isolated_settings
+    )
     for case in cases:
         if not isinstance(case, dict):
             raise ValueError("frozen benchmark case must be an object")
@@ -376,6 +387,8 @@ def replay_benchmark(
             category_labels=initial_payload.categories,
             vector_store_id=None,
             dependencies=dependencies,
+            validation_openai_client=validation_model_client,
+            regeneration_openai_client=regeneration_model_client,
         )
         end = datetime.now(timezone.utc).isoformat()
         record_validation_run_manifest_stage(

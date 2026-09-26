@@ -8,9 +8,11 @@ import pytest
 
 from scripts.quality.replay_validation_repair_benchmark import (
     _benchmark_manifest,
+    _build_repair_model_clients,
     _case_paths,
     _validation_report,
 )
+from src.services.llm_service import LLMServiceClient
 from src.utils.cache_utils import sha256_json
 
 
@@ -79,3 +81,11 @@ def test_benchmark_reuses_the_retained_initial_validation_failures() -> None:
     assert report.status == "fail"
     assert report.issues[0].rule_id == "grounding"
     assert report.issues[0].repair_target == "summary"
+
+
+def test_benchmark_builds_production_model_clients_for_both_repair_stages() -> None:
+    validation_client, regeneration_client = _build_repair_model_clients(object())
+
+    assert isinstance(validation_client, LLMServiceClient)
+    assert isinstance(regeneration_client, LLMServiceClient)
+    assert validation_client is not regeneration_client
