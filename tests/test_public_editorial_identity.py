@@ -56,8 +56,18 @@ def test_insight_entity_identity_is_stable_across_evidence_rebinding() -> None:
 def test_targeted_insight_repair_uses_public_item_identity_before_section() -> None:
     artifacts = {
         "insights_final": [
-            {"id": "IC-001", "evidence_id": "f1", "pages": [1]},
-            {"id": "IC-002", "evidence_id": "f2", "pages": [2]},
+            {
+                "id": "IC-001",
+                "text": "First retained insight.",
+                "evidence_id": "f1",
+                "pages": [1],
+            },
+            {
+                "id": "IC-002",
+                "text": "Second retained insight.",
+                "evidence_id": "f2",
+                "pages": [2],
+            },
         ]
     }
 
@@ -82,3 +92,4 @@ def test_targeted_insight_repair_uses_public_item_identity_before_section() -> N
     assert plan.targets[0].issues[0].entity_id == "insight:IC-001:text"
     assert plan.targets[0].issues[0].evidence_ids == ["f1"]
     assert plan.targets[0].issues[0].pages == [1]
+    assert plan.targets[0].allowed_paths == ["insights_final[item=IC-001].text"]

@@ -1730,11 +1730,22 @@ def _render_regeneration_model(
     repair_call: bool = True,
 ) -> Dict[str, Any]:
     request = execution.runtime.request
+    active_target = _active_repair_target(execution, variables)
+    required_protected_fields = (
+        _required_repair_protected_fields(
+            _current_repair_artifacts(execution.state), active_target
+        )
+        if repair_call
+        else []
+    )
+    if repair_call and (
+        not active_target.allowed_paths or not required_protected_fields
+    ):
+        raise _repair_decision_error(execution, "repair_scope_partition_invalid")
     openai_client = require_injected_model_client(
         execution.runtime.openai_client,
         scope="artifact_regeneration",
     )
-    active_target = _active_repair_target(execution, variables)
     if repair_call:
         variables = {
             **variables,
@@ -1753,9 +1764,7 @@ def _render_regeneration_model(
                             if issue.rule_id
                         }
                     ),
-                    "required_protected_fields": _required_repair_protected_fields(
-                        _current_repair_artifacts(execution.state), active_target
-                    ),
+                    "required_protected_fields": required_protected_fields,
                 }
             ),
             "prior_repair_memory_json": _dump_json(
@@ -2175,40 +2184,30 @@ def _validated_repair_decision(
         if not set(claim.get("evidence_ids") or []) <= set(decision.evidence_ids_used):
             raise _repair_decision_error(execution, "claim_evidence_not_declared_used")
 
-    required_protected = _required_repair_protected_fields(current_artifacts, target)
-    if set(decision.protected_fields) != set(required_protected):
-        raise _repair_decision_error(execution, "protected_fields_incomplete")
-    candidate = deepcopy(current_artifacts)
     for operation in decision.minimal_patch:
-        if not any(
-            operation.path == allowed
-            or operation.path.startswith(allowed + ".")
-            or operation.path.startswith(allowed + "[")
-            for allowed in target.allowed_paths
-        ):
+        if operation.path not in target.allowed_paths:
             raise _repair_decision_error(
                 execution, "changed_path_outside_allowed_paths"
             )
-        found, previous = _read_repair_path(candidate, operation.path)
+        found, previous = _read_repair_path(current_artifacts, operation.path)
         if not found:
             raise _repair_decision_error(
                 execution, "patch_target_unresolved_or_ambiguous"
             )
-        family_root_replacement = operation.path in target.allowed_paths and not any(
-            "." in path or "[" in path for path in target.allowed_paths
-        )
-        if (
-            isinstance(previous, (dict, list))
-            and not operation.path.endswith(".metric")
-            and not family_root_replacement
-        ):
+        claim_path = bool(re.fullmatch(r".+\[claim_index=\d+\]", operation.path))
+        item_or_family_path = operation.path.endswith("]") and not claim_path
+        if isinstance(previous, (dict, list)) or item_or_family_path:
             raise _repair_decision_error(execution, "patch_target_not_atomic")
-        if (
-            isinstance(operation.value, (dict, list))
-            and not operation.path.endswith(".metric")
-            and not family_root_replacement
-        ):
+        if isinstance(operation.value, (dict, list)):
             raise _repair_decision_error(execution, "patch_value_over_broad")
+
+    required_protected = _required_repair_protected_fields(current_artifacts, target)
+    if not required_protected:
+        raise _repair_decision_error(execution, "repair_scope_partition_invalid")
+    if set(decision.protected_fields) != set(required_protected):
+        raise _repair_decision_error(execution, "protected_fields_incomplete")
+    candidate = deepcopy(current_artifacts)
+    for operation in decision.minimal_patch:
         if not _write_repair_path(candidate, operation.path, operation.value):
             raise _repair_decision_error(execution, "patch_application_failed")
     if not _repair_protected_fields_preserved(
@@ -2298,59 +2297,91 @@ def _apply_repair_decision_patch(
 def _required_repair_protected_fields(
     artifacts: Dict[str, Any], target: RegenerationTarget
 ) -> List[str]:
+    writable = set(target.allowed_paths)
+    if not writable:
+        return []
+    roots = {_repair_path_root(path) for path in writable}
     protected: set[str] = set()
-    for allowed in target.allowed_paths:
-        claim_match = re.fullmatch(r"(.+)\[claim_index=(\d+)\]", allowed)
-        if claim_match:
-            base_path, raw_index = claim_match.groups()
-            found, text = _read_repair_path(artifacts, base_path)
-            if found and isinstance(text, str):
-                for index in range(len(_soft_copy_sentence_spans(text))):
-                    if index != int(raw_index):
-                        protected.add(f"{base_path}[claim_index={index}]")
-            summary = artifacts.get("summary")
-            if base_path.startswith("summary.") and isinstance(summary, dict):
-                field_name = base_path.split(".", 1)[1]
-                protected.update(
-                    f"summary.{key}" for key in summary if key != field_name
-                )
-            continue
-        item_match = re.match(r"^([^\[]+\[[^\]]+\])(?:\.(.*))?$", allowed)
-        if item_match:
-            item_path, suffix = item_match.groups()
-            found, item = _read_repair_path(artifacts, item_path)
-            if not found or not isinstance(item, dict):
-                continue
-            mutable_fields = set()
-            if suffix:
-                mutable_fields.add(suffix.split(".", 1)[0])
-            elif target.target_section == "quotes":
-                mutable_fields.add("text")
-            elif target.target_section == "insights_bundle":
-                if target.repair_action == "REBIND_EVIDENCE":
-                    mutable_fields.update(
-                        {"evidence_id", "evidence", "evidence_spans", "pages"}
-                    )
-                else:
-                    mutable_fields.update(
-                        _insight_repair_field(issue.entity_id, issue.affected_section)
-                        for issue in target.issues
-                    )
-            elif target.target_section == "summary":
-                mutable_fields.update({"claim", "evidence_id", "evidence", "pages"})
-            protected.update(
-                f"{item_path}.{key}" for key in item if key not in mutable_fields
-            )
-            continue
-        root, separator, suffix = allowed.partition(".")
-        if separator and root == "summary":
-            summary = artifacts.get("summary")
-            mutable = {suffix.split(".", 1)[0]}
-            if isinstance(summary, dict):
-                protected.update(
-                    f"summary.{key}" for key in summary if key not in mutable
-                )
+    for root in roots:
+        if root not in artifacts:
+            return []
+        leaves = _repair_leaf_paths(artifacts[root], root)
+        if not writable.intersection(leaves):
+            return []
+        if any(
+            path not in leaves
+            for path in writable
+            if _repair_path_root(path) == root
+        ):
+            return []
+        protected.update(leaves - writable)
+    for path in writable:
+        found, value = _read_repair_path(artifacts, path)
+        if not found or isinstance(value, (dict, list)):
+            return []
     return sorted(protected)
+
+
+def _repair_path_root(path: str) -> str:
+    return re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
+
+
+_REPAIR_SOFT_COPY_PATHS = frozenset(
+    {
+        "summary.tldr",
+        "summary.card_tldr_compact",
+        "summary.executive_summary",
+        "expert_comment",
+        "linkedin_post",
+    }
+)
+
+
+def _repair_leaf_paths(value: Any, path: str) -> set[str]:
+    """Flatten one retained artifact family into its immutable leaf paths."""
+
+    if isinstance(value, str) and path in _REPAIR_SOFT_COPY_PATHS:
+        spans = _soft_copy_sentence_spans(value)
+        return (
+            {f"{path}[claim_index={index}]" for index in range(len(spans))}
+            if spans
+            else {path}
+        )
+    if isinstance(value, dict):
+        if not value:
+            return {path}
+        return {
+            leaf
+            for key, child in value.items()
+            for leaf in _repair_leaf_paths(child, f"{path}.{key}")
+        }
+    if isinstance(value, list):
+        if not value:
+            return {path}
+        leaves: set[str] = set()
+        for index, child in enumerate(value):
+            identity = (
+                next(
+                    (
+                        str(child.get(key) or "").strip()
+                        for key in (
+                            "id",
+                            "insight_id",
+                            "key_figure_id",
+                            "claim_id",
+                            "evidence_id",
+                        )
+                        if str(child.get(key) or "").strip()
+                    ),
+                    "",
+                )
+                if isinstance(child, dict)
+                else ""
+            )
+            selector = f"[item={identity}]" if identity else f"[{index}]"
+            leaves.update(_repair_leaf_paths(child, f"{path}{selector}"))
+        return leaves
+    return {path}
 
 
 def _read_repair_path(value: Any, path: str) -> tuple[bool, Any]:
@@ -3042,6 +3073,15 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             "editorial_plan_json": _dump_json(execution.state.editorial_plan),
         },
     )
+    decision = result.get("_repair_decision")
+    if isinstance(decision, RepairDecision):
+        result = {
+            **result,
+            "summary": _apply_repair_decision_patch(
+                current_artifacts=_current_repair_artifacts(execution.state),
+                decision=decision,
+            )["summary"],
+        }
     if not _record_atomic_summary_claim_bindings(
         execution, namespace=namespace, result=result
     ):
@@ -3073,12 +3113,11 @@ def _record_atomic_summary_claim_bindings(
     patch_operations = [
         operation
         for operation in decision.minimal_patch
-        if operation.path
-        in {
-            "summary.tldr",
-            "summary.card_tldr_compact",
-            "summary.executive_summary",
-        }
+        if re.fullmatch(
+            r"summary\.(?:tldr|card_tldr_compact|executive_summary)"
+            r"(?:\[claim_index=\d+\])?",
+            operation.path,
+        )
         and isinstance(operation.value, str)
     ]
     if not patch_operations:

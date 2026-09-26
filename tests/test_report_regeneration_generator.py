@@ -57,8 +57,10 @@ from src.generators.validation.regeneration_candidate import (
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _allowed_paths,
+    _build_target,
     _build_regeneration_plan,
 )
+from src.utils.errors import AppError
 
 METRIC = {
     "value": "",
@@ -77,6 +79,7 @@ def regenerate_artifacts(request, **kwargs):
     targets = []
     for target in request.plan.targets:
         issues = list(target.issues)
+        had_no_issues = not issues
         if not issues and target.target_section in {
             "summary",
             "insights_bundle",
@@ -86,24 +89,74 @@ def regenerate_artifacts(request, **kwargs):
             "linkedin_post",
             "topics",
         }:
+            family = target.target_section
+            affected_section = (
+                "summary.executive_summary" if family == "summary" else family
+            )
             issues = [
                 RegenerationIssue(
                     rule_id="test_fixture_repair",
-                    affected_section=target.target_section,
+                    affected_section=affected_section,
                     message="A deterministic test fixture requested repair.",
                     severity="error",
                 )
             ]
+        planned = _build_target(
+            target.target_section,
+            issues,
+            artifacts=request.current_artifacts,
+        )
         paths = list(target.allowed_paths) or _allowed_paths(
             target.target_section,
             issues,
             request.current_artifacts,
             target.repair_action,
         )
-        targets.append(replace(target, issues=issues, allowed_paths=paths))
+        if had_no_issues and target.target_section in {
+            "summary",
+            "expert_comment",
+            "linkedin_post",
+        }:
+            paths = (
+                [f"{target.target_section}[claim_index=0]"]
+                if target.target_section in {"expert_comment", "linkedin_post"}
+                else paths[:1]
+            )
+        targets.append(
+            replace(
+                target,
+                issues=issues,
+                allowed_paths=paths,
+                repair_action=target.repair_action
+                or (planned.repair_action if planned else ""),
+                repair_strategy=target.repair_strategy
+                or (planned.repair_strategy if planned else ""),
+            )
+        )
     return _regenerate_artifacts(
         replace(request, plan=replace(request.plan, targets=targets)), **kwargs
     )
+
+
+def _append_retained_soft_copy_sibling(
+    artifacts: dict, family: str, sentence: str = "A retained sibling claim."
+) -> None:
+    existing = artifacts[family]
+    claims = artifacts["soft_copy_claim_provenance"]["claims"]
+    template = next(
+        claim for claim in claims if claim["artifact_family"] == family
+    )
+    retained = existing.rstrip()
+    if not retained.endswith((".", "!", "?")):
+        retained = f"{retained}."
+        retained_hash = hashlib.sha256(retained.encode()).hexdigest()
+        template["claim_id"] = f"soft_copy:{family}:{retained_hash[:16]}"
+        template["text_hash"] = retained_hash
+    artifacts[family] = f"{retained} {sentence}"
+    sibling = dict(template)
+    sibling["claim_id"] = f"soft_copy:{family}:retained-sibling"
+    sibling["text_hash"] = hashlib.sha256(sentence.encode()).hexdigest()
+    claims.append(sibling)
 
 
 def test_restore_missing_final_insight_roster_replaces_duplicate_model_id() -> None:
@@ -1284,6 +1337,24 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
     repair_strategy: str,
 ) -> None:
     current = _current_artifacts()
+    evidence_packs = _evidence_packs()
+    if artifact_family == "summary":
+        current["summary"]["claim_evidence_map"][0].update(
+            claim="Old TLDR.", evidence="Old TLDR."
+        )
+        evidence_packs["findings"]["findings"][0].update(
+            text="Old TLDR.", evidence="Old TLDR."
+        )
+    if (
+        artifact_family == "expert_comment"
+        and repair_action == "REGENERATE_ITEM"
+    ):
+        next(
+            claim
+            for claim in current["soft_copy_claim_provenance"]["claims"]
+            if claim["artifact_family"] == artifact_family
+        )["evidence_ids"] = ["f1"]
+        _append_retained_soft_copy_sibling(current, artifact_family)
     current["topics_covered"] = [
         {
             "schema_version": "1.0",
@@ -1309,6 +1380,15 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         }
     ]
     original_claims = current["soft_copy_claim_provenance"]["claims"]
+    repaired_claim = next(
+        claim
+        for claim in original_claims
+        if claim["artifact_family"] == artifact_family
+        and (
+            artifact_family != "summary"
+            or claim["text_hash"] == hashlib.sha256(b"Old summary").hexdigest()
+        )
+    )
     sibling_claims = [
         claim
         for claim in original_claims
@@ -1334,22 +1414,32 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
                         target_section=artifact_family,
                         repair_action=repair_action,
                         repair_strategy=repair_strategy,
-                        allowed_paths=[artifact_family],
+                        allowed_paths=[
+                            (
+                                "summary.executive_summary[claim_index=0]"
+                                if artifact_family == "summary"
+                                else f"{artifact_family}[claim_index=0]"
+                            )
+                        ],
                         issues=[
                             RegenerationIssue(
                                 rule_id=issue_rule_id,
-                                affected_section=artifact_family,
+                                affected_section=(
+                                    "summary.executive_summary"
+                                    if artifact_family == "summary"
+                                    else artifact_family
+                                ),
                                 message="Remove the failed soft-copy family.",
                                 severity="error",
-                                entity_id=artifact_family,
+                                entity_id=repaired_claim["claim_id"],
                             )
                         ],
                     )
                 ],
             ),
             current_artifacts=current,
-            doc_map=_evidence_packs()["doc_map"],
-            evidence_packs=_evidence_packs(),
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
             settings=_settings(tmp_path),
             ctx=_ctx(),
             source_status=current["source_status"],
@@ -1370,15 +1460,19 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         assert openai_client.calls
         assert prompt_client.render_calls
     elif artifact_family == "summary":
-        assert all(
-            not updated["summary"].get(field)
-            for field in ("tldr", "card_tldr_compact", "executive_summary")
-        )
+        assert updated["summary"]["executive_summary"] == "Old TLDR."
+        assert updated["summary"]["tldr"] == "Old TLDR."
+        assert updated["summary"]["card_tldr_compact"] == "Old TLDR."
     else:
         assert updated[artifact_family] == ""
-    if not attempt_number_does_not_select_safe_removal:
+    if not attempt_number_does_not_select_safe_removal and artifact_family != "summary":
         assert not any(
             claim["artifact_family"] == artifact_family
+            for claim in updated["soft_copy_claim_provenance"]["claims"]
+        )
+    if artifact_family == "summary":
+        assert any(
+            claim["artifact_family"] == "summary"
             for claim in updated["soft_copy_claim_provenance"]["claims"]
         )
     assert {
@@ -1400,7 +1494,7 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
     candidate_integrity = validate_regeneration_candidate(
         current_artifacts=current,
         candidate_artifacts=updated,
-        evidence_packs=_evidence_packs(),
+        evidence_packs=evidence_packs,
         ctx=_ctx(),
     )
     assert not any(
@@ -1435,11 +1529,12 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
                         issues=[
                             RegenerationIssue(
                                 rule_id="metrics",
-                                affected_section="insights_final",
+                                affected_section="insights:insight-1.metric.value",
                                 message="[metrics] Unsupported insight value",
                                 severity="error",
                                 evidence_ids=["f1"],
                                 pages=[1],
+                                entity_id="insight:insight-1:metric.value",
                             )
                         ],
                     )
@@ -1461,21 +1556,17 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
         prompt_client=prompt_client,
     )
 
-    assert response.regenerated_sections == ["insights_candidates", "insights_final"]
+    assert response.regenerated_sections == ["insights_final"]
     prompts = response.updated_artifacts["_cache"]["prompts"]
     assert prompts["report_vs/artifacts/insights_final"] == {
         "prompt_content_hash": "c" * 64
     }
-    assert (
-        prompts["report_vs/artifacts/regenerate/insights_candidates"][
-            "prompt_content_hash"
-        ]
-        == "c" * 64
-    )
     assert prompts["report_vs/artifacts/regenerate/insights_final"][
         "execution_identity"
     ]
-    assert len(response.updated_artifacts["insights_candidates"]) == 4
+    assert response.updated_artifacts["insights_candidates"] == _current_artifacts()[
+        "insights_candidates"
+    ]
     assert len(response.updated_artifacts["insights_final"]) == 5
     assert (
         response.updated_artifacts["family_status"]["insights_bundle"]["status"]
@@ -1490,24 +1581,14 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
 
     rendered_paths = [call["path"] for call in prompt_client.render_calls]
     assert rendered_paths == [
-        "report_vs/artifacts/regenerate/insights_candidates/system.yaml",
-        "report_vs/artifacts/regenerate/insights_candidates/user.yaml",
         "report_vs/artifacts/regenerate/insights_final/system.yaml",
         "report_vs/artifacts/regenerate/insights_final/user.yaml",
     ]
     first_user_prompt = openai_client.calls[0].user_prompt
     assert "Unsupported insight value" in first_user_prompt
     assert "Evidence text" in first_user_prompt
-    candidate_variables = prompt_client.render_calls[1]["variables"]
-    assert json.loads(candidate_variables["editorial_plan_json"]) == {
-        "report_thesis": "The report's retained evidence changes planning.",
-        "themes": [
-            {"theme": "Primary evidence", "priority": 1, "evidence_ids": ["f1"]},
-            {"theme": "Margin evidence", "priority": 2, "evidence_ids": ["f2"]},
-        ],
-    }
-    final_variables = prompt_client.render_calls[3]["variables"]
-    assert final_variables["final_insight_target_count"] == 5
+    final_variables = prompt_client.render_calls[1]["variables"]
+    assert final_variables["final_insight_target_count"] == 1
 
 
 def test_final_insight_reuses_same_id_candidate_evidence_when_model_omits_it() -> None:
@@ -1686,6 +1767,12 @@ def test_regenerate_artifacts_expert_comment_uses_grounded_synthesis_context(
     prompt_client = _FakePromptClient()
     openai_client = _FakeOpenAIClient()
     current_artifacts = _current_artifacts()
+    next(
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )["evidence_ids"] = ["f1"]
+    _append_retained_soft_copy_sibling(current_artifacts, "expert_comment")
     current_artifacts["insights_final"][0]["so_what"] = (
         "The primary finding changes the operating tradeoff."
     )
@@ -1759,6 +1846,12 @@ def test_regenerate_artifacts_linkedin_post_receives_editorial_plan(tmp_path):
     prompt_client = _FakePromptClient()
     openai_client = _FakeOpenAIClient()
     current_artifacts = _current_artifacts()
+    next(
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "linkedin_post"
+    )["evidence_ids"] = ["f1"]
+    _append_retained_soft_copy_sibling(current_artifacts, "linkedin_post")
 
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
@@ -1812,6 +1905,12 @@ def test_regenerated_soft_copy_claim_gets_new_provenance_and_untouched_claim_is_
     tmp_path,
 ) -> None:
     current_artifacts = _current_artifacts()
+    next(
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )["evidence_ids"] = ["f1"]
+    _append_retained_soft_copy_sibling(current_artifacts, "expert_comment")
     retained_linkedin_claim = SoftCopyClaimProvenance(
         schema_version="1.0",
         artifact_family="linkedin_post",
@@ -2300,7 +2399,9 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
     assert original_claims[1].claim_id not in by_id
 
 
-def test_ambiguous_soft_copy_issue_uses_existing_family_regeneration(tmp_path) -> None:
+def test_ambiguous_soft_copy_issue_is_not_widened_to_family_regeneration(
+    tmp_path,
+) -> None:
     current_artifacts = _current_artifacts()
     sentences = ["First sibling.", "Second ambiguous claim.", "Third ambiguous claim."]
     current_artifacts["expert_comment"] = " ".join(sentences)
@@ -2329,45 +2430,49 @@ def test_ambiguous_soft_copy_issue_uses_existing_family_regeneration(tmp_path) -
     evidence_packs = _evidence_packs()
     openai_client = _ClaimScopedExpertOpenAIClient()
 
-    response = regenerate_artifacts(
-        ArtifactRegenerationRequest(
-            report_id="report-1",
-            report_name="report-1",
-            attempt_index=2,
-            plan=RegenerationPlan(
-                mode="targeted",
-                targets=[
-                    RegenerationTarget(
-                        target_section="expert_comment",
-                        regenerate_steps=["expert_comment"],
-                        issues=[
-                            RegenerationIssue(
-                                rule_id="grounding",
-                                affected_section="expert_comment",
-                                message="Unsupported retained claim.",
-                                severity="error",
-                                evidence_ids=["f2"],
-                            )
-                        ],
-                    )
-                ],
-                unmappable_issues=[],
-                broad_retry_allowed=False,
+    with pytest.raises(AppError) as error:
+        regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=2,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[
+                        RegenerationTarget(
+                            target_section="expert_comment",
+                            regenerate_steps=["expert_comment"],
+                            issues=[
+                                RegenerationIssue(
+                                    rule_id="grounding",
+                                    affected_section="expert_comment",
+                                    message="Unsupported retained claim.",
+                                    severity="error",
+                                    evidence_ids=["f2"],
+                                )
+                            ],
+                        )
+                    ],
+                    unmappable_issues=[],
+                    broad_retry_allowed=False,
+                ),
+                current_artifacts=current_artifacts,
+                doc_map=evidence_packs["doc_map"],
+                evidence_packs=evidence_packs,
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=current_artifacts["source_status"],
+                categories=["Category"],
             ),
-            current_artifacts=current_artifacts,
-            doc_map=evidence_packs["doc_map"],
-            evidence_packs=evidence_packs,
-            settings=_settings(tmp_path),
-            ctx=_ctx(),
-            source_status=current_artifacts["source_status"],
-            categories=["Category"],
-        ),
-        openai_client=openai_client,
-        prompt_client=_FakePromptClient(),
-    )
+            openai_client=openai_client,
+            prompt_client=_FakePromptClient(),
+        )
 
-    assert response.updated_artifacts["expert_comment"] == "Repaired middle claim."
-    assert len(openai_client.calls) == 1
+    assert error.value.context["reason"] in {
+        "atomic_repair_target_unresolved_or_ambiguous",
+        "repair_scope_partition_invalid",
+    }
+    assert openai_client.calls == []
 
 
 def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_call(
@@ -2780,7 +2885,11 @@ def test_multi_claim_repair_keeps_quarantine_scoped_to_its_failed_claim(
 
 def test_sequential_claim_repairs_preserve_prior_selection_provenance(tmp_path) -> None:
     current_artifacts = _current_artifacts()
-    sentences = ["First bad claim.", "Second bad claim."]
+    sentences = [
+        "First bad claim.",
+        "Second bad claim.",
+        "Third retained sibling.",
+    ]
     current_artifacts["expert_comment"] = " ".join(sentences)
     claims = [
         SoftCopyClaimProvenance(

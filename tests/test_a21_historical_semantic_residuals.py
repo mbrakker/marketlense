@@ -99,8 +99,9 @@ def test_stackadapt_abstained_quote_cannot_enter_semantic_request() -> None:
     plan = _build_regeneration_plan(
         issues=[issue], artifacts=artifacts, broad_retry_available=True
     )
-    assert [target.target_section for target in plan.targets] == ["quotes"]
-    assert plan.targets[0].selected_evidence_ids == []
+    assert plan.mode == "skip"
+    assert plan.targets == []
+    assert plan.broad_retry_allowed is False
 
 
 def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None:

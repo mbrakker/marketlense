@@ -5,9 +5,11 @@ text: |
   path exists.
   - Echo the planned action, strategy, and protected paths exactly. Preserve
     every protected value.
-  - `changed_paths` must equal the patch paths, each at or below `allowed_paths`.
-    Use `replace` on the smallest unambiguous stable path; replace a whole
-    metric object only when that metric is the target.
+  - `allowed_paths` is the exact writable leaf set. `changed_paths` must equal
+    the patch paths, and every patch path must exactly equal one declared path;
+    do not replace a parent item, family, or an undeclared descendant.
+  - Use one `replace` operation for each writable leaf that needs a change.
+    Never replace a whole insight, metric, quote, or other object.
   - Encode each replacement value as one complete JSON value in `value_json`.
     Include no prose or markdown outside that JSON encoding.
   - `evidence_ids_used` contains only retained `relevant_evidence` IDs that

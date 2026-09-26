@@ -8,7 +8,9 @@ def test_scope_validation_rejects_tampered_derived_artifact_despite_allowed_depe
     None
 ):
     plan = SimpleNamespace(
-        targets=[SimpleNamespace(allowed_paths=["summary.tldr", "insights_final"])]
+        targets=[
+            SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])
+        ]
     )
     before = {
         "summary": {"tldr": "Before."},
@@ -37,7 +39,9 @@ def test_scope_validation_rejects_tampered_derived_artifact_despite_allowed_depe
 
 
 def test_scope_validation_rejects_unlisted_nested_field() -> None:
-    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary.tldr"])])
+    plan = SimpleNamespace(
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])]
+    )
     before = {"summary": {"tldr": "Before.", "executive_summary": "Stable."}}
     after = {"summary": {"tldr": "Repaired.", "executive_summary": "Changed sibling."}}
 
@@ -316,7 +320,9 @@ def test_candidate_verifies_only_prompt_cache_metadata_used_by_repair() -> None:
 
 
 def test_scope_validation_allows_soft_copy_provenance_for_repaired_soft_copy() -> None:
-    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary.tldr"])])
+    plan = SimpleNamespace(
+        targets=[SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])]
+    )
     before = {
         "summary": {"tldr": "Before."},
         "soft_copy_claim_provenance": {"claims": [{"claim_id": "before"}]},
@@ -360,13 +366,19 @@ def test_insight_repair_allows_only_verified_derived_projection() -> None:
         "insights_final": [{"id": "one", "text": "Old claim."}],
         "metric_spine": [{"value": "stale"}],
     }
-    candidate = {"insights_final": [], "metric_spine": []}
+    candidate = deepcopy(before)
+    candidate["insights_final"][0]["text"] = "New claim."
+    candidate["metric_spine"] = []
     verified, issues = _verify_derived_artifact_roots(
         current_artifacts=before,
         candidate_artifacts=candidate,
         evidence_packs={},
     )
-    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["insights_final"])])
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(allowed_paths=["insights_final[item=one].text"])
+        ]
+    )
 
     assert not issues
     assert "metric_spine" in verified
@@ -402,7 +414,9 @@ def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
     before = {
         "toc_entries": toc,
         "summary": {},
-        "insights_final": [],
+        "insights_final": [
+            {"id": "one", "evidence_id": "old-evidence", "pages": [3]}
+        ],
         "topics_covered": [
             {
                 "schema_version": "1.0",
@@ -417,12 +431,16 @@ def test_insight_repair_rebuilds_only_source_proven_topics() -> None:
         ],
     }
     candidate = deepcopy(before)
-    candidate["insights_final"] = [
-        {"id": "one", "evidence_id": "finding-one", "pages": [3]}
-    ]
+    candidate["insights_final"][0]["evidence_id"] = "finding-one"
     candidate["topics_covered"][0]["evidence_ids"] = ["finding-one"]
     candidate["topics_covered"][0]["status"] = "source_backed"
-    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["insights_final"])])
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(
+                allowed_paths=["insights_final[item=one].evidence_id"]
+            )
+        ]
+    )
 
     verified, issues = _verify_derived_artifact_roots(
         current_artifacts=before,
@@ -461,7 +479,11 @@ def test_summary_repair_allows_only_verified_chart_projection() -> None:
         "summary": {"tldr": "New summary."},
         "chart_insight_cards": [],
     }
-    plan = SimpleNamespace(targets=[SimpleNamespace(allowed_paths=["summary"])])
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(allowed_paths=["summary.tldr[claim_index=0]"])
+        ]
+    )
 
     verified, issues = _verify_derived_artifact_roots(
         current_artifacts=before,

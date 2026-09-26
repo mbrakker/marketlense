@@ -67,6 +67,9 @@ def test_regenerate_artifacts_propagates_retryable_app_error(
                                     pages=[1],
                                 )
                             ],
+                            allowed_paths=[
+                                "summary.executive_summary[claim_index=0]"
+                            ],
                         )
                     ],
                     unmappable_issues=[],
@@ -131,6 +134,9 @@ def test_regenerate_artifacts_propagates_non_retryable_prompt_error(
                                     evidence_ids=["f1"],
                                     pages=[1],
                                 )
+                            ],
+                            allowed_paths=[
+                                "summary.executive_summary[claim_index=0]"
                             ],
                         )
                     ],
@@ -310,13 +316,7 @@ def test_plan_declares_one_insight_field_path() -> None:
         broad_retry_available=False,
     )
 
-    assert plan.targets[0].allowed_paths == [
-        "insights_final[item=insight-1].evidence",
-        "insights_final[item=insight-1].evidence_id",
-        "insights_final[item=insight-1].evidence_spans",
-        "insights_final[item=insight-1].pages",
-        "insights_final[item=insight-1].text",
-    ]
+    assert plan.targets[0].allowed_paths == ["insights_final[item=insight-1].text"]
 
 
 def test_report_identity_repair_copies_canonical_title_without_model_calls(
@@ -736,6 +736,12 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
 
 
 def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
+    artifacts = _current_artifacts()
+    next(
+        claim
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )["evidence_ids"] = ["f1"]
     issue = ValidationIssue(
         schema_version="1.1",
         rule_id="grounding",
@@ -748,7 +754,7 @@ def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
 
     first_plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
     )
     assert first_plan.targets[0].repair_strategy == "current_evidence"
@@ -760,7 +766,7 @@ def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
     }
     second_plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
         rejected_strategy_keys=rejected_current,
     )
@@ -772,7 +778,7 @@ def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
     }
     third_plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
         rejected_strategy_keys=rejected_alternative,
     )
@@ -901,6 +907,12 @@ def test_attempt_strategy_fingerprint_describes_actual_selection() -> None:
         _plan_strategy_fingerprint,
     )
 
+    artifacts = _current_artifacts()
+    next(
+        claim
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )["evidence_ids"] = ["f1"]
     issue = ValidationIssue(
         schema_version="1.1",
         rule_id="grounding",
@@ -911,7 +923,7 @@ def test_attempt_strategy_fingerprint_describes_actual_selection() -> None:
     )
     plan = _build_regeneration_plan(
         issues=[issue],
-        artifacts=_current_artifacts(),
+        artifacts=artifacts,
         broad_retry_available=False,
     )
     response = SimpleNamespace(

@@ -14,6 +14,7 @@ from src.contracts.regeneration import (
 )
 from src.generators.report_regeneration_generator import (
     _decode_repair_patch_value_json,
+    _required_repair_protected_fields,
     regenerate_artifacts,
 )
 from src.utils.errors import AppError
@@ -22,6 +23,9 @@ from tests.test_report_regeneration_generator import (
     _evidence_packs,
     _FakePromptClient,
     _settings,
+)
+from tests._test_report_regeneration_generator._shared import (
+    _parse_fixture_variables,
 )
 
 from ._shared import *  # noqa: F401,F403
@@ -85,18 +89,16 @@ def _atomic_insight_decision(
     path: str = "insights_final[item=insight-1].text",
     evidence_ids: list[str] | None = None,
 ) -> dict:
+    target = _atomic_insight_plan().targets[0]
+    protected_fields = _required_repair_protected_fields(
+        _source_backed_artifacts(), target
+    )
     return {
         "schema_version": "1.0",
         "repair_action": "REGENERATE_ITEM",
         "repair_strategy": "current_evidence",
         "evidence_ids_used": list(evidence_ids or ["f1"]),
-        "protected_fields": [
-            "insights_final[item=insight-1].id",
-            "insights_final[item=insight-1].evidence_id",
-            "insights_final[item=insight-1].evidence",
-            "insights_final[item=insight-1].metric",
-            "insights_final[item=insight-1].pages",
-        ],
+        "protected_fields": protected_fields,
         "changed_paths": [path],
         "minimal_patch": [
             {
@@ -142,6 +144,14 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
     assert len(client.calls) == 1
     assert client.calls[0].structured_output_schema_identity == (
         "regeneration_repair_decision_v3"
+    )
+    prompt_variables = _parse_fixture_variables(client.calls[0].user_prompt)
+    repair_context = json.loads(prompt_variables["repair_context_json"])
+    assert repair_context["allowed_paths"] == [
+        "insights_final[item=insight-1].text"
+    ]
+    assert repair_context["required_protected_fields"] == (
+        _required_repair_protected_fields(current, _atomic_insight_plan().targets[0])
     )
     assert repaired[0]["text"] == "Repaired final insight"
     assert repaired[0]["metric"] == before[0]["metric"]

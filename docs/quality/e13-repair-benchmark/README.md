@@ -58,6 +58,26 @@ unmerged pre-repair base payload and original artifacts into the existing
 validation-regeneration loop; production validation, evidence, semantic,
 editorial, scope, promotion, rollback, and retry limits remain in force.
 
+## Atomic writable-path contract
+
+The repair planner resolves each model repair to exact retained scalar leaves
+before provider invocation. That sorted `allowed_paths` set is the single
+authority sent to the model and checked against `changed_paths`, every
+`minimal_patch` operation, the mutation-scope validator, and the protected
+field calculation. Protected fields are the retained leaf complement within
+the affected artifact roots, so a repair can change its declared leaves while
+unrelated fields and sibling items remain immutable. A decision may contain
+multiple `replace` operations when multiple leaves need repair; parent items,
+families, and undeclared descendants are rejected.
+
+Planning abstains when it cannot resolve a writable scalar leaf. Before a
+provider client is required, runtime preflight also verifies that every path
+resolves uniquely to a scalar and that both the writable and protected sets
+form a non-empty partition. Deterministic dependent-artifact changes continue
+to be recorded and checked through the existing verified-derived-path audit;
+they do not become model-writable paths. This contract change is measured
+against the unchanged seven-case manifests after the implementation commit.
+
 ## Measurement status
 
 The implementation commit must be measured after it is committed, using its

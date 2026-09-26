@@ -588,10 +588,17 @@ def _path_root(path: str) -> str:
 
 
 def _path_is_declared(path: str, allowed_paths: set[str]) -> bool:
+    deterministic_family_roots = {
+        "toc_entries",
+        "toc_topics",
+        "toc_topics_expanded",
+    }
     return any(
         path == allowed
-        or path.startswith(f"{allowed}.")
-        or path.startswith(f"{allowed}[")
+        or (
+            allowed in deterministic_family_roots
+            and (path.startswith(f"{allowed}.") or path.startswith(f"{allowed}["))
+        )
         for allowed in allowed_paths
     )
 

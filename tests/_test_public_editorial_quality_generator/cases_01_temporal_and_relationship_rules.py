@@ -273,6 +273,25 @@ def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> 
             "rise from 4.1 to 5.7 in 2020-2024."
         ),
     }
+    claim_text = artifacts["expert_comment"]
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="expert_comment",
+                claim_id="soft_copy:expert_comment:relationship-failure",
+                text_hash=hashlib.sha256(claim_text.encode()).hexdigest(),
+                classification="interpretive",
+                evidence_ids=("subscription-evidence",),
+                source_spans=(),
+                producing_prompt_identity={
+                    "namespace": "report_vs/artifacts/expert_comment"
+                },
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
 
     report = evaluate_public_editorial_quality(
         report_id="mixed-status", artifacts=artifacts
@@ -294,6 +313,7 @@ def test_expert_relationship_failure_retains_only_the_rejected_evidence_id() -> 
     )
 
     assert plan.targets[0].issues[0].excluded_evidence_ids == ["subscription-evidence"]
+    assert plan.targets[0].allowed_paths == ["expert_comment[claim_index=0]"]
 
 
 def test_relationship_failure_uses_existing_targeted_regeneration() -> None:
