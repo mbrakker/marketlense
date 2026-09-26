@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "recorded_date": "2026-09-26",
+  "implementation_sha": "6a9c8d07851f27d682be12920cee538898f21a85",
+  "disposition": "same_validator_attribution_verified_e13_remains_active",
+  "frozen_corpus": {
+    "case_count": 7,
+    "manifest_count": 3,
+    "manifest_sha256": {
+      "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+    },
+    "frozen_inputs_modified": false
+  },
+  "current_validator_identity": {
+    "validator_identity": "regeneration-candidate-v1:7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625:f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+    "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+    "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+    "producer_build_identity": "6a9c8d07851f27d682be12920cee538898f21a85",
+    "baseline_and_candidate_identities_match": true
+  },
+  "attribution": {
+    "reproducible_case_count": 4,
+    "no_longer_reproducible_case_count": 3,
+    "success_denominator": 4,
+    "success_at_1": {"count": 0, "denominator": 4, "rate": 0.0},
+    "success_at_3": {"count": 0, "denominator": 4, "rate": 0.0},
+    "introduced_hard_failure_observations": 24,
+    "introduced_hard_failure_attempts": 4,
+    "persisting_failure_observations": 37,
+    "resolved_failure_observations": 5,
+    "candidate_validation_attempts": 6,
+    "repair_attempts": 6,
+    "benchmark_comparison_status": "incompatible"
+  },
+  "cohorts": [
+    {
+      "manifest": "baseline-a21-five.json",
+      "manifest_sha256": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "case_count": 5,
+      "reproducible_case_count": 2,
+      "no_longer_reproducible_case_count": 3,
+      "success_denominator": 2,
+      "success_at_1": {"count": 0, "denominator": 2, "rate": 0.0},
+      "success_at_3": {"count": 0, "denominator": 2, "rate": 0.0},
+      "repair_attempts": 3,
+      "introduced_hard_failure_observations": 21,
+      "introduced_hard_failure_attempts": 2,
+      "persisting_failure_observations": 13,
+      "resolved_failure_observations": 2,
+      "scorecard_sha256": "960351b5d92e46cf737963952a1568227fa6ec731c3b64c38fac498f06191f06"
+    },
+    {
+      "manifest": "baseline-mobile-editorial.json",
+      "manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "case_count": 1,
+      "reproducible_case_count": 1,
+      "no_longer_reproducible_case_count": 0,
+      "success_denominator": 1,
+      "success_at_1": {"count": 0, "denominator": 1, "rate": 0.0},
+      "success_at_3": {"count": 0, "denominator": 1, "rate": 0.0},
+      "repair_attempts": 0,
+      "candidate_validation_attempts": 0,
+      "introduced_hard_failure_observations": null,
+      "persisting_failure_observations": 0,
+      "resolved_failure_observations": 0,
+      "scorecard_sha256": "5ee8c93f468a203b7780ff1f36bcf8e1ed9e62c8e9fd218722112e460c9a3744"
+    },
+    {
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+      "case_count": 1,
+      "reproducible_case_count": 1,
+      "no_longer_reproducible_case_count": 0,
+      "success_denominator": 1,
+      "success_at_1": {"count": 0, "denominator": 1, "rate": 0.0},
+      "success_at_3": {"count": 0, "denominator": 1, "rate": 0.0},
+      "repair_attempts": 3,
+      "candidate_validation_attempts": 3,
+      "introduced_hard_failure_observations": 3,
+      "introduced_hard_failure_attempts": 2,
+      "persisting_failure_observations": 24,
+      "resolved_failure_observations": 3,
+      "scorecard_sha256": "7d0d3e123d09f9231594bf724c183ede7e15a9fbf5137f4d214e556d6cff4c73"
+    }
+  ],
+  "case_attributions": [
+    {
+      "case_id": "2026-global-co-8970fc13f012",
+      "manifest": "baseline-a21-five.json",
+      "reproducibility_status": "no_longer_reproducible",
+      "current_baseline_failure_fingerprints": [
+        "3446f36430ccdf7f0a74efcc89739afe354a659877ffdfa3eb2a82089a7d1ffc",
+        "3fc076972d9077cc8fa0798968275f93ccc559355a8103fe8dd45dcccba90652"
+      ],
+      "candidate_validation_attempts": 0,
+      "repair_counted_as_success_or_failure": false
+    },
+    {
+      "case_id": "attachment-the-6dddc246d289",
+      "manifest": "baseline-a21-five.json",
+      "reproducibility_status": "reproducible",
+      "current_baseline_failure_fingerprints": [
+        "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+        "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+      ],
+      "candidate_validation_attempts": 1,
+      "terminal_failure_code": "regeneration_repair_decision_invalid",
+      "terminal_failure_reason": "protected_fields_incomplete",
+      "repair_counted_as_success": false
+    },
+    {
+      "case_id": "ebook-0225-fut-997cc1cccd6a",
+      "manifest": "baseline-a21-five.json",
+      "reproducibility_status": "reproducible",
+      "current_baseline_failure_fingerprints": [
+        "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff"
+      ],
+      "candidate_validation_attempts": 2,
+      "terminal_failure_code": null,
+      "repair_counted_as_success": false
+    },
+    {
+      "case_id": "final-web-vers-1d9e64dd7425",
+      "manifest": "baseline-a21-five.json",
+      "reproducibility_status": "no_longer_reproducible",
+      "current_baseline_failure_fingerprints": [
+        "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff"
+      ],
+      "candidate_validation_attempts": 0,
+      "repair_counted_as_success_or_failure": false
+    },
+    {
+      "case_id": "g0-ec-trends-r-41f8ffd78145",
+      "manifest": "baseline-a21-five.json",
+      "reproducibility_status": "no_longer_reproducible",
+      "current_baseline_failure_fingerprints": [],
+      "candidate_validation_attempts": 0,
+      "replay_final_status": "pass_without_repair_attempt",
+      "repair_counted_as_success_or_failure": false
+    },
+    {
+      "case_id": "public-editorial-linkedin-mobile-app",
+      "manifest": "baseline-mobile-editorial.json",
+      "reproducibility_status": "reproducible",
+      "current_baseline_failure_fingerprints": [
+        "8018ada9a464df45a0d0b641917f392c53fa9beb4203abcdbefaf17c3810d57a",
+        "f01186026598a3ef1683d18dec85acb428fbb991af59662d90abb867af250143"
+      ],
+      "candidate_validation_attempts": 0,
+      "terminal_failure_code": "regeneration_target_item_unchanged",
+      "repair_counted_as_success": false
+    },
+    {
+      "case_id": "doubleverify-linkedin-public-editorial-hard-failure",
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "reproducibility_status": "reproducible",
+      "current_baseline_failure_fingerprints": [
+        "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+        "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095"
+      ],
+      "candidate_validation_attempts": 3,
+      "max_repair_attempts_reached": true,
+      "repair_counted_as_success": false
+    }
+  ],
+  "required_workflow_canary": {
+    "all_runs_passed": false,
+    "publication_performed": false,
+    "runs": [
+      {
+        "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-required-workflow-6a9c8d07 --source \"tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf\" --max-duration-seconds 7200",
+        "exit_code": 1,
+        "git_sha": "6a9c8d07851f27d682be12920cee538898f21a85",
+        "final_state": "failed",
+        "stage": "semantic_validation",
+        "validator_rule": "semantic",
+        "affected_section": "insights:ctv-quality-concerns",
+        "terminal_failure_code": "validation_failed",
+        "attempt_count": 1,
+        "publication_readiness": "fail",
+        "duration_seconds": 352.512,
+        "model_provider_calls": 41,
+        "input_tokens": 305044,
+        "output_tokens": 51482,
+        "estimated_cost_usd": 0.052286,
+        "warning": "could not convert string to float: b'0.00-6165227' : FloatObject invalid; use 0.0 instead",
+        "attribution": "Generated-content semantic mismatch and existing regeneration-scope gate; the replay-only baseline helper is not called by this canary."
+      },
+      {
+        "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-required-workflow-6a9c8d07-retry --source \"tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf\" --max-duration-seconds 7200",
+        "exit_code": 1,
+        "git_sha": "6a9c8d07851f27d682be12920cee538898f21a85",
+        "final_state": "failed",
+        "stage": "report_pipeline",
+        "terminal_failure_code": "regeneration_repair_decision_invalid",
+        "failure_reason": "patch_application_failed",
+        "repair_attempt": 0,
+        "publication_readiness": "fail",
+        "duration_seconds": 408.431,
+        "model_provider_calls": 42,
+        "input_tokens": 310695,
+        "output_tokens": 57170,
+        "estimated_cost_usd": 0.059373,
+        "attribution": "Existing production repair-decision patch gate failed before candidate validation; benchmark baseline and delta-accounting helpers do not participate at this stage."
+      }
+    ]
+  },
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-repair-live/6a9c8d07/a21 --implementation-sha 6a9c8d07851f27d682be12920cee538898f21a85",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-repair-live/6a9c8d07/mobile --implementation-sha 6a9c8d07851f27d682be12920cee538898f21a85",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-repair-live/6a9c8d07/doubleverify --implementation-sha 6a9c8d07851f27d682be12920cee538898f21a85"
+  ],
+  "closure_disposition": {
+    "e13_closed": false,
+    "reason": "Same-validator attribution and no-longer-reproducible accounting are verified, but no reproducible case produced a successful repair and neither isolated readiness canary run passed.",
+    "thresholds_met": false
+  }
+}

@@ -291,3 +291,55 @@ remain unmet; the denominator and cohort comparison are incomplete, residual
 odds are unbounded, and no valid success@1/@3 is demonstrated. The canary
 passed but is not repair evidence. The documentation validator still reports
 12 pre-existing stale anchors in unrelated `simplification.md`.
+
+## Same-validator measurement — 2026-09-26, implementation SHA `6a9c8d07851f27d682be12920cee538898f21a85`
+
+The unchanged seven-case corpus was replayed against the exact committed
+implementation. The three frozen manifest hashes match their retained values.
+Current baseline and candidate reports carry the same validator identity,
+configuration hash, policy hash, and build identity. Frozen historical
+validation remains provenance and comparison data; it was not passed to
+current repair planning or delta calculations.
+
+Four cases reproduced their historical target failure under the current
+validator, and three were classified `no_longer_reproducible`. The latter were
+skipped before repair planning and remain in the seven-case corpus count, but
+are excluded from repair successes and failures. The effectiveness denominator
+is therefore 4: success@1 is 0/4 and success@3 is 0/4. The case that ended with
+replay status `pass` among the non-reproducible cases had no repair attempt and
+is not a repair success. The four reproducible cases also produced no
+successful repair.
+
+| Cohort | Cases | Reproducible | No longer reproducible | Success@1 / @3 denominator | Success@1 / @3 | Candidate validations | Introduced hard-failure observations | Persisting | Resolved |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A21 | 5 | 2 | 3 | 2 | 0/2, 0/2 | 3 | 21 | 13 | 2 |
+| Mobile editorial | 1 | 1 | 0 | 1 | 0/1, 0/1 | 0 | not observed | 0 | 0 |
+| DoubleVerify | 1 | 1 | 0 | 1 | 0/1, 0/1 | 3 | 3 | 24 | 3 |
+| **Total** | **7** | **4** | **3** | **4** | **0/4, 0/4** | **6** | **24** | **37** | **5** |
+
+The mobile case reproduced, but the repair stopped at
+`regeneration_target_item_unchanged` before candidate validation; its
+introduced-failure count is unavailable, not zero. Across cases that reached
+candidate validation, same-validator comparison recorded 24 introduced hard
+failure observations over four attempts, 37 persisting observations, and 5
+resolved observations. Cohort-to-historical comparisons remain incompatible.
+The exact per-case reproducibility status, current baseline fingerprints,
+validator identities, scorecard hashes, and commands are in the
+[2026-09-26 measurement](results/2026-09-26-6a9c8d07.json) (SHA-256
+`b715fb9bcd6c3b78fdc7bcf2dff1236975d86de9a84f01dd76c0230fc56722b0`; see
+[SHA-256 sidecar](results/2026-09-26-6a9c8d07.json.sha256)).
+
+The required isolated IAS workflow ran at this SHA with fresh state and
+publication disabled in two runs. The first failed during semantic validation for
+`insights:ctv-quality-concerns`; the semantic validator reported that the
+inventory-and-sellers condition was attached to the 82% brand-safety figure
+instead of the 84% attention-measurement figure. The existing regeneration
+scope gate also rejected an undeclared artifact-path change. This failure is
+in generated content and existing validation/scope behavior; the benchmark-
+only baseline helper is not used by the canary. A fresh-state rerun failed
+before candidate validation when the existing repair-decision patch gate
+returned `patch_application_failed`; the benchmark baseline and delta-count
+helpers do not participate at that stage. Both runs kept publication disabled.
+Their usage, run directories, parser warning, and terminal outcomes are
+retained in the result. E13 remains **Active**: no reproducible case succeeded,
+and neither required-workflow canary run passed.
