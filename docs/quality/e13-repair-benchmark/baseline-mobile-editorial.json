@@ -1,0 +1,483 @@
+{
+  "baseline_identity": {
+    "configuration_hash": "effca08c7bf4e1541b4d2e1956ec732e964aef50c8b5ab5bdbc34d1f35154324",
+    "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+    "producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+    "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+    "validator_identity": "unavailable"
+  },
+  "baseline_usage": {
+    "attribution": "available",
+    "attribution_scope": "report_case_aggregate",
+    "estimated_cost_usd": 0.051973,
+    "input_tokens": 119933,
+    "model_call_count": 11,
+    "output_tokens": 23322,
+    "prompt_identity_sha256": "949d91267e05ad51a8d3afa8a4e214676922452d628bd4262ca42465282a0f11",
+    "repair_attempt_attribution": "unavailable",
+    "total_tokens": 143255
+  },
+  "benchmark_id": "baseline-mobile-editorial",
+  "cases": [
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "773c6edbf1ae5388e267e1d2962b63a124d63d28af3b4c22f3193deef61f3151",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance",
+            "summary"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+          "before_sha256": "15510a644a712ab6c3a62ab018f17c3e5fb138605b203c39595520fbd257abf8",
+          "cohort_id": "65422ce6cd591e38bfef9d838e4dcbb862d1bb34a40461b5a7607eefab4a28c1",
+          "configuration_hash": "effca08c7bf4e1541b4d2e1956ec732e964aef50c8b5ab5bdbc34d1f35154324",
+          "failure_fingerprints": [
+            "0cd65ab940e453c1150ee03455167c79df400e2eaecd016532ab3b1aa9919b05",
+            "14f4834d69433024d10097b63bac916c2715c88f3ec8fca9b4254b7caed0a668",
+            "441ef71e254f1f2a2ad67403be8496a7d4706e306030013df46c05a503fe9565",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "6c1a383ac47f7659a4d425412d193bfccb8a9d8fcaf920a743804b3c0aa7ac46",
+            "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+            "a62f429889b62e85626829dca93855a3fc2ff964559d30c9c97e3e577eeda958",
+            "ac671c28ccb09feb4bb05a186924cbe239e7f0d0263f147da804f2e3e06750f3",
+            "ac7177c26e870aedb779bb9206756b7531aec2b2e0957278745b032a85e6ea2e",
+            "bd1d6fc652770a828ed7f72f322b91e45b7cf8102104649cce9afb89dd025b65",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "c6306ae42d01ffda82d4c6cd0c050364aab69fbccdbdaa66338e3f3dd1d22ebd"
+          ],
+          "latency_ms": 96955,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "d1f282a62488b819d840de7444e428fa6be7f393cdbb5b72d4177ed7bfd69c7e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:ce7e864312b74b8d",
+                "entity_id": "soft_copy:expert_comment:ce7e864312b74b8d",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance"
+              },
+              {
+                "affected_section": "insights:insight-005~insights:insight-004",
+                "entity_id": "insight:insight-005:text",
+                "evidence_ids": [
+                  "gaming-apps"
+                ],
+                "rule_id": "public_editorial_quality.duplicate_insight"
+              },
+              {
+                "affected_section": "metric_spine",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:c5555cec115d0a7f",
+                "evidence_ids": [],
+                "rule_id": "numbers"
+              },
+              {
+                "affected_section": "chart_insight_cards",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:4447867b179773e4",
+                "entity_id": "soft_copy:expert_comment:4447867b179773e4",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance"
+              },
+              {
+                "affected_section": "key_figures",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:4447867b179773e4",
+                "evidence_ids": [],
+                "rule_id": "numbers"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:c5555cec115d0a7f",
+                "entity_id": "soft_copy:expert_comment:c5555cec115d0a7f",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "insights_final[0].text",
+                "entity_id": "991e1a25c9c972305d972b0b92e6f7db9d0700dfa364fcc7c7a08786e9bf45fc",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:7eb8c5e5b4803909",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "tldr",
+                "entity_id": "soft_copy:summary:06e189aaefa7cadf",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:insight-005.so_what",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "numbers"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "soft_copy:summary:2f00488fa4de82b5",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "9771bae3b69ce651ec46b7528a00f25771cdaca62034fff9b6ddd2bd74924f3a",
+          "report_id": "cohort-b638414df0b1fccea1cd",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "about-adjust",
+            "ai-transforms",
+            "conclusion",
+            "ecommerce-shopping-apps",
+            "finance-apps",
+            "finding-1",
+            "gaming-apps",
+            "gaming-finding-keeping-users",
+            "introduction",
+            "multi-platform-strategy"
+          ],
+          "source_audit_path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "79936557dea7f8574590477af06b801709c202139435ab246e9bf4dc99e5f5fc",
+          "strategy_fingerprint": "817300fb44c70fea297e7de1dcf4c4b19d6e7d0e724536207d99c7c6d4886a02",
+          "transformation_scope": [
+            "expert_comment",
+            "insights_candidates",
+            "insights_final",
+            "summary"
+          ],
+          "validation_run_id": "validation:42d0e74ae0403a24a0248fe5a0f19c9afbbbb57bc1f31d98a829fd517608c38b",
+          "validation_status": "fail",
+          "workflow_run_id": "149639a6-b803-45ce-adc0-a8a8a81c30ba"
+        },
+        {
+          "after_sha256": "5fe447d8e169a883d7dceee49c161109e16542f7b14a0b7b855ed40b4580515e",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance",
+            "summary"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+          "before_sha256": "15510a644a712ab6c3a62ab018f17c3e5fb138605b203c39595520fbd257abf8",
+          "cohort_id": "65422ce6cd591e38bfef9d838e4dcbb862d1bb34a40461b5a7607eefab4a28c1",
+          "configuration_hash": "effca08c7bf4e1541b4d2e1956ec732e964aef50c8b5ab5bdbc34d1f35154324",
+          "failure_fingerprints": [
+            "14f4834d69433024d10097b63bac916c2715c88f3ec8fca9b4254b7caed0a668",
+            "441ef71e254f1f2a2ad67403be8496a7d4706e306030013df46c05a503fe9565",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+            "a62f429889b62e85626829dca93855a3fc2ff964559d30c9c97e3e577eeda958",
+            "ac7177c26e870aedb779bb9206756b7531aec2b2e0957278745b032a85e6ea2e",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "dc156ed6966c8b16a3a4213a833749f3e6262d0d9dbdbe6b4fe78172ef082458"
+          ],
+          "latency_ms": 92345,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "d1f282a62488b819d840de7444e428fa6be7f393cdbb5b72d4177ed7bfd69c7e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "insights:insight-005~insights:insight-004",
+                "entity_id": "insight:insight-005:text",
+                "evidence_ids": [
+                  "gaming-apps"
+                ],
+                "rule_id": "public_editorial_quality.duplicate_insight"
+              },
+              {
+                "affected_section": "metric_spine",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "chart_insight_cards",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "key_figures",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:617ecfc98cb8931e",
+                "entity_id": "soft_copy:expert_comment:617ecfc98cb8931e",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "insights_final[0].text",
+                "entity_id": "991e1a25c9c972305d972b0b92e6f7db9d0700dfa364fcc7c7a08786e9bf45fc",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:7eb8c5e5b4803909",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "tldr",
+                "entity_id": "soft_copy:summary:06e189aaefa7cadf",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:insight-005.so_what",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "numbers"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "soft_copy:summary:2f00488fa4de82b5",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "9771bae3b69ce651ec46b7528a00f25771cdaca62034fff9b6ddd2bd74924f3a",
+          "report_id": "cohort-b638414df0b1fccea1cd",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "about-adjust",
+            "ai-transforms",
+            "conclusion",
+            "ecommerce-shopping-apps",
+            "finance-apps",
+            "finding-1",
+            "gaming-apps",
+            "gaming-finding-keeping-users",
+            "introduction",
+            "multi-platform-strategy"
+          ],
+          "source_audit_path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "f11febc998dd5c945301d2d3ac9c0c7a8c1508f83fd94c93ab0d61c4801aa419",
+          "strategy_fingerprint": "817300fb44c70fea297e7de1dcf4c4b19d6e7d0e724536207d99c7c6d4886a02",
+          "transformation_scope": [
+            "expert_comment",
+            "insights_candidates",
+            "insights_final",
+            "summary"
+          ],
+          "validation_run_id": "validation:42d0e74ae0403a24a0248fe5a0f19c9afbbbb57bc1f31d98a829fd517608c38b",
+          "validation_status": "fail",
+          "workflow_run_id": "149639a6-b803-45ce-adc0-a8a8a81c30ba"
+        }
+      ],
+      "case_id": "public-editorial-linkedin-mobile-app",
+      "evidence_pack_sha256": {
+        "doc_map": "524b70aeaaf446caa30b22dcc691004ae287472e7375d34099a4560d4a1df02c",
+        "findings": "e645c2c8fe8fef9104d19f3f80725da203f371172a40c3dc66bb912b84372900",
+        "limitations": "b6342b3dd330920d1d7174dbcfc8fb9c3803b881a8f4bb17f12427edeaebe9e0",
+        "methods": "bfc0ce9a38c12a56d99ccbf1fb7336bb9de3f8524d8951257e6c84b9d5c9f8ba",
+        "quote_candidates": "35128fecc3978f527f4dc69322b6730d0d8c2e773e8287c34ad83dd08cec66cf",
+        "scope": "c664eaf85d49771cc3c3c2c0ef477b19aab5e7705f31e933db9f4c0aa184fc4c"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "expert_comment",
+        "family_status",
+        "insights_candidates",
+        "insights_final",
+        "soft_copy_claim_provenance",
+        "summary"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "public_editorial_hard_failure",
+        "summary"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "effca08c7bf4e1541b4d2e1956ec732e964aef50c8b5ab5bdbc34d1f35154324",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+        "prompt_identity_sha256": "949d91267e05ad51a8d3afa8a4e214676922452d628bd4262ca42465282a0f11",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+        "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+        "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+        "cbb9c26480bd93fc2058071a4a7d89be7b26ff189952f9a06b9524a61e7be15f",
+        "e04e279b803f90e14f641e338185f8fe281bbfa1afa49eabe9d29e046b91c0b7",
+        "f01186026598a3ef1683d18dec85acb428fbb991af59662d90abb867af250143",
+        "f3977a82b9129c48f984815dd533283d54d9542180f75a1547dabedfe44f93ed"
+      ],
+      "initial_validation_sha256": "e0584446c6611cec806c3cc71f2284932c4d82d258eb703da5781da27403b68d",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json",
+          "sha256": "b7fac89c256d49685d05ef2f756b44f859fc23a13daf12e2889ef1630338cedd"
+        },
+        "doc_map": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/doc_map.json",
+          "sha256": "524b70aeaaf446caa30b22dcc691004ae287472e7375d34099a4560d4a1df02c"
+        },
+        "findings": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/findings.json",
+          "sha256": "e645c2c8fe8fef9104d19f3f80725da203f371172a40c3dc66bb912b84372900"
+        },
+        "initial_validation": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/validation.json",
+          "sha256": "e0584446c6611cec806c3cc71f2284932c4d82d258eb703da5781da27403b68d"
+        },
+        "limitations": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/limitations.json",
+          "sha256": "b6342b3dd330920d1d7174dbcfc8fb9c3803b881a8f4bb17f12427edeaebe9e0"
+        },
+        "methods": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/methods.json",
+          "sha256": "bfc0ce9a38c12a56d99ccbf1fb7336bb9de3f8524d8951257e6c84b9d5c9f8ba"
+        },
+        "quote_candidates": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/quote_candidates.json",
+          "sha256": "35128fecc3978f527f4dc69322b6730d0d8c2e773e8287c34ad83dd08cec66cf"
+        },
+        "report_context": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/report_context.json",
+          "sha256": "bef8ae16149527b411f4f136caf6031f9711f9cd6545e94161fb11bce0ee4670"
+        },
+        "scope": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/scope.json",
+          "sha256": "c664eaf85d49771cc3c3c2c0ef477b19aab5e7705f31e933db9f4c0aa184fc4c"
+        }
+      },
+      "original_artifact_canonical_sha256": "15510a644a712ab6c3a62ab018f17c3e5fb138605b203c39595520fbd257abf8",
+      "publisher_id": "Adjust",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "report_slug": "mobile-app-trends-2026-pdf",
+      "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235"
+    }
+  ],
+  "corpus_source": {
+    "cohort_manifest_path": "docs/quality/reliability-cohort-20260920-a21-final/frozen_cohort.json",
+    "cohort_manifest_sha256": "21a9a1b995d10b5add412780d96930ecc29bafd082907ecbf0741c80be841a07",
+    "schema_file_sha256": {
+      "src/schemas/artifacts.schema.json": "6637619ebdf00f85540e24b01cf1e85ebf9b56233f1c98aff7c32ffd5349f1af",
+      "src/schemas/regeneration_candidate_audit.schema.json": "08d4761436e3d69ddba8daffd7641c3b1e9f58ca06f5168221c40a4fd40004ee",
+      "src/schemas/validation_report.schema.json": "a4e690cb962a0550b2c2b12eb1e50527ed057d3cc8e118d31f0c7b25c68e606f"
+    },
+    "source_git_sha": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+    "source_result_path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/result.json",
+    "source_result_sha256": "b8cffdb5b1fbf50162909458f6e7312acfce032e1de2c2f5ddd4c1a5091eab92",
+    "source_retention": "original artifacts and evidence packs remain in the referenced local retained replay; this manifest pins their exact bytes without copying source text into committed evidence",
+    "source_usage_db_sha256": "0abf0c8e69b4338fb59d5b2865770501ef4afec83100bb2767f47a540d2d2be2"
+  },
+  "frozen": true,
+  "manifest_sha256": "e1fa7be664d45869230cfcecf5fa3c5b24153ac668dafc1aeace161e50633560",
+  "schema_version": "1.0"
+}

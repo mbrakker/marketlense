@@ -1,0 +1,408 @@
+{
+  "baseline_identity": {
+    "configuration_hash": "47b71263f508f11df421778f8e7c06024cd7ba6f436ddd34cdd7e0c741a4542f",
+    "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+    "producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
+    "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+    "validator_identity": "unavailable"
+  },
+  "baseline_usage": {
+    "attribution": "unavailable",
+    "attribution_scope": "unavailable",
+    "repair_attempt_attribution": "unavailable"
+  },
+  "benchmark_id": "e13-doubleverify-linkedin-public-editorial-20260925",
+  "cases": [
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "8038e613288fbf0e493ff6b394b8add22b87df6aa344421c6a959727ad586f41",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "linkedin_post",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
+          "before_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+          "cohort_id": "e86f9021d97087f8f30f048deec742018035e6529b5f3545dfe25b3e0ff2432b",
+          "configuration_hash": "47b71263f508f11df421778f8e7c06024cd7ba6f436ddd34cdd7e0c741a4542f",
+          "failure_fingerprints": [
+            "f43299a0f8279043dac2baa34430f632676f85df85296dcc0ca8addd07189e68",
+            "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+            "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff"
+          ],
+          "latency_ms": 41462,
+          "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REGENERATE_ITEM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:af6e36a977754ce4",
+                "entity_id": "soft_copy:expert_comment:af6e36a977754ce4",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance",
+                "schema_version": "1.0"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "insights:q1-regional-ad-attention-index",
+                "entity_id": "",
+                "evidence_ids": [],
+                "rule_id": "metrics",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:00af9c6339c40c80",
+                "evidence_ids": [
+                  "s8"
+                ],
+                "rule_id": "public_editorial_quality.metric_label_relationship",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:48d499ca7ce4fa59",
+                "evidence_ids": [
+                  "s3",
+                  "s8"
+                ],
+                "rule_id": "public_editorial_quality.metric_label_relationship",
+                "schema_version": "1.0"
+              }
+            ],
+            "schema_version": "1.0"
+          },
+          "repair_strategy": "current_evidence",
+          "report_id": "cohort-e854b71d6fb10333b47f",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "s1",
+            "s4",
+            "s6",
+            "s7",
+            "s9",
+            "video-benchmark-scope"
+          ],
+          "source_audit_path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "16318826b2d4dd6fa0830412020a0256d829e2621f7ceb7dcd38d344667d43de",
+          "strategy_fingerprint": "53c029d24a1d873534eedbf3ee89ee985bcb4b18755f9ba6d5d672a5467b6d3c",
+          "transformation_scope": [
+            "expert_comment",
+            "linkedin_post"
+          ],
+          "validation_run_id": "validation:efe76ed031cd9c9a8953e80c4816ea9ec7a67483b723efd548635e786f67e2fc",
+          "validation_status": "fail",
+          "workflow_run_id": "4cec64fd-6823-4d99-8051-efa118bd306c"
+        },
+        {
+          "after_sha256": "2cd0a4b4ed1b23176a8fcf79d9bf8bcd47ada65a8babc57f30a4c8de0ac46763",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "linkedin_post",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
+          "before_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+          "cohort_id": "e86f9021d97087f8f30f048deec742018035e6529b5f3545dfe25b3e0ff2432b",
+          "configuration_hash": "47b71263f508f11df421778f8e7c06024cd7ba6f436ddd34cdd7e0c741a4542f",
+          "failure_fingerprints": [
+            "d792c317125a424296cf5799fe829ac001bd87c5c1361120bbcd6c367fdcc248",
+            "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+            "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+            "8ca8533b4b4168be678a03d6e7316eec7025af9bdf6843a857431a3660c35448",
+            "8ca8533b4b4168be678a03d6e7316eec7025af9bdf6843a857431a3660c35448",
+            "fd90821646e57ee72b6c35ea11386567f6c2014c23da5f740a2dcca3278d087c"
+          ],
+          "latency_ms": 39514,
+          "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REBIND_EVIDENCE",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:769f59525e7bd86a",
+                "evidence_ids": [
+                  "s9"
+                ],
+                "rule_id": "numbers",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "expert_comment:soft_copy:expert_comment:8b6f013bc11d1a17",
+                "entity_id": "soft_copy:expert_comment:8b6f013bc11d1a17",
+                "evidence_ids": [],
+                "rule_id": "soft_copy_claim_provenance",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:769f59525e7bd86a",
+                "evidence_ids": [
+                  "s9"
+                ],
+                "rule_id": "public_editorial_quality.metric_label_relationship",
+                "schema_version": "1.0"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "insights:q1-regional-ad-attention-index",
+                "entity_id": "",
+                "evidence_ids": [],
+                "rule_id": "metrics",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:00af9c6339c40c80",
+                "evidence_ids": [
+                  "s8"
+                ],
+                "rule_id": "public_editorial_quality.metric_label_relationship",
+                "schema_version": "1.0"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:48d499ca7ce4fa59",
+                "evidence_ids": [
+                  "s3",
+                  "s8"
+                ],
+                "rule_id": "public_editorial_quality.metric_label_relationship",
+                "schema_version": "1.0"
+              }
+            ],
+            "schema_version": "1.0"
+          },
+          "repair_strategy": "alternative_evidence",
+          "report_id": "cohort-e854b71d6fb10333b47f",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "s1",
+            "s4",
+            "s6",
+            "s7",
+            "s9",
+            "video-benchmark-scope"
+          ],
+          "source_audit_path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "4ea6735098f38f287f76a0fceaf5f37b38257d49a0b9911ab4c5b8469ff845e4",
+          "strategy_fingerprint": "3d52b3c7c0d9ea432af7b78e7c5b55bab22194bcec46b22699e9196254b432bb",
+          "transformation_scope": [
+            "expert_comment",
+            "linkedin_post"
+          ],
+          "validation_run_id": "validation:efe76ed031cd9c9a8953e80c4816ea9ec7a67483b723efd548635e786f67e2fc",
+          "validation_status": "fail",
+          "workflow_run_id": "4cec64fd-6823-4d99-8051-efa118bd306c"
+        }
+      ],
+      "case_id": "doubleverify-linkedin-public-editorial-hard-failure",
+      "evidence_pack_sha256": {
+        "doc_map": "e6278958fc24acdab218095d693ff9ebf40118f8fec71604f18ee0ff4f3f7e22",
+        "findings": "3366545ee19233400c5c2d1ab09b7dfb84c7ce6438eafd0dc497d028d5a3bc47",
+        "limitations": "9a2eb0520dac9a9270d549f7c615d2afa9f92201b58f355b24ae5d3703b7d3f4",
+        "methods": "0a3480b712e156114127c753c7df4c9764926ec659f5ad422f75389227ed90cb",
+        "quote_candidates": "de02fa4504c92a1c825cbe59ebf4561bbe58eefa18728e96c64a852c5f2a8e13",
+        "scope": "13594398158dab820b82e16d7a82cf08e645a01f50869330db579bc52d53a6e2"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "expert_comment",
+        "family_status",
+        "linkedin_post",
+        "soft_copy_claim_provenance"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "linkedin",
+        "public_editorial_hard_failure",
+        "summary"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "47b71263f508f11df421778f8e7c06024cd7ba6f436ddd34cdd7e0c741a4542f",
+        "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+        "producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
+        "prompt_identity_sha256": "3d5771b30814fb218b97c761cfaaca221c148b6e3bccfd2b6ab95f3884b4dba9",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+        "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+        "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+        "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+        "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+        "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+      ],
+      "initial_validation_sha256": "f7e9ca41bdcdf99e73a71ef46be0f8e10ed9c4b6c36acde015a372fd79d6d5a6",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/artifacts.json",
+          "sha256": "f152bd4cf177e17cd2ef3e60b9fde3070ef2c9542a7d5aedb0634f6cde42613b"
+        },
+        "doc_map": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/doc_map.json",
+          "sha256": "e6278958fc24acdab218095d693ff9ebf40118f8fec71604f18ee0ff4f3f7e22"
+        },
+        "findings": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/findings.json",
+          "sha256": "3366545ee19233400c5c2d1ab09b7dfb84c7ce6438eafd0dc497d028d5a3bc47"
+        },
+        "historical_audit_01": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_1.json",
+          "sha256": "16318826b2d4dd6fa0830412020a0256d829e2621f7ceb7dcd38d344667d43de"
+        },
+        "historical_audit_02": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_2.json",
+          "sha256": "4ea6735098f38f287f76a0fceaf5f37b38257d49a0b9911ab4c5b8469ff845e4"
+        },
+        "initial_validation": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/validation.json",
+          "sha256": "f7e9ca41bdcdf99e73a71ef46be0f8e10ed9c4b6c36acde015a372fd79d6d5a6"
+        },
+        "limitations": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/limitations.json",
+          "sha256": "9a2eb0520dac9a9270d549f7c615d2afa9f92201b58f355b24ae5d3703b7d3f4"
+        },
+        "methods": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/methods.json",
+          "sha256": "0a3480b712e156114127c753c7df4c9764926ec659f5ad422f75389227ed90cb"
+        },
+        "prompt_source_01": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_doc_map.json",
+          "sha256": "5cf369747b5e8fd88755585fe1449127a268c5ede9257553b6c77765baa8bca9"
+        },
+        "prompt_source_02": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_findings.json",
+          "sha256": "869a82e5fb28b0d5618cf56e366ea905fd027cc5de9da0502c4cce4d5354b574"
+        },
+        "prompt_source_03": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_limitations.json",
+          "sha256": "750adeeefabca220251d79d7e718082f2b940a7bb0173478fcb8db87fb21d919"
+        },
+        "prompt_source_04": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_methods.json",
+          "sha256": "622b45d1a1746c54de1db45b0a0403be85ce439da67cc6d65745962cbf7e525c"
+        },
+        "prompt_source_05": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_quote_candidates.json",
+          "sha256": "532024e1928413d91c0409570ad083c97070210cbf038ce26268344c727a260e"
+        },
+        "prompt_source_06": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_evidence_packs_scope.json",
+          "sha256": "58a15b18d9701f815e92381319ee6566a7de600ed19e602ad9c5bea51112fbd2"
+        },
+        "prompt_source_07": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_taxonomy.json",
+          "sha256": "9e7ca5da5fe02f2188130b58d7e0664de5cc2ecebe54e0361cce0a73dfb1c102"
+        },
+        "prompt_source_08": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/prompt_family_report_vs_validate_semantic.json",
+          "sha256": "681c3e79e519a4b0a7c62c852657ab11361bb28e95383e34525aebc525812462"
+        },
+        "quote_candidates": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/quote_candidates.json",
+          "sha256": "de02fa4504c92a1c825cbe59ebf4561bbe58eefa18728e96c64a852c5f2a8e13"
+        },
+        "report_context": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/report_context.json",
+          "sha256": "98159948924eb6c1b1b73ae75151bd4f56b0b711b588bc4390c11043ad4f5daa"
+        },
+        "scope": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/scope.json",
+          "sha256": "13594398158dab820b82e16d7a82cf08e645a01f50869330db579bc52d53a6e2"
+        },
+        "source_run_result": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/result.json",
+          "sha256": "849e89e707dbc9d1f561c5c042ee7e5e8dec0942867540d4b255614569f7f63a"
+        }
+      },
+      "original_artifact_canonical_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+      "publisher_id": "DoubleVerify",
+      "report_id": "cohort-e854b71d6fb10333b47f",
+      "report_slug": "dv-qualityandattentionbenchmark-q1-2026-pdf",
+      "source_identity_id": "source:6c7377bbcd7e21ffe4683dad478a3fad",
+      "source_run_git_sha": "c89e1af249be771acb515a8d255f56c43c4b359c"
+    }
+  ],
+  "frozen": true,
+  "manifest_sha256": "b6665cde30becc1eb0fc0a6bf56c12dc154c273933643dc6a396b5d637bb7b1f",
+  "schema_version": "1.0",
+  "source_run_git_sha": "c89e1af249be771acb515a8d255f56c43c4b359c"
+}

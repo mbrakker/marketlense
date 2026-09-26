@@ -1109,8 +1109,11 @@ def _run_validation_regeneration_loop(
                     },
                 )
             )
-        attempt_ctx = child_context(
-            mode_ctx, task_id=f"{mode_ctx.task_id}:regen:{attempt_index}"
+        attempt_ctx = replace(
+            child_context(
+                mode_ctx, task_id=f"{mode_ctx.task_id}:regen:{attempt_index}"
+            ),
+            repair_attempt=attempt_index,
         )
         logger.info(
             log_event(
@@ -1307,6 +1310,22 @@ def _run_validation_regeneration_loop(
         )
         repair_delta = _repair_delta(
             current_validation_report, candidate_validation_report
+        )
+        before_hard_failure_keys = {
+            _failure_fingerprint(issue).key
+            for issue in current_validation_report.issues
+            if str(issue.severity or "").lower() == "error"
+        }
+        after_hard_failure_keys = {
+            _failure_fingerprint(issue).key
+            for issue in candidate_validation_report.issues
+            if str(issue.severity or "").lower() == "error"
+        }
+        repair_delta = replace(
+            repair_delta,
+            introduced_hard_failure_count=len(
+                after_hard_failure_keys - before_hard_failure_keys
+            ),
         )
         strategy_fingerprint = _attempt_strategy_fingerprint(
             plan, regeneration_response

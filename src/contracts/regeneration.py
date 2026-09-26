@@ -112,6 +112,7 @@ class RepairDelta:
     resolved: List[FailureFingerprint] = field(default_factory=list)
     persisting: List[FailureFingerprint] = field(default_factory=list)
     introduced: List[FailureFingerprint] = field(default_factory=list)
+    introduced_hard_failure_count: int | None = None
     severity_changes: List[RepairSeverityChange] = field(default_factory=list)
     mutation_scope_result: str = field(
         default="not_evaluated",

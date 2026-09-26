@@ -160,6 +160,7 @@ class ValidationReliabilityRepairAttempt(SemanticIdContract):
     resolved_failure_fingerprints: tuple[str, ...]
     persisting_failure_fingerprints: tuple[str, ...]
     introduced_failure_fingerprints: tuple[str, ...]
+    introduced_hard_failure_count: int | None
     strategy_fingerprint: str
     candidate_fingerprint: str
     repair_action: str
@@ -205,6 +206,17 @@ class ValidationReliabilityRepairModeMetric(SemanticIdContract):
 
 
 @dataclass(frozen=True)
+class ValidationReliabilityRepairFailureClass(SemanticIdContract):
+    """One bounded validator-class contribution to the repair denominator."""
+
+    schema_version: str = field(
+        metadata={"doc": "Repair failure-class metric schema version."}
+    )
+    failure_class: str
+    attempt_count: int
+
+
+@dataclass(frozen=True)
 class ValidationReliabilityRepairScorecard(SemanticIdContract):
     """Cohort-compatible effectiveness measurement for retained repair attempts."""
 
@@ -225,6 +237,44 @@ class ValidationReliabilityRepairScorecard(SemanticIdContract):
     repeated_failed_strategy_evidence_attempt_count: int | None
     repeated_failed_candidate_attempt_count: int | None
     incompatible_audit_count: int
+    hard_failure_introduction_count: int | None
+    benchmark_case_count: int | None
+    benchmark_denominator_complete: bool
+    benchmark_manifest_sha256: str
+    baseline_identity_sha256: str
+    current_identity_sha256: str
+    hard_failure_introduction_attempt_count: int | None
+    hard_failure_introduction_rate: float | None
+    unsupported_evidence_introduction_attempt_count: int | None
+    deterministic_repair_share: float | None
+    model_repair_share: float | None
+    usage_attribution: str
+    model_call_count: int | None
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
+    estimated_cost_usd: float | None
+    latency_ms: int | None
+    current_residual_failure_odds: float | None
+    current_residual_failure_odds_state: str
+    baseline_success_at_3_count: int | None
+    baseline_success_at_3_rate: float | None
+    baseline_usage_attribution: str
+    baseline_model_call_count: int | None
+    baseline_input_tokens: int | None
+    baseline_output_tokens: int | None
+    baseline_total_tokens: int | None
+    baseline_estimated_cost_usd: float | None
+    baseline_latency_ms: int | None
+    baseline_residual_failure_odds: float | None
+    baseline_residual_failure_odds_state: str
+    residual_odds_reduction_factor: float | None
+    residual_odds_reduction_state: str
+    benchmark_comparison_status: str
+    failure_class_distribution: tuple[ValidationReliabilityRepairFailureClass, ...]
+    baseline_failure_class_distribution: tuple[
+        ValidationReliabilityRepairFailureClass, ...
+    ]
     attempts: tuple[ValidationReliabilityRepairAttempt, ...]
     mode_metrics: tuple[ValidationReliabilityRepairModeMetric, ...]
 
@@ -266,6 +316,8 @@ class ValidationReliabilityBuildRequest(SemanticIdContract):
     validation_run_id: ValidationRunId
     state_db_path: str = ""
     repair_evidence_root: str = ""
+    repair_benchmark_manifest_path: str = ""
+    current_schema_identity_sha256: str = ""
 
 
 @dataclass(frozen=True)

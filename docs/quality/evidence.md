@@ -47,6 +47,39 @@ The read-only reliability exporter writes this retained projection as
 usage attribution, is explicitly `unavailable` with `null` metrics. It must
 not be represented as a zero-cost or zero-success repair cohort.
 
+E13 historical repair measurement uses the same scorecard with a frozen
+manifest under [`e13-repair-benchmark/`](e13-repair-benchmark/). Each manifest
+pins the original artifact, six evidence packs, initial validation, source
+audit hashes, prompt identity, expected mutation scope, historical outcome,
+and the configuration, policy, schema, validator, and build identities. Cases
+with incompatible identities remain separate manifests. The manifest records
+references and hashes; source artifacts, evidence packs, prompts, and full
+candidate audits stay in their existing isolated run storage.
+
+Replay a manifest only from the exact implementation SHA being measured:
+
+```powershell
+python scripts/quality/replay_validation_repair_benchmark.py `
+  --manifest docs/quality/e13-repair-benchmark/<frozen-manifest>.json `
+  --output-dir tmp/e13-repair-live/<run-name> `
+  --implementation-sha <full-40-character-sha>
+```
+
+The runner checks every pinned input, starts the production validation repair
+loop with the retained failed artifact and validation report, and writes the
+existing validation reliability artifact. Its console output contains only
+bounded identities, counts, rates, and usage metrics. Before/after comparison
+is fail-closed across configuration, policy, schema, validator, and build
+provenance; incompatible histories are never combined, and missing attribution
+stays `unavailable`. Repairs that abstain, remove content, fail validation,
+violate the frozen mutation limit, or are not promoted do not count as success.
+
+The committed [E13 benchmark README](e13-repair-benchmark/README.md) records
+the frozen manifest hashes, exact measured implementation SHA, results,
+commands, and criterion-by-criterion disposition. It does not copy raw source,
+prompts, candidate responses, or unpublished diagnostics into the scorecard
+evidence.
+
 The current frozen A21 measurement and its complete retained evidence are in
 [`reliability-cohort-20260920-a21-final/`](reliability-cohort-20260920-a21-final/).
 

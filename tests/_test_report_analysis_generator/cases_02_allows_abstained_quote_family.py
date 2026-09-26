@@ -334,6 +334,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     for artifact in [original, *candidates]:
         _set_interpretive_summary_provenance(artifact)
     regeneration_inputs = []
+    repair_usage_attempts = []
     regeneration_targets = []
     regeneration_strategies = []
     retry_memories = []
@@ -380,6 +381,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         )
 
     def _regenerate(request):
+        repair_usage_attempts.append(request.ctx.repair_attempt)
         regeneration_inputs.append(request.current_artifacts["summary"]["tldr"])
         regeneration_targets.append(
             [target.target_section for target in request.plan.targets]
@@ -447,6 +449,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
 
     assert regeneration_inputs == ["original artifact", "original artifact"]
+    assert repair_usage_attempts == [1, 2]
     assert regeneration_targets == [["summary"], ["summary"]]
     assert regeneration_strategies == ["current_evidence", "alternative_evidence"]
     assert retry_memories[0] == []
@@ -473,6 +476,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             encoding="utf-8"
         )
     )
+    assert first_audit["repair_delta"]["introduced_hard_failure_count"] == 1
     assert first_audit["repair_decisions"][0]["minimal_patch"][0]["value"] == (
         "failed candidate"
     )

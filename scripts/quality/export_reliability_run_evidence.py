@@ -52,7 +52,42 @@ _REPAIR_SCORECARD_FIELDS = (
     "repeated_failed_strategy_evidence_attempt_count",
     "repeated_failed_candidate_attempt_count",
     "incompatible_audit_count",
+    "benchmark_case_count",
+    "benchmark_denominator_complete",
+    "benchmark_manifest_sha256",
+    "baseline_identity_sha256",
+    "current_identity_sha256",
+    "hard_failure_introduction_count",
+    "hard_failure_introduction_attempt_count",
+    "hard_failure_introduction_rate",
+    "unsupported_evidence_introduction_attempt_count",
+    "deterministic_repair_share",
+    "model_repair_share",
+    "usage_attribution",
+    "model_call_count",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "estimated_cost_usd",
+    "latency_ms",
+    "current_residual_failure_odds",
+    "current_residual_failure_odds_state",
+    "baseline_success_at_3_count",
+    "baseline_success_at_3_rate",
+    "baseline_usage_attribution",
+    "baseline_model_call_count",
+    "baseline_input_tokens",
+    "baseline_output_tokens",
+    "baseline_total_tokens",
+    "baseline_estimated_cost_usd",
+    "baseline_latency_ms",
+    "baseline_residual_failure_odds",
+    "baseline_residual_failure_odds_state",
+    "residual_odds_reduction_factor",
+    "residual_odds_reduction_state",
+    "benchmark_comparison_status",
 )
+_REPAIR_FAILURE_CLASS_FIELDS = ("schema_version", "failure_class", "attempt_count")
 _REPAIR_ATTEMPT_FIELDS = (
     "schema_version",
     "report_id",
@@ -62,6 +97,7 @@ _REPAIR_ATTEMPT_FIELDS = (
     "resolved_failure_fingerprints",
     "persisting_failure_fingerprints",
     "introduced_failure_fingerprints",
+    "introduced_hard_failure_count",
     "strategy_fingerprint",
     "candidate_fingerprint",
     "repair_action",
@@ -220,6 +256,17 @@ def _repair_effectiveness_projection(
     projection = {
         key: scorecard[key] for key in _REPAIR_SCORECARD_FIELDS if key in scorecard
     }
+    for field_name in (
+        "failure_class_distribution",
+        "baseline_failure_class_distribution",
+    ):
+        values = scorecard.get(field_name)
+        if isinstance(values, list):
+            projection[field_name] = [
+                {key: item[key] for key in _REPAIR_FAILURE_CLASS_FIELDS if key in item}
+                for item in values
+                if isinstance(item, dict)
+            ]
     for field_name, allowed_fields in (
         ("attempts", _REPAIR_ATTEMPT_FIELDS),
         ("mode_metrics", _REPAIR_MODE_FIELDS),

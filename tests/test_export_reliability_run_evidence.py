@@ -144,6 +144,19 @@ def test_export_run_evidence_projects_repair_scorecard_without_source_content(
                     "cohort_compatible": True,
                     "repair_chain_count": 1,
                     "success_at_1_rate": 1.0,
+                    "benchmark_case_count": 1,
+                    "benchmark_denominator_complete": True,
+                    "benchmark_manifest_sha256": "d" * 64,
+                    "model_call_count": None,
+                    "usage_attribution": "unavailable",
+                    "failure_class_distribution": [
+                        {
+                            "schema_version": "1.1",
+                            "failure_class": "grounding",
+                            "attempt_count": 2,
+                            "private_detail": "PRIVATE_DIAGNOSTIC_MARKER",
+                        }
+                    ],
                     "attempts": [
                         {
                             "failure_fingerprints": ["a" * 64],
@@ -198,6 +211,14 @@ def test_export_run_evidence_projects_repair_scorecard_without_source_content(
     scorecard = json.loads(output_dir.joinpath("repair_effectiveness.json").read_text())
     assert scorecard["measurement_status"] == "available"
     assert scorecard["attempts"][0]["candidate_fingerprint"] == "b" * 64
+    assert scorecard["benchmark_case_count"] == 1
+    assert scorecard["failure_class_distribution"] == [
+        {
+            "schema_version": "1.1",
+            "failure_class": "grounding",
+            "attempt_count": 2,
+        }
+    ]
     assert "source" not in json.dumps(scorecard).lower()
     scorecard_json = json.dumps(scorecard)
     for marker in (
@@ -205,6 +226,7 @@ def test_export_run_evidence_projects_repair_scorecard_without_source_content(
         "PRIVATE_RAW_PROMPT_MARKER",
         "PRIVATE_RAW_RESPONSE_MARKER",
         "PRIVATE_SOURCE_EXTRACT_MARKER",
+        "PRIVATE_DIAGNOSTIC_MARKER",
     ):
         assert marker not in scorecard_json
 

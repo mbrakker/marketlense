@@ -53,6 +53,10 @@
         "resolved": { "type": "array" },
         "persisting": { "type": "array" },
         "introduced": { "type": "array" },
+        "introduced_hard_failure_count": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
         "severity_changes": {
           "type": "array",
           "items": {

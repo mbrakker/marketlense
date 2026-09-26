@@ -25,6 +25,7 @@ from src.contracts.validation_reliability import (
     ValidationReliabilityFirstAttemptStage,
     ValidationReliabilityFirstAttemptTransition,
     ValidationReliabilityRepairAttempt,
+    ValidationReliabilityRepairFailureClass,
     ValidationReliabilityRepairModeMetric,
     ValidationReliabilityRepairScorecard,
     ValidationReliabilityTransition,
@@ -35,7 +36,8 @@ from src.services._report_store_service.connection import _metadata_conn
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-_SCHEMA_VERSION = "1.0"
+_SCHEMA_VERSION = "1.1"
+_REQUEST_SCHEMA_VERSION = "1.0"
 _STATE_SEQUENCE: tuple[str, ...] = (
     "admitted",
     "source_prepared",
@@ -125,6 +127,7 @@ _REQUIRED_USAGE_ATTRIBUTION = (
     "producer_build_identity",
 )
 _SAFE_REPAIR_TOKEN = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
+_SAFE_REPAIR_PATH = re.compile(r"^[A-Za-z0-9._:/\[\]-]{1,256}$")
 
 
 @dataclass(frozen=True)
@@ -292,7 +295,10 @@ def write_validation_reliability_artifact(
 ) -> ValidationReliabilityWriteResponse:
     """Atomically retain the canonical artifact without adding a second ledger."""
 
-    if request.schema_version != _SCHEMA_VERSION or not request.artifact_path.strip():
+    if (
+        request.schema_version != _REQUEST_SCHEMA_VERSION
+        or not request.artifact_path.strip()
+    ):
         raise AppError(
             code="validation_reliability_write_request_invalid",
             message="Reliability artifact writing requires a supported schema and path",
@@ -334,7 +340,7 @@ def write_validation_reliability_artifact(
         )
     )
     return ValidationReliabilityWriteResponse(
-        schema_version=_SCHEMA_VERSION,
+        schema_version=_REQUEST_SCHEMA_VERSION,
         artifact_path=str(path),
         artifact_hash=expected_hash,
     )
@@ -352,7 +358,7 @@ def validation_reliability_artifact_path(
 
 
 def _validate_build_request(request: ValidationReliabilityBuildRequest) -> None:
-    if request.schema_version != _SCHEMA_VERSION:
+    if request.schema_version != _REQUEST_SCHEMA_VERSION:
         raise AppError(
             code="validation_reliability_schema_version_invalid",
             message="Validation reliability telemetry schema version is unsupported",
@@ -718,12 +724,45 @@ def _repair_scorecard(
 ) -> ValidationReliabilityRepairScorecard:
     """Aggregate only cohort-bound, content-free candidate audit records."""
 
+    benchmark_manifest = None
+    benchmark_manifest_sha256 = ""
+    if request.repair_benchmark_manifest_path.strip():
+        benchmark_manifest, benchmark_manifest_sha256 = _read_repair_benchmark_manifest(
+            Path(request.repair_benchmark_manifest_path)
+        )
+        if benchmark_manifest is None:
+            return _unavailable_repair_scorecard(
+                incompatible_audit_count=1,
+                benchmark_comparison_status="incompatible",
+            )
+
+    benchmark_baseline_identity_sha256 = (
+        hashlib.sha256(
+            _canonical_bytes(benchmark_manifest["baseline_identity"])
+        ).hexdigest()
+        if benchmark_manifest is not None
+        else ""
+    )
+    benchmark_case_count = (
+        len(benchmark_manifest["cases"]) if benchmark_manifest is not None else None
+    )
+
     root_text = request.repair_evidence_root.strip()
     if not root_text:
-        return _unavailable_repair_scorecard(incompatible_audit_count=0)
+        return _unavailable_repair_scorecard(
+            incompatible_audit_count=0,
+            benchmark_case_count=benchmark_case_count,
+            benchmark_manifest_sha256=benchmark_manifest_sha256,
+            baseline_identity_sha256=benchmark_baseline_identity_sha256,
+        )
     root = Path(root_text)
     if not root.is_dir():
-        return _unavailable_repair_scorecard(incompatible_audit_count=0)
+        return _unavailable_repair_scorecard(
+            incompatible_audit_count=0,
+            benchmark_case_count=benchmark_case_count,
+            benchmark_manifest_sha256=benchmark_manifest_sha256,
+            baseline_identity_sha256=benchmark_baseline_identity_sha256,
+        )
 
     cohort_report_ids = {
         str(row["report_id"])
@@ -752,9 +791,20 @@ def _repair_scorecard(
 
     if incompatible_count:
         return _unavailable_repair_scorecard(
-            incompatible_audit_count=incompatible_count
+            incompatible_audit_count=incompatible_count,
+            benchmark_case_count=benchmark_case_count,
+            benchmark_manifest_sha256=benchmark_manifest_sha256,
+            baseline_identity_sha256=benchmark_baseline_identity_sha256,
+            benchmark_comparison_status="incompatible",
         )
     if not raw_audits:
+        if benchmark_manifest is not None and benchmark_manifest.get("cases"):
+            return _unavailable_repair_scorecard(
+                incompatible_audit_count=0,
+                benchmark_case_count=benchmark_case_count,
+                benchmark_manifest_sha256=benchmark_manifest_sha256,
+                baseline_identity_sha256=benchmark_baseline_identity_sha256,
+            )
         return ValidationReliabilityRepairScorecard(
             schema_version=_SCHEMA_VERSION,
             measurement_status="available",
@@ -771,6 +821,42 @@ def _repair_scorecard(
             repeated_failed_strategy_evidence_attempt_count=0,
             repeated_failed_candidate_attempt_count=0,
             incompatible_audit_count=0,
+            hard_failure_introduction_count=0,
+            benchmark_case_count=None,
+            benchmark_denominator_complete=False,
+            benchmark_manifest_sha256="",
+            baseline_identity_sha256="",
+            current_identity_sha256="",
+            hard_failure_introduction_attempt_count=0,
+            hard_failure_introduction_rate=None,
+            unsupported_evidence_introduction_attempt_count=0,
+            deterministic_repair_share=None,
+            model_repair_share=None,
+            usage_attribution="unavailable",
+            model_call_count=None,
+            input_tokens=None,
+            output_tokens=None,
+            total_tokens=None,
+            estimated_cost_usd=None,
+            latency_ms=None,
+            current_residual_failure_odds=None,
+            current_residual_failure_odds_state="unavailable",
+            baseline_success_at_3_count=None,
+            baseline_success_at_3_rate=None,
+            baseline_usage_attribution="unavailable",
+            baseline_model_call_count=None,
+            baseline_input_tokens=None,
+            baseline_output_tokens=None,
+            baseline_total_tokens=None,
+            baseline_estimated_cost_usd=None,
+            baseline_latency_ms=None,
+            baseline_residual_failure_odds=None,
+            baseline_residual_failure_odds_state="unavailable",
+            residual_odds_reduction_factor=None,
+            residual_odds_reduction_state="unavailable",
+            benchmark_comparison_status="unavailable",
+            failure_class_distribution=(),
+            baseline_failure_class_distribution=(),
             attempts=(),
             mode_metrics=(),
         )
@@ -785,7 +871,13 @@ def _repair_scorecard(
         )
         key = (attempt.report_id, attempt.attempt_index, attempt.candidate_fingerprint)
         if key in seen_attempt_keys:
-            return _unavailable_repair_scorecard(incompatible_audit_count=1)
+            return _unavailable_repair_scorecard(
+                incompatible_audit_count=1,
+                benchmark_case_count=benchmark_case_count,
+                benchmark_manifest_sha256=benchmark_manifest_sha256,
+                baseline_identity_sha256=benchmark_baseline_identity_sha256,
+                benchmark_comparison_status="incompatible",
+            )
         seen_attempt_keys.add(key)
         repair_attempts.append(attempt)
     repair_attempts.sort(
@@ -795,11 +887,33 @@ def _repair_scorecard(
             item.candidate_fingerprint,
         )
     )
-    chains: dict[tuple[str, str], list[ValidationReliabilityRepairAttempt]] = (
-        defaultdict(list)
-    )
+    if benchmark_manifest is not None:
+        scope_limits = {
+            str(case["report_id"]): set(case["expected_legal_mutation_scope"])
+            for case in benchmark_manifest["cases"]
+        }
+        audit_by_attempt_key = {
+            (
+                str(audit["report_id"]),
+                int(audit["attempt_index"]),
+                _safe_hash(audit.get("after_sha256")),
+            ): audit
+            for _, audit in raw_audits
+        }
+        scoped_attempts: list[ValidationReliabilityRepairAttempt] = []
+        for item in repair_attempts:
+            audit = audit_by_attempt_key[
+                (item.report_id, item.attempt_index, item.candidate_fingerprint)
+            ]
+            if not _audit_scope_within_limit(
+                audit, scope_limits.get(item.report_id, set())
+            ):
+                item = replace(item, successful=False, out_of_scope_mutation=True)
+            scoped_attempts.append(item)
+        repair_attempts = scoped_attempts
+    chains: dict[str, list[ValidationReliabilityRepairAttempt]] = defaultdict(list)
     for attempt in repair_attempts:
-        chains[(attempt.report_id, _chain_fingerprint(attempt))].append(attempt)
+        chains[attempt.report_id].append(attempt)
     for entries in chains.values():
         entries.sort(key=lambda item: item.attempt_index)
     chain_count = len(chains)
@@ -809,12 +923,90 @@ def _repair_scorecard(
     success_at_3 = sum(
         any(item.successful for item in values[:3]) for values in chains.values()
     )
-    failed_attempts = [item for item in repair_attempts if not item.successful]
+    usage_complete = bool(repair_attempts) and all(
+        item.usage_attribution == "available" for item in repair_attempts
+    )
+    latency_complete = bool(repair_attempts) and all(
+        item.latency_ms is not None for item in repair_attempts
+    )
+    repair_modes_complete = bool(repair_attempts) and all(
+        item.repair_mode in {"deterministic", "model"} for item in repair_attempts
+    )
+    hard_failure_attribution_complete = bool(repair_attempts) and all(
+        item.introduced_hard_failure_count is not None for item in repair_attempts
+    )
+    hard_failure_introduction_count = (
+        sum(item.introduced_hard_failure_count or 0 for item in repair_attempts)
+        if hard_failure_attribution_complete
+        else None
+    )
+    hard_failure_introduction_attempt_count = (
+        sum((item.introduced_hard_failure_count or 0) > 0 for item in repair_attempts)
+        if hard_failure_attribution_complete
+        else None
+    )
+    unsupported_evidence_attribution_complete = bool(raw_audits) and all(
+        isinstance((audit.get("repair_delta") or {}).get("introduced"), list)
+        for _, audit in raw_audits
+    )
+    unsupported_evidence_introductions = (
+        sum(
+            any(
+                _unsupported_evidence_rule(rule_id)
+                for rule_id in _failure_rule_ids_from_attempt(audit)
+            )
+            for _, audit in raw_audits
+        )
+        if unsupported_evidence_attribution_complete
+        else None
+    )
+    scope_attribution_complete = bool(raw_audits) and all(
+        _scope_outcome_attributable(audit) for _, audit in raw_audits
+    )
+    out_of_scope_mutation_count = (
+        sum(item.out_of_scope_mutation for item in repair_attempts)
+        if scope_attribution_complete
+        else None
+    )
+    repeat_attribution_complete = bool(raw_audits) and all(
+        _repeat_outcome_attributable(audit) for _, audit in raw_audits
+    )
+    failure_class_counts = Counter(
+        rule_id for item in repair_attempts for rule_id in item.failure_rule_ids
+    )
+    current_odds, current_odds_state = _residual_failure_odds(
+        denominator=chain_count, successes=success_at_3
+    )
+    benchmark_metrics = _benchmark_comparison_metrics(
+        manifest=benchmark_manifest,
+        current_attempts=repair_attempts,
+        current_audits=[audit for _, audit in raw_audits],
+        run=run,
+        manifest_sha256=benchmark_manifest_sha256,
+        current_schema_identity_sha256=request.current_schema_identity_sha256,
+    )
+    attempt_by_key = {
+        (item.report_id, item.attempt_index, item.candidate_fingerprint): item
+        for item in repair_attempts
+    }
+    failed_audits = [
+        audit
+        for _, audit in raw_audits
+        if not attempt_by_key[
+            (
+                str(audit["report_id"]),
+                int(audit["attempt_index"]),
+                _safe_hash(audit.get("after_sha256")),
+            )
+        ].successful
+    ]
     repeated_strategy = _repeated_failed_attempt_count(
-        failed_attempts, key=lambda item: item.strategy_fingerprint
+        failed_audits,
+        key=lambda audit: _failed_strategy_evidence_key(audit, attempt_by_key),
     )
     repeated_candidate = _repeated_failed_attempt_count(
-        failed_attempts, key=lambda item: item.candidate_fingerprint
+        failed_audits,
+        key=lambda audit: _failed_candidate_key(audit),
     )
     return ValidationReliabilityRepairScorecard(
         schema_version=_SCHEMA_VERSION,
@@ -832,19 +1024,123 @@ def _repair_scorecard(
         abstention_or_removal_attempt_count=sum(
             item.abstention_or_removal for item in repair_attempts
         ),
-        out_of_scope_mutation_attempt_count=sum(
-            item.out_of_scope_mutation for item in repair_attempts
+        out_of_scope_mutation_attempt_count=out_of_scope_mutation_count,
+        repeated_failed_strategy_evidence_attempt_count=(
+            repeated_strategy if repeat_attribution_complete else None
         ),
-        repeated_failed_strategy_evidence_attempt_count=repeated_strategy,
-        repeated_failed_candidate_attempt_count=repeated_candidate,
+        repeated_failed_candidate_attempt_count=(
+            repeated_candidate if repeat_attribution_complete else None
+        ),
         incompatible_audit_count=0,
+        hard_failure_introduction_count=hard_failure_introduction_count,
+        benchmark_case_count=benchmark_metrics["benchmark_case_count"],
+        benchmark_denominator_complete=benchmark_metrics[
+            "benchmark_denominator_complete"
+        ],
+        benchmark_manifest_sha256=benchmark_metrics["benchmark_manifest_sha256"],
+        baseline_identity_sha256=benchmark_metrics["baseline_identity_sha256"],
+        current_identity_sha256=benchmark_metrics["current_identity_sha256"],
+        hard_failure_introduction_attempt_count=hard_failure_introduction_attempt_count,
+        hard_failure_introduction_rate=(
+            _rate(hard_failure_introduction_attempt_count, len(repair_attempts))
+            if hard_failure_introduction_attempt_count is not None and repair_attempts
+            else None
+        ),
+        unsupported_evidence_introduction_attempt_count=unsupported_evidence_introductions,
+        deterministic_repair_share=(
+            _rate(
+                sum(item.repair_mode == "deterministic" for item in repair_attempts),
+                len(repair_attempts),
+            )
+            if repair_modes_complete
+            else None
+        ),
+        model_repair_share=(
+            _rate(
+                sum(item.repair_mode == "model" for item in repair_attempts),
+                len(repair_attempts),
+            )
+            if repair_modes_complete
+            else None
+        ),
+        usage_attribution="available" if usage_complete else "unavailable",
+        model_call_count=(
+            sum(item.model_call_count or 0 for item in repair_attempts)
+            if usage_complete
+            else None
+        ),
+        input_tokens=(
+            sum(item.input_tokens or 0 for item in repair_attempts)
+            if usage_complete
+            else None
+        ),
+        output_tokens=(
+            sum(item.output_tokens or 0 for item in repair_attempts)
+            if usage_complete
+            else None
+        ),
+        total_tokens=(
+            sum(item.total_tokens or 0 for item in repair_attempts)
+            if usage_complete
+            else None
+        ),
+        estimated_cost_usd=(
+            round(sum(item.estimated_cost_usd or 0.0 for item in repair_attempts), 6)
+            if usage_complete
+            else None
+        ),
+        latency_ms=(
+            sum(item.latency_ms or 0 for item in repair_attempts)
+            if latency_complete
+            else None
+        ),
+        current_residual_failure_odds=current_odds,
+        current_residual_failure_odds_state=current_odds_state,
+        baseline_success_at_3_count=benchmark_metrics["baseline_success_at_3_count"],
+        baseline_success_at_3_rate=benchmark_metrics["baseline_success_at_3_rate"],
+        baseline_usage_attribution=benchmark_metrics["baseline_usage_attribution"],
+        baseline_model_call_count=benchmark_metrics["baseline_model_call_count"],
+        baseline_input_tokens=benchmark_metrics["baseline_input_tokens"],
+        baseline_output_tokens=benchmark_metrics["baseline_output_tokens"],
+        baseline_total_tokens=benchmark_metrics["baseline_total_tokens"],
+        baseline_estimated_cost_usd=benchmark_metrics["baseline_estimated_cost_usd"],
+        baseline_latency_ms=benchmark_metrics["baseline_latency_ms"],
+        baseline_residual_failure_odds=benchmark_metrics[
+            "baseline_residual_failure_odds"
+        ],
+        baseline_residual_failure_odds_state=benchmark_metrics[
+            "baseline_residual_failure_odds_state"
+        ],
+        residual_odds_reduction_factor=benchmark_metrics[
+            "residual_odds_reduction_factor"
+        ],
+        residual_odds_reduction_state=benchmark_metrics[
+            "residual_odds_reduction_state"
+        ],
+        benchmark_comparison_status=benchmark_metrics["benchmark_comparison_status"],
+        failure_class_distribution=tuple(
+            ValidationReliabilityRepairFailureClass(
+                schema_version=_SCHEMA_VERSION,
+                failure_class=rule_id,
+                attempt_count=count,
+            )
+            for rule_id, count in sorted(failure_class_counts.items())
+        ),
+        baseline_failure_class_distribution=benchmark_metrics[
+            "baseline_failure_class_distribution"
+        ],
         attempts=tuple(repair_attempts),
         mode_metrics=_repair_mode_metrics(repair_attempts),
     )
 
 
 def _unavailable_repair_scorecard(
-    *, incompatible_audit_count: int
+    *,
+    incompatible_audit_count: int,
+    benchmark_case_count: int | None = None,
+    benchmark_manifest_sha256: str = "",
+    baseline_identity_sha256: str = "",
+    benchmark_comparison_status: str = "unavailable",
 ) -> ValidationReliabilityRepairScorecard:
     return ValidationReliabilityRepairScorecard(
         schema_version=_SCHEMA_VERSION,
@@ -862,9 +1158,525 @@ def _unavailable_repair_scorecard(
         repeated_failed_strategy_evidence_attempt_count=None,
         repeated_failed_candidate_attempt_count=None,
         incompatible_audit_count=incompatible_audit_count,
+        hard_failure_introduction_count=None,
+        benchmark_case_count=benchmark_case_count,
+        benchmark_denominator_complete=False,
+        benchmark_manifest_sha256=benchmark_manifest_sha256,
+        baseline_identity_sha256=baseline_identity_sha256,
+        current_identity_sha256="",
+        hard_failure_introduction_attempt_count=None,
+        hard_failure_introduction_rate=None,
+        unsupported_evidence_introduction_attempt_count=None,
+        deterministic_repair_share=None,
+        model_repair_share=None,
+        usage_attribution="unavailable",
+        model_call_count=None,
+        input_tokens=None,
+        output_tokens=None,
+        total_tokens=None,
+        estimated_cost_usd=None,
+        latency_ms=None,
+        current_residual_failure_odds=None,
+        current_residual_failure_odds_state="unavailable",
+        baseline_success_at_3_count=None,
+        baseline_success_at_3_rate=None,
+        baseline_usage_attribution="unavailable",
+        baseline_model_call_count=None,
+        baseline_input_tokens=None,
+        baseline_output_tokens=None,
+        baseline_total_tokens=None,
+        baseline_estimated_cost_usd=None,
+        baseline_latency_ms=None,
+        baseline_residual_failure_odds=None,
+        baseline_residual_failure_odds_state="unavailable",
+        residual_odds_reduction_factor=None,
+        residual_odds_reduction_state="unavailable",
+        benchmark_comparison_status=benchmark_comparison_status,
+        failure_class_distribution=(),
+        baseline_failure_class_distribution=(),
         attempts=(),
         mode_metrics=(),
     )
+
+
+def _read_repair_benchmark_manifest(path: Path) -> tuple[dict[str, Any] | None, str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None, ""
+    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+        return None, ""
+    declared_hash = _safe_hash(payload.get("manifest_sha256"))
+    body = {key: value for key, value in payload.items() if key != "manifest_sha256"}
+    actual_hash = hashlib.sha256(_canonical_bytes(body)).hexdigest()
+    cases = payload.get("cases")
+    baseline_identity = payload.get("baseline_identity")
+    if (
+        not declared_hash
+        or declared_hash != actual_hash
+        or payload.get("frozen") is not True
+        or not isinstance(cases, list)
+        or not cases
+        or not isinstance(baseline_identity, dict)
+    ):
+        return None, ""
+    report_ids: set[str] = set()
+    for case in cases:
+        if not isinstance(case, dict):
+            return None, ""
+        report_id = _safe_repair_token(case.get("report_id"))
+        artifact_hash = _safe_hash(case.get("original_artifact_canonical_sha256"))
+        initial_failures = case.get("initial_failure_fingerprints")
+        baseline_attempts = case.get("baseline_attempts")
+        evidence_hashes = case.get("evidence_pack_sha256")
+        legal_scope = case.get("expected_legal_mutation_scope")
+        identities = case.get("identities")
+        historical_outcome = case.get("historical_outcome")
+        if (
+            not report_id
+            or report_id in report_ids
+            or not artifact_hash
+            or not _safe_hash(case.get("initial_validation_sha256"))
+            or not isinstance(initial_failures, list)
+            or not initial_failures
+            or not all(_safe_hash(item) for item in initial_failures)
+            or not isinstance(evidence_hashes, dict)
+            or not evidence_hashes
+            or any(
+                not _SAFE_REPAIR_TOKEN.fullmatch(str(name)) or not _safe_hash(value)
+                for name, value in evidence_hashes.items()
+            )
+            or not isinstance(legal_scope, list)
+            or not legal_scope
+            or not all(
+                isinstance(value, str) and _SAFE_REPAIR_PATH.fullmatch(value)
+                for value in legal_scope
+            )
+            or not isinstance(identities, dict)
+            or any(
+                not _safe_repair_token(identities.get(name))
+                for name in (
+                    "prompt_identity_sha256",
+                    "artifact_schema_identity",
+                    "validator_identity",
+                    "configuration_hash",
+                    "policy_hash",
+                    "producer_build_identity",
+                )
+            )
+            or not _safe_repair_token(historical_outcome)
+            or not isinstance(baseline_attempts, list)
+            or not baseline_attempts
+        ):
+            return None, ""
+        report_ids.add(report_id)
+        for audit in baseline_attempts:
+            if (
+                not isinstance(audit, dict)
+                or str(audit.get("report_id") or "") != report_id
+                or not _audit_has_safe_benchmark_fields(audit)
+            ):
+                return None, ""
+        first = min(baseline_attempts, key=lambda item: int(item["attempt_index"]))
+        first_allowed_scope = first.get("allowed_paths")
+        if (
+            str(first.get("before_sha256") or "") != artifact_hash
+            or not isinstance(first_allowed_scope, list)
+            or not all(
+                isinstance(value, str) and _SAFE_REPAIR_PATH.fullmatch(value)
+                for value in first_allowed_scope
+            )
+            or sorted(set(first_allowed_scope)) != sorted(set(legal_scope))
+            or str(identities.get("configuration_hash") or "")
+            != str(first.get("configuration_hash") or "")
+            or str(identities.get("policy_hash") or "")
+            != str(first.get("policy_hash") or "")
+            or str(identities.get("validator_identity") or "")
+            != str(
+                (first.get("repair_delta") or {}).get("validator_identity")
+                or "unavailable"
+            )
+            or any(
+                str(identities.get(field_name) or "")
+                != str(baseline_identity.get(field_name) or "")
+                for field_name in (
+                    "configuration_hash",
+                    "policy_hash",
+                    "validator_identity",
+                    "producer_build_identity",
+                )
+            )
+            or str(identities.get("producer_build_identity") or "")
+            != str(
+                first.get("attested_producer_build_identity")
+                or first.get("producer_build_identity")
+                or ""
+            )
+            or identities.get("artifact_schema_identity")
+            != f"schema-{baseline_identity.get('schema_identity_sha256')}"
+        ):
+            return None, ""
+    for field_name in (
+        "configuration_hash",
+        "policy_hash",
+        "producer_build_identity",
+        "validator_identity",
+    ):
+        if not _safe_repair_token(baseline_identity.get(field_name)):
+            return None, ""
+    if not _safe_hash(baseline_identity.get("schema_identity_sha256")):
+        return None, ""
+    return payload, declared_hash
+
+
+def _audit_has_safe_benchmark_fields(audit: dict[str, Any]) -> bool:
+    delta = audit.get("repair_delta")
+    return bool(
+        isinstance(audit.get("attempt_index"), int)
+        and not isinstance(audit.get("attempt_index"), bool)
+        and int(audit["attempt_index"]) > 0
+        and _safe_hash(audit.get("before_sha256"))
+        and _safe_hash(audit.get("after_sha256"))
+        and _safe_repair_token(audit.get("strategy_fingerprint"))
+        and isinstance(delta, dict)
+        and all(
+            isinstance(delta.get(key, []), list)
+            for key in ("resolved", "persisting", "introduced")
+        )
+        and all(
+            _safe_repair_token(audit.get(field_name))
+            for field_name in (
+                "configuration_hash",
+                "policy_hash",
+                "producer_build_identity",
+            )
+        )
+    )
+
+
+def _benchmark_comparison_metrics(
+    *,
+    manifest: dict[str, Any] | None,
+    current_attempts: list[ValidationReliabilityRepairAttempt],
+    current_audits: list[dict[str, Any]],
+    run: dict[str, Any],
+    manifest_sha256: str,
+    current_schema_identity_sha256: str,
+) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "benchmark_case_count": None,
+        "benchmark_denominator_complete": False,
+        "benchmark_manifest_sha256": manifest_sha256,
+        "baseline_identity_sha256": "",
+        "current_identity_sha256": "",
+        "baseline_success_at_3_count": None,
+        "baseline_success_at_3_rate": None,
+        "baseline_usage_attribution": "unavailable",
+        "baseline_model_call_count": None,
+        "baseline_input_tokens": None,
+        "baseline_output_tokens": None,
+        "baseline_total_tokens": None,
+        "baseline_estimated_cost_usd": None,
+        "baseline_latency_ms": None,
+        "baseline_residual_failure_odds": None,
+        "baseline_residual_failure_odds_state": "unavailable",
+        "residual_odds_reduction_factor": None,
+        "residual_odds_reduction_state": "unavailable",
+        "benchmark_comparison_status": "unavailable",
+        "baseline_failure_class_distribution": (),
+    }
+    if manifest is None:
+        return defaults
+
+    cases = manifest["cases"]
+    report_ids = {str(case["report_id"]) for case in cases}
+    baseline_attempts: list[ValidationReliabilityRepairAttempt] = []
+    baseline_identity = manifest["baseline_identity"]
+    baseline_ids_compatible = True
+    for case in cases:
+        raw_attempts = sorted(
+            case["baseline_attempts"], key=lambda item: int(item["attempt_index"])
+        )
+        for audit in raw_attempts:
+            observed_identity = {
+                "configuration_hash": audit.get("configuration_hash"),
+                "policy_hash": audit.get("policy_hash"),
+                "producer_build_identity": audit.get(
+                    "attested_producer_build_identity",
+                    audit.get("producer_build_identity"),
+                ),
+                "validator_identity": (audit.get("repair_delta") or {}).get(
+                    "validator_identity"
+                ),
+            }
+            if any(
+                str(observed_identity.get(key) or "")
+                != str(baseline_identity.get(key) or "")
+                for key in (
+                    "configuration_hash",
+                    "policy_hash",
+                    "producer_build_identity",
+                    "validator_identity",
+                )
+            ):
+                baseline_ids_compatible = False
+            baseline_attempts.append(
+                _repair_attempt_from_audit(
+                    audit=audit,
+                    usage_events=[],
+                    usage_attribution_available=False,
+                )
+            )
+
+    baseline_chains: dict[str, list[ValidationReliabilityRepairAttempt]] = defaultdict(
+        list
+    )
+    for item in baseline_attempts:
+        baseline_chains[item.report_id].append(item)
+    for values in baseline_chains.values():
+        values.sort(key=lambda item: item.attempt_index)
+    baseline_case_reports = {item.report_id for item in baseline_attempts}
+    baseline_success_at_3 = sum(
+        any(item.successful for item in values[:3])
+        for values in baseline_chains.values()
+    )
+    baseline_odds, baseline_odds_state = _residual_failure_odds(
+        denominator=len(baseline_chains), successes=baseline_success_at_3
+    )
+    baseline_class_counts = Counter(
+        rule_id for item in baseline_attempts for rule_id in item.failure_rule_ids
+    )
+    baseline_latency_complete = bool(baseline_attempts) and all(
+        item.latency_ms is not None for item in baseline_attempts
+    )
+
+    current_by_report: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for audit in current_audits:
+        current_by_report[str(audit.get("report_id") or "")].append(audit)
+    current_report_ids = set(current_by_report)
+    input_hashes_match = current_report_ids == report_ids
+    fingerprints_match = current_report_ids == report_ids
+    for case in cases:
+        report_id = str(case["report_id"])
+        audits = sorted(
+            current_by_report.get(report_id, []),
+            key=lambda item: int(item.get("attempt_index") or 0),
+        )
+        if not audits:
+            input_hashes_match = False
+            fingerprints_match = False
+            continue
+        first = audits[0]
+        if str(first.get("before_sha256") or "") != str(
+            case["original_artifact_canonical_sha256"]
+        ):
+            input_hashes_match = False
+        delta = first.get("repair_delta")
+        if not isinstance(delta, dict):
+            fingerprints_match = False
+        else:
+            observed = tuple(
+                sorted(
+                    set(_fingerprints_from_delta(delta.get("resolved")))
+                    | set(_fingerprints_from_delta(delta.get("persisting")))
+                )
+            )
+            expected = tuple(sorted(set(case["initial_failure_fingerprints"])))
+            fingerprints_match = fingerprints_match and observed == expected
+
+    case_count = len(cases)
+    current_case_attempts_complete = True
+    for report_id in report_ids:
+        indexes = sorted(
+            item.attempt_index
+            for item in current_attempts
+            if item.report_id == report_id
+        )
+        if not indexes or indexes != list(range(1, len(indexes) + 1)):
+            current_case_attempts_complete = False
+    baseline_case_attempts_complete = True
+    for report_id in report_ids:
+        indexes = sorted(
+            item.attempt_index
+            for item in baseline_attempts
+            if item.report_id == report_id
+        )
+        if not indexes or indexes != list(range(1, len(indexes) + 1)):
+            baseline_case_attempts_complete = False
+    current_validator_identities = {
+        str((audit.get("repair_delta") or {}).get("validator_identity") or "")
+        for audit in current_audits
+    }
+    current_identity_compatible = (
+        str(run.get("configuration_hash") or "")
+        == str(baseline_identity.get("configuration_hash") or "")
+        and str(run.get("policy_hash") or "")
+        == str(baseline_identity.get("policy_hash") or "")
+        and _safe_hash(current_schema_identity_sha256)
+        == str(baseline_identity.get("schema_identity_sha256") or "")
+        and current_validator_identities
+        == {str(baseline_identity.get("validator_identity") or "")}
+    )
+    denominator_complete = (
+        baseline_ids_compatible
+        and current_identity_compatible
+        and len(baseline_case_reports) == case_count
+        and current_report_ids == report_ids
+        and len({item.report_id for item in current_attempts}) == case_count
+        and current_case_attempts_complete
+        and baseline_case_attempts_complete
+        and input_hashes_match
+        and fingerprints_match
+    )
+    baseline_usage = manifest.get("baseline_usage")
+    baseline_usage_metrics: dict[str, Any] = {}
+    usage_status = "unavailable"
+    if (
+        isinstance(baseline_usage, dict)
+        and baseline_usage.get("attribution") == "available"
+    ):
+        fields = (
+            "model_call_count",
+            "input_tokens",
+            "output_tokens",
+            "total_tokens",
+            "estimated_cost_usd",
+        )
+        valid = all(
+            isinstance(baseline_usage.get(name), (int, float))
+            and not isinstance(baseline_usage.get(name), bool)
+            and baseline_usage[name] >= 0
+            for name in fields
+        )
+        if valid:
+            usage_status = "available"
+            baseline_usage_metrics = {
+                f"baseline_{name}": (
+                    round(float(baseline_usage[name]), 6)
+                    if name == "estimated_cost_usd"
+                    else int(baseline_usage[name])
+                )
+                for name in fields
+            }
+
+    current_identity_values = {
+        "configuration_hash": str(run.get("configuration_hash") or ""),
+        "policy_hash": str(run.get("policy_hash") or ""),
+        "producer_build_identity": str(run.get("producer_build_identity") or ""),
+        "schema_identity_sha256": current_schema_identity_sha256,
+        "validator_identities": sorted(current_validator_identities),
+    }
+    baseline_identity_hash = hashlib.sha256(
+        _canonical_bytes(baseline_identity)
+    ).hexdigest()
+    current_identity_hash = hashlib.sha256(
+        _canonical_bytes(current_identity_values)
+    ).hexdigest()
+    result = {
+        **defaults,
+        "benchmark_case_count": case_count,
+        "benchmark_denominator_complete": denominator_complete,
+        "baseline_identity_sha256": baseline_identity_hash,
+        "current_identity_sha256": current_identity_hash,
+        "baseline_success_at_3_count": baseline_success_at_3,
+        "baseline_success_at_3_rate": (
+            _rate(baseline_success_at_3, len(baseline_chains))
+            if baseline_chains
+            else None
+        ),
+        "baseline_usage_attribution": usage_status,
+        "baseline_latency_ms": (
+            sum(item.latency_ms or 0 for item in baseline_attempts)
+            if baseline_latency_complete
+            else None
+        ),
+        "baseline_residual_failure_odds": baseline_odds,
+        "baseline_residual_failure_odds_state": baseline_odds_state,
+        "baseline_failure_class_distribution": tuple(
+            ValidationReliabilityRepairFailureClass(
+                schema_version=_SCHEMA_VERSION,
+                failure_class=rule_id,
+                attempt_count=count,
+            )
+            for rule_id, count in sorted(baseline_class_counts.items())
+        ),
+        "benchmark_comparison_status": (
+            "paired" if denominator_complete else "incompatible"
+        ),
+        **baseline_usage_metrics,
+    }
+    if denominator_complete:
+        result.update(
+            _residual_odds_reduction(
+                baseline=baseline_odds,
+                baseline_state=baseline_odds_state,
+                current_successes=sum(
+                    any(item.successful for item in values[:3])
+                    for values in _group_repair_attempts(current_attempts).values()
+                ),
+                current_denominator=len(_group_repair_attempts(current_attempts)),
+            )
+        )
+    return result
+
+
+def _group_repair_attempts(
+    attempts: list[ValidationReliabilityRepairAttempt],
+) -> dict[str, list[ValidationReliabilityRepairAttempt]]:
+    chains: dict[str, list[ValidationReliabilityRepairAttempt]] = defaultdict(list)
+    for item in attempts:
+        # One report has one atomic repair chain per validation run. Failure
+        # fingerprints legitimately change as issues are resolved or introduced,
+        # so they cannot be used to split the chain.
+        chains[item.report_id].append(item)
+    for values in chains.values():
+        values.sort(key=lambda item: item.attempt_index)
+    return chains
+
+
+def _residual_odds_reduction(
+    *,
+    baseline: float | None,
+    baseline_state: str,
+    current_successes: int,
+    current_denominator: int,
+) -> dict[str, Any]:
+    current, current_state = _residual_failure_odds(
+        denominator=current_denominator, successes=current_successes
+    )
+    if baseline_state == "unbounded" and current_state == "available":
+        return {
+            "residual_odds_reduction_factor": None,
+            "residual_odds_reduction_state": "unbounded",
+        }
+    if (
+        baseline_state != "available"
+        or current_state != "available"
+        or baseline is None
+        or current is None
+    ):
+        return {
+            "residual_odds_reduction_factor": None,
+            "residual_odds_reduction_state": (
+                "baseline_ceiling"
+                if baseline_state == "available" and baseline == 0
+                else "unavailable"
+            ),
+        }
+    if current == 0:
+        return {
+            "residual_odds_reduction_factor": None,
+            "residual_odds_reduction_state": "unbounded",
+        }
+    if baseline == 0:
+        return {
+            "residual_odds_reduction_factor": None,
+            "residual_odds_reduction_state": "baseline_ceiling",
+        }
+    return {
+        "residual_odds_reduction_factor": baseline / current,
+        "residual_odds_reduction_state": "available",
+    }
 
 
 def _audit_matches_reliability_run(
@@ -885,12 +1697,45 @@ def _audit_matches_reliability_run(
     report_id = str(payload.get("report_id") or "")
     if not report_id or report_id not in cohort_report_ids:
         return False
+    delta = payload.get("repair_delta")
     return bool(
         _safe_repair_token(payload.get("strategy_fingerprint"))
         and _safe_hash(payload.get("after_sha256"))
-        and isinstance(payload.get("repair_delta"), dict)
+        and isinstance(delta, dict)
+        and all(
+            isinstance(delta.get(field_name), list)
+            for field_name in ("resolved", "persisting", "introduced")
+        )
         and isinstance(payload.get("attempt_index"), int)
         and int(payload["attempt_index"]) > 0
+    )
+
+
+def _scope_outcome_attributable(audit: dict[str, Any]) -> bool:
+    delta = audit.get("repair_delta")
+    return bool(
+        isinstance(delta, dict)
+        and delta.get("mutation_scope_result")
+        in {
+            "pass",
+            "fail",
+        }
+    )
+
+
+def _repeat_outcome_attributable(audit: dict[str, Any]) -> bool:
+    delta = audit.get("repair_delta")
+    return bool(
+        isinstance(delta, dict)
+        and _safe_hash(audit.get("before_sha256"))
+        and _safe_hash(audit.get("after_sha256"))
+        and _safe_repair_token(audit.get("strategy_fingerprint"))
+        and isinstance(audit.get("selected_evidence_ids"), list)
+        and _safe_repair_token(delta.get("validator_identity"))
+        and all(
+            isinstance(delta.get(field_name), list)
+            for field_name in ("resolved", "persisting", "introduced")
+        )
     )
 
 
@@ -919,25 +1764,43 @@ def _repair_attempt_from_audit(
         marker in f"{repair_action}:{repair_strategy}".lower()
         for marker in ("remove", "abstain")
     )
-    out_of_scope_mutation = any(
-        value.startswith("regeneration_scope_violation:") for value in validation_issues
-    ) or any(value == "regeneration_scope_violation" for value in introduced)
-    matching_usage = [
+    introduced_rule_ids = _failure_rule_ids_from_delta(delta.get("introduced"))
+    out_of_scope_mutation = (
+        any(
+            value.startswith("regeneration_scope_violation:")
+            for value in validation_issues
+        )
+        or "regeneration_scope_violation" in introduced_rule_ids
+        or (delta.get("mutation_scope_result") == "fail")
+    )
+    report_usage = [
         event
         for event in usage_events
         if str(event.get("report_id") or "") == str(audit["report_id"])
-        and int(event.get("repair_attempt") or 0) == int(audit["attempt_index"])
+        and _is_regeneration_usage_event(event)
     ]
-    attribution_valid = usage_attribution_available and all(
-        str(event.get(field) or "") == str(audit[field])
-        for event in matching_usage
-        for field in (
-            "validation_run_id",
-            "cohort_id",
-            "workflow_run_id",
-            "configuration_hash",
-            "policy_hash",
-            "producer_build_identity",
+    matching_usage = [
+        event
+        for event in report_usage
+        if int(event.get("repair_attempt") or 0) == int(audit["attempt_index"])
+    ]
+    has_unattributed_regeneration_usage = any(
+        int(event.get("repair_attempt") or 0) <= 0 for event in report_usage
+    )
+    attribution_valid = (
+        usage_attribution_available
+        and not has_unattributed_regeneration_usage
+        and all(
+            str(event.get(field) or "") == str(audit[field])
+            for event in matching_usage
+            for field in (
+                "validation_run_id",
+                "cohort_id",
+                "workflow_run_id",
+                "configuration_hash",
+                "policy_hash",
+                "producer_build_identity",
+            )
         )
     )
     usage = _repair_usage(matching_usage) if attribution_valid else None
@@ -949,6 +1812,16 @@ def _repair_attempt_from_audit(
         and latency_raw >= 0
         else None
     )
+    raw_hard_failure_count = (audit.get("repair_delta") or {}).get(
+        "introduced_hard_failure_count"
+    )
+    hard_failure_count = (
+        int(raw_hard_failure_count)
+        if isinstance(raw_hard_failure_count, int)
+        and not isinstance(raw_hard_failure_count, bool)
+        and raw_hard_failure_count >= 0
+        else None
+    )
     return ValidationReliabilityRepairAttempt(
         schema_version=_SCHEMA_VERSION,
         report_id=str(audit["report_id"]),
@@ -958,6 +1831,7 @@ def _repair_attempt_from_audit(
         resolved_failure_fingerprints=resolved,
         persisting_failure_fingerprints=persisting,
         introduced_failure_fingerprints=introduced,
+        introduced_hard_failure_count=hard_failure_count,
         strategy_fingerprint=_safe_repair_token(audit.get("strategy_fingerprint")),
         candidate_fingerprint=_safe_hash(audit.get("after_sha256")),
         repair_action=repair_action,
@@ -998,6 +1872,23 @@ def _repair_attempt_from_audit(
         configuration_hash=str(audit["configuration_hash"]),
         policy_hash=str(audit["policy_hash"]),
         producer_build_identity=str(audit["producer_build_identity"]),
+    )
+
+
+def _audit_scope_within_limit(audit: dict[str, Any], allowed_scope: set[str]) -> bool:
+    declared = audit.get("allowed_paths")
+    return bool(
+        isinstance(declared, list)
+        and all(
+            isinstance(path, str)
+            and any(
+                path == allowed
+                or path.startswith(f"{allowed}.")
+                or path.startswith(f"{allowed}[")
+                for allowed in allowed_scope
+            )
+            for path in declared
+        )
     )
 
 
@@ -1078,6 +1969,43 @@ def _repair_usage(events: list[dict[str, Any]]) -> _RepairUsage:
     }
 
 
+def _is_regeneration_usage_event(event: dict[str, Any]) -> bool:
+    """Exclude validation and structured-output recovery calls from repair cost."""
+
+    return (
+        str(event.get("semantic_task") or "") == "artifact_regeneration"
+        or str(event.get("action") or "") == "artifact_regeneration"
+        or str(event.get("action") or "").startswith("artifacts:regenerate:")
+    )
+
+
+def _failure_rule_ids_from_attempt(audit: dict[str, Any]) -> tuple[str, ...]:
+    delta = audit.get("repair_delta")
+    if not isinstance(delta, dict):
+        return ()
+    return _failure_rule_ids_from_delta(delta.get("introduced"))
+
+
+def _unsupported_evidence_rule(rule_id: str) -> bool:
+    normalized = rule_id.lower()
+    return (
+        normalized in {"grounding", "claim_support", "numbers"}
+        or normalized.startswith("retained_claim.")
+        or normalized.startswith("public_editorial_quality.unsupported")
+    )
+
+
+def _residual_failure_odds(
+    *, denominator: int, successes: int
+) -> tuple[float | None, str]:
+    if denominator <= 0:
+        return None, "unavailable"
+    failures = denominator - successes
+    if successes == 0:
+        return None, "unbounded"
+    return failures / successes, "available"
+
+
 def _prompt_identities(events: list[dict[str, Any]]) -> tuple[str, ...]:
     return tuple(
         sorted(
@@ -1091,16 +2019,55 @@ def _prompt_identities(events: list[dict[str, Any]]) -> tuple[str, ...]:
     )
 
 
-def _chain_fingerprint(attempt: ValidationReliabilityRepairAttempt) -> str:
-    payload = "|".join(attempt.failure_fingerprints)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
-def _repeated_failed_attempt_count(
-    attempts: list[ValidationReliabilityRepairAttempt], *, key
-) -> int:
+def _repeated_failed_attempt_count(attempts: list[dict[str, Any]], *, key) -> int:
     counts = Counter(key(item) for item in attempts if key(item))
     return sum(count for count in counts.values() if count > 1)
+
+
+def _failed_strategy_evidence_key(
+    audit: dict[str, Any],
+    attempts: dict[tuple[str, int, str], ValidationReliabilityRepairAttempt],
+) -> tuple[Any, ...] | None:
+    attempt = attempts.get(
+        (
+            str(audit.get("report_id") or ""),
+            int(audit.get("attempt_index") or 0),
+            _safe_hash(audit.get("after_sha256")),
+        )
+    )
+    if (
+        attempt is None
+        or not attempt.strategy_fingerprint
+        or not attempt.failure_fingerprints
+    ):
+        return None
+    delta = audit.get("repair_delta")
+    validator_identity = (
+        _safe_repair_token(delta.get("validator_identity"))
+        if isinstance(delta, dict)
+        else ""
+    )
+    return (
+        attempt.failure_fingerprints,
+        attempt.strategy_fingerprint,
+        attempt.evidence_fingerprints,
+        _safe_hash(audit.get("before_sha256")),
+        validator_identity or "unavailable",
+    )
+
+
+def _failed_candidate_key(audit: dict[str, Any]) -> tuple[str, str, str] | None:
+    candidate = _safe_hash(audit.get("after_sha256"))
+    before = _safe_hash(audit.get("before_sha256"))
+    if not candidate or not before:
+        return None
+    delta = audit.get("repair_delta")
+    validator_identity = (
+        _safe_repair_token(delta.get("validator_identity"))
+        if isinstance(delta, dict)
+        else ""
+    )
+    return candidate, before, validator_identity or "unavailable"
 
 
 def _repair_mode_metrics(

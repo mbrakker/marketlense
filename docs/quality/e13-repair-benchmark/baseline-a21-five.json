@@ -1,0 +1,2010 @@
+{
+  "baseline_identity": {
+    "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+    "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+    "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+    "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+    "validator_identity": "unavailable"
+  },
+  "baseline_usage": {
+    "attribution": "available",
+    "attribution_scope": "report_case_aggregate",
+    "estimated_cost_usd": 0.109236,
+    "input_tokens": 235970,
+    "model_call_count": 32,
+    "output_tokens": 51700,
+    "prompt_identity_sha256": "f47d5673cdb068f85481fa5171c13daf32f23d264167a391c666ff73c24d22fa",
+    "repair_attempt_attribution": "unavailable",
+    "total_tokens": 287670
+  },
+  "benchmark_id": "baseline-a21-five",
+  "cases": [
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "036c22441ad7015e3a2dc10a9b68f1ce3ba2b06169caed001983ba29901ff8f1",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "quotes_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "ea7383fe53528d24c9d6d1cc890d9449dd75e602c7d04479208cf02ad27d6017",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+            "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+            "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+          ],
+          "latency_ms": 51082,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REGENERATE_ITEM",
+          "repair_delta": {
+            "introduced": [],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights_final[1].text",
+                "entity_id": "a1e1996607239b23a0321a0c1deead0cde85f01a85ed540b3bed1c5cb2fdd23e",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:section-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              }
+            ],
+            "resolved": [],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "current_evidence",
+          "report_id": "cohort-076eca6d31e0c1dcddf0",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "8694764e4d5948d941be28a77529478544b017c8a2660179be4da88b1c237a71",
+          "strategy_fingerprint": "84ee4074b965b3f9af5181648158c8cfc477bcf348211b03f9d440c03f7e2139",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "b1443b81975c968138859d72f4620168732713b2bcd58211b0dfa0c1247de3c1",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "quotes_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "ea7383fe53528d24c9d6d1cc890d9449dd75e602c7d04479208cf02ad27d6017",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+            "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+            "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+          ],
+          "latency_ms": 55151,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights_final[1].text",
+                "entity_id": "a1e1996607239b23a0321a0c1deead0cde85f01a85ed540b3bed1c5cb2fdd23e",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:section-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              }
+            ],
+            "resolved": [],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-076eca6d31e0c1dcddf0",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "44c7f976c661bf2815ae587c6c7c60eccdd09afb4210b52e240d71c9316bbe7c",
+          "strategy_fingerprint": "2455434c2584df510acf129f61f78750497b5f391cbeffaacc5276974f011b87",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "469a9896bfa7c04fe8b644eaf7d71635da36968d4d9a91b32551036f064b3878",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "quotes_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 3,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "ea7383fe53528d24c9d6d1cc890d9449dd75e602c7d04479208cf02ad27d6017",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+            "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+            "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+          ],
+          "latency_ms": 49020,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "expert_comment",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights_final[1].text",
+                "entity_id": "a1e1996607239b23a0321a0c1deead0cde85f01a85ed540b3bed1c5cb2fdd23e",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:section-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              }
+            ],
+            "resolved": [],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-076eca6d31e0c1dcddf0",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/regeneration_candidate_audit_3.json",
+          "source_audit_sha256": "79094b0746e5c074a46a7c46ad89f186f4cfecc62b24acd462dece44525d73d6",
+          "strategy_fingerprint": "2455434c2584df510acf129f61f78750497b5f391cbeffaacc5276974f011b87",
+          "transformation_scope": [
+            "quotes"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        }
+      ],
+      "case_id": "2026-global-co-8970fc13f012",
+      "evidence_pack_sha256": {
+        "doc_map": "fa800123aa0e9e93dd4ffcb098371b7f1da674827de40a54c34374ff6f01a9ef",
+        "findings": "396ce9c9a264c71965b2a62233afd4ef0e0a0a0b998684e5328f9ce1b10ce01a",
+        "limitations": "1230d82dfee821baa60136517bfc18337fd1d906aed0aca27ad94f83810657fa",
+        "methods": "7ab7f517bc8aa240c4453efbd024848842ed9702bdb1cb91d32196bf2ff48e15",
+        "quote_candidates": "ca785abbd0e0d3f5070ba29ac8ad5a5e171d13958bc57c61a6be7f7bb4c1cf4b",
+        "scope": "9da296fdd8f8ad89e4ef3760a60ef5671207212e67fb5289e5143afca297aa6d"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "family_status",
+        "quotes_final",
+        "soft_copy_claim_provenance"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "quote"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+        "prompt_identity_sha256": "94ce7fd930c46c3410ee4742ae34d3b38260f10fd6f403afb25ab8aca49fb648",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+        "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+        "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+        "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+      ],
+      "initial_validation_sha256": "43947037e32f88d5c69b3dfcf235e3fe09ab0613dc0e4bc6966b084ffde6cc30",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/artifacts.json",
+          "sha256": "600fdadf408e8333d3c896ea0f6dd66f295125781a6ee8539df51bcd44654d24"
+        },
+        "doc_map": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/doc_map.json",
+          "sha256": "fa800123aa0e9e93dd4ffcb098371b7f1da674827de40a54c34374ff6f01a9ef"
+        },
+        "findings": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/findings.json",
+          "sha256": "396ce9c9a264c71965b2a62233afd4ef0e0a0a0b998684e5328f9ce1b10ce01a"
+        },
+        "initial_validation": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/validation.json",
+          "sha256": "43947037e32f88d5c69b3dfcf235e3fe09ab0613dc0e4bc6966b084ffde6cc30"
+        },
+        "limitations": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/limitations.json",
+          "sha256": "1230d82dfee821baa60136517bfc18337fd1d906aed0aca27ad94f83810657fa"
+        },
+        "methods": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/methods.json",
+          "sha256": "7ab7f517bc8aa240c4453efbd024848842ed9702bdb1cb91d32196bf2ff48e15"
+        },
+        "quote_candidates": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/quote_candidates.json",
+          "sha256": "ca785abbd0e0d3f5070ba29ac8ad5a5e171d13958bc57c61a6be7f7bb4c1cf4b"
+        },
+        "report_context": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/report_context.json",
+          "sha256": "1c5bc52e7a8c02f814fe34113a8ca9e37feae562dd6cc0f632791c3676e6194f"
+        },
+        "scope": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/2026-global-co-8970fc13f012/report_analysis/scope.json",
+          "sha256": "9da296fdd8f8ad89e4ef3760a60ef5671207212e67fb5289e5143afca297aa6d"
+        }
+      },
+      "original_artifact_canonical_sha256": "ea7383fe53528d24c9d6d1cc890d9449dd75e602c7d04479208cf02ad27d6017",
+      "publisher_id": "Contentstack",
+      "report_id": "cohort-076eca6d31e0c1dcddf0",
+      "report_slug": "2026-global-co-8970fc13f012",
+      "source_identity_id": "source:ac8915b43ea20012f9da2bf3c8150b9f"
+    },
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "56a0019a7ab85b62a0bc689d329d29135fc095c1523fa5c17beed7cee60ca082",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "d2474ef212c5e66c36bdbda855f25444259c581e4be442a78d1f61d9a6e3467b",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d"
+          ],
+          "latency_ms": 98443,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REGENERATE_ITEM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "evidence_pack:limitations",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "insights:insight-002.text",
+                "entity_id": "insight:insight-002:text",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "current_evidence",
+          "report_id": "cohort-f1652970000cfe246c94",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "quote-002"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "8f66d384da3802008e2f410a82815fa014336c1273126efd95ee5e4ee92a23c2",
+          "strategy_fingerprint": "0d40917300831c44df19fc8239d582fe82b335a256996716b76010a0f7979a73",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "c52ce9e5fc98a8debf5325f0bf896dff7beac336dee25b2f8d65b90610f76369",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "d2474ef212c5e66c36bdbda855f25444259c581e4be442a78d1f61d9a6e3467b",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d"
+          ],
+          "latency_ms": 91698,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "evidence_pack:limitations",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "insights:insight-002.text",
+                "entity_id": "insight:insight-002:text",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-f1652970000cfe246c94",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "93efcb88a5116225c5f1285b87299a9bbdf036dbe5ad714a4342e3a73411e224",
+          "strategy_fingerprint": "a5871e0e9ed4b75a2444c6a02f8e15c778e9f30cc3bd309d24ba6e968e803242",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "12409c0de730b30909bcffb25f56bf8002bcb068e719b300048e52f0b7402e91",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 3,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "d2474ef212c5e66c36bdbda855f25444259c581e4be442a78d1f61d9a6e3467b",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "7b546213af35d280ed3436c809832dc132443ea416974f1207f6e7c7494bfec2",
+            "aaf6b61c808f8986e5830473dc739b0956d467acd13b094fdeca79a585f34cef",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "dab22aca0cc315ed0b7c4516aaf18c02adc666d913eff2ba0fa86ac8a4b10fba"
+          ],
+          "latency_ms": 87830,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:8ba19f5207845a2f",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:377454c1832f6d12",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:bb0eea710207774b",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "evidence_pack:limitations",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "insights:insight-002.text",
+                "entity_id": "insight:insight-002:text",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-f1652970000cfe246c94",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/regeneration_candidate_audit_3.json",
+          "source_audit_sha256": "5800f3b4a76c6edb28a421f58ec4eb1c2e3d9d94b1b2b54844be7ebc2a38bf15",
+          "strategy_fingerprint": "a5871e0e9ed4b75a2444c6a02f8e15c778e9f30cc3bd309d24ba6e968e803242",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        }
+      ],
+      "case_id": "attachment-the-6dddc246d289",
+      "evidence_pack_sha256": {
+        "doc_map": "a100715bc8b04c8990c14f88ac61931b12ebe9bfb911ed5891242b7746918d14",
+        "findings": "39842fb5aa7dc49a78575a44ed8b522880506dec5a6fdba0380b670a8259ceab",
+        "limitations": "47ddecf86aeafe5c0b67d69c5fc9f3a3a2d457d580558588c13022d36638eb64",
+        "methods": "af2dc2c1d5b34909d72e7dd0a8ea9be7becae67a502fbadebd68ed5f556c2a0e",
+        "quote_candidates": "8e6dc3b6c892f839eac978ce1c34783eab3a6b1aaa0e60ad79b0f46aabac88d7",
+        "scope": "643daaac171639e8de7561882ac5e250ffa92348e5c2474e75c93ef3cd8b331c"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "family_status",
+        "insights_candidates",
+        "insights_final",
+        "soft_copy_claim_provenance"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "linkedin"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+        "prompt_identity_sha256": "f9078d2cd78f46958ff99c9cbfd5094d56541e06c493787a92d013250201bfd4",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+        "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+      ],
+      "initial_validation_sha256": "ea018788a97e408f97f5a870c010269d93636367372a650133d0304f72175075",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/artifacts.json",
+          "sha256": "ec77ccb77f0d74817f213753026f944d174fb98a56ed21a8eacc24b7493d7610"
+        },
+        "doc_map": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/doc_map.json",
+          "sha256": "a100715bc8b04c8990c14f88ac61931b12ebe9bfb911ed5891242b7746918d14"
+        },
+        "findings": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/findings.json",
+          "sha256": "39842fb5aa7dc49a78575a44ed8b522880506dec5a6fdba0380b670a8259ceab"
+        },
+        "initial_validation": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/validation.json",
+          "sha256": "ea018788a97e408f97f5a870c010269d93636367372a650133d0304f72175075"
+        },
+        "limitations": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/limitations.json",
+          "sha256": "47ddecf86aeafe5c0b67d69c5fc9f3a3a2d457d580558588c13022d36638eb64"
+        },
+        "methods": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/methods.json",
+          "sha256": "af2dc2c1d5b34909d72e7dd0a8ea9be7becae67a502fbadebd68ed5f556c2a0e"
+        },
+        "quote_candidates": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/quote_candidates.json",
+          "sha256": "8e6dc3b6c892f839eac978ce1c34783eab3a6b1aaa0e60ad79b0f46aabac88d7"
+        },
+        "report_context": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/report_context.json",
+          "sha256": "6ea6551727896d245b383e09adf7797ac559ba5b21414e38bc033f61203470ee"
+        },
+        "scope": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/attachment-the-6dddc246d289/report_analysis/scope.json",
+          "sha256": "643daaac171639e8de7561882ac5e250ffa92348e5c2474e75c93ef3cd8b331c"
+        }
+      },
+      "original_artifact_canonical_sha256": "d2474ef212c5e66c36bdbda855f25444259c581e4be442a78d1f61d9a6e3467b",
+      "publisher_id": "SimilarWeb",
+      "report_id": "cohort-f1652970000cfe246c94",
+      "report_slug": "attachment-the-6dddc246d289",
+      "source_identity_id": "source:28e4b4d73a69f2c37f70151adf362589"
+    },
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "74e6dbebd26e12429a2b93517de75d43e90b3837829460f417399289bcc469aa",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance",
+            "summary"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "eadfad4fff70309039d8a5c3eac2b9f4ebc7ea913124a33ad8ed98e2d155b94c",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d"
+          ],
+          "latency_ms": 107042,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights_final[3].text",
+                "entity_id": "66a070fc6f5100e9b770881f30730d36c70c1d18a6f7148f75ef6f6275de1a1b",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-0a019f840c3f89ad0a96",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "finding-01",
+            "finding-05",
+            "section-02",
+            "section-04",
+            "section-06",
+            "section-07"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "c4401314d8d631c90b61f49e6337a3339841406c5a2f6767889a1464292fca94",
+          "strategy_fingerprint": "36513d8ea9f9edb4e000dff5c590ca916de62e6c7bffc021f5db2df7f28a8e64",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final",
+            "summary"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "d43454ab4ee2d3c291ffe19aa46fa07f085d327e9bc14bb3390325a625acf058",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance",
+            "summary"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "eadfad4fff70309039d8a5c3eac2b9f4ebc7ea913124a33ad8ed98e2d155b94c",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+            "31a848bab0ba1cca278797bbc8140d927c5ecd89f36c5c7255964f347afbf7a8",
+            "441ef71e254f1f2a2ad67403be8496a7d4706e306030013df46c05a503fe9565",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "a62f429889b62e85626829dca93855a3fc2ff964559d30c9c97e3e577eeda958",
+            "ac7177c26e870aedb779bb9206756b7531aec2b2e0957278745b032a85e6ea2e",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d"
+          ],
+          "latency_ms": 85149,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "insights:insight-02",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "metrics"
+              },
+              {
+                "affected_section": "metric_spine",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "chart_insight_cards",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "key_figures",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "insights_final[3].text",
+                "entity_id": "66a070fc6f5100e9b770881f30730d36c70c1d18a6f7148f75ef6f6275de1a1b",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-0a019f840c3f89ad0a96",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "finding-01",
+            "finding-05",
+            "section-02",
+            "section-04",
+            "section-06",
+            "section-07"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "fda1b3b9e824dad348e4aa11a01439dc7dfcbd970c3eedf78fe329071ea8e84b",
+          "strategy_fingerprint": "36513d8ea9f9edb4e000dff5c590ca916de62e6c7bffc021f5db2df7f28a8e64",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final",
+            "summary"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "aa60c9ed40cb6c15e8980a56811a199a648dc74f2ce9bfceb79d6b672fa90dc7",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance",
+            "summary"
+          ],
+          "attempt_index": 3,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "eadfad4fff70309039d8a5c3eac2b9f4ebc7ea913124a33ad8ed98e2d155b94c",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d"
+          ],
+          "latency_ms": 106350,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "insights_final[3].text",
+                "entity_id": "66a070fc6f5100e9b770881f30730d36c70c1d18a6f7148f75ef6f6275de1a1b",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-0a019f840c3f89ad0a96",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "finding-01",
+            "finding-05",
+            "section-02",
+            "section-04",
+            "section-06",
+            "section-07"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/regeneration_candidate_audit_3.json",
+          "source_audit_sha256": "3fb4b033d0bb05a11097602545ae1a9445133edbfd5d1aee81a9bf8b894f6d03",
+          "strategy_fingerprint": "36513d8ea9f9edb4e000dff5c590ca916de62e6c7bffc021f5db2df7f28a8e64",
+          "transformation_scope": [
+            "insights_candidates",
+            "insights_final",
+            "summary"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        }
+      ],
+      "case_id": "ebook-0225-fut-997cc1cccd6a",
+      "evidence_pack_sha256": {
+        "doc_map": "edf14ff8e86922c1457bdf41f96e864b59d650cf5ebe9606a3dd3bf76402f9a0",
+        "findings": "7f28c70cb8b989dfd2043d987d56afe8a0409c8bc05553a636f17840e062462b",
+        "limitations": "88b2e0e13eb2e291930ec5b1a8df530d0f8a5f775b40440c43dd22feecec2fcd",
+        "methods": "ac26b106d7e08f8cdf7e175287feca5f2d470400d2291238edc2970283838eb3",
+        "quote_candidates": "e8298edf8530969c44e4df320d5d69f7882407c5dbb870cc64ee4e6e52328b8b",
+        "scope": "f3b86e4de402817b22c8c7a0c1226d89db1870698c9998765a3d4818daf4b67f"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "family_status",
+        "insights_candidates",
+        "insights_final",
+        "soft_copy_claim_provenance",
+        "summary"
+      ],
+      "failure_classes": [
+        "insight_metric",
+        "summary"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+        "prompt_identity_sha256": "4219d99c3d5faf912936b45de56b723fe9e960551828b040c0afa224d992634e",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+        "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+        "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+        "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+      ],
+      "initial_validation_sha256": "6f8c22aa3db340a38aedbf62b07b427b4f855428570b3c5ed1352a44e8bd68d9",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/artifacts.json",
+          "sha256": "7d472772372e3f316aed111a1539829a06397bb2786323df71ec5ff0302d6873"
+        },
+        "doc_map": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/doc_map.json",
+          "sha256": "edf14ff8e86922c1457bdf41f96e864b59d650cf5ebe9606a3dd3bf76402f9a0"
+        },
+        "findings": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/findings.json",
+          "sha256": "7f28c70cb8b989dfd2043d987d56afe8a0409c8bc05553a636f17840e062462b"
+        },
+        "initial_validation": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/validation.json",
+          "sha256": "6f8c22aa3db340a38aedbf62b07b427b4f855428570b3c5ed1352a44e8bd68d9"
+        },
+        "limitations": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/limitations.json",
+          "sha256": "88b2e0e13eb2e291930ec5b1a8df530d0f8a5f775b40440c43dd22feecec2fcd"
+        },
+        "methods": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/methods.json",
+          "sha256": "ac26b106d7e08f8cdf7e175287feca5f2d470400d2291238edc2970283838eb3"
+        },
+        "quote_candidates": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/quote_candidates.json",
+          "sha256": "e8298edf8530969c44e4df320d5d69f7882407c5dbb870cc64ee4e6e52328b8b"
+        },
+        "report_context": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/report_context.json",
+          "sha256": "d2ac9866d8f118402ce18373544181e889fa126989d0ddb8c04b045362ebc4c1"
+        },
+        "scope": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/ebook-0225-fut-997cc1cccd6a/report_analysis/scope.json",
+          "sha256": "f3b86e4de402817b22c8c7a0c1226d89db1870698c9998765a3d4818daf4b67f"
+        }
+      },
+      "original_artifact_canonical_sha256": "eadfad4fff70309039d8a5c3eac2b9f4ebc7ea913124a33ad8ed98e2d155b94c",
+      "publisher_id": "Bigcommerce",
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "report_slug": "ebook-0225-fut-997cc1cccd6a",
+      "source_identity_id": "source:5c922bfa405c19d9cbc9a0a00ea70d1b"
+    },
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "02c465dfa6198a8634af6cb46bf8b312817d08427ddd0d3cc2b40f308b035693",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "37244c0e55ce4abeb56c3c75c30e88d644eb4d4138da21ed1b3b269c034ae004",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+            "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "86508bdd7fa0a49f0ed81d077de142f6875b12e649240969b5eaa393cbd9da5e",
+            "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7"
+          ],
+          "latency_ms": 49495,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REGENERATE_ITEM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:6b9bddcc35ce766e",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "topics_covered[6].why_it_matters",
+                "entity_id": "d8a018e398fee2b07897848772225527c431487d8fffb7abea75c08976e6edac",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:executive-summary",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              },
+              {
+                "affected_section": "insights_final[0].text",
+                "entity_id": "991e1a25c9c972305d972b0b92e6f7db9d0700dfa364fcc7c7a08786e9bf45fc",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:cf5bf19b2fe5bbb9",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:501ac25ed9e11d10",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "current_evidence",
+          "report_id": "cohort-81af3890cd84ece81ef1",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "ai-trusted-guide",
+            "careful-spending",
+            "executive-summary",
+            "reliable-tech",
+            "value-redefined",
+            "what-organizations-should-do"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "b961fc08985ef2ee79d0c05ff5bfa56af2680e96745b4bf62517f3f1ab761d8f",
+          "strategy_fingerprint": "ac324d7648a9898037c93669d1d2493d2da312017e882a076e3282c6a825641c",
+          "transformation_scope": [
+            "expert_comment"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "d68eb6b35161f5bee705149f93e4fa54eedce775a0434b230c485899c495e59b",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "37244c0e55ce4abeb56c3c75c30e88d644eb4d4138da21ed1b3b269c034ae004",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+            "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+            "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+            "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7"
+          ],
+          "latency_ms": 37946,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "metadata.title",
+                "entity_id": "metadata:title",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "topics_covered[6].why_it_matters",
+                "entity_id": "d8a018e398fee2b07897848772225527c431487d8fffb7abea75c08976e6edac",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:executive-summary",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              },
+              {
+                "affected_section": "insights_final[0].text",
+                "entity_id": "991e1a25c9c972305d972b0b92e6f7db9d0700dfa364fcc7c7a08786e9bf45fc",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:cf5bf19b2fe5bbb9",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:501ac25ed9e11d10",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-81af3890cd84ece81ef1",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "e66b3e1e0798578b921232d18dc56019298aaf275b01a152223e2ca4f6207660",
+          "strategy_fingerprint": "786ec3b7bab90f4e299d4394f93b6011627a3e79649229e9cf7b5b6c8b32e189",
+          "transformation_scope": [
+            "expert_comment"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "d68eb6b35161f5bee705149f93e4fa54eedce775a0434b230c485899c495e59b",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 3,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "37244c0e55ce4abeb56c3c75c30e88d644eb4d4138da21ed1b3b269c034ae004",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+            "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+            "321ac93a793890fc86040593e540e8cef2df2c997d61d10290772c8b9d2f7490",
+            "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+            "c748b45d212fc577ee6193105b1cb06c7bc151eed6a3da6f4ed2647f491116ed"
+          ],
+          "latency_ms": 43936,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "insights:ic_value_price_switching_001.so_what",
+                "entity_id": "insight:ic_value_price_switching_001:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ic_fairness_shrinkflation_002.so_what",
+                "entity_id": "insight:ic_fairness_shrinkflation_002:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "topics_covered[6].why_it_matters",
+                "entity_id": "d8a018e398fee2b07897848772225527c431487d8fffb7abea75c08976e6edac",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:executive-summary",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              },
+              {
+                "affected_section": "insights_final[0].text",
+                "entity_id": "991e1a25c9c972305d972b0b92e6f7db9d0700dfa364fcc7c7a08786e9bf45fc",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:cf5bf19b2fe5bbb9",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:501ac25ed9e11d10",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "safe_removal",
+          "report_id": "cohort-81af3890cd84ece81ef1",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_3.json",
+          "source_audit_sha256": "51f545507da1e0063798e4581369cd4be16e4079d05a5606c4b14e2d6a5e634a",
+          "strategy_fingerprint": "786ec3b7bab90f4e299d4394f93b6011627a3e79649229e9cf7b5b6c8b32e189",
+          "transformation_scope": [
+            "expert_comment"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        }
+      ],
+      "case_id": "final-web-vers-1d9e64dd7425",
+      "evidence_pack_sha256": {
+        "doc_map": "3a70dc8c1019fec16609034783cbb9ae177352157efa4efa8973b2f64be21ed9",
+        "findings": "8401bdce7cd924e2f7a98a408bad207746c078dd303ecadbc7513d6d8aaf7fde",
+        "limitations": "1a84117f5be1371815aff908812ca8a571d30c1313ad4ba8eca7bc7581ca535d",
+        "methods": "8d15f006698ff87b0a6ae018858085f480d0aed69782e626d39955f2981a98a0",
+        "quote_candidates": "0067ff3394de4ce6b4b23e027b20580c406c9d6b3f950a217dc7106bfee156b4",
+        "scope": "e13bfa0dea9f0025c7adf4cda75d56be0d5978837b5d97832573ee1e287f2cfa"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "expert_comment",
+        "family_status",
+        "soft_copy_claim_provenance"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "linkedin",
+        "quote"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+        "prompt_identity_sha256": "66a69730fe0b03791ae587a53f8647028f501961086c9cb4da6e38db13dd0b5f",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+        "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+        "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+        "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+        "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+        "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+      ],
+      "initial_validation_sha256": "f31d2c0543f07385c8460db5a724949b004a90a5b70329031b2b7c733abc2b4a",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/artifacts.json",
+          "sha256": "83ad5e5c2064456552bee64863d956ea50988f37d3175e7e8dbc8af0734fc7aa"
+        },
+        "doc_map": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/doc_map.json",
+          "sha256": "3a70dc8c1019fec16609034783cbb9ae177352157efa4efa8973b2f64be21ed9"
+        },
+        "findings": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/findings.json",
+          "sha256": "8401bdce7cd924e2f7a98a408bad207746c078dd303ecadbc7513d6d8aaf7fde"
+        },
+        "initial_validation": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/validation.json",
+          "sha256": "f31d2c0543f07385c8460db5a724949b004a90a5b70329031b2b7c733abc2b4a"
+        },
+        "limitations": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/limitations.json",
+          "sha256": "1a84117f5be1371815aff908812ca8a571d30c1313ad4ba8eca7bc7581ca535d"
+        },
+        "methods": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/methods.json",
+          "sha256": "8d15f006698ff87b0a6ae018858085f480d0aed69782e626d39955f2981a98a0"
+        },
+        "quote_candidates": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/quote_candidates.json",
+          "sha256": "0067ff3394de4ce6b4b23e027b20580c406c9d6b3f950a217dc7106bfee156b4"
+        },
+        "report_context": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/report_context.json",
+          "sha256": "744e77815679c8515cecad6a702177636d0afa81b4b3d5d6a8d18ab01b916357"
+        },
+        "scope": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/final-web-vers-1d9e64dd7425/report_analysis/scope.json",
+          "sha256": "e13bfa0dea9f0025c7adf4cda75d56be0d5978837b5d97832573ee1e287f2cfa"
+        }
+      },
+      "original_artifact_canonical_sha256": "37244c0e55ce4abeb56c3c75c30e88d644eb4d4138da21ed1b3b269c034ae004",
+      "publisher_id": "Capgemini Research Institute",
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "report_slug": "final-web-vers-1d9e64dd7425",
+      "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff"
+    },
+    {
+      "baseline_attempts": [
+        {
+          "after_sha256": "e91538fb8a9b33d52e046819c2de42c68954eff498138c0fcc2a32e9ef83de58",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 1,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "3b8fafcdcfa56c8945585bfdc50fa4ef2556ac473b0d6c3ccc46b7be75410b2f",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "654aa493bf5ab9507cdcf830b9ff735e751148d265451bd520a1c09e3fc286aa",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+            "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+            "e19509445fedc04f9b89515a12ff112ebfe1380da9e3252ceb58b628eed5ed8d"
+          ],
+          "latency_ms": 100188,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "topics_covered",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:6687ec0a80f0f0ff",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:finding-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:85d697c89887f4a3",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ec26-insight-005.so_what",
+                "entity_id": "insight:ec26-insight-005:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:abd166d7d2fd5ecb",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ec26-insight-002.so_what",
+                "entity_id": "insight:ec26-insight-002:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:119bed4c9e78d57f",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ec26-insight-006.so_what",
+                "entity_id": "insight:ec26-insight-006:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-9b97626fc83c086961a7",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "section-2",
+            "section-3",
+            "section-4",
+            "section-5",
+            "section-6",
+            "section-7",
+            "section-8"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/regeneration_candidate_audit_1.json",
+          "source_audit_sha256": "351de01f26ddb49771158633a7ad28958d96f7885dd1157febf08842269d0d7d",
+          "strategy_fingerprint": "f7620db06e7cb11bcb04f40eccaeaa9fbbf86513c73048cfa5c36d20b2296e0f",
+          "transformation_scope": [
+            "expert_comment",
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "b031b69e0e87386e1dadd01dbdb566c470ca43fbd28c3ad1900463759264ea62",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 2,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "3b8fafcdcfa56c8945585bfdc50fa4ef2556ac473b0d6c3ccc46b7be75410b2f",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "751a1d3f00ba0ce1d42fec665d56891287a9be264f4b0fb046063f2280f73ae8",
+            "91c516d75e3f734b145fe7254cdb688e574245cc127cd887f94da1190b039c86",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+            "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+            "e19509445fedc04f9b89515a12ff112ebfe1380da9e3252ceb58b628eed5ed8d",
+            "ebf2aee48a3d4b46b4872bbec03887ad5104b711e63ea1d54248e39f44f54697"
+          ],
+          "latency_ms": 109610,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "insights_candidates:ec26-insight-003",
+                "entity_id": "ec26-insight-003",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "linkedin_post",
+                "entity_id": "soft_copy:linkedin_post:6687ec0a80f0f0ff",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights:ec26-insight-005.so_what",
+                "entity_id": "insight:ec26-insight-005:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:finding-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              },
+              {
+                "affected_section": "insights:ec26-insight-002.so_what",
+                "entity_id": "insight:ec26-insight-002:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:85d697c89887f4a3",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:abd166d7d2fd5ecb",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:119bed4c9e78d57f",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ec26-insight-006.so_what",
+                "entity_id": "insight:ec26-insight-006:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-9b97626fc83c086961a7",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "section-2",
+            "section-3",
+            "section-4",
+            "section-5",
+            "section-6",
+            "section-7",
+            "section-8"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/regeneration_candidate_audit_2.json",
+          "source_audit_sha256": "06cc586249fd17ec98f1db7aaa812ffeacf83d310111ceda431688d39eb7323b",
+          "strategy_fingerprint": "f7620db06e7cb11bcb04f40eccaeaa9fbbf86513c73048cfa5c36d20b2296e0f",
+          "transformation_scope": [
+            "expert_comment",
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        },
+        {
+          "after_sha256": "a88c155f9345b9daec59635ca33981283c939c7c3eea2d20a78b3a30c465e9c6",
+          "allowed_paths": [
+            "_cache",
+            "_repair_evidence_selection",
+            "expert_comment",
+            "family_status",
+            "insights_candidates",
+            "insights_final",
+            "soft_copy_claim_provenance"
+          ],
+          "attempt_index": 3,
+          "attested_producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+          "before_sha256": "3b8fafcdcfa56c8945585bfdc50fa4ef2556ac473b0d6c3ccc46b7be75410b2f",
+          "cohort_id": "33054c7c789f9a38f46d41078ae27545aee75bd54ddcd66d9f9b8c3219e7bcea",
+          "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+          "failure_fingerprints": [
+            "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+            "187275142887a4b94f84fe894f48d1a4a5c64ccd0e20708dfe110e9c17591c6f",
+            "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+            "5b6ee087a5a41a22254940e3e7aafaef8e7e396c4607c3b1ac940f6f978cc91f",
+            "91c516d75e3f734b145fe7254cdb688e574245cc127cd887f94da1190b039c86",
+            "938f685d69e2f940bc9a5e5f75a3d54ac0a9ba8cbfb289a7847ab71df9ae22d1",
+            "c201e91f819d2c41a35df9fcfc0f88c005fffba408c00390aba82ba1851bf05d",
+            "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+            "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+            "ebf2aee48a3d4b46b4872bbec03887ad5104b711e63ea1d54248e39f44f54697",
+            "f0877c133cc41653addc9dcc9dc222171748f6b383ee3f844a39192f3d1d8c19"
+          ],
+          "latency_ms": 95507,
+          "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+          "producer_build_identity": "workspace",
+          "promotion_outcome": "rolled_back",
+          "repair_action": "8fe3d091cee81bd65dc1a02967645655d907630bd64704127364d936864dc91e",
+          "repair_delta": {
+            "introduced": [
+              {
+                "affected_section": "insights:ec26-insight-008.text",
+                "entity_id": "insight:ec26-insight-008:text",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "executive_advisory",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              },
+              {
+                "affected_section": "insights:ec26-insight-003.so_what",
+                "entity_id": "insight:ec26-insight-003:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "claim_ledgers",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "regeneration_scope_violation"
+              }
+            ],
+            "persisting": [
+              {
+                "affected_section": "quotes",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "family_confidence"
+              },
+              {
+                "affected_section": "summary.executive_summary",
+                "entity_id": "summary.executive_summary",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "insights:ec26-insight-005.so_what",
+                "entity_id": "insight:ec26-insight-005:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "summary.tldr",
+                "entity_id": "summary.tldr",
+                "evidence_ids": [],
+                "rule_id": "artifact_quality"
+              },
+              {
+                "affected_section": "quotes:finding-1",
+                "entity_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "evidence_ids": [],
+                "rule_id": "semantic"
+              },
+              {
+                "affected_section": "insights:ec26-insight-002.so_what",
+                "entity_id": "insight:ec26-insight-002:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "insights:ec26-insight-006.so_what",
+                "entity_id": "insight:ec26-insight-006:so_what",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "resolved": [
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:85d697c89887f4a3",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:abd166d7d2fd5ecb",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              },
+              {
+                "affected_section": "expert_comment",
+                "entity_id": "soft_copy:expert_comment:119bed4c9e78d57f",
+                "evidence_ids": [],
+                "rule_id": "grounding"
+              }
+            ],
+            "validator_identity": "unavailable"
+          },
+          "repair_strategy": "2b28681e52ca7ec2bbecc2336fb755557d22a80c33ae8eb4c62a7cc12a74695b",
+          "report_id": "cohort-9b97626fc83c086961a7",
+          "schema_version": "1.0",
+          "selected_evidence_ids": [
+            "section-2",
+            "section-3",
+            "section-4",
+            "section-5",
+            "section-6",
+            "section-7",
+            "section-8"
+          ],
+          "source_audit_path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/regeneration_candidate_audit_3.json",
+          "source_audit_sha256": "a52c6463fda908e820ef020ae8eadaaba85c1ce37a429f116e67c833b03b79f2",
+          "strategy_fingerprint": "f7620db06e7cb11bcb04f40eccaeaa9fbbf86513c73048cfa5c36d20b2296e0f",
+          "transformation_scope": [
+            "expert_comment",
+            "insights_candidates",
+            "insights_final"
+          ],
+          "validation_run_id": "validation:c5cc18941c7af95710d5ff54f739defa95f36dbd79a7cf080728bb9cafe29870",
+          "validation_status": "fail",
+          "workflow_run_id": "0e107a0d-d48d-451b-9bcb-0f475589ad6f"
+        }
+      ],
+      "case_id": "g0-ec-trends-r-41f8ffd78145",
+      "evidence_pack_sha256": {
+        "doc_map": "a616efe3290fd80c129cb4d96d8e6f70ddffce8a29a62e515dad7f03d57684f5",
+        "findings": "03f3434beb4caf2e3c5cd013219f04fe60cc8e6343f917b87f6c87f04916fbf2",
+        "limitations": "061df923ee202a2ac3cfcfacb2fe150f5c5cc2384e3b950e040a7d5a451b083b",
+        "methods": "3ae25501e9c02a2f6b97c9495dbfa3afea10f80e44c07255f433cc4f946b685a",
+        "quote_candidates": "6c40609c6a53a5f0f3c5f3b9ac978cfbee9ff671ae7647cb9f825a2a60ef0ce4",
+        "scope": "49e992876be790a9170bdf88370f88d20373608b8d1541ae1520f43f6821d886"
+      },
+      "expected_legal_mutation_scope": [
+        "_cache",
+        "_repair_evidence_selection",
+        "expert_comment",
+        "family_status",
+        "insights_candidates",
+        "insights_final",
+        "soft_copy_claim_provenance"
+      ],
+      "failure_classes": [
+        "expert_view",
+        "insight_metric",
+        "linkedin",
+        "quote",
+        "summary"
+      ],
+      "historical_outcome": "all_attempts_rolled_back",
+      "identities": {
+        "artifact_schema_identity": "schema-96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
+        "configuration_hash": "a023388e3d8a2d94a478dbb89dfc6c7e803a330111e04c9d23c46fcc99687bc8",
+        "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
+        "producer_build_identity": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+        "prompt_identity_sha256": "bdd4e9d96ff691c2ca608d84f92fa74cad5ff1379ad279d070b2db0483759e1d",
+        "validator_identity": "unavailable"
+      },
+      "initial_failure_fingerprints": [
+        "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+        "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+        "39b0cb8f12806d2719b24653f4b5e993d966bb8c3226595e61bf2663e03a8070",
+        "91c516d75e3f734b145fe7254cdb688e574245cc127cd887f94da1190b039c86",
+        "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+        "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+        "e89e2a20f8b9afd9359e1817a1553cc039ba4adce8a56950c5f1f953715ca04f",
+        "ebf2aee48a3d4b46b4872bbec03887ad5104b711e63ea1d54248e39f44f54697",
+        "ecac2b05ea5bcbceb483b8dbdb4dbc086d986c5d38c12b994f88e77af366d8e6",
+        "f0877c133cc41653addc9dcc9dc222171748f6b383ee3f844a39192f3d1d8c19"
+      ],
+      "initial_validation_sha256": "88dbfbdea93142d12cef11b15262df53aa68f5acc42bf16745d84cf4b89ea986",
+      "input_files": {
+        "artifacts": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/artifacts.json",
+          "sha256": "171c07ff5934f685b159fa208d2c3f90b04201befe4ad25ae8758424c3ed2278"
+        },
+        "doc_map": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/doc_map.json",
+          "sha256": "a616efe3290fd80c129cb4d96d8e6f70ddffce8a29a62e515dad7f03d57684f5"
+        },
+        "findings": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/findings.json",
+          "sha256": "03f3434beb4caf2e3c5cd013219f04fe60cc8e6343f917b87f6c87f04916fbf2"
+        },
+        "initial_validation": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/validation.json",
+          "sha256": "88dbfbdea93142d12cef11b15262df53aa68f5acc42bf16745d84cf4b89ea986"
+        },
+        "limitations": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/limitations.json",
+          "sha256": "061df923ee202a2ac3cfcfacb2fe150f5c5cc2384e3b950e040a7d5a451b083b"
+        },
+        "methods": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/methods.json",
+          "sha256": "3ae25501e9c02a2f6b97c9495dbfa3afea10f80e44c07255f433cc4f946b685a"
+        },
+        "quote_candidates": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/quote_candidates.json",
+          "sha256": "6c40609c6a53a5f0f3c5f3b9ac978cfbee9ff671ae7647cb9f825a2a60ef0ce4"
+        },
+        "report_context": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/report_context.json",
+          "sha256": "37bba7db8d35984cd9a63a0ed1df4bc24e3a153ceeef1b769927b1c223a17e71"
+        },
+        "scope": {
+          "path": "tmp/a21-final-20260920-live/frozen-reliability-jkjbdjg4/members/ias-first-attempt-a7i7se7t/output/g0-ec-trends-r-41f8ffd78145/report_analysis/scope.json",
+          "sha256": "49e992876be790a9170bdf88370f88d20373608b8d1541ae1520f43f6821d886"
+        }
+      },
+      "original_artifact_canonical_sha256": "3b8fafcdcfa56c8945585bfdc50fa4ef2556ac473b0d6c3ccc46b7be75410b2f",
+      "publisher_id": "DHL eCommerce",
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "report_slug": "g0-ec-trends-r-41f8ffd78145",
+      "source_identity_id": "source:51ecf17fd1dd14390636cdf033f41edf"
+    }
+  ],
+  "corpus_source": {
+    "cohort_manifest_path": "docs/quality/reliability-cohort-20260920-a21-final/frozen_cohort.json",
+    "cohort_manifest_sha256": "21a9a1b995d10b5add412780d96930ecc29bafd082907ecbf0741c80be841a07",
+    "schema_file_sha256": {
+      "src/schemas/artifacts.schema.json": "6637619ebdf00f85540e24b01cf1e85ebf9b56233f1c98aff7c32ffd5349f1af",
+      "src/schemas/regeneration_candidate_audit.schema.json": "08d4761436e3d69ddba8daffd7641c3b1e9f58ca06f5168221c40a4fd40004ee",
+      "src/schemas/validation_report.schema.json": "a4e690cb962a0550b2c2b12eb1e50527ed057d3cc8e118d31f0c7b25c68e606f"
+    },
+    "source_git_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+    "source_result_path": "docs/quality/reliability-cohort-20260920-a21-final/cohort_result.json",
+    "source_result_sha256": "f45047b8343f18192783e26e8d42ffa2524d18c90fdd33d09e945e404902b5ee",
+    "source_retention": "original artifacts and evidence packs remain in the referenced local retained replay; this manifest pins their exact bytes without copying source text into committed evidence",
+    "source_usage_db_sha256": "4c9496beec01b7af63f974a30bbd859d980e3dad86b34bd21df9936605fa22d0"
+  },
+  "frozen": true,
+  "manifest_sha256": "a42ba8a0b9d9b6f1e687cdba1e479fe5b220a1ba870f0b58e552a4739b5ea803",
+  "schema_version": "1.0"
+}
