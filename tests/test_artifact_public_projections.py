@@ -2,6 +2,10 @@ from src.generators._artifact_generator.storage import build_key_figures
 
 
 def test_key_figure_support_reuses_its_linked_retained_insight_text() -> None:
+    insight_text = (
+        "U.S. household data usage is forecast to rise from 475GB per month "
+        "to 1,000GB per month by 2024E."
+    )
     figures = build_key_figures(
         metric_spine=[
             {
@@ -18,10 +22,8 @@ def test_key_figure_support_reuses_its_linked_retained_insight_text() -> None:
             {
                 "id": "usage",
                 "evidence_id": "usage-evidence",
-                "text": (
-                    "U.S. household data usage is forecast to rise from 475GB per "
-                    "month to 1,000GB per month by 2024E."
-                ),
+                "text": insight_text,
+                "evidence": insight_text,
             }
         ],
     )

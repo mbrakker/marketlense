@@ -10,7 +10,7 @@ import pytest
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
-from tests.test_public_editorial_quality_generator import (
+from tests._test_public_editorial_quality_generator._shared import (
     _retained_artifacts,
     _rule_ids,
     _set_near_duplicate,

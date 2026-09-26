@@ -31,6 +31,20 @@ def _contract_dataclasses() -> list[type]:
     return ordered
 
 
+def _versioned_contract_dataclasses() -> list[type]:
+    """Exclude nested values whose enclosing contract owns the version boundary."""
+    nested_values_with_parent_version = {
+        "src.contracts.regeneration.RepairPatchOperation",
+        "src.contracts.regeneration.RepairSeverityChange",
+    }
+    return [
+        candidate
+        for candidate in _contract_dataclasses()
+        if f"{candidate.__module__}.{candidate.__name__}"
+        not in nested_values_with_parent_version
+    ]
+
+
 def _build_value(annotation: Any, field_name: str, stack: tuple[type, ...]) -> Any:
     origin = get_origin(annotation)
     args = get_args(annotation)
@@ -179,7 +193,7 @@ def test_contract_dataclass_roundtrip(contract_cls: type) -> None:
 
 @pytest.mark.parametrize(
     "contract_cls",
-    _contract_dataclasses(),
+    _versioned_contract_dataclasses(),
     ids=lambda cls: f"{cls.__module__}.{cls.__name__}",
 )
 def test_contract_dataclasses_expose_schema_version(contract_cls: type) -> None:

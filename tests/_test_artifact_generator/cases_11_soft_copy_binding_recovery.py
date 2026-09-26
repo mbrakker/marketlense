@@ -72,7 +72,7 @@ def test_soft_copy_binding_gap_is_deferred_to_finalization(tmp_path) -> None:
     ]
 
 
-def test_linkedin_paragraph_bindings_are_deferred_to_final_sentence_grid(
+def test_linkedin_paragraph_bindings_remain_declared_until_finalization(
     tmp_path,
 ) -> None:
     class ParagraphClaimsClient:
@@ -123,41 +123,39 @@ def test_linkedin_paragraph_bindings_are_deferred_to_final_sentence_grid(
     )
 
     assert len(client.requests) == 1
-    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
-        "First supported point.",
-        "Second supported point.",
-        "Third supported point.",
+    assert result["_soft_copy_claim_bindings"] == [
+        {
+            "claim": "First supported point. Second supported point.",
+            "classification": "factual",
+            "evidence_ids": [],
+        },
+        {
+            "claim": "Third supported point.",
+            "classification": "interpretive",
+            "evidence_ids": [],
+        },
     ]
 
 
-def test_linkedin_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
-    class UncoveredThenRepairedClient:
+def test_linkedin_binding_gap_is_deferred_without_model_retry(tmp_path) -> None:
+    class PartialClaimsClient:
         def __init__(self) -> None:
             self.requests = []
 
         def openai_chat_json(self, request, ctx):
             del ctx
             self.requests.append(request)
-            claims = [
-                {
-                    "claim": "The first supported sentence.",
-                    "classification": "interpretive",
-                    "evidence_ids": [],
-                }
-            ]
-            if len(self.requests) > 1:
-                claims.append(
-                    {
-                        "claim": "The trailing hashtag sentence.",
-                        "classification": "interpretive",
-                        "evidence_ids": [],
-                    }
-                )
             payload = {
                 "linkedin_post": (
                     "The first supported sentence. The trailing hashtag sentence."
                 ),
-                "claim_provenance": claims,
+                "claim_provenance": [
+                    {
+                        "claim": "The first supported sentence.",
+                        "classification": "interpretive",
+                        "evidence_ids": [],
+                    }
+                ],
             }
             return OpenAIResponseResult(
                 schema_version="1.0",
@@ -169,7 +167,7 @@ def test_linkedin_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
                 model=request.model,
             )
 
-    client = UncoveredThenRepairedClient()
+    client = PartialClaimsClient()
     result = render_artifact_json_model(
         namespace="report_vs/artifacts/linkedin_post",
         variables={"doc_map_json": "{}"},
@@ -181,15 +179,18 @@ def test_linkedin_binding_gap_uses_existing_bounded_recovery(tmp_path) -> None:
         vector_store_id=None,
     )
 
-    assert len(client.requests) == 2
-    assert [binding["claim"] for binding in result["_soft_copy_claim_bindings"]] == [
-        "The first supported sentence.",
-        "The trailing hashtag sentence.",
+    assert len(client.requests) == 1
+    assert result["_soft_copy_claim_bindings"] == [
+        {
+            "claim": "The first supported sentence.",
+            "classification": "interpretive",
+            "evidence_ids": [],
+        }
     ]
 
 
 __all__ = [
     "test_soft_copy_binding_gap_is_deferred_to_finalization",
-    "test_linkedin_paragraph_bindings_are_deferred_to_final_sentence_grid",
-    "test_linkedin_binding_gap_uses_existing_bounded_recovery",
+    "test_linkedin_paragraph_bindings_remain_declared_until_finalization",
+    "test_linkedin_binding_gap_is_deferred_without_model_retry",
 ]

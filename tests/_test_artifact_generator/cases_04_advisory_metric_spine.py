@@ -74,7 +74,20 @@ def test_metric_label_survives_candidate_to_final_insight_to_key_figure() -> Non
     final = normalize_artifact_insights(candidate, prefix="insight")
 
     spine = derive_metric_spine_from_insights(final)
-    figures = build_key_figures(metric_spine=spine, evidence_packs={})
+    figures = build_key_figures(
+        metric_spine=spine,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "iab-video",
+                        "text": "Digital video revenue growth was 19.2%.",
+                    }
+                ]
+            }
+        },
+        insights_final=final,
+    )
 
     assert spine[0]["label"] == "Digital video revenue growth"
     assert spine[0]["evidence_id"] == "iab-video"
@@ -301,24 +314,25 @@ def test_metric_spine_label_keeps_a_complete_long_source_sentence() -> None:
 def test_metric_spine_renders_one_clean_primary_metric(
     value: str, unit: str, expected_display: str
 ) -> None:
-    spine = derive_metric_spine_from_insights(
-        [
-            {
-                "id": "primary-metric",
-                "text": (
-                    "The source-backed insight retains supporting numbers in prose."
-                ),
-                "evidence_id": "iab-primary-metric",
-                "metric": {
-                    "label": "Source-backed primary metric",
-                    "value": value,
-                    "unit": unit,
-                },
-            }
-        ]
-    )
+    source_text = f"Source-backed primary metric: {expected_display}."
+    insight = {
+        "id": "primary-metric",
+        "text": source_text,
+        "evidence": source_text,
+        "evidence_id": "iab-primary-metric",
+        "metric": {
+            "label": "Source-backed primary metric",
+            "value": value,
+            "unit": unit,
+        },
+    }
+    spine = derive_metric_spine_from_insights([insight])
 
-    figures = build_key_figures(metric_spine=spine, evidence_packs={})
+    figures = build_key_figures(
+        metric_spine=spine,
+        evidence_packs={},
+        insights_final=[insight],
+    )
 
     assert [figure["figure"] for figure in figures] == [expected_display]
 
@@ -586,20 +600,19 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
     unit: str,
     magnitude: str,
 ) -> None:
-    spine = derive_metric_spine_from_insights(
-        [
-            {
-                "id": "headline",
-                "text": "Headline value",
-                "evidence_id": "metric-headline",
-                "metric": {
-                    "label": "Source-backed headline metric",
-                    "value": display,
-                    "unit": "",
-                },
-            }
-        ]
-    )
+    source_text = f"Source-backed headline metric: {display}."
+    insight = {
+        "id": "headline",
+        "text": source_text,
+        "evidence": source_text,
+        "evidence_id": "metric-headline",
+        "metric": {
+            "label": "Source-backed headline metric",
+            "value": display,
+            "unit": "",
+        },
+    }
+    spine = derive_metric_spine_from_insights([insight])
 
     assert spine[0]["value"] == display
     assert spine[0]["source_display_value"] == display
@@ -612,6 +625,7 @@ def test_metric_spine_preserves_source_display_and_exposes_complete_numeric_meta
     figures = build_key_figures(
         metric_spine=spine,
         evidence_packs={},
+        insights_final=[insight],
     )
     assert figures[0]["figure"] == display
 

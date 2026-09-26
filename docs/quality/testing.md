@@ -16,6 +16,8 @@ Tests that exercise a request's default relative accounting, ledger, cache, or s
 
 First-party test modules remain below the repository ownership threshold through semantic case splits. A temporary allowlist is not a substitute for splitting a module once its approved maximum is exceeded. For oversized suites, keep `test_<suite>.py` as a small pytest aggregator and put semantic `cases_*.py` modules with shared fixtures in `_test_<suite>/`; preserve decorators and resolve file-based fixtures from the original aggregator path.
 
+Shared builders and fixtures used by other test modules belong in `_test_<suite>/_shared.py` and are imported from that module directly. A test aggregator exports test cases; it is not a shared-helper API. Schema-version checks apply to standalone or persisted contract boundaries; nested value objects inherit the enclosing version unless they cross a boundary independently.
+
 Validation runs MUST reuse the canonical production workflow and production orchestration by default. Validation-specific code may isolate inputs, state, outputs, external side effects and evidence collection, but MUST NOT reproduce workflow sequencing or business logic. A divergent/component validation is permitted only when explicitly required by the validation objective and must identify that limitation in its evidence.
 
 CLI unit tests must inject the canonical configuration service whenever the command needs application settings. The default suite must not depend on developer credentials or a local `.env` file.

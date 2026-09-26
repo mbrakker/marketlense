@@ -6,7 +6,9 @@ from src.generators.public_editorial_quality_generator import (
     enumerate_public_editorial_items,
     evaluate_public_editorial_quality,
 )
-from tests.test_public_editorial_quality_generator import _retained_artifacts
+from tests._test_public_editorial_quality_generator._shared import (
+    _retained_artifacts,
+)
 
 
 def test_public_item_inventory_and_identity_evidence_fail_closed_atomically() -> None:

@@ -14,7 +14,7 @@ from scripts.quality.run_frozen_reliability_cohort import (
     _load_members,
     run_frozen_reliability_cohort,
 )
-from tests.test_validation_queue_lineage import (
+from tests._test_validation_queue_lineage._shared import (
     _full_chain_chat_response_factory,
     _full_chain_response_factory,
 )
@@ -158,10 +158,7 @@ def test_failure_diagnostic_projects_structured_reference_and_cover_terminal_cau
         ]
         conn.executemany(
             "INSERT INTO remediation_records VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                (*row[:4], json.dumps(row[4]), "2026-09-19T12:00:00Z")
-                for row in rows
-            ],
+            [(*row[:4], json.dumps(row[4]), "2026-09-19T12:00:00Z") for row in rows],
         )
 
     diagnostics = {

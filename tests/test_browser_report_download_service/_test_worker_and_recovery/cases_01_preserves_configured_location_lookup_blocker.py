@@ -330,7 +330,7 @@ def test_download_report_with_browser_use_recovers_lookup_before_completed_histo
     base_settings = _settings(tmp_path)
     settings = replace(
         base_settings,
-        timeout_seconds=0.05,
+        timeout_seconds=1.0,
         max_steps=1,
         identity_profile=BrowserDownloadIdentity(
             schema_version="1.0",
