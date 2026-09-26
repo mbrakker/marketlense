@@ -117,13 +117,59 @@ acceptance disposition: [2026-09-26 result](results/2026-09-26-09df2bac.json)
 The isolated discovery-to-publish readiness canary passed on that SHA in one
 attempt and ended at `awaiting_review`; validation and publication readiness
 passed, and publication remained disabled. It did not exercise repair and is
-not counted in repair metrics. The missing payload inputs are now pinned in
-the schema 2.0 manifests above; a new exact-SHA replay is required before
-updating E13's current measurement disposition.
+not counted in repair metrics. The missing payload inputs were subsequently
+pinned in the schema 2.0 manifests.
 
-E13 remains **Active**. Closure requires a retained complete pre-repair
-`ReportPayload` for each immutable case and evidence that the quantitative
-closure criteria pass. The quality check
-`check_documentation.py --check-generated` also reported 12 pre-existing stale
-line anchors in `simplification.md`; none point to files changed for this
-work.
+## Current measurement disposition — 2026-09-26, implementation SHA `baad5a69d9dc63c6a0b9e807c97fa1aea0f8bff3`
+
+All seven frozen cases passed exact payload reconstruction and the production
+completeness preflight before repair clients were built. The five analysis
+checkpoint cases use the production checkpoint decoder and normalizer; mobile
+and DoubleVerify use their earliest retained selection state plus pinned
+metadata inputs. No production fields were invented. A comparison against the
+original manifests at `02072208` checked 173 historical case fields and input
+references with zero mismatches. The three manifests retain their original
+cases and historical artifact, evidence, validation, and failure identities.
+
+All seven cases reached the production regeneration loop and ended in failure.
+The case outcome count is 0/7 successes; it is separate from the canonical
+candidate-audit scorecard denominator:
+
+| Cohort | Cases failed | Cases with candidate audits | Candidate attempts | Scorecard disposition |
+| --- | ---: | ---: | ---: | --- |
+| A21 | 5/5 | 3/5 | 5 | Available, denominator incomplete, comparison incompatible; success@1 and @3 are 0/3 among audited chains |
+| Mobile editorial | 1/1 | 0/1 | 0 | Unavailable; repair decision rejected before candidate audit |
+| DoubleVerify | 1/1 | 0/1 | 0 | Unavailable; repair decision rejected before candidate audit |
+
+The A21 audits record 5/5 hard-failure introductions, 5/5 out-of-scope
+mutations, and 5/5 unsupported-evidence introductions. They also record one
+abstention or removal, zero repeated candidate hashes, and zero repeated
+strategy/evidence combinations. A21's scorecard usage attribution is
+unavailable; the isolated usage ledger retained 28 events, 219,275 input and
+39,158 output tokens, and USD 0.034411. Mobile retained one event (5,547 input,
+1,437 output tokens, USD 0.001273); DoubleVerify retained one event (10,419
+input, 2,184 output tokens, USD 0.002134). These run-level totals are not
+attributed to candidate attempts, and comparable latency/cost is unavailable.
+The three cohorts remain identity-incompatible. Since baseline success@3 was
+0/7 with unbounded residual odds, no residual-odds reduction is demonstrated.
+
+The required isolated discovery-to-publish canary failed twice at this SHA.
+The first run stopped during `insights_candidates` structured-output recovery
+(`deterministic_repair_invalid`); the second stopped in the report pipeline
+when the production mutation-scope guard rejected a repair decision with
+`changed_path_outside_allowed_paths`. Both used fresh isolated state. The
+benchmark replays did not change production validation or promotion gates.
+
+The complete per-case outcomes, full emitted scorecards, observed usage,
+failure-class coverage, exact commands, canary results, and validation results
+are retained in [the 2026-09-26 measurement](results/2026-09-26-baad5a69.json)
+(SHA-256 `ef963b0cdc12341dc22f73aa4a4600b9b571aad6d8c4243abc3776a52564b88d`; see
+[SHA-256 sidecar](results/2026-09-26-baad5a69.json.sha256)).
+
+E13 remains **Active**. The corpus reconstruction defect is fixed, but closure
+criteria are not met: no repair succeeded, A21's measured candidate attempts
+exceed the hard-failure, scope, and evidence thresholds, mobile and DoubleVerify
+have no candidate-audit measurements, the scorecard denominators are
+incomplete, and the required canary failed twice. The documentation gate also
+continues to report 12 pre-existing stale line anchors in unrelated
+`simplification.md`.
