@@ -51,9 +51,11 @@ LONG_TEST_FILE_ALLOWLIST = {
     },
     "tests/test_report_regeneration_generator.py": {
         "owner": "quality/repository-hygiene",
-        "reason": "Targeted regeneration coverage requires a follow-up split.",
+        "reason": (
+            "Targeted regeneration and E13 atomic-scope coverage require a follow-up split."
+        ),
         "expires_on": "2026-09-30",
-        "max_lines": 3191,
+        "max_lines": 3550,
     },
     "tests/test_artifact_normalization.py": {
         "owner": "quality/repository-hygiene",

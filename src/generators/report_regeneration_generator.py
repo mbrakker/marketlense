@@ -6,6 +6,7 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
+from difflib import SequenceMatcher
 from typing import Any, Callable, Dict, List, Sequence
 
 from src.contracts.regeneration import (
@@ -354,6 +355,12 @@ def regenerate_artifacts(
         regeneration_attempt=request.attempt_index,
         validate_references=False,
     )
+    _preserve_atomic_target_families(
+        updated_artifacts=updated_artifacts,
+        state=state,
+        plan=request.plan,
+        original_artifacts=request.current_artifacts,
+    )
     changed_roots = {
         str(path).split(".", 1)[0]
         for target in request.plan.targets
@@ -364,13 +371,14 @@ def regenerate_artifacts(
         "claim_ledgers": {"summary", "insights_final", "quotes_final"},
     }
     for artifact_root, input_roots in derived_inputs.items():
-        if (
-            artifact_root in safe_artifacts
-            and not changed_roots.intersection(input_roots)
-        ):
-            updated_artifacts[artifact_root] = deepcopy(
-                safe_artifacts[artifact_root]
-            )
+        if changed_roots.intersection(input_roots):
+            continue
+        if artifact_root in safe_artifacts:
+            updated_artifacts[artifact_root] = deepcopy(safe_artifacts[artifact_root])
+        else:
+            # A targeted repair must not introduce an unrelated derived
+            # projection that was absent from the last promoted artifact set.
+            updated_artifacts.pop(artifact_root, None)
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
         updated_artifacts["_repair_evidence_selection"] = {
@@ -432,6 +440,16 @@ def _actual_repair_action(
         if action:
             return action
     targets = request.plan.targets
+    if (
+        state.prompt_namespaces
+        and targets
+        and targets[0].repair_action
+        in {
+            "COPY_CANONICAL_SOURCE_VALUE",
+            "CORRECT_PROTECTED_FACT",
+        }
+    ):
+        return "REGENERATE_ITEM"
     return targets[0].repair_action if targets else "REGENERATE_ITEM"
 
 
@@ -441,6 +459,16 @@ def _actual_repair_strategy(
     if state.deterministic_repairs:
         return "+".join(dict.fromkeys(state.deterministic_repairs))
     targets = request.plan.targets
+    if (
+        state.prompt_namespaces
+        and targets
+        and targets[0].repair_action
+        in {
+            "COPY_CANONICAL_SOURCE_VALUE",
+            "CORRECT_PROTECTED_FACT",
+        }
+    ):
+        return "current_evidence_escalation"
     return targets[0].repair_strategy if targets else "current_evidence"
 
 
@@ -1175,6 +1203,279 @@ def _unique_ints(values) -> List[int]:
     return unique
 
 
+def _preserve_atomic_target_families(
+    *,
+    updated_artifacts: Dict[str, Any],
+    state: _RegenerationState,
+    plan,
+    original_artifacts: Dict[str, Any],
+) -> None:
+    """Apply targeted changes onto the exact current artifact family."""
+
+    family_state = {
+        "summary": state.summary,
+        "insights_candidates": state.insights_candidates,
+        "insights_final": state.insights_final,
+        "quotes_final": state.quotes_final,
+        "expert_comment": state.expert_comment,
+        "linkedin_post": state.linkedin_post,
+    }
+    allowed_roots = {
+        re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
+        for target in plan.targets
+        for path in target.allowed_paths
+    }
+    paths_by_root: Dict[str, List[str]] = {}
+    for target in plan.targets:
+        for allowed_path in target.allowed_paths:
+            root = re.split(r"[.\[]", str(allowed_path or ""), maxsplit=1)[0]
+            paths_by_root.setdefault(root, []).append(str(allowed_path or ""))
+        if not target.allowed_paths:
+            legacy_roots = {
+                "summary": ("summary",),
+                "insights_bundle": ("insights_candidates", "insights_final"),
+                "quotes": ("quotes_final",),
+                "expert_comment": ("expert_comment",),
+                "linkedin_post": ("linkedin_post",),
+            }.get(target.target_section, ())
+            for root in legacy_roots:
+                paths_by_root[root] = [root]
+                allowed_roots.add(root)
+    for root, paths in paths_by_root.items():
+        if root not in family_state or root not in original_artifacts:
+            continue
+        if root in paths:
+            updated_artifacts[root] = deepcopy(
+                updated_artifacts.get(root, family_state[root])
+            )
+            continue
+        merged_family = deepcopy(original_artifacts[root])
+        for allowed_path in paths:
+            merged_family = _copy_allowed_mutation_path(
+                original_family=merged_family,
+                target_family=updated_artifacts.get(root, family_state[root]),
+                full_path=allowed_path,
+                root=root,
+            )
+        updated_artifacts[root] = merged_family
+    for root, value in family_state.items():
+        if root not in allowed_roots:
+            updated_artifacts[root] = deepcopy(original_artifacts.get(root, value))
+
+
+def _copy_allowed_mutation_path(
+    *,
+    original_family: Any,
+    target_family: Any,
+    full_path: str,
+    root: str,
+) -> Any:
+    """Copy one declared value from assembly onto its last-promoted family."""
+
+    path = full_path[len(root) :].lstrip(".")
+    if not path:
+        return deepcopy(target_family)
+    claim_index_match = re.search(r"\[claim_index=(\d+)\]$", path)
+    if claim_index_match:
+        field_path = path[: claim_index_match.start()]
+        original_text = _read_mutation_path(original_family, field_path)
+        target_text = _read_mutation_path(target_family, field_path)
+        index = int(claim_index_match.group(1))
+        if not isinstance(original_text, str) or not isinstance(target_text, str):
+            return original_family
+        original_spans = _soft_copy_sentence_spans(original_text)
+        target_sentences = soft_copy_material_sentences(target_text)
+        if index >= len(original_spans):
+            return original_family
+        matcher = SequenceMatcher(
+            a=soft_copy_material_sentences(original_text),
+            b=target_sentences,
+            autojunk=False,
+        )
+        target_spans = _soft_copy_sentence_spans(target_text)
+        repaired_text = original_text
+        for operation, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+            if operation == "equal":
+                continue
+            if old_start <= index < old_end:
+                start = original_spans[old_start][0]
+                end = original_spans[old_end - 1][1]
+                replacement = (
+                    target_text[
+                        target_spans[new_start][0] : target_spans[new_end - 1][1]
+                    ]
+                    if new_start < new_end and len(target_spans) >= new_end
+                    else ""
+                )
+                if new_start == new_end and end < len(original_text):
+                    separator = re.match(r"\s+", original_text[end:])
+                    end += len(separator.group(0)) if separator else 0
+                elif new_start == new_end:
+                    start = len(original_text[:start].rstrip())
+                repaired_text = (
+                    original_text[:start] + replacement + original_text[end:]
+                )
+                break
+            if operation == "insert" and old_start == index and new_start < new_end:
+                insertion = (
+                    target_text[
+                        target_spans[new_start][0] : target_spans[new_end - 1][1]
+                    ]
+                    if len(target_spans) >= new_end
+                    else ""
+                )
+                insertion_at = (
+                    original_spans[index][0]
+                    if index < len(original_spans)
+                    else len(original_text)
+                )
+                repaired_text = (
+                    original_text[:insertion_at]
+                    + insertion
+                    + original_text[insertion_at:]
+                )
+                break
+        if not field_path:
+            return repaired_text
+        return _write_mutation_path(original_family, field_path, repaired_text)
+    return _write_mutation_path(
+        original_family,
+        path,
+        _read_mutation_path(target_family, path),
+    )
+
+
+def _mutation_path_tokens(path: str) -> List[tuple[str, str | None]]:
+    tokens: List[tuple[str, str | None]] = []
+    for part in path.split("."):
+        match = re.fullmatch(r"([^\[\]]+)(?:\[(?:item=)?([^\]]+)\])?", part)
+        if match is None:
+            return []
+        tokens.append((match.group(1), match.group(2)))
+    return tokens
+
+
+def _resolve_mutation_child(value: Any, key: str, selector: str | None) -> Any:
+    child = value.get(key) if isinstance(value, dict) else None
+    if selector is None:
+        return child
+    if not isinstance(child, list):
+        return None
+    if selector.isdigit():
+        index = int(selector)
+        return child[index] if 0 <= index < len(child) else None
+    matches = [
+        item
+        for item in child
+        if isinstance(item, dict)
+        and selector
+        in {
+            _s(item.get(field)).strip()
+            for field in (
+                "id",
+                "insight_id",
+                "key_figure_id",
+                "claim_id",
+                "evidence_id",
+            )
+        }
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _read_mutation_path(value: Any, path: str) -> Any:
+    list_match = re.match(r"^\[(?:item=)?([^\]]+)\](?:\.(.*))?$", path)
+    if list_match and isinstance(value, list):
+        index = _mutation_list_index(value, list_match.group(1))
+        if index is None:
+            return None
+        child = value[index]
+        remainder = list_match.group(2)
+        return child if remainder is None else _read_mutation_path(child, remainder)
+    tokens = _mutation_path_tokens(path)
+    current = value
+    for key, selector in tokens:
+        current = _resolve_mutation_child(current, key, selector)
+    return current
+
+
+def _write_mutation_path(value: Any, path: str, replacement: Any) -> Any:
+    list_match = re.match(r"^\[(?:item=)?([^\]]+)\](?:\.(.*))?$", path)
+    if list_match and isinstance(value, list):
+        index = _mutation_list_index(value, list_match.group(1))
+        if index is None:
+            return value
+        remainder = list_match.group(2)
+        if remainder is None:
+            value[index] = deepcopy(replacement)
+        else:
+            value[index] = _write_mutation_path(value[index], remainder, replacement)
+        return value
+    tokens = _mutation_path_tokens(path)
+    if not tokens:
+        return value
+    current = value
+    for key, selector in tokens[:-1]:
+        current = _resolve_mutation_child(current, key, selector)
+        if current is None:
+            return value
+    key, selector = tokens[-1]
+    if selector is None:
+        if isinstance(current, dict):
+            current[key] = deepcopy(replacement)
+        return value
+    items = current.get(key) if isinstance(current, dict) else None
+    if not isinstance(items, list):
+        return value
+    if selector.isdigit():
+        index = int(selector)
+        if 0 <= index < len(items):
+            items[index] = deepcopy(replacement)
+        return value
+    matches = [
+        index
+        for index, item in enumerate(items)
+        if isinstance(item, dict)
+        and selector
+        in {
+            _s(item.get(field)).strip()
+            for field in (
+                "id",
+                "insight_id",
+                "key_figure_id",
+                "claim_id",
+                "evidence_id",
+            )
+        }
+    ]
+    if len(matches) == 1:
+        items[matches[0]] = deepcopy(replacement)
+    return value
+
+
+def _mutation_list_index(values: List[Any], selector: str) -> int | None:
+    if selector.isdigit():
+        index = int(selector)
+        return index if 0 <= index < len(values) else None
+    matching = [
+        index
+        for index, item in enumerate(values)
+        if isinstance(item, dict)
+        and selector
+        in {
+            _s(item.get(field)).strip()
+            for field in (
+                "id",
+                "insight_id",
+                "key_figure_id",
+                "claim_id",
+                "evidence_id",
+            )
+        }
+    ]
+    return matching[0] if len(matching) == 1 else None
+
+
 def _restore_final_insight_evidence_bindings(
     *,
     final_insights: List[Dict[str, Any]],
@@ -1816,8 +2117,150 @@ def _summary_claim_repairs(
     return resolved
 
 
+def _summary_claim_map_targets(
+    execution: _RegenerationHandlerExecution,
+) -> List[tuple[int, Dict[str, Any], List[RegenerationIssue]]] | None:
+    """Resolve every failed claim-map issue to one stable summary item."""
+
+    claims = execution.state.summary.get("claim_evidence_map")
+    if not isinstance(claims, list) or not execution.target.issues:
+        return None
+    grouped: Dict[int, List[RegenerationIssue]] = {}
+    for issue in execution.target.issues:
+        identity = ""
+        entity_match = re.fullmatch(r"summary_claim:(.+)", _s(issue.entity_id).strip())
+        affected_match = re.match(
+            r"^summary\.claim_evidence_map:([^.:]+)",
+            _s(issue.affected_section).strip(),
+        )
+        index_match = re.match(
+            r"^summary(?:\.)?\.?(?:claim_evidence_map)\[(\d+)\]",
+            _s(issue.affected_section).strip(),
+        )
+        if entity_match:
+            identity = entity_match.group(1)
+        elif affected_match:
+            identity = affected_match.group(1)
+        elif index_match:
+            identity = str(int(index_match.group(1)) + 1)
+        if not identity:
+            return None
+        matches = [
+            index
+            for index, claim in enumerate(claims)
+            if isinstance(claim, dict)
+            and identity
+            in {
+                _s(claim.get("id")).strip(),
+                _s(claim.get("claim_id")).strip(),
+                str(index + 1),
+            }
+        ]
+        if len(matches) != 1:
+            return None
+        grouped.setdefault(matches[0], []).append(issue)
+    return [(index, claims[index], issues) for index, issues in sorted(grouped.items())]
+
+
+def _regenerate_summary_claim_map_items(
+    execution: _RegenerationHandlerExecution,
+    targets: List[tuple[int, Dict[str, Any], List[RegenerationIssue]]],
+    namespace: str,
+) -> None:
+    claims = execution.state.summary.get("claim_evidence_map") or []
+    if _uses_safe_removal(execution):
+        removed = {index for index, _claim, _issues in targets}
+        execution.state.summary["claim_evidence_map"] = [
+            claim for index, claim in enumerate(claims) if index not in removed
+        ]
+        execution.state.regenerated_sections.append("summary")
+        return
+    for index, claim, issues in targets:
+        grounding_package = execution.grounding_package
+        if not grounding_package.get("evidence_ids"):
+            raise AppError(
+                code="regeneration_target_item_no_retained_evidence",
+                message=(
+                    "Targeted summary claim repair has no retained evidence "
+                    "available for grounding."
+                ),
+                retryable=False,
+                context={"report_id": execution.runtime.request.report_id},
+            )
+        result = _render_regeneration_model(
+            execution=execution,
+            namespace=namespace,
+            ctx=execution.target_ctx,
+            variables={
+                **execution.runtime.base_vars,
+                "attempt_index": execution.runtime.request.attempt_index,
+                "target_section": execution.target.target_section,
+                "current_section_json": _dump_json({"claim_evidence_map": [claim]}),
+                "claim_repair_scope_json": _dump_json(
+                    {
+                        "mode": "claim_map_item",
+                        "claim_id": _s(
+                            claim.get("id") or claim.get("claim_id") or index + 1
+                        ),
+                        "fields_to_change": ["claim"],
+                        "preserve_sibling_claims": True,
+                    }
+                ),
+                "failure_reasons_json": _issues_json(issues),
+                "fix_checklist_json": _fix_checklist_json(execution.target),
+                "grounding_package_json": _dump_json(grounding_package),
+                "editorial_plan_json": _dump_json(execution.state.editorial_plan),
+            },
+        )
+        repaired_summary = result.get("summary")
+        repaired_items = (
+            repaired_summary.get("claim_evidence_map")
+            if isinstance(repaired_summary, dict)
+            else None
+        )
+        if not isinstance(repaired_items, list) or not repaired_items:
+            raise AppError(
+                code="regeneration_target_item_unresolved",
+                message="Targeted summary claim repair returned no claim item.",
+                retryable=False,
+                context={"report_id": execution.runtime.request.report_id},
+            )
+        stable_id = _s(claim.get("id") or claim.get("claim_id")).strip()
+        matching = [
+            item
+            for item in repaired_items
+            if isinstance(item, dict)
+            and (
+                not stable_id
+                or _s(item.get("id") or item.get("claim_id")).strip() == stable_id
+            )
+        ]
+        if len(matching) != 1:
+            raise AppError(
+                code="regeneration_target_item_unresolved",
+                message="Targeted summary claim repair returned an ambiguous item.",
+                retryable=False,
+                context={"report_id": execution.runtime.request.report_id},
+            )
+        repaired_text = _s(matching[0].get("claim")).strip()
+        if not repaired_text or repaired_text == _s(claim.get("claim")).strip():
+            raise AppError(
+                code="regeneration_target_item_unresolved",
+                message="Targeted summary claim repair did not change the failed claim.",
+                retryable=False,
+                context={"report_id": execution.runtime.request.report_id},
+            )
+        claims[index] = {**claim, "claim": repaired_text}
+    execution.state.regenerated_sections.append("summary")
+    execution.state.prompt_namespaces.append(namespace)
+
+
 def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
+    claim_map_targets = _summary_claim_map_targets(execution)
+    if claim_map_targets is not None:
+        _regenerate_summary_claim_map_items(execution, claim_map_targets, namespace)
+        return
     scoped_repairs = _summary_claim_repairs(execution)
     if scoped_repairs is not None:
         for field, repairs in scoped_repairs.items():
@@ -1950,6 +2393,12 @@ _INSIGHT_METRIC_PROVENANCE_FIELDS = (
     "denominator",
     "observation_status",
 )
+_INSIGHT_EVIDENCE_BINDING_FIELDS = (
+    "evidence_id",
+    "evidence",
+    "evidence_spans",
+    "pages",
+)
 
 
 def _restore_failed_insight_metrics_deterministically(
@@ -1957,45 +2406,37 @@ def _restore_failed_insight_metrics_deterministically(
 ) -> bool:
     """Copy protected insight metric fields from their retained binding.
 
-    A final insight whose protected numeric/unit/timeframe/forecast fields
-    drifted from the retained same-stable-ID candidate (or previously promoted
-    final insight) is repaired by deterministically copying the retained
-    canonical metric values.  No model call is consumed.  Any issue that
-    cannot be attributed to one bound insight keeps the generative path.
+    A final insight whose protected metric fields or evidence binding drifted
+    from one uniquely retained same-stable-ID candidate is repaired by copying
+    those canonical fields. Ambiguous identity or missing source fields keep
+    the generative path.
     """
 
     if execution.target.repair_action != "CORRECT_PROTECTED_FACT":
         return False
-    retained_by_id: Dict[str, Dict[str, Any]] = {}
-    for source in (execution.state.insights_candidates, execution.state.insights_final):
-        for insight in source:
-            if not isinstance(insight, dict):
-                continue
-            insight_id = _s(insight.get("id")).strip()
-            metric = insight.get("metric")
-            if (
-                insight_id
-                and isinstance(metric, dict)
-                and _s(metric.get("value")).strip()
-            ):
-                retained_by_id.setdefault(insight_id, insight)
+    retained_by_id: Dict[str, List[Dict[str, Any]]] = {}
+    for insight in execution.state.insights_candidates:
+        if not isinstance(insight, dict):
+            continue
+        insight_id = _s(insight.get("id")).strip()
+        metric = insight.get("metric")
+        if insight_id and isinstance(metric, dict) and _s(metric.get("value")).strip():
+            retained_by_id.setdefault(insight_id, []).append(insight)
     corrected_any = False
     for issue in execution.target.issues:
         insight_id = failed_insight_id(issue.entity_id, issue.affected_section)
         if not insight_id:
             return False
-        target_insight = next(
-            (
-                insight
-                for insight in execution.state.insights_final
-                if isinstance(insight, dict)
-                and _s(insight.get("id")).strip() == insight_id
-            ),
-            None,
-        )
-        retained = retained_by_id.get(insight_id)
-        if target_insight is None or retained is None:
+        target_matches = [
+            insight
+            for insight in execution.state.insights_final
+            if isinstance(insight, dict) and _s(insight.get("id")).strip() == insight_id
+        ]
+        retained_matches = retained_by_id.get(insight_id, [])
+        if len(target_matches) != 1 or len(retained_matches) != 1:
             return False
+        target_insight = target_matches[0]
+        retained = retained_matches[0]
         current_metric = target_insight.get("metric")
         current_metric = current_metric if isinstance(current_metric, dict) else {}
         retained_metric = retained.get("metric")
@@ -2006,16 +2447,25 @@ def _restore_failed_insight_metrics_deterministically(
             for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
             if _s(retained_metric.get(field_name)).strip()
         )
-        if not drifted:
+        binding_drifted = any(
+            retained.get(field_name) != target_insight.get(field_name)
+            for field_name in _INSIGHT_EVIDENCE_BINDING_FIELDS
+            if field_name in retained
+        )
+        if not drifted and not binding_drifted:
             continue
-        target_insight["metric"] = {
-            **current_metric,
-            **{
-                field_name: deepcopy(retained_metric.get(field_name, ""))
-                for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
-                if field_name in retained_metric
-            },
-        }
+        if drifted:
+            target_insight["metric"] = {
+                **current_metric,
+                **{
+                    field_name: deepcopy(retained_metric.get(field_name, ""))
+                    for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
+                    if field_name in retained_metric
+                },
+            }
+        for field_name in _INSIGHT_EVIDENCE_BINDING_FIELDS:
+            if field_name in retained:
+                target_insight[field_name] = deepcopy(retained[field_name])
         evidence_id = _s(retained.get("evidence_id")).strip()
         if evidence_id:
             target_insight["evidence_id"] = evidence_id
@@ -2049,6 +2499,8 @@ def _handle_insights_bundle_regeneration(
     if _restore_failed_insight_metrics_deterministically(execution):
         return
     candidates_namespace, final_namespace = execution.handler.prompt_namespaces
+    if _regenerate_one_final_insight(execution, final_namespace):
+        return
     prior_final_insights = deepcopy(execution.state.insights_final)
     candidates_ctx = child_context(
         execution.target_ctx, task_id=f"{execution.target_ctx.task_id}:candidates"
@@ -2133,6 +2585,125 @@ def _handle_insights_bundle_regeneration(
     execution.state.prompt_namespaces.extend([candidates_namespace, final_namespace])
 
 
+def _regenerate_one_final_insight(
+    execution: _RegenerationHandlerExecution, namespace: str
+) -> bool:
+    """Regenerate only a uniquely identified final insight and its failed fields."""
+
+    insight_ids = {
+        failed_insight_id(issue.entity_id, issue.affected_section)
+        for issue in execution.target.issues
+    }
+    insight_ids.discard("")
+    if len(insight_ids) != 1:
+        return False
+    insight_id = next(iter(insight_ids))
+    matches = [
+        (index, item)
+        for index, item in enumerate(execution.state.insights_final)
+        if isinstance(item, dict) and _s(item.get("id")).strip() == insight_id
+    ]
+    if len(matches) != 1:
+        return False
+    index, original = matches[0]
+    requested_fields = {
+        field
+        for issue in execution.target.issues
+        if (field := _insight_repair_field(issue.entity_id, issue.affected_section))
+    }
+    if not requested_fields:
+        return False
+    candidate = next(
+        (
+            item
+            for item in execution.state.insights_candidates
+            if isinstance(item, dict) and _s(item.get("id")).strip() == insight_id
+        ),
+        None,
+    )
+    selected_evidence_ids = {
+        _s(value).strip()
+        for issue in execution.target.issues
+        for value in issue.evidence_ids
+        if _s(value).strip()
+    }
+    claim_fields = {
+        "text": ["text"],
+        "metric": ["metric"],
+    }
+    mutable_fields = {
+        field_name
+        for field in requested_fields
+        for field_name in claim_fields.get(field, [])
+    }
+    if execution.target.repair_action == "REBIND_EVIDENCE":
+        mutable_fields.update({"evidence_id", "evidence", "evidence_spans", "pages"})
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json([original]),
+            "insights_candidates_json": _dump_json([candidate] if candidate else []),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+            "editorial_plan_json": _dump_json(
+                _claim_scoped_editorial_plan(
+                    execution.state.editorial_plan, selected_evidence_ids
+                )
+            ),
+            "final_insight_target_count": 1,
+        },
+    )
+    regenerated = normalize_artifact_insights(
+        result.get("insights_final"), prefix="insight"
+    )
+    matching = [
+        item for item in regenerated if _s(item.get("id")).strip() == insight_id
+    ]
+    if not matching and len(regenerated) == 1:
+        matching = regenerated
+    if len(matching) != 1:
+        raise AppError(
+            code="regeneration_target_item_unresolved",
+            message="Atomic insight regeneration did not return its stable target.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    repaired = deepcopy(original)
+    for field_name in mutable_fields:
+        if field_name in matching[0]:
+            repaired[field_name] = deepcopy(matching[0][field_name])
+    repaired["id"] = insight_id
+    if not any(repaired.get(name) != original.get(name) for name in mutable_fields):
+        raise AppError(
+            code="regeneration_target_item_unchanged",
+            message="Atomic insight regeneration did not change its declared field.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    execution.state.insights_final[index] = repaired
+    execution.state.regenerated_sections.append("insights_final")
+    execution.state.prompt_namespaces.append(namespace)
+    return True
+
+
+def _insight_repair_field(entity_id: str, affected_section: str) -> str:
+    parts = str(entity_id or "").split(":")
+    if len(parts) >= 3 and parts[0] == "insight" and parts[2] in {"text", "metric"}:
+        return parts[2]
+    affected = str(affected_section or "").casefold()
+    match = re.search(r"\.(text|metric)(?:\.|$)", affected)
+    if match:
+        return match.group(1)
+    suffix = affected.rsplit(":", 1)[-1]
+    return suffix if suffix in {"text", "metric"} else ""
+
+
 def _remove_failed_insight_with_retained_replacement(
     execution: _RegenerationHandlerExecution,
 ) -> None:
@@ -2202,12 +2773,14 @@ def _remove_failed_insight_with_retained_replacement(
                 not candidate_pages or not candidate_pages <= support_pages
             ):
                 continue
+            candidate_metric = candidate.get("metric")
+            metric: Dict[str, Any] = (
+                candidate_metric if isinstance(candidate_metric, dict) else {}
+            )
             compatible = rank_compatible_alternatives(
                 CompatibilityQuery(
                     text=_s(candidate.get("text")),
-                    metric=candidate.get("metric")
-                    if isinstance(candidate.get("metric"), dict)
-                    else {},
+                    metric=metric,
                     pages=tuple(candidate_pages),
                 ),
                 [
@@ -2390,26 +2963,41 @@ def _retained_quote_candidate_for(
     execution: _RegenerationHandlerExecution, quote_entry: Dict[str, Any]
 ) -> Dict[str, Any] | None:
     evidence_id = _normalized_evidence_id(quote_entry.get("evidence_id"))
-    if not evidence_id:
-        return None
     quarantined = {
         _normalized_evidence_id(value)
         for value in execution.target.quarantined_evidence_ids
         if _normalized_evidence_id(value)
     }
-    if evidence_id in quarantined:
+    if evidence_id and evidence_id not in quarantined:
+        matching_ids = [
+            candidate
+            for candidate in execution.runtime.quote_candidates
+            if isinstance(candidate, dict)
+            and _normalized_evidence_id(
+                candidate.get("id") or candidate.get("evidence_id")
+            )
+            == evidence_id
+        ]
+        if len(matching_ids) == 1 and _s(matching_ids[0].get("text")).strip():
+            return matching_ids[0]
+    quote_text = _normalized_soft_copy_text(_s(quote_entry.get("text")))
+    if not quote_text:
         return None
+    exact_text_matches: List[Dict[str, Any]] = []
     for candidate in execution.runtime.quote_candidates:
         if not isinstance(candidate, dict):
             continue
+        candidate_id = _normalized_evidence_id(
+            candidate.get("id") or candidate.get("evidence_id")
+        )
+        candidate_text = _normalized_soft_copy_text(_s(candidate.get("text")))
         if (
-            _normalized_evidence_id(candidate.get("id") or candidate.get("evidence_id"))
-            == evidence_id
+            candidate_id
+            and candidate_id not in quarantined
+            and candidate_text == quote_text
         ):
-            if not _s(candidate.get("text")).strip():
-                return None
-            return candidate
-    return None
+            exact_text_matches.append(candidate)
+    return exact_text_matches[0] if len(exact_text_matches) == 1 else None
 
 
 def _restore_failed_quotes_deterministically(
@@ -2450,6 +3038,12 @@ def _restore_failed_quotes_deterministically(
         page = candidate.get("page")
         if isinstance(page, int) and page > 0:
             repaired["page"] = page
+        candidate_id = _s(candidate.get("id") or candidate.get("evidence_id")).strip()
+        if candidate_id:
+            repaired["evidence_id"] = candidate_id
+        source_pack = _s(candidate.get("source_pack")).strip()
+        if source_pack:
+            repaired["source_pack"] = source_pack
         restored.append(repaired)
         execution.state.selected_evidence_ids.extend(
             [
@@ -2479,10 +3073,29 @@ def _restore_failed_quotes_deterministically(
 def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> None:
     if _restore_failed_quotes_deterministically(execution):
         return
-    namespace = execution.handler.prompt_namespaces[0]
+    if _regenerate_one_quote(execution):
+        return
     quarantined_ids = set(
         execution.grounding_package.get("quarantined_evidence_ids") or []
     )
+    retained_candidates = _without_quarantined_evidence(
+        execution.runtime.quote_candidates, quarantined_ids
+    )
+    if not retained_candidates:
+        resolved = _failed_quote_entries(execution)
+        if resolved is None:
+            execution.state.quotes_final = []
+        else:
+            failed_entries = {id(entry) for _issue, entry in resolved}
+            execution.state.quotes_final = [
+                quote
+                for quote in execution.state.quotes_final
+                if id(quote) not in failed_entries
+            ]
+        execution.state.deterministic_repairs.append("safe_abstain")
+        execution.state.regenerated_sections.append("quotes")
+        return
+    namespace = execution.handler.prompt_namespaces[0]
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -2505,6 +3118,89 @@ def _handle_quotes_regeneration(execution: _RegenerationHandlerExecution) -> Non
     execution.state.quotes_final = normalize_artifact_quotes(result.get("quotes_final"))
     execution.state.regenerated_sections.append("quotes")
     execution.state.prompt_namespaces.append(namespace)
+
+
+def _regenerate_one_quote(execution: _RegenerationHandlerExecution) -> bool:
+    """Patch one uniquely resolved quote while retaining all quote siblings."""
+
+    resolved = _failed_quote_entries(execution)
+    if resolved is None or len(resolved) != 1:
+        return False
+    _issue, failed_entry = resolved[0]
+    index = next(
+        (
+            position
+            for position, quote in enumerate(execution.state.quotes_final)
+            if quote is failed_entry
+        ),
+        None,
+    )
+    if index is None:
+        return False
+    namespace = execution.handler.prompt_namespaces[0]
+    quarantined_ids = set(
+        execution.grounding_package.get("quarantined_evidence_ids") or []
+    )
+    candidates = _without_quarantined_evidence(
+        execution.runtime.quote_candidates, quarantined_ids
+    )
+    result = _render_regeneration_model(
+        execution=execution,
+        namespace=namespace,
+        ctx=execution.target_ctx,
+        variables={
+            **execution.runtime.base_vars,
+            "attempt_index": execution.runtime.request.attempt_index,
+            "target_section": execution.target.target_section,
+            "current_section_json": _dump_json([failed_entry]),
+            "quote_candidates_json": _dump_json(candidates),
+            "failure_reasons_json": _issues_json(execution.target.issues),
+            "fix_checklist_json": _fix_checklist_json(execution.target),
+            "grounding_package_json": _dump_json(execution.grounding_package),
+        },
+    )
+    regenerated = normalize_artifact_quotes(result.get("quotes_final"))
+    if not regenerated:
+        raise AppError(
+            code="regeneration_target_item_unresolved",
+            message="Atomic quote regeneration did not return its stable target.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    stable_id = _s(failed_entry.get("id") or failed_entry.get("evidence_id")).strip()
+    replacement = next(
+        (
+            quote
+            for quote in regenerated
+            if stable_id
+            and _s(quote.get("id") or quote.get("evidence_id")).strip() == stable_id
+        ),
+        regenerated[0] if len(regenerated) == 1 else None,
+    )
+    if replacement is None:
+        raise AppError(
+            code="regeneration_target_item_unresolved",
+            message="Atomic quote regeneration returned an ambiguous target.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    # Quote repair changes the text claim. Keep the retained quote's source
+    # binding and speaker/citation metadata, which the model cannot safely
+    # reconstruct from a text-only answer.
+    replacement_text = _s(replacement.get("text")).strip()
+    replacement = deepcopy(failed_entry)
+    replacement["text"] = replacement_text
+    if not replacement["text"]:
+        raise AppError(
+            code="regeneration_target_item_unresolved",
+            message="Atomic quote regeneration returned empty text.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
+    execution.state.quotes_final[index] = replacement
+    execution.state.regenerated_sections.append("quotes")
+    execution.state.prompt_namespaces.append(namespace)
+    return True
 
 
 def _handle_cover_semantics_regeneration(

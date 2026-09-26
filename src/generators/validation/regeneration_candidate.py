@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
-from src.contracts.claim_validation import ClaimValidationResult
 from src.contracts.regeneration import RegenerationEvidenceLineage
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
@@ -23,6 +22,9 @@ from src.generators._artifact_generator.storage import (
     build_topics_covered,
     build_universal_claim_ledger,
     derive_metric_spine_from_insights,
+)
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import validate_retained_claims
@@ -74,6 +76,8 @@ def validate_regeneration_candidate(
     evidence_packs: dict[str, Any],
     ctx: RunContext,
     removed_insight_ids: Sequence[str] = (),
+    planned_prompt_namespaces: Sequence[str] = (),
+    actual_prompt_namespaces: Sequence[str] = (),
 ) -> CandidateIntegrityResult:
     """Validate candidate schema, IDs, source pages, and material continuity.
 
@@ -135,17 +139,20 @@ def validate_regeneration_candidate(
     current_records = _records(current_artifacts)
     candidate_records = _records(candidate_artifacts)
     evidence_pages = _evidence_source_pages(evidence_packs)
+    soft_copy_issue_count = len(issues)
     _validate_soft_copy_claim_provenance(
         current_artifacts=current_artifacts,
         candidate_artifacts=candidate_artifacts,
         evidence_packs=evidence_packs,
         issues=issues,
     )
-    _validate_changed_soft_copy_quantities(
-        current_artifacts=current_artifacts,
-        candidate_artifacts=candidate_artifacts,
-        evidence_packs=evidence_packs,
-        issues=issues,
+    soft_copy_provenance_valid = len(issues) == soft_copy_issue_count
+    issues.extend(
+        retained_claim_repair_issues(
+            candidate_artifacts,
+            evidence_packs,
+            previous_artifacts=current_artifacts,
+        )
     )
     candidate_by_key = {record.key: record for record in candidate_records}
     current_by_key = {record.key: record for record in current_records}
@@ -237,6 +244,27 @@ def validate_regeneration_candidate(
         candidate_artifacts=candidate_artifacts,
         evidence_packs=evidence_packs,
     )
+    if (
+        current_artifacts.get("soft_copy_claim_provenance")
+        != candidate_artifacts.get("soft_copy_claim_provenance")
+        and soft_copy_provenance_valid
+    ):
+        verified_derived_roots = frozenset(
+            {*verified_derived_roots, "soft_copy_claim_provenance"}
+        )
+    if current_artifacts.get("_repair_evidence_selection") != candidate_artifacts.get(
+        "_repair_evidence_selection"
+    ) and _repair_evidence_selection_is_valid(candidate_artifacts):
+        verified_derived_roots = frozenset(
+            {*verified_derived_roots, "_repair_evidence_selection"}
+        )
+    if _verify_regenerated_prompt_metadata(
+        current_artifacts=current_artifacts,
+        candidate_artifacts=candidate_artifacts,
+        planned_prompt_namespaces=planned_prompt_namespaces,
+        actual_prompt_namespaces=actual_prompt_namespaces,
+    ):
+        verified_derived_roots = frozenset({*verified_derived_roots, "_cache"})
     issues.extend(derived_issues)
     return CandidateIntegrityResult(
         issues=issues,
@@ -245,63 +273,226 @@ def validate_regeneration_candidate(
     )
 
 
-def _validate_changed_soft_copy_quantities(
+def _verify_regenerated_prompt_metadata(
     *,
     current_artifacts: dict[str, Any],
     candidate_artifacts: dict[str, Any],
-    evidence_packs: dict[str, Any],
-    issues: list[ValidationIssue],
-) -> None:
-    """Use retained-claim checks for numeric factual copy changed by repair."""
+    planned_prompt_namespaces: Sequence[str],
+    actual_prompt_namespaces: Sequence[str],
+) -> bool:
+    """Verify cache changes are limited to prompt identities used by this repair."""
 
-    current_claims, _ = _soft_copy_claims(current_artifacts)
-    candidate_claims, candidate_error = _soft_copy_claims(candidate_artifacts)
-    if candidate_error:
-        return  # The provenance check reports malformed or missing lineage.
-    changed = {
-        (claim.artifact_family, claim.claim_id): claim
-        for claim in candidate_claims
-        if claim not in current_claims and claim.classification == "factual"
+    current_cache = current_artifacts.get("_cache")
+    candidate_cache = candidate_artifacts.get("_cache")
+    if not isinstance(current_cache, dict) or not isinstance(candidate_cache, dict):
+        return current_cache == candidate_cache
+    if current_cache == candidate_cache:
+        return True
+
+    planned = {
+        str(value).strip() for value in planned_prompt_namespaces if str(value).strip()
     }
-    if not changed:
-        return
-    package = validate_retained_claims(candidate_artifacts, evidence_packs)
-    for result in package.results:
-        claim = changed.get((result.candidate.source_family, result.candidate.claim_id))
-        if claim is None or not result.candidate.factual:
-            continue
-        if not _failed_numeric_support(result):
-            continue
-        issues.append(
-            ValidationIssue(
-                message=(
-                    "[regeneration_claim_support] Factual soft-copy quantity or "
-                    "timeframe is not entailed by its selected retained evidence."
-                ),
-                severity="error",
-                affected_section=f"{claim.artifact_family}:{claim.claim_id}",
-                rule_id="regeneration_claim_support",
-                repair_target=claim.artifact_family,
-                entity_id=claim.claim_id,
-                evidence_ids=list(claim.evidence_ids),
-            )
+    actual = list(
+        dict.fromkeys(
+            str(value).strip()
+            for value in actual_prompt_namespaces
+            if str(value).strip()
         )
-
-
-def _failed_numeric_support(result: ClaimValidationResult) -> bool:
-    if result.candidate.kind != "numeric":
+    )
+    if not actual or not set(actual).issubset(planned):
         return False
-    return any(
-        check.status == "failed"
-        and check.name
-        in {
-            "number_value_unit_match",
-            "protected_fact_value_consistency",
-            "protected_fact_unit_currency_consistency",
-            "protected_fact_magnitude_consistency",
-            "protected_fact_timeframe_consistency",
+
+    cache_keys = (
+        "prompts",
+        "producing_prompt_identities",
+        "regeneration_prompt_requirements",
+    )
+    current_rest = {
+        key: value for key, value in current_cache.items() if key not in cache_keys
+    }
+    candidate_rest = {
+        key: value for key, value in candidate_cache.items() if key not in cache_keys
+    }
+    if current_rest != candidate_rest:
+        return False
+
+    current_maps: dict[str, dict[str, Any]] = {}
+    candidate_maps: dict[str, dict[str, Any]] = {}
+    for key in cache_keys:
+        before = current_cache.get(key, {})
+        after = candidate_cache.get(key, {})
+        if not isinstance(before, dict) or not isinstance(after, dict):
+            return False
+        current_maps[key] = before
+        candidate_maps[key] = after
+
+    expected_families: dict[str, str] = {}
+    for namespace in actual:
+        family = namespace.replace("/regenerate/", "/", 1)
+        expected_families[family] = namespace
+        identity = candidate_maps["prompts"].get(namespace)
+        if not isinstance(identity, dict) or identity.get("namespace") != namespace:
+            return False
+        if not all(
+            str(identity.get(key) or "").strip()
+            for key in (
+                "prompt_content_hash",
+                "execution_identity",
+                "configuration_policy_hash",
+            )
+        ):
+            return False
+
+    family_keys = set(expected_families)
+    namespace_keys = set(actual)
+    for key in cache_keys:
+        allowed_keys = namespace_keys if key == "prompts" else family_keys
+        before_rest = {
+            name: value
+            for name, value in current_maps[key].items()
+            if name not in allowed_keys
         }
-        for check in result.checks
+        after_rest = {
+            name: value
+            for name, value in candidate_maps[key].items()
+            if name not in allowed_keys
+        }
+        if before_rest != after_rest:
+            return False
+
+    for family, namespace in expected_families.items():
+        identity = candidate_maps["prompts"].get(namespace)
+        if (
+            candidate_maps["producing_prompt_identities"].get(family) != identity
+            or candidate_maps["regeneration_prompt_requirements"].get(family)
+            != namespace
+        ):
+            return False
+    return True
+
+
+def retained_claim_repair_issues(
+    artifacts: dict[str, Any],
+    evidence_packs: dict[str, Any],
+    *,
+    previous_artifacts: dict[str, Any] | None = None,
+) -> list[ValidationIssue]:
+    """Return stable deterministic repair findings without semantic validation."""
+
+    package = validate_retained_claims(artifacts, evidence_packs)
+    previous_results = {}
+    if previous_artifacts is not None:
+        previous_results = {
+            (result.candidate.source_family, result.candidate.claim_id): result
+            for result in validate_retained_claims(
+                previous_artifacts, evidence_packs
+            ).results
+        }
+    family_targets = {
+        "summary": "summary",
+        "insights_final": "insights_bundle",
+        "quotes_final": "quotes",
+        "key_figures": "key_figures",
+        "expert_comment": "expert_comment",
+        "linkedin_post": "linkedin_post",
+        "executive_summary": "summary",
+        "executive_takeaways": "summary",
+    }
+    issues: list[ValidationIssue] = []
+    changed_soft_copy_claims: dict[tuple[str, str], SoftCopyClaimProvenance] = {}
+    if previous_artifacts is not None:
+        previous_claims, _ = _soft_copy_claims(previous_artifacts)
+        retained_keys = {
+            (claim.artifact_family, claim.claim_id) for claim in previous_claims
+        }
+        changed_soft_copy_claims = {
+            (claim.artifact_family, claim.claim_id): claim
+            for claim in _soft_copy_claims(artifacts)[0]
+            if claim.classification == "factual"
+            and (claim.artifact_family, claim.claim_id) not in retained_keys
+        }
+    for result in package.results:
+        candidate = result.candidate
+        target = family_targets.get(candidate.source_family)
+        if not target or not candidate.factual:
+            continue
+        affected = candidate.affected_section or candidate.source_family
+        entity_id = candidate.entity_id or candidate.claim_id
+        evidence_ids = [
+            reference.evidence_id for reference in candidate.evidence_references
+        ]
+        previous = previous_results.get((candidate.source_family, candidate.claim_id))
+        unchanged_claim = bool(
+            previous
+            and previous.candidate.text_hash == candidate.text_hash
+            and previous.candidate.evidence_references == candidate.evidence_references
+        )
+        issue_severity = "warning" if unchanged_claim else "error"
+        for check in result.checks:
+            if check.status != "failed":
+                continue
+            rule_id = f"retained_claim.{check.name}"
+            reason = check.reason or "deterministic_check_failed"
+            issues.append(
+                ValidationIssue(
+                    message=(
+                        f"[{rule_id}|{reason}] Retained claim failed a "
+                        "deterministic evidence check."
+                    ),
+                    severity=issue_severity,
+                    affected_section=affected,
+                    rule_id=rule_id,
+                    repair_target=target,
+                    entity_id=entity_id,
+                    evidence_ids=evidence_ids,
+                )
+            )
+        changed_claim = changed_soft_copy_claims.get(
+            (candidate.source_family, candidate.claim_id)
+        )
+        numeric_or_timeframe_failed = any(
+            check.status == "failed"
+            and check.name
+            in {
+                "number_value_unit_match",
+                "protected_fact_value_consistency",
+                "protected_fact_unit_currency_consistency",
+                "protected_fact_magnitude_consistency",
+                "protected_fact_timeframe_consistency",
+            }
+            for check in result.checks
+        )
+        if changed_claim is not None and numeric_or_timeframe_failed:
+            issues.append(
+                ValidationIssue(
+                    message=(
+                        "[regeneration_claim_support] Factual soft-copy quantity or "
+                        "timeframe is not entailed by its selected retained evidence."
+                    ),
+                    severity=issue_severity,
+                    affected_section=(
+                        f"{changed_claim.artifact_family}:{changed_claim.claim_id}"
+                    ),
+                    rule_id="regeneration_claim_support",
+                    repair_target=changed_claim.artifact_family,
+                    entity_id=changed_claim.claim_id,
+                    evidence_ids=list(changed_claim.evidence_ids),
+                )
+            )
+    return issues
+
+
+def _repair_evidence_selection_is_valid(artifacts: dict[str, Any]) -> bool:
+    selections = artifacts.get("_repair_evidence_selection")
+    if not isinstance(selections, dict):
+        return False
+    return all(
+        isinstance(key, str)
+        and valid_soft_copy_evidence_selection(key, value)
+        and not set(value.get("selected_evidence_ids") or []).intersection(
+            value.get("quarantined_evidence_ids") or []
+        )
+        for key, value in selections.items()
     )
 
 
@@ -320,6 +511,7 @@ def _verify_derived_artifact_roots(
         "chart_insight_cards",
         "executive_advisory",
         "claim_ledgers",
+        "family_status",
     )
     changed = {
         root
@@ -379,6 +571,14 @@ def _verify_derived_artifact_roots(
             quotes_final=quotes,
             metric_spine=metric_spine,
             executive_advisory=executive_advisory,
+        ),
+        "family_status": build_artifact_family_status(
+            summary=summary,
+            insights_candidates=candidate_artifacts.get("insights_candidates") or [],
+            insights_final=insights,
+            quotes_final=quotes,
+            expert_comment=s(candidate_artifacts.get("expert_comment")),
+            linkedin_post=s(candidate_artifacts.get("linkedin_post")),
         ),
     }
     verified = frozenset(

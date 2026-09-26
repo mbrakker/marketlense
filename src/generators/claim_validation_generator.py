@@ -37,7 +37,7 @@ _CAUSAL_RE = re.compile(
 _INTERPRETIVE_RE = re.compile(
     r"\b(recommend|suggest|should|could|may|likely|interpret)\b", re.I
 )
-_QUOTED_RE = re.compile(r'(["“”]).+?\1')
+_QUOTED_RE = re.compile(r"""(?:"[^"]+"|“[^”]+”|‘[^’]+’|'[^']+')""")
 _RECOVERY_TOKEN_RE = re.compile(r"[a-z]{4,}")
 _RECOVERY_STOP_WORDS = {
     "about",
@@ -197,6 +197,8 @@ def _candidates(
         *,
         classification: str = "",
         claim_id: str = "",
+        affected_section: str = "",
+        entity_id: str = "",
         require_all_evidence_references: bool = False,
         provenance_error: str = "",
     ) -> None:
@@ -218,6 +220,8 @@ def _candidates(
                 else _factual(kind)
             ),
             evidence_references=_references(raw, evidence),
+            affected_section=affected_section,
+            entity_id=entity_id,
         )
         output.append(
             _ClaimValidationInput(
@@ -228,7 +232,7 @@ def _candidates(
             )
         )
 
-    def add_soft_copy(family: str, text: object) -> None:
+    def add_soft_copy(family: str, text: object, *, affected_section: str = "") -> None:
         claim = str(text or "").strip()
         if not claim:
             return
@@ -239,6 +243,7 @@ def _candidates(
                 claim,
                 claim_id=f"soft_copy_provenance:{family}:{text_hash[:16]}",
                 classification="factual",
+                affected_section=affected_section or family,
                 provenance_error=soft_copy_provenance_error,
             )
             return
@@ -249,6 +254,7 @@ def _candidates(
                 claim,
                 claim_id=f"soft_copy_provenance:{family}:{text_hash[:16]}",
                 classification="factual",
+                affected_section=affected_section or family,
                 provenance_error="soft_copy_provenance_sentence_missing",
             )
             return
@@ -261,35 +267,124 @@ def _candidates(
             },
             classification=provenance.classification,
             claim_id=provenance.claim_id,
+            affected_section=affected_section or family,
+            entity_id=provenance.claim_id,
             require_all_evidence_references=provenance.classification == "factual",
         )
 
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
-        for raw in summary.get("claim_evidence_map") or []:
+        for index, raw in enumerate(summary.get("claim_evidence_map") or [], start=1):
             if isinstance(raw, dict):
-                add("summary", raw.get("claim"), raw)
+                claim_identity = str(
+                    raw.get("id") or raw.get("claim_id") or index
+                ).strip()
+                add(
+                    "summary",
+                    raw.get("claim"),
+                    raw,
+                    claim_id=f"summary_claim:{claim_identity}",
+                    affected_section=f"summary.claim_evidence_map:{claim_identity}.claim",
+                    entity_id=f"summary_claim:{claim_identity}",
+                )
         for key in ("tldr", "card_tldr_compact", "executive_summary"):
             for sentence in _SENTENCE_RE.split(str(summary.get(key) or "")):
-                add_soft_copy("summary", sentence)
+                add_soft_copy("summary", sentence, affected_section=f"summary.{key}")
     for family, item_key, text_key in (
         ("insights_final", "insights_final", "text"),
         ("quotes_final", "quotes_final", "text"),
     ):
         for raw in artifacts.get(item_key) or []:
             if isinstance(raw, dict):
-                add(family, raw.get(text_key), raw)
+                stable_id = str(
+                    raw.get("id")
+                    or raw.get("insight_id")
+                    or raw.get("evidence_id")
+                    or ""
+                ).strip()
+                if family == "insights_final":
+                    claim_id = f"insight:{stable_id}:text" if stable_id else ""
+                    affected = (
+                        f"insights:{stable_id}.text" if stable_id else "insights_final"
+                    )
+                    entity = f"insight:{stable_id}:text" if stable_id else ""
+                else:
+                    claim_id = f"quote:{stable_id}:text" if stable_id else ""
+                    affected = (
+                        f"quotes:{stable_id}.text" if stable_id else "quotes_final"
+                    )
+                    entity = f"quote:{stable_id}:text" if stable_id else ""
+                add(
+                    family,
+                    raw.get(text_key),
+                    raw,
+                    claim_id=claim_id,
+                    affected_section=affected,
+                    entity_id=entity,
+                )
+                if family == "insights_final" and isinstance(raw.get("metric"), dict):
+                    metric_text = _metric_claim_text(raw["metric"])
+                    if metric_text:
+                        add(
+                            family,
+                            metric_text,
+                            raw,
+                            claim_id=f"insight:{stable_id}:metric" if stable_id else "",
+                            affected_section=(
+                                f"insights:{stable_id}.metric"
+                                if stable_id
+                                else "insights_final"
+                            ),
+                            entity_id=f"insight:{stable_id}:metric"
+                            if stable_id
+                            else "",
+                        )
+    for index, raw in enumerate(artifacts.get("key_figures") or [], start=1):
+        if not isinstance(raw, dict):
+            continue
+        stable_id = str(raw.get("id") or raw.get("key_figure_id") or index).strip()
+        figure_text = _metric_claim_text(raw)
+        if figure_text:
+            add(
+                "key_figures",
+                figure_text,
+                raw,
+                claim_id=f"key_figure:{stable_id}:figure",
+                affected_section=f"key_figures:{stable_id}.figure",
+                entity_id=f"key_figure:{stable_id}:figure",
+            )
     for family in ("expert_comment", "linkedin_post"):
         value = artifacts.get(family)
         if isinstance(value, str):
             for sentence in _SENTENCE_RE.split(value):
-                add_soft_copy(family, sentence)
+                add_soft_copy(family, sentence, affected_section=family)
     for family in ("executive_summary", "executive_takeaways"):
         value = artifacts.get(family)
         if isinstance(value, str):
             for sentence in _SENTENCE_RE.split(value):
                 add(family, sentence)
     return output
+
+
+def _metric_claim_text(metric: dict) -> str:
+    """Create a stable factual display from retained metric fields."""
+
+    values = [
+        str(metric.get(key) or "").strip()
+        for key in (
+            "label",
+            "subject",
+            "value",
+            "unit",
+            "geography",
+            "segment",
+            "cohort",
+            "denominator",
+            "timeframe",
+            "observation_status",
+        )
+    ]
+    return " ".join(value for value in values if value)
 
 
 def _soft_copy_claims_by_hash(

@@ -88,7 +88,13 @@ def test_stackadapt_abstained_quote_cannot_enter_semantic_request() -> None:
     assert quotes == []
     assert semantic_payload(artifacts["insights_final"], quotes)["quotes"] == []
     assert _candidate_check(case, artifacts).passed
-    assert _candidate_check(case, case["candidate_attempt_1"]).passed
+    rejected = _candidate_check(case, case["candidate_attempt_1"])
+    assert not rejected.passed
+    assert any(
+        item.rule_id == "regeneration_derived_projection"
+        and item.affected_section == "family_status"
+        for item in rejected.issues
+    )
 
     plan = _build_regeneration_plan(
         issues=[issue], artifacts=artifacts, broad_retry_available=True
@@ -164,7 +170,13 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
     next(item for item in copied["insights_final"] if item["id"] == duplicate_id)[
         "text"
     ] = retained_candidate["text"]
-    assert _candidate_check(case, copied).passed
+    copied_candidate = _candidate_check(case, copied)
+    assert not copied_candidate.passed
+    assert any(
+        item.rule_id == "retained_claim.number_value_unit_match"
+        and "quantity_not_entailed" in item.message
+        for item in copied_candidate.issues
+    )
     copied_quality = evaluate_public_editorial_quality(
         report_id=case["report_id"], artifacts=copied
     )

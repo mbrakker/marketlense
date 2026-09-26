@@ -541,7 +541,7 @@ def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
         generate_evidence_packs=lambda **kwargs: {
             "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Doc Publisher"}}
         },
-        generate_artifacts=lambda **kwargs: _artifacts(),
+        generate_artifacts=lambda **kwargs: _artifacts_without_retained_claims(),
         run_validation=lambda *args, **kwargs: (_ for _ in ()).throw(
             ValueError("boom")
         ),

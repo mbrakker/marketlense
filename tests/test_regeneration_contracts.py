@@ -271,3 +271,27 @@ def test_repair_delta_keeps_typed_failure_fingerprints() -> None:
     assert RepairDelta(
         resolved=[], persisting=[fingerprint], introduced=[]
     ).persisting == [fingerprint]
+
+
+def test_legacy_candidate_audit_defaults_new_repair_fields() -> None:
+    retained_v1_audit = {
+        "attempt_index": 1,
+        "transformation_scope": ["summary"],
+        "before_sha256": "a" * 64,
+        "after_sha256": "b" * 64,
+        "current_artifacts_path": "artifacts.json",
+        "candidate_artifacts_path": "candidate.json",
+        "validation_status": "fail",
+        "promotion_outcome": "rolled_back",
+        "validation_issues": ["grounding:summary"],
+        "evidence_lineage": [],
+    }
+
+    audit = RegenerationCandidateAudit(**retained_v1_audit)
+
+    assert audit.allowed_paths == []
+    assert audit.verified_dependent_paths == []
+    assert audit.failure_fingerprints == []
+    assert audit.selected_evidence_ids == []
+    assert audit.quarantined_evidence_ids == []
+    assert audit.repair_delta == RepairDelta()

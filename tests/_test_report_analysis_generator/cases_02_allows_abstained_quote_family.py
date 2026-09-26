@@ -186,14 +186,14 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     )
     source = _source(runtime)
     selection = _selection(runtime, source)
-    original = _artifacts(
+    original = _artifacts_without_retained_claims(
         summary={
             "tldr": "current artifact",
             "executive_summary": "Current summary",
             "claim_evidence_map": [],
         }
     )
-    candidate = _artifacts(
+    candidate = _artifacts_without_retained_claims(
         summary={
             "tldr": "candidate artifact",
             "card_tldr_compact": "Candidate summary",
@@ -201,6 +201,8 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
             "claim_evidence_map": [],
         },
     )
+    _set_interpretive_summary_provenance(original)
+    _set_interpretive_summary_provenance(candidate)
     validation_calls = 0
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
@@ -299,7 +301,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
     source = _source(runtime)
     selection = _selection(runtime, source)
-    original = _artifacts(
+    original = _artifacts_without_retained_claims(
         summary={
             "tldr": "original artifact",
             "executive_summary": "Original summary",
@@ -307,7 +309,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         }
     )
     candidates = [
-        _artifacts(
+        _artifacts_without_retained_claims(
             summary={
                 "tldr": "failed candidate",
                 "card_tldr_compact": "Failed candidate summary",
@@ -315,7 +317,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                 "claim_evidence_map": [],
             },
         ),
-        _artifacts(
+        _artifacts_without_retained_claims(
             summary={
                 "tldr": "repaired artifact",
                 "card_tldr_compact": "Repaired summary",
@@ -324,6 +326,8 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
             },
         ),
     ]
+    for artifact in [original, *candidates]:
+        _set_interpretive_summary_provenance(artifact)
     regeneration_inputs = []
     regeneration_targets = []
     validation_calls = 0
@@ -744,13 +748,7 @@ def test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures(tmp_pa
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
-        generate_artifacts=lambda **kwargs: _artifacts(
-            summary={
-                "tldr": "x",
-                "executive_summary": "x",
-                "claim_evidence_map": [],
-            }
-        ),
+        generate_artifacts=lambda **kwargs: _artifacts_without_retained_claims(),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )
@@ -866,14 +864,23 @@ def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets
         )
 
     deps = _deps(
-        generate_evidence_packs=lambda **kwargs: {"doc_map": {}},
-        generate_artifacts=lambda **kwargs: _artifacts(
-            summary={
-                "tldr": "x",
-                "executive_summary": "x",
-                "claim_evidence_map": [],
-            }
-        ),
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {},
+            "findings": {
+                "findings": [
+                    {
+                        "id": f"e{index}",
+                        "text": f"Repaired insight {index}. Evidence {index}.",
+                        "page": index,
+                    }
+                    for index in range(1, 6)
+                ]
+            },
+            "quote_candidates": {
+                "quote_candidates": [{"id": "q1", "text": "Repaired quote", "page": 2}]
+            },
+        },
+        generate_artifacts=lambda **kwargs: _artifacts_without_retained_claims(),
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
     )

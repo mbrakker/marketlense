@@ -42,6 +42,14 @@ class ClaimCandidate:
         metadata={"doc": "Whether unsupported status blocks readiness."}
     )
     evidence_references: list[ClaimEvidenceReference] = field(default_factory=list)
+    affected_section: str = field(
+        default="",
+        metadata={"doc": "Stable artifact field containing this retained claim."},
+    )
+    entity_id: str = field(
+        default="",
+        metadata={"doc": "Stable public item identity when the claim belongs to one."},
+    )
 
 
 @dataclass(frozen=True)

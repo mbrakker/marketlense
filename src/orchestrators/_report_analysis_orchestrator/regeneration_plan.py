@@ -7,6 +7,7 @@ lookup used by the report-analysis validation repair loop.
 from __future__ import annotations
 
 import re
+import hashlib
 from typing import Any, Dict, List
 
 from src.contracts.regeneration import (
@@ -18,9 +19,11 @@ from src.contracts.regeneration import (
 )
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
 )
 from src.contracts.validation import ValidationIssue
 from src.utils.editorial_identity import (
+    failed_insight_id,
     insight_entity_id,
     insight_entity_id_from_public_item_id,
 )
@@ -261,7 +264,11 @@ def _normalize_regeneration_issue(
     derived_evidence_ids, pages = _issue_grounding(
         issue.affected_section, artifacts, issue.entity_id
     )
-    evidence_ids = derived_evidence_ids or list(issue.evidence_ids)
+    evidence_ids = (
+        list(issue.evidence_ids)
+        if str(issue.rule_id or "").strip().lower().startswith("retained_claim.")
+        else derived_evidence_ids or list(issue.evidence_ids)
+    )
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )
@@ -292,6 +299,8 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     if rule_id == "public_editorial_quality.duplicate_insight":
         # The wording duplicates a sibling; their shared source is still valid.
         return False
+    if rule_id.startswith("retained_claim."):
+        return rule_id == "retained_claim.evidence_reference_completeness"
     return str(issue.severity or "").strip().lower() == "error" and (
         rule_id == "grounding"
         or rule_id in {"numbers", "metrics"}
@@ -368,8 +377,15 @@ def _lookup_quote_grounding(
     return evidence_ids, pages
 
 
-def _allowed_paths(target_key: str) -> List[str]:
-    roots = {
+def _allowed_paths(
+    target_key: str,
+    issues: List[RegenerationIssue],
+    artifacts: Dict[str, Any],
+    repair_action: str,
+) -> List[str]:
+    """Resolve declared mutation paths to the narrowest retained stable item."""
+
+    family_roots = {
         "topics": ["toc_entries", "toc_topics", "toc_topics_expanded"],
         "summary": ["summary"],
         "insights_bundle": ["insights_candidates", "insights_final"],
@@ -379,12 +395,219 @@ def _allowed_paths(target_key: str) -> List[str]:
         "linkedin_post": ["linkedin_post"],
         "report_identity": [],
     }.get(target_key, [])
-    return roots + [
-        "soft_copy_claim_provenance",
-        "family_status",
-        "_cache",
-        "_repair_evidence_selection",
-    ]
+    resolved = [_issue_allowed_path(target_key, issue, artifacts) for issue in issues]
+    if any(path in {target_key, "insights_bundle", "topics"} for path in resolved):
+        return sorted(set(family_roots))
+    if target_key == "quotes" and repair_action in {
+        "COPY_CANONICAL_SOURCE_VALUE",
+        "REGENERATE_ITEM",
+        "REBIND_EVIDENCE",
+        "REMOVE_CLAIM",
+    }:
+        resolved = [
+            path.rsplit(".text", 1)[0] if path.endswith(".text") else path
+            for path in resolved
+        ]
+    if target_key == "summary" and repair_action == "REMOVE_CLAIM":
+        resolved = [
+            path.rsplit(".claim", 1)[0] if ".claim" in path else path
+            for path in resolved
+        ]
+    if target_key == "summary" and repair_action == "REBIND_EVIDENCE":
+        resolved = [
+            path.rsplit(".claim", 1)[0] if path.endswith(".claim") else path
+            for path in resolved
+        ]
+    if target_key == "insights_bundle" and repair_action == "REBIND_EVIDENCE":
+        resolved = [
+            path.split("].", 1)[0] + "]" if "]." in path else path for path in resolved
+        ]
+    if target_key == "insights_bundle" and repair_action == "CORRECT_PROTECTED_FACT":
+        item_roots = {
+            path.split("].", 1)[0] + "]" if "]." in path else path
+            for path in resolved
+            if ".metric" in path or path.endswith(".text")
+        }
+        resolved.extend(
+            f"{root}.{field}"
+            for root in item_roots
+            for field in ("evidence_id", "evidence", "evidence_spans", "pages")
+        )
+    if target_key == "insights_bundle" and repair_action == "REMOVE_CLAIM":
+        resolved = [
+            path.rsplit(".", 1)[0] if "." in path else path for path in resolved
+        ]
+    return sorted({path for path in resolved if path} or set(family_roots))
+
+
+def _issue_allowed_path(
+    target_key: str, issue: RegenerationIssue, artifacts: Dict[str, Any]
+) -> str:
+    affected = str(issue.affected_section or "").strip()
+    entity_id = str(issue.entity_id or "").strip()
+    if target_key == "report_identity":
+        return ""
+    if target_key == "summary":
+        soft_copy_path = _soft_copy_claim_path(
+            family="summary", entity_id=entity_id, artifacts=artifacts
+        )
+        if soft_copy_path:
+            return soft_copy_path
+        match = re.match(
+            r"^(?:summary\.)?(tldr|card_tldr_compact|executive_summary)(?:\.|$)",
+            affected,
+        )
+        if match:
+            return f"summary.{match.group(1)}"
+        map_match = re.match(r"^summary\.claim_evidence_map:([^.:]+)", affected)
+        if map_match:
+            identity = map_match.group(1)
+            entries = artifacts.get("summary", {}).get("claim_evidence_map", [])
+            if isinstance(entries, list):
+                for index, entry in enumerate(entries):
+                    if not isinstance(entry, dict):
+                        continue
+                    stable_id = str(
+                        entry.get("id") or entry.get("claim_id") or ""
+                    ).strip()
+                    if stable_id == identity:
+                        return f"summary.claim_evidence_map[item={identity}]"
+                    if not stable_id and str(index + 1) == identity:
+                        return f"summary.claim_evidence_map[{index}]"
+        return "summary"
+    if target_key == "insights_bundle":
+        insight_id = insight_entity_id_from_public_item_id(entity_id)
+        if not insight_id:
+            insight_id = failed_insight_id(entity_id, affected)
+        if insight_id:
+            final = artifacts.get("insights_final") or []
+            candidates = artifacts.get("insights_candidates") or []
+            root, item_path = _identified_item_path("insights_final", final, insight_id)
+            if not root:
+                root, item_path = _identified_item_path(
+                    "insights_candidates", candidates, insight_id
+                )
+            if root:
+                field = _insight_issue_field(entity_id, affected)
+                return f"{root}{item_path}.{field}" if field else f"{root}{item_path}"
+        return "insights_bundle"
+    if target_key == "quotes":
+        identity = _public_item_identity(entity_id, "quote") or _section_identity(
+            affected, "quotes"
+        )
+        if identity:
+            items = artifacts.get("quotes_final") or []
+            root, item_path = _identified_item_path("quotes_final", items, identity)
+            if root:
+                return f"{root}{item_path}.text"
+        return "quotes_final"
+    if target_key == "key_figures":
+        identity = _public_item_identity(entity_id, "key_figure") or _section_identity(
+            affected, "key_figures"
+        )
+        if identity:
+            root, item_path = _identified_item_path(
+                "key_figures", artifacts.get("key_figures") or [], identity
+            )
+            if root:
+                return f"{root}{item_path}.figure"
+        return "key_figures"
+    if target_key in {"expert_comment", "linkedin_post"}:
+        return (
+            _soft_copy_claim_path(
+                family=target_key, entity_id=entity_id, artifacts=artifacts
+            )
+            or target_key
+        )
+    return target_key
+
+
+def _public_item_identity(entity_id: str, expected_kind: str) -> str:
+    kind, separator, remainder = entity_id.partition(":")
+    if kind != expected_kind or not separator:
+        return ""
+    return remainder.split(":", 1)[0].split(".", 1)[0].strip()
+
+
+def _section_identity(affected: str, expected_root: str) -> str:
+    prefix, separator, remainder = affected.partition(":")
+    if prefix.casefold() != expected_root.casefold() or not separator:
+        return ""
+    return remainder.split(".", 1)[0].strip()
+
+
+def _identified_item_path(root: str, items: object, identity: str) -> tuple[str, str]:
+    if not isinstance(items, list):
+        return "", ""
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        stable_id = str(
+            item.get("id") or item.get("insight_id") or item.get("key_figure_id") or ""
+        ).strip()
+        if stable_id and stable_id == identity:
+            return root, f"[item={stable_id}]"
+        if not stable_id and str(index + 1) == identity:
+            return root, f"[{index}]"
+        if root == "quotes_final" and not stable_id:
+            if str(item.get("evidence_id") or "").strip() == identity:
+                return root, f"[{index}]"
+    return "", ""
+
+
+def _insight_issue_field(entity_id: str, affected: str) -> str:
+    parts = entity_id.split(":")
+    if len(parts) >= 3 and parts[0] == "insight" and parts[2] in {"text", "metric"}:
+        return parts[2]
+    match = re.search(r"\.(text|metric)(?:\.|$)", affected)
+    return match.group(1) if match else ""
+
+
+def _soft_copy_claim_path(
+    *, family: str, entity_id: str, artifacts: Dict[str, Any]
+) -> str:
+    if not entity_id:
+        return ""
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        return ""
+    claim = next(
+        (
+            value
+            for value in claims
+            if value.artifact_family == family and value.claim_id == entity_id
+        ),
+        None,
+    )
+    if claim is None:
+        return ""
+    text_fields = (
+        (
+            ("summary", "tldr"),
+            ("summary", "card_tldr_compact"),
+            ("summary", "executive_summary"),
+        )
+        if family == "summary"
+        else ((family, ""),)
+    )
+    matches: list[str] = []
+    for artifact_root, field in text_fields:
+        text = (
+            artifacts.get(artifact_root, {}).get(field, "")
+            if field
+            else artifacts.get(artifact_root, "")
+        )
+        for index, sentence in enumerate(soft_copy_material_sentences(text)):
+            text_hash = hashlib.sha256(
+                " ".join(sentence.split()).encode("utf-8")
+            ).hexdigest()
+            if text_hash == claim.text_hash:
+                base = f"summary.{field}" if field else family
+                matches.append(f"{base}[claim_index={index}]")
+    return matches[0] if len(matches) == 1 else ""
 
 
 # Ordered, materially distinct repair strategies per target.  The planner
@@ -438,7 +661,13 @@ def _issues_support_quote_restore(ordered_issues: List[RegenerationIssue]) -> bo
     """A failed quote can be restored verbatim only from a retained source quote."""
 
     return all(
-        str(issue.rule_id or "").strip().lower() in {"grounding", "semantic"}
+        str(issue.rule_id or "").strip().lower()
+        in {
+            "grounding",
+            "semantic",
+            "retained_claim.quote_match",
+            "retained_claim.evidence_reference_completeness",
+        }
         and str(issue.severity or "").lower() == "error"
         for issue in ordered_issues
     )
@@ -448,7 +677,19 @@ def _issues_support_metric_copy(ordered_issues: List[RegenerationIssue]) -> bool
     """A failed insight metric can be copied only from retained bound evidence."""
 
     return any(
-        str(issue.rule_id or "").strip().lower() in {"grounding", "numbers", "metrics"}
+        (
+            str(issue.rule_id or "").strip().lower()
+            in {"grounding", "numbers", "metrics"}
+            or str(issue.rule_id or "").strip().lower()
+            in {
+                "retained_claim.number_value_unit_match",
+                "retained_claim.evidence_reference_completeness",
+            }
+            or str(issue.rule_id or "")
+            .strip()
+            .lower()
+            .startswith("retained_claim.protected_fact_")
+        )
         and str(issue.severity or "").lower() == "error"
         for issue in ordered_issues
     )
@@ -458,6 +699,7 @@ def _build_target(
     target_key: str,
     issues: List[RegenerationIssue],
     rejected_strategy_keys: set[str] | None = None,
+    artifacts: Dict[str, Any] | None = None,
 ) -> RegenerationTarget | None:
     ordered_issues = sorted(
         issues,
@@ -500,7 +742,9 @@ def _build_target(
         issues=ordered_issues,
         repair_action=repair_action,
         repair_strategy=repair_strategy,
-        allowed_paths=_allowed_paths(target_key),
+        allowed_paths=_allowed_paths(
+            target_key, ordered_issues, artifacts or {}, repair_action
+        ),
         selected_evidence_ids=selected_evidence_ids,
         quarantined_evidence_ids=sorted(
             {value for issue in ordered_issues for value in issue.excluded_evidence_ids}
@@ -558,7 +802,12 @@ def _build_regeneration_plan(
         targets = [
             built_target
             for built_target in (
-                _build_target(target_key, grouped[target_key], rejected_strategy_keys)
+                _build_target(
+                    target_key,
+                    grouped[target_key],
+                    rejected_strategy_keys,
+                    artifacts,
+                )
                 for target_key in TARGET_ORDER
                 if target_key in grouped
             )
@@ -594,7 +843,12 @@ def _build_regeneration_plan(
         broad_targets = [
             built_target
             for built_target in (
-                _build_target(target_key, list(unmappable), rejected_strategy_keys)
+                _build_target(
+                    target_key,
+                    list(unmappable),
+                    rejected_strategy_keys,
+                    artifacts,
+                )
                 for target_key in BROAD_TARGETS
             )
             if built_target is not None

@@ -1180,7 +1180,9 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
                                 affected_section="linkedin_post",
                                 message="Unsupported numeric claim.",
                                 severity="error",
-                                entity_id=current["soft_copy_claim_provenance"]["claims"][-1]["claim_id"],
+                                entity_id=current["soft_copy_claim_provenance"][
+                                    "claims"
+                                ][-1]["claim_id"],
                                 evidence_ids=["f1"],
                             ),
                             RegenerationIssue(
@@ -1260,7 +1262,9 @@ def test_family_safe_removal_retires_only_that_familys_soft_copy_provenance(
     ]
     original_claims = current["soft_copy_claim_provenance"]["claims"]
     sibling_claims = [
-        claim for claim in original_claims if claim["artifact_family"] != artifact_family
+        claim
+        for claim in original_claims
+        if claim["artifact_family"] != artifact_family
     ]
     sibling_copy = {
         family: soft_copy_public_text(family, current[family])
@@ -2118,12 +2122,17 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
     assert repaired["claim_id"] != original_claim.claim_id
     assert repaired["repaired_from_claim_id"] == original_claim.claim_id
     assert selection["repaired_claim_id"] == repaired["claim_id"]
-    assert validate_regeneration_candidate(
+    assert "claim_ledgers" not in response.updated_artifacts
+    assert "topics_covered" not in response.updated_artifacts
+    candidate_integrity = validate_regeneration_candidate(
         current_artifacts=current_artifacts,
         candidate_artifacts=response.updated_artifacts,
         evidence_packs=evidence_packs,
         ctx=_ctx(),
-    ).passed
+    )
+    assert candidate_integrity.passed, [
+        (issue.affected_section, issue.message) for issue in candidate_integrity.issues
+    ]
 
     quarantined_candidate = deepcopy(response.updated_artifacts)
     rewritten_claim = next(
@@ -2986,6 +2995,128 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
     assert response.updated_artifacts["quotes_final"][0]["text"] == "Old quote"
 
 
+def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
+    class _ClaimMapOpenAIClient(_FakeOpenAIClient):
+        def openai_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            assert "claim_map_item" in req.user_prompt
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(
+                    {
+                        "summary": {
+                            "claim_evidence_map": [
+                                {
+                                    "id": "claim-one",
+                                    "claim": "Corrected retained claim.",
+                                    "evidence_id": "untrusted-change",
+                                },
+                                {
+                                    "id": "claim-two",
+                                    "claim": "Altered sibling claim.",
+                                },
+                            ]
+                        }
+                    }
+                ),
+                parsed_json={
+                    "summary": {
+                        "claim_evidence_map": [
+                            {
+                                "id": "claim-one",
+                                "claim": "Corrected retained claim.",
+                                "evidence_id": "untrusted-change",
+                            },
+                            {
+                                "id": "claim-two",
+                                "claim": "Altered sibling claim.",
+                            },
+                        ]
+                    }
+                },
+                request_id="req-claim-map-atomic",
+            )
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "id": "claim-one",
+            "claim": "Unsupported original claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        },
+        {
+            "id": "claim-two",
+            "claim": "Untouched sibling claim.",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "pages": [2],
+        },
+    ]
+    before_claims = deepcopy(artifacts["summary"]["claim_evidence_map"])
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="summary",
+                regenerate_steps=["summary"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="retained_claim.number_value_unit_match",
+                        affected_section=("summary.claim_evidence_map:claim-one.claim"),
+                        message="[retained_claim.number_value_unit_match] repair claim",
+                        severity="error",
+                        entity_id="summary_claim:claim-one",
+                        evidence_ids=["f1"],
+                    )
+                ],
+                repair_action="REGENERATE_ITEM",
+                repair_strategy="current_evidence",
+                allowed_paths=["summary.claim_evidence_map[item=claim-one].claim"],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    openai_client = _ClaimMapOpenAIClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    claims = response.updated_artifacts["summary"]["claim_evidence_map"]
+    assert len(openai_client.calls) == 1
+    request_variables = json.loads(openai_client.calls[0].user_prompt.split("|", 1)[1])
+    claim_scope = json.loads(request_variables["claim_repair_scope_json"])
+    assert claim_scope["claim_id"] == "claim-one"
+    assert (
+        len(json.loads(request_variables["current_section_json"])["claim_evidence_map"])
+        == 1
+    )
+    assert claims[0]["claim"] == "Corrected retained claim."
+    assert claims[0]["evidence_id"] == before_claims[0]["evidence_id"]
+    assert claims[1] == before_claims[1]
+
+
 def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path):
     source = "Share fell from 43% in Q1 2025 to 41% in Q2 2025."
     current_artifacts = _current_artifacts()
@@ -3112,7 +3243,7 @@ def test_regenerate_artifacts_applies_family_policy_to_unsupported_quotes(
     )
     assert (
         response.updated_artifacts["family_status"]["quotes"]["reason"]
-        == "quotes_missing_verbatim_source"
+        == "quotes_missing"
     )
 
 

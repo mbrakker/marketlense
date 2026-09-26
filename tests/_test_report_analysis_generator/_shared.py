@@ -7,6 +7,8 @@ __file__ = str(
     _SplitPath(__file__).resolve().parent.parent / "test_report_analysis_generator.py"
 )
 
+import hashlib
+
 import json
 
 import logging
@@ -50,6 +52,11 @@ from src.contracts.report_generation import (
 from src.contracts.report_models import Figure, Quote, ReportPayload
 
 from src.contracts.run_context import RunContext
+
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 
 from src.contracts.taxonomy import TaxonomyExtractResponse
 
@@ -235,6 +242,56 @@ def _artifacts(**overrides) -> dict:
     }
     payload.update(overrides)
     return payload
+
+
+def _artifacts_without_retained_claims(*, summary: dict | None = None) -> dict:
+    """Build a focused orchestration fixture without unrelated factual copy."""
+
+    artifacts = _artifacts(
+        summary=summary
+        or {"tldr": "", "executive_summary": "", "claim_evidence_map": []},
+        insights_candidates=[],
+        insights_final=[],
+        quotes_final=[],
+        expert_comment="",
+        linkedin_post="",
+    )
+    artifacts["soft_copy_claim_provenance"] = {"schema_version": "1.0", "claims": []}
+    return artifacts
+
+
+def _set_interpretive_summary_provenance(artifacts: dict) -> None:
+    """Give non-factual orchestration text a complete retained provenance record."""
+
+    claims = []
+    seen_hashes: set[str] = set()
+    summary = artifacts.get("summary")
+    if isinstance(summary, dict):
+        for field in ("tldr", "card_tldr_compact", "executive_summary"):
+            text = " ".join(str(summary.get(field) or "").split())
+            if not text:
+                continue
+            text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            if text_hash in seen_hashes:
+                continue
+            seen_hashes.add(text_hash)
+            claims.append(
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="summary",
+                    claim_id=f"test:summary:{text_hash[:16]}",
+                    text_hash=text_hash,
+                    classification="interpretive",
+                    evidence_ids=(),
+                    source_spans=(),
+                    producing_prompt_identity={"namespace": "test/summary"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            )
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
+    )
 
 
 def _source(runtime: ReportRuntimeState) -> ReportSourceState:

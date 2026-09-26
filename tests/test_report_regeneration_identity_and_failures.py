@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.openai import OpenAIResponseResult
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     RegenerationIssue,
@@ -333,6 +334,32 @@ def test_metadata_title_grounding_failure_routes_to_report_identity_repair() -> 
     assert target.prompt_namespaces == []
 
 
+def test_plan_declares_one_insight_field_path() -> None:
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="retained_claim.number_value_unit_match",
+        message="[retained_claim.number_value_unit_match|quantity_not_entailed] Failed.",
+        severity="error",
+        affected_section="insights:insight-1.text",
+        entity_id="insight:insight-1:text",
+        evidence_ids=["f1"],
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=_current_artifacts(),
+        broad_retry_available=False,
+    )
+
+    assert plan.targets[0].allowed_paths == [
+        "insights_final[item=insight-1].evidence",
+        "insights_final[item=insight-1].evidence_id",
+        "insights_final[item=insight-1].evidence_spans",
+        "insights_final[item=insight-1].pages",
+        "insights_final[item=insight-1].text",
+    ]
+
+
 def test_report_identity_repair_copies_canonical_title_without_model_calls(
     tmp_path,
 ) -> None:
@@ -379,6 +406,155 @@ def test_report_identity_repair_copies_canonical_title_without_model_calls(
     assert [item["text"] for item in after["quotes_final"]] == ["Old quote"]
     assert after["expert_comment"] == current_artifacts["expert_comment"]
     assert after["linkedin_post"] == current_artifacts["linkedin_post"]
+
+
+def test_model_repair_changes_only_the_identified_final_insight(tmp_path) -> None:
+    current_artifacts = _source_backed_artifacts()
+    before_final = [dict(item) for item in current_artifacts["insights_final"]]
+    before_candidates = [
+        dict(item) for item in current_artifacts["insights_candidates"]
+    ]
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="insights_bundle",
+                regenerate_steps=["insights_final"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="insights:insight-1.text",
+                        message="[grounding|unsupported_factual_claim] Repair one item.",
+                        severity="error",
+                        entity_id="insight:insight-1:text",
+                        evidence_ids=["f1"],
+                    )
+                ],
+                repair_action="REGENERATE_ITEM",
+                repair_strategy="current_evidence",
+                allowed_paths=["insights_final[item=insight-1].text"],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    openai_client = _FakeOpenAIClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    after_final = response.updated_artifacts["insights_final"]
+    assert len(openai_client.calls) == 1
+    assert len(after_final) == len(before_final)
+    for before, after in zip(before_final, after_final, strict=True):
+        if before["id"] == "insight-1":
+            assert after["text"] == "Repaired final insight"
+            assert after["metric"] == before["metric"]
+        else:
+            assert after == before
+    assert response.updated_artifacts["insights_candidates"] == before_candidates
+
+
+def test_model_repair_changes_only_the_identified_quote(tmp_path) -> None:
+    class _AtomicQuoteOpenAIClient(_FakeOpenAIClient):
+        def openai_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=(
+                    '{"quotes_final":[{"evidence_id":"q1","text":"Repaired quote."},'
+                    '{"evidence_id":"q2","text":"Altered sibling quote."}]}'
+                ),
+                parsed_json={
+                    "quotes_final": [
+                        {"evidence_id": "q1", "text": "Repaired quote."},
+                        {"evidence_id": "q2", "text": "Altered sibling quote."},
+                    ]
+                },
+                request_id="req-atomic-quote",
+            )
+
+    current_artifacts = _source_backed_artifacts()
+    current_artifacts["quotes_final"].append(
+        {
+            "id": "q2",
+            "text": "Untouched sibling quote.",
+            "speaker": "Other speaker",
+            "evidence_id": "q2",
+            "page": 2,
+        }
+    )
+    before_quotes = [dict(item) for item in current_artifacts["quotes_final"]]
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="quotes",
+                regenerate_steps=["quotes"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/quotes"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="quotes:q1",
+                        message="[grounding|unsupported_quote] repair one quote",
+                        severity="error",
+                        entity_id="quote:q1:text",
+                        evidence_ids=["q1"],
+                    )
+                ],
+                repair_action="REGENERATE_ITEM",
+                repair_strategy="current_evidence",
+                allowed_paths=["quotes_final[item=q1]"],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    openai_client = _AtomicQuoteOpenAIClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current_artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    after_quotes = response.updated_artifacts["quotes_final"]
+    assert len(openai_client.calls) == 1
+    assert after_quotes[0]["text"] == "Repaired quote."
+    assert after_quotes[1] == before_quotes[1]
 
 
 def test_report_identity_repair_abstains_without_canonical_source(tmp_path) -> None:
@@ -492,6 +668,7 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
         "id": "f1",
         "evidence": "Europe margin reached 46% in 2025.",
         "text": "Europe margin reached 46% in 2025.",
+        "page": 1,
     }
     supported_text = "Europe margin reached 46% in 2025."
     candidate_metric = dict(
@@ -514,10 +691,10 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
     current_artifacts["insights_final"][0] = {
         "id": "insight-1",
         "text": supported_text,
-        "evidence_id": "f1",
-        "evidence": "Europe margin reached 46% in 2025.",
+        "evidence_id": "missing-evidence",
+        "evidence": "Drifted evidence binding.",
         "metric": dict(drifted_metric),
-        "pages": [1],
+        "pages": [99],
     }
     plan = RegenerationPlan(
         mode="targeted",
@@ -544,6 +721,14 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
                 ],
                 repair_action="CORRECT_PROTECTED_FACT",
                 repair_strategy="canonical_metric_copy",
+                allowed_paths=[
+                    "insights_final[item=insight-1].text",
+                    "insights_final[item=insight-1].metric",
+                    "insights_final[item=insight-1].evidence_id",
+                    "insights_final[item=insight-1].evidence",
+                    "insights_final[item=insight-1].evidence_spans",
+                    "insights_final[item=insight-1].pages",
+                ],
             )
         ],
         unmappable_issues=[],
@@ -581,12 +766,14 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
     assert repaired_insight["metric"]["value"] == "46%"
     assert repaired_insight["metric"]["geography"] == "Europe"
     assert repaired_insight["evidence_id"] == "f1"
+    assert repaired_insight["evidence"] == "Europe margin reached 46% in 2025."
+    assert repaired_insight["pages"] == [1]
     untouched = next(
         insight
         for insight in response.updated_artifacts["insights_final"]
         if insight["id"] == "insight-2"
     )
-    assert untouched["metric"] == current_artifacts["insights_final"][1]["metric"]
+    assert untouched == current_artifacts["insights_final"][1]
 
 
 def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:

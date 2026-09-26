@@ -7,6 +7,8 @@ and bounded artifact regeneration attempts.
 from __future__ import annotations
 
 import inspect
+import re
+from difflib import SequenceMatcher
 from copy import deepcopy
 from dataclasses import asdict, replace
 from time import perf_counter
@@ -41,8 +43,10 @@ from src.generators.report_generation_dependencies import ReportAnalysisDependen
 from src.generators.report_generation_shared import merge_artifacts_into_payload
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
+    retained_claim_repair_issues,
     validate_regeneration_candidate,
 )
+from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
 from src.orchestrators._report_analysis_orchestrator.payload import (
     _ensure_report_payload_complete,
 )
@@ -74,6 +78,29 @@ _DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
     "chart_insight_cards": frozenset({"insights_final", "key_figures", "summary"}),
     "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),
     "claim_ledgers": frozenset({"insights_final", "summary", "quotes_final"}),
+    "family_status": frozenset(
+        {
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "quotes_final",
+            "expert_comment",
+            "linkedin_post",
+        }
+    ),
+    "_repair_evidence_selection": frozenset(
+        {"summary", "expert_comment", "linkedin_post"}
+    ),
+    "_cache": frozenset(
+        {
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "quotes_final",
+            "expert_comment",
+            "linkedin_post",
+        }
+    ),
 }
 
 
@@ -324,6 +351,42 @@ def _candidate_validation_report(
     )
 
 
+def _with_retained_claim_repair_diagnostics(
+    report: ValidationReport,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> ValidationReport:
+    diagnostics = retained_claim_repair_issues(artifacts, evidence_packs)
+    known = {
+        (
+            issue.rule_id,
+            issue.affected_section,
+            issue.entity_id,
+            tuple(issue.evidence_ids),
+        )
+        for issue in report.issues
+    }
+    added = [
+        issue
+        for issue in diagnostics
+        if (
+            issue.rule_id,
+            issue.affected_section,
+            issue.entity_id,
+            tuple(issue.evidence_ids),
+        )
+        not in known
+    ]
+    if not added:
+        return report
+    return replace(
+        report,
+        status="fail",
+        severity="error",
+        issues=[*report.issues, *added],
+    )
+
+
 def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
     return FailureFingerprint(
         rule_id=str(issue.rule_id or "validation").strip(),
@@ -437,20 +500,20 @@ def _scope_validation_report(
     plan,
     verified_derived_roots: frozenset[str] = frozenset(),
 ) -> ValidationReport:
-    allowed = {
-        path.split(".", 1)[0]
+    allowed_paths = {
+        path.strip()
         for target in plan.targets
         for path in target.allowed_paths
+        if str(path).strip()
     }
-    changed = set(_artifact_diff_summary(before, after)["changed_keys"])
-    changed.update(_artifact_diff_summary(before, after)["added_keys"])
-    changed.update(_artifact_diff_summary(before, after)["removed_keys"])
+    changed_paths = _artifact_diff_paths(before, after)
     violations = sorted(
-        root
-        for root in changed - allowed
-        if not _is_allowed_derived_artifact_change(
-            root=root,
-            allowed=allowed,
+        path
+        for path in changed_paths
+        if not _path_is_declared(path, allowed_paths)
+        and not _is_allowed_derived_artifact_change(
+            path=path,
+            allowed_paths=allowed_paths,
             verified_derived_roots=verified_derived_roots,
         )
     )
@@ -466,7 +529,7 @@ def _scope_validation_report(
             ValidationIssue(
                 message=(
                     "[regeneration_scope_violation] Targeted repair changed an "
-                    "unrelated artifact root"
+                    "undeclared artifact path"
                 ),
                 severity="error",
                 affected_section=path,
@@ -477,14 +540,157 @@ def _scope_validation_report(
     )
 
 
+def _path_root(path: str) -> str:
+    return re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
+
+
+def _path_is_declared(path: str, allowed_paths: set[str]) -> bool:
+    return any(
+        path == allowed
+        or path.startswith(f"{allowed}.")
+        or path.startswith(f"{allowed}[")
+        for allowed in allowed_paths
+    )
+
+
 def _is_allowed_derived_artifact_change(
-    *, root: str, allowed: set[str], verified_derived_roots: frozenset[str]
+    *,
+    path: str,
+    allowed_paths: set[str],
+    verified_derived_roots: frozenset[str],
 ) -> bool:
     """Allow only deterministic projections of an explicitly scoped repair."""
 
-    return bool(_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.get(root, set()) & allowed) and (
-        root == "soft_copy_claim_provenance" or root in verified_derived_roots
+    root = _path_root(path)
+    allowed_roots = {_path_root(value) for value in allowed_paths}
+    return root in verified_derived_roots and bool(
+        _DERIVED_ARTIFACT_ROOT_DEPENDENCIES.get(root, set()) & allowed_roots
     )
+
+
+def _verified_dependent_paths(
+    *,
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+    plan,
+    verified_derived_roots: frozenset[str],
+) -> List[str]:
+    allowed_paths = {
+        path.strip()
+        for target in plan.targets
+        for path in target.allowed_paths
+        if str(path).strip()
+    }
+    return sorted(
+        path
+        for path in _artifact_diff_paths(before, after)
+        if _is_allowed_derived_artifact_change(
+            path=path,
+            allowed_paths=allowed_paths,
+            verified_derived_roots=verified_derived_roots,
+        )
+    )
+
+
+_SOFT_COPY_DIFF_PATHS = frozenset(
+    {
+        "summary.tldr",
+        "summary.card_tldr_compact",
+        "summary.executive_summary",
+        "expert_comment",
+        "linkedin_post",
+    }
+)
+
+
+def _artifact_diff_paths(before: Any, after: Any, path: str = "") -> set[str]:
+    """Return changed leaf paths, using stable item IDs when the arrays preserve them."""
+
+    if before == after:
+        return set()
+    if isinstance(before, dict) and isinstance(after, dict):
+        changed: set[str] = set()
+        for key in sorted(set(before) | set(after)):
+            child = f"{path}.{key}" if path else str(key)
+            if key not in before or key not in after:
+                changed.add(child)
+            else:
+                changed.update(_artifact_diff_paths(before[key], after[key], child))
+        return changed
+    if isinstance(before, list) and isinstance(after, list):
+        before_ids = _stable_list_ids(before)
+        after_ids = _stable_list_ids(after)
+        if before_ids is not None and after_ids is not None:
+            if set(before_ids) == set(after_ids) and before_ids != after_ids:
+                return {path or "$"}
+            before_by_id = dict(zip(before_ids, before))
+            after_by_id = dict(zip(after_ids, after))
+            changed = {
+                changed_path
+                for identity in before_ids
+                if identity in after_by_id
+                for changed_path in _artifact_diff_paths(
+                    before_by_id[identity],
+                    after_by_id[identity],
+                    f"{path}[item={identity}]",
+                )
+            }
+            changed.update(
+                f"{path}[item={identity}]"
+                for identity in set(before_ids) ^ set(after_ids)
+            )
+            return changed
+        changed = set()
+        for index in range(max(len(before), len(after))):
+            child = f"{path}[{index}]"
+            if index >= len(before) or index >= len(after):
+                changed.add(child)
+            else:
+                changed.update(_artifact_diff_paths(before[index], after[index], child))
+        return changed
+    if (
+        path in _SOFT_COPY_DIFF_PATHS
+        and isinstance(before, str)
+        and isinstance(after, str)
+    ):
+        return _soft_copy_changed_claim_paths(path, before, after)
+    return {path} if path else {"$"}
+
+
+def _stable_list_ids(values: list[Any]) -> list[str] | None:
+    identities: list[str] = []
+    for value in values:
+        if not isinstance(value, dict):
+            return None
+        identity = next(
+            (
+                str(value.get(key) or "").strip()
+                for key in ("id", "insight_id", "key_figure_id", "claim_id")
+                if str(value.get(key) or "").strip()
+            ),
+            "",
+        )
+        if not identity:
+            return None
+        identities.append(identity)
+    return identities if len(set(identities)) == len(identities) else None
+
+
+def _soft_copy_changed_claim_paths(path: str, before: str, after: str) -> set[str]:
+    before_sentences = soft_copy_material_sentences(before)
+    after_sentences = soft_copy_material_sentences(after)
+    matcher = SequenceMatcher(a=before_sentences, b=after_sentences, autojunk=False)
+    changed: set[str] = set()
+    for operation, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+        if operation == "equal":
+            continue
+        changed.update(
+            f"{path}[claim_index={index}]" for index in range(old_start, old_end)
+        )
+        changed.update(
+            f"{path}[claim_index={index}]" for index in range(new_start, new_end)
+        )
+    return changed or {path}
 
 
 def _validation_issue_keys(report: ValidationReport) -> list[str]:
@@ -575,6 +781,16 @@ def _candidate_audit(
         ),
         allowed_paths=(
             sorted({path for target in plan.targets for path in target.allowed_paths})
+            if plan
+            else []
+        ),
+        verified_dependent_paths=(
+            _verified_dependent_paths(
+                before=current_artifacts,
+                after=candidate_artifacts,
+                plan=plan,
+                verified_derived_roots=candidate_result.verified_derived_roots,
+            )
             if plan
             else []
         ),
@@ -744,6 +960,11 @@ def _run_validation_regeneration_loop(
         if current_validation_report.status == "pass":
             final_status = "pass"
             break
+        current_validation_report = _with_retained_claim_repair_diagnostics(
+            current_validation_report,
+            promoted_artifacts,
+            evidence_packs,
+        )
         plan = _build_regeneration_plan(
             issues=current_validation_report.issues,
             artifacts=working_artifacts,
@@ -898,6 +1119,12 @@ def _run_validation_regeneration_loop(
                 candidate_artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 ctx=attempt_ctx,
+                planned_prompt_namespaces=tuple(
+                    namespace
+                    for target in plan.targets
+                    for namespace in target.prompt_namespaces
+                ),
+                actual_prompt_namespaces=tuple(regeneration_response.prompt_namespaces),
                 removed_insight_ids=tuple(
                     failed_insight_id(issue.entity_id, issue.affected_section)
                     for target in plan.targets
@@ -924,6 +1151,7 @@ def _run_validation_regeneration_loop(
                     candidate_artifacts_path=candidate_artifacts_path,
                     candidate_result=candidate_result,
                     regeneration_response=regeneration_response,
+                    plan=plan,
                 ),
                 ctx=attempt_ctx,
             )

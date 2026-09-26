@@ -521,6 +521,15 @@ class RegenerationCandidateAudit:
     repair_action: str = field(default="")
     repair_strategy: str = field(default="")
     allowed_paths: List[str] = field(default_factory=list)
+    verified_dependent_paths: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Changed paths admitted as deterministic dependents of the "
+                "declared repair scope."
+            )
+        },
+    )
     selected_evidence_ids: List[str] = field(default_factory=list)
     quarantined_evidence_ids: List[str] = field(default_factory=list)
     repair_delta: RepairDelta = field(default_factory=RepairDelta)

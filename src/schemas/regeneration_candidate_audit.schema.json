@@ -43,6 +43,7 @@
     "producer_build_identity": { "type": "string", "maxLength": 160 },
     "latency_ms": { "type": ["integer", "null"], "minimum": 0 },
     "allowed_paths": { "type": "array", "items": { "type": "string" } },
+    "verified_dependent_paths": { "type": "array", "items": { "type": "string" } },
     "selected_evidence_ids": { "type": "array", "items": { "type": "string" } },
     "quarantined_evidence_ids": { "type": "array", "items": { "type": "string" } },
     "repair_delta": {

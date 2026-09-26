@@ -14748,7 +14748,13 @@
     "src.contracts.claim_validation.ClaimCandidate": {
       "additionalProperties": false,
       "properties": {
+        "affected_section": {
+          "type": "string"
+        },
         "claim_id": {
+          "type": "string"
+        },
+        "entity_id": {
           "type": "string"
         },
         "evidence_references": {
@@ -30837,6 +30843,12 @@
         },
         "validation_status": {
           "type": "string"
+        },
+        "verified_dependent_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "workflow_run_id": {
           "type": "string"

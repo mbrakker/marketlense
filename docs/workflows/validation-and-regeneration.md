@@ -85,8 +85,23 @@ last promoted artifact, cannot repeat its fingerprinted strategy/evidence combin
 and uses safe removal or abstention when the scoped strategy is exhausted. Deterministic
 claim removal and source-bound corrections do not construct a model client. The
 candidate integrity, retained-claim, full validation, public-editorial, readiness, and
-promotion gates remain authoritative; a candidate that changes an undeclared artifact
-root is rejected as `regeneration_scope_violation` before promotion.
+promotion gates remain authoritative. Target paths resolve to the narrowest stable
+item and field available for a summary claim or variant, insight and metric, key
+figure, quote, Expert View claim, or LinkedIn claim. When identity cannot be
+resolved unambiguously, the planner uses the existing family-level repair.
+
+The scope gate compares exact changed paths, including nested fields and stable
+list-item identities, against each target's declared `allowed_paths`. It rejects
+changed siblings and undeclared nested fields as `regeneration_scope_violation`
+before promotion. A changed deterministic projection is allowed only after the
+candidate verifier recomputes it from canonical inputs and confirms that it
+depends on a declared repair path. The audit records declared paths and verified
+dependent paths. Regeneration may also update private prompt-cache metadata;
+the verifier admits only namespaces both planned and actually used, checks that
+each producing identity matches its retained prompt identity and regeneration
+requirement, and rejects unrelated cache changes. Targeted patches merge onto
+the last promoted artifact, keeping untargeted sibling fields and items
+unchanged even when a model response includes extra changes.
 For an atomic failed final insight, `REMOVE_CLAIM/safe_removal` resolves its
 stable ID from the validation issue, excludes that ID from both final and
 candidate pools, and leaves sibling insights and their shared evidence intact.
@@ -107,7 +122,8 @@ Insight and soft-copy repairs may also change their deterministic projections.
 The candidate gate recomputes the changed metric spine, key figures, chart
 cards, executive advisory, and claim ledger from the candidate's canonical
 inputs. The scope gate permits each changed projection only after exact
-recomputation succeeds; an unrelated or altered projection remains blocked.
+recomputation succeeds and its declared input dependency matches the repair;
+an unrelated or altered projection remains blocked.
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
@@ -528,11 +544,20 @@ under `validation_regen_candidate_<attempt>.json`; a candidate failure cannot
 replace either canonical artifact or canonical validation output.
 
 The regeneration loop treats canonical artifacts and `validation.json` as one
-promoted state. It builds every next repair plan from that matching pair. A
-rejected candidate leaves both members unchanged; its artifact, validation
-snapshot, and candidate audit remain diagnostic-only negative feedback. A
-passing candidate promotes the artifact and its matching validation report
-together, after every required gate has passed.
+promoted state. Before each repair plan, deterministic `validate_retained_claims()`
+checks the last promoted artifacts and adds stable `retained_claim.*` diagnostics
+for failed evidence-completeness, protected-fact, number/unit, timeframe, quote,
+and other supported checks. These diagnostics carry the affected field, stable
+item or claim identity, and retained evidence IDs; diagnosis makes no model
+call. Candidate integrity repeats the same deterministic checks before
+promotion. An unchanged pre-existing claim failure is retained as a warning in
+the candidate so a scoped repair does not have to rewrite unrelated content.
+
+Every next repair plan is built from that matching promoted artifact and
+validation pair. A rejected candidate leaves both members unchanged; its
+artifact, validation snapshot, and candidate audit remain diagnostic-only
+negative feedback. A passing candidate promotes the artifact and its matching
+validation report together, after every required gate has passed.
 
 Candidate provenance is claim-specific for soft public copy and family-specific
 otherwise. Every grounding or public-editorial finding that exactly matches a
@@ -614,7 +639,9 @@ Every candidate writes a schema-backed
 claim/insight identity, original and candidate evidence IDs and source pages,
 validation issue codes, transformation scope, before/after canonical hashes,
 and per-family hashes for claim-bearing siblings that are byte-equivalent across
-the candidate. It also retains candidate/current artifact paths and whether the
+the candidate. It records exact `allowed_paths` and any recomputed
+`verified_dependent_paths`; the latter is optional when reading older audit
+records. It also retains candidate/current artifact paths and whether the
 attempt was promoted or rolled back. Promotion uses the canonical atomic
 artifact store only after every gate passes, so the prior current artifact stays
 recoverable until the atomic replacement succeeds. A failed candidate remains
