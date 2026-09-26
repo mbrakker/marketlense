@@ -60,6 +60,7 @@ from src.utils.slugify import slugify
 _SCHEMA_IDENTITY_PATHS = (
     "src/schemas/artifacts.schema.json",
     "src/schemas/regeneration_candidate_audit.schema.json",
+    "src/schemas/regeneration_repair_decision.schema.json",
     "src/schemas/validation_report.schema.json",
 )
 

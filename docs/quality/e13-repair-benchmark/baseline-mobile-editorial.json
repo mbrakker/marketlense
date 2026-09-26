@@ -4,7 +4,8 @@
     "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
     "producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
     "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
-    "validator_identity": "unavailable"
+    "validator_identity": "unavailable",
+    "repair_response_schema_identity": "unavailable"
   },
   "baseline_usage": {
     "attribution": "available",
@@ -478,6 +479,6 @@
     "source_usage_db_sha256": "0abf0c8e69b4338fb59d5b2865770501ef4afec83100bb2767f47a540d2d2be2"
   },
   "frozen": true,
-  "manifest_sha256": "e1fa7be664d45869230cfcecf5fa3c5b24153ac668dafc1aeace161e50633560",
+  "manifest_sha256": "83b73c0b8fd0fe9dd6e54450fe7db132f5aea9c0bb495b7a01631dbdb0c4c428",
   "schema_version": "1.0"
 }

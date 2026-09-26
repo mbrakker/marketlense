@@ -13,15 +13,19 @@ in their isolated local run storage.
 
 | Manifest | Cases | Covered failure classes | Baseline success@3 | Baseline usage |
 | --- | ---: | --- | ---: | --- |
-| [`baseline-a21-five.json`](baseline-a21-five.json) (`a42ba8a0b9d9b6f1e687cdba1e479fe5b220a1ba870f0b58e552a4739b5ea803) | 5 | summary, insight/metric, quote, Expert View, LinkedIn | 0/5 | 32 calls, 235,970 input + 51,700 output tokens, USD 0.109236; attempt-level attribution unavailable |
-| [`baseline-mobile-editorial.json`](baseline-mobile-editorial.json) (`e1fa7be664d45869230cfcecf5fa3c5b24153ac668dafc1aeace161e50633560`) | 1 | summary, insight/metric, Expert View, public-editorial hard failure | 0/1 | 11 calls, 119,933 input + 23,322 output tokens, USD 0.051973; attempt-level attribution unavailable |
-| [`baseline-doubleverify-linkedin-public-editorial.json`](baseline-doubleverify-linkedin-public-editorial.json) (`b6665cde30becc1eb0fc0a6bf56c12dc154c273933643dc6a396b5d637bb7b1f`) | 1 | summary, insight/metric, Expert View, LinkedIn, public-editorial hard failure | 0/1 | unavailable; no repair-attributable usage ledger was retained |
+| [`baseline-a21-five.json`](baseline-a21-five.json) (`d23482c46e0d8498bdf5dd0727472dfbc5c8da17d80443fba2ab43a0d68f12c4`) | 5 | summary, insight/metric, quote, Expert View, LinkedIn | 0/5 | 32 calls, 235,970 input + 51,700 output tokens, USD 0.109236; attempt-level attribution unavailable |
+| [`baseline-mobile-editorial.json`](baseline-mobile-editorial.json) (`83b73c0b8fd0fe9dd6e54450fe7db132f5aea9c0bb495b7a01631dbdb0c4c428`) | 1 | summary, insight/metric, Expert View, public-editorial hard failure | 0/1 | 11 calls, 119,933 input + 23,322 output tokens, USD 0.051973; attempt-level attribution unavailable |
+| [`baseline-doubleverify-linkedin-public-editorial.json`](baseline-doubleverify-linkedin-public-editorial.json) (`a586f229704a04aa2ebdda6bbcd5bdf7de74974bd15b5405ad64fbd5b8fc7363`) | 1 | summary, insight/metric, Expert View, LinkedIn, public-editorial hard failure | 0/1 | unavailable; no repair-attributable usage ledger was retained |
 
 These manifests are deliberately separate. Their configuration, policy,
 schema, validator, and build identities do not form one compatible baseline.
 The first two have an unavailable historical validator identity. The third
 pins its source result's Git SHA as the build attestation for audits from the
-same workflow run; the validator identity is unavailable there as well.
+same workflow run; the validator identity is unavailable there as well. The
+repair-response schema did not exist at any of these source commits, so its
+historical identity is explicitly `unavailable`. The current aggregate schema
+identity includes that response schema, which keeps every historical
+comparison fail-closed.
 
 ## Measurement status
 
@@ -33,9 +37,12 @@ artifact-regeneration model service clients used by the report workflow. The
 provider schema projection uses the API-supported strict subset; the full
 canonical schema remains authoritative when the response is validated. The
 repair decision's fixed `replace` operation is explicitly typed as a string
-for strict structured output. The scorecard retains its normal validation,
-evidence, mutation-scope, promotion, and rollback gates. It does not author
-replacement copy or raise the configured retry limit.
+for strict structured output. This response contract is identified as v2.
+Replacement values cross that provider boundary as JSON-encoded strings and
+are parsed before the existing deterministic patch checks. The scorecard
+retains its normal validation, evidence, mutation-scope, promotion, and
+rollback gates. It does not author replacement copy or raise the configured
+retry limit.
 
 The exact implementation SHA, per-cohort final metrics, per-failure-class
 results, commands and test outcomes, and acceptance-criteria disposition will

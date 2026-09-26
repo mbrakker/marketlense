@@ -4,7 +4,8 @@
     "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
     "producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
     "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
-    "validator_identity": "unavailable"
+    "validator_identity": "unavailable",
+    "repair_response_schema_identity": "unavailable"
   },
   "baseline_usage": {
     "attribution": "unavailable",
@@ -402,7 +403,7 @@
     }
   ],
   "frozen": true,
-  "manifest_sha256": "b6665cde30becc1eb0fc0a6bf56c12dc154c273933643dc6a396b5d637bb7b1f",
+  "manifest_sha256": "a586f229704a04aa2ebdda6bbcd5bdf7de74974bd15b5405ad64fbd5b8fc7363",
   "schema_version": "1.0",
   "source_run_git_sha": "c89e1af249be771acb515a8d255f56c43c4b359c"
 }

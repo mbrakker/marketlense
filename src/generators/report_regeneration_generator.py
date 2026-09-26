@@ -1810,6 +1810,7 @@ def _render_regeneration_model(
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
         response_contract_name=("regeneration_repair_decision" if repair_call else ""),
+        response_contract_identity_version="v2",
     )
     if not repair_call:
         return result
@@ -2095,7 +2096,7 @@ def _validated_repair_decision(
             RepairPatchOperation(
                 op=str(item["op"]),
                 path=str(item["path"]),
-                value=deepcopy(item["value"]),
+                value=_decode_repair_patch_value_json(item["value_json"]),
             )
             for item in raw_patch
             if isinstance(item, dict)
@@ -2210,6 +2211,20 @@ def _validated_repair_decision(
     ):
         raise _repair_decision_error(execution, "protected_field_changed")
     return decision
+
+
+def _decode_repair_patch_value_json(value_json: object) -> Any:
+    if not isinstance(value_json, str):
+        raise ValueError("minimal_patch_value_json_invalid")
+    try:
+        return json.loads(value_json, parse_constant=_reject_non_json_constant)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise ValueError("minimal_patch_value_json_invalid") from exc
+
+
+def _reject_non_json_constant(value: str) -> Any:
+    del value
+    raise ValueError("non_standard_json_constant")
 
 
 def _repair_protected_fields_preserved(

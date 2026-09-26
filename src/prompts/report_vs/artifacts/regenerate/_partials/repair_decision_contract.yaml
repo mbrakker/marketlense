@@ -8,6 +8,8 @@ text: |
   - `changed_paths` must equal the patch paths, each at or below `allowed_paths`.
     Use `replace` on the smallest unambiguous stable path; replace a whole
     metric object only when that metric is the target.
+  - Encode each replacement value as one complete JSON value in `value_json`.
+    Include no prose or markdown outside that JSON encoding.
   - `evidence_ids_used` contains only retained `relevant_evidence` IDs that
     support this patch. Exclude quarantined IDs. Failed/current/rejected copy
     and retry memory are diagnostic only, never evidence.

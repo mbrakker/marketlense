@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from src.contracts.run_context import RunContext
@@ -171,6 +173,9 @@ def test_repair_decision_provider_schema_omits_unsupported_keywords():
 
     patch_op = repair["minimal_patch"]["items"]["properties"]["op"]
     assert patch_op["type"] == "string"
+    patch_value = repair["minimal_patch"]["items"]["properties"]
+    assert "value" not in patch_value
+    assert patch_value["value_json"]["type"] == "string"
 
 
 def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids():
@@ -184,7 +189,11 @@ def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids()
             "protected_fields": [],
             "changed_paths": ["summary.tldr"],
             "minimal_patch": [
-                {"op": "replace", "path": "summary.tldr", "value": "Updated"}
+                {
+                    "op": "replace",
+                    "path": "summary.tldr",
+                    "value_json": json.dumps("Updated"),
+                }
             ],
             "claim_provenance": [],
         }

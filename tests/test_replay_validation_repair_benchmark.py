@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from scripts.quality.replay_validation_repair_benchmark import (
+    _SCHEMA_IDENTITY_PATHS,
     _benchmark_manifest,
     _build_repair_model_clients,
     _case_paths,
@@ -89,3 +90,11 @@ def test_benchmark_builds_production_model_clients_for_both_repair_stages() -> N
     assert isinstance(validation_client, LLMServiceClient)
     assert isinstance(regeneration_client, LLMServiceClient)
     assert validation_client is not regeneration_client
+
+
+def test_benchmark_schema_identity_includes_the_private_repair_response_schema() -> (
+    None
+):
+    assert "src/schemas/regeneration_repair_decision.schema.json" in (
+        _SCHEMA_IDENTITY_PATHS
+    )

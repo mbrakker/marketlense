@@ -43,13 +43,11 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["op", "path", "value"],
+            "required": ["op", "path", "value_json"],
             "properties": {
               "op": {"type": "string", "const": "replace"},
               "path": {"type": "string", "minLength": 1},
-              "value": {
-                "type": ["string", "number", "boolean", "object", "array", "null"]
-              }
+              "value_json": {"type": "string", "minLength": 1}
             },
             "additionalProperties": false
           }

@@ -462,7 +462,7 @@ def _full_chain_chat_response_factory(
                 id="fixture-chat-rank-candidates",
             )
         else:
-            if schema_name == "regeneration_repair_decision_v1":
+            if schema_name == "regeneration_repair_decision_v2":
                 repair_context = _json_prompt_value(call, "Repair context JSON")
                 failures = _json_prompt_value(call, "Validator failures JSON")
                 if not isinstance(repair_context, dict):
@@ -505,7 +505,11 @@ def _full_chain_chat_response_factory(
                     "protected_fields": repair_context["required_protected_fields"],
                     "changed_paths": [path],
                     "minimal_patch": [
-                        {"op": "replace", "path": path, "value": replacement}
+                        {
+                            "op": "replace",
+                            "path": path,
+                            "value_json": json.dumps(replacement, ensure_ascii=False),
+                        }
                     ],
                     "claim_provenance": (
                         [
@@ -535,7 +539,7 @@ def _full_chain_chat_response_factory(
                 )
                 payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
-            if schema_name == "regeneration_repair_decision_v1":
+            if schema_name == "regeneration_repair_decision_v2":
                 pass
             elif reproduce_ias_soft_copy and family in soft_copy_calls:
                 soft_copy_calls[family] += 1

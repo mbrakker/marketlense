@@ -89,7 +89,13 @@ def _legacy_repair_decision_response(req, result):
         "evidence_ids_used": used_evidence_ids,
         "protected_fields": context["required_protected_fields"],
         "changed_paths": [path],
-        "minimal_patch": [{"op": "replace", "path": path, "value": patch_value}],
+        "minimal_patch": [
+            {
+                "op": "replace",
+                "path": path,
+                "value_json": json.dumps(patch_value, ensure_ascii=False),
+            }
+        ],
         "claim_provenance": provenance,
     }
     payload = {"repair_decision": decision}

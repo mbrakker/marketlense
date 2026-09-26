@@ -100,6 +100,7 @@ def render_artifact_json_model(
     prepared_prompt_bundle: PreparedPromptBundle | None = None,
     response_observer: Callable[[Any, float, str], None] | None = None,
     response_contract_name: str = "",
+    response_contract_identity_version: str = "v1",
 ) -> Dict[str, Any]:
     """Render one artifact through the shared bounded JSON recovery service."""
     prompt_bundle = prepared_prompt_bundle or prepare_prompt_bundle(
@@ -258,7 +259,7 @@ def render_artifact_json_model(
             source_url=source_url,
             output_schema=output_schema,
             output_schema_identity=(
-                f"{response_contract_name}_v1"
+                f"{response_contract_name}_{response_contract_identity_version}"
                 if response_contract_name
                 else f"artifact_{root_key}_v1"
             ),
