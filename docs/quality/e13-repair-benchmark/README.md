@@ -83,6 +83,8 @@ leaf resolution, the planner abstains for the whole target instead of dropping
 the unresolved issue and widening the remaining repair to its family. Stable
 item selectors and positional selectors must resolve to the same retained
 leaves in planning, protected-field calculation, patching, and scope comparison.
+The frozen replay below exercises this contract at implementation SHA
+`9120a8fee9289c3850e9f91048a22c9da5457038`.
 
 ## Measurement status
 
@@ -146,7 +148,7 @@ passed, and publication remained disabled. It did not exercise repair and is
 not counted in repair metrics. The missing payload inputs were subsequently
 pinned in the schema 2.0 manifests.
 
-## Current measurement disposition — 2026-09-26, implementation SHA `baad5a69d9dc63c6a0b9e807c97fa1aea0f8bff3`
+## Prior measurement disposition — 2026-09-26, implementation SHA `baad5a69d9dc63c6a0b9e807c97fa1aea0f8bff3`
 
 All seven frozen cases passed exact payload reconstruction and the production
 completeness preflight before repair clients were built. The five analysis
@@ -199,3 +201,71 @@ have no candidate-audit measurements, the scorecard denominators are
 incomplete, and the required canary failed twice. The documentation gate also
 continues to report 12 pre-existing stale line anchors in unrelated
 `simplification.md`.
+
+## Current measurement disposition — 2026-09-26, implementation SHA `9120a8fee9289c3850e9f91048a22c9da5457038`
+
+The unchanged seven frozen cases were replayed independently on the exact
+implementation SHA after the code commit. All seven payloads passed the
+production reconstruction and completeness preflight; no case or manifest was
+changed. Candidate validation was reached for six cases, producing 12
+candidate audits. Mobile editorial stopped before candidate validation with
+`regeneration_target_item_unchanged`. The strict scorecard denominator is 6/7
+because mobile produced no candidate audit; valid success@1 and success@3 are
+both 0/6, and the full case outcome is 0/7. Global and attachment each ended
+with final validation `pass`, but neither qualifies as a successful repair:
+their strict scorecard fingerprints persisted and/or the mutation exceeded the
+frozen legal scope. “Runner attempts” below is the attempt count emitted by the
+replay result; “not emitted” means that terminal event did not include that
+counter. Candidate audit counts independently record how many candidates
+reached validation.
+
+| Frozen case | Runner attempts | Candidate audits | Final outcome / terminal failure | Success@1 / @3 | Scorecard out-of-scope attempts | Runtime scope paths | Protected changed / incomplete | Unsupported-evidence attempts | New hard failures |
+| --- | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `2026-global-co-8970fc13f012` | 1 | 1 | validation pass; no terminal code | false / false | 1 | 0 | 0 / 0 | 0 | 0 |
+| `attachment-the-6dddc246d289` | 2 | 2 | validation pass; no terminal code | false / false | 0 | 0 | 0 / 0 | 0 | 0 |
+| `ebook-0225-fut-997cc1cccd6a` | not emitted | 2 | `schema_type_mismatch` | false / false | 2 | 12 | 0 / 0 | 1 | 17 |
+| `final-web-vers-1d9e64dd7425` | 3 | 3 | `validation_failed_after_max_attempts` | false / false | 3 | 39 | 0 / 0 | 3 | 52 |
+| `g0-ec-trends-r-41f8ffd78145` | not emitted | 1 | `regeneration_repair_decision_invalid` / `protected_fields_incomplete` | false / false | 1 | 4 | 0 / 1 | 1 | 6 |
+| `public-editorial-linkedin-mobile-app` | not emitted | 0 | `regeneration_target_item_unchanged` before candidate validation | unavailable | 0 | 0 | 0 / 0 | 0 | 0 |
+| `doubleverify-linkedin-public-editorial-hard-failure` | 3 | 3 | `validation_failed_after_max_attempts` | false / false | 1 | 1 | 0 / 0 | 2 | 3 |
+
+The original terminal repair-decision guard classes are now absent from the
+replay: `changed_path_outside_allowed_paths` 0, `patch_target_not_atomic` 0,
+and `protected_field_changed` 0. No validator was relaxed. Candidate-level
+scope failures still occur: the unchanged runtime scope validator reported 56
+out-of-scope path occurrences, and the frozen-scope scorecard marked 8/12
+candidate attempts out of scope. Audited paths identify deterministic derived
+projections and expert-comment provenance, plus one `_cache` prompt-requirement
+path; these remain integrity failures and were not promoted. One subsequent
+repair decision failed closed with `protected_fields_incomplete`. Across the 12
+candidate audits, 78 new hard failures were introduced in 8 attempts and
+unsupported evidence was introduced in 7 attempts. Existing evidence,
+grounding, public-editorial, promotion, rollback, and retry gates remained
+active. Scorecard comparison is incompatible across cohorts, the denominator
+is incomplete, and provider usage is not attributable to repair attempts.
+
+The required isolated IAS discovery-to-publish canary passed on this SHA in one
+workflow attempt: validation and publication readiness passed, final state was
+`awaiting_review`, and publication remained disabled. It made 41 provider calls
+(260,610 input and 44,466 output tokens; USD 0.048154) in 310.049 seconds. A PDF
+parser emitted an invalid-float warning; the run still passed both gates. This
+canary does not exercise candidate repair and is excluded from E13 repair
+metrics.
+
+The retained result includes each case outcome, emitted scorecards, bounded
+candidate-audit summaries and hashes, exact commands, usage attribution,
+canary outcome, and validation results: [2026-09-26 measurement](results/2026-09-26-9120a8fe.json)
+(SHA-256 `56bdc065fcfade8e0e1c87cca6595bc4bd455b261de986233cddeb8c8e41f797`; see [SHA-256 sidecar](results/2026-09-26-9120a8fe.json.sha256)).
+Full private audits and run data remain in isolated local storage. The result
+contains no rendered prompt, source extract, model response, or replacement
+copy.
+
+E13 remains **Active**. This change removes the three observed atomic
+repair-decision guard failures, but it does not yet establish atomic scope
+safety across candidate artifacts: the scorecard still records 8/12
+out-of-scope attempts and 56 runtime scope-path occurrences. The evidence,
+semantic, public-editorial, and newly introduced hard-failure thresholds also
+remain unmet; the denominator and cohort comparison are incomplete, residual
+odds are unbounded, and no valid success@1/@3 is demonstrated. The canary
+passed but is not repair evidence. The documentation validator still reports
+12 pre-existing stale anchors in unrelated `simplification.md`.

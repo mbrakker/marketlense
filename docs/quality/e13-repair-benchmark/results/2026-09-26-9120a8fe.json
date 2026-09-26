@@ -1,0 +1,2247 @@
+{
+  "aggregate_metrics": {
+    "candidate_audit_attempt_count": 12,
+    "candidate_validation_reached_cases": 6,
+    "new_hard_failure_candidate_attempt_denominator": 12,
+    "new_hard_failure_introduction_attempt_count": 8,
+    "new_hard_failure_introduction_count": 78,
+    "protected_field_changed_count": 0,
+    "protected_fields_incomplete_guard_failure_count": 1,
+    "run_level_provider_usage": {
+      "attribution": "aggregate_across_validation_and_repair_events_not_comparable_to_repair_only_baseline",
+      "estimated_cost_usd": 0.079974,
+      "event_count": 48,
+      "input_tokens": 496976,
+      "output_tokens": 73599,
+      "total_tokens": 570575
+    },
+    "runtime_scope_violation_path_occurrence_count": 56,
+    "scorecard_cohort_comparison": "incompatible_or_unavailable",
+    "scorecard_out_of_scope_mutation_attempt_count": 8,
+    "scorecard_success_denominator_complete": false,
+    "scored_candidate_case_count": 6,
+    "success_at_1_count": 0,
+    "success_at_1_rate": 0.0,
+    "success_at_3_count": 0,
+    "success_at_3_rate": 0.0,
+    "unsupported_evidence_candidate_attempt_denominator": 12,
+    "unsupported_evidence_introduction_attempt_count": 7
+  },
+  "atomic_contract_outcomes": {
+    "note": "Original repair-decision guard codes no longer appear as terminal failures. The unchanged mutation-scope validator still rejects candidate-level derived/provenance paths outside verified scope; the frozen-scope scorecard also flags a planned target outside its historical legal scope. No scope or protected-field gate was relaxed.",
+    "protected_field_changed_validation_failures": 0,
+    "runtime_regeneration_scope_violation_path_occurrences": 56,
+    "scorecard_out_of_scope_mutation_attempts": 8,
+    "terminal_changed_path_outside_allowed_paths_failures": 0,
+    "terminal_patch_target_not_atomic_failures": 0,
+    "terminal_protected_field_changed_failures": 0,
+    "terminal_protected_fields_incomplete_failures": 1
+  },
+  "canary_runs": [
+    {
+      "admission_outcome": "admitted",
+      "bounded_automatic_repair": false,
+      "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-required-workflow-9120a8fe --source \"tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf\" --max-duration-seconds 7200",
+      "duration_seconds": 310.049,
+      "estimated_cost_usd": 0.048154,
+      "exit_code": 0,
+      "final_state": "awaiting_review",
+      "implementation_sha": "9120a8fee9289c3850e9f91048a22c9da5457038",
+      "input_tokens": 260610,
+      "isolated_fresh_state": true,
+      "model_provider_calls": 41,
+      "output_tokens": 44466,
+      "publication_enabled": false,
+      "publication_readiness": "pass",
+      "run_directory": "tmp/e13-required-workflow-9120a8fe/ias-first-attempt-8uh8_5a0",
+      "stage": "isolated_discovery_to_publish_canary",
+      "terminal_failure_code": "",
+      "validation": "pass",
+      "warnings": [
+        "PDF parser emitted an invalid FloatObject warning; workflow still passed validation and publication-readiness gates."
+      ],
+      "workflow_attempt_count": 1
+    }
+  ],
+  "case_outcome_denominator": {
+    "candidate_audit_attempt_count": 12,
+    "candidate_validation_reached_cases": 6,
+    "case_count": 7,
+    "failed": 7,
+    "note": "Strict scorecard success@1/@3 is 0 for every case with an emitted scorecard; mobile emitted no candidate audit. Two final-validation statuses were pass, but their attempts did not satisfy the scorecard successful-repair definition because failure fingerprints persisted and/or the attempt was out of the frozen legal scope. Thus no case counts as a valid E13 repair success.",
+    "strict_scorecard_case_denominator": 6,
+    "success_rate": 0.0,
+    "successful_repairs": 0,
+    "terminal_outcomes_recorded": 7
+  },
+  "closure_disposition": {
+    "e13_closed": false,
+    "reason": "Strict success@3 remains 0; scorecard denominators are incomplete or incompatible; the measured attempts retain scope/provenance/semantic and hard-failure regressions; unsupported evidence was introduced; comparative cost attribution is unavailable. The isolated canary passed but does not exercise repair.",
+    "remaining_failure": "Candidate-level regeneration_scope_violation persists for derived key-figure/chart projections and expert-comment provenance; one provider response omitted protected fields (protected_fields_incomplete); ebook stopped on schema_type_mismatch; mobile stopped at regeneration_target_item_unchanged; semantic/provenance/public-editorial and introduced-hard-failure metrics remain below E13 acceptance.",
+    "thresholds_met": false
+  },
+  "cohorts": [
+    {
+      "case_count": 5,
+      "case_outcomes": [
+        {
+          "candidate_audit_attempt_count": 1,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "linkedin_post[claim_index=1]"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "ede8c41bf50b0f8537467d264b4a7dcf597ac849b55eb226f304e60446686e7e",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/2026-global-co-8970fc13f012/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 4,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "family_confidence",
+                "retained_claim.protected_fact_attribution_consistency"
+              ],
+              "changed_paths": [
+                "linkedin_post[claim_index=1]"
+              ],
+              "introduced_hard_failure_count": 0,
+              "introduced_rule_ids": [],
+              "promotion_outcome": "promoted",
+              "runtime_scope_violation_paths": [],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": false,
+              "validation_status": "pass",
+              "verified_dependent_path_count": 33,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection",
+                "family_status",
+                "soft_copy_claim_provenance"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "2026-global-co-8970fc13f012",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "quote"
+          ],
+          "final_validation_status": "pass",
+          "max_reached": false,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": 1,
+            "count": 0
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": 1,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 1,
+            "runtime_scope_violation_path_occurrences": 0,
+            "runtime_scope_violation_paths": []
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "",
+          "terminal_failure_reason": "",
+          "terminal_summary": null,
+          "unsupported_evidence_introductions": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": 1
+          }
+        },
+        {
+          "candidate_audit_attempt_count": 2,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "insights_final[item=insight-002].text"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "b59006cdc1f9722f4911657510c0dd76221ac240e6c50824bda55139cfeca308",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/attachment-the-6dddc246d289/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 2,
+              "candidate_validation_rule_ids": [
+                "family_confidence",
+                "grounding"
+              ],
+              "changed_paths": [
+                "insights_final[item=insight-002].text"
+              ],
+              "introduced_hard_failure_count": 0,
+              "introduced_rule_ids": [],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [],
+              "scorecard_out_of_scope_mutation": false,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": false,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 27,
+              "verified_dependent_roots": [
+                "_cache"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "insights_final[item=insight-002].text"
+              ],
+              "attempt_index": 2,
+              "audit_file_sha256": "504f01e0c51150634269f3130dead0dfa09b4fc7fdec4ae39f9378bf7ac9699a",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/attachment-the-6dddc246d289/report_analysis/regeneration_candidate_audit_2.json",
+              "candidate_validation_issue_count": 1,
+              "candidate_validation_rule_ids": [
+                "family_confidence"
+              ],
+              "changed_paths": [
+                "insights_final[item=insight-002].text"
+              ],
+              "introduced_hard_failure_count": 0,
+              "introduced_rule_ids": [],
+              "promotion_outcome": "promoted",
+              "runtime_scope_violation_paths": [],
+              "scorecard_out_of_scope_mutation": false,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": false,
+              "validation_status": "pass",
+              "verified_dependent_path_count": 27,
+              "verified_dependent_roots": [
+                "_cache"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "attachment-the-6dddc246d289",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "linkedin"
+          ],
+          "final_validation_status": "pass",
+          "max_reached": false,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": 2,
+            "count": 0
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": 2,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 0,
+            "runtime_scope_violation_path_occurrences": 0,
+            "runtime_scope_violation_paths": []
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "",
+          "terminal_failure_reason": "",
+          "terminal_summary": null,
+          "unsupported_evidence_introductions": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": 2
+          }
+        },
+        {
+          "candidate_audit_attempt_count": 2,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]",
+                "summary.executive_summary[claim_index=1]",
+                "summary.executive_summary[claim_index=2]",
+                "summary.executive_summary[claim_index=3]",
+                "summary.executive_summary[claim_index=4]",
+                "summary.executive_summary[claim_index=5]",
+                "summary.tldr[claim_index=0]"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "6c641dd892cc3d31fe40dd0f70a54c91803f8ecd0db54570dc5b0a36c2d24177",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/ebook-0225-fut-997cc1cccd6a/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 12,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation"
+              ],
+              "changed_paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]",
+                "summary.tldr[claim_index=0]"
+              ],
+              "introduced_hard_failure_count": 9,
+              "introduced_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "chart_insight_cards[item=insight-03]",
+                "chart_insight_cards[item=insight-04]",
+                "chart_insight_cards[item=insight-07]",
+                "key_figures[0]",
+                "key_figures[1]",
+                "key_figures[2]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 45,
+              "verified_dependent_roots": [
+                "_cache",
+                "claim_ledgers[0]",
+                "executive_advisory",
+                "soft_copy_claim_provenance",
+                "topics_covered[1]",
+                "topics_covered[2]",
+                "topics_covered[3]",
+                "topics_covered[5]",
+                "topics_covered[6]",
+                "topics_covered[7]"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]",
+                "summary.executive_summary[claim_index=1]",
+                "summary.executive_summary[claim_index=2]",
+                "summary.executive_summary[claim_index=3]",
+                "summary.executive_summary[claim_index=4]",
+                "summary.executive_summary[claim_index=5]",
+                "summary.tldr[claim_index=0]"
+              ],
+              "attempt_index": 2,
+              "audit_file_sha256": "1bafc9d9d25b802b6ecf7efc682a43351ed9cf724a61497e92b515642f41af55",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/ebook-0225-fut-997cc1cccd6a/report_analysis/regeneration_candidate_audit_2.json",
+              "candidate_validation_issue_count": 13,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.protected_fact_attribution_consistency"
+              ],
+              "changed_paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]",
+                "summary.tldr[claim_index=0]"
+              ],
+              "introduced_hard_failure_count": 8,
+              "introduced_rule_ids": [
+                "artifact_quality",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "chart_insight_cards[item=insight-03]",
+                "chart_insight_cards[item=insight-04]",
+                "chart_insight_cards[item=insight-07]",
+                "key_figures[0]",
+                "key_figures[1]",
+                "key_figures[2]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": false,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 45,
+              "verified_dependent_roots": [
+                "_cache",
+                "claim_ledgers[0]",
+                "executive_advisory",
+                "soft_copy_claim_provenance",
+                "topics_covered[1]",
+                "topics_covered[2]",
+                "topics_covered[3]",
+                "topics_covered[5]",
+                "topics_covered[6]",
+                "topics_covered[7]"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "ebook-0225-fut-997cc1cccd6a",
+          "failure_classes": [
+            "insight_metric",
+            "summary"
+          ],
+          "final_validation_status": "fail",
+          "max_reached": null,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 2,
+            "candidate_audit_denominator": 2,
+            "count": 17
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": null,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 2,
+            "runtime_scope_violation_path_occurrences": 12,
+            "runtime_scope_violation_paths": [
+              "chart_insight_cards[item=insight-03]",
+              "chart_insight_cards[item=insight-04]",
+              "chart_insight_cards[item=insight-07]",
+              "key_figures[0]",
+              "key_figures[1]",
+              "key_figures[2]"
+            ]
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "schema_type_mismatch",
+          "terminal_failure_reason": "",
+          "terminal_summary": "schema_type_mismatch",
+          "unsupported_evidence_introductions": {
+            "attempt_count": 1,
+            "candidate_audit_denominator": 2
+          }
+        },
+        {
+          "candidate_audit_attempt_count": 3,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=5]"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "244baf580adb7d5de932eb29e83f719d720037c3e93f1531c8883d10a42bf074",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 24,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "family_confidence",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "changed_paths": [
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=5]"
+              ],
+              "introduced_hard_failure_count": 17,
+              "introduced_rule_ids": [
+                "artifact_quality",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "chart_insight_cards[0]",
+                "chart_insight_cards[1]",
+                "chart_insight_cards[2]",
+                "chart_insight_cards[3]",
+                "chart_insight_cards[4]",
+                "key_figures[0]",
+                "key_figures[1]",
+                "key_figures[2]",
+                "key_figures[3]",
+                "key_figures[4]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:501ac25ed9e11d10]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:87f4c8ce24c52c76]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:cf5bf19b2fe5bbb9]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 31,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection",
+                "family_status"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=5]"
+              ],
+              "attempt_index": 2,
+              "audit_file_sha256": "cccab860b6e3c43c265e14ac3e2208aedd28000eb45ae0c64644c1de0dead432",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_2.json",
+              "candidate_validation_issue_count": 24,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "family_confidence",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "changed_paths": [
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=5]"
+              ],
+              "introduced_hard_failure_count": 17,
+              "introduced_rule_ids": [
+                "artifact_quality",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "chart_insight_cards[0]",
+                "chart_insight_cards[1]",
+                "chart_insight_cards[2]",
+                "chart_insight_cards[3]",
+                "chart_insight_cards[4]",
+                "key_figures[0]",
+                "key_figures[1]",
+                "key_figures[2]",
+                "key_figures[3]",
+                "key_figures[4]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:1b2f5d8eadc2d47d]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:501ac25ed9e11d10]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:cf5bf19b2fe5bbb9]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 31,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection",
+                "family_status"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=5]"
+              ],
+              "attempt_index": 3,
+              "audit_file_sha256": "4da41151ccb2bf841e15ab66adc5303d919cccf1ea4fbe2e03603d355619d6e2",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/final-web-vers-1d9e64dd7425/report_analysis/regeneration_candidate_audit_3.json",
+              "candidate_validation_issue_count": 25,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "family_confidence",
+                "grounding",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "changed_paths": [],
+              "introduced_hard_failure_count": 18,
+              "introduced_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "regeneration_derived_projection",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "_cache.regeneration_prompt_requirements",
+                "chart_insight_cards[0]",
+                "chart_insight_cards[1]",
+                "chart_insight_cards[2]",
+                "chart_insight_cards[3]",
+                "chart_insight_cards[4]",
+                "key_figures[0]",
+                "key_figures[1]",
+                "key_figures[2]",
+                "key_figures[3]",
+                "key_figures[4]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:501ac25ed9e11d10]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:cf5bf19b2fe5bbb9]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 4,
+              "verified_dependent_roots": [
+                "family_status"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "final-web-vers-1d9e64dd7425",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "linkedin",
+            "quote"
+          ],
+          "final_validation_status": "fail",
+          "max_reached": true,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 3,
+            "candidate_audit_denominator": 3,
+            "count": 52
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": 3,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 3,
+            "runtime_scope_violation_path_occurrences": 39,
+            "runtime_scope_violation_paths": [
+              "_cache.regeneration_prompt_requirements",
+              "chart_insight_cards[0]",
+              "chart_insight_cards[1]",
+              "chart_insight_cards[2]",
+              "chart_insight_cards[3]",
+              "chart_insight_cards[4]",
+              "key_figures[0]",
+              "key_figures[1]",
+              "key_figures[2]",
+              "key_figures[3]",
+              "key_figures[4]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:1b2f5d8eadc2d47d]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:501ac25ed9e11d10]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:87f4c8ce24c52c76]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:cf5bf19b2fe5bbb9]"
+            ]
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "",
+          "terminal_failure_reason": "",
+          "terminal_summary": "validation_failed_after_max_attempts",
+          "unsupported_evidence_introductions": {
+            "attempt_count": 3,
+            "candidate_audit_denominator": 3
+          }
+        },
+        {
+          "candidate_audit_attempt_count": 1,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "expert_comment[claim_index=1]",
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=4]",
+                "insights_final[item=ec26-insight-002].so_what",
+                "insights_final[item=ec26-insight-005].so_what",
+                "insights_final[item=ec26-insight-006].so_what"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "3febdee43c5dff0c8ebb7d08b019a3762915d0891cbbfe0ede35058d1c608a31",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/a21/output/g0-ec-trends-r-41f8ffd78145/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 9,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "family_confidence",
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "changed_paths": [
+                "expert_comment[claim_index=1]",
+                "expert_comment[claim_index=2]",
+                "expert_comment[claim_index=4]"
+              ],
+              "introduced_hard_failure_count": 6,
+              "introduced_rule_ids": [
+                "regeneration_scope_violation",
+                "retained_claim.soft_copy_provenance_integrity",
+                "soft_copy_claim_provenance"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:119bed4c9e78d57f]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:2bfcde22dc8b1a0f]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:85d697c89887f4a3]",
+                "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:abd166d7d2fd5ecb]"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 27,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "g0-ec-trends-r-41f8ffd78145",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "linkedin",
+            "quote",
+            "summary"
+          ],
+          "final_validation_status": "fail",
+          "max_reached": null,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 1,
+            "candidate_audit_denominator": 1,
+            "count": 6
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 1
+          },
+          "reported_attempt_count": null,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 1,
+            "runtime_scope_violation_path_occurrences": 4,
+            "runtime_scope_violation_paths": [
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:119bed4c9e78d57f]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:2bfcde22dc8b1a0f]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:85d697c89887f4a3]",
+              "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:abd166d7d2fd5ecb]"
+            ]
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "regeneration_repair_decision_invalid",
+          "terminal_failure_reason": "protected_fields_incomplete",
+          "terminal_summary": "regeneration_repair_decision_invalid/protected_fields_incomplete",
+          "unsupported_evidence_introductions": {
+            "attempt_count": 1,
+            "candidate_audit_denominator": 1
+          }
+        }
+      ],
+      "command": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-repair-live/9120a8fe/a21 --implementation-sha 9120a8fee9289c3850e9f91048a22c9da5457038",
+      "exit_code": 0,
+      "manifest": "baseline-a21-five.json",
+      "manifest_sha256": "0df61edb0e67f0dfc1ed8a3fb81334fb1f0a1a2a75aff4f07f4b3075399616f2",
+      "observed_usage": {
+        "attribution": "isolated_run_level_event_aggregate_not_linked_to_candidate_attempts",
+        "estimated_cost_usd": 0.055035,
+        "event_count": 37,
+        "input_tokens": 334887,
+        "output_tokens": 55285,
+        "total_tokens": 390172
+      },
+      "repair_scorecard": {
+        "abstention_or_removal_attempt_count": 1,
+        "attempts": [
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "5e1df945c460c6935995311ce4ec0a8cfe801046e6fd9551b294a9ead5b88ad7",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "69dfcfb9aa5b0961d4d56e59602b9bc468eb1c55e49be0d0ff9404f76b842077"
+            ],
+            "failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "2c0273babad45f3efe1e5adb360fc2c5ca7fb296446820ddb761b48045670aa1",
+              "5b66c6ac81180a653c9b42843347a3184937440a7c13e720dc4d85eb31fb3e74",
+              "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc",
+              "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "family_confidence",
+              "retained_claim.protected_fact_attribution_consistency",
+              "semantic"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [],
+            "introduced_hard_failure_count": 0,
+            "latency_ms": 39434,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "5b66c6ac81180a653c9b42843347a3184937440a7c13e720dc4d85eb31fb3e74",
+              "c4b6e8797af5206712614167f48458ac17d10aff10aa97995a153b4b018a7adc"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "promoted",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-076eca6d31e0c1dcddf0",
+            "resolved_failure_fingerprints": [
+              "2c0273babad45f3efe1e5adb360fc2c5ca7fb296446820ddb761b48045670aa1",
+              "cebd466a9a97fc32501634d8c6f59430ecc145f9a6746d4ed8b9b137b07a1382"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "83666267b6635ab8693b41b00dcd6ff5fa675c6fe85282b634f92733335a3835",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "pass"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "27e288601b601d30bc1d6873b247caa69b88d8938e3416cf37cb06914a1d0052",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "6db5fe590b3f1153ba457ff71b45229cb47f5f96bfa7c33176b86b5ce40ff7e7"
+            ],
+            "failure_fingerprints": [
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+              "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+              "7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6",
+              "bee0bdcce9d2af6c08ddab4d09b6361ad0df9550fe84ab06e98c62915c11a089",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "grounding",
+              "regeneration_derived_projection",
+              "regeneration_scope_violation",
+              "retained_claim.protected_fact_attribution_consistency"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "18727fc2660fa5f9d39c576dd68808d3db5786eecf63e02b8d8d0bb6411468b3",
+              "577876a739c97d3bde13af3af3db230c4f28644bc5cbc93b7625d64d0a8aa487",
+              "5f6ac75b676a8da4bca93416a06f8ab5f6fadf4e7d47e348ab1a1582fe3684d3",
+              "6c793b47d9692adfba1749809601d7108897e322609c700465f426f74eb179bd",
+              "7fcd3fdb1cb07af41304b80a1e4d4482809943eafb81c50c25c819ce49abd531",
+              "a5497cdadf86508853c5ea38afe1f2aad7d07356a7b73e6b205f19c6d416c006",
+              "af89466322d5c432357cc46f29c65571321c628823f8de92c99680ff19bb8a45",
+              "e4acb31035a479ac4a73ac7ed2dcfa621f42f2a70fbf104657931d77040b1de7",
+              "e9a077c933d587e84ca443689e35e293e4bc7dc54113995ef412f5f7e842399f",
+              "ef3ff8a2a37e1fb9b247253656827c73a94c890322b65dbb377c00e0ba36842b",
+              "fa773bcc5bb6812831e4e78b3c8c5cbf10ed32389183f7bb1a151c8d7cb28542"
+            ],
+            "introduced_hard_failure_count": 9,
+            "latency_ms": 53473,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-0a019f840c3f89ad0a96",
+            "resolved_failure_fingerprints": [
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+              "7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6",
+              "bee0bdcce9d2af6c08ddab4d09b6361ad0df9550fe84ab06e98c62915c11a089",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "f851aa62de4ed26caf2f281fcfc17f4971b4712f76ef6abc8603dac359beae5d",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 2,
+            "candidate_fingerprint": "edb10f4eafb430a46c219fb2021ea54b96c9c8896a2a6db4038c2e512ea4de30",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "2519d42cc385137d1f05fb71edda2d1d3a67d74a55ed11b51ff00117a214b67e",
+              "411166f7a6256c97a5afd21ab35b3f0eea874282862c67e3a5b5491e3946b5d9",
+              "cfe6fe88caf122b294b93b9fc4d3cd3a648ee4334d6f69163fd881c28e5b7470"
+            ],
+            "failure_fingerprints": [
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+              "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+              "7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6",
+              "bee0bdcce9d2af6c08ddab4d09b6361ad0df9550fe84ab06e98c62915c11a089",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "grounding",
+              "regeneration_derived_projection",
+              "regeneration_scope_violation",
+              "retained_claim.protected_fact_attribution_consistency"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "577876a739c97d3bde13af3af3db230c4f28644bc5cbc93b7625d64d0a8aa487",
+              "5f6ac75b676a8da4bca93416a06f8ab5f6fadf4e7d47e348ab1a1582fe3684d3",
+              "6c793b47d9692adfba1749809601d7108897e322609c700465f426f74eb179bd",
+              "7fcd3fdb1cb07af41304b80a1e4d4482809943eafb81c50c25c819ce49abd531",
+              "a5497cdadf86508853c5ea38afe1f2aad7d07356a7b73e6b205f19c6d416c006",
+              "af89466322d5c432357cc46f29c65571321c628823f8de92c99680ff19bb8a45",
+              "e4acb31035a479ac4a73ac7ed2dcfa621f42f2a70fbf104657931d77040b1de7",
+              "e9a077c933d587e84ca443689e35e293e4bc7dc54113995ef412f5f7e842399f",
+              "ef3ff8a2a37e1fb9b247253656827c73a94c890322b65dbb377c00e0ba36842b",
+              "fa773bcc5bb6812831e4e78b3c8c5cbf10ed32389183f7bb1a151c8d7cb28542"
+            ],
+            "introduced_hard_failure_count": 8,
+            "latency_ms": 63552,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "2f9c4c73ad491f85cd0fe64a38030eb132c0bc94f83a1f58e972947e1d9fb97a",
+              "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+              "7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REBIND_EVIDENCE",
+            "repair_mode": "unavailable",
+            "repair_strategy": "alternative_evidence",
+            "report_id": "cohort-0a019f840c3f89ad0a96",
+            "resolved_failure_fingerprints": [
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "bee0bdcce9d2af6c08ddab4d09b6361ad0df9550fe84ab06e98c62915c11a089",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "9c2fad9043f6600b4c2768abf93dcaf901d99a13bfb8eebb77c0e8e9b8774ab9",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "dd8b5937717e1697bf56ed6803ae7f00c9307a6ce62d355e2182e524f1ddd12e",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "50556a3919c6815ff3bb04ddb5a59a74d63289be34f35cd98df9d291387faf03",
+              "5f2d40ba71b5c97b6e2fcea6fa2de16686023e25de2e5defd52c98b10759e7ff",
+              "73130e792dac2374356ac4cc31eda3135dd53f71d0402f8c609bb1f66a674d3e"
+            ],
+            "failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "family_confidence",
+              "grounding",
+              "regeneration_derived_projection",
+              "regeneration_scope_violation",
+              "retained_claim.soft_copy_provenance_integrity",
+              "semantic",
+              "soft_copy_claim_provenance"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "050ab57906fca4abbe0696c1e186bccaa9cdd08063cf452e79fcde48a24770c0",
+              "13a2939e836648de6537ac7d966a9960fecad67e71da198f93f7af3959da78c9",
+              "18bc904bae3b14f59cee8b7763787d292e6852c8af0cbfebcf967926e7deaea9",
+              "290052e4a88038d685dc304192fcdedd135468d44404ee2167d91064c9d7dae1",
+              "2d6668350e288d69fb9927f4bd44708d2a429b1483af815c2aee8ffeb0253ca7",
+              "30ebf0fac7cf11f9b84f5152ad539c18d62e65aa0e0a625fdcaab379a7cba518",
+              "3d78b349899ded83f2d154c817e6eb0bc2b0e5ef17505ad9071dc7c5a349fe08",
+              "5f6ac75b676a8da4bca93416a06f8ab5f6fadf4e7d47e348ab1a1582fe3684d3",
+              "69178ca8b07efe57cc3c3f0ff18cd493c911070fb1fcc81aaf40bd7506dcec6a",
+              "6c793b47d9692adfba1749809601d7108897e322609c700465f426f74eb179bd",
+              "7769a9c5c806c67783dbafdf53356acb563c15981320b331329c6985a791a45e",
+              "7a72bac6d1c86e65bbf9e1557cbe745cb089ad666cc14919d15401aa9d75a2be",
+              "7ab02a77a1d1939dfc45baedc12a1a2293891d8621284c3c6270a5043e9b285b",
+              "7fcd3fdb1cb07af41304b80a1e4d4482809943eafb81c50c25c819ce49abd531",
+              "933eadba1e3ca224a99adf36662baab8fcf1c7169f8913bf03edbbeeb20a7aba",
+              "9502ff42df361fe94976cee2783a84c8ed45a91ea7aae68207e76e4865860b56",
+              "a5497cdadf86508853c5ea38afe1f2aad7d07356a7b73e6b205f19c6d416c006",
+              "a90f70b9f10941ba17ef3c0a63b6b81481726ff912c0f6e494615c4c32e670d5",
+              "b2b27cc5ee011e3566fb829f3926f07c2d1553bb9d7aaef942cd8eaeb2aa8a9d",
+              "e4acb31035a479ac4a73ac7ed2dcfa621f42f2a70fbf104657931d77040b1de7",
+              "f3e249ea337baa5003b2614186830a04e656f3da309058d59a1a0ade15a55511"
+            ],
+            "introduced_hard_failure_count": 17,
+            "latency_ms": 50073,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-81af3890cd84ece81ef1",
+            "resolved_failure_fingerprints": [
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "b2ffec2e28bba665ab9ce18f675900780a969673779d9e500123c7f333fe65c3",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 2,
+            "candidate_fingerprint": "867d2a931aacb8ac31ebe1f70e55c4523f3b1f8be6716567b1623617acc45a96",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "50556a3919c6815ff3bb04ddb5a59a74d63289be34f35cd98df9d291387faf03",
+              "5f2d40ba71b5c97b6e2fcea6fa2de16686023e25de2e5defd52c98b10759e7ff",
+              "73130e792dac2374356ac4cc31eda3135dd53f71d0402f8c609bb1f66a674d3e"
+            ],
+            "failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "family_confidence",
+              "grounding",
+              "regeneration_derived_projection",
+              "regeneration_scope_violation",
+              "retained_claim.soft_copy_provenance_integrity",
+              "semantic",
+              "soft_copy_claim_provenance"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "050ab57906fca4abbe0696c1e186bccaa9cdd08063cf452e79fcde48a24770c0",
+              "13a2939e836648de6537ac7d966a9960fecad67e71da198f93f7af3959da78c9",
+              "18bc904bae3b14f59cee8b7763787d292e6852c8af0cbfebcf967926e7deaea9",
+              "290052e4a88038d685dc304192fcdedd135468d44404ee2167d91064c9d7dae1",
+              "2d6668350e288d69fb9927f4bd44708d2a429b1483af815c2aee8ffeb0253ca7",
+              "30ebf0fac7cf11f9b84f5152ad539c18d62e65aa0e0a625fdcaab379a7cba518",
+              "3d78b349899ded83f2d154c817e6eb0bc2b0e5ef17505ad9071dc7c5a349fe08",
+              "5f6ac75b676a8da4bca93416a06f8ab5f6fadf4e7d47e348ab1a1582fe3684d3",
+              "69178ca8b07efe57cc3c3f0ff18cd493c911070fb1fcc81aaf40bd7506dcec6a",
+              "6c793b47d9692adfba1749809601d7108897e322609c700465f426f74eb179bd",
+              "7769a9c5c806c67783dbafdf53356acb563c15981320b331329c6985a791a45e",
+              "7a72bac6d1c86e65bbf9e1557cbe745cb089ad666cc14919d15401aa9d75a2be",
+              "7ab02a77a1d1939dfc45baedc12a1a2293891d8621284c3c6270a5043e9b285b",
+              "7fcd3fdb1cb07af41304b80a1e4d4482809943eafb81c50c25c819ce49abd531",
+              "933eadba1e3ca224a99adf36662baab8fcf1c7169f8913bf03edbbeeb20a7aba",
+              "9502ff42df361fe94976cee2783a84c8ed45a91ea7aae68207e76e4865860b56",
+              "a1652666482d80b003fc5720413f93137cfd1939d20b6661f03f34238a6f40b1",
+              "a5497cdadf86508853c5ea38afe1f2aad7d07356a7b73e6b205f19c6d416c006",
+              "a90f70b9f10941ba17ef3c0a63b6b81481726ff912c0f6e494615c4c32e670d5",
+              "b2b27cc5ee011e3566fb829f3926f07c2d1553bb9d7aaef942cd8eaeb2aa8a9d",
+              "e4acb31035a479ac4a73ac7ed2dcfa621f42f2a70fbf104657931d77040b1de7"
+            ],
+            "introduced_hard_failure_count": 17,
+            "latency_ms": 39436,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REBIND_EVIDENCE",
+            "repair_mode": "unavailable",
+            "repair_strategy": "alternative_evidence",
+            "report_id": "cohort-81af3890cd84ece81ef1",
+            "resolved_failure_fingerprints": [
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "1ead03a37a9df631d8d78d0afe36ca469a9f1e4397aeacfb427eb2816818f7ae",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": true,
+            "attempt_index": 3,
+            "candidate_fingerprint": "3bddae4662ae0408b63923ee37be18697030c2df479743718a6acc08a968a101",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "28ecb4df01f002d4a6840fd92422d67863899678558fa7a734fbc358f140d1eb",
+              "50556a3919c6815ff3bb04ddb5a59a74d63289be34f35cd98df9d291387faf03",
+              "5f2d40ba71b5c97b6e2fcea6fa2de16686023e25de2e5defd52c98b10759e7ff",
+              "852408bfbc8333513e7cc815691cad3270bf9ee001d8dd3902a766bde30f73a6"
+            ],
+            "failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "family_confidence",
+              "grounding",
+              "regeneration_derived_projection",
+              "regeneration_scope_violation",
+              "retained_claim.soft_copy_provenance_integrity",
+              "semantic",
+              "soft_copy_claim_provenance"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "050ab57906fca4abbe0696c1e186bccaa9cdd08063cf452e79fcde48a24770c0",
+              "13a2939e836648de6537ac7d966a9960fecad67e71da198f93f7af3959da78c9",
+              "18bc904bae3b14f59cee8b7763787d292e6852c8af0cbfebcf967926e7deaea9",
+              "290052e4a88038d685dc304192fcdedd135468d44404ee2167d91064c9d7dae1",
+              "2d6668350e288d69fb9927f4bd44708d2a429b1483af815c2aee8ffeb0253ca7",
+              "30ebf0fac7cf11f9b84f5152ad539c18d62e65aa0e0a625fdcaab379a7cba518",
+              "3d78b349899ded83f2d154c817e6eb0bc2b0e5ef17505ad9071dc7c5a349fe08",
+              "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+              "5f6ac75b676a8da4bca93416a06f8ab5f6fadf4e7d47e348ab1a1582fe3684d3",
+              "69178ca8b07efe57cc3c3f0ff18cd493c911070fb1fcc81aaf40bd7506dcec6a",
+              "6c793b47d9692adfba1749809601d7108897e322609c700465f426f74eb179bd",
+              "7769a9c5c806c67783dbafdf53356acb563c15981320b331329c6985a791a45e",
+              "7a72bac6d1c86e65bbf9e1557cbe745cb089ad666cc14919d15401aa9d75a2be",
+              "7ab02a77a1d1939dfc45baedc12a1a2293891d8621284c3c6270a5043e9b285b",
+              "7fcd3fdb1cb07af41304b80a1e4d4482809943eafb81c50c25c819ce49abd531",
+              "886abbddb5dedd11220465d93f2a1a4d4b3ce90d8f32dd2309f319645de7813b",
+              "933eadba1e3ca224a99adf36662baab8fcf1c7169f8913bf03edbbeeb20a7aba",
+              "9502ff42df361fe94976cee2783a84c8ed45a91ea7aae68207e76e4865860b56",
+              "a5497cdadf86508853c5ea38afe1f2aad7d07356a7b73e6b205f19c6d416c006",
+              "a90f70b9f10941ba17ef3c0a63b6b81481726ff912c0f6e494615c4c32e670d5",
+              "b2b27cc5ee011e3566fb829f3926f07c2d1553bb9d7aaef942cd8eaeb2aa8a9d",
+              "e4acb31035a479ac4a73ac7ed2dcfa621f42f2a70fbf104657931d77040b1de7"
+            ],
+            "introduced_hard_failure_count": 18,
+            "latency_ms": 26199,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "199b40010de69c014afe28d884dee2a71c81b2bd249460474f84c9a1caf15fa0",
+              "8d52a7cd9c18e5ea094fd0c7c905396db0aa4d3b5153756732b30910f3a989a7"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REMOVE_CLAIM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "safe_removal",
+            "report_id": "cohort-81af3890cd84ece81ef1",
+            "resolved_failure_fingerprints": [
+              "2c46ed5503c70657d7983cf24968740698e899397e1b020df1caec8615530dca",
+              "b1a81350c50e361d4d825e726642069ec755ba5c8371b1d334127243341bfc82",
+              "fb115a9a81c7fdfabfbb26fcc34686bb54e283079685d7cd0df5d004093fe7d1"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "0fc6623ce06efc8ecdf247b3a475a1c50d2cb484e43c59d926675c5227cbcd3a",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "e89271d0333fb0bf6cd32fe89cc94c64e1377e534766d167e300996c09e1926a",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "24b8081e3ad5c5772e3e7eb655349ddddc2ac978b53f3514b11f327db549e5f4",
+              "46f6abe84b13936e6c9b5b451ee2a64ff0f316a74035631cb541d901b48373ee",
+              "47422811e5a9aa49ae7c87c2171059b1234741675907f154138b971a9fa324ce",
+              "4a5abd840045decb8fee45efe9b2a592aa8ecd96ca38b003a35d5e8a8dbf1d2c",
+              "9ae47436439a2073a099c3f069319459e78e144d9efa89211d16d1ef8a088208",
+              "a40e98d6ca146f2c28cb061df5e992ea0c2c155031cb627adc2a3691f23eb6c5",
+              "bbc4a02428b15c851e4d503b31b0a9efcb1e28392dd5f2361e0e67a2ba96dfa7",
+              "d3db5338aae140c5cc04ac37690aa4f98041e14a042bc6473d54ecda8d95f93e",
+              "d8eb6f07df706608208a2f3d9c5926f16e37c628d028609a512ebf041def5307"
+            ],
+            "failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "39b0cb8f12806d2719b24653f4b5e993d966bb8c3226595e61bf2663e03a8070",
+              "91c516d75e3f734b145fe7254cdb688e574245cc127cd887f94da1190b039c86",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+              "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+              "e89e2a20f8b9afd9359e1817a1553cc039ba4adce8a56950c5f1f953715ca04f",
+              "ebf2aee48a3d4b46b4872bbec03887ad5104b711e63ea1d54248e39f44f54697",
+              "ecac2b05ea5bcbceb483b8dbdb4dbc086d986c5d38c12b994f88e77af366d8e6",
+              "f0877c133cc41653addc9dcc9dc222171748f6b383ee3f844a39192f3d1d8c19"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "family_confidence",
+              "grounding",
+              "regeneration_scope_violation",
+              "retained_claim.soft_copy_provenance_integrity",
+              "semantic",
+              "soft_copy_claim_provenance"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "086fa7d61cadb2546bf18298edefe531c8e0f9b0e70a826703ed3e9910eb9b75",
+              "30ebf0fac7cf11f9b84f5152ad539c18d62e65aa0e0a625fdcaab379a7cba518",
+              "607ef4749800bc438ab388a666379883494bb8bca05035be590c1b47cf54fd46",
+              "658f02c0a8136123c660e2b45ff04484e96331bc2b3d701275f89f15ba9112a5",
+              "976af10ed49416c7c7b0ed7ee59572513f069993a891f0bf14d6689a603174f5",
+              "a44b2fb229d470908fa127ecb6eed9a327c05dd8c15825bee16a61ceafca9ed7"
+            ],
+            "introduced_hard_failure_count": 6,
+            "latency_ms": 48450,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-9b97626fc83c086961a7",
+            "resolved_failure_fingerprints": [
+              "39b0cb8f12806d2719b24653f4b5e993d966bb8c3226595e61bf2663e03a8070",
+              "91c516d75e3f734b145fe7254cdb688e574245cc127cd887f94da1190b039c86",
+              "d3a4782e5dd67cfde2a0cd282c5a68ddaa268e7b5bb12e085e7e5ae64f2692e1",
+              "e89e2a20f8b9afd9359e1817a1553cc039ba4adce8a56950c5f1f953715ca04f",
+              "ebf2aee48a3d4b46b4872bbec03887ad5104b711e63ea1d54248e39f44f54697",
+              "ecac2b05ea5bcbceb483b8dbdb4dbc086d986c5d38c12b994f88e77af366d8e6",
+              "f0877c133cc41653addc9dcc9dc222171748f6b383ee3f844a39192f3d1d8c19"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "aacb4a5c64a20cba532f277b377d6209767c4ef303080397404f33c608ebf665",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "99b94c9e6ae7d6681fa4a34a43f1682353b0f40e9bb1de74e85975ce1c4cc1a5",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "e4ab4e3b1493d5a997b4e51cdefbaa10570ef3ea9432bd72e7b6a89654ceb7f6"
+            ],
+            "failure_fingerprints": [
+              "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+              "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+            ],
+            "failure_rule_ids": [
+              "family_confidence",
+              "grounding"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [],
+            "introduced_hard_failure_count": 0,
+            "latency_ms": 53048,
+            "model_call_count": null,
+            "out_of_scope_mutation": false,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+              "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "CORRECT_PROTECTED_FACT",
+            "repair_mode": "unavailable",
+            "repair_strategy": "canonical_metric_copy",
+            "report_id": "cohort-f1652970000cfe246c94",
+            "resolved_failure_fingerprints": [],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "bfb96cf993e7cce1d05e0e16048d84aa3d63a6484cfcb11b20115eea4dd57681",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 2,
+            "candidate_fingerprint": "2763f614545eb26fcec59abfb4df9fca64470d5211594dbebf4d5cded75b74d5",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "e4ab4e3b1493d5a997b4e51cdefbaa10570ef3ea9432bd72e7b6a89654ceb7f6"
+            ],
+            "failure_fingerprints": [
+              "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d",
+              "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+            ],
+            "failure_rule_ids": [
+              "family_confidence",
+              "grounding"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [],
+            "introduced_hard_failure_count": 0,
+            "latency_ms": 63851,
+            "model_call_count": null,
+            "out_of_scope_mutation": false,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "promoted",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-f1652970000cfe246c94",
+            "resolved_failure_fingerprints": [
+              "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "0e0d9ed9359acd7c7864685a2cbbadad63192b0a170794ac17e0c1d5f6976f6e",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "pass"
+          }
+        ],
+        "baseline_estimated_cost_usd": 0.109236,
+        "baseline_failure_class_distribution": [
+          {
+            "attempt_count": 12,
+            "failure_class": "artifact_quality",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 12,
+            "failure_class": "family_confidence",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 12,
+            "failure_class": "grounding",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 1,
+            "failure_class": "metrics",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 9,
+            "failure_class": "regeneration_scope_violation",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 9,
+            "failure_class": "semantic",
+            "schema_version": "1.1"
+          }
+        ],
+        "baseline_identity_sha256": "bd10b1530078e37a40d405fcf090f77855a9cc86d39c7bec082e39c046bc9603",
+        "baseline_input_tokens": 235970,
+        "baseline_latency_ms": 1168447,
+        "baseline_model_call_count": 32,
+        "baseline_output_tokens": 51700,
+        "baseline_residual_failure_odds": null,
+        "baseline_residual_failure_odds_state": "unbounded",
+        "baseline_success_at_3_count": 0,
+        "baseline_success_at_3_rate": 0.0,
+        "baseline_total_tokens": 287670,
+        "baseline_usage_attribution": "available",
+        "benchmark_case_count": 5,
+        "benchmark_comparison_status": "incompatible",
+        "benchmark_denominator_complete": false,
+        "benchmark_manifest_sha256": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+        "cohort_compatible": true,
+        "current_identity_sha256": "579ef7500db103ffbc8b9db01cf0640fc8aa8d5779f6876e48498cb866eec02a",
+        "current_residual_failure_odds": null,
+        "current_residual_failure_odds_state": "unbounded",
+        "deterministic_repair_share": null,
+        "estimated_cost_usd": null,
+        "failure_class_distribution": [
+          {
+            "attempt_count": 7,
+            "failure_class": "artifact_quality",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 7,
+            "failure_class": "family_confidence",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 8,
+            "failure_class": "grounding",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 5,
+            "failure_class": "regeneration_derived_projection",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 6,
+            "failure_class": "regeneration_scope_violation",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "retained_claim.protected_fact_attribution_consistency",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 4,
+            "failure_class": "retained_claim.soft_copy_provenance_integrity",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 5,
+            "failure_class": "semantic",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 4,
+            "failure_class": "soft_copy_claim_provenance",
+            "schema_version": "1.1"
+          }
+        ],
+        "hard_failure_introduction_attempt_count": 6,
+        "hard_failure_introduction_count": 75,
+        "hard_failure_introduction_rate": 0.666667,
+        "incompatible_audit_count": 0,
+        "input_tokens": null,
+        "latency_ms": 437516,
+        "measurement_status": "available",
+        "mode_metrics": [
+          {
+            "attempt_count": 9,
+            "estimated_cost_usd": null,
+            "input_tokens": null,
+            "latency_ms": null,
+            "metric_attribution": "unavailable",
+            "model_call_count": null,
+            "output_tokens": null,
+            "repair_mode": "unavailable",
+            "schema_version": "1.1",
+            "success_rate": 0.0,
+            "successful_attempt_count": 0,
+            "total_tokens": null
+          }
+        ],
+        "model_call_count": null,
+        "model_repair_share": null,
+        "out_of_scope_mutation_attempt_count": 7,
+        "output_tokens": null,
+        "repair_attempt_count": 9,
+        "repair_chain_count": 5,
+        "repeated_failed_candidate_attempt_count": 0,
+        "repeated_failed_strategy_evidence_attempt_count": 0,
+        "residual_odds_reduction_factor": null,
+        "residual_odds_reduction_state": "unavailable",
+        "rolled_back_attempt_count": 7,
+        "schema_version": "1.1",
+        "success_at_1_count": 0,
+        "success_at_1_rate": 0.0,
+        "success_at_3_count": 0,
+        "success_at_3_rate": 0.0,
+        "total_tokens": null,
+        "unsupported_evidence_introduction_attempt_count": 5,
+        "usage_attribution": "unavailable"
+      },
+      "scorecard_artifact_path": "tmp/e13-repair-live/9120a8fe/a21/output/validation-runs/4797983182356fb527a4f9205d4d03cc69c519248a4ea44090415f5fb344c2d9/reliability_telemetry.json",
+      "scorecard_artifact_sha256": "8e0a4eed0c0b174f7c4a387c47f404e8c97e9e48a2cc51813fa1b23449dd640a",
+      "scorecard_file_sha256": "c041fe7ec2dc71f4b7ec025b00e1c0fd812ae74dd68aaeeb8ad0e2e79b66634a"
+    },
+    {
+      "case_count": 1,
+      "case_outcomes": [
+        {
+          "candidate_audit_attempt_count": 0,
+          "candidate_audits": [],
+          "candidate_validation_reached": false,
+          "case_id": "public-editorial-linkedin-mobile-app",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "public_editorial_hard_failure",
+            "summary"
+          ],
+          "final_validation_status": "fail",
+          "max_reached": null,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": null,
+            "count": 0
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": null,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 0,
+            "runtime_scope_violation_path_occurrences": 0,
+            "runtime_scope_violation_paths": []
+          },
+          "success_at_1": null,
+          "success_at_3": null,
+          "terminal_failure_code": "regeneration_target_item_unchanged",
+          "terminal_failure_reason": "",
+          "terminal_summary": "regeneration_target_item_unchanged",
+          "unsupported_evidence_introductions": {
+            "attempt_count": 0,
+            "candidate_audit_denominator": null
+          }
+        }
+      ],
+      "command": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-repair-live/9120a8fe/mobile --implementation-sha 9120a8fee9289c3850e9f91048a22c9da5457038",
+      "exit_code": 0,
+      "manifest": "baseline-mobile-editorial.json",
+      "manifest_sha256": "de54b796e82d23283c89b32b0b66da93cfc03c8ccf0022f400da204c91c821a1",
+      "observed_usage": {
+        "attribution": "isolated_run_level_event_aggregate_not_linked_to_candidate_attempts",
+        "estimated_cost_usd": 0.006464,
+        "event_count": 2,
+        "input_tokens": 23169,
+        "output_tokens": 8295,
+        "total_tokens": 31464
+      },
+      "repair_scorecard": {
+        "abstention_or_removal_attempt_count": null,
+        "attempts": [],
+        "baseline_estimated_cost_usd": null,
+        "baseline_failure_class_distribution": [],
+        "baseline_identity_sha256": "572866216d2a23c378032eaaa3c55b9bb7e1a3c0b309e5a2b20dac5cdb6a5c99",
+        "baseline_input_tokens": null,
+        "baseline_latency_ms": null,
+        "baseline_model_call_count": null,
+        "baseline_output_tokens": null,
+        "baseline_residual_failure_odds": null,
+        "baseline_residual_failure_odds_state": "unavailable",
+        "baseline_success_at_3_count": null,
+        "baseline_success_at_3_rate": null,
+        "baseline_total_tokens": null,
+        "baseline_usage_attribution": "unavailable",
+        "benchmark_case_count": 1,
+        "benchmark_comparison_status": "unavailable",
+        "benchmark_denominator_complete": false,
+        "benchmark_manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+        "cohort_compatible": false,
+        "current_identity_sha256": "",
+        "current_residual_failure_odds": null,
+        "current_residual_failure_odds_state": "unavailable",
+        "deterministic_repair_share": null,
+        "estimated_cost_usd": null,
+        "failure_class_distribution": [],
+        "hard_failure_introduction_attempt_count": null,
+        "hard_failure_introduction_count": null,
+        "hard_failure_introduction_rate": null,
+        "incompatible_audit_count": 0,
+        "input_tokens": null,
+        "latency_ms": null,
+        "measurement_status": "unavailable",
+        "mode_metrics": [],
+        "model_call_count": null,
+        "model_repair_share": null,
+        "out_of_scope_mutation_attempt_count": null,
+        "output_tokens": null,
+        "repair_attempt_count": null,
+        "repair_chain_count": null,
+        "repeated_failed_candidate_attempt_count": null,
+        "repeated_failed_strategy_evidence_attempt_count": null,
+        "residual_odds_reduction_factor": null,
+        "residual_odds_reduction_state": "unavailable",
+        "rolled_back_attempt_count": null,
+        "schema_version": "1.1",
+        "success_at_1_count": null,
+        "success_at_1_rate": null,
+        "success_at_3_count": null,
+        "success_at_3_rate": null,
+        "total_tokens": null,
+        "unsupported_evidence_introduction_attempt_count": null,
+        "usage_attribution": "unavailable"
+      },
+      "scorecard_artifact_path": "tmp/e13-repair-live/9120a8fe/mobile/output/validation-runs/500d282a090ac1662e78817aeaaab3ed3e5db9e3cd39babccfeddc8ee941b8b3/reliability_telemetry.json",
+      "scorecard_artifact_sha256": "d9af130bf681cf211a8afb608e30bb1fa6c2fd4d159e6fb0979032f018741e98",
+      "scorecard_file_sha256": "f1aa43c0f795e97f2fc36d85ad0c2367947e08e09e1de98401d7843eb07bd7e6"
+    },
+    {
+      "case_count": 1,
+      "case_outcomes": [
+        {
+          "candidate_audit_attempt_count": 3,
+          "candidate_audits": [
+            {
+              "allowed_paths": [
+                "linkedin_post[claim_index=3]"
+              ],
+              "attempt_index": 1,
+              "audit_file_sha256": "65ee07af26d3d8325638f7969ddab1f03b3149b5cced28356f56a4662162fcb3",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/doubleverify/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_1.json",
+              "candidate_validation_issue_count": 9,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "metrics",
+                "public_editorial_quality.metric_label_relationship",
+                "retained_claim.number_value_unit_match",
+                "retained_claim.protected_fact_unit_currency_consistency",
+                "retained_claim.protected_fact_value_consistency"
+              ],
+              "changed_paths": [
+                "linkedin_post[claim_index=3]"
+              ],
+              "introduced_hard_failure_count": 1,
+              "introduced_rule_ids": [
+                "grounding"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [],
+              "scorecard_out_of_scope_mutation": false,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 25,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection",
+                "soft_copy_claim_provenance"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "linkedin_post[claim_index=3]"
+              ],
+              "attempt_index": 2,
+              "audit_file_sha256": "f4748df6a911e8fccb63d54469e188baefabfe5521716eb165dc3c9f54b83af4",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/doubleverify/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_2.json",
+              "candidate_validation_issue_count": 8,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "metrics",
+                "public_editorial_quality.metric_label_relationship",
+                "retained_claim.number_value_unit_match",
+                "retained_claim.protected_fact_unit_currency_consistency",
+                "retained_claim.protected_fact_value_consistency"
+              ],
+              "changed_paths": [
+                "linkedin_post[claim_index=3]"
+              ],
+              "introduced_hard_failure_count": 0,
+              "introduced_rule_ids": [],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [],
+              "scorecard_out_of_scope_mutation": false,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": false,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 25,
+              "verified_dependent_roots": [
+                "_cache",
+                "_repair_evidence_selection",
+                "soft_copy_claim_provenance"
+              ]
+            },
+            {
+              "allowed_paths": [
+                "linkedin_post[claim_index=3]"
+              ],
+              "attempt_index": 3,
+              "audit_file_sha256": "962506bb2086c77ee47ad30427e76e503e572b36682ef8388c4d08d814d2a078",
+              "audit_path": "tmp/e13-repair-live/9120a8fe/doubleverify/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/regeneration_candidate_audit_3.json",
+              "candidate_validation_issue_count": 10,
+              "candidate_validation_rule_ids": [
+                "artifact_quality",
+                "grounding",
+                "metrics",
+                "public_editorial_quality.metric_label_relationship",
+                "regeneration_scope_violation",
+                "retained_claim.number_value_unit_match",
+                "retained_claim.protected_fact_unit_currency_consistency",
+                "retained_claim.protected_fact_value_consistency"
+              ],
+              "changed_paths": [],
+              "introduced_hard_failure_count": 2,
+              "introduced_rule_ids": [
+                "grounding",
+                "regeneration_scope_violation"
+              ],
+              "promotion_outcome": "rolled_back",
+              "runtime_scope_violation_paths": [
+                "_cache.regeneration_prompt_requirements"
+              ],
+              "scorecard_out_of_scope_mutation": true,
+              "scorecard_successful": false,
+              "unsupported_evidence_introduced": true,
+              "validation_status": "fail",
+              "verified_dependent_path_count": 1,
+              "verified_dependent_roots": [
+                "soft_copy_claim_provenance"
+              ]
+            }
+          ],
+          "candidate_validation_reached": true,
+          "case_id": "doubleverify-linkedin-public-editorial-hard-failure",
+          "failure_classes": [
+            "expert_view",
+            "insight_metric",
+            "linkedin",
+            "public_editorial_hard_failure",
+            "summary"
+          ],
+          "final_validation_status": "fail",
+          "max_reached": true,
+          "newly_introduced_hard_failures": {
+            "attempt_count": 2,
+            "candidate_audit_denominator": 3,
+            "count": 3
+          },
+          "protected_field_violations": {
+            "protected_field_changed_count": 0,
+            "protected_fields_incomplete_guard_failures": 0
+          },
+          "reported_attempt_count": 3,
+          "scope_violations": {
+            "out_of_scope_mutation_attempt_count": 1,
+            "runtime_scope_violation_path_occurrences": 1,
+            "runtime_scope_violation_paths": [
+              "_cache.regeneration_prompt_requirements"
+            ]
+          },
+          "success_at_1": false,
+          "success_at_3": false,
+          "terminal_failure_code": "",
+          "terminal_failure_reason": "",
+          "terminal_summary": "validation_failed_after_max_attempts",
+          "unsupported_evidence_introductions": {
+            "attempt_count": 2,
+            "candidate_audit_denominator": 3
+          }
+        }
+      ],
+      "command": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-repair-live/9120a8fe/doubleverify --implementation-sha 9120a8fee9289c3850e9f91048a22c9da5457038",
+      "exit_code": 0,
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "manifest_sha256": "24a72c09eee4fc225f128fe680cb4b972cfbd3ca81c19c71ff105a9107a0686a",
+      "observed_usage": {
+        "attribution": "isolated_run_level_event_aggregate_not_linked_to_candidate_attempts",
+        "estimated_cost_usd": 0.018475,
+        "event_count": 9,
+        "input_tokens": 138920,
+        "output_tokens": 10019,
+        "total_tokens": 148939
+      },
+      "repair_scorecard": {
+        "abstention_or_removal_attempt_count": 1,
+        "attempts": [
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 1,
+            "candidate_fingerprint": "5a11c44dee7111d2e94f1637415d41af99956c23a35998d9bcb717416ff56a19",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "e72d310dbb213f4c2e34da28935b38905332ee3628a04df2dd13859fd769c6c5"
+            ],
+            "failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "grounding",
+              "metrics",
+              "public_editorial_quality.metric_label_relationship",
+              "retained_claim.number_value_unit_match",
+              "retained_claim.protected_fact_unit_currency_consistency",
+              "retained_claim.protected_fact_value_consistency"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "1ad3b89e063267e9161e43ccb715ec224838a33fe498cf183b2afab65697b7fd"
+            ],
+            "introduced_hard_failure_count": 1,
+            "latency_ms": 38885,
+            "model_call_count": null,
+            "out_of_scope_mutation": false,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REGENERATE_ITEM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-e854b71d6fb10333b47f",
+            "resolved_failure_fingerprints": [
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "8ff2f2cc877333e3713e27a4a00e56407ebbc9a5576ff17e2dda4da86ef2e528",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": false,
+            "attempt_index": 2,
+            "candidate_fingerprint": "107a27efbe88c0f3aee44947bc9c9ae60911f980adf03e2c484e11845fb4c815",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "d34beeb70cddcc1f973ab468a4f7467557065a2fc1b9c118e728035b25d38af0"
+            ],
+            "failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "metrics",
+              "public_editorial_quality.metric_label_relationship",
+              "retained_claim.number_value_unit_match",
+              "retained_claim.protected_fact_unit_currency_consistency",
+              "retained_claim.protected_fact_value_consistency"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [],
+            "introduced_hard_failure_count": 0,
+            "latency_ms": 35764,
+            "model_call_count": null,
+            "out_of_scope_mutation": false,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REBIND_EVIDENCE",
+            "repair_mode": "unavailable",
+            "repair_strategy": "alternative_evidence",
+            "report_id": "cohort-e854b71d6fb10333b47f",
+            "resolved_failure_fingerprints": [
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "dbc2e5847e5742b46869a5abd2648cf5f5916cd05537c17bc9ecc62ded1db096",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          },
+          {
+            "abstention_or_removal": true,
+            "attempt_index": 3,
+            "candidate_fingerprint": "a5dc96956c17a2b7f23406348ffa288183379911d5331c09c0fc9b2f4768f07a",
+            "configuration_hash": "7065ad88b09d7059c9e4d3d0181f32a2cfb550eea348d281b0d39b96cdda5625",
+            "estimated_cost_usd": null,
+            "evidence_fingerprints": [
+              "13d28fed9becbe6637ef6b017fbefef73b2b907e25eb00396f7c2675623e87f6",
+              "71e7690959239ca065841eba3ebb281072baa78ba0bb31079b9acb4a009a9fe3",
+              "e72d310dbb213f4c2e34da28935b38905332ee3628a04df2dd13859fd769c6c5",
+              "e8bc163c82eee18733288c7d4ac636db3a6deb013ef2d37b68322be20edc45cc"
+            ],
+            "failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "failure_rule_ids": [
+              "artifact_quality",
+              "grounding",
+              "metrics",
+              "public_editorial_quality.metric_label_relationship",
+              "regeneration_scope_violation",
+              "retained_claim.number_value_unit_match",
+              "retained_claim.protected_fact_unit_currency_consistency",
+              "retained_claim.protected_fact_value_consistency"
+            ],
+            "input_tokens": null,
+            "introduced_failure_fingerprints": [
+              "1ad3b89e063267e9161e43ccb715ec224838a33fe498cf183b2afab65697b7fd",
+              "886abbddb5dedd11220465d93f2a1a4d4b3ce90d8f32dd2309f319645de7813b"
+            ],
+            "introduced_hard_failure_count": 2,
+            "latency_ms": 33943,
+            "model_call_count": null,
+            "out_of_scope_mutation": true,
+            "output_tokens": null,
+            "persisting_failure_fingerprints": [
+              "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+              "1288b9748040feb4a295b8c0551ccb8585c1dd2d369a5b534450eca0e4b89eae",
+              "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6",
+              "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+              "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+              "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+              "b2ec3f52053385f2a2cdc7301f6b5102b2fd55684523cdbe076c1198c682f268",
+              "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511"
+            ],
+            "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
+            "producer_build_identity": "9120a8fee9289c3850e9f91048a22c9da5457038",
+            "promotion_outcome": "rolled_back",
+            "prompt_identities": [],
+            "repair_action": "REMOVE_CLAIM",
+            "repair_mode": "unavailable",
+            "repair_strategy": "safe_removal",
+            "report_id": "cohort-e854b71d6fb10333b47f",
+            "resolved_failure_fingerprints": [
+              "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa"
+            ],
+            "schema_version": "1.1",
+            "strategy_fingerprint": "711ff80207a08562ea272b8647b34de6f9c356c94168adb17149929e463636c5",
+            "successful": false,
+            "total_tokens": null,
+            "usage_attribution": "unavailable",
+            "validation_status": "fail"
+          }
+        ],
+        "baseline_estimated_cost_usd": null,
+        "baseline_failure_class_distribution": [
+          {
+            "attempt_count": 2,
+            "failure_class": "artifact_quality",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 1,
+            "failure_class": "grounding",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 2,
+            "failure_class": "metrics",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 1,
+            "failure_class": "numbers",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 2,
+            "failure_class": "public_editorial_quality.metric_label_relationship",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 2,
+            "failure_class": "soft_copy_claim_provenance",
+            "schema_version": "1.1"
+          }
+        ],
+        "baseline_identity_sha256": "cf297edd7bf0e8e44584ad460895b067867d380450461f0695a8e6cf8f3d89e1",
+        "baseline_input_tokens": null,
+        "baseline_latency_ms": 80976,
+        "baseline_model_call_count": null,
+        "baseline_output_tokens": null,
+        "baseline_residual_failure_odds": null,
+        "baseline_residual_failure_odds_state": "unbounded",
+        "baseline_success_at_3_count": 0,
+        "baseline_success_at_3_rate": 0.0,
+        "baseline_total_tokens": null,
+        "baseline_usage_attribution": "unavailable",
+        "benchmark_case_count": 1,
+        "benchmark_comparison_status": "incompatible",
+        "benchmark_denominator_complete": false,
+        "benchmark_manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+        "cohort_compatible": true,
+        "current_identity_sha256": "579ef7500db103ffbc8b9db01cf0640fc8aa8d5779f6876e48498cb866eec02a",
+        "current_residual_failure_odds": null,
+        "current_residual_failure_odds_state": "unbounded",
+        "deterministic_repair_share": null,
+        "estimated_cost_usd": null,
+        "failure_class_distribution": [
+          {
+            "attempt_count": 3,
+            "failure_class": "artifact_quality",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 2,
+            "failure_class": "grounding",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "metrics",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "public_editorial_quality.metric_label_relationship",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 1,
+            "failure_class": "regeneration_scope_violation",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "retained_claim.number_value_unit_match",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "retained_claim.protected_fact_unit_currency_consistency",
+            "schema_version": "1.1"
+          },
+          {
+            "attempt_count": 3,
+            "failure_class": "retained_claim.protected_fact_value_consistency",
+            "schema_version": "1.1"
+          }
+        ],
+        "hard_failure_introduction_attempt_count": 2,
+        "hard_failure_introduction_count": 3,
+        "hard_failure_introduction_rate": 0.666667,
+        "incompatible_audit_count": 0,
+        "input_tokens": null,
+        "latency_ms": 108592,
+        "measurement_status": "available",
+        "mode_metrics": [
+          {
+            "attempt_count": 3,
+            "estimated_cost_usd": null,
+            "input_tokens": null,
+            "latency_ms": null,
+            "metric_attribution": "unavailable",
+            "model_call_count": null,
+            "output_tokens": null,
+            "repair_mode": "unavailable",
+            "schema_version": "1.1",
+            "success_rate": 0.0,
+            "successful_attempt_count": 0,
+            "total_tokens": null
+          }
+        ],
+        "model_call_count": null,
+        "model_repair_share": null,
+        "out_of_scope_mutation_attempt_count": 1,
+        "output_tokens": null,
+        "repair_attempt_count": 3,
+        "repair_chain_count": 1,
+        "repeated_failed_candidate_attempt_count": 0,
+        "repeated_failed_strategy_evidence_attempt_count": 0,
+        "residual_odds_reduction_factor": null,
+        "residual_odds_reduction_state": "unavailable",
+        "rolled_back_attempt_count": 3,
+        "schema_version": "1.1",
+        "success_at_1_count": 0,
+        "success_at_1_rate": 0.0,
+        "success_at_3_count": 0,
+        "success_at_3_rate": 0.0,
+        "total_tokens": null,
+        "unsupported_evidence_introduction_attempt_count": 2,
+        "usage_attribution": "unavailable"
+      },
+      "scorecard_artifact_path": "tmp/e13-repair-live/9120a8fe/doubleverify/output/validation-runs/422844771286a133cd8266672de67a5d6a2b9836c3b3c32ebf0e0cfc6866e53f/reliability_telemetry.json",
+      "scorecard_artifact_sha256": "4f7317efc2281701dc6fc4dc62dec9c5679bf68577c840106f8577fe7032f759",
+      "scorecard_file_sha256": "d68e535ad506bb102c19878f91853a35677dd03597c85d53f337fec89b9ce923"
+    }
+  ],
+  "disposition": "atomic_guard_terminal_failures_reduced_closure_not_demonstrated",
+  "frozen_corpus": {
+    "case_count": 7,
+    "historical_identity_check": {
+      "mismatches": 0,
+      "preserved_case_fields_and_input_refs_checked": 173,
+      "source_commit": "02072208"
+    },
+    "manifest_count": 3,
+    "manifest_sha256": {
+      "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+      "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9"
+    }
+  },
+  "implementation_sha": "9120a8fee9289c3850e9f91048a22c9da5457038",
+  "payload_reconstruction": {
+    "all_cases_passed_preflight": true,
+    "invented_production_fields": 0,
+    "preflight_case_count": 7,
+    "production_completeness_gate": "passed for all 7 before repair model clients were built",
+    "reconstruction": "production checkpoint decoder, normalize_report, metadata resolution, and artifact merge from hash-pinned source state"
+  },
+  "per_failure_class_outcomes": [
+    {
+      "candidate_audit_case_count": 5,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 6,
+      "failure_class": "expert_view",
+      "frozen_case_count": 6,
+      "observed_case_outcome_count": 6,
+      "successful_repair_case_count": 0
+    },
+    {
+      "candidate_audit_case_count": 6,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 7,
+      "failure_class": "insight_metric",
+      "frozen_case_count": 7,
+      "observed_case_outcome_count": 7,
+      "successful_repair_case_count": 0
+    },
+    {
+      "candidate_audit_case_count": 4,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 4,
+      "failure_class": "linkedin",
+      "frozen_case_count": 4,
+      "observed_case_outcome_count": 4,
+      "successful_repair_case_count": 0
+    },
+    {
+      "candidate_audit_case_count": 1,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 2,
+      "failure_class": "public_editorial_hard_failure",
+      "frozen_case_count": 2,
+      "observed_case_outcome_count": 2,
+      "successful_repair_case_count": 0
+    },
+    {
+      "candidate_audit_case_count": 3,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 3,
+      "failure_class": "quote",
+      "frozen_case_count": 3,
+      "observed_case_outcome_count": 3,
+      "successful_repair_case_count": 0
+    },
+    {
+      "candidate_audit_case_count": 3,
+      "existing_scorecard_class_metric": "partial_or_unavailable_due_incomplete_or_incompatible_cohort_scorecards",
+      "failed_case_count": 4,
+      "failure_class": "summary",
+      "frozen_case_count": 4,
+      "observed_case_outcome_count": 4,
+      "successful_repair_case_count": 0
+    }
+  ],
+  "recorded_date": "2026-09-26",
+  "schema_version": "1.0",
+  "validation": {
+    "affected_tests": {
+      "command": "python -m pytest -q tests/test_atomic_regeneration_contract.py tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py tests/test_regeneration_candidate.py tests/test_a21_historical_semantic_residuals.py tests/test_a21_structured_provenance_remediation.py tests/test_a21_bfab37bb_evidence_closure.py tests/test_validation_repair_scorecard.py tests/test_report_analysis_orchestrator_decomposition.py tests/test_public_editorial_identity.py tests/test_public_editorial_quality_generator.py tests/test_public_editorial_quality_provenance.py tests/test_replay_validation_repair_benchmark.py tests/test_prompt_fixture_corpus_regression.py",
+      "result": "passed; 254 tests"
+    },
+    "contract_schema": {
+      "command": "python scripts/ci/check_contract_schemas.py --snapshot docs/quality/contract_schemas.json",
+      "result": "passed"
+    },
+    "documentation_generated_check": {
+      "command": "python scripts/ci/check_documentation.py",
+      "result": "failed on 12 pre-existing stale anchors in unrelated simplification.md"
+    },
+    "focused_tests": {
+      "result": "passed; 20 tests for atomic planner, key-figure, quote, and ambiguous-path contracts"
+    },
+    "formatting": {
+      "command": "python -m ruff format --check [changed Python files]",
+      "result": "failed; 5 files would reformat, mostly pre-existing formatting outside changed hunks; no formatting changes applied"
+    },
+    "git_diff_check": {
+      "command": "git diff --check",
+      "result": "passed"
+    },
+    "implementation_commit": "9120a8fee9289c3850e9f91048a22c9da5457038",
+    "ruff_lint": {
+      "command": "python -m ruff check --select E4,E7,E9,F --ignore E402 [changed Python files]",
+      "result": "passed"
+    },
+    "type_check": {
+      "command": "python scripts/ci/run_type_check.py",
+      "result": "passed; 764 source files, baseline matched (0 tracked errors)"
+    }
+  }
+}
