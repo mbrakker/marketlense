@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from ._shared import *  # noqa: F401,F403
 
-
 _validate_regeneration_candidate = validate_regeneration_candidate
 
 
