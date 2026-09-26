@@ -108,6 +108,30 @@ leaves in planning, protected-field calculation, patching, and scope comparison.
 The frozen replay below exercises this contract at implementation SHA
 `9120a8fee9289c3850e9f91048a22c9da5457038`.
 
+## Deterministic candidate rejection and evidence metrics
+
+Candidate artifact integrity and mutation scope are resolved before semantic
+and grounding provider validation. When either deterministic check returns a
+hard error, the candidate audit records
+`not_evaluated_due_to_deterministic_failure`; public editorial evaluation,
+scope and lineage results, the complete `RepairDelta`, rollback, and retry
+memory are still retained. A deterministically valid candidate continues
+through the normal semantic, grounding, and public-editorial gates. Candidate
+validation usage is attributed by its regeneration task identity, separately
+from baseline validation and repair-generation usage.
+
+The scorecard reports introduced hard factual failures in three bounded
+categories: unknown or hallucinated evidence identity, unsupported claim or
+claim/evidence support, and provenance or lineage. Unknown identity requires
+an explicit unknown-evidence rule or reason; a generic `retained_claim.*`
+rule is not treated as hallucination. Numeric and protected-fact mismatches
+are unsupported-claim failures. Provenance coverage, integrity, source-page,
+and lineage rules are reported separately. The historical
+`unsupported_evidence_introduction_attempt_count` field remains readable for
+older scorecards; use the three explicit counters for current classification.
+Historical audits without category or deterministic-validation telemetry keep
+those newer measurements unavailable rather than assigning zero.
+
 ## Measurement status
 
 The implementation commit must be measured after it is committed, using its

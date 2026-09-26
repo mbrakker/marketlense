@@ -129,6 +129,11 @@ _REQUIRED_USAGE_ATTRIBUTION = (
 )
 _SAFE_REPAIR_TOKEN = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 _SAFE_REPAIR_PATH = re.compile(r"^[A-Za-z0-9._:/\[\]-]{1,256}$")
+_EVIDENCE_INTRODUCTION_CATEGORIES = {
+    "unknown_or_hallucinated_evidence_introduction",
+    "unsupported_claim_evidence_introduction",
+    "provenance_or_lineage_introduction",
+}
 
 
 @dataclass(frozen=True)
@@ -658,7 +663,8 @@ def _read_usage_events(
             rows = conn.execute(
                 """
                 SELECT timestamp_utc, validation_run_id, cohort_id, workflow_run_id,
-                       report_id, publisher_id, workflow, stage, artifact_family,
+                       report_id, task_id, publisher_id, workflow, stage,
+                       artifact_family,
                        action, semantic_task, prompt_namespace, prompt_hash,
                        policy_namespace,
                        provider, model, input_tokens, output_tokens, total_tokens,
@@ -1001,6 +1007,41 @@ def _repair_scorecard(
         if unsupported_evidence_attribution_complete
         else None
     )
+    evidence_category_attribution_complete = bool(repair_attempts) and all(
+        item.introduced_failure_categories is not None for item in repair_attempts
+    )
+    evidence_category_attempt_counts = {
+        category: (
+            sum(
+                category in (item.introduced_failure_categories or ())
+                for item in repair_attempts
+            )
+            if evidence_category_attribution_complete
+            else None
+        )
+        for category in _EVIDENCE_INTRODUCTION_CATEGORIES
+    }
+    deterministic_rejection_attribution_complete = bool(repair_attempts) and all(
+        item.semantic_grounding_validation_status != "unavailable"
+        for item in repair_attempts
+    )
+    deterministic_rejection_attempts = (
+        sum(
+            item.semantic_grounding_validation_status
+            == "not_evaluated_due_to_deterministic_failure"
+            for item in repair_attempts
+        )
+        if deterministic_rejection_attribution_complete
+        else None
+    )
+    semantic_grounding_usage_complete = bool(repair_attempts) and all(
+        item.semantic_grounding_validation_provider_call_count is not None
+        and item.semantic_grounding_validation_input_tokens is not None
+        and item.semantic_grounding_validation_output_tokens is not None
+        and item.semantic_grounding_validation_total_tokens is not None
+        and item.semantic_grounding_validation_estimated_cost_usd is not None
+        for item in repair_attempts
+    )
     scope_attribution_complete = bool(raw_audits) and all(
         _scope_outcome_attributable(audit) for _, audit in raw_audits
     )
@@ -1089,6 +1130,67 @@ def _repair_scorecard(
             else None
         ),
         unsupported_evidence_introduction_attempt_count=unsupported_evidence_introductions,
+        unknown_or_hallucinated_evidence_introduction_attempt_count=(
+            evidence_category_attempt_counts[
+                "unknown_or_hallucinated_evidence_introduction"
+            ]
+        ),
+        unsupported_claim_evidence_introduction_attempt_count=(
+            evidence_category_attempt_counts["unsupported_claim_evidence_introduction"]
+        ),
+        provenance_or_lineage_introduction_attempt_count=(
+            evidence_category_attempt_counts["provenance_or_lineage_introduction"]
+        ),
+        deterministic_rejection_attempt_count=deterministic_rejection_attempts,
+        semantic_grounding_validation_invocations_avoided_count=(
+            deterministic_rejection_attempts
+        ),
+        semantic_grounding_validation_provider_call_count=(
+            sum(
+                item.semantic_grounding_validation_provider_call_count or 0
+                for item in repair_attempts
+            )
+            if semantic_grounding_usage_complete
+            else None
+        ),
+        semantic_grounding_validation_input_tokens=(
+            sum(
+                item.semantic_grounding_validation_input_tokens or 0
+                for item in repair_attempts
+            )
+            if semantic_grounding_usage_complete
+            else None
+        ),
+        semantic_grounding_validation_output_tokens=(
+            sum(
+                item.semantic_grounding_validation_output_tokens or 0
+                for item in repair_attempts
+            )
+            if semantic_grounding_usage_complete
+            else None
+        ),
+        semantic_grounding_validation_total_tokens=(
+            sum(
+                item.semantic_grounding_validation_total_tokens or 0
+                for item in repair_attempts
+            )
+            if semantic_grounding_usage_complete
+            else None
+        ),
+        semantic_grounding_validation_estimated_cost_usd=(
+            round(
+                sum(
+                    item.semantic_grounding_validation_estimated_cost_usd or 0.0
+                    for item in repair_attempts
+                ),
+                6,
+            )
+            if semantic_grounding_usage_complete
+            else None
+        ),
+        semantic_grounding_validation_usage_attribution=(
+            "available" if semantic_grounding_usage_complete else "unavailable"
+        ),
         deterministic_repair_share=(
             _rate(
                 sum(item.repair_mode == "deterministic" for item in repair_attempts),
@@ -1995,14 +2097,25 @@ def _repair_attempt_from_audit(
         if str(event.get("report_id") or "") == str(audit["report_id"])
         and _is_regeneration_usage_event(event)
     ]
-    matching_usage = [
+    attempt_index = int(audit["attempt_index"])
+    task_attempt_marker = f":regen:{attempt_index}:"
+    task_attributed_usage = [
         event
         for event in report_usage
-        if int(event.get("repair_attempt") or 0) == int(audit["attempt_index"])
+        if task_attempt_marker in str(event.get("task_id") or "")
     ]
-    has_unattributed_regeneration_usage = any(
-        int(event.get("repair_attempt") or 0) <= 0 for event in report_usage
-    )
+    if task_attributed_usage:
+        matching_usage = task_attributed_usage
+        has_unattributed_regeneration_usage = False
+    else:
+        matching_usage = [
+            event
+            for event in report_usage
+            if int(event.get("repair_attempt") or 0) == attempt_index
+        ]
+        has_unattributed_regeneration_usage = any(
+            int(event.get("repair_attempt") or 0) <= 0 for event in report_usage
+        )
     attribution_valid = (
         usage_attribution_available
         and not has_unattributed_regeneration_usage
@@ -2020,6 +2133,32 @@ def _repair_attempt_from_audit(
         )
     )
     usage = _repair_usage(matching_usage) if attribution_valid else None
+    repair_delta = audit.get("repair_delta") or {}
+    raw_validation_status = str(
+        repair_delta.get("semantic_grounding_validation_status") or ""
+    )
+    validation_status = (
+        raw_validation_status
+        if raw_validation_status
+        in {"evaluated", "not_evaluated_due_to_deterministic_failure"}
+        else "unavailable"
+    )
+    validation_usage = _candidate_validation_usage(
+        audit=audit,
+        usage_events=usage_events,
+        usage_attribution_available=usage_attribution_available,
+        validation_status=validation_status,
+    )
+    raw_categories = repair_delta.get("introduced_failure_categories")
+    introduced_failure_categories = (
+        tuple(sorted(set(raw_categories)))
+        if isinstance(raw_categories, list)
+        and all(
+            isinstance(category, str) and category in _EVIDENCE_INTRODUCTION_CATEGORIES
+            for category in raw_categories
+        )
+        else None
+    )
     latency_raw = audit.get("latency_ms")
     latency_ms = (
         int(latency_raw)
@@ -2088,6 +2227,23 @@ def _repair_attempt_from_audit(
         configuration_hash=str(audit["configuration_hash"]),
         policy_hash=str(audit["policy_hash"]),
         producer_build_identity=str(audit["producer_build_identity"]),
+        semantic_grounding_validation_status=validation_status,
+        introduced_failure_categories=introduced_failure_categories,
+        semantic_grounding_validation_provider_call_count=(
+            validation_usage["calls"] if validation_usage is not None else None
+        ),
+        semantic_grounding_validation_input_tokens=(
+            validation_usage["input_tokens"] if validation_usage is not None else None
+        ),
+        semantic_grounding_validation_output_tokens=(
+            validation_usage["output_tokens"] if validation_usage is not None else None
+        ),
+        semantic_grounding_validation_total_tokens=(
+            validation_usage["total_tokens"] if validation_usage is not None else None
+        ),
+        semantic_grounding_validation_estimated_cost_usd=(
+            validation_usage["cost"] if validation_usage is not None else None
+        ),
     )
 
 
@@ -2183,6 +2339,43 @@ def _repair_usage(events: list[dict[str, Any]]) -> _RepairUsage:
             sum(float(event["estimated_cost_usd"] or 0.0) for event in events), 6
         ),
     }
+
+
+def _candidate_validation_usage(
+    *,
+    audit: dict[str, Any],
+    usage_events: list[dict[str, Any]],
+    usage_attribution_available: bool,
+    validation_status: str,
+) -> _RepairUsage | None:
+    if not usage_attribution_available or validation_status == "unavailable":
+        return None
+    attempt_index = int(audit["attempt_index"])
+    task_marker = f":regen:{attempt_index}:validation_regen_candidate_{attempt_index}:"
+    matching = [
+        event
+        for event in usage_events
+        if str(event.get("report_id") or "") == str(audit["report_id"])
+        and task_marker in str(event.get("task_id") or "")
+        and str(event.get("artifact_family") or "")
+        in {"validation_semantic", "validation_grounding"}
+    ]
+    if validation_status == "evaluated" and not matching:
+        return None
+    if not all(
+        str(event.get(field) or "") == str(audit.get(field) or "")
+        for event in matching
+        for field in (
+            "validation_run_id",
+            "cohort_id",
+            "workflow_run_id",
+            "configuration_hash",
+            "policy_hash",
+            "producer_build_identity",
+        )
+    ):
+        return None
+    return _repair_usage(matching)
 
 
 def _is_regeneration_usage_event(event: dict[str, Any]) -> bool:

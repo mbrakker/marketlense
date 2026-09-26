@@ -400,6 +400,92 @@ def _failure_fingerprint(issue: ValidationIssue) -> FailureFingerprint:
     )
 
 
+def _evidence_introduction_category(issue: ValidationIssue) -> str | None:
+    """Classify evidence failures using stable rules and explicit reason codes."""
+
+    rule_id = str(issue.rule_id or "").strip().lower()
+    message = str(issue.message or "").strip()
+    reason_match = re.match(r"^\[[^|\]]+\|([a-zA-Z0-9_.-]+)\]", message)
+    reason = reason_match.group(1).lower() if reason_match else ""
+    has_evidence_identity = any(str(value).strip() for value in issue.evidence_ids)
+
+    if (
+        (
+            rule_id == "grounding"
+            and reason in {"hallucinated_evidence_id", "unknown_evidence_id"}
+        )
+        or (
+            has_evidence_identity
+            and reason
+            in {
+                "unknown_evidence_reference",
+                "missing_or_unknown_evidence_reference",
+            }
+        )
+        or (
+            rule_id == "claim_support"
+            and bool(str(issue.entity_id or "").strip())
+            and "references unknown evidence_id" in message.lower()
+        )
+    ):
+        return "unknown_or_hallucinated_evidence_introduction"
+
+    if (
+        rule_id
+        in {
+            "soft_copy_claim_provenance",
+            "regeneration_source_page",
+            "provenance",
+            "lineage",
+        }
+        or rule_id.startswith(("provenance.", "lineage."))
+        or reason
+        in {
+            "provenance_coverage",
+            "provenance_integrity",
+            "source_page_mismatch",
+            "lineage_missing",
+            "lineage_invalid",
+            "soft_copy_provenance_missing",
+            "soft_copy_provenance_invalid",
+            "soft_copy_provenance_ambiguous",
+            "soft_copy_provenance_sentence_missing",
+        }
+    ):
+        return "provenance_or_lineage_introduction"
+
+    if (
+        rule_id
+        in {
+            "grounding",
+            "claim_support",
+            "numbers",
+            "regeneration_claim_support",
+        }
+        or rule_id.startswith("retained_claim.")
+        or rule_id.startswith("public_editorial_quality.unsupported")
+    ):
+        return "unsupported_claim_evidence_introduction"
+    return None
+
+
+def _introduced_failure_categories(
+    report: ValidationReport, delta: RepairDelta
+) -> List[str]:
+    """Return bounded categories for newly introduced hard issue fingerprints."""
+
+    introduced_keys = {item.key for item in delta.introduced}
+    return sorted(
+        {
+            category
+            for issue in report.issues
+            if str(issue.severity or "").strip().lower() == "error"
+            and (category := _evidence_introduction_category(issue))
+            and _failure_fingerprint(issue).key in introduced_keys
+        }
+    )
+
+
 def _retained_claim_severity_by_fingerprint(
     report: ValidationReport,
 ) -> Dict[str, str]:
@@ -1356,38 +1442,58 @@ def _run_validation_regeneration_loop(
             if candidate_enforced
             else "validation"
         )
-        candidate_validation_report = _run_validation_with_fallback(
-            runtime=runtime,
-            mode_ctx=attempt_ctx,
-            dependencies=dependencies,
-            validation_req=ValidationRequest(
-                schema_version="1.0",
-                report_id=ReportId(runtime.file.file_id),
-                report=regenerated_payload,
-                artifacts=candidate_artifacts,
-                evidence_packs=evidence_packs,
-                vector_store_id=vector_store_id,
-                source_id=str(runtime.ctx.source_identity_id or "").strip(),
-                deterministic_grounding_passed=candidate_result.passed,
-                publisher_name=runtime.publisher_name,
-                report_name=runtime.source_report_name or runtime.report_title,
-                source_url=runtime.source_url,
-                source_text=source_text,
-            ),
-            pack_name=validation_pack_name,
-            openai_client=validation_openai_client,
+        scope_validation = _scope_validation_report(
+            before=artifacts_before,
+            after=candidate_artifacts,
+            plan=plan,
+            verified_derived_roots=candidate_result.verified_derived_roots,
         )
+        deterministic_candidate_rejection = bool(
+            not candidate_result.passed
+            or any(
+                str(issue.severity or "").strip().lower() == "error"
+                for issue in scope_validation.issues
+            )
+        )
+        if deterministic_candidate_rejection:
+            candidate_provider_validation = ValidationReport(
+                schema_version="1.1",
+                status="pass",
+                issues=[],
+                severity="pass",
+            )
+            semantic_grounding_validation_status = (
+                "not_evaluated_due_to_deterministic_failure"
+            )
+        else:
+            candidate_provider_validation = _run_validation_with_fallback(
+                runtime=runtime,
+                mode_ctx=attempt_ctx,
+                dependencies=dependencies,
+                validation_req=ValidationRequest(
+                    schema_version="1.0",
+                    report_id=ReportId(runtime.file.file_id),
+                    report=regenerated_payload,
+                    artifacts=candidate_artifacts,
+                    evidence_packs=evidence_packs,
+                    vector_store_id=vector_store_id,
+                    source_id=str(runtime.ctx.source_identity_id or "").strip(),
+                    deterministic_grounding_passed=candidate_result.passed,
+                    publisher_name=runtime.publisher_name,
+                    report_name=runtime.source_report_name or runtime.report_title,
+                    source_url=runtime.source_url,
+                    source_text=source_text,
+                ),
+                pack_name=validation_pack_name,
+                openai_client=validation_openai_client,
+            )
+            semantic_grounding_validation_status = "evaluated"
         candidate_validation_report = _candidate_validation_report(
-            candidate_validation_report, candidate_result
+            candidate_provider_validation, candidate_result
         )
         candidate_validation_report = _merge_public_editorial_quality(
             candidate_validation_report,
-            _scope_validation_report(
-                before=artifacts_before,
-                after=candidate_artifacts,
-                plan=plan,
-                verified_derived_roots=candidate_result.verified_derived_roots,
-            ),
+            scope_validation,
         )
         editorial_validation, editorial_path = (
             _evaluate_and_store_public_editorial_quality(
@@ -1457,6 +1563,10 @@ def _run_validation_regeneration_loop(
             repair_delta,
             mutation_scope_result="fail" if scope_failed else "pass",
             evidence_lineage_result="fail" if evidence_lineage_failed else "pass",
+            introduced_failure_categories=_introduced_failure_categories(
+                candidate_validation_report, repair_delta
+            ),
+            semantic_grounding_validation_status=(semantic_grounding_validation_status),
             repair_action=str(
                 getattr(regeneration_response, "repair_action", "") or ""
             ),

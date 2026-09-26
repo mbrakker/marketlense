@@ -57,6 +57,24 @@
           "type": ["integer", "null"],
           "minimum": 0
         },
+        "introduced_failure_categories": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "unknown_or_hallucinated_evidence_introduction",
+              "unsupported_claim_evidence_introduction",
+              "provenance_or_lineage_introduction"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "semantic_grounding_validation_status": {
+          "enum": [
+            "evaluated",
+            "not_evaluated_due_to_deterministic_failure",
+            "not_evaluated"
+          ]
+        },
         "severity_changes": {
           "type": "array",
           "items": {

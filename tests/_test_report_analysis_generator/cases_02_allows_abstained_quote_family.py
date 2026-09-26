@@ -352,13 +352,12 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
         replace(issue, severity=baseline_retained_severity)
         for issue in retained_claim_repair_issues(original, evidence_packs)
     ]
-    validation_calls = 0
+    validation_calls: list[str] = []
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
-        nonlocal validation_calls
-        del req, settings, ctx, pack_name, report_name, md5
-        validation_calls += 1
-        if validation_calls == 1:
+        del req, settings, ctx, report_name, md5
+        validation_calls.append(pack_name)
+        if len(validation_calls) == 1:
             return ValidationReport(
                 schema_version="1.1",
                 status="fail",
@@ -408,21 +407,173 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
     )
 
     assert len(state.regeneration_attempts) == 1
+    assert validation_calls == (
+        ["validation"]
+        if baseline_retained_severity == "error"
+        else ["validation", "validation_regen_candidate_1"]
+    )
     assert state.regeneration_attempts[0].promotion_outcome == expected_outcome
     assert state.artifacts_payload["summary"]["tldr"] == (
         "Repaired summary" if expected_outcome == "promoted" else "Broken summary"
     )
     if expected_outcome == "rolled_back":
+        assert (
+            state.regeneration_attempts[
+                0
+            ].repair_delta.semantic_grounding_validation_status
+            == "not_evaluated_due_to_deterministic_failure"
+        )
         assert any(
             item.rule_id == "retained_claim.number_value_unit_match"
             for item in state.regeneration_attempts[0].repair_delta.persisting
         )
     else:
+        assert (
+            state.regeneration_attempts[
+                0
+            ].repair_delta.semantic_grounding_validation_status
+            == "evaluated"
+        )
+        assert "public_editorial_quality_regen_attempt_1" in state.evidence_paths
         assert any(
             issue.rule_id == "retained_claim.number_value_unit_match"
             and issue.severity == "warning"
             for issue in state.validation_report.issues
         )
+
+
+def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
+    tmp_path,
+) -> None:
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=2
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    original = _artifacts_without_retained_claims(
+        summary={
+            "tldr": "Original summary",
+            "card_tldr_compact": "Original card",
+            "executive_summary": "Original executive summary",
+            "claim_evidence_map": [],
+        }
+    )
+    original["linkedin_post"] = "Original LinkedIn copy"
+    _set_interpretive_summary_provenance(original)
+    candidates = []
+    for index in (1, 2):
+        candidate = deepcopy(original)
+        candidate["summary"]["executive_summary"] = f"Candidate summary {index}"
+        candidate["linkedin_post"] = f"Unplanned LinkedIn change {index}"
+        _set_interpretive_summary_provenance(candidate)
+        candidates.append(candidate)
+    validation_calls: list[str] = []
+    retry_memories = []
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del req, settings, ctx, report_name, md5
+        validation_calls.append(pack_name)
+        return ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            issues=[
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="[grounding] Unsupported summary claim",
+                    severity="error",
+                    affected_section="executive_summary",
+                    rule_id="grounding",
+                )
+            ],
+            severity="error",
+        )
+
+    def _regenerate(request):
+        retry_memories.append(list(request.repair_memory))
+        attempt = request.attempt_index
+        return ArtifactRegenerationResponse(
+            updated_artifacts=candidates[attempt - 1],
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            candidate_artifacts_path=str(
+                tmp_path / "out" / f"artifacts_regen_candidate_{attempt}.json"
+            ),
+            repair_action="REGENERATE_ITEM",
+            repair_strategy=f"strategy-{attempt}",
+            selected_evidence_ids=[f"f{attempt}"],
+        )
+
+    deps = _deps(
+        generate_evidence_packs=lambda **kwargs: {
+            "doc_map": {"docMap": {"title": "Doc Title"}},
+            "findings": {
+                "findings": [
+                    {
+                        "id": f"f{index}",
+                        "text": (
+                            "European loyalty reached 49% in 2024."
+                            if index == 1
+                            else ""
+                        ),
+                        "pages": [index],
+                    }
+                    for index in range(1, 6)
+                ]
+            },
+            "quote_candidates": {"quote_candidates": [{"id": "q1", "page": 1}]},
+        },
+        generate_artifacts=lambda **kwargs: original,
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+
+    state = run_report_analysis(
+        runtime,
+        source,
+        selection,
+        VectorStoreIndexingState(
+            vector_store_id="vs_1",
+            openai_file_id="file_1",
+            vector_store_status="completed",
+            indexed_at_utc="2026-01-01T00:00:00Z",
+            last_error=None,
+        ),
+        deps,
+    )
+
+    assert validation_calls == ["validation"]
+    assert len(state.regeneration_attempts) == 2
+    assert all(
+        attempt.promotion_outcome == "rolled_back"
+        and attempt.repair_delta.mutation_scope_result == "fail"
+        and attempt.repair_delta.semantic_grounding_validation_status
+        == "not_evaluated_due_to_deterministic_failure"
+        for attempt in state.regeneration_attempts
+    )
+    assert any(
+        issue.rule_id == "regeneration_scope_violation"
+        for issue in state.regeneration_attempts[0].repair_delta.introduced
+    )
+    first_audit = json.loads(
+        Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert first_audit["repair_delta"]["mutation_scope_result"] == "fail"
+    assert (
+        first_audit["repair_delta"]["semantic_grounding_validation_status"]
+        == "not_evaluated_due_to_deterministic_failure"
+    )
+    assert "public_editorial_quality_regen_attempt_1" in state.evidence_paths
+    assert retry_memories[0] == []
+    assert retry_memories[1][0].mutation_scope_result == "fail"
+    assert any(
+        issue.rule_id == "regeneration_scope_violation"
+        for issue in retry_memories[1][0].introduced
+    )
 
 
 def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback(
@@ -980,6 +1131,7 @@ __all__ = [
     "test_run_report_analysis_regenerates_failed_section_until_pass",
     "test_run_report_analysis_rolls_back_failed_candidate_regeneration",
     "test_candidate_promotion_preserves_promoted_retained_claim_severity",
+    "test_scope_rejection_skips_provider_validation_and_preserves_retry_memory",
     "test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback",
     "test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration",
     "test_run_report_analysis_stops_after_regeneration_max_attempts",

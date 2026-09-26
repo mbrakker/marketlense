@@ -5,9 +5,12 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from src.contracts.llm_usage import LLMUsageLedgerAppendRequest, LLMUsageLedgerEntry
 from src.contracts.regeneration import FailureFingerprint
 from src.contracts.run_context import RunContext
+from src.contracts.validation import ValidationIssue
 from src.contracts.validation_reliability import (
     ValidationReliabilityBenchmarkCaseAttribution,
     ValidationReliabilityBuildRequest,
@@ -17,6 +20,9 @@ from src.contracts.validation_run_manifest import (
     ValidationRunManifestCreateRequest,
     ValidationRunManifestRecordRequest,
     ValidationRunManifestStageRecord,
+)
+from src.orchestrators._report_analysis_orchestrator import (
+    validation as analysis_validation,
 )
 from src.services.llm_usage_ledger_service import append_usage
 from src.services.report_store_service import (
@@ -197,6 +203,268 @@ def _audit(
     }
 
 
+@pytest.mark.parametrize(
+    ("rule_id", "message", "evidence_ids", "entity_id", "expected"),
+    [
+        (
+            "grounding",
+            "[grounding|hallucinated_evidence_id] Candidate references unknown ID.",
+            [],
+            "",
+            "unknown_or_hallucinated_evidence_introduction",
+        ),
+        (
+            "retained_claim.evidence_reference_completeness",
+            (
+                "[retained_claim.evidence_reference_completeness|"
+                "unknown_evidence_reference] Unknown reference."
+            ),
+            ["unknown-id"],
+            "",
+            "unknown_or_hallucinated_evidence_introduction",
+        ),
+        (
+            "claim_support",
+            "Summary claim references unknown evidence_id 'unknown-id'.",
+            [],
+            "unknown-id",
+            "unknown_or_hallucinated_evidence_introduction",
+        ),
+        (
+            "soft_copy_claim_provenance",
+            "Candidate factual claim has no provenance binding.",
+            ["finding-1"],
+            "",
+            "provenance_or_lineage_introduction",
+        ),
+        (
+            "retained_claim.soft_copy_provenance_integrity",
+            "[retained_claim.soft_copy_provenance_integrity|"
+            "soft_copy_provenance_missing] Missing provenance.",
+            ["finding-1"],
+            "",
+            "provenance_or_lineage_introduction",
+        ),
+        (
+            "regeneration_source_page",
+            "Candidate source page does not match retained evidence.",
+            ["finding-1"],
+            "",
+            "provenance_or_lineage_introduction",
+        ),
+        (
+            "retained_claim.number_value_unit_match",
+            "[retained_claim.number_value_unit_match|quantity_not_entailed]",
+            ["finding-1"],
+            "",
+            "unsupported_claim_evidence_introduction",
+        ),
+        (
+            "retained_claim.protected_fact_value_consistency",
+            "[retained_claim.protected_fact_value_consistency|"
+            "protected_fact_value_incompatible]",
+            ["finding-1"],
+            "",
+            "unsupported_claim_evidence_introduction",
+        ),
+        (
+            "grounding",
+            "[grounding|contradicted] Candidate statement conflicts with evidence.",
+            ["finding-1"],
+            "",
+            "unsupported_claim_evidence_introduction",
+        ),
+        (
+            "retained_claim.evidence_reference_completeness",
+            "[retained_claim.evidence_reference_completeness|missing_evidence_reference]",
+            [],
+            "",
+            "unsupported_claim_evidence_introduction",
+        ),
+        (
+            "retained_claim.evidence_reference_completeness",
+            "[retained_claim.evidence_reference_completeness|"
+            "missing_or_unknown_evidence_reference] No evidence reference.",
+            [],
+            "claim-1",
+            "unsupported_claim_evidence_introduction",
+        ),
+        (
+            "retained_claim.evidence_reference_completeness",
+            "Unknown evidence reference without a stable reason token.",
+            ["finding-1"],
+            "",
+            "unsupported_claim_evidence_introduction",
+        ),
+    ],
+)
+def test_evidence_introduction_category_uses_specific_rule_and_reason(
+    rule_id: str,
+    message: str,
+    evidence_ids: list[str],
+    entity_id: str,
+    expected: str,
+) -> None:
+    issue = ValidationIssue(
+        message=message,
+        severity="error",
+        affected_section="summary.tldr",
+        rule_id=rule_id,
+        entity_id=entity_id,
+        evidence_ids=evidence_ids,
+    )
+    classify = getattr(
+        analysis_validation, "_evidence_introduction_category", lambda _issue: None
+    )
+
+    assert classify(issue) == expected
+
+
+def _validation_usage(report_id: str, family: str) -> LLMUsageLedgerEntry:
+    action = (
+        "validate:grounding"
+        if family == "validation_grounding"
+        else "validate:semantic"
+    )
+    return replace(
+        _usage(report_id, 0),
+        request_id=f"validation-{report_id}-{family}",
+        task_id=(f"report:{report_id}:regen:1:validation_regen_candidate_1:{family}"),
+        action=action,
+        semantic_task=action,
+        stage=f"{family.removeprefix('validation_')}_primary",
+        artifact_family=family,
+        model_policy_namespace="report_vs/validate",
+        policy_namespace="report_vs/validate",
+        repair_attempt=0,
+    )
+
+
+def test_repair_scorecard_reports_bounded_evidence_and_validation_call_metrics(
+    tmp_path: Path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    audit_root = tmp_path / "audits"
+    categories = (
+        (
+            "unknown",
+            "grounding",
+            "unknown_or_hallucinated_evidence_introduction",
+            "evaluated",
+        ),
+        (
+            "provenance",
+            "soft_copy_claim_provenance",
+            "provenance_or_lineage_introduction",
+            "evaluated",
+        ),
+        (
+            "numeric",
+            "retained_claim.number_value_unit_match",
+            "unsupported_claim_evidence_introduction",
+            "evaluated",
+        ),
+        (
+            "deterministic-reject",
+            "regeneration_scope_violation",
+            None,
+            "not_evaluated_due_to_deterministic_failure",
+        ),
+    )
+    for report_id, rule_id, category, validation_status in categories:
+        _create_manifest(reports_db, report_id)
+        append_usage(
+            LLMUsageLedgerAppendRequest(
+                schema_version="1.0",
+                db_path=usage_db,
+                entry=_usage(report_id, 1),
+            ),
+            _ctx(),
+        )
+        if validation_status == "evaluated":
+            for family in ("validation_semantic", "validation_grounding"):
+                append_usage(
+                    LLMUsageLedgerAppendRequest(
+                        schema_version="1.0",
+                        db_path=usage_db,
+                        entry=_validation_usage(report_id, family),
+                    ),
+                    _ctx(),
+                )
+        payload = _audit(report_id=report_id, promotion_outcome="rolled_back")
+        delta = payload["repair_delta"]
+        delta["introduced"] = [
+            {
+                "rule_id": rule_id,
+                "affected_section": "summary.tldr",
+                "entity_id": report_id,
+                "evidence_ids": ["finding-1"] if category else [],
+            }
+        ]
+        delta["introduced_failure_categories"] = [category] if category else []
+        delta["semantic_grounding_validation_status"] = validation_status
+        path = audit_root / report_id / "report_analysis"
+        path.mkdir(parents=True)
+        (path / "regeneration_candidate_audit_1.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+            repair_evidence_root=str(audit_root),
+        ),
+        _ctx(),
+    )
+
+    scorecard = artifact.repair_scorecard
+    assert scorecard.unknown_or_hallucinated_evidence_introduction_attempt_count == 1
+    assert scorecard.unsupported_claim_evidence_introduction_attempt_count == 1
+    assert scorecard.provenance_or_lineage_introduction_attempt_count == 1
+    assert scorecard.unsupported_evidence_introduction_attempt_count == 2
+    assert scorecard.deterministic_rejection_attempt_count == 1
+    assert scorecard.semantic_grounding_validation_invocations_avoided_count == 1
+    assert scorecard.semantic_grounding_validation_provider_call_count == 6
+    assert scorecard.semantic_grounding_validation_input_tokens == 600
+    assert scorecard.semantic_grounding_validation_output_tokens == 120
+    assert scorecard.semantic_grounding_validation_estimated_cost_usd == 0.072
+
+
+def test_historical_repair_audit_without_new_telemetry_remains_readable(
+    tmp_path: Path,
+) -> None:
+    reports_db = str(tmp_path / "reports.sqlite")
+    usage_db = str(tmp_path / "usage.sqlite")
+    audit_root = tmp_path / "audits"
+    _create_manifest(reports_db, "report-legacy")
+    path = audit_root / "report-legacy" / "report_analysis"
+    path.mkdir(parents=True)
+    (path / "regeneration_candidate_audit_1.json").write_text(
+        json.dumps(_audit(report_id="report-legacy", promotion_outcome="rolled_back")),
+        encoding="utf-8",
+    )
+
+    artifact = build_validation_reliability_artifact(
+        ValidationReliabilityBuildRequest(
+            schema_version="1.0",
+            reports_db_path=reports_db,
+            usage_db_path=usage_db,
+            validation_run_id="validation-1",
+            repair_evidence_root=str(audit_root),
+        ),
+        _ctx(),
+    )
+
+    scorecard = artifact.repair_scorecard
+    assert scorecard.measurement_status == "available"
+    assert scorecard.unknown_or_hallucinated_evidence_introduction_attempt_count is None
+    assert scorecard.deterministic_rejection_attempt_count is None
+
+
 def test_repair_scorecard_excludes_rolled_back_and_removed_candidates(
     tmp_path: Path,
 ) -> None:
@@ -209,7 +477,12 @@ def test_repair_scorecard_excludes_rolled_back_and_removed_candidates(
         _create_manifest(reports_db, report_id)
     append_usage(
         LLMUsageLedgerAppendRequest(
-            schema_version="1.0", db_path=usage_db, entry=_usage("report-3", 1)
+            schema_version="1.0",
+            db_path=usage_db,
+            entry=replace(
+                _usage("report-3", 0),
+                task_id="report:report-3:regen:1:regeneration",
+            ),
         ),
         _ctx(),
     )

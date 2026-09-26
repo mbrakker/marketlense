@@ -183,6 +183,13 @@ class ValidationReliabilityRepairAttempt(SemanticIdContract):
     configuration_hash: str
     policy_hash: str
     producer_build_identity: str
+    semantic_grounding_validation_status: str = "unavailable"
+    introduced_failure_categories: tuple[str, ...] | None = None
+    semantic_grounding_validation_provider_call_count: int | None = None
+    semantic_grounding_validation_input_tokens: int | None = None
+    semantic_grounding_validation_output_tokens: int | None = None
+    semantic_grounding_validation_total_tokens: int | None = None
+    semantic_grounding_validation_estimated_cost_usd: float | None = None
 
 
 @dataclass(frozen=True)
@@ -313,6 +320,17 @@ class ValidationReliabilityRepairScorecard(SemanticIdContract):
     benchmark_case_attributions: tuple[
         ValidationReliabilityBenchmarkCaseAttribution, ...
     ] = ()
+    unknown_or_hallucinated_evidence_introduction_attempt_count: int | None = None
+    unsupported_claim_evidence_introduction_attempt_count: int | None = None
+    provenance_or_lineage_introduction_attempt_count: int | None = None
+    deterministic_rejection_attempt_count: int | None = None
+    semantic_grounding_validation_invocations_avoided_count: int | None = None
+    semantic_grounding_validation_provider_call_count: int | None = None
+    semantic_grounding_validation_input_tokens: int | None = None
+    semantic_grounding_validation_output_tokens: int | None = None
+    semantic_grounding_validation_total_tokens: int | None = None
+    semantic_grounding_validation_estimated_cost_usd: float | None = None
+    semantic_grounding_validation_usage_attribution: str = "unavailable"
 
 
 @dataclass(frozen=True)

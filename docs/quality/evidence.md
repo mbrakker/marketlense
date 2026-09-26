@@ -42,6 +42,15 @@ usage and latency totals. Prompt identity is namespace plus hash only. The
 artifact does not
 retain source text, rendered prompts, or provider responses.
 
+Current candidate audits also separate introduced hard failures into unknown
+or hallucinated evidence identity, unsupported claim/evidence support, and
+provenance/lineage. A generic retained-claim rule does not establish an
+unknown evidence identity. The same scorecard reports deterministic rejections
+that skipped semantic/grounding validation, plus candidate-scoped provider
+calls, tokens, and cost. Task identity separates these calls from baseline
+validation and repair generation. Older audits remain readable; metrics that
+need fields they did not retain stay `null`/unavailable.
+
 The read-only reliability exporter writes this retained projection as
 `repair_effectiveness.json`. A missing or incompatible sidecar, or unavailable
 usage attribution, is explicitly `unavailable` with `null` metrics. It must

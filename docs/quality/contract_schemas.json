@@ -31168,6 +31168,12 @@
           },
           "type": "array"
         },
+        "introduced_failure_categories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "introduced_hard_failure_count": {
           "anyOf": [
             {
@@ -31200,6 +31206,9 @@
           "type": "array"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "semantic_grounding_validation_status": {
           "type": "string"
         },
         "severity_changes": {
@@ -42925,6 +42934,19 @@
             }
           ]
         },
+        "introduced_failure_categories": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "introduced_failure_fingerprints": {
           "items": {
             "type": "string"
@@ -43015,6 +43037,59 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "semantic_grounding_validation_estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_provider_call_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_status": {
+          "type": "string"
+        },
+        "semantic_grounding_validation_total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "strategy_fingerprint": {
           "type": "string"
@@ -43367,6 +43442,16 @@
         "current_residual_failure_odds_state": {
           "type": "string"
         },
+        "deterministic_rejection_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "deterministic_repair_share": {
           "anyOf": [
             {
@@ -43505,6 +43590,16 @@
             }
           ]
         },
+        "provenance_or_lineage_introduction_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "repair_attempt_count": {
           "anyOf": [
             {
@@ -43581,6 +43676,69 @@
         "schema_version": {
           "type": "string"
         },
+        "semantic_grounding_validation_estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_input_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_invocations_avoided_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_output_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_provider_call_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_grounding_validation_usage_attribution": {
+          "type": "string"
+        },
         "success_at_1_count": {
           "anyOf": [
             {
@@ -43632,6 +43790,26 @@
           ]
         },
         "total_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unknown_or_hallucinated_evidence_introduction_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unsupported_claim_evidence_introduction_attempt_count": {
           "anyOf": [
             {
               "type": "integer"

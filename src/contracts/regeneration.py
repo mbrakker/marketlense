@@ -115,6 +115,20 @@ class RepairDelta:
     persisting: List[FailureFingerprint] = field(default_factory=list)
     introduced: List[FailureFingerprint] = field(default_factory=list)
     introduced_hard_failure_count: int | None = None
+    introduced_failure_categories: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": ("Bounded factual evidence categories for introduced hard failures.")
+        },
+    )
+    semantic_grounding_validation_status: str = field(
+        default="not_evaluated",
+        metadata={
+            "doc": (
+                "evaluated|not_evaluated_due_to_deterministic_failure|not_evaluated."
+            )
+        },
+    )
     severity_changes: List[RepairSeverityChange] = field(default_factory=list)
     mutation_scope_result: str = field(
         default="not_evaluated",
