@@ -7,7 +7,8 @@ import hashlib
 import json
 import subprocess
 import sys
-from dataclasses import asdict, replace
+from copy import deepcopy
+from dataclasses import asdict, fields, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
 from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_generation import ReportRuntimeState
+from src.contracts.report_models import Figure, Quote, ReportFigureAsset, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationIssue, ValidationReport
@@ -34,8 +36,15 @@ from src.generators._report_generation_dependencies.analysis import (
     ReportAnalysisDependencies,
 )
 from src.generators.report_generation_shared import (
-    base_payload,
     merge_artifacts_into_payload,
+    resolve_doc_map_metadata,
+)
+from src.generators.normalize_generator import normalize_report
+from src.orchestrators._report_analysis_orchestrator.payload import (
+    _ensure_report_payload_complete,
+)
+from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _report_payload_from_dict,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _run_validation_regeneration_loop,
@@ -96,7 +105,11 @@ def _benchmark_manifest(path: Path) -> tuple[dict[str, Any], str]:
             + "\n"
         ).encode("utf-8")
     ).hexdigest()
-    if payload.get("frozen") is not True or declared_hash != actual_hash:
+    if (
+        payload.get("schema_version") != "2.0"
+        or payload.get("frozen") is not True
+        or declared_hash != actual_hash
+    ):
         raise ValueError("frozen benchmark manifest is invalid")
     return payload, declared_hash
 
@@ -188,6 +201,329 @@ def _case_paths(case: dict[str, Any], workspace: Path) -> tuple[dict[str, Path],
     return paths, artifacts_path
 
 
+def _pointer_value(payload: object, pointer: object) -> object:
+    if (
+        not isinstance(pointer, list)
+        or not pointer
+        or not all(isinstance(item, str) and item for item in pointer)
+    ):
+        raise ValueError("pre-repair payload pointer is invalid")
+    current = payload
+    for item in pointer:
+        if not isinstance(current, dict) or item not in current:
+            raise ValueError("pre-repair payload pointer is unresolved")
+        current = current[item]
+    return current
+
+
+def _report_payload_from_frozen_state(
+    raw_payload: object,
+    *,
+    expected_sha256: str,
+    label: str,
+) -> ReportPayload:
+    if not isinstance(raw_payload, dict):
+        raise ValueError(f"{label} ReportPayload seed must be an object")
+
+    def require_fields(
+        raw: object, expected: tuple[str, ...], field_label: str
+    ) -> None:
+        if not isinstance(raw, dict) or set(raw) != set(expected):
+            raise ValueError(f"{label} {field_label} payload fields are incomplete")
+
+    require_fields(
+        raw_payload,
+        tuple(field.name for field in fields(ReportPayload)),
+        "ReportPayload",
+    )
+    require_fields(
+        raw_payload.get("quote"),
+        tuple(field.name for field in fields(Quote)),
+        "Quote",
+    )
+    require_fields(
+        raw_payload.get("figure"),
+        tuple(field.name for field in fields(Figure)),
+        "Figure",
+    )
+    assets = raw_payload.get("_figure_assets")
+    if not isinstance(assets, list):
+        raise ValueError(f"{label} ReportPayload figure assets are invalid")
+    asset_fields = tuple(field.name for field in fields(ReportFigureAsset))
+    for index, asset in enumerate(assets):
+        require_fields(asset, asset_fields, f"figure asset {index}")
+
+    if sha256_json(raw_payload) != expected_sha256:
+        raise ValueError(f"{label} ReportPayload canonical hash mismatch")
+    try:
+        payload = _report_payload_from_dict(raw_payload)
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{label} ReportPayload seed cannot be decoded") from exc
+    if payload.to_dict() != raw_payload:
+        raise ValueError(f"{label} ReportPayload seed does not round-trip exactly")
+    return payload
+
+
+def _pre_repair_base_payload(
+    *,
+    case: dict[str, Any],
+    paths: dict[str, Path],
+    report_context: dict[str, Any],
+    evidence_packs: dict[str, dict[str, Any]],
+    case_ctx: RunContext,
+) -> ReportPayload:
+    state = case.get("pre_repair_state")
+    if not isinstance(state, dict):
+        raise ValueError("frozen case pre-repair state is missing")
+    input_name = str(state.get("input_file") or "")
+    checkpoint_path = paths.get(input_name)
+    if checkpoint_path is None:
+        raise ValueError("frozen case pre-repair checkpoint reference is missing")
+    checkpoint = _read_json(checkpoint_path)
+    payload_data = _pointer_value(checkpoint, state.get("payload_pointer"))
+    expected_sha = str(state.get("canonical_sha256") or "")
+    case_label = str(case.get("case_id") or case.get("report_id") or "case")
+
+    def require_caption_generation_disabled() -> None:
+        source_cohort_name = str(state.get("source_cohort_file") or "")
+        source_cohort_path = paths.get(source_cohort_name)
+        if source_cohort_path is None:
+            raise ValueError("frozen source configuration reference is missing")
+        source_cohort = _read_json(source_cohort_path)
+        configuration = source_cohort.get("configuration_snapshot")
+        if (
+            not isinstance(configuration, dict)
+            or configuration.get("figure_caption_enabled") is not False
+        ):
+            raise ValueError(
+                "frozen source figure-caption configuration is unsupported"
+            )
+
+    if state.get("kind") == "analysis_checkpoint":
+        return _report_payload_from_frozen_state(
+            payload_data,
+            expected_sha256=expected_sha,
+            label=case_label,
+        )
+    if state.get("kind") == "analysis_checkpoint_reconstruction":
+        require_caption_generation_disabled()
+        analysis_state = (
+            checkpoint.get("payload", {}).get("analysis")
+            if isinstance(checkpoint.get("payload"), dict)
+            else None
+        )
+        source_artifacts = (
+            analysis_state.get("artifacts_payload")
+            if isinstance(analysis_state, dict)
+            else None
+        )
+        source_artifact_sha = str(state.get("source_artifact_canonical_sha256") or "")
+        if (
+            not isinstance(source_artifacts, dict)
+            or sha256_json(source_artifacts) != source_artifact_sha
+            or source_artifact_sha
+            != str(case.get("original_artifact_canonical_sha256") or "")
+        ):
+            raise ValueError("analysis checkpoint artifact identity does not match")
+        source_payload = _report_payload_from_frozen_state(
+            payload_data,
+            expected_sha256=str(state.get("source_payload_sha256") or ""),
+            label=f"{case_label} production analysis state",
+        )
+        normalized = normalize_report(source_payload, case_ctx)
+        if sha256_json(normalized.to_dict()) != expected_sha:
+            raise ValueError(f"{case_label} reconstructed ReportPayload hash mismatch")
+        return normalized
+    if state.get("kind") != "selection_checkpoint_reconstruction":
+        raise ValueError("frozen case pre-repair state kind is unsupported")
+
+    payload = _report_payload_from_frozen_state(
+        payload_data,
+        expected_sha256=str(state.get("selection_payload_sha256") or ""),
+        label=f"{case_label} selection",
+    )
+    source_checkpoint = checkpoint.get("payload")
+    source_state = (
+        source_checkpoint.get("source") if isinstance(source_checkpoint, dict) else None
+    )
+    title_resolution = (
+        source_state.get("title_resolution") if isinstance(source_state, dict) else None
+    )
+    source_title = (
+        str(title_resolution.get("title") or "").strip()
+        if isinstance(title_resolution, dict)
+        else ""
+    )
+
+    taxonomy = state.get("taxonomy_ids")
+    categories = state.get("category_ids")
+    if (
+        not isinstance(taxonomy, list)
+        or not all(isinstance(item, str) and item for item in taxonomy)
+        or not isinstance(categories, list)
+        or not all(isinstance(item, str) and item for item in categories)
+    ):
+        raise ValueError("frozen case taxonomy or category stage outputs are invalid")
+    source_state_db_name = str(state.get("source_state_db_file") or "")
+    if not source_state_db_name or source_state_db_name not in paths:
+        raise ValueError("frozen taxonomy and category source database is missing")
+    stage_provenance = state.get("stage_output_provenance")
+    if stage_provenance != {
+        "category_ids_stage": "category_fit",
+        "region_and_time_period_input": "report_context",
+        "taxonomy_ids_stage": "taxonomy",
+        "taxonomy_and_category_stage_records_file": source_state_db_name,
+    }:
+        raise ValueError("frozen taxonomy and category stage provenance is invalid")
+    if not isinstance(report_context.get("region"), str) or not isinstance(
+        report_context.get("time_period"), str
+    ):
+        raise ValueError("frozen report context region or time period is missing")
+
+    require_caption_generation_disabled()
+
+    source_publisher = str(state.get("source_publisher") or "").strip()
+    doc_map = evidence_packs.get("doc_map")
+    if not isinstance(doc_map, dict):
+        raise ValueError("frozen doc map is missing")
+    artifact_doc_map = dict(doc_map)
+    if source_publisher:
+        artifact_doc_map["publisher"] = source_publisher
+    doc_map_title, resolved_publisher, _, _ = resolve_doc_map_metadata(artifact_doc_map)
+
+    payload.taxonomy = list(taxonomy)
+    payload.categories = list(categories)
+    payload.region = report_context["region"]
+    payload.time_period = report_context["time_period"]
+    if doc_map_title and not source_title:
+        payload.title = doc_map_title
+    if source_publisher:
+        payload.publisher = source_publisher
+    elif resolved_publisher:
+        payload.publisher = resolved_publisher
+
+    normalized = normalize_report(payload, case_ctx)
+    if sha256_json(normalized.to_dict()) != expected_sha:
+        raise ValueError(f"{case_label} reconstructed ReportPayload hash mismatch")
+    return normalized
+
+
+def _verify_reconstructed_analysis_payload(
+    *,
+    case: dict[str, Any],
+    paths: dict[str, Path],
+    state: dict[str, Any],
+    merged_payload: ReportPayload,
+) -> None:
+    if state.get("kind") != "analysis_checkpoint_reconstruction":
+        return
+    input_name = str(state.get("input_file") or "")
+    checkpoint_path = paths.get(input_name)
+    if checkpoint_path is None:
+        raise ValueError("frozen analysis checkpoint reference is missing")
+    checkpoint = _read_json(checkpoint_path)
+    normalized_data = _pointer_value(
+        checkpoint, state.get("normalized_payload_pointer")
+    )
+    source_normalized = _report_payload_from_frozen_state(
+        normalized_data,
+        expected_sha256=str(state.get("source_normalized_payload_sha256") or ""),
+        label=f"{case.get('case_id') or 'case'} persisted normalized payload",
+    ).to_dict()
+    replay_normalized = merged_payload.to_dict()
+    # These two fields name resources from the original run. The replay uses
+    # its own isolated vector/evidence resources; all semantic payload fields
+    # must remain byte-for-byte equivalent after canonical serialization.
+    for field_name in ("_evidence_packs", "_vector_store_id"):
+        source_normalized.pop(field_name, None)
+        replay_normalized.pop(field_name, None)
+    if source_normalized != replay_normalized:
+        raise ValueError("reconstructed payload differs from persisted analysis state")
+
+
+def _preflight_benchmark_cases(
+    cases: list[Any], workspace: Path, root_ctx: RunContext
+) -> list[dict[str, Any]]:
+    required_evidence = {
+        "doc_map",
+        "findings",
+        "limitations",
+        "methods",
+        "quote_candidates",
+        "scope",
+    }
+    prepared_cases: list[dict[str, Any]] = []
+    for case in cases:
+        if not isinstance(case, dict):
+            raise ValueError("frozen benchmark case must be an object")
+        paths, _ = _case_paths(case, workspace)
+        artifacts = _read_json(paths["artifacts"])
+        evidence_packs = {
+            name: _read_json(paths[name]) for name in required_evidence if name in paths
+        }
+        if set(evidence_packs) != required_evidence:
+            raise ValueError("frozen benchmark evidence pack set is incomplete")
+        report_context = _read_json(paths["report_context"])
+        initial_validation = _validation_report(_read_json(paths["initial_validation"]))
+        report_id = str(case.get("report_id") or "")
+        if not report_id:
+            raise ValueError("frozen benchmark report identity is missing")
+        case_ctx = replace(
+            root_ctx,
+            task_id=f"report:{report_id}",
+            span_id=f"report:{report_id}",
+            report_id=report_id,
+            source_identity_id=str(case.get("source_identity_id") or ""),
+            publisher_id=str(
+                case.get("publisher_id") or report_context.get("publisher") or ""
+            ),
+        )
+        base_payload = _pre_repair_base_payload(
+            case=case,
+            paths=paths,
+            report_context=report_context,
+            evidence_packs=evidence_packs,
+            case_ctx=case_ctx,
+        )
+        initial_payload = merge_artifacts_into_payload(
+            deepcopy(base_payload), artifacts
+        )
+        state = case.get("pre_repair_state")
+        if not isinstance(state, dict):
+            raise ValueError("frozen case pre-repair state is missing")
+        if sha256_json(initial_payload.to_dict()) != str(
+            state.get("merged_canonical_sha256") or ""
+        ):
+            raise ValueError("frozen merged pre-repair ReportPayload hash mismatch")
+        _verify_reconstructed_analysis_payload(
+            case=case,
+            paths=paths,
+            state=state,
+            merged_payload=initial_payload,
+        )
+        _ensure_report_payload_complete(
+            initial_payload,
+            artifacts=artifacts,
+            ctx=case_ctx,
+            file_id=report_id,
+            stage="benchmark_preflight",
+        )
+        prepared_cases.append(
+            {
+                "case": case,
+                "paths": paths,
+                "artifacts": artifacts,
+                "evidence_packs": evidence_packs,
+                "report_context": report_context,
+                "initial_validation": initial_validation,
+                "case_ctx": case_ctx,
+                "base_payload": base_payload,
+                "initial_payload": initial_payload,
+            }
+        )
+    return prepared_cases
+
+
 def replay_benchmark(
     *,
     manifest_path: Path,
@@ -253,6 +589,7 @@ def replay_benchmark(
         policy_hash=policy_hash,
         implementation_sha=implementation_sha,
     )
+    prepared_cases = _preflight_benchmark_cases(cases, workspace, root_ctx)
     create_validation_run_manifest(
         ValidationRunManifestCreateRequest(
             schema_version="1.0",
@@ -271,47 +608,19 @@ def replay_benchmark(
     validation_model_client, regeneration_model_client = _build_repair_model_clients(
         isolated_settings
     )
-    for case in cases:
-        if not isinstance(case, dict):
-            raise ValueError("frozen benchmark case must be an object")
-        paths, _ = _case_paths(case, workspace)
-        artifacts = _read_json(paths["artifacts"])
-        evidence_names = (
-            "doc_map",
-            "findings",
-            "limitations",
-            "methods",
-            "quote_candidates",
-            "scope",
-        )
-        evidence_packs = {
-            name: _read_json(paths[name]) for name in evidence_names if name in paths
-        }
-        required_evidence = {
-            "doc_map",
-            "findings",
-            "limitations",
-            "methods",
-            "quote_candidates",
-            "scope",
-        }
-        if set(evidence_packs) != required_evidence:
-            raise ValueError("frozen benchmark evidence pack set is incomplete")
-        report_context = _read_json(paths["report_context"])
-        initial_validation = _validation_report(_read_json(paths["initial_validation"]))
-        report_id = str(case.get("report_id") or "")
+    for prepared in prepared_cases:
+        case = prepared["case"]
+        artifacts = prepared["artifacts"]
+        evidence_packs = prepared["evidence_packs"]
+        report_context = prepared["report_context"]
+        initial_validation = prepared["initial_validation"]
+        case_ctx = prepared["case_ctx"]
+        base_payload = prepared["base_payload"]
+        report_id = str(case["report_id"])
         report_slug = slugify(str(case.get("report_slug") or report_id))
         source_identity_id = str(case.get("source_identity_id") or "")
         publisher_id = str(
             case.get("publisher_id") or report_context.get("publisher") or ""
-        )
-        case_ctx = replace(
-            root_ctx,
-            task_id=f"report:{report_id}",
-            span_id=f"report:{report_id}",
-            report_id=report_id,
-            source_identity_id=source_identity_id,
-            publisher_id=publisher_id,
         )
         runtime = ReportRuntimeState(
             schema_version="1.0",
@@ -338,23 +647,6 @@ def replay_benchmark(
             source_report_name=str(report_context.get("title") or report_slug),
             source_url=str(report_context.get("source_url") or ""),
         )
-        initial_payload = base_payload(
-            title=runtime.report_title,
-            contents_page_number=0,
-            contents_heading="",
-            contents_image="",
-        )
-        initial_payload.publisher = runtime.publisher_name
-        initial_payload.source = runtime.source_url
-        initial_payload.region = str(report_context.get("region") or "")
-        initial_payload.time_period = str(report_context.get("time_period") or "")
-        raw_categories = artifacts.get("categories")
-        initial_payload.categories = (
-            [str(value) for value in raw_categories if str(value)]
-            if isinstance(raw_categories, list)
-            else []
-        )
-        initial_payload = merge_artifacts_into_payload(initial_payload, artifacts)
         dependencies.analysis_store_pack(
             AnalysisStorePackRequest(
                 schema_version="1.0",
@@ -376,7 +668,7 @@ def replay_benchmark(
         ) = _run_validation_regeneration_loop(
             runtime=runtime,
             mode_ctx=case_ctx,
-            base_payload=initial_payload,
+            base_payload=base_payload,
             current_artifacts=artifacts,
             current_validation_report=initial_validation,
             evidence_packs=evidence_packs,
@@ -385,7 +677,7 @@ def replay_benchmark(
                 if isinstance(artifacts.get("source_status"), dict)
                 else {}
             ),
-            category_labels=initial_payload.categories,
+            category_labels=base_payload.categories,
             vector_store_id=None,
             dependencies=dependencies,
             validation_openai_client=validation_model_client,

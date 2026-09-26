@@ -152,6 +152,28 @@ def _report_payload_from_dict(raw_payload: object) -> ReportPayload:
                     generated_caption=str(raw_asset.get("generated_caption") or ""),
                     display_caption=str(raw_asset.get("display_caption") or ""),
                     caption_source=str(raw_asset.get("caption_source") or ""),
+                    crop_qa_score=float(raw_asset.get("crop_qa_score") or 0.0),
+                    crop_qa_defects=[
+                        str(item)
+                        for item in raw_asset.get("crop_qa_defects", [])
+                        if str(item)
+                    ],
+                    crop_qa_detector_summary={
+                        str(key): float(value)
+                        for key, value in dict(
+                            raw_asset.get("crop_qa_detector_summary") or {}
+                        ).items()
+                    },
+                    crop_qa_accepted=bool(raw_asset.get("crop_qa_accepted", False)),
+                    crop_qa_sidecar_path=str(
+                        raw_asset.get("crop_qa_sidecar_path") or ""
+                    ),
+                    crop_quality_profile=str(
+                        raw_asset.get("crop_quality_profile") or ""
+                    ),
+                    crop_rejection_reason=str(
+                        raw_asset.get("crop_rejection_reason") or ""
+                    ),
                     schema_version=str(raw_asset.get("schema_version") or "1.0"),
                 )
             )

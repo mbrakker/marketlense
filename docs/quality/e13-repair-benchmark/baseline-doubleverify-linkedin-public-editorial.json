@@ -3,9 +3,9 @@
     "configuration_hash": "47b71263f508f11df421778f8e7c06024cd7ba6f436ddd34cdd7e0c741a4542f",
     "policy_hash": "f8b1f2c157a7b342bd7949122cb349ebc808fcd480abfc75b5c47fab458b4ebd",
     "producer_build_identity": "c89e1af249be771acb515a8d255f56c43c4b359c",
+    "repair_response_schema_identity": "unavailable",
     "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
-    "validator_identity": "unavailable",
-    "repair_response_schema_identity": "unavailable"
+    "validator_identity": "unavailable"
   },
   "baseline_usage": {
     "attribution": "unavailable",
@@ -389,12 +389,54 @@
           "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/dv-qualityandattentionbenchmark-q1-2026-pdf/report_analysis/scope.json",
           "sha256": "13594398158dab820b82e16d7a82cf08e645a01f50869330db579bc52d53a6e2"
         },
+        "selection_checkpoint": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/output/.checkpoints/report_generation/cohort-e854b71d6fb10333b47f/selection_complete.json",
+          "sha256": "8905f6382ee415d44cb484495a8a101f28b177ba04a01819b7f2ee2e124cee9b"
+        },
+        "source_cohort": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/cohort/source.json",
+          "sha256": "c728fb327568cd3e90400f861c2a372091554aeb72e7979db7c36fdbb45845da"
+        },
         "source_run_result": {
           "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/result.json",
           "sha256": "849e89e707dbc9d1f561c5c042ee7e5e8dec0942867540d4b255614569f7f63a"
+        },
+        "source_state_db": {
+          "path": "tmp/doubleverify-closure-canary-20260925/ias-first-attempt-kua5gsl0/state/reports.sqlite",
+          "sha256": "651a89fdeeb7dc9d1eb85932dd855546be814538dda2751bb7f573f30d2affdc"
         }
       },
       "original_artifact_canonical_sha256": "003afdca595e7a8f7bead4e437a130b9641e648e3fd1a5f216b3f380cd830407",
+      "pre_repair_state": {
+        "canonical_sha256": "1a500700ae888f29a735b4ae2ffecf8dcfb728f92b84c0461006fe57033801d9",
+        "category_ids": [
+          "advertising_media"
+        ],
+        "input_file": "selection_checkpoint",
+        "kind": "selection_checkpoint_reconstruction",
+        "merged_canonical_sha256": "9922f5f9b329ec926c86a515a0647badbb3fdf224074f778c907a5aa1b91536a",
+        "payload_pointer": [
+          "payload",
+          "selection",
+          "payload"
+        ],
+        "selection_payload_sha256": "afeb98bf456f1655bbb975b21e11eebb54f72a8cd0756ccc2f0034af3cd11fba",
+        "source_cohort_file": "source_cohort",
+        "source_publisher": "",
+        "source_state_db_file": "source_state_db",
+        "stage_output_provenance": {
+          "category_ids_stage": "category_fit",
+          "region_and_time_period_input": "report_context",
+          "taxonomy_and_category_stage_records_file": "source_state_db",
+          "taxonomy_ids_stage": "taxonomy"
+        },
+        "taxonomy_ids": [
+          "ad_equity_and_brand_lift_measurement",
+          "consumer_attention",
+          "media_channels_performance",
+          "media_quality"
+        ]
+      },
       "publisher_id": "DoubleVerify",
       "report_id": "cohort-e854b71d6fb10333b47f",
       "report_slug": "dv-qualityandattentionbenchmark-q1-2026-pdf",
@@ -403,7 +445,7 @@
     }
   ],
   "frozen": true,
-  "manifest_sha256": "a586f229704a04aa2ebdda6bbcd5bdf7de74974bd15b5405ad64fbd5b8fc7363",
-  "schema_version": "1.0",
+  "manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+  "schema_version": "2.0",
   "source_run_git_sha": "c89e1af249be771acb515a8d255f56c43c4b359c"
 }

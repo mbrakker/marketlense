@@ -13,9 +13,9 @@ in their isolated local run storage.
 
 | Manifest | Cases | Covered failure classes | Baseline success@3 | Baseline usage |
 | --- | ---: | --- | ---: | --- |
-| [`baseline-a21-five.json`](baseline-a21-five.json) (`d23482c46e0d8498bdf5dd0727472dfbc5c8da17d80443fba2ab43a0d68f12c4`) | 5 | summary, insight/metric, quote, Expert View, LinkedIn | 0/5 | 32 calls, 235,970 input + 51,700 output tokens, USD 0.109236; attempt-level attribution unavailable |
-| [`baseline-mobile-editorial.json`](baseline-mobile-editorial.json) (`83b73c0b8fd0fe9dd6e54450fe7db132f5aea9c0bb495b7a01631dbdb0c4c428`) | 1 | summary, insight/metric, Expert View, public-editorial hard failure | 0/1 | 11 calls, 119,933 input + 23,322 output tokens, USD 0.051973; attempt-level attribution unavailable |
-| [`baseline-doubleverify-linkedin-public-editorial.json`](baseline-doubleverify-linkedin-public-editorial.json) (`a586f229704a04aa2ebdda6bbcd5bdf7de74974bd15b5405ad64fbd5b8fc7363`) | 1 | summary, insight/metric, Expert View, LinkedIn, public-editorial hard failure | 0/1 | unavailable; no repair-attributable usage ledger was retained |
+| [`baseline-a21-five.json`](baseline-a21-five.json) (`b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740`) | 5 | summary, insight/metric, quote, Expert View, LinkedIn | 0/5 | 32 calls, 235,970 input + 51,700 output tokens, USD 0.109236; attempt-level attribution unavailable |
+| [`baseline-mobile-editorial.json`](baseline-mobile-editorial.json) (`70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9`) | 1 | summary, insight/metric, Expert View, public-editorial hard failure | 0/1 | 11 calls, 119,933 input + 23,322 output tokens, USD 0.051973; attempt-level attribution unavailable |
+| [`baseline-doubleverify-linkedin-public-editorial.json`](baseline-doubleverify-linkedin-public-editorial.json) (`a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a`) | 1 | summary, insight/metric, Expert View, LinkedIn, public-editorial hard failure | 0/1 | unavailable; no repair-attributable usage ledger was retained |
 
 These manifests are deliberately separate. Their configuration, policy,
 schema, validator, and build identities do not form one compatible baseline.
@@ -26,6 +26,37 @@ repair-response schema did not exist at any of these source commits, so its
 historical identity is explicitly `unavailable`. The current aggregate schema
 identity includes that response schema, which keeps every historical
 comparison fail-closed.
+
+## Pre-repair payload inputs
+
+Manifest schema 2.0 pins the production state needed to recreate the payload
+passed to the repair loop. Five cases have an `analysis_complete` checkpoint
+whose retained `analysis.payload` contains the original payload before
+normalization and whose `artifacts_payload` hash matches the frozen original
+artifacts. Replay decodes every `ReportPayload` field losslessly and calls the
+production `normalize_report()` function. It also verifies the merged result
+against the same checkpoint's persisted `normalized_payload`, ignoring only
+the original run's vector-store ID and evidence-pack paths, which belong to the
+isolated source run.
+
+The mobile and DoubleVerify cases stopped before an analysis checkpoint was
+written. Their manifests pin the earliest retained selection checkpoint,
+report context, doc map, source-run configuration, and source SQLite database.
+The frozen taxonomy and category stage outputs come from that database; replay
+applies the production metadata resolution and normalization steps to the
+selection payload. The source configuration pins figure-caption generation as
+disabled, so reconstruction has no missing model-generated caption step.
+
+All checkpoint, context, doc-map, configuration, database, artifact, and
+evidence references are workspace-local and SHA-256 checked. Canonical hashes
+pin both the reconstructed base payload and its artifact-merged form. Required
+top-level and nested `ReportPayload` fields must round-trip exactly through the
+production checkpoint decoder. A missing field, changed figure state, source
+hash mismatch, or production completeness failure stops the entire cohort
+preflight before any repair model clients are built. The replay then passes the
+unmerged pre-repair base payload and original artifacts into the existing
+validation-regeneration loop; production validation, evidence, semantic,
+editorial, scope, promotion, rollback, and retry limits remain in force.
 
 ## Measurement status
 
@@ -44,7 +75,7 @@ the existing deterministic patch checks. The scorecard retains its normal
 validation, evidence, mutation-scope, promotion, and rollback gates. It does
 not author replacement copy or raise the configured retry limit.
 
-## Final measurement disposition — 2026-09-26
+## Prior measurement disposition — 2026-09-26, implementation SHA `09df2bac76111e44b8e811337c83a1995c791954`
 
 The implementation was replayed at exact SHA
 `09df2bac76111e44b8e811337c83a1995c791954`. The A21 replay stopped in its
@@ -78,14 +109,16 @@ latency, class coverage, failed-run usage, command outcomes, and the exact
 acceptance disposition: [2026-09-26 result](results/2026-09-26-09df2bac.json)
 (SHA-256 `1cf12dc7a0a09ae4ea69cd46cfdcc155d9b8052b80a015c923b42c8598a71e6b`).
 
-The isolated discovery-to-publish readiness canary passed on the same SHA in
-one attempt and ended at `awaiting_review`; validation and publication
-readiness passed, and publication remained disabled. It did not exercise
-repair and is not counted in repair metrics.
+The isolated discovery-to-publish readiness canary passed on that SHA in one
+attempt and ended at `awaiting_review`; validation and publication readiness
+passed, and publication remained disabled. It did not exercise repair and is
+not counted in repair metrics. The missing payload inputs are now pinned in
+the schema 2.0 manifests above; a new exact-SHA replay is required before
+updating E13's current measurement disposition.
 
 E13 remains **Active**. Closure requires a retained complete pre-repair
-`ReportPayload` for each immutable case, followed by a same-corpus replay on a
-new exact implementation SHA. Until then, the quantitative repair criteria are
-not demonstrated. The quality check `check_documentation.py --check-generated`
-also continues to report 12 pre-existing stale line anchors in
-`simplification.md`; none point to files changed for this work.
+`ReportPayload` for each immutable case and evidence that the quantitative
+closure criteria pass. The quality check
+`check_documentation.py --check-generated` also reported 12 pre-existing stale
+line anchors in `simplification.md`; none point to files changed for this
+work.

@@ -545,6 +545,46 @@ def test_repair_scorecard_pairs_a_frozen_baseline_denominator(
     assert scorecard.residual_odds_reduction_state == "unbounded"
     assert scorecard.baseline_usage_attribution == "unavailable"
 
+    baseline_manifest["schema_version"] = "2.0"
+    version_two_body = {
+        key: value
+        for key, value in baseline_manifest.items()
+        if key != "manifest_sha256"
+    }
+    baseline_manifest["manifest_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                version_two_body,
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(baseline_manifest), encoding="utf-8")
+    version_two = build_validation_reliability_artifact(request, _ctx())
+    assert version_two.repair_scorecard.benchmark_denominator_complete is True
+
+    baseline_manifest["schema_version"] = "1.0"
+    version_one_body = {
+        key: value
+        for key, value in baseline_manifest.items()
+        if key != "manifest_sha256"
+    }
+    baseline_manifest["manifest_sha256"] = hashlib.sha256(
+        (
+            json.dumps(
+                version_one_body,
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+    manifest_path.write_text(json.dumps(baseline_manifest), encoding="utf-8")
+
     second["allowed_paths"] = ["summary.tldr", "expert_comment"]
     second_path = (
         audit_root

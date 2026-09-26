@@ -1204,7 +1204,10 @@ def _read_repair_benchmark_manifest(path: Path) -> tuple[dict[str, Any] | None, 
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None, ""
-    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+    if not isinstance(payload, dict) or payload.get("schema_version") not in {
+        "1.0",
+        "2.0",
+    }:
         return None, ""
     declared_hash = _safe_hash(payload.get("manifest_sha256"))
     body = {key: value for key, value in payload.items() if key != "manifest_sha256"}

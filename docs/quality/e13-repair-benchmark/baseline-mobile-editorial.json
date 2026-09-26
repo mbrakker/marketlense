@@ -3,9 +3,9 @@
     "configuration_hash": "effca08c7bf4e1541b4d2e1956ec732e964aef50c8b5ab5bdbc34d1f35154324",
     "policy_hash": "ce319973c2cc0369633fdf5822e15328cc3d93cd212e7586daf30b03c19fb6c1",
     "producer_build_identity": "2a1579a84c9b3180a1f4d48322d5c5cf10f33f5a",
+    "repair_response_schema_identity": "unavailable",
     "schema_identity_sha256": "96dad8f5eb670505c66014ccef1c06f77d67a93e099c1e1684982bfa359ff808",
-    "validator_identity": "unavailable",
-    "repair_response_schema_identity": "unavailable"
+    "validator_identity": "unavailable"
   },
   "baseline_usage": {
     "attribution": "available",
@@ -455,9 +455,57 @@
         "scope": {
           "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/mobile-app-trends-2026-pdf/report_analysis/scope.json",
           "sha256": "c664eaf85d49771cc3c3c2c0ef477b19aab5e7705f31e933db9f4c0aa184fc4c"
+        },
+        "selection_checkpoint": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/output/.cp/344c4f14be29/66fb4508f80b/e5a1c1f82b67.json",
+          "sha256": "3e54550ffd10134576fbbbc8dd0ba0fa74908ae2f1014ff23af14c74f8627d44"
+        },
+        "source_cohort": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/cohort/source.json",
+          "sha256": "f71c8338b1568baf65c149cffa5ce94a146e87a395b43ad0845bd0d3b9849525"
+        },
+        "source_state_db": {
+          "path": "tmp/reliability-replay-20260920-soft-copy-finalization-r2/ias-first-attempt-y5hubkeo/state/reports.sqlite",
+          "sha256": "06bbee962c195b04ef2764f5b02e132a52e4b30380b533a7655929ce65042ad7"
         }
       },
       "original_artifact_canonical_sha256": "15510a644a712ab6c3a62ab018f17c3e5fb138605b203c39595520fbd257abf8",
+      "pre_repair_state": {
+        "canonical_sha256": "87290b931c74d55b0bd144bdf7f081bf5cec2db4aef0e46b0f8bfa4c37c7efa4",
+        "category_ids": [
+          "ai_automation",
+          "measurement_attribution",
+          "omni_channel"
+        ],
+        "input_file": "selection_checkpoint",
+        "kind": "selection_checkpoint_reconstruction",
+        "merged_canonical_sha256": "70c183154983aaed45fcfe22d1981b81a66b5643531855fcf403fb8715c91829",
+        "payload_pointer": [
+          "payload",
+          "selection",
+          "payload"
+        ],
+        "selection_payload_sha256": "514b56eb5179ee16fc8360fe37b6db0d8c7bb732f292909d0bafe9e75931039f",
+        "source_cohort_file": "source_cohort",
+        "source_publisher": "",
+        "source_state_db_file": "source_state_db",
+        "stage_output_provenance": {
+          "category_ids_stage": "category_fit",
+          "region_and_time_period_input": "report_context",
+          "taxonomy_and_category_stage_records_file": "source_state_db",
+          "taxonomy_ids_stage": "taxonomy"
+        },
+        "taxonomy_ids": [
+          "ai",
+          "app_downloads",
+          "consumer_behavior",
+          "cross_channel",
+          "ecommerce",
+          "mobile_gaming",
+          "tech_trends",
+          "technology"
+        ]
+      },
       "publisher_id": "Adjust",
       "report_id": "cohort-b638414df0b1fccea1cd",
       "report_slug": "mobile-app-trends-2026-pdf",
@@ -479,6 +527,6 @@
     "source_usage_db_sha256": "0abf0c8e69b4338fb59d5b2865770501ef4afec83100bb2767f47a540d2d2be2"
   },
   "frozen": true,
-  "manifest_sha256": "83b73c0b8fd0fe9dd6e54450fe7db132f5aea9c0bb495b7a01631dbdb0c4c428",
-  "schema_version": "1.0"
+  "manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+  "schema_version": "2.0"
 }
