@@ -167,6 +167,45 @@ older scorecards; use the three explicit counters for current classification.
 Historical audits without category or deterministic-validation telemetry keep
 those newer measurements unavailable rather than assigning zero.
 
+## 2026-09-27 atomic summary path disposition — implementation SHA `a572ab89cb74c2c480d473e00d159d8f45869651`
+
+The planner now separates summary claim-map leaves from public-copy field
+targets before provider invocation. A map-claim request exposes its selected
+item and exact `allowed_paths`; the existing repair-decision and candidate
+scope validators reject paths outside that set. The atomic summary tests also
+verify unchanged sibling claims and public copy, rejection of whole-summary
+replacement, and audit retention of planned and applied paths.
+
+The fresh IAS canary completed one isolated workflow attempt with publication
+disabled. Its current hard finding was `numbers` on `expert_comment`; summary
+findings were warnings and produced no summary repair target. Reconstructing
+the production planner from the retained initial artifacts and validation
+report yields `expert_comment[claim_index=0]`. The run stopped before candidate
+audit or candidate validation at
+`regeneration_repair_decision_invalid / patch_value_over_broad`. No candidate
+changed-path or applied-patch arrays were retained for that rejected decision,
+and no candidate artifact was promoted. This IAS run therefore does not replay
+the earlier summary-target failure. Full canary and replay measurements are in
+the [2026-09-27 result](results/2026-09-27-a572ab89.json); the isolated run
+files remain under ignored `tmp/e13-summary-a572ab89/`.
+
+The unchanged seven-case frozen corpus produced three currently reproducible
+cases and four no-longer-reproducible cases. Success@1 and success@3 remain
+0/3 (0.0), with zero candidate promotions. The prior replay was 0/4; the
+denominator differs because the attachment case is no longer reproducible.
+Out-of-scope mutation attempts fell from 6 to 4, introduced scope-violation
+occurrences fell from 41 to 25, protected-field incompleteness remained zero,
+and provenance/lineage introductions fell from 2 to 1. E13 remains active.
+The currently reproducible E13 plans target an insight or Expert View claim;
+they do not select a summary claim-map target, so the focused summary contract
+tests remain the direct evidence for this path change.
+
+Verification at the implementation SHA: 193 focused atomic/repair tests and
+167 broader validation tests passed. The prompt, fixture, and LLM suite passed
+40 tests, and the prompt fixture regression gate passed within its configured
+token tolerance. The report-analysis planner suite had six failures; the same
+six tests failed on the parent commit, while 33 tests passed on this revision.
+
 ## Measurement status
 
 The implementation commit must be measured after it is committed, using its
