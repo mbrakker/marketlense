@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "run_directory": "tmp/retained-grounding-cohort-20260927-groundingfix-final-v2/frozen-reliability-422vloqh",
+  "implementation_sha": "361db2301f5aada6ad2228c5cab937035b4a77b9",
+  "source_manifest": {
+    "path": "scripts/quality/frozen_reliability_cohort_20.json",
+    "sha256": "21a9a1b995d10b5add412780d96930ecc29bafd082907ecbf0741c80be841a07"
+  },
+  "run_status": "interrupted_partial",
+  "cohort_result_present": false,
+  "source_ingest": {
+    "succeeded": 13,
+    "pending": 7,
+    "succeeded_members": [
+      {"report_id": "cohort-b638414df0b1fccea1cd", "publisher": "Adjust"},
+      {"report_id": "cohort-86858bdcb370266f26c2", "publisher": "Algolia"},
+      {"report_id": "cohort-77bc67b2bc98187d9d58", "publisher": "Bain & Company"},
+      {"report_id": "cohort-0a019f840c3f89ad0a96", "publisher": "Bigcommerce"},
+      {"report_id": "cohort-81af3890cd84ece81ef1", "publisher": "Capgemini Research Institute"},
+      {"report_id": "cohort-076eca6d31e0c1dcddf0", "publisher": "Contentstack"},
+      {"report_id": "cohort-9b97626fc83c086961a7", "publisher": "DHL eCommerce"},
+      {"report_id": "cohort-2acb4a56e14add5d7717", "publisher": "KPMG"},
+      {"report_id": "cohort-11b0b55157f7d0636815", "publisher": "Merchant Risk Council"},
+      {"report_id": "cohort-b3cb5f66cccda4420be2", "publisher": "Mintel"},
+      {"report_id": "cohort-5ceb3b4498de7288ce5a", "publisher": "Robeco"},
+      {"report_id": "cohort-f1652970000cfe246c94", "publisher": "SimilarWeb"},
+      {"report_id": "cohort-8ef1021c332aa85ba008", "publisher": "StackAdapt Inc."}
+    ]
+  },
+  "workflow_jobs_at_interruption": {
+    "report_selection": {"succeeded": 10, "dead_letter": 2},
+    "report_analysis": {"succeeded": 6, "dead_letter": 2, "running": 1},
+    "report_render": {"dead_letter": 6},
+    "publication_jobs": 0,
+    "publication_readiness_records": 0,
+    "published_records": 0
+  },
+  "candidate_grounding_packages": {
+    "count": 9,
+    "readiness_status": "not_publishable_for_all_packages",
+    "unsupported_factual_count": 2,
+    "unresolved_factual_count": 135,
+    "interpretation": "Intermediate candidate totals, not a completed cohort publication decision."
+  },
+  "validation_artifacts": {
+    "status_counts": {"pass": 5, "fail": 4},
+    "issue_counts_by_rule": {
+      "artifact_quality": 39,
+      "family_confidence": 11,
+      "grounding": 7,
+      "metrics": 2,
+      "numbers": 3,
+      "public_editorial_quality.duplicate_insight": 1
+    }
+  },
+  "confirmed_false_positive_finding": {
+    "report_id": "cohort-86858bdcb370266f26c2",
+    "publisher": "Algolia",
+    "claim_id": "soft_copy:linkedin_post:ed49ac9a3568d4e5",
+    "rule_id": "numbers",
+    "affected_section": "linkedin_post",
+    "evidence_ids": ["f1"],
+    "source_page": "printed p.9 (PDF page 10)",
+    "source_text": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+    "rejected_values": [42, 34],
+    "cause": "Every explicit year in the sentence, including the 2026 report edition year, was attached to both percentage quantities.",
+    "focused_regression": "Pass for 42% in 2025 versus 34% in 2024; a changed 35% in 2023 remains rejected."
+  },
+  "provider_usage": {
+    "calls": 315,
+    "input_tokens": 2942955,
+    "output_tokens": 385587,
+    "estimated_cost_usd": 0.479478,
+    "last_usage_event_utc": "2026-09-27T20:11:53.765183+00:00"
+  },
+  "future_default_manifest_preflight": {
+    "manifest_path": "scripts/quality/frozen_reliability_cohort_10.json",
+    "manifest_sha256": "190cff0d3ec7b80190bb7b8791ba4255081278aedf0433bed542c1216694fda6",
+    "cohort_size": 10,
+    "admitted": 10,
+    "provider_calls": 0,
+    "estimated_cost_usd": 0,
+    "validation_scope": "component admission preflight only; not end-to-end report validation",
+    "preflight_directory": "tmp/frozen-reliability-10-preflight-20260927/frozen-reliability-preflight-zyiabblt"
+  }
+}

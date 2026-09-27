@@ -18,12 +18,16 @@ from scripts.quality.ias_live_canary_runner import (
     summarize_frozen_cohort_results,
 )
 
+DEFAULT_SOURCES_MANIFEST = Path(__file__).with_name("frozen_reliability_cohort_10.json")
+
 
 def _load_members(manifest_path: Path) -> list[dict[str, Any]]:
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     members = payload.get("members") if isinstance(payload, dict) else None
-    if not isinstance(members, list) or len(members) != 20:
-        raise ValueError("Frozen reliability cohort must contain exactly 20 members")
+    if not isinstance(members, list) or len(members) not in {10, 20}:
+        raise ValueError(
+            "Frozen reliability cohort must contain exactly 10 or 20 members"
+        )
     root = Path(__file__).resolve().parents[2]
     required = {
         "source_path",
@@ -148,7 +152,7 @@ def main() -> int:
     parser.add_argument(
         "--sources-manifest",
         type=Path,
-        default=Path(__file__).with_name("frozen_reliability_cohort_20.json"),
+        default=DEFAULT_SOURCES_MANIFEST,
     )
     parser.add_argument("--runs-root", type=Path, required=True)
     parser.add_argument("--max-duration", type=int, default=7_200)

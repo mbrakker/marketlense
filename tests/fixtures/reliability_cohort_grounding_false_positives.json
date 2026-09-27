@@ -138,6 +138,20 @@
       "classification": "partial_false_positive_plus_unresolved_sample_size"
     },
     {
+      "case_id": "algolia-edition-year-does-not-contaminate-linked-percentages",
+      "report": "Algolia",
+      "claim_id": "soft_copy:linkedin_post:ed49ac9a3568d4e5",
+      "rule_id": "numbers",
+      "kind": "edition_year_quantity",
+      "source_page": "printed p.9 (PDF page 10)",
+      "claim": "One representative lens in the 2026 B2C ecommerce AI trends report is the greater stated focus on user intent: in the 2025 report, 42% of respondents said they were focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence": "The report states: ‘42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.’",
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "findings:f1",
+      "classification": "confirmed"
+    },
+    {
       "case_id": "criteo-94-percent-survey-result",
       "report": "Criteo",
       "claim_id": "soft_copy:summary:72bf43055e321462",

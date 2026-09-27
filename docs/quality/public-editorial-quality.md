@@ -86,8 +86,11 @@ An `index` or `indices` header can identify a following unadorned index value.
 Explicit count nouns such as `countries` and `gainers` keep a count from
 inheriting a nearby percentage unit. Hyphenated measurement units such as
 `28-day` remain time quantities, while compounds such as `first-90-day` retain
-the number without inferring a duration. Extraction still compares the full
-unit and any attached temporal context rather than inferring a metric.
+the number without inferring a duration. Each quantity is associated with its
+nearest explicit temporal expression in the sentence, so an edition year and
+distinct comparison years do not all attach to every value. Equally near time
+expressions remain together, and a clear value or period mismatch remains
+blocking.
 
 Protected-fact quantity dimensions report `compatible` when every explicit
 claim quantity matches linked evidence. A clear one-to-one mismatch remains

@@ -123,6 +123,19 @@ def test_duration_is_one_time_quantity_and_preserves_its_timeframe() -> None:
     assert parsed[0].timeframe == "2024e"
 
 
+def test_percentages_keep_their_nearest_year_in_a_multi_year_sentence() -> None:
+    parsed = extract_quantities(
+        "In the 2026 edition, the 2025 report records 42% for user intent, "
+        "up from 34% in 2024."
+    )
+
+    assert [
+        (quantity.value, quantity.timeframe)
+        for quantity in parsed
+        if quantity.unit_family == "percent"
+    ] == [(42.0, "2025"), (34.0, "2024")]
+
+
 def test_duration_numeric_grounding_rejects_a_different_minute_value() -> None:
     assert _numeric_grounding_match("0:52 in 2024E", "0:52 in 2024E")
     assert not _numeric_grounding_match("0:48 in 2024E", "0:52 in 2024E")

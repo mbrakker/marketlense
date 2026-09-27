@@ -11,6 +11,7 @@ from scripts.quality.ias_live_canary_runner import (
     summarize_frozen_cohort_results,
 )
 from scripts.quality.run_frozen_reliability_cohort import (
+    DEFAULT_SOURCES_MANIFEST,
     _load_members,
     run_frozen_reliability_cohort,
 )
@@ -415,9 +416,41 @@ def test_frozen_manifest_requires_pinned_source_provenance(tmp_path: Path) -> No
     try:
         _load_members(manifest)
     except ValueError as exc:
-        assert "exactly 20 members" in str(exc)
+        assert "exactly 10 or 20 members" in str(exc)
     else:
         raise AssertionError("incomplete frozen manifest was accepted")
+
+
+def test_frozen_manifest_accepts_the_future_ten_report_cohort_size(
+    tmp_path: Path,
+) -> None:
+    members = []
+    for index in range(10):
+        source_path = tmp_path / f"source-{index}.pdf"
+        content = f"future-ten-report-fixture-{index}".encode("utf-8")
+        source_path.write_bytes(content)
+        members.append(
+            {
+                "source_path": str(source_path.resolve()),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Frozen fixture {index}",
+                "landing_page_url": f"https://publisher.example/reports/{index}",
+                "source_page_url": "https://publisher.example/reports",
+                "publisher_name": "Fixture Publisher",
+                "downloaded_at_utc": "2026-09-01T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "cohort.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+
+    loaded = _load_members(manifest)
+
+    assert len(loaded) == 10
+
+
+def test_default_frozen_manifest_contains_ten_reports() -> None:
+    assert len(_load_members(DEFAULT_SOURCES_MANIFEST)) == 10
 
 
 def test_frozen_manifest_rejects_missing_provenance_before_file_access(

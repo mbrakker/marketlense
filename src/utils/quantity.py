@@ -258,7 +258,7 @@ def _extract_spelled_percentages(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.95,
                 raw=match.group(0),
             )
@@ -371,6 +371,28 @@ def infer_timeframe(text: str) -> str:
     return ", ".join(dict.fromkeys(matches))
 
 
+def _timeframe_for_span(text: str, span: tuple[int, int]) -> str:
+    """Attach the nearest explicit timeframe to a quantity's source span."""
+    start, end = span
+    matches = list(_TIMEFRAME_RE.finditer(text))
+    if not matches:
+        return ""
+
+    def distance(match: re.Match[str]) -> int:
+        if match.end() < start:
+            return start - match.end()
+        if match.start() > end:
+            return match.start() - end
+        return 0
+
+    nearest_distance = min(distance(match) for match in matches)
+    return ", ".join(
+        dict.fromkeys(
+            match.group(0) for match in matches if distance(match) == nearest_distance
+        )
+    )
+
+
 def _extract_ranges(text: str) -> List[Quantity]:
     output: List[Quantity] = []
     for match in _RANGE_RE.finditer(text):
@@ -419,7 +441,7 @@ def _extract_ranges(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.9 if canonical_unit else 0.65,
                 raw=match.group(0),
                 low=low_v,
@@ -447,7 +469,7 @@ def _extract_ratios(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.9,
                 raw=match.group(0),
             )
@@ -471,7 +493,7 @@ def _extract_n_equals(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.95,
                 raw=match.group(0),
             )
@@ -496,7 +518,7 @@ def _extract_durations(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.98,
                 raw=match.group(0),
             )
@@ -520,7 +542,7 @@ def _extract_multipliers(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=0.92,
                 raw=match.group(0),
             )
@@ -584,7 +606,7 @@ def _extract_main(text: str) -> List[Quantity]:
                 start=match.start(),
                 end=match.end(),
                 sentence=text,
-                timeframe=infer_timeframe(text),
+                timeframe=_timeframe_for_span(text, match.span()),
                 confidence=confidence,
                 raw=match.group(0),
             )

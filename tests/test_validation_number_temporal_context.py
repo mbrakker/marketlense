@@ -29,6 +29,68 @@ def test_number_rule_keeps_temporal_context_local_to_each_sentence() -> None:
     assert issues == []
 
 
+def test_number_rule_does_not_apply_edition_year_to_linked_percentages() -> None:
+    evidence = (
+        "The report states: “42% of respondents are focusing on using AI to "
+        "better understand user intent, up from 34% in 2024.”"
+    )
+    artifacts = {
+        "summary": {
+            "tldr": (
+                "In the 2025 report, 42% of respondents said they were focusing "
+                "on using AI to better understand user intent, up from 34% in 2024."
+            )
+        },
+        "linkedin_post": (
+            "One representative lens in the 2026 B2C ecommerce AI trends report "
+            "is the greater stated focus on user intent: in the 2025 report, "
+            "42% of respondents said they were focusing on using AI to better "
+            "understand user intent, up from 34% in 2024."
+        ),
+    }
+
+    issues = validate_new_numbers(
+        artifacts=artifacts,
+        insights=[],
+        report=None,  # type: ignore[arg-type]
+        evidence_texts=[evidence],
+    )
+
+    assert not [
+        issue
+        for issue in issues
+        if issue.rule_id == "numbers" and issue.affected_section == "linkedin_post"
+    ]
+
+
+def test_number_rule_still_rejects_a_changed_year_comparison_value() -> None:
+    evidence = (
+        "The 2025 report states that 42% of respondents focus on user intent, "
+        "up from 34% in 2024."
+    )
+    artifacts = {
+        "summary": {"tldr": evidence},
+        "linkedin_post": (
+            "The 2026 edition reviews the 2025 report: 42% of respondents "
+            "focused on user intent, up from 35% in 2023."
+        ),
+    }
+
+    issues = validate_new_numbers(
+        artifacts=artifacts,
+        insights=[],
+        report=None,  # type: ignore[arg-type]
+        evidence_texts=[evidence],
+    )
+
+    assert any(
+        issue.rule_id == "numbers"
+        and issue.affected_section == "linkedin_post"
+        and "Number 35.0 not present" in issue.message
+        for issue in issues
+    )
+
+
 def test_number_rule_keeps_soft_copy_claim_identity_for_targeted_rebinding() -> None:
     sentence = "The retention rate reached 3.0%."
     claim = SoftCopyClaimProvenance(
