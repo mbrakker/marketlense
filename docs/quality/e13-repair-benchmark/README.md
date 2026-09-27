@@ -461,3 +461,67 @@ the canonical workflow continued and completed successfully. E13 remains
 Exact commands, bounded metrics, scorecard hashes, and canary evidence are in
 the [2026-09-27 measurement](results/2026-09-27-bd8f2927.json) (SHA-256
 recorded in its [sidecar](results/2026-09-27-bd8f2927.json.sha256)).
+
+## Atomic soft-copy provenance replay — 2026-09-27, implementation SHA `197ba2d4544a49c2d9050c2ce74811f95b1dc045`
+
+The same seven frozen cases were replayed at the committed provenance repair
+implementation. All three frozen manifest hashes matched. `final-web` and
+`g0` were classified `no_longer_reproducible`: their historical target
+fingerprints were absent from current baseline validation, so neither reached
+repair planning or candidate audit. This is not evidence of a repaired
+candidate. The ebook case remained reproducible but stopped at
+`regeneration_target_item_unchanged`, before candidate validation. The mobile
+editorial case stopped at the same unchanged-target gate.
+
+The DoubleVerify Expert View / LinkedIn case reached three candidate attempts.
+Its candidate audits had no soft-copy provenance-integrity or protected-field
+contract failure. All three attempts rolled back on remaining content checks,
+including metric-label relationship and retained numeric/protected-fact
+support. Candidate semantic/grounding validation made zero provider calls on
+these deterministic rejects. Across the cohort, no audited attempt introduced
+unknown or hallucinated evidence or a provenance/lineage defect; one A21
+attempt introduced an unsupported-claim/evidence failure. The mobile case had
+no candidate audit, so candidate introduction metrics are unavailable there.
+
+| Cohort | Cases | Reproducible | No longer reproducible | Attempts | Success@1 / @3 | Factual introduction attempts: unknown / unsupported / provenance |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| A21 | 5 | 2 | 3 | 2 | 0/2, 0/2 | 0 / 1 / 0 |
+| Mobile editorial | 1 | 1 | 0 | 0 | 0/1, 0/1 | unavailable |
+| DoubleVerify | 1 | 1 | 0 | 3 | 0/1, 0/1 | 0 / 0 / 0 |
+| **Total** | **7** | **4** | **3** | **5** | **0/4, 0/4** | **0 / 1 / 0** |
+
+These are case-level repair-success metrics: no reproducible case met the
+scorecard success condition, even though one A21 candidate had a promoted
+attempt. A21 attributed two repair-model calls, 13,527 input tokens, 1,781
+output tokens, and USD 0.002243. DoubleVerify's aggregate scorecard usage
+attribution was unavailable; its two non-abstention attempt records show two
+repair-model calls, 8,584 input tokens, 821 output tokens, and USD 0.001269.
+The third attempt used safe removal. Across the four model-backed repair
+attempts, the available attempt records total four repair-model calls, 22,111
+input tokens, 2,602 output tokens, and USD 0.003512. Its candidate semantic /
+grounding scorecard reports zero provider calls and three skipped validation
+invocations. Historical and current scorecards are not comparable for usage or
+failure distributions.
+
+The required isolated IAS workflow was run twice with publication disabled;
+neither run passed. The first reached validation pass but failed publication
+readiness at `card_tldr_compact_invalid` (39 provider calls, 249,704 input and
+49,113 output tokens, USD 0.049389). A fresh-state rerun terminated at
+`validation_failed` on grounding for an insight's `so_what` field (38 calls,
+242,095 input and 42,559 output tokens). Both emitted the existing PDF float
+parse warning and published nothing. The second run's candidate audit also
+reported soft-copy provenance integrity issues for Expert View / LinkedIn
+content that was byte-identical before and after the candidate; inspection
+showed claim-validator sentence fragments absent from the material-sentence
+index. This existing segmentation mismatch remains unresolved. The canary's
+terminal failures were the compact-summary gate and insight grounding, and the
+required end-to-end canary remains unpassed.
+
+The exact replay classifications, bounded usage, case-level scorecard hashes,
+telemetry hashes, canary outcomes, and verification commands are in the
+[2026-09-27 provenance measurement](results/2026-09-27-197ba2d4.json) (SHA-256
+recorded in its [sidecar](results/2026-09-27-197ba2d4.json.sha256)). E13 remains
+**Active**: final-web, g0, and ebook did not reach repair candidate validation;
+the DoubleVerify candidate audits had no provenance or protected-field
+contract defects, but content validation blocked promotion and the required
+workflow canary did not pass.

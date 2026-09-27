@@ -1,0 +1,166 @@
+{
+  "schema_version": "1.0",
+  "recorded_date": "2026-09-27",
+  "implementation_sha": "197ba2d4544a49c2d9050c2ce74811f95b1dc045",
+  "disposition": "atomic_soft_copy_provenance_rebuilt_candidate_success_unproven",
+  "frozen_corpus": {
+    "case_count": 7,
+    "manifest_count": 3,
+    "frozen_inputs_modified": false,
+    "manifest_sha256": {
+      "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+    }
+  },
+  "target_replay": {
+    "final_web": {
+      "reproducibility": "no_longer_reproducible",
+      "historical_target_fingerprint_present": false,
+      "repair_planning_reached": false,
+      "candidate_audit_count": 0
+    },
+    "g0": {
+      "reproducibility": "no_longer_reproducible",
+      "historical_target_fingerprint_present": false,
+      "repair_planning_reached": false,
+      "candidate_audit_count": 0,
+      "note": "A different current baseline hard failure remains."
+    },
+    "ebook": {
+      "reproducibility": "reproducible",
+      "terminal_failure_code": "regeneration_target_item_unchanged",
+      "candidate_validation_reached": false,
+      "candidate_audit_count": 0
+    },
+    "doubleverify_expert_linkedin": {
+      "reproducibility": "reproducible",
+      "candidate_audit_count": 3,
+      "attempts_rolled_back": 3,
+      "soft_copy_provenance_integrity_failures": 0,
+      "protected_fields_incomplete_failures": 0,
+      "remaining_failure_classes": [
+        "public_editorial_quality.metric_label_relationship",
+        "retained_claim.number_value_unit_match",
+        "retained_claim.protected_fact_unit_currency_consistency",
+        "retained_claim.protected_fact_value_consistency"
+      ],
+      "semantic_grounding_provider_calls": 0,
+      "semantic_grounding_invocations_skipped": 3
+    },
+    "mobile_editorial": {
+      "reproducibility": "reproducible",
+      "terminal_failure_code": "regeneration_target_item_unchanged",
+      "candidate_validation_reached": false,
+      "candidate_audit_count": 0
+    }
+  },
+  "repair_outcomes": {
+    "case_count": 7,
+    "reproducible_case_count": 4,
+    "no_longer_reproducible_case_count": 3,
+    "repair_attempt_count": 5,
+    "success_at_1": {
+      "count": 0,
+      "denominator": 4
+    },
+    "success_at_3": {
+      "count": 0,
+      "denominator": 4
+    },
+    "candidate_promotion_count": 1,
+    "candidate_rollback_count": 4
+  },
+  "introduced_factual_failure_categories": {
+    "unit": "candidate attempts with an introduced hard failure fingerprint",
+    "unknown_or_hallucinated_evidence_introduction": 0,
+    "unsupported_claim_evidence_introduction": 1,
+    "provenance_or_lineage_introduction": 0,
+    "mobile_case": "unavailable because it stopped before candidate validation"
+  },
+  "usage": {
+    "a21": {
+      "repair_model_calls": 2,
+      "input_tokens": 13527,
+      "output_tokens": 1781,
+      "estimated_cost_usd": 0.002243,
+      "scorecard_sha256": "43a33e4f7f8031e9e61deb9b7ceeb1086e82a56399caf66968f3300006c8f00c"
+    },
+    "mobile_editorial": {
+      "repair_model_calls": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "estimated_cost_usd": null,
+      "scorecard_sha256": "a6172dfda8274e9a75b7ab40cd507fd870cbf88593f951110e39e2d2e9420025"
+    },
+    "doubleverify": {
+      "repair_model_calls": 2,
+      "input_tokens": 8584,
+      "output_tokens": 821,
+      "estimated_cost_usd": 0.001269,
+      "semantic_grounding_provider_calls": 0,
+      "semantic_grounding_invocations_skipped": 3,
+      "usage_attribution": "partial; safe-removal attempt had no attributable model usage",
+      "scorecard_sha256": "c055d3a01e81c1321e20e90733258c697d02d446a4e5f590c53725c186aa5308"
+    }
+  },
+  "telemetry": {
+    "a21": {
+      "sha256": "d1af61f61d78937007a436a6f159d69378f489377fc44ffef0f47ade336ff113"
+    },
+    "mobile_editorial": {
+      "sha256": "3321f48d4957ea3e03f7963af9c11fe609f715ca2160480dd89e08a9a3012273"
+    },
+    "doubleverify": {
+      "sha256": "408f75a4c5d3d39cc62b0f2c44f8e073448f4e42386bba9e55807054e65f77f4"
+    }
+  },
+  "required_workflow_canary": {
+    "publication_performed": false,
+    "all_runs_passed": false,
+    "runs": [
+      {
+        "terminal_failure_code": "card_tldr_compact_invalid",
+        "validation": "pass",
+        "publication_readiness": "fail",
+        "provider_calls": 39,
+        "input_tokens": 249704,
+        "output_tokens": 49113,
+        "estimated_cost_usd": 0.049389,
+        "pdf_float_parse_warning": true
+      },
+      {
+        "terminal_failure_code": "validation_failed",
+        "validation_failure": "grounding at insights:uk26-social-ai-monitoring.so_what",
+        "provider_calls": 38,
+        "input_tokens": 242095,
+        "output_tokens": 42559,
+        "estimated_cost_usd": null,
+        "pdf_float_parse_warning": true,
+        "observed_soft_copy_provenance_integrity": "reported for Expert View / LinkedIn content identical to baseline and candidate",
+        "soft_copy_failure_inspection": "claim-validation sentence fragments absent from material-sentence index"
+      }
+    ]
+  },
+  "verification": {
+    "focused_and_broader_regeneration_suite": "299 passed",
+    "prompt_fixture_regression": "passed",
+    "json_contract_validation": "passed",
+    "git_diff_check": "passed",
+    "required_workflow_canary": "not passed; publication disabled"
+  },
+  "commands": [
+    "pytest tests/test_atomic_regeneration_contract.py tests/test_lineage_regeneration.py tests/test_report_regeneration_generator.py tests/test_regeneration_contracts.py tests/test_regeneration_candidate.py tests/test_report_regeneration_identity_and_failures.py tests/test_soft_copy_claim_provenance.py tests/test_schema_validator.py tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py tests/test_prompt_fixture_corpus_regression.py tests/test_llm_service.py tests/test_llm_routing_policy.py -q",
+    "python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-repair-live/197ba2d4/a21-five/output --implementation-sha 197ba2d4544a49c2d9050c2ce74811f95b1dc045",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-repair-live/197ba2d4/mobile-editorial/output --implementation-sha 197ba2d4544a49c2d9050c2ce74811f95b1dc045",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-repair-live/197ba2d4/doubleverify-linkedin/output --implementation-sha 197ba2d4544a49c2d9050c2ce74811f95b1dc045",
+    "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-first-attempt-197ba2d4 --max-duration-seconds 7200",
+    "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-first-attempt-197ba2d4-retry --max-duration-seconds 7200"
+  ],
+  "closure_disposition": {
+    "e13_closed": false,
+    "reason": "The frozen target fingerprints did not reach repair or candidate audit in final-web, g0, or ebook; the executed DoubleVerify repairs remained blocked by content validation, and the required workflow canary did not pass.",
+    "thresholds_met": false
+  }
+}
