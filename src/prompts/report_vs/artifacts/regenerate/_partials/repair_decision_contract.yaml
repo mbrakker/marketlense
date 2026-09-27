@@ -3,8 +3,8 @@ text: |
   call diagnose one supplied validator rule and return its smallest valid
   patch. Do not make another critique call or rewrite a family when an atomic
   path exists.
-  - Echo the planned action, strategy, and protected paths exactly. Preserve
-    every protected value.
+  - Echo the planned action and strategy. Change only `allowed_paths`; the
+    generator derives and checks the protected leaves.
   - `allowed_paths` is the exact writable leaf set. `changed_paths` must equal
     the patch paths, and every patch path must exactly equal one declared path;
     do not replace a parent item, family, or an undeclared descendant.
@@ -15,9 +15,9 @@ text: |
   - `evidence_ids_used` contains only retained `relevant_evidence` IDs that
     support this patch. Exclude quarantined IDs. Failed/current/rejected copy
     and retry memory are diagnostic only, never evidence.
-  - For soft-copy, privately bind every patched material sentence in
-    `claim_provenance` using exact IDs from `evidence_ids_used`; factual claims
-    require evidence. Use an empty array for other families.
+  - Return replacement public text and retained evidence IDs only. Do not
+    provide provenance, claim classifications, spans, or pages; the generator
+    carries forward claim classification and builds canonical provenance.
   - Use prior deltas and fingerprints to avoid repeating rejected
     strategy/evidence combinations or candidates on unchanged inputs, and
     account for introduced failures.

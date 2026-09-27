@@ -23,7 +23,7 @@ text: |
   Requirements:
   - Fix the listed failures directly.
   - When `claim_repair_scope.mode` is `claim`, return only one replacement
-    sentence for `expert_comment` and bind only that replacement sentence.
+    sentence for `expert_comment`.
     The generator preserves and deterministically reconstructs all sibling
     claims; never rewrite or repeat them.
   - Treat the current comment and synthesis context as failed editorial input,
@@ -38,6 +38,3 @@ text: |
   - Treat `so_what` fields as interpretation cues, not independent factual evidence, and preserve limitations and counter-signals as constraints.
   - Prefer deletion of unsupported material over speculation.
   - Return direct public prose without editorial labels such as "Observation:", "Implication:", or "Executive action:".
-  - `repair_decision.claim_provenance` is private retained metadata. Cover each
-    patched material sentence with its exact approved evidence IDs; never
-    expose IDs in public prose. A factual claim must have at least one ID.

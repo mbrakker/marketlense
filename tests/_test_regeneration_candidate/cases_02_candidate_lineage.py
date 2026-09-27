@@ -489,6 +489,37 @@ def test_candidate_blocks_factual_soft_copy_claim_with_wrong_source_page(
 
 
 @pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
+def test_candidate_blocks_factual_soft_copy_claim_with_wrong_source_offsets(
+    family: str,
+) -> None:
+    current, candidate, evidence_packs = _soft_copy_artifacts()
+    quote = next(
+        item
+        for item in evidence_packs["quote_candidates"]["quote_candidates"]
+        if item["id"] == "qc_001"
+    )
+    quote["start_offset"] = 12
+    quote["end_offset"] = 24
+    claim = _claim_for_family(candidate, family)
+    claim["source_spans"][0]["start_offset"] = 13
+    claim["source_spans"][0]["end_offset"] = 23
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+
+    assert not result.passed
+    assert any(
+        issue.rule_id == "regeneration_source_page"
+        and issue.affected_section.startswith(family)
+        for issue in result.issues
+    )
+
+
+@pytest.mark.parametrize("family", ["expert_comment", "linkedin_post"])
 def test_candidate_blocks_unchanged_factual_soft_copy_claim_that_loses_lineage(
     family: str,
 ) -> None:

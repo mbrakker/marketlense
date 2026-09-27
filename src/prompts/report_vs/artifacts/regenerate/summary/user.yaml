@@ -24,7 +24,7 @@ text: |
     `grounding_package.quarantined_evidence_ids`.
   - Fix the listed failures directly.
   - When `claim_repair_scope.mode` is `claim`, return only the named summary
-    field with one replacement sentence and bind only that sentence. The
+    field with one replacement sentence. The
     generator preserves and deterministically reconstructs all sibling claims;
     never rewrite or repeat them.
   - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
@@ -37,6 +37,3 @@ text: |
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Do not use mechanical lead-ins or labels such as "Answer:", "Observation:", or "Implication:"; write direct public prose throughout the executive summary.
   - Do not introduce unsupported numbers, entities, quotes, or conclusions. A numeric value may appear only when it is explicitly supported by that claim's linked retained evidence.
-  - `repair_decision.claim_provenance` is private metadata for the patched
-    sentence(s). Bind exact approved evidence IDs; factual sentences need at
-    least one. Never expose IDs in public prose.

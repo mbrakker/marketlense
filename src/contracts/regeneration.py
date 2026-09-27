@@ -87,7 +87,7 @@ class RepairDecision:
     protected_fields: List[str] = field(
         default_factory=list,
         metadata={
-            "doc": "Retained scalar leaf paths outside repair scope that must remain unchanged."
+            "doc": "Planner-derived immutable leaf paths outside the repair scope."
         },
     )
     changed_paths: List[str] = field(
@@ -97,10 +97,6 @@ class RepairDecision:
     minimal_patch: List[RepairPatchOperation] = field(
         default_factory=list,
         metadata={"doc": "Smallest legal replacement patch for the promoted artifact."},
-    )
-    claim_provenance: List[Dict[str, Any]] = field(
-        default_factory=list,
-        metadata={"doc": "Private provenance bindings for patched soft-copy claims."},
     )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Private repair decision schema version."}

@@ -94,8 +94,10 @@ families, and undeclared descendants are rejected.
 
 Planning abstains when it cannot resolve a writable scalar leaf. Before a
 provider client is required, runtime preflight also verifies that every path
-resolves uniquely to a scalar and that both the writable and protected sets
-form a non-empty partition. Deterministic dependent-artifact changes continue
+resolves uniquely to a scalar. The generator computes protected fields as the
+actual leaf complement; the complement may be empty when the writable leaf is
+the only leaf in its root, and it is never requested from the model.
+Deterministic dependent-artifact changes continue
 to be recorded and checked through the existing verified-derived-path audit;
 they do not become model-writable paths. This contract change is measured
 against the unchanged seven-case manifests after the implementation commit.
@@ -157,10 +159,12 @@ artifact-regeneration model service clients used by the report workflow. The
 provider schema projection uses the API-supported strict subset; the full
 canonical schema remains authoritative when the response is validated. The
 repair decision's fixed `replace` operation is explicitly typed as a string
-for strict structured output. The response contract is identified as v3; its
-failure class is derived from the planner's issue list. Replacement values
-cross that provider boundary as JSON-encoded strings and are parsed before
-the existing deterministic patch checks. The scorecard retains its normal
+for strict structured output. The response contract is identified as v4; its
+failure class is derived from the planner's issue list. Provider decisions carry
+replacement values and selected retained evidence IDs; the generator derives
+protected fields and soft-copy provenance. Replacement values cross that
+provider boundary as JSON-encoded strings and are parsed before the existing
+deterministic patch checks. The scorecard retains its normal
 validation, evidence, mutation-scope, promotion, and rollback gates. It does
 not author replacement copy or raise the configured retry limit. A
 non-retryable typed `AppError` from one case is retained on that case's

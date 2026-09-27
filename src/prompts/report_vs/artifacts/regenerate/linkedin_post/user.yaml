@@ -23,7 +23,7 @@ text: |
   - Fix the listed failures directly.
   - Obey `claim_repair_scope.mode` before applying any format constraint:
     - In `claim` mode, return exactly one complete replacement sentence for
-      `linkedin_post` and bind only that sentence. The generator preserves and
+      `linkedin_post`. The generator preserves and
       deterministically reconstructs all sibling claims; never rewrite or
       repeat them. Do not apply the full-post word, paragraph, proof-point, or
       hashtag rules in claim mode.
@@ -43,8 +43,5 @@ text: |
   - In `family` mode, use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
+  - Before returning, check attribution, transition, question, and interpretive bridge sentences for support from the selected retained evidence; omit any sentence that adds an unsupported factual assertion.
   - Return direct public prose without editorial labels such as "Executive takeaway:", "Observation:", or "Implication:".
-  - `repair_decision.claim_provenance` is private retained metadata. Cover each
-    patched material sentence with its exact approved evidence IDs; never
-    expose IDs in public prose. A factual claim must have at least one ID.
-  - Before returning, privately segment the completed post and audit `claim_provenance` coverage, including attribution, transition, question, and interpretive bridge sentences. Omit any sentence that cannot be classified and bound rather than omitting its private binding.

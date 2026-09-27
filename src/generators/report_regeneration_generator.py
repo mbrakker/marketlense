@@ -20,7 +20,6 @@ from src.contracts.regeneration import (
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
-    align_soft_copy_claim_bindings_to_text,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
     soft_copy_public_text,
@@ -1757,7 +1756,7 @@ def _render_regeneration_model(
         else []
     )
     if repair_call and (
-        not active_target.allowed_paths or not required_protected_fields
+        not active_target.allowed_paths or required_protected_fields is None
     ):
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
     openai_client = require_injected_model_client(
@@ -1782,7 +1781,6 @@ def _render_regeneration_model(
                             if issue.rule_id
                         }
                     ),
-                    "required_protected_fields": required_protected_fields,
                 }
             ),
             "prior_repair_memory_json": _dump_json(
@@ -1837,7 +1835,7 @@ def _render_regeneration_model(
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
         response_contract_name=("regeneration_repair_decision" if repair_call else ""),
-        response_contract_identity_version="v3",
+        response_contract_identity_version="v4",
     )
     if not repair_call:
         return result
@@ -1893,7 +1891,6 @@ def _render_regeneration_model(
         root_value = patched_artifacts[root_key]
     return {
         root_key: root_value,
-        "_soft_copy_claim_bindings": deepcopy(decision.claim_provenance),
         "_repair_decision": decision,
     }
 
@@ -2115,12 +2112,15 @@ def _validated_repair_decision(
 ) -> RepairDecision:
     if not isinstance(payload, dict):
         raise _repair_decision_error(execution, "decision_missing")
+    if "protected_fields" in payload or "claim_provenance" in payload:
+        raise _repair_decision_error(execution, "planner_metadata_in_provider_decision")
     target = target or execution.target
     planned_failure_class = next(
         (issue.rule_id for issue in target.issues if issue.rule_id), ""
     )
     if not planned_failure_class:
         raise _repair_decision_error(execution, "failure_class_not_in_plan")
+    required_protected = _required_repair_protected_fields(current_artifacts, target)
     try:
         raw_patch = payload["minimal_patch"]
         if not isinstance(raw_patch, list):
@@ -2144,16 +2144,9 @@ def _validated_repair_decision(
             evidence_ids_used=[
                 str(value).strip() for value in payload["evidence_ids_used"]
             ],
-            protected_fields=[
-                str(value).strip() for value in payload["protected_fields"]
-            ],
+            protected_fields=required_protected or [],
             changed_paths=[str(value).strip() for value in payload["changed_paths"]],
             minimal_patch=patch,
-            claim_provenance=[
-                dict(value)
-                for value in payload["claim_provenance"]
-                if isinstance(value, dict)
-            ],
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise _repair_decision_error(execution, "decision_contract_invalid") from exc
@@ -2198,10 +2191,6 @@ def _validated_repair_decision(
         decision.evidence_ids_used
     ).intersection(quarantined):
         raise _repair_decision_error(execution, "evidence_not_retained_or_quarantined")
-    for claim in decision.claim_provenance:
-        if not set(claim.get("evidence_ids") or []) <= set(decision.evidence_ids_used):
-            raise _repair_decision_error(execution, "claim_evidence_not_declared_used")
-
     for operation in decision.minimal_patch:
         if operation.path not in target.allowed_paths:
             raise _repair_decision_error(
@@ -2219,10 +2208,11 @@ def _validated_repair_decision(
         if isinstance(operation.value, (dict, list)):
             raise _repair_decision_error(execution, "patch_value_over_broad")
 
-    required_protected = _required_repair_protected_fields(current_artifacts, target)
-    if not required_protected:
+    if required_protected is None:
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
-    if set(decision.protected_fields) != set(required_protected):
+    if not _repair_decision_protected_fields_are_complete(
+        decision, required_protected
+    ):
         raise _repair_decision_error(execution, "protected_fields_incomplete")
     candidate = deepcopy(current_artifacts)
     for operation in decision.minimal_patch:
@@ -2295,6 +2285,14 @@ def _repair_protected_fields_preserved(
     return True
 
 
+def _repair_decision_protected_fields_are_complete(
+    decision: RepairDecision, required_fields: Sequence[str]
+) -> bool:
+    """Check a planner-populated immutable leaf complement on an internal decision."""
+
+    return set(decision.protected_fields) == set(required_fields)
+
+
 def _apply_repair_decision_patch(
     *, current_artifacts: Dict[str, Any], decision: RepairDecision
 ) -> Dict[str, Any]:
@@ -2314,29 +2312,29 @@ def _apply_repair_decision_patch(
 
 def _required_repair_protected_fields(
     artifacts: Dict[str, Any], target: RegenerationTarget
-) -> List[str]:
+) -> List[str] | None:
     writable = set(target.allowed_paths)
     if not writable:
-        return []
+        return None
     roots = {_repair_path_root(path) for path in writable}
     protected: set[str] = set()
     for root in roots:
         if root not in artifacts:
-            return []
+            return None
         leaves = _repair_leaf_paths(artifacts[root], root)
         if not writable.intersection(leaves):
-            return []
+            return None
         if any(
             path not in leaves
             for path in writable
             if _repair_path_root(path) == root
         ):
-            return []
+            return None
         protected.update(leaves - writable)
     for path in writable:
         found, value = _read_repair_path(artifacts, path)
         if not found or isinstance(value, (dict, list)):
-            return []
+            return None
     return sorted(protected)
 
 
@@ -2498,6 +2496,7 @@ def _record_soft_copy_claim_bindings(
     repaired_claim: _SoftCopyClaimRepair | None = None,
     repaired_text: str = "",
 ) -> None:
+    decision = result.get("_repair_decision")
     bindings = result.get("_soft_copy_claim_bindings")
     declared_bindings = (
         [dict(item) for item in bindings if isinstance(item, dict)]
@@ -2506,22 +2505,31 @@ def _record_soft_copy_claim_bindings(
     )
     if repaired_claim is not None:
         normalized_repaired = _normalized_soft_copy_text(repaired_text)
+        if not isinstance(decision, RepairDecision):
+            raise _repair_decision_error(execution, "repair_decision_missing")
+        declared_bindings = _repair_claim_bindings(
+            text=repaired_text,
+            classification=repaired_claim.claim.classification,
+            evidence_ids=decision.evidence_ids_used,
+        ) or []
+        if not declared_bindings:
+            raise _repair_decision_error(
+                execution, "repaired_claim_binding_not_deterministic"
+            )
         repaired_claim_id = (
             f"soft_copy:{artifact_family}:"
             f"{hashlib.sha256(normalized_repaired.encode()).hexdigest()[:16]}"
         )
         if repaired_claim_id == repaired_claim.claim.claim_id:
             return
-        declared_bindings = [
-            item
-            for item in align_soft_copy_claim_bindings_to_text(
-                artifact_family=artifact_family,
-                text=repaired_text,
-                claim_bindings=declared_bindings,
-            )
-            if _normalized_soft_copy_text(item.get("claim")) == normalized_repaired
-        ]
         if repaired_claim_id != repaired_claim.claim.claim_id:
+            _rebuild_soft_copy_repair_selection(
+                execution=execution,
+                artifact_family=artifact_family,
+                original_claim=repaired_claim.claim,
+                repaired_claim_id=repaired_claim_id,
+                selected_evidence_ids=decision.evidence_ids_used,
+            )
             execution.state.replaced_soft_copy_claim_ids.setdefault(
                 artifact_family, []
             ).append(repaired_claim.claim.claim_id)
@@ -2531,11 +2539,9 @@ def _record_soft_copy_claim_bindings(
             execution.state.soft_copy_repair_lineage[
                 f"{artifact_family}:{repaired_claim_id}"
             ] = repaired_claim.claim.claim_id
-            selection = execution.state.soft_copy_evidence_selections.get(
-                f"{artifact_family}:{repaired_claim.claim.claim_id}"
+            execution.state.selected_evidence_ids.extend(
+                decision.evidence_ids_used
             )
-            if isinstance(selection, dict):
-                selection["repaired_claim_id"] = repaired_claim_id
     if repaired_claim is not None:
         execution.state.soft_copy_claim_bindings.setdefault(artifact_family, []).extend(
             declared_bindings
@@ -2565,26 +2571,92 @@ def _normalized_soft_copy_text(value: object) -> str:
 
 
 def _valid_claim_replacement(
-    *, artifact_family: str, text: str, bindings: object
+    *, classification: str, text: str, evidence_ids: Sequence[str]
 ) -> bool:
     """Accept only one newly bound sentence for a claim-scoped model reply."""
 
-    sentences = soft_copy_material_sentences(text)
-    if len(sentences) != 1:
-        return False
-    aligned = align_soft_copy_claim_bindings_to_text(
-        artifact_family=artifact_family, text=text, claim_bindings=bindings
-    )
-    return any(
-        _normalized_soft_copy_text(binding.get("claim")) == sentences[0]
-        and binding.get("classification")
-        in {"factual", "interpretive", "recommendation"}
-        and (
-            binding.get("classification") != "factual"
-            or bool(binding.get("evidence_ids"))
-        )
-        for binding in aligned
-    )
+    return _repair_claim_bindings(
+        text=text, classification=classification, evidence_ids=evidence_ids
+    ) is not None
+
+
+def _repair_claim_bindings(
+    *, classification: str, text: str, evidence_ids: Sequence[str]
+) -> List[Dict[str, Any]] | None:
+    """Build one semantic binding from retained identity and selected IDs."""
+
+    normalized_text = _normalized_soft_copy_text(text)
+    sentences = soft_copy_material_sentences(normalized_text)
+    if (
+        not normalized_text
+        or len(sentences) != 1
+        or sentences[0] != normalized_text
+        or classification not in {"factual", "interpretive", "recommendation"}
+    ):
+        return None
+    selected_ids = _unique_strings(evidence_ids)
+    if classification == "factual" and not selected_ids:
+        return None
+    return [
+        {
+            "claim": sentences[0],
+            "classification": classification,
+            "evidence_ids": selected_ids,
+        }
+    ]
+
+
+def _rebuild_soft_copy_repair_selection(
+    *,
+    execution: _RegenerationHandlerExecution,
+    artifact_family: str,
+    original_claim: SoftCopyClaimProvenance,
+    repaired_claim_id: str,
+    selected_evidence_ids: Sequence[str],
+) -> None:
+    """Bind the private repair selection to the deterministic claim record."""
+
+    key = f"{artifact_family}:{original_claim.claim_id}"
+    selection = execution.state.soft_copy_evidence_selections.get(key)
+    if not valid_soft_copy_evidence_selection(
+        key, selection, require_selected_evidence_entries=True
+    ):
+        raise _repair_decision_error(execution, "repair_selection_missing_or_invalid")
+    assert isinstance(selection, dict)
+    selected_ids = _unique_strings(selected_evidence_ids)
+    if original_claim.classification == "factual" and not selected_ids:
+        raise _repair_decision_error(execution, "factual_repair_evidence_missing")
+    entries_by_id: Dict[str, List[Dict[str, Any]]] = {}
+    for entry in selection.get("selected_evidence_entries", []):
+        if not isinstance(entry, dict):
+            continue
+        evidence_id = _entry_evidence_id(entry)
+        if evidence_id:
+            entries_by_id.setdefault(evidence_id.casefold(), []).append(entry)
+    selected_entries: List[Dict[str, Any]] = []
+    for evidence_id in selected_ids:
+        matches = entries_by_id.get(evidence_id.casefold(), [])
+        if len(matches) != 1:
+            raise _repair_decision_error(
+                execution, "evidence_not_retained_or_quarantined"
+            )
+        selected_entries.append(deepcopy(matches[0]))
+    rebuilt = deepcopy(selection)
+    rebuilt["selected_evidence_ids"] = selected_ids
+    rebuilt["selected_evidence_entries"] = selected_entries
+    rebuilt.pop("repaired_claim_id", None)
+    hash_payload = {
+        field: value
+        for field, value in rebuilt.items()
+        if field != "package_sha256"
+    }
+    rebuilt["package_sha256"] = _canonical_evidence_hash(hash_payload)
+    rebuilt["repaired_claim_id"] = repaired_claim_id
+    if not valid_soft_copy_evidence_selection(
+        key, rebuilt, require_selected_evidence_entries=True
+    ):
+        raise _repair_decision_error(execution, "repair_selection_rebuild_invalid")
+    execution.state.soft_copy_evidence_selections[key] = rebuilt
 
 
 def _soft_copy_sentence_spans(text: str) -> List[tuple[int, int, str]]:
@@ -3053,10 +3125,14 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     if isinstance(repaired_summary, dict)
                     else ""
                 )
-                if not _valid_claim_replacement(
-                    artifact_family="summary",
-                    text=repaired_text,
-                    bindings=result.get("_soft_copy_claim_bindings"),
+                decision = result.get("_repair_decision")
+                if (
+                    not isinstance(decision, RepairDecision)
+                    or not _valid_claim_replacement(
+                        classification=repair.claim.classification,
+                        text=repaired_text,
+                        evidence_ids=decision.evidence_ids_used,
+                    )
                 ):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
@@ -3128,7 +3204,7 @@ def _record_atomic_summary_claim_bindings(
     namespace: str,
     result: Dict[str, Any],
 ) -> bool:
-    """Retain unchanged summary claims around a field-scoped model patch."""
+    """Rebuild changed summary bindings from retained identity and selected IDs."""
 
     decision = result.get("_repair_decision")
     repaired_summary = result.get("summary")
@@ -3148,10 +3224,7 @@ def _record_atomic_summary_claim_bindings(
     ]
     if not patch_operations:
         return False
-    declared_bindings = result.get("_soft_copy_claim_bindings")
-    if not isinstance(declared_bindings, list) or not declared_bindings:
-        return False
-
+    current_artifacts = _current_repair_artifacts(execution.state)
     public_sentences = set(
         soft_copy_material_sentences(soft_copy_public_text("summary", repaired_summary))
     )
@@ -3165,6 +3238,58 @@ def _record_atomic_summary_claim_bindings(
         hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
         for sentence in public_sentences
     }
+    retained_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in retained_claims:
+        if claim.artifact_family == "summary":
+            retained_by_hash.setdefault(claim.text_hash, []).append(claim)
+    repaired_bindings: List[Dict[str, Any]] = []
+    repaired_lineage: Dict[str, str] = {}
+    for operation in patch_operations:
+        found, previous = _read_repair_path(current_artifacts, operation.path)
+        if not found or not isinstance(previous, str):
+            return False
+        before_sentences = soft_copy_material_sentences(previous)
+        after_sentences = soft_copy_material_sentences(operation.value)
+        matcher = SequenceMatcher(
+            a=before_sentences, b=after_sentences, autojunk=False
+        )
+        for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+            if code == "equal" or new_start == new_end:
+                continue
+            if old_end - old_start != 1 or new_end - new_start != 1:
+                return False
+            old_text = before_sentences[old_start]
+            new_text = after_sentences[new_start]
+            old_hash = hashlib.sha256(
+                _normalized_soft_copy_text(old_text).encode("utf-8")
+            ).hexdigest()
+            predecessors = retained_by_hash.get(old_hash, [])
+            if len(predecessors) == 1:
+                classification = predecessors[0].classification
+            elif decision.evidence_ids_used:
+                # The predecessor binding is stale or absent. Carry the
+                # replacement conservatively as factual so the canonical
+                # evidence and retained-claim checks must ground it.
+                classification = "factual"
+            else:
+                return False
+            bindings = _repair_claim_bindings(
+                text=new_text,
+                classification=classification,
+                evidence_ids=decision.evidence_ids_used,
+            )
+            if bindings is None:
+                return False
+            repaired_bindings.extend(bindings)
+            repaired_hash = hashlib.sha256(
+                _normalized_soft_copy_text(new_text).encode("utf-8")
+            ).hexdigest()
+            repaired_claim_id = f"soft_copy:summary:{repaired_hash[:16]}"
+            if len(predecessors) == 1:
+                repaired_lineage[f"summary:{repaired_claim_id}"] = (
+                    predecessors[0].claim_id
+                )
+
     stale_claim_ids = [
         claim.claim_id
         for claim in retained_claims
@@ -3176,9 +3301,23 @@ def _record_atomic_summary_claim_bindings(
     replaced_claim_ids.extend(
         claim_id for claim_id in stale_claim_ids if claim_id not in replaced_claim_ids
     )
+    retained_hashes = {
+        claim.text_hash
+        for claim in retained_claims
+        if claim.artifact_family == "summary" and claim.text_hash in public_hashes
+    }
+    repaired_hashes = {
+        hashlib.sha256(
+            _normalized_soft_copy_text(binding["claim"]).encode("utf-8")
+        ).hexdigest()
+        for binding in repaired_bindings
+    }
+    if public_hashes != retained_hashes | repaired_hashes:
+        return False
     execution.state.soft_copy_claim_bindings.setdefault("summary", []).extend(
-        dict(binding) for binding in declared_bindings if isinstance(binding, dict)
+        repaired_bindings
     )
+    execution.state.soft_copy_repair_lineage.update(repaired_lineage)
     execution.state.soft_copy_prompt_identities["summary"] = dict(
         execution.state.prompt_identities.get(namespace) or {}
     )
@@ -3186,9 +3325,7 @@ def _record_atomic_summary_claim_bindings(
         1, int(result.get("_soft_copy_generation_attempt") or 1)
     )
     execution.state.soft_copy_repair_texts.setdefault("summary", []).extend(
-        operation.value.strip()
-        for operation in patch_operations
-        if operation.value.strip()
+        binding["claim"] for binding in repaired_bindings
     )
     return True
 
@@ -4135,10 +4272,14 @@ def _handle_expert_comment_regeneration(
                     },
                 )
                 repaired_text = _s(result.get("expert_comment"))
-                if not _valid_claim_replacement(
-                    artifact_family="expert_comment",
-                    text=repaired_text,
-                    bindings=result.get("_soft_copy_claim_bindings"),
+                decision = result.get("_repair_decision")
+                if (
+                    not isinstance(decision, RepairDecision)
+                    or not _valid_claim_replacement(
+                        classification=repair.claim.classification,
+                        text=repaired_text,
+                        evidence_ids=decision.evidence_ids_used,
+                    )
                 ):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
@@ -4355,10 +4496,14 @@ def _handle_linkedin_post_regeneration(
             repaired_text = strip_linkedin_inline_reference_ids(
                 _s(result.get("linkedin_post"))
             )
-            if not _valid_claim_replacement(
-                artifact_family="linkedin_post",
-                text=repaired_text,
-                bindings=result.get("_soft_copy_claim_bindings"),
+            decision = result.get("_repair_decision")
+            if (
+                not isinstance(decision, RepairDecision)
+                or not _valid_claim_replacement(
+                    classification=repair.claim.classification,
+                    text=repaired_text,
+                    evidence_ids=decision.evidence_ids_used,
+                )
             ):
                 replacements[repair.claim.claim_id] = None
                 _mark_soft_copy_claim_removed(execution, repair)

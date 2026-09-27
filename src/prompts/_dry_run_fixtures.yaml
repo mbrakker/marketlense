@@ -34,7 +34,7 @@ shared:
   grounding_package_json: &grounding_package_json >-
     {"findings":[{"claim":"Wallet adoption is increasing across enterprise checkout flows.","evidence_ids":["f1"]}],"quotes":[{"quote_id":"q1","speaker":"Lead Analyst"}]}
   repair_context_json: &repair_context_json >-
-    {"allowed_paths":["expert_comment[claim_index=0]"],"repair_action":"REGENERATE_ITEM","repair_strategy":"current_evidence","quarantined_evidence_ids":[],"failure_classes":["grounding"],"required_protected_fields":[]}
+    {"allowed_paths":["expert_comment[claim_index=0]"],"repair_action":"REGENERATE_ITEM","repair_strategy":"current_evidence","quarantined_evidence_ids":[],"failure_classes":["grounding"]}
   prior_repair_memory_json: &prior_repair_memory_json "[]"
   cross_report_request_json: &cross_report_request_json >-
     {"request_id":"cross-report-fixture","topic":"AI commerce adoption","auto_theme":true,"category_filters":["Retail"],"tag_filters":["AI"],"publisher_filters":[],"date_range_start":"2026-05-01","date_range_end":"2026-05-31","publication_mode":"generate_only"}

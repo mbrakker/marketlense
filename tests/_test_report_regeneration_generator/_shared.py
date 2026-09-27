@@ -4,11 +4,6 @@ import json
 import re
 
 from src.contracts.openai import OpenAIResponseResult
-from src.contracts.soft_copy_claim_provenance import (
-    align_soft_copy_claim_bindings_to_text,
-    soft_copy_material_sentences,
-)
-
 
 _MISSING_REPAIR_FIXTURE_PATH = object()
 
@@ -73,20 +68,11 @@ def _legacy_repair_decision_response(req, result):
         if isinstance(claim, dict)
         and set(claim.get("evidence_ids") or []).intersection(used_evidence_ids)
     ]
-    if isinstance(patch_value, str):
-        family = path.split(".", 1)[0].split("[", 1)[0]
-        if family in {"summary", "expert_comment", "linkedin_post"}:
-            provenance = align_soft_copy_claim_bindings_to_text(
-                artifact_family=family,
-                text=patch_value,
-                claim_bindings=provenance,
-            )
     decision = {
         "schema_version": "1.0",
         "repair_action": context["repair_action"],
         "repair_strategy": context["repair_strategy"],
         "evidence_ids_used": used_evidence_ids,
-        "protected_fields": context["required_protected_fields"],
         "changed_paths": [path],
         "minimal_patch": [
             {
@@ -95,7 +81,6 @@ def _legacy_repair_decision_response(req, result):
                 "value_json": json.dumps(patch_value, ensure_ascii=False),
             }
         ],
-        "claim_provenance": provenance,
     }
     payload = {"repair_decision": decision}
     return OpenAIResponseResult(
@@ -130,12 +115,9 @@ def _legacy_repair_path_value(payload, path):
         if separator and selector_key == "claim_index":
             if not isinstance(current, str):
                 return _MISSING_REPAIR_FIXTURE_PATH
-            sentences = soft_copy_material_sentences(current)
-            if len(sentences) > 1:
-                try:
-                    current = sentences[int(selector_value)]
-                except (IndexError, ValueError):
-                    return _MISSING_REPAIR_FIXTURE_PATH
+            # The fixture response stands in for the value of the requested
+            # atomic leaf. Preserve the full value so production single-claim
+            # validation sees and rejects an overlong replacement.
             continue
         if not separator or not isinstance(current, list):
             return _MISSING_REPAIR_FIXTURE_PATH

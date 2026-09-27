@@ -92,13 +92,27 @@ resolved unambiguously, the planner uses the existing family-level repair.
 
 Each model-assisted repair call returns one private `repair_decision` with the
 diagnosed failure class, selected action and strategy, retained evidence IDs actually
-used, protected fields, changed paths, minimal replacement patch, and soft-copy
-provenance where applicable. The generator validates evidence, quarantine, scope,
-protected fields, and one unambiguous target before applying that patch to the current
-promoted artifact. Current failed copy and rejected candidate copy are diagnostic
-context only; they are never evidence. The same model response contains diagnosis and
-patch, so this contract adds no critique call. Malformed decisions and invalid or broad
-patches fail closed before candidate persistence.
+used, changed paths, and a minimal replacement patch. The generator derives the
+protected leaf complement from the retained artifact and allowed paths; that
+planner-owned set is checked again before patch application and is not requested from
+the model. Failed and rejected copy are diagnostic context only, never evidence. The
+same model response contains diagnosis and patch, so this contract adds no critique
+call. Malformed decisions and invalid or broad patches fail closed before candidate
+creation.
+
+For an atomic Expert View or LinkedIn claim repair, the model supplies replacement
+public text and selected retained evidence IDs only. The generator resolves the
+repaired sentence after patch application, carries forward the matched retained
+claim's classification, and builds new provenance from that text, the selected IDs,
+the current artifact family, the canonical evidence-span index, and stable claim
+identity rules. It replaces only the changed claim's provenance and rebuilds its
+`_repair_evidence_selection` entry with the exact same IDs and canonical evidence
+entries. Untouched sibling records remain byte/canonically unchanged. Unknown or
+quarantined evidence, ambiguous claim identity, or mismatched page/span lineage fails
+closed; the planner's existing safe removal or abstention strategy remains the
+authorized route when support cannot be established. Candidate integrity reruns
+`validate_retained_claims()` and the soft-copy provenance checks before semantic and
+grounding provider validation.
 
 After a rollback, the next plan and prompt receive a bounded `RepairDelta` containing
 resolved, persisting, and introduced issue fingerprints, severity transitions,
@@ -316,10 +330,10 @@ read-only scorecard omit private repair decisions and unpublished diagnostics.
 The audit is observational: it does not make model calls or change
 regeneration, validation, retry, promotion, or rollback decisions.
 
-Repair prompts carry the allowed paths, protected fields, planned action and
-strategy, and bounded content-free retry memory. The prompt-fixture corpus
-baseline is measured against this structured repair contract; the current
-baseline records the updated input-token footprint.
+Repair prompts carry the allowed paths, planned action and strategy, and bounded
+content-free retry memory. Protected-field complements and soft-copy provenance are
+computed by the generator and are not provider-authored fields. The prompt-fixture
+corpus baseline is measured against this structured repair contract.
 
 The canonical `reliability_telemetry.json` aggregates compatible audits into a
 repair scorecard. It reports repair-chain and attempt denominators, success at

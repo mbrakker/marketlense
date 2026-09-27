@@ -23,6 +23,7 @@ from src.contracts.regeneration import (
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
+    RepairDecision,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
@@ -36,6 +37,7 @@ from src.generators._artifact_generator.storage import (
     build_key_figures,
     derive_metric_spine_from_insights,
 )
+from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
@@ -45,6 +47,7 @@ from src.generators.report_regeneration_generator import (
     _build_regeneration_state,
     _build_soft_copy_claim_evidence_package,
     _merge_regenerated_insights_by_stable_id,
+    _repair_decision_protected_fields_are_complete,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
 )
@@ -70,6 +73,7 @@ from src.utils.errors import AppError
 
 from ._test_report_regeneration_generator._shared import (
     _legacy_repair_decision_response,
+    _parse_fixture_variables,
 )
 
 METRIC = {
@@ -293,6 +297,36 @@ def _soft_copy_claim(
         producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
         generation_attempt=1,
         regeneration_attempt=0,
+    )
+
+
+def test_handcrafted_incomplete_protected_field_complement_is_rejected() -> None:
+    decision = RepairDecision(
+        diagnosed_failure_class="grounding",
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        protected_fields=["expert_comment[claim_index=0]"],
+    )
+
+    assert not _repair_decision_protected_fields_are_complete(
+        decision,
+        [
+            "expert_comment[claim_index=1]",
+            "expert_comment[claim_index=2]",
+        ],
+    )
+    assert _repair_decision_protected_fields_are_complete(
+        decision,
+        ["expert_comment[claim_index=0]"],
+    )
+    assert not _repair_decision_protected_fields_are_complete(decision, [])
+    assert _repair_decision_protected_fields_are_complete(
+        RepairDecision(
+            diagnosed_failure_class="grounding",
+            repair_action="REGENERATE_ITEM",
+            repair_strategy="current_evidence",
+        ),
+        [],
     )
 
 
@@ -2388,10 +2422,32 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
     selection = response.updated_artifacts["_repair_evidence_selection"][
         f"expert_comment:{original_claim.claim_id}"
     ]
+    canonical_spans = artifact_evidence_span_index(
+        doc_map=evidence_packs["doc_map"], evidence_packs=evidence_packs
+    )
 
     assert repaired["claim_id"] != original_claim.claim_id
     assert repaired["repaired_from_claim_id"] == original_claim.claim_id
+    assert repaired["classification"] == original_claim.classification
+    assert repaired["evidence_ids"] == selection["selected_evidence_ids"]
+    assert repaired["source_spans"] == canonical_spans["f2"]
     assert selection["repaired_claim_id"] == repaired["claim_id"]
+    assert valid_soft_copy_evidence_selection(
+        f"expert_comment:{original_claim.claim_id}",
+        selection,
+        require_selected_evidence_entries=True,
+    )
+    assert [
+        item["entry"]["id"] for item in selection["selected_evidence_entries"]
+    ] == selection["selected_evidence_ids"]
+    retained_sibling = next(
+        claim
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["claim_id"] == sibling_claim.claim_id
+    )
+    assert retained_sibling == soft_copy_claim_provenance_to_payload(
+        [sibling_claim]
+    )["claims"][0]
     assert "claim_ledgers" not in response.updated_artifacts
     assert "topics_covered" not in response.updated_artifacts
     candidate_integrity = validate_regeneration_candidate(
@@ -2422,6 +2478,231 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
 
     assert not result.passed
     assert any("quarantined" in issue.message for issue in result.issues)
+
+
+def test_atomic_repair_rejects_selected_evidence_missing_from_retained_package(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    old_text = "Original factual Expert View sentence."
+    old_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:original-factual",
+        text_hash=hashlib.sha256(old_text.encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("f2",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current["expert_comment"] = old_text
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload([old_claim])["claims"]
+    evidence_packs = _evidence_packs()
+
+    class _UnknownSelectedEvidenceClient:
+        def openai_chat_json(self, req, ctx):
+            del ctx
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            repair_context = json.loads(variables["repair_context_json"])
+            path = repair_context["allowed_paths"][0]
+            decision = {
+                "schema_version": "1.0",
+                "repair_action": repair_context["repair_action"],
+                "repair_strategy": repair_context["repair_strategy"],
+                "evidence_ids_used": ["missing-retained-evidence"],
+                "changed_paths": [path],
+                "minimal_patch": [
+                    {
+                        "op": "replace",
+                        "path": path,
+                        "value_json": json.dumps("Repaired factual sentence."),
+                    }
+                ],
+            }
+            payload = {"repair_decision": decision}
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-unknown-selected-evidence",
+            )
+
+    target = RegenerationTarget(
+        target_section="expert_comment",
+        regenerate_steps=["expert_comment"],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["expert_comment[claim_index=0]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="expert_comment",
+                message="Original factual claim is unsupported.",
+                severity="error",
+                entity_id=old_claim.claim_id,
+                evidence_ids=["f2"],
+            )
+        ],
+    )
+
+    with pytest.raises(AppError) as captured:
+        _regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=2,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[target],
+                    unmappable_issues=[],
+                    broad_retry_allowed=False,
+                ),
+                current_artifacts=current,
+                doc_map=evidence_packs["doc_map"],
+                evidence_packs=evidence_packs,
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=current["source_status"],
+                categories=["Category"],
+            ),
+            openai_client=_UnknownSelectedEvidenceClient(),
+            prompt_client=_FakePromptClient(),
+        )
+
+    assert captured.value.code == "regeneration_repair_decision_invalid"
+    assert captured.value.context["reason"] == "evidence_not_retained_or_quarantined"
+
+
+def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    original_text = "Original factual LinkedIn sentence."
+    sibling_text = "Unchanged LinkedIn sentence."
+    original_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id="soft_copy:linkedin_post:original-factual",
+        text_hash=hashlib.sha256(original_text.encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("f2",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    sibling_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id="soft_copy:linkedin_post:unchanged-sibling",
+        text_hash=hashlib.sha256(sibling_text.encode()).hexdigest(),
+        classification="interpretive",
+        evidence_ids=("f2",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current["linkedin_post"] = f"{original_text} {sibling_text}"
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "linkedin_post"
+    ] + soft_copy_claim_provenance_to_payload(
+        [original_claim, sibling_claim]
+    )["claims"]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].extend(
+        {"id": f"f{index}", "evidence": f"Supporting finding {index}."}
+        for index in (3, 4, 5)
+    )
+    target = RegenerationTarget(
+        target_section="linkedin_post",
+        regenerate_steps=["linkedin_post"],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["linkedin_post[claim_index=0]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="linkedin_post",
+                message="Original LinkedIn fact needs repair.",
+                severity="error",
+                entity_id=original_claim.claim_id,
+                evidence_ids=["f2"],
+            )
+        ],
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_ClaimScopedSoftCopyOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    claims = response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    repaired = next(
+        claim
+        for claim in claims
+        if claim["artifact_family"] == "linkedin_post"
+        and claim["text_hash"]
+        == hashlib.sha256(b"Repaired LinkedIn claim.").hexdigest()
+    )
+    selection = response.updated_artifacts["_repair_evidence_selection"][
+        f"linkedin_post:{original_claim.claim_id}"
+    ]
+    canonical_spans = artifact_evidence_span_index(
+        doc_map=evidence_packs["doc_map"], evidence_packs=evidence_packs
+    )
+
+    assert response.updated_artifacts["linkedin_post"] == (
+        "Repaired LinkedIn claim. Unchanged LinkedIn sentence."
+    )
+    assert repaired["classification"] == "factual"
+    assert repaired["evidence_ids"] == ["f2"]
+    assert repaired["source_spans"] == canonical_spans["f2"]
+    assert repaired["repaired_from_claim_id"] == original_claim.claim_id
+    assert selection["selected_evidence_ids"] == repaired["evidence_ids"]
+    assert next(
+        claim
+        for claim in claims
+        if claim["claim_id"] == sibling_claim.claim_id
+    ) == soft_copy_claim_provenance_to_payload([sibling_claim])["claims"][0]
+    assert not hasattr(response.repair_decisions[0], "claim_provenance")
+    candidate_integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=response.updated_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+    assert candidate_integrity.passed, [
+        (issue.affected_section, issue.message)
+        for issue in candidate_integrity.issues
+    ]
 
 
 def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(

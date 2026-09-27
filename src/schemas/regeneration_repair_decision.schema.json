@@ -11,21 +11,14 @@
         "repair_action",
         "repair_strategy",
         "evidence_ids_used",
-        "protected_fields",
         "changed_paths",
-        "minimal_patch",
-        "claim_provenance"
+        "minimal_patch"
       ],
       "properties": {
         "schema_version": {"type": "string"},
         "repair_action": {"type": "string", "minLength": 1},
         "repair_strategy": {"type": "string", "minLength": 1},
         "evidence_ids_used": {
-          "type": "array",
-          "items": {"type": "string", "minLength": 1},
-          "uniqueItems": true
-        },
-        "protected_fields": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
@@ -46,25 +39,6 @@
               "op": {"type": "string", "const": "replace"},
               "path": {"type": "string", "minLength": 1},
               "value_json": {"type": "string", "minLength": 1}
-            },
-            "additionalProperties": false
-          }
-        },
-        "claim_provenance": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["claim", "classification", "evidence_ids"],
-            "properties": {
-              "claim": {"type": "string"},
-              "classification": {
-                "enum": ["factual", "interpretive", "recommendation"]
-              },
-              "evidence_ids": {
-                "type": "array",
-                "items": {"type": "string", "minLength": 1},
-                "uniqueItems": true
-              }
             },
             "additionalProperties": false
           }

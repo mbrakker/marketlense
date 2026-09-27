@@ -168,6 +168,8 @@ def test_repair_decision_provider_schema_omits_unsupported_keywords():
     repair = schema["properties"]["repair_decision"]["properties"]
 
     assert "diagnosed_failure_class" not in repair
+    assert "protected_fields" not in repair
+    assert "claim_provenance" not in repair
     evidence_ids = repair["evidence_ids_used"]
     assert "uniqueItems" not in evidence_ids
     assert "minLength" not in evidence_ids["items"]
@@ -186,7 +188,6 @@ def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids()
             "repair_action": "replace",
             "repair_strategy": "evidence_alignment",
             "evidence_ids_used": ["finding:1", "finding:1"],
-            "protected_fields": [],
             "changed_paths": ["summary.tldr"],
             "minimal_patch": [
                 {
@@ -195,9 +196,65 @@ def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids()
                     "value_json": json.dumps("Updated"),
                 }
             ],
-            "claim_provenance": [],
         }
     }
+
+    with pytest.raises(AppError):
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="regeneration_repair_decision",
+            ),
+            _ctx(),
+        )
+
+
+def test_repair_decision_rejects_provider_authored_provenance():
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "repair_action": "REGENERATE_ITEM",
+            "repair_strategy": "current_evidence",
+            "evidence_ids_used": ["finding:1"],
+            "changed_paths": ["expert_comment[claim_index=0]"],
+            "minimal_patch": [
+                {
+                    "op": "replace",
+                    "path": "expert_comment[claim_index=0]",
+                    "value_json": json.dumps("A repaired sentence."),
+                }
+            ],
+        }
+    }
+
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            payload=payload,
+            schema_name="regeneration_repair_decision",
+        ),
+        _ctx(),
+    )
+    payload["repair_decision"]["protected_fields"] = []
+
+    with pytest.raises(AppError):
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="regeneration_repair_decision",
+            ),
+            _ctx(),
+        )
+    payload["repair_decision"].pop("protected_fields")
+    payload["repair_decision"]["claim_provenance"] = [
+        {
+            "claim": "A repaired sentence.",
+            "classification": "factual",
+            "evidence_ids": ["finding:1"],
+        }
+    ]
 
     with pytest.raises(AppError):
         validate_schema(

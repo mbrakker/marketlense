@@ -87,18 +87,12 @@ def _decision_payload(
     artifacts: dict[str, object],
     patches: list[tuple[str, object]],
     evidence_ids: list[str] | None = None,
-    protected_fields: list[str] | None = None,
 ) -> dict[str, object]:
     return {
         "schema_version": "1.0",
         "repair_action": target.repair_action,
         "repair_strategy": target.repair_strategy,
         "evidence_ids_used": evidence_ids or [],
-        "protected_fields": (
-            protected_fields
-            if protected_fields is not None
-            else _required_repair_protected_fields(artifacts, target)
-        ),
         "changed_paths": [path for path, _ in patches],
         "minimal_patch": [
             {
@@ -108,7 +102,6 @@ def _decision_payload(
             }
             for path, value in patches
         ],
-        "claim_provenance": [],
     }
 
 
@@ -370,7 +363,7 @@ def test_ambiguous_writable_path_abstains_before_provider_is_required() -> None:
         _allowed_paths("insights_bundle", [issue], artifacts, "REGENERATE_ITEM")
         == []
     )
-    assert _required_repair_protected_fields(artifacts, target) == []
+    assert _required_repair_protected_fields(artifacts, target) is None
 
     execution = SimpleNamespace(
         runtime=SimpleNamespace(

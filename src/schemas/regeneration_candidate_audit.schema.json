@@ -112,8 +112,7 @@
           "evidence_ids_used",
           "protected_fields",
           "changed_paths",
-          "minimal_patch",
-          "claim_provenance"
+          "minimal_patch"
         ],
         "properties": {
           "schema_version": { "type": "string" },
