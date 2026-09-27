@@ -104,6 +104,12 @@ matching Expert View or LinkedIn metric-label repairs wait for full candidate
 revalidation after the source correction. Retry limits and the evidence,
 scope, and promotion validators are unchanged.
 
+For atomic Expert View and LinkedIn claim targets, non-blocking family warnings
+remain available as repair context but are excluded from the claim-to-provenance
+resolver. Only hard findings select claim spans for mutation, so a warning about
+the surrounding family cannot make a uniquely identified failed claim appear
+unresolvable.
+
 Planning abstains when it cannot resolve a writable scalar leaf. Before a
 provider client is required, runtime preflight also verifies that every path
 resolves uniquely to a scalar. The generator computes protected fields as the

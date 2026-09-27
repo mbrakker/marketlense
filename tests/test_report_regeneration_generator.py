@@ -2893,7 +2893,14 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
                 severity="error",
                 entity_id=original_claim.claim_id,
                 evidence_ids=["f2"],
-            )
+            ),
+            RegenerationIssue(
+                rule_id="artifact_quality",
+                affected_section="linkedin_post",
+                entity_id="linkedin_post",
+                message="Existing non-blocking LinkedIn quality warning.",
+                severity="warning",
+            ),
         ],
     )
 
@@ -3006,8 +3013,18 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
         for issue in validation_issues
         if issue.entity_id == original_claims[1].claim_id
     )
+    warning_issue = ValidationIssue(
+        schema_version="1.0",
+        message="Existing non-blocking Expert View quality warning.",
+        severity="warning",
+        affected_section="expert_comment",
+        rule_id="artifact_quality",
+        entity_id="expert_comment",
+    )
     plan = _build_regeneration_plan(
-        issues=[failed_issue], artifacts=current_artifacts, broad_retry_available=False
+        issues=[failed_issue, warning_issue],
+        artifacts=current_artifacts,
+        broad_retry_available=False,
     )
 
     response = regenerate_artifacts(
@@ -3030,6 +3047,14 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
 
     assert failed_issue.entity_id == original_claims[1].claim_id
     assert plan.targets[0].issues[0].evidence_ids == ["f2"]
+    assert any(
+        issue.entity_id == original_claims[1].claim_id
+        for issue in plan.targets[0].issues
+    )
+    assert any(
+        issue.rule_id == "artifact_quality" and issue.severity == "warning"
+        for issue in plan.targets[0].issues
+    )
     assert response.updated_artifacts["expert_comment"] == (
         "First supported sibling.  Last supported sibling."
     )

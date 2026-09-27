@@ -4355,10 +4355,16 @@ def _handle_expert_comment_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
+    claim_issues = [
+        issue
+        for issue in execution.target.issues
+        if str(issue.severity or "").strip().lower() == "error"
+    ]
     claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="expert_comment",
         text=execution.state.expert_comment,
+        issues=claim_issues,
     )
     if claim_repairs is None and _has_soft_copy_claim_leaf_target(execution):
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
@@ -4589,10 +4595,16 @@ def _handle_linkedin_post_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
+    claim_issues = [
+        issue
+        for issue in execution.target.issues
+        if str(issue.severity or "").strip().lower() == "error"
+    ]
     claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="linkedin_post",
         text=execution.state.linkedin_post,
+        issues=claim_issues,
     )
     if claim_repairs is None and _has_soft_copy_claim_leaf_target(execution):
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
