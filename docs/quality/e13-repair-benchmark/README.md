@@ -205,6 +205,9 @@ Verification at the implementation SHA: 193 focused atomic/repair tests and
 40 tests, and the prompt fixture regression gate passed within its configured
 token tolerance. The report-analysis planner suite had six failures; the same
 six tests failed on the parent commit, while 33 tests passed on this revision.
+The documentation validation suite had four passes and one failure from 12
+stale heading anchors in `simplification.md`; the parent commit has the same
+failure.
 
 ## Measurement status
 
