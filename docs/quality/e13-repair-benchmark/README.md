@@ -593,3 +593,8 @@ memory's `resolved` set must cover all current source fingerprints before those
 dependent targets are admitted; otherwise planning remains source-only. This
 lets the next candidate repair the source and its dependent copy in one bounded
 attempt after prior evidence proved that the source edit itself worked.
+
+The insight safe-removal strategy is planned only when its issue set resolves
+to one stable failed insight ID, which is the existing removal handler's
+atomicity contract. A multi-insight batch that exhausts its rewrite and
+rebind strategies is left blocked before the invalid single-item removal path.

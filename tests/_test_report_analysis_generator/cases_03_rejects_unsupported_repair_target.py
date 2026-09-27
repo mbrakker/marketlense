@@ -8,6 +8,7 @@ from src.contracts.regeneration import (
     FailureFingerprint,
     RepairDelta,
     RepairSeverityChange,
+    repair_strategy_fingerprint,
 )
 
 from ._shared import *  # noqa: F401,F403
@@ -322,9 +323,7 @@ def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy(
         classification="factual",
         evidence_ids=("s8",),
         source_spans=(),
-        producing_prompt_identity={
-            "namespace": "report_vs/artifacts/linkedin_post"
-        },
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
         generation_attempt=1,
         regeneration_attempt=0,
     )
@@ -355,9 +354,7 @@ def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy(
         "linkedin_post",
     ]
     assert retry_plan.targets[0].allowed_paths == target.allowed_paths
-    assert retry_plan.targets[1].allowed_paths == [
-        "linkedin_post[claim_index=0]"
-    ]
+    assert retry_plan.targets[1].allowed_paths == ["linkedin_post[claim_index=0]"]
 
 
 def test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error():
@@ -377,6 +374,70 @@ def test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error():
 
     assert plan.mode == "skip"
     assert plan.targets == []
+
+
+def test_multi_insight_retry_does_not_offer_single_item_safe_removal():
+    insights = [
+        {
+            "id": insight_id,
+            "text": f"Supported text for {insight_id}.",
+            "metric": {"value": "10", "unit": "index"},
+            "evidence_id": evidence_id,
+            "evidence": f"Source supports 10 for {insight_id}.",
+        }
+        for insight_id, evidence_id in (
+            ("insight-a", "evidence-a"),
+            ("insight-b", "evidence-b"),
+        )
+    ]
+    artifacts = {
+        "insights_final": insights,
+        "insights_candidates": [dict(insight) for insight in insights],
+    }
+    issues = [
+        ValidationIssue(
+            schema_version="1.0",
+            message="Retained metric is unsupported.",
+            severity="error",
+            affected_section=f"insights:{insight_id}.metric",
+            rule_id="retained_claim.protected_fact_value_consistency",
+            entity_id=f"insight:{insight_id}:metric",
+            evidence_ids=[evidence_id],
+        )
+        for insight_id, evidence_id in (
+            ("insight-a", "evidence-a"),
+            ("insight-b", "evidence-b"),
+        )
+    ]
+
+    first_plan = _build_regeneration_plan(
+        issues=issues, artifacts=artifacts, broad_retry_available=False
+    )
+    assert first_plan.targets[0].repair_action == "REGENERATE_ITEM"
+    fingerprints = [issue.failure_fingerprint for issue in first_plan.targets[0].issues]
+    rejected = {
+        repair_strategy_fingerprint(
+            fingerprints,
+            first_plan.targets[0].repair_strategy,
+            first_plan.targets[0].selected_evidence_ids,
+        ),
+        repair_strategy_fingerprint(
+            fingerprints, "alternative_evidence", ["evidence-a", "evidence-b"]
+        ),
+    }
+
+    exhausted = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected,
+    )
+
+    assert exhausted.mode == "skip"
+    assert exhausted.targets == []
+    assert {issue.rule_id for issue in exhausted.unmappable_issues} == {
+        "retained_claim.protected_fact_value_consistency"
+    }
 
 
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
@@ -456,6 +517,7 @@ __all__ = [
     "test_mobile_numbers_failure_targets_exact_insight_so_what_leaf",
     "test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy",
     "test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error",
+    "test_multi_insight_retry_does_not_offer_single_item_safe_removal",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]
