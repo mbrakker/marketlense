@@ -198,8 +198,11 @@ list-item identities, against each target's declared `allowed_paths`. It rejects
 changed siblings and undeclared nested fields as `regeneration_scope_violation`
 before promotion. A changed deterministic projection is allowed only after the
 candidate verifier recomputes it from canonical inputs and confirms that it
-depends on a declared repair path. The audit records declared paths and verified
-dependent paths. Regeneration may also update private prompt-cache metadata;
+depends on a declared repair path whose source root actually changed. A
+projection that matches its canonical builder is still out of scope when its
+declared source stayed unchanged. The audit records declared paths and exact
+verified dependent paths. Regeneration may also update private prompt-cache
+metadata;
 the verifier admits only namespaces both planned and actually used, checks that
 each producing identity matches its retained prompt identity and regeneration
 requirement, and rejects unrelated cache changes. Targeted patches merge onto
@@ -227,6 +230,15 @@ cards, executive advisory, and claim ledger from the candidate's canonical
 inputs. The scope gate permits each changed projection only after exact
 recomputation succeeds and its declared input dependency matches the repair;
 an unrelated or altered projection remains blocked.
+
+After the atomic source patch is merged onto the last promoted artifact, one
+finalization step compares patched roots with that promoted baseline. It restores
+existing deterministic projections, rebuilds only dependents of roots that
+actually changed through the canonical artifact builders, and returns exact
+changed projection paths. Assembly-created roots are materialized only when
+they are affected dependents. Unrelated projections remain byte-identical, and
+the candidate verifier independently recomputes every changed root before
+scope admission.
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public
@@ -288,6 +300,14 @@ prior retained claim for that family. Claim-scoped repairs retain their existing
 lineage rule and replace only the declared repaired claim. This prevents a
 stale hash from an earlier complete-family pass from surviving a deterministic
 public-copy correction.
+The same finalization step rebuilds provenance by sentence hashes from the final
+public text on the shared `soft_copy_material_sentences` grid. Claims keep their
+retained identity when classification and evidence bindings still match; a
+candidate binding is selected when those semantics changed, and candidate
+validation checks it. Repeated byte-identical sentences resolve to one stable
+content identity. A final sentence without a retained binding fails with
+`regeneration_deterministic_projection_failed`; finalization does not invent a
+classification, evidence ID, or off-grid sentence fragment.
 For optional Expert Comment and LinkedIn copy, finalization may omit an
 unbound sentence only when the same output retains at least one sentence with
 an already declared semantic binding. It never infers a replacement binding;

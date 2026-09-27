@@ -693,6 +693,147 @@ def test_align_bindings_keeps_exact_and_unmatched_bindings() -> None:
     assert aligned[1] == unmatched_binding
 
 
+def test_byte_identical_expert_and_linkedin_text_share_sentence_hashes() -> None:
+    from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+    from src.generators.soft_copy_claim_provenance import (
+        build_soft_copy_claim_provenance,
+    )
+
+    text = "U.S. merchants changed course. Planning followed."
+    sentences = soft_copy_material_sentences(text)
+    bindings = [
+        {
+            "claim": sentences[0],
+            "classification": "interpretive",
+            "evidence_ids": [],
+        },
+        {
+            "claim": sentences[1],
+            "classification": "recommendation",
+            "evidence_ids": [],
+        },
+    ]
+    shared = {
+        "text": text,
+        "declared_claims": bindings,
+        "evidence_span_index": {},
+        "producing_prompt_identity": {"execution_identity": "same"},
+        "generation_attempt": 1,
+        "regeneration_attempt": 0,
+    }
+
+    expert = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment", **shared
+    )
+    linkedin = build_soft_copy_claim_provenance(
+        artifact_family="linkedin_post", **shared
+    )
+    summary = build_soft_copy_claim_provenance(artifact_family="summary", **shared)
+    repeated_expert = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment", **shared
+    )
+
+    assert [claim.text_hash for claim in expert] == [
+        claim.text_hash for claim in linkedin
+    ]
+    assert [claim.text_hash for claim in expert] == [
+        claim.text_hash for claim in summary
+    ]
+    assert [claim.claim_id for claim in expert] == [
+        claim.claim_id for claim in repeated_expert
+    ]
+    assert [claim.text_hash for claim in expert] == [
+        sha256(sentence.encode("utf-8")).hexdigest() for sentence in sentences
+    ]
+
+
+def test_fragment_binding_rebuilds_only_a_canonical_material_sentence() -> None:
+    from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+    from src.generators.soft_copy_claim_provenance import (
+        build_soft_copy_claim_provenance,
+    )
+
+    text = "U.S. market adoption reached 42%. Leaders should monitor the shift."
+    sentences = soft_copy_material_sentences(text)
+    claims = build_soft_copy_claim_provenance(
+        artifact_family="linkedin_post",
+        text=text,
+        declared_claims=[
+            {
+                "claim": "market adoption reached 42%",
+                "classification": "factual",
+                "evidence_ids": ["finding-1"],
+            },
+            {
+                "claim": sentences[1],
+                "classification": "recommendation",
+                "evidence_ids": [],
+            },
+        ],
+        evidence_span_index={"finding-1": []},
+        producing_prompt_identity={"execution_identity": "same"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+
+    assert [claim.text_hash for claim in claims] == [
+        sha256(sentence.encode("utf-8")).hexdigest() for sentence in sentences
+    ]
+    assert claims[0].text_hash != sha256(b"market adoption reached 42%").hexdigest()
+
+
+def test_candidate_validation_rejects_fragment_absent_from_sentence_grid() -> None:
+    from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+    from src.generators.validation.regeneration_candidate import (
+        validate_regeneration_candidate,
+    )
+
+    text = "U.S. market adoption reached 42%. Leaders should monitor the shift."
+    sentences = soft_copy_material_sentences(text)
+    current = _assemble_soft_copy(
+        linkedin_post=text,
+        soft_copy_claim_bindings={
+            "linkedin_post": [
+                {
+                    "claim": sentence,
+                    "classification": "recommendation",
+                    "evidence_ids": [],
+                }
+                for sentence in sentences
+            ]
+        },
+    )
+    candidate = dict(current)
+    fragment = "market adoption reached 42%"
+    candidate["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="linkedin_post",
+                claim_id=(
+                    f"soft_copy:linkedin_post:{sha256(fragment.encode()).hexdigest()[:16]}"
+                ),
+                text_hash=sha256(fragment.encode()).hexdigest(),
+                classification="recommendation",
+                evidence_ids=(),
+                source_spans=(),
+                producing_prompt_identity={"execution_identity": "retained"},
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+        ctx=RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
+    )
+
+    assert any(issue.rule_id == "soft_copy_claim_provenance" for issue in result.issues)
+
+
 def test_align_bindings_resolves_punctuation_and_case_variance() -> None:
     """Mechanically equivalent quotes bind without a model repair attempt."""
 

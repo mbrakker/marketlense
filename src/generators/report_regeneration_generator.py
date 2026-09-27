@@ -27,7 +27,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationRequest
 from src.generators._artifact_generator.storage import (
-    rebuild_regeneration_derived_artifacts,
+    finalize_regeneration_candidate_artifacts,
 )
 from src.generators.artifact_generator import (
     apply_artifact_family_policy,
@@ -383,33 +383,31 @@ def regenerate_artifacts(
         plan=request.plan,
         original_artifacts=request.current_artifacts,
     )
-    changed_roots = {
-        str(path).split(".", 1)[0]
+    authorized_source_roots = {
+        re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
         for target in request.plan.targets
         for path in target.allowed_paths
     }
-    modified_writable_roots = {
-        root
-        for root in changed_roots
-        if updated_artifacts.get(root) != safe_artifacts.get(root)
+    legacy_target_roots = {
+        "summary": {"summary"},
+        "insights_bundle": {"insights_candidates", "insights_final"},
+        "quotes": {"quotes_final"},
+        "expert_comment": {"expert_comment"},
+        "linkedin_post": {"linkedin_post"},
+        "cover_semantics": {"cover_semantics"},
+        "topics": {"toc_entries", "toc_topics", "toc_topics_expanded"},
     }
-    derived_inputs = {
-        "topics_covered": {"summary", "insights_final"},
-        "claim_ledgers": {"summary", "insights_final", "quotes_final"},
-    }
-    for artifact_root, input_roots in derived_inputs.items():
-        if changed_roots.intersection(input_roots):
+    for target in request.plan.targets:
+        if target.allowed_paths:
             continue
-        if artifact_root in safe_artifacts:
-            updated_artifacts[artifact_root] = deepcopy(safe_artifacts[artifact_root])
-        else:
-            # A targeted repair must not introduce an unrelated derived
-            # projection that was absent from the last promoted artifact set.
-            updated_artifacts.pop(artifact_root, None)
-    rebuild_regeneration_derived_artifacts(
-        artifacts=updated_artifacts,
+        authorized_source_roots.update(
+            legacy_target_roots.get(target.target_section, set())
+        )
+    finalized_derived_paths = finalize_regeneration_candidate_artifacts(
+        promoted_baseline=request.current_artifacts,
+        candidate_artifacts=updated_artifacts,
         evidence_packs=safe_evidence,
-        writable_roots=modified_writable_roots,
+        authorized_source_roots=authorized_source_roots,
     )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
@@ -450,6 +448,7 @@ def regenerate_artifacts(
                 "attempt_index": request.attempt_index,
                 "regenerated_sections": state.regenerated_sections,
                 "candidate_artifacts_path": candidate_artifacts_path,
+                "finalized_derived_path_count": len(finalized_derived_paths),
             },
         )
     )

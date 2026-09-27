@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from copy import deepcopy
@@ -26,6 +27,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
     soft_copy_public_text,
 )
 from src.generators._artifact_generator.family_policy import (
@@ -79,6 +81,7 @@ from src.services.schema_validator_service import (
     validate_schema,
 )
 from src.utils.analysis_family import family_is_abstained
+from src.utils.artifact_diff import artifact_diff_paths
 from src.utils.cache_utils import sha256_json
 from src.utils.coercion import string_value as _s
 from src.utils.errors import AppError
@@ -94,15 +97,25 @@ from src.utils.numeric_display import numeric_metadata_for_complete_display
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.quantity import extract_quantities
 
-CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
-    "metric_spine": frozenset({"insights_final"}),
-    "topics_covered": frozenset({"summary", "insights_final"}),
-    "key_figures": frozenset({"insights_final", "summary"}),
-    "chart_insight_cards": frozenset(
-        {"insights_final", "key_figures", "summary"}
+ARTIFACT_ROOT_DEPENDENCIES = {
+    "metric_spine": frozenset({"insights_final", "editorial_plan"}),
+    "topics_covered": frozenset({"toc_entries", "summary", "insights_final"}),
+    "key_figures": frozenset(
+        {"insights_final", "summary", "editorial_plan", "metric_spine"}
     ),
-    "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),
-    "claim_ledgers": frozenset({"insights_final", "summary", "quotes_final"}),
+    "chart_insight_cards": frozenset({"insights_final", "key_figures", "summary"}),
+    "executive_advisory": frozenset(
+        {"insights_final", "summary", "quotes_final", "metric_spine"}
+    ),
+    "claim_ledgers": frozenset(
+        {
+            "insights_final",
+            "summary",
+            "quotes_final",
+            "metric_spine",
+            "executive_advisory",
+        }
+    ),
     "family_status": frozenset(
         {
             "summary",
@@ -113,7 +126,37 @@ CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
             "linkedin_post",
         }
     ),
+    "soft_copy_claim_provenance": frozenset(
+        {"summary", "expert_comment", "linkedin_post"}
+    ),
+    "_repair_evidence_selection": frozenset(
+        {"summary", "expert_comment", "linkedin_post"}
+    ),
+    "_cache": frozenset(
+        {
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "quotes_final",
+            "expert_comment",
+            "linkedin_post",
+        }
+    ),
 }
+CANONICAL_DERIVED_ARTIFACT_ROOTS = frozenset(
+    {
+        "metric_spine",
+        "topics_covered",
+        "key_figures",
+        "chart_insight_cards",
+        "executive_advisory",
+        "claim_ledgers",
+        "family_status",
+    }
+)
+REGENERATION_PRIVATE_METADATA_ROOTS = frozenset(
+    {"_cache", "_repair_evidence_selection"}
+)
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -1859,17 +1902,16 @@ def rebuild_regeneration_derived_artifacts(
     artifacts: Dict[str, Any],
     evidence_packs: Dict[str, Any],
     writable_roots: Iterable[str],
+    materialize_roots: Iterable[str] = (),
 ) -> frozenset[str]:
-    """Rebuild only present deterministic projections downstream of a repair."""
+    """Rebuild present affected projections through the canonical builders."""
 
     affected_roots = {str(root).strip() for root in writable_roots if str(root).strip()}
     required_roots: set[str] = set()
     while True:
         newly_required = {
             root
-            for root, dependencies in (
-                CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.items()
-            )
+            for root, dependencies in ARTIFACT_ROOT_DEPENDENCIES.items()
             if root not in required_roots and dependencies.intersection(affected_roots)
         }
         if not newly_required:
@@ -1877,17 +1919,189 @@ def rebuild_regeneration_derived_artifacts(
         required_roots.update(newly_required)
         affected_roots.update(newly_required)
 
-    present_roots = required_roots.intersection(artifacts)
+    present_roots = required_roots.intersection(
+        artifacts, CANONICAL_DERIVED_ARTIFACT_ROOTS
+    ) | required_roots.intersection(materialize_roots, CANONICAL_DERIVED_ARTIFACT_ROOTS)
     if not present_roots:
         return frozenset()
-    expected = build_canonical_regeneration_derived_artifacts(
-        artifacts=artifacts,
-        evidence_packs=evidence_packs,
-        roots=present_roots,
-    )
+    try:
+        expected = build_canonical_regeneration_derived_artifacts(
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+            roots=present_roots,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="regeneration_deterministic_projection_failed",
+            message="Canonical deterministic projections could not be rebuilt",
+            retryable=False,
+            context={
+                "projection_roots": sorted(present_roots),
+                "cause_code": exc.code,
+            },
+            cause=exc,
+        ) from exc
     for root in present_roots:
         artifacts[root] = expected[root]
     return frozenset(present_roots)
+
+
+def finalize_regeneration_candidate_artifacts(
+    *,
+    promoted_baseline: Dict[str, Any],
+    candidate_artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    authorized_source_roots: Iterable[str],
+) -> frozenset[str]:
+    """Finalize deterministic dependents and provenance on the atomic candidate.
+
+    The baseline is the last promoted artifact state. Candidate assembly can
+    contain incidental changes, so only planner-authorized roots are retained
+    as source changes. Projection roots are restored from the baseline, then
+    only dependents of authorized source roots that actually changed are rebuilt
+    through the canonical builders.
+    Returned paths are the exact changed dependent paths produced by this step.
+    """
+
+    projection_roots = set(CANONICAL_DERIVED_ARTIFACT_ROOTS)
+    authorized_roots = {
+        str(root).strip() for root in authorized_source_roots if str(root).strip()
+    }
+    candidate_materialized_roots = {
+        root for root in projection_roots if root in candidate_artifacts
+    }
+    for root in projection_roots:
+        if root in promoted_baseline:
+            candidate_artifacts[root] = deepcopy(promoted_baseline[root])
+        else:
+            candidate_artifacts.pop(root, None)
+
+    for root in set(promoted_baseline) | set(candidate_artifacts):
+        if (
+            root in authorized_roots
+            or root in projection_roots
+            or root in REGENERATION_PRIVATE_METADATA_ROOTS
+            or root == "soft_copy_claim_provenance"
+        ):
+            continue
+        if root in promoted_baseline:
+            candidate_artifacts[root] = deepcopy(promoted_baseline[root])
+        else:
+            candidate_artifacts.pop(root, None)
+
+    changed_source_roots = {
+        root
+        for root in authorized_roots
+        if root not in ARTIFACT_ROOT_DEPENDENCIES
+        and promoted_baseline.get(root) != candidate_artifacts.get(root)
+    }
+    rebuilt_roots = rebuild_regeneration_derived_artifacts(
+        artifacts=candidate_artifacts,
+        evidence_packs=evidence_packs,
+        writable_roots=changed_source_roots,
+        materialize_roots=candidate_materialized_roots,
+    )
+
+    try:
+        _rebuild_final_soft_copy_claim_provenance(
+            artifacts=candidate_artifacts,
+            promoted_baseline=promoted_baseline,
+        )
+    except AppError as exc:
+        raise AppError(
+            code="regeneration_deterministic_projection_failed",
+            message="Final soft-copy provenance could not be rebuilt deterministically",
+            retryable=False,
+            context={
+                "projection": "soft_copy_claim_provenance",
+                "cause_code": exc.code,
+                "artifact_family": exc.context.get("artifact_family", ""),
+                "missing_public_sentence_count": exc.context.get(
+                    "missing_public_sentence_count", 0
+                ),
+                "obsolete_provenance_sentence_count": exc.context.get(
+                    "obsolete_provenance_sentence_count", 0
+                ),
+            },
+            cause=exc,
+        ) from exc
+
+    changed_paths = artifact_diff_paths(promoted_baseline, candidate_artifacts)
+    verified_roots = set(rebuilt_roots)
+    if promoted_baseline.get("soft_copy_claim_provenance") != candidate_artifacts.get(
+        "soft_copy_claim_provenance"
+    ):
+        verified_roots.add("soft_copy_claim_provenance")
+    return frozenset(
+        path
+        for path in changed_paths
+        if path.split(".", 1)[0].split("[", 1)[0] in verified_roots
+    )
+
+
+def _rebuild_final_soft_copy_claim_provenance(
+    *,
+    artifacts: Dict[str, Any],
+    promoted_baseline: Dict[str, Any],
+) -> None:
+    """Rebind final public sentences on the shared canonical material grid."""
+
+    raw_provenance = artifacts.get("soft_copy_claim_provenance")
+    if raw_provenance is None:
+        claims: List[SoftCopyClaimProvenance] = []
+    else:
+        claims = soft_copy_claim_provenance_from_payload(raw_provenance)
+    baseline_claims: List[SoftCopyClaimProvenance] = []
+    baseline_provenance = promoted_baseline.get("soft_copy_claim_provenance")
+    if isinstance(baseline_provenance, dict):
+        try:
+            baseline_claims = soft_copy_claim_provenance_from_payload(
+                baseline_provenance
+            )
+        except AppError:
+            baseline_claims = []
+    rebuilt_claims: List[SoftCopyClaimProvenance] = []
+    for family in ("summary", "expert_comment", "linkedin_post"):
+        public_text = soft_copy_public_text(family, artifacts.get(family))
+        family_claims = [claim for claim in claims if claim.artifact_family == family]
+        baseline_family_claims = [
+            claim for claim in baseline_claims if claim.artifact_family == family
+        ]
+        claims_by_hash = {claim.text_hash: claim for claim in family_claims}
+        baseline_by_hash = {claim.text_hash: claim for claim in baseline_family_claims}
+        rebuilt_hashes: set[str] = set()
+        for sentence in soft_copy_material_sentences(public_text):
+            text_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+            if text_hash in rebuilt_hashes:
+                continue
+            candidate_claim = claims_by_hash.get(text_hash)
+            baseline_claim = baseline_by_hash.get(text_hash)
+            retained = candidate_claim or baseline_claim
+            if (
+                candidate_claim is not None
+                and baseline_claim is not None
+                and candidate_claim.classification == baseline_claim.classification
+                and candidate_claim.evidence_ids == baseline_claim.evidence_ids
+            ):
+                retained = baseline_claim
+            if retained is None:
+                raise AppError(
+                    code="soft_copy_claim_provenance_sentence_missing",
+                    message="Final sentence is absent from retained provenance",
+                    retryable=False,
+                    context={"artifact_family": family},
+                )
+            rebuilt_claims.append(retained)
+            rebuilt_hashes.add(text_hash)
+    rebuilt_claims.extend(
+        claim
+        for claim in claims
+        if claim.artifact_family not in {"summary", "expert_comment", "linkedin_post"}
+    )
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        rebuilt_claims
+    )
+    assert_retained_soft_copy_claims_match_public_copy(artifacts)
 
 
 def build_canonical_regeneration_derived_artifacts(

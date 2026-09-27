@@ -4502,18 +4502,24 @@ def test_regenerate_artifacts_topics_rebuilds_topic_briefs_without_model_calls(
     )
 
 
-def test_regenerate_artifacts_rebuilds_only_key_figures_without_model_calls(tmp_path):
+def test_atomic_metric_source_repair_rebuilds_key_figures_without_model_calls(
+    tmp_path,
+):
     prompt_client = _FakePromptClient()
     openai_client = _FakeOpenAIClient()
     current_artifacts = _current_artifacts()
+    insight = current_artifacts["insights_final"][0]
+    evidence_text = (
+        "In 2026, 75% of Europe retail-media teams use AI in campaign workflows."
+    )
     current_artifacts["insights_final"][0].update(
         {
             "text": "Retail-media teams are using AI in campaign workflows.",
-            "evidence": "In 2026, 75% of Europe retail-media teams use AI in campaign workflows.",
+            "evidence": evidence_text,
             "metric": {
                 **METRIC,
                 "label": "Retail-media teams using AI in campaign workflows",
-                "value": "75%",
+                "value": "70%",
                 "timeframe": "2026",
                 "geography": "Europe",
                 "segment": "retail-media teams",
@@ -4521,46 +4527,47 @@ def test_regenerate_artifacts_rebuilds_only_key_figures_without_model_calls(tmp_
             },
         }
     )
-    current_artifacts["key_figures"] = [
+    current_artifacts["insights_candidates"] = [
         {
-            "figure_id": "bad-figure",
-            "label": "Retail-media teams using AI in campaign workflows",
-            "figure": "70%",
-            "evidence_id": "f1",
+            **deepcopy(insight),
+            "metric": {**insight["metric"], "value": "75%"},
         }
     ]
     evidence_packs = _evidence_packs()
-    evidence_packs["findings"]["findings"][0]["evidence"] = current_artifacts[
-        "insights_final"
-    ][0]["evidence"]
+    evidence_packs["findings"]["findings"][0].update(
+        {"evidence": evidence_text, "text": evidence_text}
+    )
+    current_artifacts["key_figures"] = build_key_figures(
+        metric_spine=derive_metric_spine_from_insights(
+            current_artifacts["insights_final"], evidence_packs=evidence_packs
+        ),
+        evidence_packs=evidence_packs,
+        summary=current_artifacts["summary"],
+        insights_final=current_artifacts["insights_final"],
+        editorial_plan=current_artifacts["editorial_plan"],
+    )
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="Retained metric value is unsupported.",
+        severity="error",
+        affected_section="insights:insight-1.metric",
+        rule_id="retained_claim.protected_fact_value_consistency",
+        entity_id="insight:insight-1:metric",
+        evidence_ids=["f1"],
+    )
+    plan = _build_regeneration_plan(
+        issues=[issue], artifacts=current_artifacts, broad_retry_available=False
+    )
+    assert plan.targets[0].allowed_paths == [
+        "insights_final[item=insight-1].metric.value"
+    ]
 
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id="report-1",
             report_name="report-1",
             attempt_index=1,
-            plan=RegenerationPlan(
-                mode="targeted",
-                targets=[
-                    RegenerationTarget(
-                        target_section="key_figures",
-                        regenerate_steps=["key_figures"],
-                        prompt_namespaces=[],
-                        issues=[
-                            RegenerationIssue(
-                                rule_id="public_editorial_quality.metric_label_relationship",
-                                affected_section="key_figures:0.figure",
-                                message="The selected figure conflicts with its evidence.",
-                                severity="error",
-                                evidence_ids=["f1"],
-                                repair_target="key_figures",
-                            )
-                        ],
-                    )
-                ],
-                unmappable_issues=[],
-                broad_retry_allowed=True,
-            ),
+            plan=plan,
             current_artifacts=current_artifacts,
             doc_map=evidence_packs["doc_map"],
             evidence_packs=evidence_packs,
@@ -4575,7 +4582,7 @@ def test_regenerate_artifacts_rebuilds_only_key_figures_without_model_calls(tmp_
         prompt_client=prompt_client,
     )
 
-    assert response.regenerated_sections == ["key_figures"]
+    assert response.updated_artifacts["insights_final"][0]["metric"]["value"] == "75%"
     assert response.updated_artifacts["key_figures"][0]["figure"] == "75%"
     assert response.updated_artifacts["summary"]["tldr"] == "Old TLDR."
     assert response.updated_artifacts["summary"]["executive_summary"] == "Old summary"
