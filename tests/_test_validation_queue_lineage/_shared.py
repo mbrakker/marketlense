@@ -462,7 +462,7 @@ def _full_chain_chat_response_factory(
                 id="fixture-chat-rank-candidates",
             )
         else:
-            if schema_name == "regeneration_repair_decision_v3":
+            if schema_name == "regeneration_repair_decision_v5":
                 repair_context = _json_prompt_value(call, "Repair context JSON")
                 if not isinstance(repair_context, dict):
                     raise AssertionError("repair fixture is missing its typed context")
@@ -493,26 +493,14 @@ def _full_chain_chat_response_factory(
                     "repair_action": repair_context["repair_action"],
                     "repair_strategy": repair_context["repair_strategy"],
                     "evidence_ids_used": used_ids if replacement else [],
-                    "protected_fields": repair_context["required_protected_fields"],
                     "changed_paths": [path],
                     "minimal_patch": [
                         {
                             "op": "replace",
                             "path": path,
-                            "value_json": json.dumps(replacement, ensure_ascii=False),
+                            "value": replacement,
                         }
                     ],
-                    "claim_provenance": (
-                        [
-                            {
-                                "claim": replacement,
-                                "classification": "recommendation",
-                                "evidence_ids": used_ids,
-                            }
-                        ]
-                        if replacement
-                        else []
-                    ),
                 }
                 payload = {"repair_decision": decision}
                 response = FakeOpenAIResult(
@@ -530,7 +518,7 @@ def _full_chain_chat_response_factory(
                 )
                 payload = json.loads(response.output_text)
             family = schema_name.removeprefix("artifact_").removesuffix("_v1")
-            if schema_name == "regeneration_repair_decision_v3":
+            if schema_name == "regeneration_repair_decision_v5":
                 pass
             elif reproduce_ias_soft_copy and family in soft_copy_calls:
                 soft_copy_calls[family] += 1

@@ -78,7 +78,7 @@ def _legacy_repair_decision_response(req, result):
             {
                 "op": "replace",
                 "path": path,
-                "value_json": json.dumps(patch_value, ensure_ascii=False),
+                "value": patch_value,
             }
         ],
     }

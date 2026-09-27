@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from src.contracts.run_context import RunContext
@@ -177,8 +175,53 @@ def test_repair_decision_provider_schema_omits_unsupported_keywords():
     patch_op = repair["minimal_patch"]["items"]["properties"]["op"]
     assert patch_op["type"] == "string"
     patch_value = repair["minimal_patch"]["items"]["properties"]
-    assert "value" not in patch_value
-    assert patch_value["value_json"]["type"] == "string"
+    assert patch_value["value"] == {"type": "string"}
+    assert "value_json" not in patch_value
+    assert "value" in repair["minimal_patch"]["items"]["required"]
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "summary.claim_evidence_map[item=claim-1].claim",
+        "summary.executive_summary[claim_index=0]",
+        "insights_final[item=insight-1].text",
+        "insights_final[item=insight-1].so_what",
+        "insights_final[item=insight-1].metric.value",
+        "insights_final[item=insight-1].metric.unit",
+        "quotes_final[item=quote-1].text",
+        "expert_comment[claim_index=0]",
+        "linkedin_post[claim_index=0]",
+    ],
+)
+@pytest.mark.parametrize(
+    "value",
+    [{"nested": "replacement"}, ["replacement"]],
+    ids=["object", "array"],
+)
+def test_repair_provider_schema_rejects_container_values_for_every_family_leaf(
+    path: str, value: object
+) -> None:
+    payload = {
+        "repair_decision": {
+            "schema_version": "1.0",
+            "repair_action": "REGENERATE_ITEM",
+            "repair_strategy": "current_evidence",
+            "evidence_ids_used": ["finding:1"],
+            "changed_paths": [path],
+            "minimal_patch": [{"op": "replace", "path": path, "value": value}],
+        }
+    }
+
+    with pytest.raises(AppError):
+        validate_schema(
+            SchemaValidateRequest(
+                schema_version="1.0",
+                payload=payload,
+                schema_name="regeneration_repair_decision",
+            ),
+            _ctx(),
+        )
 
 
 def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids():
@@ -193,7 +236,7 @@ def test_repair_decision_canonical_schema_still_rejects_duplicate_evidence_ids()
                 {
                     "op": "replace",
                     "path": "summary.tldr",
-                    "value_json": json.dumps("Updated"),
+                    "value": "Updated",
                 }
             ],
         }
@@ -222,7 +265,7 @@ def test_repair_decision_rejects_provider_authored_provenance():
                 {
                     "op": "replace",
                     "path": "expert_comment[claim_index=0]",
-                    "value_json": json.dumps("A repaired sentence."),
+                    "value": "A repaired sentence.",
                 }
             ],
         }

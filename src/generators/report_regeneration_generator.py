@@ -1746,10 +1746,19 @@ def _render_regeneration_model(
 ) -> Dict[str, Any]:
     request = execution.runtime.request
     active_target = _active_repair_target(execution, variables)
-    required_protected_fields = (
-        _required_repair_protected_fields(
-            _current_repair_artifacts(execution.state), active_target
+    current_repair_artifacts = (
+        _current_repair_artifacts(execution.state) if repair_call else {}
+    )
+    if repair_call and not active_target.allowed_paths:
+        raise _repair_decision_error(execution, "repair_scope_partition_invalid")
+    if repair_call:
+        _validate_model_writable_paths(
+            execution=execution,
+            target=active_target,
+            current_artifacts=current_repair_artifacts,
         )
+    required_protected_fields = (
+        _required_repair_protected_fields(current_repair_artifacts, active_target)
         if repair_call
         else []
     )
@@ -1833,7 +1842,7 @@ def _render_regeneration_model(
         source_url=request.source_url,
         prepared_prompt_bundle=prepared,
         response_contract_name=("regeneration_repair_decision" if repair_call else ""),
-        response_contract_identity_version="v4",
+        response_contract_identity_version="v5",
     )
     if not repair_call:
         return result
@@ -2086,17 +2095,23 @@ def _repair_memory_prompt_payload(memory) -> List[Dict[str, Any]]:
 
 
 def _repair_decision_error(
-    execution: _RegenerationHandlerExecution, reason: str
+    execution: _RegenerationHandlerExecution,
+    reason: str,
+    *,
+    path: str = "",
 ) -> AppError:
+    context = {
+        "report_id": execution.runtime.request.report_id,
+        "target_section": execution.target.target_section,
+        "reason": reason,
+    }
+    if path:
+        context["path"] = path
     return AppError(
         code="regeneration_repair_decision_invalid",
         message="Model repair decision or minimal patch failed deterministic validation.",
         retryable=False,
-        context={
-            "report_id": execution.runtime.request.report_id,
-            "target_section": execution.target.target_section,
-            "reason": reason,
-        },
+        context=context,
     )
 
 
@@ -2123,17 +2138,20 @@ def _validated_repair_decision(
         raw_patch = payload["minimal_patch"]
         if not isinstance(raw_patch, list):
             raise TypeError("minimal_patch_not_array")
-        patch = [
-            RepairPatchOperation(
-                op=str(item["op"]),
-                path=str(item["path"]),
-                value=_decode_repair_patch_value_json(item["value_json"]),
+        patch = []
+        for item in raw_patch:
+            if not isinstance(item, dict):
+                raise TypeError("minimal_patch_operation_invalid")
+            value = item["value"]
+            if not isinstance(value, str):
+                raise TypeError("minimal_patch_value_not_string")
+            patch.append(
+                RepairPatchOperation(
+                    op=str(item["op"]),
+                    path=str(item["path"]),
+                    value=value,
+                )
             )
-            for item in raw_patch
-            if isinstance(item, dict)
-        ]
-        if len(patch) != len(raw_patch):
-            raise TypeError("minimal_patch_operation_invalid")
         decision = RepairDecision(
             schema_version=str(payload["schema_version"]),
             diagnosed_failure_class=planned_failure_class,
@@ -2221,18 +2239,33 @@ def _validated_repair_decision(
     return decision
 
 
-def _decode_repair_patch_value_json(value_json: object) -> Any:
-    if not isinstance(value_json, str):
-        raise ValueError("minimal_patch_value_json_invalid")
-    try:
-        return json.loads(value_json, parse_constant=_reject_non_json_constant)
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise ValueError("minimal_patch_value_json_invalid") from exc
+def _validate_model_writable_paths(
+    *,
+    execution: _RegenerationHandlerExecution,
+    target: RegenerationTarget,
+    current_artifacts: Dict[str, Any],
+) -> None:
+    """Require every provider-writable path to resolve to one retained string."""
 
-
-def _reject_non_json_constant(value: str) -> Any:
-    del value
-    raise ValueError("non_standard_json_constant")
+    paths = target.allowed_paths
+    if any(not isinstance(path, str) or not path for path in paths):
+        raise _repair_decision_error(execution, "model_writable_path_invalid")
+    if len(paths) != len(set(paths)):
+        raise _repair_decision_error(execution, "model_writable_paths_not_unique")
+    for path in paths:
+        found, current = _read_repair_path(current_artifacts, path)
+        if not found:
+            raise _repair_decision_error(
+                execution,
+                "model_writable_path_unresolved_or_ambiguous",
+                path=path,
+            )
+        if not isinstance(current, str):
+            raise _repair_decision_error(
+                execution,
+                "model_writable_path_not_string",
+                path=path,
+            )
 
 
 def _repair_protected_fields_preserved(

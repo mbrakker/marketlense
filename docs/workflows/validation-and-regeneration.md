@@ -149,8 +149,18 @@ protected leaf complement from the retained artifact and allowed paths; that
 planner-owned set is checked again before patch application and is not requested from
 the model. Failed and rejected copy are diagnostic context only, never evidence. The
 same model response contains diagnosis and patch, so this contract adds no critique
-call. Malformed decisions and invalid or broad patches fail closed before candidate
-creation.
+call. Each `minimal_patch` operation carries its replacement as a direct string
+`value`; JSON-encoded replacement strings are not part of the provider contract.
+The current model-assisted paths resolve to string leaves in the artifact schema:
+Summary claim text and sentences, candidate/final insight prose and textual metric
+leaves, quote text, and Expert View and LinkedIn sentences. Before provider setup,
+regeneration resolves every planned writable path against the current artifacts
+and fails with the exact path if it is duplicate, ambiguous, missing, or not a
+string. This keeps a future
+planner or artifact-schema change from exposing a container or unsupported scalar to
+the model. Topics, Key Figures, and report identity continue through their existing
+deterministic repair routes. Malformed decisions and invalid or broad patches fail
+closed before candidate creation.
 
 For an atomic Expert View or LinkedIn claim repair, the model supplies replacement
 public text and selected retained evidence IDs only. The generator resolves the

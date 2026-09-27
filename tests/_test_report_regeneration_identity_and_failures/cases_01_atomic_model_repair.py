@@ -13,7 +13,6 @@ from src.contracts.regeneration import (
     RegenerationTarget,
 )
 from src.generators.report_regeneration_generator import (
-    _decode_repair_patch_value_json,
     regenerate_artifacts,
 )
 from src.utils.errors import AppError
@@ -83,8 +82,7 @@ def _atomic_insight_plan(*, quarantined: list[str] | None = None) -> Regeneratio
 
 def _atomic_insight_decision(
     *,
-    value: str = "Repaired final insight",
-    value_json: str | None = None,
+    value: object = "Repaired final insight",
     path: str = "insights_final[item=insight-1].text",
     evidence_ids: list[str] | None = None,
 ) -> dict:
@@ -98,11 +96,7 @@ def _atomic_insight_decision(
             {
                 "op": "replace",
                 "path": path,
-                "value_json": (
-                    value_json
-                    if value_json is not None
-                    else json.dumps(value, ensure_ascii=False)
-                ),
+                "value": value,
             }
         ],
     }
@@ -136,13 +130,11 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
     repaired = response.updated_artifacts["insights_final"]
     assert len(client.calls) == 1
     assert client.calls[0].structured_output_schema_identity == (
-        "regeneration_repair_decision_v4"
+        "regeneration_repair_decision_v5"
     )
     prompt_variables = _parse_fixture_variables(client.calls[0].user_prompt)
     repair_context = json.loads(prompt_variables["repair_context_json"])
-    assert repair_context["allowed_paths"] == [
-        "insights_final[item=insight-1].text"
-    ]
+    assert repair_context["allowed_paths"] == ["insights_final[item=insight-1].text"]
     assert "required_protected_fields" not in repair_context
     assert repaired[0]["text"] == "Repaired final insight"
     assert repaired[0]["metric"] == before[0]["metric"]
@@ -164,7 +156,7 @@ def test_model_repair_rejects_illegal_sibling_patch_before_candidate_write(
         {
             "op": "replace",
             "path": sibling_path,
-            "value_json": json.dumps("Changed sibling"),
+            "value": "Changed sibling",
         }
     )
     client = _RepairDecisionOpenAIClient(decision)
@@ -195,11 +187,13 @@ def test_model_repair_rejects_illegal_sibling_patch_before_candidate_write(
     assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
 
 
-def test_model_repair_rejects_invalid_json_patch_value_before_candidate_write(
+def test_model_repair_rejects_non_string_patch_value_before_candidate_write(
     tmp_path,
 ) -> None:
     current = _source_backed_artifacts()
-    client = _RepairDecisionOpenAIClient(_atomic_insight_decision(value_json="{"))
+    client = _RepairDecisionOpenAIClient(
+        _atomic_insight_decision(value={"text": "over-broad"})
+    )
 
     with pytest.raises(AppError) as error:
         regenerate_artifacts(
@@ -222,17 +216,10 @@ def test_model_repair_rejects_invalid_json_patch_value_before_candidate_write(
             prompt_client=_FakePromptClient(),
         )
 
-    assert error.value.code == "regeneration_repair_decision_invalid"
+    assert error.value.code == "artifact_structured_output_invalid"
+    assert error.value.context["error_class"] == "schema_type_mismatch"
     assert len(client.calls) == 1
     assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
-
-
-@pytest.mark.parametrize(
-    "value",
-    ["text", 0, False, None, ["a", 1], {"value": ["a", 1]}],
-)
-def test_repair_value_json_round_trip_preserves_json_types(value) -> None:
-    assert _decode_repair_patch_value_json(json.dumps(value)) == value
 
 
 def test_model_repair_rejects_quarantined_evidence_before_candidate_write(
@@ -337,8 +324,7 @@ def test_invalid_repair_contract_does_not_trigger_a_second_provider_call(
 __all__ = [
     "test_model_repair_applies_one_validated_atomic_patch_in_one_call",
     "test_model_repair_rejects_illegal_sibling_patch_before_candidate_write",
-    "test_model_repair_rejects_invalid_json_patch_value_before_candidate_write",
-    "test_repair_value_json_round_trip_preserves_json_types",
+    "test_model_repair_rejects_non_string_patch_value_before_candidate_write",
     "test_model_repair_rejects_quarantined_evidence_before_candidate_write",
     "test_model_repair_rejects_evidence_missing_from_retained_package",
     "test_invalid_repair_contract_does_not_trigger_a_second_provider_call",

@@ -2780,7 +2780,7 @@ def test_atomic_repair_rejects_selected_evidence_missing_from_retained_package(
                     {
                         "op": "replace",
                         "path": path,
-                        "value_json": json.dumps("Repaired factual sentence."),
+                        "value": "Repaired factual sentence.",
                     }
                 ],
             }
@@ -4139,12 +4139,12 @@ def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(
                     {
                         "op": "replace",
                         "path": path,
-                        "value_json": json.dumps("Corrected retained claim."),
+                        "value": "Corrected retained claim.",
                     },
                     {
                         "op": "replace",
                         "path": unauthorized_path,
-                        "value_json": json.dumps("Rewritten sibling summary claim."),
+                        "value": "Rewritten sibling summary claim.",
                     },
                 ],
             }

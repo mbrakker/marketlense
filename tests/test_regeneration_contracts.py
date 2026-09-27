@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+import pytest
+
 from src.contracts.ingest import IngestSettings
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
@@ -323,6 +325,37 @@ def test_private_repair_decision_and_monotonic_delta_round_trip() -> None:
     ]
     assert RepairDecision(**decision_raw) == decision
     assert RepairDelta(**delta_raw) == delta
+
+    audit = RegenerationCandidateAudit(
+        attempt_index=1,
+        before_sha256="a" * 64,
+        after_sha256="b" * 64,
+        repair_decisions=[decision],
+        repair_delta=delta,
+    )
+    retained = asdict(audit)
+    assert retained["allowed_paths"] == []
+    assert retained["repair_decisions"][0]["changed_paths"] == [
+        "insights_final[item=i1].text"
+    ]
+    assert retained["repair_decisions"][0]["minimal_patch"] == [
+        {
+            "op": "replace",
+            "path": "insights_final[item=i1].text",
+            "value": "A grounded replacement.",
+        }
+    ]
+
+
+@pytest.mark.parametrize("value", [{"nested": [1, 2]}, ["deterministic", 3]])
+def test_internal_repair_patch_operation_keeps_python_container_values(value) -> None:
+    operation = RepairPatchOperation(
+        op="replace",
+        path="internal.deterministic.value",
+        value=value,
+    )
+
+    assert operation.value == value
 
 
 def test_candidate_hash_rejection_identity_changes_with_material_inputs() -> None:

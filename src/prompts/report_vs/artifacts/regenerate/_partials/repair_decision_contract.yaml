@@ -10,8 +10,8 @@ text: |
     do not replace a parent item, family, or an undeclared descendant.
   - Use one `replace` operation for each writable leaf that needs a change.
     Never replace a whole insight, metric, quote, or other object.
-  - Encode each replacement value as one complete JSON value in `value_json`.
-    Include no prose or markdown outside that JSON encoding.
+  - Return each replacement directly in `value` as a string scalar. Do not
+    encode JSON inside the string or return an object or array.
   - `evidence_ids_used` contains only retained `relevant_evidence` IDs that
     support this patch. Exclude quarantined IDs. Failed/current/rejected copy
     and retry memory are diagnostic only, never evidence.
