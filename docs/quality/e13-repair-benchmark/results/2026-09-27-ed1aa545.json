@@ -1,0 +1,208 @@
+{
+  "schema_version": "1.0",
+  "measured_at_utc_date": "2026-09-27",
+  "implementation_sha": "ed1aa545b0f447beb7c8548f15a0c995730f1ccd",
+  "change": {
+    "response_contract_identity_version": "v5",
+    "provider_patch_value_type": "string",
+    "pre_provider_model_writable_path_validation": true
+  },
+  "frozen_manifests": {
+    "a21": {
+      "manifest": "baseline-a21-five.json",
+      "benchmark_manifest_sha256": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740"
+    },
+    "mobile": {
+      "manifest": "baseline-mobile-editorial.json",
+      "benchmark_manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9"
+    },
+    "doubleverify": {
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "benchmark_manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+    }
+  },
+  "repair_decision_invalid_counts": {
+    "previous_ias_canary": {
+      "regeneration_repair_decision_invalid": 1,
+      "by_reason": {
+        "patch_value_over_broad": 1
+      }
+    },
+    "current_frozen_replays": {
+      "regeneration_repair_decision_invalid": 0,
+      "patch_value_over_broad": 0
+    },
+    "current_ias_canary": {
+      "regeneration_repair_decision_invalid": 0,
+      "patch_value_over_broad": 0,
+      "repair_attempted": false
+    }
+  },
+  "frozen_replay_aggregate": {
+    "benchmark_case_count": 7,
+    "reproducible_case_count": 3,
+    "no_longer_reproducible_case_count": 4,
+    "candidate_validation_attempt_count": 6,
+    "candidate_promotion_count": 0,
+    "rolled_back_attempt_count": 6,
+    "success_at_1": "0/3",
+    "success_at_3": "0/3",
+    "out_of_scope_mutation_attempt_count": 6,
+    "hard_failure_introduction_attempt_count": 5,
+    "hard_failure_introduction_count": 52,
+    "unsupported_evidence_introduction_attempt_count": 1,
+    "current_replay_provider_usage_from_isolated_cost_ledgers": {
+      "provider_calls": 34,
+      "input_tokens": 710547,
+      "output_tokens": 45276,
+      "estimated_cost_usd": 0.0926
+    },
+    "repair_attributed_usage": {
+      "provider_calls": 7,
+      "input_tokens": 45412,
+      "output_tokens": 5760,
+      "estimated_cost_usd": 0.007422,
+      "usage_attribution": "partial",
+      "unattributed_cohorts": [
+        "a21",
+        "mobile"
+      ]
+    },
+    "comparison_to_previous_frozen_replay": {
+      "previous_candidate_validation_attempt_count": 4,
+      "previous_candidate_promotion_count": 0,
+      "previous_success_at_1": "0/3",
+      "previous_success_at_3": "0/3",
+      "previous_out_of_scope_mutation_attempt_count": 4,
+      "previous_hard_failure_introduction_attempt_count": 2,
+      "previous_hard_failure_introduction_count": 25,
+      "model_output_variance_note": "Current candidate and scope counts changed across separate model runs; these differences are not attributed to the response-contract change."
+    }
+  },
+  "cohorts": {
+    "a21": {
+      "benchmark_case_count": 5,
+      "reproducible_case_count": 1,
+      "no_longer_reproducible_case_count": 4,
+      "repair_attempt_count": 0,
+      "candidate_validation_attempt_count": 0,
+      "candidate_promotion_count": 0,
+      "success_at_1": "0/1",
+      "success_at_3": "0/1",
+      "repair_usage_attribution": "unavailable",
+      "run_provider_usage": {
+        "provider_calls": 16,
+        "input_tokens": 388277,
+        "output_tokens": 21609,
+        "estimated_cost_usd": 0.049009
+      }
+    },
+    "mobile": {
+      "benchmark_case_count": 1,
+      "reproducible_case_count": 1,
+      "repair_attempt_count": 3,
+      "candidate_validation_attempt_count": 3,
+      "candidate_promotion_count": 0,
+      "rolled_back_attempt_count": 3,
+      "success_at_1": "0/1",
+      "success_at_3": "0/1",
+      "out_of_scope_mutation_attempt_count": 3,
+      "hard_failure_introduction_attempt_count": 3,
+      "hard_failure_introduction_count": 31,
+      "repair_usage_attribution": "unavailable",
+      "run_provider_usage": {
+        "provider_calls": 5,
+        "input_tokens": 126614,
+        "output_tokens": 9365,
+        "estimated_cost_usd": 0.017187
+      }
+    },
+    "doubleverify": {
+      "benchmark_case_count": 1,
+      "reproducible_case_count": 1,
+      "repair_attempt_count": 3,
+      "candidate_validation_attempt_count": 3,
+      "candidate_promotion_count": 0,
+      "rolled_back_attempt_count": 3,
+      "success_at_1": "0/1",
+      "success_at_3": "0/1",
+      "out_of_scope_mutation_attempt_count": 3,
+      "hard_failure_introduction_attempt_count": 2,
+      "hard_failure_introduction_count": 21,
+      "unsupported_evidence_introduction_attempt_count": 1,
+      "repair_usage_attribution": {
+        "provider_calls": 7,
+        "input_tokens": 45412,
+        "output_tokens": 5760,
+        "estimated_cost_usd": 0.007422
+      },
+      "run_provider_usage": {
+        "provider_calls": 13,
+        "input_tokens": 195656,
+        "output_tokens": 14302,
+        "estimated_cost_usd": 0.026404
+      }
+    }
+  },
+  "ias_first_attempt_canary": {
+    "run_directory": "tmp/ias-scalar-contract-ed1aa545/ias-first-attempt-bk0h2g77",
+    "isolated_fresh_state": true,
+    "workflow_attempt_count": 1,
+    "planner_allowed_paths": null,
+    "candidate_audit_count": 0,
+    "candidate_validation_attempt_count": 0,
+    "candidate_promotion_count": 0,
+    "regeneration_repair_attempted": false,
+    "terminal_failure_code": "validation_failed",
+    "terminal_stage": "semantic_validation",
+    "terminal_artifact_family": "insights:digital-video-brand-safety-outlook",
+    "final_state": "failed",
+    "validation": "fail",
+    "publication_readiness": "fail",
+    "publication_performed": false,
+    "provider_calls": 38,
+    "input_tokens": 304855,
+    "output_tokens": 49524,
+    "estimated_cost_usd": 0.055093,
+    "duration_seconds": 334.514,
+    "diagnostic": "No regeneration candidate audit was emitted; the run stopped at semantic validation before the IAS expert_comment repair path was reached."
+  },
+  "focused_ias_path_regression": {
+    "tests": [
+      "tests/test_report_regeneration_generator.py::test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim",
+      "tests/test_atomic_regeneration_contract.py::test_model_repair_contract_is_string_atomic_for_every_model_family"
+    ],
+    "result": "14 passed",
+    "path": "expert_comment[claim_index=0]",
+    "checks": [
+      "exact planner path retained",
+      "direct string value accepted",
+      "object and array values rejected by schema",
+      "parent and undeclared sibling paths rejected",
+      "applied scalar and changed path retained",
+      "sibling content unchanged",
+      "regeneration candidate validation passed"
+    ]
+  },
+  "verification": {
+    "focused_regeneration_and_contract_suite": "307 passed",
+    "prompt_fixture_regression": "passed; 91,246 tokens and USD 0.021853 versus 91,728 tokens and USD 0.021900 baseline",
+    "contract_schema_snapshot": "passed",
+    "formatting": "passed",
+    "ruff_lint": "passed",
+    "git_diff_check": "passed",
+    "broader_affected_suite": "209 passed, 9 failed; six existing report-analysis planner expectation failures and three frozen queue-lineage cases failed on missing grounding_validation_output_v2 fixture",
+    "type_check": "failed on three existing mypy errors in claim_validation_generator.py and publish_readiness_generator.py; no changed-file type errors reported",
+    "documentation_check": "failed on 12 stale source anchors in unchanged docs/simplification.md",
+    "isolated_ias_workflow": "failed at semantic_validation before regeneration; publication remained disabled"
+  },
+  "commands": {
+    "a21_replay": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-scalar-contract-ed1aa545/a21 --implementation-sha ed1aa545b0f447beb7c8548f15a0c995730f1ccd",
+    "mobile_replay": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-scalar-contract-ed1aa545/mobile --implementation-sha ed1aa545b0f447beb7c8548f15a0c995730f1ccd",
+    "doubleverify_replay": "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-scalar-contract-ed1aa545/doubleverify --implementation-sha ed1aa545b0f447beb7c8548f15a0c995730f1ccd",
+    "ias_canary": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-scalar-contract-ed1aa545 --max-duration-seconds 7200",
+    "focused_ias_path_test": "python -m pytest -q tests/test_atomic_regeneration_contract.py::test_model_repair_contract_is_string_atomic_for_every_model_family",
+    "focused_suite": "python -m pytest -q tests/test_schema_validator.py tests/test_atomic_regeneration_contract.py tests/test_regeneration_contracts.py tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_report_regeneration_identity_and_failures.py tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py tests/test_prompt_fixture_corpus_regression.py tests/test_llm_service.py tests/test_llm_routing_policy.py",
+    "prompt_fixture_gate": "python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3"
+  }
+}

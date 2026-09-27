@@ -143,6 +143,55 @@ leaves in planning, protected-field calculation, patching, and scope comparison.
 The frozen replay below exercises this contract at implementation SHA
 `9120a8fee9289c3850e9f91048a22c9da5457038`.
 
+## Direct-string provider contract replay — 2026-09-27, implementation SHA ed1aa545
+
+The provider-facing minimal_patch operation now uses a direct string value.
+The repair response identity is version v5; old and new response contracts
+cannot share a cached identity. The pre-provider check confirms that every
+planned model path resolves uniquely to a string leaf before a provider client
+is required. Internal RepairPatchOperation values remain reusable for
+deterministic callers.
+
+The focused IAS path regression passed 14 tests. It retained the exact
+expert_comment[claim_index=0] planner path, accepted a direct string
+replacement, rejected object and array values at schema validation, rejected
+parent and undeclared sibling paths, preserved the sibling text, and passed
+candidate validation.
+
+The unchanged A21, Mobile editorial, and DoubleVerify manifests were replayed
+at implementation SHA ed1aa545b0f447beb7c8548f15a0c995730f1ccd. The benchmark
+manifest identities match the frozen hashes above. Three of seven cases
+reproduced; four were no longer reproducible. Six candidates reached
+validation and rolled back; none promoted. Success@1/@3 remained 0/3. The new
+replay outputs contained zero regeneration_repair_decision_invalid or
+patch_value_over_broad occurrences. Isolated cost ledgers recorded 34 provider
+calls, 710,547 input tokens, 45,276 output tokens, and estimated USD 0.092600.
+Repair-attributed usage was available for DoubleVerify only: 7 calls, 45,412
+input tokens, 5,760 output tokens, and USD 0.007422. Attribution was
+unavailable for A21 and Mobile.
+
+Compared with the immediately preceding frozen replay, candidate validation
+attempts increased from four to six, while promotions and success@1/@3 were
+unchanged at zero. Out-of-scope mutation attempts increased from four to six,
+and hard-failure introduction attempts increased from two (25 occurrences) to
+five (52 occurrences). These candidate outcomes varied across model runs and
+are not attributed to the response-contract change.
+
+The isolated IAS canary used fresh state and kept publication disabled. It
+terminated at validation_failed during semantic validation, before the
+regeneration planner or candidate audit ran. Therefore that canary did not
+exercise expert_comment[claim_index=0]; the focused generator regression did.
+The canary recorded 38 provider calls, 304,855 input tokens, 49,524 output
+tokens, and estimated USD 0.055093. The previous IAS canary had terminated at
+regeneration_repair_decision_invalid / patch_value_over_broad after 44 calls,
+297,349 input tokens, 56,195 output tokens, and USD 0.057830. The current
+canary did not pass the end-to-end workflow gate, and E13 remains **Active**.
+
+The detailed bounded results, commands, test outcomes, frozen manifest
+identities, per-cohort counts, and canary limitation are retained in the
+[direct-string measurement](results/2026-09-27-ed1aa545.json), with its
+[SHA-256 sidecar](results/2026-09-27-ed1aa545.json.sha256).
+
 ## Deterministic candidate rejection and evidence metrics
 
 Candidate artifact integrity and mutation scope are resolved before semantic

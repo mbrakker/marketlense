@@ -2694,6 +2694,16 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
         selection,
         require_selected_evidence_entries=True,
     )
+    assert response.repair_decisions[0].changed_paths == [
+        "expert_comment[claim_index=0]"
+    ]
+    assert response.repair_decisions[0].minimal_patch[0].value == (
+        "Repaired middle claim."
+    )
+    assert isinstance(response.repair_decisions[0].minimal_patch[0].value, str)
+    assert response.updated_artifacts["expert_comment"] == (
+        "Repaired middle claim. Unchanged sibling interpretation."
+    )
     assert [
         item["entry"]["id"] for item in selection["selected_evidence_entries"]
     ] == selection["selected_evidence_ids"]
