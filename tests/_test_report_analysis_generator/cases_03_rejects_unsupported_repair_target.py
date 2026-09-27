@@ -4,6 +4,11 @@ from __future__ import annotations
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
+from src.contracts.regeneration import (
+    FailureFingerprint,
+    RepairDelta,
+    RepairSeverityChange,
+)
 
 from ._shared import *  # noqa: F401,F403
 
@@ -161,6 +166,173 @@ def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
     assert [issue.rule_id for issue in plan.targets[0].issues] == ["grounding"]
 
 
+def test_mobile_numbers_failure_targets_exact_insight_so_what_leaf():
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-002",
+                "text": "Existing text",
+                "so_what": "Existing implication",
+            },
+            {
+                "id": "insight-005",
+                "text": "Existing text",
+                "so_what": "The 1.0 day checkpoint is proven.",
+            },
+        ],
+        "insights_candidates": [],
+    }
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="[numbers] 1.0 is not supported",
+                severity="error",
+                affected_section="insights:insight-005.so_what",
+                rule_id="numbers",
+                entity_id="insight:insight-005:so_what",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="[artifact_quality] Existing warning",
+                severity="warning",
+                affected_section="insights_final[0].text",
+                rule_id="artifact_quality",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="[artifact_quality] Same-item warning",
+                severity="warning",
+                affected_section="insights:insight-005.text",
+                rule_id="artifact_quality",
+                entity_id="insight:insight-005:text",
+            ),
+        ],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    target = plan.targets[0]
+    assert target.target_section == "insights_bundle"
+    assert target.repair_action == "REGENERATE_ITEM"
+    assert target.allowed_paths == ["insights_final[item=insight-005].so_what"]
+    assert [issue.rule_id for issue in target.issues] == [
+        "numbers",
+        "artifact_quality",
+    ]
+
+
+def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy():
+    metric = {
+        "label": "Regional Ad Attention Index",
+        "value": "99–110",
+        "unit": "index",
+        "timeframe": "Q1 2026",
+        "geography": "APAC, EMEA, LATAM, North America",
+        "cohort": "Regional benchmarks",
+        "denominator": "",
+        "observation_status": "observed",
+    }
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "q1-regional-ad-attention-index",
+                "text": "Regional attention",
+                "metric": dict(metric),
+                "evidence_id": "s8",
+            }
+        ],
+        "insights_candidates": [
+            {
+                "id": "q1-regional-ad-attention-index",
+                "text": "Regional attention",
+                "metric": dict(metric),
+                "evidence_id": "s8",
+            }
+        ],
+        "linkedin_post": "Regional Ad Attention Index is 110 in EMEA and 99 in North America.",
+        "soft_copy_claim_provenance": {"schema_version": "1.0", "claims": []},
+    }
+    public_issue = ValidationIssue(
+        schema_version="1.0",
+        message="Metric label and value relationship is unsupported.",
+        severity="error",
+        affected_section="linkedin_post",
+        rule_id="public_editorial_quality.metric_label_relationship",
+        entity_id="soft_copy:linkedin_post:regional-metric",
+        evidence_ids=["s8"],
+        repair_target="linkedin_post",
+    )
+    persisted_root_failures = [
+        FailureFingerprint(
+            rule_id=rule_id,
+            affected_section="insights:q1-regional-ad-attention-index.metric",
+            entity_id="insight:q1-regional-ad-attention-index:metric",
+            evidence_ids=["s8", "s8"],
+        )
+        for rule_id in (
+            "retained_claim.protected_fact_value_consistency",
+            "retained_claim.protected_fact_unit_currency_consistency",
+            "retained_claim.number_value_unit_match",
+        )
+    ]
+    repair_memory = [
+        RepairDelta(
+            persisting=persisted_root_failures,
+            severity_changes=[
+                RepairSeverityChange(
+                    failure_fingerprint=fingerprint.key,
+                    before="warning",
+                    after="error",
+                )
+                for fingerprint in persisted_root_failures
+            ],
+        )
+    ]
+
+    plan = _build_regeneration_plan(
+        issues=[public_issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        repair_memory=repair_memory,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    target = plan.targets[0]
+    assert target.repair_action == "REGENERATE_ITEM"
+    assert target.allowed_paths == [
+        "insights_final[item=q1-regional-ad-attention-index].metric.unit",
+        "insights_final[item=q1-regional-ad-attention-index].metric.value",
+    ]
+    assert {issue.rule_id for issue in target.issues} == {
+        "retained_claim.protected_fact_value_consistency",
+        "retained_claim.protected_fact_unit_currency_consistency",
+        "retained_claim.number_value_unit_match",
+    }
+
+
+def test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error():
+    unknown_severity = FailureFingerprint(
+        rule_id="retained_claim.protected_fact_value_consistency",
+        affected_section="insights:q1-regional-ad-attention-index.metric",
+        entity_id="insight:q1-regional-ad-attention-index:metric",
+        evidence_ids=["s8"],
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[],
+        artifacts={},
+        broad_retry_available=False,
+        repair_memory=[RepairDelta(persisting=[unknown_severity])],
+    )
+
+    assert plan.mode == "skip"
+    assert plan.targets == []
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -235,6 +407,9 @@ __all__ = [
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
     "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",
+    "test_mobile_numbers_failure_targets_exact_insight_so_what_leaf",
+    "test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy",
+    "test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

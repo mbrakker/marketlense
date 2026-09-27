@@ -26,6 +26,7 @@ from src.contracts.regeneration import (
     RepairDecision,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.validation import ValidationIssue
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
@@ -180,9 +181,7 @@ def _append_retained_soft_copy_sibling(
 ) -> None:
     existing = artifacts[family]
     claims = artifacts["soft_copy_claim_provenance"]["claims"]
-    template = next(
-        claim for claim in claims if claim["artifact_family"] == family
-    )
+    template = next(claim for claim in claims if claim["artifact_family"] == family)
     retained = existing.rstrip()
     if not retained.endswith((".", "!", "?")):
         retained = f"{retained}."
@@ -997,6 +996,28 @@ class _TemporalSummaryOpenAIClient(_FakeOpenAIClient):
         return super()._legacy_chat_json(req, ctx)
 
 
+class _MobileSoWhatOpenAIClient(_FakeOpenAIClient):
+    def _legacy_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/insights_final" in req.system_prompt:
+            self.calls.append(req)
+            repaired = {
+                "id": "insight-1",
+                "text": "Old final insight",
+                "so_what": "The repaired implication is evidence-led.",
+                "evidence_id": "f1",
+                "evidence": "Evidence text",
+                "metric": dict(METRIC),
+                "pages": [1],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps({"insights_final": [repaired]}),
+                parsed_json={"insights_final": [repaired]},
+                request_id="req-mobile-so-what",
+            )
+        return super()._legacy_chat_json(req, ctx)
+
+
 class _ClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
     def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
@@ -1429,7 +1450,8 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
 
 @pytest.mark.parametrize("attempt_index", [2, 3])
 def test_later_no_prompt_repair_does_not_add_empty_prompt_requirements_to_cache(
-    tmp_path, attempt_index: int,
+    tmp_path,
+    attempt_index: int,
 ) -> None:
     current = _current_artifacts()
     current["_cache"] = {
@@ -1528,10 +1550,7 @@ def test_explicit_repair_action_changes_only_that_familys_soft_copy_provenance(
         evidence_packs["findings"]["findings"][0].update(
             text="Old TLDR.", evidence="Old TLDR."
         )
-    if (
-        artifact_family == "expert_comment"
-        and repair_action == "REGENERATE_ITEM"
-    ):
+    if artifact_family == "expert_comment" and repair_action == "REGENERATE_ITEM":
         next(
             claim
             for claim in current["soft_copy_claim_provenance"]["claims"]
@@ -1694,6 +1713,8 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
 ):
     prompt_client = _FakePromptClient()
     openai_client = _FakeOpenAIClient()
+    current_artifacts = _current_artifacts()
+    current_artifacts["insights_final"][0]["metric"]["value"] = "Unsupported value"
     response = regenerate_artifacts(
         ArtifactRegenerationRequest(
             report_id="report-1",
@@ -1725,12 +1746,12 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
                 unmappable_issues=[],
                 broad_retry_allowed=True,
             ),
-            current_artifacts=_current_artifacts(),
+            current_artifacts=current_artifacts,
             doc_map=_evidence_packs()["doc_map"],
             evidence_packs=_evidence_packs(),
             settings=_settings(tmp_path),
             ctx=_ctx(),
-            source_status=_current_artifacts()["source_status"],
+            source_status=current_artifacts["source_status"],
             categories=["Category"],
             vector_store_id=None,
             md5="md5",
@@ -1747,9 +1768,10 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     assert prompts["report_vs/artifacts/regenerate/insights_final"][
         "execution_identity"
     ]
-    assert response.updated_artifacts["insights_candidates"] == _current_artifacts()[
-        "insights_candidates"
-    ]
+    assert (
+        response.updated_artifacts["insights_candidates"]
+        == current_artifacts["insights_candidates"]
+    )
     assert len(response.updated_artifacts["insights_final"]) == 5
     assert (
         response.updated_artifacts["family_status"]["insights_bundle"]["status"]
@@ -1772,6 +1794,200 @@ def test_regenerate_artifacts_insights_bundle_uses_targeted_steps_and_preserves_
     assert "Evidence text" in first_user_prompt
     final_variables = prompt_client.render_calls[1]["variables"]
     assert final_variables["final_insight_target_count"] == 1
+
+
+def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
+    current = _current_artifacts()
+    current["insights_final"][0]["so_what"] = "The original implication is unsupported."
+    current["insights_candidates"].append(
+        {
+            **deepcopy(current["insights_final"][0]),
+            "text": "Candidate insight",
+        }
+    )
+    original = deepcopy(current["insights_final"][0])
+    issue = RegenerationIssue(
+        rule_id="numbers",
+        affected_section="insights:insight-1.so_what",
+        entity_id="insight:insight-1:so_what",
+        message="Unsupported number in the implication.",
+        severity="error",
+        evidence_ids=["f1"],
+    )
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message=issue.message,
+                severity="error",
+                affected_section=issue.affected_section,
+                rule_id=issue.rule_id,
+                entity_id=issue.entity_id,
+                evidence_ids=issue.evidence_ids,
+            )
+        ],
+        artifacts=current,
+        broad_retry_available=False,
+    )
+    assert plan.targets[0].allowed_paths == ["insights_final[item=insight-1].so_what"]
+    openai_client = _MobileSoWhatOpenAIClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired = response.updated_artifacts["insights_final"][0]
+    assert repaired["so_what"] == "The repaired implication is evidence-led."
+    assert {key: value for key, value in repaired.items() if key != "so_what"} == {
+        key: value for key, value in original.items() if key != "so_what"
+    }
+    assert len(openai_client.calls) == 1
+
+
+def test_canonical_metric_copy_changes_only_declared_metric_leaf(tmp_path):
+    current = _current_artifacts()
+    evidence_text = "Regional Attention index was 99-110 across APAC, EMEA, LATAM and North America."
+    current["insights_final"][0]["evidence"] = evidence_text
+    current["insights_final"][0]["metric"].update(
+        {
+            "label": "Regional Attention",
+            "value": "",
+            "unit": "index",
+            "geography": "Global",
+        }
+    )
+    current["insights_candidates"] = [
+        {
+            **deepcopy(current["insights_final"][0]),
+            "metric": {
+                **current["insights_final"][0]["metric"],
+                "value": "99-110",
+                "geography": "APAC, EMEA, LATAM, North America",
+            },
+            "evidence": evidence_text,
+        }
+    ]
+    original_metric = deepcopy(current["insights_final"][0]["metric"])
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="Retained metric value is unsupported.",
+        severity="error",
+        affected_section="insights:insight-1.metric",
+        rule_id="retained_claim.protected_fact_value_consistency",
+        entity_id="insight:insight-1:metric",
+        evidence_ids=["f1"],
+    )
+    plan = _build_regeneration_plan(
+        issues=[issue], artifacts=current, broad_retry_available=False
+    )
+    assert plan.targets[0].repair_action == "CORRECT_PROTECTED_FACT"
+    assert plan.targets[0].allowed_paths == [
+        "insights_final[item=insight-1].metric.value"
+    ]
+    openai_client = _FakeOpenAIClient()
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"][0].update(
+        {"evidence": evidence_text, "text": evidence_text}
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired = next(
+        item
+        for item in response.updated_artifacts["insights_final"]
+        if item["id"] == "insight-1"
+    )
+    updated_metric = repaired["metric"]
+    assert updated_metric["value"] == "99-110", response.updated_artifacts[
+        "insights_final"
+    ]
+    assert {key: value for key, value in updated_metric.items() if key != "value"} == {
+        key: value for key, value in original_metric.items() if key != "value"
+    }
+    assert openai_client.calls == []
+
+
+def test_noop_canonical_metric_copy_fails_before_provider_use(tmp_path):
+    current = _current_artifacts()
+    current["insights_final"][0]["metric"].update(
+        {"label": "Regional Attention", "value": "99-110", "unit": "index"}
+    )
+    current["insights_candidates"] = [deepcopy(current["insights_final"][0])]
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        regenerate_steps=["insights_candidates", "insights_final"],
+        prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+        issues=[
+            RegenerationIssue(
+                rule_id="retained_claim.protected_fact_value_consistency",
+                affected_section="insights:insight-1.metric",
+                entity_id="insight:insight-1:metric",
+                message="Metric value does not match retained evidence.",
+                severity="error",
+                evidence_ids=["f1"],
+            )
+        ],
+        repair_action="CORRECT_PROTECTED_FACT",
+        repair_strategy="canonical_metric_copy",
+        allowed_paths=["insights_final[item=insight-1].metric.value"],
+    )
+    openai_client = _FakeOpenAIClient()
+    prompt_client = _FakePromptClient()
+
+    with pytest.raises(AppError) as error:
+        _regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=1,
+                plan=RegenerationPlan(
+                    mode="targeted", targets=[target], unmappable_issues=[]
+                ),
+                current_artifacts=current,
+                doc_map=_evidence_packs()["doc_map"],
+                evidence_packs=_evidence_packs(),
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=current["source_status"],
+                categories=["Category"],
+            ),
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+        )
+
+    assert error.value.code == "no_material_repair_available"
+    assert openai_client.calls == []
+    assert prompt_client.render_calls == []
 
 
 def test_final_insight_reuses_same_id_candidate_evidence_when_model_omits_it() -> None:
@@ -2486,9 +2702,10 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
         for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
         if claim["claim_id"] == sibling_claim.claim_id
     )
-    assert retained_sibling == soft_copy_claim_provenance_to_payload(
-        [sibling_claim]
-    )["claims"][0]
+    assert (
+        retained_sibling
+        == soft_copy_claim_provenance_to_payload([sibling_claim])["claims"][0]
+    )
     assert "claim_ledgers" not in response.updated_artifacts
     assert "topics_covered" not in response.updated_artifacts
     candidate_integrity = validate_regeneration_candidate(
@@ -2656,9 +2873,7 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
         claim
         for claim in current["soft_copy_claim_provenance"]["claims"]
         if claim["artifact_family"] != "linkedin_post"
-    ] + soft_copy_claim_provenance_to_payload(
-        [original_claim, sibling_claim]
-    )["claims"]
+    ] + soft_copy_claim_provenance_to_payload([original_claim, sibling_claim])["claims"]
     evidence_packs = _evidence_packs()
     evidence_packs["findings"]["findings"].extend(
         {"id": f"f{index}", "evidence": f"Supporting finding {index}."}
@@ -2728,11 +2943,10 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
     assert repaired["source_spans"] == canonical_spans["f2"]
     assert repaired["repaired_from_claim_id"] == original_claim.claim_id
     assert selection["selected_evidence_ids"] == repaired["evidence_ids"]
-    assert next(
-        claim
-        for claim in claims
-        if claim["claim_id"] == sibling_claim.claim_id
-    ) == soft_copy_claim_provenance_to_payload([sibling_claim])["claims"][0]
+    assert (
+        next(claim for claim in claims if claim["claim_id"] == sibling_claim.claim_id)
+        == soft_copy_claim_provenance_to_payload([sibling_claim])["claims"][0]
+    )
     assert not hasattr(response.repair_decisions[0], "claim_provenance")
     candidate_integrity = validate_regeneration_candidate(
         current_artifacts=current,
@@ -2741,8 +2955,7 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
         ctx=_ctx(),
     )
     assert candidate_integrity.passed, [
-        (issue.affected_section, issue.message)
-        for issue in candidate_integrity.issues
+        (issue.affected_section, issue.message) for issue in candidate_integrity.issues
     ]
 
 
@@ -3657,9 +3870,7 @@ def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_pat
         evidence_packs=evidence_packs,
         insights_final=normalized_insights,
     )
-    assert [figure["figure"] for figure in current["key_figures"]] == [
-        "42 percent"
-    ]
+    assert [figure["figure"] for figure in current["key_figures"]] == ["42 percent"]
     plan = RegenerationPlan(
         mode="targeted",
         targets=[

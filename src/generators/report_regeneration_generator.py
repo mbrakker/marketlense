@@ -336,9 +336,7 @@ def regenerate_artifacts(
         prompts.update(state.prompt_identities)
         cache_meta["prompts"] = prompts
     if state.producing_prompt_identities:
-        cache_meta["producing_prompt_identities"] = (
-            state.producing_prompt_identities
-        )
+        cache_meta["producing_prompt_identities"] = state.producing_prompt_identities
     if state.regeneration_prompt_requirements:
         cache_meta["regeneration_prompt_requirements"] = (
             state.regeneration_prompt_requirements
@@ -2210,9 +2208,7 @@ def _validated_repair_decision(
 
     if required_protected is None:
         raise _repair_decision_error(execution, "repair_scope_partition_invalid")
-    if not _repair_decision_protected_fields_are_complete(
-        decision, required_protected
-    ):
+    if not _repair_decision_protected_fields_are_complete(decision, required_protected):
         raise _repair_decision_error(execution, "protected_fields_incomplete")
     candidate = deepcopy(current_artifacts)
     for operation in decision.minimal_patch:
@@ -2325,9 +2321,7 @@ def _required_repair_protected_fields(
         if not writable.intersection(leaves):
             return None
         if any(
-            path not in leaves
-            for path in writable
-            if _repair_path_root(path) == root
+            path not in leaves for path in writable if _repair_path_root(path) == root
         ):
             return None
         protected.update(leaves - writable)
@@ -2507,11 +2501,14 @@ def _record_soft_copy_claim_bindings(
         normalized_repaired = _normalized_soft_copy_text(repaired_text)
         if not isinstance(decision, RepairDecision):
             raise _repair_decision_error(execution, "repair_decision_missing")
-        declared_bindings = _repair_claim_bindings(
-            text=repaired_text,
-            classification=repaired_claim.claim.classification,
-            evidence_ids=decision.evidence_ids_used,
-        ) or []
+        declared_bindings = (
+            _repair_claim_bindings(
+                text=repaired_text,
+                classification=repaired_claim.claim.classification,
+                evidence_ids=decision.evidence_ids_used,
+            )
+            or []
+        )
         if not declared_bindings:
             raise _repair_decision_error(
                 execution, "repaired_claim_binding_not_deterministic"
@@ -2539,9 +2536,7 @@ def _record_soft_copy_claim_bindings(
             execution.state.soft_copy_repair_lineage[
                 f"{artifact_family}:{repaired_claim_id}"
             ] = repaired_claim.claim.claim_id
-            execution.state.selected_evidence_ids.extend(
-                decision.evidence_ids_used
-            )
+            execution.state.selected_evidence_ids.extend(decision.evidence_ids_used)
     if repaired_claim is not None:
         execution.state.soft_copy_claim_bindings.setdefault(artifact_family, []).extend(
             declared_bindings
@@ -2604,19 +2599,13 @@ def _record_soft_copy_claim_bindings(
         for code, old_start, old_end, new_start, new_end in SequenceMatcher(
             a=before_sentences, b=after_sentences, autojunk=False
         ).get_opcodes():
-            if (
-                code == "equal"
-                or old_end - old_start != 1
-                or new_end - new_start != 1
-            ):
+            if code == "equal" or old_end - old_start != 1 or new_end - new_start != 1:
                 continue
             old_hash = hashlib.sha256(
                 _normalized_soft_copy_text(before_sentences[old_start]).encode()
             ).hexdigest()
             predecessors = [
-                claim
-                for claim in family_claims
-                if claim.text_hash == old_hash
+                claim for claim in family_claims if claim.text_hash == old_hash
             ]
             new_hash = hashlib.sha256(
                 _normalized_soft_copy_text(after_sentences[new_start]).encode()
@@ -2647,9 +2636,7 @@ def _record_soft_copy_claim_bindings(
                 execution.state.soft_copy_repair_texts.setdefault(
                     artifact_family, []
                 ).extend(binding["claim"] for binding in family_bindings)
-                execution.state.selected_evidence_ids.extend(
-                    decision.evidence_ids_used
-                )
+                execution.state.selected_evidence_ids.extend(decision.evidence_ids_used)
     execution.state.soft_copy_prompt_identities[artifact_family] = dict(
         execution.state.prompt_identities.get(namespace) or {}
     )
@@ -2675,9 +2662,12 @@ def _valid_claim_replacement(
 ) -> bool:
     """Accept only one newly bound sentence for a claim-scoped model reply."""
 
-    return _repair_claim_bindings(
-        text=text, classification=classification, evidence_ids=evidence_ids
-    ) is not None
+    return (
+        _repair_claim_bindings(
+            text=text, classification=classification, evidence_ids=evidence_ids
+        )
+        is not None
+    )
 
 
 def _repair_claim_bindings(
@@ -2784,9 +2774,7 @@ def _rebuild_soft_copy_repair_selection(
     rebuilt["selected_evidence_entries"] = selected_entries
     rebuilt.pop("repaired_claim_id", None)
     hash_payload = {
-        field: value
-        for field, value in rebuilt.items()
-        if field != "package_sha256"
+        field: value for field, value in rebuilt.items() if field != "package_sha256"
     }
     rebuilt["package_sha256"] = _canonical_evidence_hash(hash_payload)
     rebuilt["repaired_claim_id"] = repaired_claim_id
@@ -3264,13 +3252,12 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     else ""
                 )
                 decision = result.get("_repair_decision")
-                if (
-                    not isinstance(decision, RepairDecision)
-                    or not _valid_claim_replacement(
-                        classification=repair.claim.classification,
-                        text=repaired_text,
-                        evidence_ids=decision.evidence_ids_used,
-                    )
+                if not isinstance(
+                    decision, RepairDecision
+                ) or not _valid_claim_replacement(
+                    classification=repair.claim.classification,
+                    text=repaired_text,
+                    evidence_ids=decision.evidence_ids_used,
                 ):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
@@ -3388,9 +3375,7 @@ def _record_atomic_summary_claim_bindings(
             return False
         before_sentences = soft_copy_material_sentences(previous)
         after_sentences = soft_copy_material_sentences(operation.value)
-        matcher = SequenceMatcher(
-            a=before_sentences, b=after_sentences, autojunk=False
-        )
+        matcher = SequenceMatcher(a=before_sentences, b=after_sentences, autojunk=False)
         for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
             if code == "equal" or new_start == new_end:
                 continue
@@ -3420,9 +3405,9 @@ def _record_atomic_summary_claim_bindings(
                     predecessors = retained_by_hash.get(old_hash, [])
                     if len(predecessors) == 1:
                         repaired_claim_id = f"soft_copy:summary:{repaired_hash[:16]}"
-                        repaired_lineage[f"summary:{repaired_claim_id}"] = (
-                            predecessors[0].claim_id
-                        )
+                        repaired_lineage[f"summary:{repaired_claim_id}"] = predecessors[
+                            0
+                        ].claim_id
 
     stale_claim_ids = [
         claim.claim_id
@@ -3476,38 +3461,14 @@ def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> Non
     )
 
 
-_INSIGHT_METRIC_PROVENANCE_FIELDS = (
-    "label",
-    "value",
-    "unit",
-    "trend",
-    "timeframe",
-    "geography",
-    "segment",
-    "sample_size",
-    "confidence",
-    "subject",
-    "cohort",
-    "denominator",
-    "observation_status",
-)
-_INSIGHT_EVIDENCE_BINDING_FIELDS = (
-    "evidence_id",
-    "evidence",
-    "evidence_spans",
-    "pages",
-)
-
-
 def _restore_failed_insight_metrics_deterministically(
     execution: _RegenerationHandlerExecution,
 ) -> bool:
     """Copy protected insight metric fields from their retained binding.
 
-    A final insight whose protected metric fields or evidence binding drifted
-    from one uniquely retained same-stable-ID candidate is repaired by copying
-    those canonical fields. Ambiguous identity or missing source fields keep
-    the generative path.
+    Copy only declared metric and scalar evidence leaves from one uniquely
+    retained same-stable-ID candidate. Ambiguous identity or missing source
+    fields keep the generative path.
     """
 
     if execution.target.repair_action != "CORRECT_PROTECTED_FACT":
@@ -3521,6 +3482,23 @@ def _restore_failed_insight_metrics_deterministically(
         if insight_id and isinstance(metric, dict) and _s(metric.get("value")).strip():
             retained_by_id.setdefault(insight_id, []).append(insight)
     corrected_any = False
+    requested_paths = {
+        (match.group(1), match.group(2))
+        for path in execution.target.allowed_paths
+        if (
+            match := re.fullmatch(
+                r"insights_final\[item=([^\]]+)\]\.(metric\.[A-Za-z0-9_]+|evidence_id|evidence)",
+                path,
+            )
+        )
+    }
+    requested_metric_paths = {
+        field_path.removeprefix("metric.")
+        for _, field_path in requested_paths
+        if field_path.startswith("metric.")
+    }
+    if not requested_paths or not requested_metric_paths:
+        return False
     for issue in execution.target.issues:
         insight_id = failed_insight_id(issue.entity_id, issue.affected_section)
         if not insight_id:
@@ -3535,38 +3513,43 @@ def _restore_failed_insight_metrics_deterministically(
             return False
         target_insight = target_matches[0]
         retained = retained_matches[0]
+        allowed_fields = {
+            field_path
+            for target_id, field_path in requested_paths
+            if target_id == insight_id
+        }
         current_metric = target_insight.get("metric")
         current_metric = current_metric if isinstance(current_metric, dict) else {}
         retained_metric = retained.get("metric")
         retained_metric = retained_metric if isinstance(retained_metric, dict) else {}
-        drifted = any(
-            _s(current_metric.get(field_name)).strip()
-            != _s(retained_metric.get(field_name)).strip()
-            for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
-            if _s(retained_metric.get(field_name)).strip()
-        )
-        binding_drifted = any(
-            retained.get(field_name) != target_insight.get(field_name)
-            for field_name in _INSIGHT_EVIDENCE_BINDING_FIELDS
-            if field_name in retained
-        )
-        if not drifted and not binding_drifted:
+        drifted_fields = {
+            field_name
+            for field_name in requested_metric_paths
+            if f"metric.{field_name}" in allowed_fields
+            if field_name in retained_metric
+            and current_metric.get(field_name) != retained_metric[field_name]
+        }
+        changed_bindings = {
+            field_name
+            for field_name in ("evidence_id", "evidence")
+            if field_name in allowed_fields
+            and field_name in retained
+            and target_insight.get(field_name) != retained[field_name]
+        }
+        if not drifted_fields and not changed_bindings:
             continue
-        if drifted:
+        if drifted_fields:
             target_insight["metric"] = {
                 **current_metric,
                 **{
-                    field_name: deepcopy(retained_metric.get(field_name, ""))
-                    for field_name in _INSIGHT_METRIC_PROVENANCE_FIELDS
-                    if field_name in retained_metric
+                    field_name: deepcopy(retained_metric[field_name])
+                    for field_name in drifted_fields
                 },
             }
-        for field_name in _INSIGHT_EVIDENCE_BINDING_FIELDS:
-            if field_name in retained:
-                target_insight[field_name] = deepcopy(retained[field_name])
+        for field_name in changed_bindings:
+            target_insight[field_name] = deepcopy(retained[field_name])
         evidence_id = _s(retained.get("evidence_id")).strip()
-        if evidence_id:
-            target_insight["evidence_id"] = evidence_id
+        if "evidence_id" in changed_bindings and evidence_id:
             execution.state.selected_evidence_ids.append(evidence_id)
         corrected_any = True
     if not corrected_any:
@@ -3596,6 +3579,13 @@ def _handle_insights_bundle_regeneration(
         return
     if _restore_failed_insight_metrics_deterministically(execution):
         return
+    if execution.target.repair_action == "CORRECT_PROTECTED_FACT":
+        raise AppError(
+            code="no_material_repair_available",
+            message="The canonical insight metric has no changed supported leaf to copy.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
     candidates_namespace, final_namespace = execution.handler.prompt_namespaces
     if _regenerate_one_final_insight(execution, final_namespace):
         return
@@ -3704,13 +3694,23 @@ def _regenerate_one_final_insight(
     if len(matches) != 1:
         return False
     index, original = matches[0]
-    requested_fields = {
-        field
-        for issue in execution.target.issues
-        if (field := _insight_repair_field(issue.entity_id, issue.affected_section))
+    mutable_paths = {
+        match.group(1)
+        for path in execution.target.allowed_paths
+        if (
+            match := re.fullmatch(
+                rf"insights_final\[(?:item={re.escape(insight_id)}|\d+)\]\.(.+)",
+                path,
+            )
+        )
     }
-    if not requested_fields:
-        return False
+    if not mutable_paths:
+        raise AppError(
+            code="no_material_repair_available",
+            message="Atomic insight repair has no legal writable leaf.",
+            retryable=False,
+            context={"report_id": execution.runtime.request.report_id},
+        )
     candidate = next(
         (
             item
@@ -3725,17 +3725,13 @@ def _regenerate_one_final_insight(
         for value in issue.evidence_ids
         if _s(value).strip()
     }
-    claim_fields = {
-        "text": ["text"],
-        "metric": ["metric"],
-    }
-    mutable_fields = {
-        field_name
-        for field in requested_fields
-        for field_name in claim_fields.get(field, [])
-    }
     if execution.target.repair_action == "REBIND_EVIDENCE":
-        mutable_fields.update({"evidence_id", "evidence", "evidence_spans", "pages"})
+        mutable_paths.update(
+            field_name
+            for field_name in ("evidence_id", "evidence", "evidence_spans", "pages")
+            if f"insights_final[item={insight_id}].{field_name}"
+            in execution.target.allowed_paths
+        )
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -3773,11 +3769,16 @@ def _regenerate_one_final_insight(
             context={"report_id": execution.runtime.request.report_id},
         )
     repaired = deepcopy(original)
-    for field_name in mutable_fields:
-        if field_name in matching[0]:
-            repaired[field_name] = deepcopy(matching[0][field_name])
+    for field_path in mutable_paths:
+        regenerated_value = _insight_path_value(matching[0], field_path)
+        if regenerated_value is not _MISSING_REPAIR_VALUE:
+            _set_insight_path_value(repaired, field_path, deepcopy(regenerated_value))
     repaired["id"] = insight_id
-    if not any(repaired.get(name) != original.get(name) for name in mutable_fields):
+    if not any(
+        _insight_path_value(repaired, field_path)
+        != _insight_path_value(original, field_path)
+        for field_path in mutable_paths
+    ):
         raise AppError(
             code="regeneration_target_item_unchanged",
             message="Atomic insight regeneration did not change its declared field.",
@@ -3790,16 +3791,27 @@ def _regenerate_one_final_insight(
     return True
 
 
-def _insight_repair_field(entity_id: str, affected_section: str) -> str:
-    parts = str(entity_id or "").split(":")
-    if len(parts) >= 3 and parts[0] == "insight" and parts[2] in {"text", "metric"}:
-        return parts[2]
-    affected = str(affected_section or "").casefold()
-    match = re.search(r"\.(text|metric)(?:\.|$)", affected)
-    if match:
-        return match.group(1)
-    suffix = affected.rsplit(":", 1)[-1]
-    return suffix if suffix in {"text", "metric"} else ""
+_MISSING_REPAIR_VALUE = object()
+
+
+def _insight_path_value(insight: Dict[str, Any], path: str) -> Any:
+    current: Any = insight
+    for segment in path.split("."):
+        if not isinstance(current, dict) or segment not in current:
+            return _MISSING_REPAIR_VALUE
+        current = current[segment]
+    return current
+
+
+def _set_insight_path_value(insight: Dict[str, Any], path: str, value: Any) -> None:
+    segments = path.split(".")
+    current = insight
+    for segment in segments[:-1]:
+        child = current.get(segment)
+        if not isinstance(child, dict):
+            return
+        current = child
+    current[segments[-1]] = value
 
 
 def _remove_failed_insight_with_retained_replacement(
@@ -4407,13 +4419,12 @@ def _handle_expert_comment_regeneration(
                 )
                 repaired_text = _s(result.get("expert_comment"))
                 decision = result.get("_repair_decision")
-                if (
-                    not isinstance(decision, RepairDecision)
-                    or not _valid_claim_replacement(
-                        classification=repair.claim.classification,
-                        text=repaired_text,
-                        evidence_ids=decision.evidence_ids_used,
-                    )
+                if not isinstance(
+                    decision, RepairDecision
+                ) or not _valid_claim_replacement(
+                    classification=repair.claim.classification,
+                    text=repaired_text,
+                    evidence_ids=decision.evidence_ids_used,
                 ):
                     replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
@@ -4631,13 +4642,10 @@ def _handle_linkedin_post_regeneration(
                 _s(result.get("linkedin_post"))
             )
             decision = result.get("_repair_decision")
-            if (
-                not isinstance(decision, RepairDecision)
-                or not _valid_claim_replacement(
-                    classification=repair.claim.classification,
-                    text=repaired_text,
-                    evidence_ids=decision.evidence_ids_used,
-                )
+            if not isinstance(decision, RepairDecision) or not _valid_claim_replacement(
+                classification=repair.claim.classification,
+                text=repaired_text,
+                evidence_ids=decision.evidence_ids_used,
             ):
                 replacements[repair.claim.claim_id] = None
                 _mark_soft_copy_claim_removed(execution, repair)

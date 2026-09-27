@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, Dict, List
+from dataclasses import replace
+from typing import Any, Dict, List, Sequence
 
 from src.contracts.regeneration import (
     FailureFingerprint,
+    RepairDelta,
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
@@ -398,7 +400,29 @@ def _allowed_paths(
     if target_key == "topics":
         return sorted(set(family_roots))
 
-    resolved = [_issue_allowed_path(target_key, issue, artifacts) for issue in issues]
+    path_issues = (
+        issues
+        if repair_action in {"REMOVE_CLAIM", "ABSTAIN"}
+        else [
+            issue
+            for issue in issues
+            if str(issue.severity or "").strip().lower() == "error"
+        ]
+        or issues
+    )
+    resolved = [
+        path
+        for issue in path_issues
+        for path in (
+            _issue_insight_allowed_paths(issue, artifacts)
+            if target_key == "insights_bundle"
+            else [_issue_allowed_path(target_key, issue, artifacts)]
+        )
+    ]
+    if target_key == "insights_bundle" and any(
+        not _issue_insight_allowed_paths(issue, artifacts) for issue in path_issues
+    ):
+        return []
     if target_key in {
         "summary",
         "insights_bundle",
@@ -435,9 +459,28 @@ def _allowed_paths(
                 paths.add(path)
             continue
         if repair_action == "REMOVE_CLAIM" and target_key == "insights_bundle":
-            paths.add(path.rsplit(".", 1)[0] if "." in path else path)
+            item_match = re.match(r"^(insights_(?:final|candidates)\[.+?\])\.", path)
+            paths.add(item_match.group(1) if item_match else path)
             continue
         paths.add(path)
+    if target_key == "insights_bundle" and repair_action == "REBIND_EVIDENCE":
+        for path in tuple(paths):
+            match = re.match(r"^(insights_final\[item=[^\]]+\])\.", path)
+            if not match:
+                continue
+            item_path = match.group(1)
+            identity_match = re.search(r"\[item=([^\]]+)\]$", item_path)
+            if not identity_match:
+                continue
+            items = artifacts.get("insights_final") or []
+            item = _item_at_identity_path(items, f"[item={identity_match.group(1)}]")
+            if not isinstance(item, dict):
+                continue
+            paths.update(
+                f"{item_path}.{field}"
+                for field in ("evidence_id", "evidence")
+                if _has_scalar_leaf(item, field)
+            )
     return sorted(paths)
 
 
@@ -477,48 +520,8 @@ def _issue_allowed_path(
                         return f"summary.claim_evidence_map[{index}].claim"
         return ""
     if target_key == "insights_bundle":
-        indexed_match = re.match(
-            r"^(insights_final|insights_candidates)\[(\d+)\]\.(.+)$", affected
-        )
-        if indexed_match:
-            root, raw_index, field = indexed_match.groups()
-            items = artifacts.get(root)
-            index = int(raw_index)
-            if isinstance(items, list) and index < len(items):
-                item = items[index]
-                if isinstance(item, dict) and _has_scalar_leaf(item, field):
-                    identity = insight_entity_id(item)
-                    if identity:
-                        _, item_path = _identified_item_path(root, items, identity)
-                    else:
-                        item_path = f"[{index}]"
-                    return f"{root}{item_path}.{field}"
-            return ""
-        insight_id = insight_entity_id_from_public_item_id(entity_id)
-        if not insight_id:
-            insight_id = failed_insight_id(entity_id, affected)
-        if insight_id:
-            final = artifacts.get("insights_final") or []
-            candidates = artifacts.get("insights_candidates") or []
-            root, item_path = _identified_item_path("insights_final", final, insight_id)
-            if not root:
-                root, item_path = _identified_item_path(
-                    "insights_candidates", candidates, insight_id
-                )
-            if root:
-                field = _insight_issue_field(entity_id, affected)
-                items = final if root == "insights_final" else candidates
-                item = _item_at_identity_path(items, item_path)
-                return (
-                    f"{root}{item_path}.{field}"
-                    if (
-                        field
-                        and isinstance(item, dict)
-                        and _has_scalar_leaf(item, field)
-                    )
-                    else ""
-                )
-        return ""
+        insight_paths = _issue_insight_allowed_paths(issue, artifacts)
+        return insight_paths[0] if len(insight_paths) == 1 else ""
     if target_key == "quotes":
         identity = _public_item_identity(entity_id, "quote") or _section_identity(
             affected, "quotes"
@@ -578,16 +581,70 @@ def _issue_allowed_path(
                 and issue_evidence_ids.intersection(
                     value.casefold() for value in claim.evidence_ids
                 )
-                if (path := _soft_copy_claim_path(
-                    family=target_key,
-                    entity_id=claim.claim_id,
-                    artifacts=artifacts,
-                ))
+                if (
+                    path := _soft_copy_claim_path(
+                        family=target_key,
+                        entity_id=claim.claim_id,
+                        artifacts=artifacts,
+                    )
+                )
             }
             if len(paths) == 1:
                 return next(iter(paths))
         return ""
     return target_key
+
+
+def _issue_insight_allowed_paths(
+    issue: RegenerationIssue, artifacts: Dict[str, Any]
+) -> List[str]:
+    affected = str(issue.affected_section or "").strip()
+    entity_id = str(issue.entity_id or "").strip()
+    indexed_match = re.match(
+        r"^(insights_final|insights_candidates)\[(\d+)\]\.(.+)$", affected
+    )
+    if indexed_match:
+        root, raw_index, _ = indexed_match.groups()
+        items = artifacts.get(root)
+        index = int(raw_index)
+        if not isinstance(items, list) or index >= len(items):
+            return []
+        item = items[index]
+        if not isinstance(item, dict):
+            return []
+        identity = insight_entity_id(item)
+        item_path = f"[item={identity}]" if identity else f"[{index}]"
+        fields = _insight_issue_fields(issue)
+        return [
+            f"{root}{item_path}.{field}"
+            for field in fields
+            if _has_scalar_leaf(item, field)
+        ]
+
+    insight_id = insight_entity_id_from_public_item_id(entity_id)
+    if not insight_id:
+        insight_id = failed_insight_id(entity_id, affected)
+    if not insight_id:
+        return []
+    final = artifacts.get("insights_final") or []
+    candidates = artifacts.get("insights_candidates") or []
+    root, item_path = _identified_item_path("insights_final", final, insight_id)
+    items = final
+    if not root:
+        root, item_path = _identified_item_path(
+            "insights_candidates", candidates, insight_id
+        )
+        items = candidates
+    if not root:
+        return []
+    item = _item_at_identity_path(items, item_path)
+    if not isinstance(item, dict):
+        return []
+    return [
+        f"{root}{item_path}.{field}"
+        for field in _insight_issue_fields(issue)
+        if _has_scalar_leaf(item, field)
+    ]
 
 
 def _public_item_identity(entity_id: str, expected_kind: str) -> str:
@@ -636,6 +693,69 @@ def _insight_issue_field(entity_id: str, affected: str) -> str:
         return match.group(1).strip()
     match = re.match(r"^insights_(?:final|candidates)\[\d+\]\.(.+)$", affected)
     return match.group(1).strip() if match else ""
+
+
+_INSIGHT_METRIC_FAILURE_FIELDS = {
+    "metrics": ("metric.value", "metric.unit"),
+    "numbers": ("metric.value",),
+    "retained_claim.number_value_unit_match": ("metric.value", "metric.unit"),
+    "retained_claim.protected_fact_value_consistency": ("metric.value",),
+    "retained_claim.protected_fact_unit_currency_consistency": ("metric.unit",),
+    "retained_claim.protected_fact_magnitude_consistency": ("metric.value",),
+    "retained_claim.protected_fact_direction_consistency": ("metric.trend",),
+    "retained_claim.protected_fact_timeframe_consistency": ("metric.timeframe",),
+    "retained_claim.protected_fact_geography_consistency": ("metric.geography",),
+    "retained_claim.protected_fact_population_consistency": (
+        "metric.subject",
+        "metric.cohort",
+        "metric.denominator",
+    ),
+    "retained_claim.protected_fact_comparison_consistency": ("metric.label",),
+    "retained_claim.protected_fact_observation_status_consistency": (
+        "metric.observation_status",
+    ),
+    "public_editorial_quality.metric_label_relationship": (
+        "metric.label",
+        "metric.value",
+    ),
+}
+
+
+def _insight_issue_fields(issue: RegenerationIssue) -> List[str]:
+    """Resolve an insight failure to exact scalar leaves, never a metric object."""
+
+    field = _insight_issue_field(issue.entity_id, issue.affected_section)
+    rule_id = str(issue.rule_id or "").strip().lower()
+    mapped_metric_fields = _INSIGHT_METRIC_FAILURE_FIELDS.get(rule_id)
+    if mapped_metric_fields and field.startswith("metric"):
+        return list(mapped_metric_fields)
+    if field == "metric":
+        return []
+    if field.startswith("metric."):
+        return [field]
+    return [field] if field in {"text", "so_what", "now_what"} else []
+
+
+def _issue_insight_identity(issue: RegenerationIssue, artifacts: Dict[str, Any]) -> str:
+    identity = failed_insight_id(issue.entity_id, issue.affected_section)
+    if identity:
+        return identity
+    match = re.match(
+        r"^(insights_final|insights_candidates)\[(\d+)\]",
+        issue.affected_section,
+    )
+    if not match:
+        return ""
+    items = artifacts.get(match.group(1))
+    index = int(match.group(2))
+    if not isinstance(items, list) or index >= len(items):
+        return ""
+    item = items[index]
+    return (
+        str(item.get("id") or item.get("insight_id") or "").strip()
+        if isinstance(item, dict)
+        else ""
+    )
 
 
 def _key_figure_issue_field(entity_id: str, affected: str) -> str:
@@ -794,20 +914,18 @@ def _issues_support_metric_copy(ordered_issues: List[RegenerationIssue]) -> bool
     """A failed insight metric can be copied only from retained bound evidence."""
 
     return any(
-        (
-            str(issue.rule_id or "").strip().lower()
-            in {"grounding", "numbers", "metrics"}
-            or str(issue.rule_id or "").strip().lower()
-            in {
-                "retained_claim.number_value_unit_match",
-                "retained_claim.evidence_reference_completeness",
-            }
-            or str(issue.rule_id or "")
-            .strip()
-            .lower()
-            .startswith("retained_claim.protected_fact_")
-        )
-        and str(issue.severity or "").lower() == "error"
+        str(issue.severity or "").lower() == "error"
+        and bool(_insight_issue_fields(issue))
+        and any(field.startswith("metric.") for field in _insight_issue_fields(issue))
+        and str(issue.rule_id or "").strip().lower()
+        in {
+            "grounding",
+            "numbers",
+            "metrics",
+            "retained_claim.number_value_unit_match",
+            "retained_claim.evidence_reference_completeness",
+            *_INSIGHT_METRIC_FAILURE_FIELDS,
+        }
         for issue in ordered_issues
     )
 
@@ -834,6 +952,7 @@ def _build_target(
     repair_action = ""
     repair_strategy = ""
     selected_evidence_ids: List[str] = []
+    allowed_paths: List[str] = []
     for action, strategy in _strategy_options(target_key, ordered_issues):
         strategy_evidence_ids = (
             [] if action in {"REMOVE_CLAIM", "ABSTAIN"} else evidence_ids
@@ -843,31 +962,38 @@ def _build_target(
         )
         if candidate_key in rejected:
             continue
+        candidate_paths = _allowed_paths(
+            target_key, ordered_issues, artifacts or {}, action
+        )
+        if (
+            target_key
+            in {
+                "summary",
+                "insights_bundle",
+                "key_figures",
+                "quotes",
+                "expert_comment",
+                "linkedin_post",
+            }
+            and action != "ABSTAIN"
+            and not candidate_paths
+        ):
+            continue
+        if action == "CORRECT_PROTECTED_FACT" and not _canonical_metric_copy_changes(
+            candidate_paths, artifacts or {}
+        ):
+            # A source copy that would reproduce the current metric is not a
+            # repair action. Continue down the existing bounded strategy ladder.
+            continue
         repair_action = action
         repair_strategy = strategy
         selected_evidence_ids = strategy_evidence_ids
+        allowed_paths = candidate_paths
         break
     if not repair_strategy:
         # Every materially distinct strategy for this failure was already
         # rejected. Repeating any of them under another label is prohibited;
         # the failure stays terminal instead of burning bounded attempts.
-        return None
-    allowed_paths = _allowed_paths(
-        target_key, ordered_issues, artifacts or {}, repair_action
-    )
-    if (
-        target_key
-        in {
-            "summary",
-            "insights_bundle",
-            "key_figures",
-            "quotes",
-            "expert_comment",
-            "linkedin_post",
-        }
-        and repair_action != "ABSTAIN"
-        and not allowed_paths
-    ):
         return None
     return RegenerationTarget(
         target_section=target_key,
@@ -884,20 +1010,106 @@ def _build_target(
     )
 
 
+def _canonical_metric_copy_changes(paths: List[str], artifacts: Dict[str, Any]) -> bool:
+    """Return whether a canonical candidate changes one declared metric leaf."""
+
+    for path in paths:
+        match = re.fullmatch(
+            r"insights_final\[item=([^\]]+)\]\.metric\.([A-Za-z0-9_]+)", path
+        )
+        if not match:
+            continue
+        insight_id, field = match.groups()
+        final_matches = [
+            item
+            for item in artifacts.get("insights_final", [])
+            if isinstance(item, dict)
+            and str(item.get("id") or "").strip() == insight_id
+        ]
+        candidate_matches = [
+            item
+            for item in artifacts.get("insights_candidates", [])
+            if isinstance(item, dict)
+            and str(item.get("id") or "").strip() == insight_id
+        ]
+        if len(final_matches) != 1 or len(candidate_matches) != 1:
+            continue
+        current_metric = final_matches[0].get("metric")
+        candidate_metric = candidate_matches[0].get("metric")
+        if not isinstance(current_metric, dict) or not isinstance(
+            candidate_metric, dict
+        ):
+            continue
+        if (
+            field in candidate_metric
+            and current_metric.get(field) != candidate_metric[field]
+        ):
+            return True
+    return False
+
+
 def _build_regeneration_plan(
     *,
     issues: List[ValidationIssue],
     artifacts: Dict[str, Any],
     broad_retry_available: bool,
     rejected_strategy_keys: set[str] | None = None,
+    repair_memory: Sequence[RepairDelta] = (),
 ) -> RegenerationPlan:
+    planning_issues = list(issues)
+    if repair_memory:
+        # Only the most recent candidate describes which baseline failures are
+        # still active. Older deltas remain useful prompt memory but must not
+        # resurrect a root failure already resolved by a later candidate.
+        latest_persisting = repair_memory[-1].persisting
+        latest_severity = {
+            change.failure_fingerprint: str(change.after or "").strip().lower()
+            for change in repair_memory[-1].severity_changes
+        }
+        planning_issues = [
+            replace(issue, severity="error")
+            if latest_severity.get(
+                _normalize_regeneration_issue(issue, artifacts).failure_fingerprint
+            )
+            == "error"
+            and str(issue.severity or "").strip().lower() != "error"
+            else issue
+            for issue in planning_issues
+        ]
+        known = {
+            _normalize_regeneration_issue(issue, artifacts).failure_fingerprint
+            for issue in planning_issues
+        }
+        for fingerprint in latest_persisting:
+            if fingerprint.key in known:
+                continue
+            # RepairDelta stores fingerprints without severity. Only a delta
+            # that explicitly records an error transition may safely recreate
+            # an issue that is absent from the promoted baseline report.
+            if latest_severity.get(fingerprint.key) != "error":
+                continue
+            planning_issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message="A hard validation fingerprint persisted in the prior candidate.",
+                    severity="error",
+                    affected_section=fingerprint.affected_section,
+                    rule_id=fingerprint.rule_id,
+                    entity_id=fingerprint.entity_id,
+                    evidence_ids=list(fingerprint.evidence_ids),
+                )
+            )
+            known.add(fingerprint.key)
     grouped: Dict[str, List[RegenerationIssue]] = {}
     unmappable: List[RegenerationIssue] = []
     public_editorial_abstention = False
-    for issue in issues:
-        if str(issue.severity or "").strip().lower() not in REGENERATION_SEVERITY_ORDER:
+    for validation_issue in planning_issues:
+        if (
+            str(validation_issue.severity or "").strip().lower()
+            not in REGENERATION_SEVERITY_ORDER
+        ):
             continue
-        normalized = _normalize_regeneration_issue(issue, artifacts)
+        normalized = _normalize_regeneration_issue(validation_issue, artifacts)
         if (
             normalized.rule_id.startswith("public_editorial_quality.")
             and not str(normalized.repair_target).strip()
@@ -913,6 +1125,42 @@ def _build_regeneration_plan(
                 grouped.setdefault(target_key, []).append(normalized)
         else:
             unmappable.append(normalized)
+    authoritative_metric_issues = [
+        insight_issue
+        for insight_issue in grouped.get("insights_bundle", [])
+        if _is_authoritative_insight_metric_failure(insight_issue)
+    ]
+    if authoritative_metric_issues:
+        root_evidence_ids = {
+            value.casefold()
+            for insight_issue in authoritative_metric_issues
+            for value in insight_issue.evidence_ids
+            if value
+        }
+        for target_key in ("expert_comment", "linkedin_post"):
+            retained: list[RegenerationIssue] = []
+            for downstream_issue in grouped.get(target_key, []):
+                is_metric_relationship = (
+                    downstream_issue.rule_id
+                    == "public_editorial_quality.metric_label_relationship"
+                    or downstream_issue.rule_id.startswith(
+                        "retained_claim.protected_fact_"
+                    )
+                    or downstream_issue.rule_id
+                    == "retained_claim.number_value_unit_match"
+                )
+                issue_evidence_ids = {
+                    value.casefold() for value in downstream_issue.evidence_ids
+                }
+                if is_metric_relationship and root_evidence_ids.intersection(
+                    issue_evidence_ids
+                ):
+                    continue
+                retained.append(downstream_issue)
+            if retained:
+                grouped[target_key] = retained
+            else:
+                grouped.pop(target_key, None)
     hard_target_keys = {
         target_key
         for target_key, target_issues in grouped.items()
@@ -923,7 +1171,9 @@ def _build_regeneration_plan(
         # warning-only families. Retain warnings on the same target so its
         # repair still sees all local context, but keep claim recovery bounded.
         grouped = {
-            target_key: target_issues
+            target_key: _keep_atomic_insight_context(
+                target_key, target_issues, artifacts
+            )
             for target_key, target_issues in grouped.items()
             if target_key in hard_target_keys
         }
@@ -1004,6 +1254,41 @@ def _build_regeneration_plan(
         unmappable_issues=unmappable,
         broad_retry_allowed=False,
     )
+
+
+def _is_authoritative_insight_metric_failure(issue: RegenerationIssue) -> bool:
+    rule_id = str(issue.rule_id or "").strip().lower()
+    return (
+        str(issue.severity or "").strip().lower() == "error"
+        and (
+            rule_id.startswith("retained_claim.")
+            or rule_id in {"metrics", "numbers", "grounding"}
+        )
+        and any(field.startswith("metric.") for field in _insight_issue_fields(issue))
+    )
+
+
+def _keep_atomic_insight_context(
+    target_key: str,
+    issues: List[RegenerationIssue],
+    artifacts: Dict[str, Any],
+) -> List[RegenerationIssue]:
+    if target_key != "insights_bundle":
+        return issues
+    hard_ids = {
+        identity
+        for issue in issues
+        if str(issue.severity or "").lower() == "error"
+        if (identity := _issue_insight_identity(issue, artifacts))
+    }
+    if not hard_ids:
+        return issues
+    return [
+        issue
+        for issue in issues
+        if str(issue.severity or "").lower() == "error"
+        or _issue_insight_identity(issue, artifacts) in hard_ids
+    ]
 
 
 def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:

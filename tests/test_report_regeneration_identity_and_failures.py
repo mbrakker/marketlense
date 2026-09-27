@@ -67,9 +67,7 @@ def test_regenerate_artifacts_propagates_retryable_app_error(
                                     pages=[1],
                                 )
                             ],
-                            allowed_paths=[
-                                "summary.executive_summary[claim_index=0]"
-                            ],
+                            allowed_paths=["summary.executive_summary[claim_index=0]"],
                         )
                     ],
                     unmappable_issues=[],
@@ -135,9 +133,7 @@ def test_regenerate_artifacts_propagates_non_retryable_prompt_error(
                                     pages=[1],
                                 )
                             ],
-                            allowed_paths=[
-                                "summary.executive_summary[claim_index=0]"
-                            ],
+                            allowed_paths=["summary.executive_summary[claim_index=0]"],
                         )
                     ],
                     unmappable_issues=[],
@@ -681,12 +677,10 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
                 repair_action="CORRECT_PROTECTED_FACT",
                 repair_strategy="canonical_metric_copy",
                 allowed_paths=[
-                    "insights_final[item=insight-1].text",
-                    "insights_final[item=insight-1].metric",
+                    "insights_final[item=insight-1].metric.value",
+                    "insights_final[item=insight-1].metric.geography",
                     "insights_final[item=insight-1].evidence_id",
                     "insights_final[item=insight-1].evidence",
-                    "insights_final[item=insight-1].evidence_spans",
-                    "insights_final[item=insight-1].pages",
                 ],
             )
         ],
@@ -724,9 +718,11 @@ def test_insight_metric_conflict_is_corrected_from_retained_candidate(
     )
     assert repaired_insight["metric"]["value"] == "46%"
     assert repaired_insight["metric"]["geography"] == "Europe"
+    assert repaired_insight["metric"]["label"] == "Drifted label"
+    assert repaired_insight["metric"]["unit"] == "%"
     assert repaired_insight["evidence_id"] == "f1"
     assert repaired_insight["evidence"] == "Europe margin reached 46% in 2025."
-    assert repaired_insight["pages"] == [1]
+    assert repaired_insight["pages"] == [99]
     untouched = next(
         insight
         for insight in response.updated_artifacts["insights_final"]

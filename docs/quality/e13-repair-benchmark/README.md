@@ -92,6 +92,18 @@ unrelated fields and sibling items remain immutable. A decision may contain
 multiple `replace` operations when multiple leaves need repair; parent items,
 families, and undeclared descendants are rejected.
 
+Insight failures resolve to the exact failed leaf. Prose number failures such
+as `so_what` remain atomic prose repairs; retained metric failures resolve to
+the specific value, unit, timeframe, geography, cohort, denominator, trend,
+observation-status, or label leaves implicated by their rule IDs. A canonical
+metric copy is selected only when its same-ID retained candidate changes at
+least one declared leaf. If a hard metric fingerprint persists after a
+downstream public-copy repair, the retry planner uses the latest repair delta
+and the promoted baseline's hard issue to repair the source insight first;
+matching Expert View or LinkedIn metric-label repairs wait for full candidate
+revalidation after the source correction. Retry limits and the evidence,
+scope, and promotion validators are unchanged.
+
 Planning abstains when it cannot resolve a writable scalar leaf. Before a
 provider client is required, runtime preflight also verifies that every path
 resolves uniquely to a scalar. The generator computes protected fields as the

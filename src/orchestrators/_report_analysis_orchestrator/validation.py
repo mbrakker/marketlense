@@ -1206,6 +1206,7 @@ def _run_validation_regeneration_loop(
             artifacts=working_artifacts,
             broad_retry_available=not broad_retry_used,
             rejected_strategy_keys=rejected_strategy_keys,
+            repair_memory=repair_memory,
         )
         public_issues = [
             issue
