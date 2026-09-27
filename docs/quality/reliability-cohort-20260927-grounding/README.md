@@ -16,6 +16,32 @@ The partial findings exposed another confirmed false positive in Algolia's Linke
 
 The partial run used 315 model-provider calls, 2,942,955 input tokens, 385,587 output tokens, and USD 0.479478 estimated cost through its last recorded usage event at `2026-09-27T20:11:53.765183+00:00`. The stopped run is retained under `tmp/retained-grounding-cohort-20260927-groundingfix-final-v2/`; its 20-source manifest SHA-256 was `21a9a1b995d10b5add412780d96930ecc29bafd082907ecbf0741c80be841a07`.
 
+### Post-fix statistics from the 13-ingest finding set
+
+The post-fix replay intersects the 13 successful source-ingest report IDs with the retained false-positive matrix, then checks the matched cases against the focused regression fixtures at implementation SHA `92a68f9a7b9c96d0a8a1fcbdb0d0b3c9b6fa3e24`. This produces **19 claim-decision records across 8 of the 13 reports**: 15 confirmed false-positive decisions, 3 partial decisions, and 1 unconfirmed quote case. The other five ingested report IDs have no row in this source-reviewed matrix. These are fixture outcomes for retained findings, not a post-fix end-to-end cohort result. The row-level outcomes are in [`postfix_13_ingested_findings.csv`](postfix_13_ingested_findings.csv), with denominators and source hashes in [`postfix_13_ingested_statistics.json`](postfix_13_ingested_statistics.json).
+
+| Post-fix finding measure | Result | Interpretation |
+| --- | ---: | --- |
+| Confirmed false-positive decision fixtures | 15/15 have the expected post-fix semantic result | No confirmed case reproduces its recorded false rejection: supported claims pass their focused check, while underdetermined dimensions remain `unknown`. |
+| Partial quantity decisions | 3/3 preserve the supported percentages and leave an unlinked sample size unresolved | The sample size remains unaccepted unless separately linked; this is not counted as a fully supported claim. |
+| Unconfirmed quote case | 1/1 remains blocked | The exact quoted phrase is absent from the linked evidence record, so the fixture does not expand evidence binding. |
+| Algolia LinkedIn `numbers` finding | 2 baseline number-issue records → 0 in the focused current-code check | The linked 42% / 34% comparison is accepted; the changed 35% / 2023 mutation is still rejected. |
+| Focused deterministic regression suite | 92 passed | `python -m pytest -q tests/test_grounding_cohort_false_positive_regressions.py tests/test_validation_number_temporal_context.py tests/test_quantity_utils.py` |
+| Post-fix cohort readiness / publication outcomes | Not established | The 13-ingest run stopped before a cohort result; readiness and publication counts cannot be recalculated from the interrupted run. |
+
+By the original validator rules, the 19 matched decision records break down as follows:
+
+| Original rule family | Decision records | Post-fix fixture outcome |
+| --- | ---: | --- |
+| Protected fact: attribution, population, or timeframe | 7 | All 7 remain non-contradictory; the compared dimension is `unknown`. |
+| Exact quote matching | 6 | Five confirmed quoted-span cases pass; one unconfirmed quote remains blocked because its exact text is absent from the linked evidence. |
+| Quantity entailment | 3 | Supported percentages are recognized; the 110 sample size stays unresolved without its own evidence link. |
+| Number timeframe | 1 | Algolia 42% / 34% comparison passes; changed 35% / 2023 is rejected. |
+| Sentence fragmentation | 1 | “Scope matters.” is accepted as a complete sentence. |
+| Combined metric label | 1 | The explicitly stated 77% combined category passes. |
+
+The operational snapshot above—nine intermediate candidates, two unsupported and 135 unresolved candidate facts, five passing and four failing validation artifacts, and zero publication-readiness records—belongs to implementation SHA `361db2301f5aada6ad2228c5cab937035b4a77b9`, before the final quantity-timeframe fix. It remains useful as the partial-run baseline, but is not presented as a post-fix count. The focused replay used deterministic local tests and made no provider calls; it verifies the listed findings without rerunning discovery, acquisition, ingest, rendering, or readiness.
+
 Future runs now default to [`frozen_reliability_cohort_10.json`](../../../scripts/quality/frozen_reliability_cohort_10.json), a fixed 10-report subset covering table/index quantities, temporal context, attribution, expectation versus observation, independently supported quantities, exact text, spelled percentages, and combined categories. The original 20-report manifest remains unchanged and can still be selected explicitly. The default 10-report manifest passed component admission preflight for 10/10 sources with zero model-provider calls and zero cost; this preflight does not exercise report generation or end-to-end readiness.
 
 ## Implementation change under test

@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0",
+  "assessment": "focused regression replay over findings whose exact report IDs are among the 13 successful source ingests; not a completed cohort rerun",
+  "current_implementation_sha": "92a68f9a7b9c96d0a8a1fcbdb0d0b3c9b6fa3e24",
+  "source_run": {
+    "implementation_sha": "361db2301f5aada6ad2228c5cab937035b4a77b9",
+    "run_status": "interrupted_partial",
+    "source_manifest_path": "scripts/quality/frozen_reliability_cohort_20.json",
+    "source_manifest_sha256": "21a9a1b995d10b5add412780d96930ecc29bafd082907ecbf0741c80be841a07",
+    "source_ingest_succeeded": 13,
+    "source_ingest_total": 20,
+    "pending_source_ingest": 7,
+    "cohort_result_present": false
+  },
+  "evidence_hashes": {
+    "partial_run_summary_sha256": "0da98de910e278363e94df89b067a159580c4cf6d58dec82e122df03f3332f3d",
+    "failure_matrix_sha256": "4d4e21e23d4b85e5db933abeda00667d50398e53bbffd71b36677c0a9a35901f",
+    "regression_fixture_sha256": "1dbc0e4d94ba296647012ea30aff17c8f717803925a2b8214c6d9fa4a4b518b9"
+  },
+  "source_id_intersection": {
+    "matrix_decision_records": 19,
+    "reports_with_matrix_records": 8,
+    "reports_without_matrix_records": 5,
+    "classification_counts": {
+      "confirmed": 15,
+      "partial_false_positive_plus_unresolved_sample_size": 3,
+      "not_confirmed_unresolved_do_not_expand_evidence": 1
+    },
+    "decision_records_by_original_rule": {
+      "protected_fact_attribution_incompatible": 5,
+      "protected_fact_population_incompatible": 1,
+      "public_editorial_quality.sentence_fragment": 1,
+      "protected_fact_timeframe_incompatible": 1,
+      "quantity_not_entailed": 3,
+      "quote_not_matched": 6,
+      "public_editorial_quality.metric_label_relationship": 1,
+      "numbers": 1
+    }
+  },
+  "post_fix_fixture_replay": {
+    "confirmed_false_positive_decision_records": 15,
+    "confirmed_decision_records_with_expected_fixture_outcome": 15,
+    "partial_sample_size_decision_records": 3,
+    "partial_records_supported_values_preserved_and_unlinked_sample_left_unresolved": 3,
+    "unconfirmed_quote_decision_records_remain_blocked": 1,
+    "result_counts": {
+      "confirmed_fixtures_passed": 15,
+      "partial_supported_subclaim_sample_unresolved": 3,
+      "unconfirmed_exact_quote_remains_blocked": 1
+    },
+    "exact_algolia_linkedin_numbers_rule": {
+      "source_backed_quantities": [
+        42,
+        34
+      ],
+      "baseline_number_issue_records": 2,
+      "post_fix_number_issue_records_in_focused_rule_test": 0,
+      "mutated_35_percent_2023_comparison_rejected": true
+    },
+    "verification_command": "python -m pytest -q tests/test_grounding_cohort_false_positive_regressions.py tests/test_validation_number_temporal_context.py tests/test_quantity_utils.py",
+    "verification_result": "92 passed in 1.59s",
+    "decision_records_by_original_rule": {
+      "protected_fact_attribution_incompatible": {
+        "records": 5,
+        "outcome": "dimension_unknown_no_false_mismatch"
+      },
+      "protected_fact_population_incompatible": {
+        "records": 1,
+        "outcome": "dimension_unknown_no_false_mismatch"
+      },
+      "protected_fact_timeframe_incompatible": {
+        "records": 1,
+        "outcome": "dimension_unknown_no_false_mismatch"
+      },
+      "quote_not_matched": {
+        "records": 6,
+        "outcome": "5_confirmed_exact_quote_fixtures_passed;_1_unconfirmed_quote_remains_blocked"
+      },
+      "quantity_not_entailed": {
+        "records": 3,
+        "outcome": "supported_percentages_preserved;_unlinked_sample_size_unresolved"
+      },
+      "numbers": {
+        "records": 1,
+        "outcome": "algolia_linked_42_34_passed;_changed_35_2023_rejected"
+      },
+      "public_editorial_quality.sentence_fragment": {
+        "records": 1,
+        "outcome": "complete_short_sentence_accepted"
+      },
+      "public_editorial_quality.metric_label_relationship": {
+        "records": 1,
+        "outcome": "explicit_77_percent_combined_category_accepted"
+      }
+    }
+  },
+  "interrupted_run_snapshot_not_post_fix": {
+    "candidate_package_count": 9,
+    "candidate_packages_not_publishable": 9,
+    "candidate_unsupported_factual_count": 2,
+    "candidate_unresolved_factual_count": 135,
+    "validation_artifact_status_counts": {
+      "pass": 5,
+      "fail": 4
+    },
+    "validation_issue_counts_by_rule": {
+      "artifact_quality": 39,
+      "family_confidence": 11,
+      "grounding": 7,
+      "metrics": 2,
+      "numbers": 3,
+      "public_editorial_quality.duplicate_insight": 1
+    },
+    "publication_readiness_records": 0,
+    "published_records": 0,
+    "provider_calls": 315,
+    "input_tokens": 2942955,
+    "output_tokens": 385587,
+    "estimated_cost_usd": 0.479478
+  },
+  "post_fix_cohort_readiness_statistics": "not established; no complete post-fix 13-report workflow result or cohort_result.json exists"
+}
