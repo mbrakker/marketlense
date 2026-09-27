@@ -31,6 +31,31 @@ This deterministic queue evidence confirms queue semantics at the exact tested r
 
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 
+## Final retained-claim package lifecycle measurement
+
+The pinned five-report grounding lifecycle cohort is retained in
+[`reliability-cohort-20260927-grounding/final-package-lifecycle-5/`](reliability-cohort-20260927-grounding/final-package-lifecycle-5/).
+Its manifest contains only Merchant Risk Council, Deloitte, Emplifi,
+StackAdapt, and DoubleVerify, using the source checksums pinned by the
+representative reliability manifest. Run it through the production workflow
+with fresh isolated state and publication disabled:
+
+```powershell
+python scripts/quality/run_frozen_reliability_cohort.py `
+  --sources-manifest docs/quality/reliability-cohort-20260927-grounding/final-package-lifecycle-5/frozen_cohort.json `
+  --runs-root tmp/retained-claim-package-lifecycle-5 `
+  --max-duration 7200
+```
+
+The runner retains every report's typed terminal state and provider usage but
+does not perform WordPress publication. Keep the full temporary workflow state
+out of source control; commit the sanitized measurement summary, cohort/run
+identities, input/result hashes, and per-report typed outcomes in the cohort
+evidence folder. Report package eligibility separately from readiness: a
+source-grounded package may be materialized while unsupported or unresolved
+claims correctly remain blocked. Also retain the count of readiness-stage
+provider calls, which must be zero.
+
 ## Repair-effectiveness evidence
 
 The validation reliability artifact retains a cohort-compatible, content-free
@@ -373,11 +398,13 @@ python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"
 
 It creates a frozen one-report cohort and exercises the durable queue/outbox,
 handlers, manifest, checkpoints, report/state databases, validation,
-claim-scoped regeneration, rendering, publication readiness, and A21 builder.
-Its clean fixture proves first-pass `awaiting_review`; its repair fixture proves
-one unsupported soft-copy claim can recover without rewriting valid sibling
-copy or requesting an operator requeue. Both rebuild the same A21 artifact and
-require identical bytes and SHA-256. The fixtures mock only external
+rendering, publication readiness, and the A21 builder. Its clean fixture proves
+first-pass `awaiting_review` with a current final retained-claim package. The
+unsupported soft-copy fixtures prove final claims without a successful semantic
+grounding result remain `not_publishable`; matching supported sibling results
+remain reusable. They stop before a publication-readiness queue job is created.
+The clean fixture builds the same A21 artifact twice and requires identical
+bytes and SHA-256. The fixtures mock only external
 provider/browser/Drive/WordPress boundaries, do not publish, and are a
 mandatory precondition rather than a substitute for the separately authorized
 live canary.

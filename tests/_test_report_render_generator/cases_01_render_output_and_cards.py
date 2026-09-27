@@ -523,7 +523,7 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
 
     assert_no_defaulted_required_fields(outcome)
     assert outcome.status == "error"
-    assert outcome.error == "publish_readiness_failed"
+    assert outcome.error == "retained_claim_materialization_identity_missing"
     assert render_calls == ["DB Title"]
 
 
@@ -549,6 +549,7 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
             analysis.evidence_packs,
             source_identity=runtime.ctx.source_identity_id,
         ),
+        report_id=runtime.file.file_id,
         source_id=runtime.ctx.source_identity_id,
         source_md5=runtime.md5 or "",
         configuration_hash=runtime.ctx.configuration_hash,
@@ -636,8 +637,105 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
     assert f"unresolved_factual_count={actual_unresolved_count}" in grounding_rule[
         "detail"
     ]
-    assert "current_configuration_identity_missing" not in grounding_rule["detail"]
-    assert "current_policy_identity_missing" not in grounding_rule["detail"]
+
+
+def test_render_materializes_final_package_when_validation_candidate_is_missing(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="source-md5")
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="source:report-1",
+            configuration_hash="a" * 64,
+            policy_hash="b" * 64,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(runtime.settings.output_dir) / "final-report.html"
+    rendered_html = "<html><body><h1>Rendered report</h1></body></html>"
+
+    def render_report(_request, _ctx):
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text(rendered_html, encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    dependencies = _deps(render_report=render_report)
+    preview_resp = render_preview_asset(runtime, source, dependencies)
+    first = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        dependencies,
+        preview_resp=preview_resp,
+    )
+    first_package = json.loads(
+        Path(first.evidence_packs["retained_claim_validation"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    second = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        dependencies,
+        preview_resp=preview_resp,
+    )
+    second_package = json.loads(
+        Path(second.evidence_packs["retained_claim_validation"]).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert first.evidence_packs["retained_claim_validation"]
+    assert first_package["lineage"]["report_id"] == runtime.file.file_id
+    assert first_package["lineage"]["final_artifact_hash"] == sha256_json(
+        analysis.artifacts_payload or {}
+    )
+    assert second_package["package_hash"] == first_package["package_hash"]
+    assert "package_missing" not in Path(
+        first.evidence_packs["publish_readiness"]
+    ).read_text(encoding="utf-8")
+
+
+def test_failed_final_package_materialization_has_a_typed_terminal_reason(tmp_path):
+    runtime = _runtime(tmp_path, md5="source-md5")
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="source:report-1",
+            configuration_hash="",
+            policy_hash="b" * 64,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(runtime.settings.output_dir) / "final-report.html"
+
+    def render_report(_request, _ctx):
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text("<html><body>Report</body></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    dependencies = _deps(render_report=render_report)
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        dependencies,
+        preview_resp=render_preview_asset(runtime, source, dependencies),
+    )
+
+    assert outcome.status == "error"
+    assert outcome.error == "retained_claim_materialization_identity_missing"
 
 
 def test_render_report_output_does_not_emit_html_for_failed_canonical_validation(
@@ -1250,7 +1348,7 @@ def test_render_report_output_does_not_use_file_modified_time_for_card_date(tmp_
     assert len(writes) == 1
     assert writes[0].manifest.published_date == ""
     assert outcome.status == "error"
-    assert outcome.error == "publish_readiness_failed"
+    assert outcome.error == "retained_claim_materialization_identity_missing"
 
 
 def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):

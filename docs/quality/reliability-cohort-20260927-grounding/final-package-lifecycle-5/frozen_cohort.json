@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.1",
+  "cohort_name": "retained_claim_package_lifecycle_5",
+  "members": [
+    {
+      "source_path": "out/browser_downloads/merchantriskcouncil.org/d649ea17ec88/2026_global_payments_and_fraud_report.pdf",
+      "content_md5": "11b0b55157f7d0636815ad72435e1cf5",
+      "source_domain": "merchantriskcouncil.org",
+      "report_name": "2026 global payments and fraud report",
+      "landing_page_url": "https://merchantriskcouncil.org/learning/mrc-exclusive-reports/global-payments-and-fraud-report",
+      "source_page_url": "https://merchantriskcouncil.org/learning/mrc-exclusive-reports/global-payments-and-fraud-report",
+      "publisher_name": "Merchant Risk Council",
+      "downloaded_at_utc": "2026-07-06T07:07:51Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.deloitte.com/0b9f54f8fa8d/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "content_md5": "b10ed6c82b76739a806a9f10ec0b9723",
+      "source_domain": "www.deloitte.com",
+      "report_name": "q1 2026 emerging retail and consumer trends",
+      "landing_page_url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/industries/consumer/2026/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "source_page_url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/industries/consumer/2026/q1-2026-emerging-retail-and-consumer-trends.pdf",
+      "publisher_name": "Deloitte",
+      "downloaded_at_utc": "2026-07-17T20:20:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/s3.amazonaws.com/29d97ddbfdbb/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "content_md5": "f62048b469dd784e6e7c0349c8b92f9b",
+      "source_domain": "s3.amazonaws.com",
+      "report_name": "EMPLIFI Digital Authenticity AI 2026",
+      "landing_page_url": "https://s3.amazonaws.com/media.mediapost.com/uploads/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "source_page_url": "https://s3.amazonaws.com/media.mediapost.com/uploads/EMPLIFI_Digital_Authenticity_AI_2026.pdf",
+      "publisher_name": "Emplifi",
+      "downloaded_at_utc": "2026-07-17T20:25:12Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.stackadapt.com/4ee9fe55e371/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "content_md5": "8ef1021c332aa85ba008da58ff8ec866",
+      "source_domain": "www.stackadapt.com",
+      "report_name": "Retail Marketing Trends: How To Win in 2026",
+      "landing_page_url": "https://www.stackadapt.com/main/wp-content/uploads/sites/2/2026/01/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "source_page_url": "https://www.stackadapt.com/main/wp-content/uploads/sites/2/2026/01/StackAdapt_Retail-Marketing-Trends_Report_2026.pdf",
+      "publisher_name": "StackAdapt Inc.",
+      "downloaded_at_utc": "2026-07-17T21:38:00.007802+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "content_md5": "e854b71d6fb10333b47fd518a6e51cf9",
+      "source_domain": "doubleverify.com",
+      "report_name": "DV QualityandAttentionBenchmark Q1 2026",
+      "landing_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "source_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "publisher_name": "DoubleVerify",
+      "downloaded_at_utc": "2026-07-11T11:45:37Z"
+    }
+  ]
+}

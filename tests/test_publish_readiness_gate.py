@@ -111,7 +111,7 @@ def _retained_claim_package(
         evidence_references = (
             [
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "1.3",
                     "evidence_id": "F1",
                     "source_pack": "findings",
                     "page": 1,
@@ -124,9 +124,9 @@ def _retained_claim_package(
             else []
         )
         result = {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "candidate": {
-                "schema_version": "1.2",
+                "schema_version": "1.3",
                 "claim_id": f"claim:{index}",
                 "source_family": "summary",
                 "text": f"Retained factual claim {index}.",
@@ -192,7 +192,7 @@ def _retained_claim_package(
         }
         results.append(result)
     package = {
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "artifact_hash": sha256_json(artifacts),
         "package_hash": "",
         "results": results,
@@ -205,7 +205,8 @@ def _retained_claim_package(
         "semantic_validation_count": 1 if semantic else 0,
         "semantic_execution_identities": ["grounding-execution-1"] if semantic else [],
         "validation_identity": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
+            "report_id": "report-1",
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": "retained_claim_validation:v2",
@@ -214,7 +215,8 @@ def _retained_claim_package(
             "policy_hash": policy_hash,
         },
         "lineage": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
+            "report_id": "report-1",
             "final_artifact_hash": sha256_json(artifacts),
             "publication_projection_hash": publication_projection_hash(html),
             "evidence_pack_hash": sha256_json(evidence_packs),
@@ -347,6 +349,7 @@ def test_unsupported_retained_claim_blocks_readiness_with_separate_count() -> No
 
     assert readiness.status == "fail"
     assert rule.status == "fail"
+    assert "not_publishable" in rule.detail
     assert "unsupported_factual_count=1" in rule.detail
     assert "unresolved_factual_count=0" in rule.detail
 
@@ -360,6 +363,7 @@ def test_unresolved_retained_claim_blocks_readiness_as_incomplete_grounding() ->
 
     assert readiness.status == "fail"
     assert rule.status == "fail"
+    assert "not_publishable" in rule.detail
     assert "unsupported_factual_count=0" in rule.detail
     assert "unresolved_factual_count=1" in rule.detail
 
@@ -372,6 +376,7 @@ def test_stale_final_artifact_hash_blocks_retained_grounding_readiness() -> None
     readiness = _readiness_with_package(_seal_claim_package(package))
 
     assert readiness.status == "fail"
+    assert "package_invalid" in _retained_grounding_rule(readiness).detail
     assert "artifact_hash" in _retained_grounding_rule(readiness).detail
 
 
@@ -388,6 +393,7 @@ def test_stale_evidence_and_source_identity_block_readiness() -> None:
     rule = _retained_grounding_rule(readiness)
 
     assert readiness.status == "fail"
+    assert "package_invalid" in rule.detail
     assert "evidence_pack_hash" in rule.detail
     assert "source_id" in rule.detail
     assert "source_md5" in rule.detail
@@ -406,6 +412,7 @@ def test_stale_validator_and_configuration_identity_block_readiness() -> None:
     rule = _retained_grounding_rule(readiness)
 
     assert readiness.status == "fail"
+    assert "package_invalid" in rule.detail
     assert "claim_validation_validator_version" in rule.detail
     assert "grounding_validator_version" in rule.detail
     assert "configuration_hash" in rule.detail
@@ -446,7 +453,35 @@ def test_missing_readiness_execution_identity_blocks_retained_grounding(
     )
 
     assert readiness.status == "fail"
+    assert "package_invalid" in _retained_grounding_rule(readiness).detail
     assert problem in _retained_grounding_rule(readiness).detail
+
+
+def test_candidate_only_package_cannot_satisfy_final_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    candidate = _retained_claim_package(artifacts, evidence_packs, html)
+    candidate.pop("lineage")
+
+    readiness = _readiness_with_package(_seal_claim_package(candidate))
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert rule.status == "fail"
+    assert "package_invalid" in rule.detail
+    assert "final_lineage_missing" in rule.detail
+
+
+def test_final_package_from_another_report_is_rejected() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    package["lineage"]["report_id"] = "report-2"
+    package["validation_identity"]["report_id"] = "report-2"
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+
+    assert readiness.status == "fail"
+    assert "package_invalid" in _retained_grounding_rule(readiness).detail
+    assert "report_id_stale" in _retained_grounding_rule(readiness).detail
 
 
 def test_semantically_grounded_package_is_consumed_without_regrounding() -> None:

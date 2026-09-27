@@ -24,9 +24,9 @@ DEFAULT_SOURCES_MANIFEST = Path(__file__).with_name("frozen_reliability_cohort_1
 def _load_members(manifest_path: Path) -> list[dict[str, Any]]:
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     members = payload.get("members") if isinstance(payload, dict) else None
-    if not isinstance(members, list) or len(members) not in {10, 20}:
+    if not isinstance(members, list) or len(members) not in {5, 10, 20}:
         raise ValueError(
-            "Frozen reliability cohort must contain exactly 10 or 20 members"
+            "Frozen reliability cohort must contain exactly 5, 10, or 20 members"
         )
     root = Path(__file__).resolve().parents[2]
     required = {

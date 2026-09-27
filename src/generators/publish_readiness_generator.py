@@ -431,6 +431,7 @@ def evaluate_publish_readiness(
         _retained_claim_grounding_result(
             retained_claim_package=retained_claim_package,
             required=retained_claim_required,
+            report_id=str(report_id),
             artifacts=safe_artifacts,
             evidence_packs=safe_packs,
             final_html=final_html,
@@ -652,6 +653,7 @@ def _retained_claim_grounding_result(
     *,
     retained_claim_package: ClaimValidationPackage | Mapping[str, Any] | None,
     required: bool,
+    report_id: str,
     artifacts: dict[str, Any],
     evidence_packs: dict[str, dict[str, Any]],
     final_html: str,
@@ -684,6 +686,10 @@ def _retained_claim_grounding_result(
     results = payload.get("results")
     results = results if isinstance(results, list) else []
     problems: set[str] = set()
+    if not lineage:
+        problems.add("final_lineage_missing")
+    elif lineage.get("schema_version") != "1.1":
+        problems.add("final_lineage_schema_stale")
     if not str(configuration_hash or "").strip():
         problems.add("current_configuration_identity_missing")
     if not str(policy_hash or "").strip():
@@ -747,8 +753,10 @@ def _retained_claim_grounding_result(
     if not isinstance(validation_identity, Mapping):
         problems.add("validation_execution_identity_missing")
     else:
-        if validation_identity.get("schema_version") != "1.0":
+        if validation_identity.get("schema_version") != "1.1":
             problems.add("validation_execution_identity_invalid")
+        if validation_identity.get("report_id") != report_id:
+            problems.add("report_id_stale")
         if not str(validation_identity.get("configuration_hash") or "").strip():
             problems.add("validation_execution_configuration_identity_missing")
         if not str(validation_identity.get("policy_hash") or "").strip():
@@ -781,6 +789,8 @@ def _retained_claim_grounding_result(
         final_html
     ):
         problems.add("publication_projection_hash_stale")
+    if lineage.get("report_id") != report_id:
+        problems.add("report_id_stale")
     if lineage.get("evidence_pack_hash") != sha256_json(evidence_packs):
         problems.add("evidence_pack_hash_stale")
     if lineage.get("source_id") != source_id:
@@ -909,7 +919,9 @@ def _retained_claim_grounding_result(
         f"unresolved_factual_count={unresolved}"
     )
     if problems:
-        detail += "; " + "; ".join(sorted(problems))
+        detail = "package_invalid; " + detail + "; " + "; ".join(sorted(problems))
+    elif unsupported or unresolved:
+        detail = "not_publishable; " + detail
     if unsupported or unresolved or problems:
         return _fail(
             "publish_readiness.retained_claim_grounding",

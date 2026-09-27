@@ -932,6 +932,7 @@ def render_report_output(
                 readiness_path,
                 readiness_status,
                 retained_claim_path,
+                materialization_failure_code,
             ) = _persist_publish_readiness(
                 runtime=runtime,
                 source=source,
@@ -959,10 +960,13 @@ def render_report_output(
                 name=runtime.file_name,
                 md5=runtime.md5,
                 html_path=out_html,
-                status="error" if readiness_status != "pass" else "processed",
-                error=(
-                    "publish_readiness_failed" if readiness_status != "pass" else None
+                status=(
+                    "error"
+                    if materialization_failure_code or readiness_status != "pass"
+                    else "processed"
                 ),
+                error=materialization_failure_code
+                or ("publish_readiness_failed" if readiness_status != "pass" else None),
                 publish_readiness_status=readiness_status,
                 vector_store_id=analysis.vector_store_id,
                 vector_store_status=analysis.vector_store_status,
@@ -1244,7 +1248,12 @@ def render_report_output(
         )
     )
 
-    readiness_path, readiness_status, retained_claim_path = _persist_publish_readiness(
+    (
+        readiness_path,
+        readiness_status,
+        retained_claim_path,
+        materialization_failure_code,
+    ) = _persist_publish_readiness(
         runtime=runtime,
         source=source,
         analysis=analysis,
@@ -1261,10 +1270,15 @@ def render_report_output(
         md5=runtime.md5,
         html_path=out_html,
         status=(
-            "error" if report_card_error or readiness_status != "pass" else "processed"
+            "error"
+            if report_card_error
+            or materialization_failure_code
+            or readiness_status != "pass"
+            else "processed"
         ),
         error=(
             report_card_error
+            or materialization_failure_code
             or ("publish_readiness_failed" if readiness_status != "pass" else None)
         ),
         publish_readiness_status=readiness_status,
@@ -1300,7 +1314,7 @@ def _persist_publish_readiness(
     final_html_path: str,
     report_card_manifest_path: str | None,
     build_provenance: dict[str, str],
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     """Persist the single readiness decision after the final render is complete."""
     final_html = dependencies.read_text(
         ReadTextRequest(schema_version="1.0", path=final_html_path),
@@ -1324,7 +1338,7 @@ def _persist_publish_readiness(
             task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_path",
         ),
     ).output_path
-    retained_claim_payload = None
+    candidate_claim_payload = None
     retained_claim_path = ""
     if dependencies.file_exists(
         FileExistsRequest(schema_version="1.0", path=candidate_path),
@@ -1355,16 +1369,20 @@ def _persist_publish_readiness(
             )
         else:
             if isinstance(candidate_response.payload, dict):
-                retained_claim_payload = materialize_retained_claim_package(
-                    candidate_response.payload,
-                    artifacts=artifacts,
-                    evidence_packs=analysis.evidence_packs,
-                    final_html=final_html,
-                    source_id=source_id,
-                    source_md5=source_md5,
-                    configuration_hash=runtime.ctx.configuration_hash,
-                    policy_hash=runtime.ctx.policy_hash,
-                )
+                candidate_claim_payload = candidate_response.payload
+    retained_claim_payload, materialization_failure_code = (
+        materialize_retained_claim_package(
+            candidate_claim_payload,
+            report_id=str(runtime.file.file_id),
+            artifacts=artifacts,
+            evidence_packs=analysis.evidence_packs,
+            final_html=final_html,
+            source_id=source_id,
+            source_md5=source_md5,
+            configuration_hash=runtime.ctx.configuration_hash,
+            policy_hash=runtime.ctx.policy_hash,
+        )
+    )
     if retained_claim_payload is not None:
         retained_claim_path = dependencies.analysis_store_pack(
             AnalysisStorePackRequest(
@@ -1380,6 +1398,19 @@ def _persist_publish_readiness(
                 task_id=f"{runtime.ctx.task_id}:retained_claim_final",
             ),
         ).output_path
+    else:
+        logger.error(
+            log_event(
+                runtime.ctx,
+                role="generator",
+                event="retained_claim_final_materialization_failed",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "reason": materialization_failure_code,
+                },
+            )
+        )
     artifact_hashes = {
         "artifacts": sha256_json(artifacts),
         "validation": sha256_json(
@@ -1449,7 +1480,12 @@ def _persist_publish_readiness(
             },
         )
     )
-    return response.output_path, readiness.status, retained_claim_path
+    return (
+        response.output_path,
+        readiness.status,
+        retained_claim_path,
+        materialization_failure_code,
+    )
 
 
 def _source_fidelity_metadata(

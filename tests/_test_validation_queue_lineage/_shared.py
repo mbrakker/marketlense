@@ -168,7 +168,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
             "not_found_reason": "",
         },
         "semantic_validation_output_v1": {"metrics": [], "quotes": []},
-        "grounding_validation_output_v1": {"unsupported": [], "checks": []},
+        "grounding_validation_output_v2": {"unsupported": [], "checks": []},
         "context_category_fit_v1": {
             "schema_version": "1.0",
             "selected_category_ids": ["advertising_media"],
@@ -407,33 +407,133 @@ def _full_chain_response_factory(
             for section, claim, code in unsupported_claims
             if claim in json.dumps(call, default=str)
         ]
-        if schema_name == "grounding_validation_output_v1" and seen_unsupported_claims:
+        if schema_name == "grounding_validation_output_v2":
             if detected_unsupported_claims is not None:
                 detected_unsupported_claims.extend(
                     claim for _section, claim, _code in seen_unsupported_claims
                 )
-            payload = {
-                "unsupported": [
-                    {
-                        "section": section,
-                        "text": claim,
-                        "classification": "factual_claim",
-                        "entailment_outcome": "not_established",
-                        "violation_type": "unsupported_factual_claim",
-                        "reason": (
-                            "The retained source does not establish this claim"
-                            + (f" ({code})." if code else ".")
-                        ),
-                    }
-                    for section, claim, code in seen_unsupported_claims
-                ],
-                "checks": [],
-            }
+            payload = _full_chain_grounding_response(
+                call, unsupported_claims=seen_unsupported_claims
+            )
         return FakeOpenAIResult(
             output_text=json.dumps(payload), usage=response.usage, id=response.id
         )
 
     return respond
+
+
+def _full_chain_grounding_response(
+    call: dict,
+    *,
+    unsupported_claims: list[tuple[str, str, str]],
+) -> dict[str, object]:
+    """Answer the retained-claim schema using the exact test prompt claims."""
+    report_payload = _report_json_from_responses_call(call)
+    claims = report_payload.get("retained_claims_to_ground")
+    claims = claims if isinstance(claims, list) else []
+    unsupported_by_text = {
+        text: (section, code) for section, text, code in unsupported_claims
+    }
+    checks: list[dict[str, object]] = []
+    unsupported: list[dict[str, str]] = []
+    protected_fact_dimensions = (
+        "value",
+        "unit_currency",
+        "magnitude",
+        "direction",
+        "timeframe",
+        "geography",
+        "population",
+        "comparison",
+        "observation_status",
+        "attribution",
+        "certainty",
+        "causality",
+    )
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        item_id = str(claim.get("item_id") or "")
+        text = str(claim.get("text") or "")
+        section = str(claim.get("section") or "")
+        unsupported_match = next(
+            (
+                configured
+                for configured in unsupported_by_text
+                if configured and configured in text
+            ),
+            "",
+        )
+        if unsupported_match:
+            _configured_section, code = unsupported_by_text[unsupported_match]
+            unsupported.append(
+                {
+                    "item_id": item_id,
+                    "section": section,
+                    "text": text,
+                    "classification": "factual_claim",
+                    "entailment_outcome": "not_established",
+                    "violation_type": "unsupported_factual_claim",
+                    "reason": (
+                        "The retained source does not establish this claim"
+                        + (f" ({code})." if code else ".")
+                    ),
+                }
+            )
+            continue
+        checks.append(
+            {
+                "item_id": item_id,
+                "section": section,
+                "text": text,
+                "classification": "factual_claim",
+                "entailment_outcome": "entailed",
+                "proposition_status": "compatible",
+                "protected_facts": {
+                    name: {
+                        "claim_value": None,
+                        "evidence_value": None,
+                        "status": "compatible",
+                    }
+                    for name in protected_fact_dimensions
+                },
+                "reason": (
+                    "The test fixture marks this claim supported by its evidence."
+                ),
+            }
+        )
+    return {"unsupported": unsupported, "checks": checks}
+
+
+def _report_json_from_responses_call(call: dict) -> dict[str, object]:
+    """Parse only the report JSON embedded in a recorded grounding test call."""
+    decoder = json.JSONDecoder()
+    messages = call.get("input")
+    if not isinstance(messages, list):
+        messages = call.get("messages")
+    for message in messages if isinstance(messages, list) else []:
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+        if isinstance(content, list):
+            content = "\n".join(
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict) and isinstance(item.get("text"), str)
+            )
+        if not isinstance(content, str):
+            continue
+        marker = "Artifacts to validate (JSON):"
+        marker_offset = content.find(marker)
+        if marker_offset < 0:
+            continue
+        value_offset = marker_offset + len(marker)
+        try:
+            payload, _end = decoder.raw_decode(content[value_offset:].lstrip())
+        except ValueError:
+            continue
+        return payload if isinstance(payload, dict) else {}
+    return {}
 
 
 def _full_chain_chat_response_factory(
@@ -563,31 +663,14 @@ def _full_chain_chat_response_factory(
                 for section, claim, code in unsupported_claims
                 if claim in json.dumps(call, default=str)
             ]
-            if (
-                schema_name == "grounding_validation_output_v1"
-                and seen_unsupported_claims
-            ):
+            if schema_name == "grounding_validation_output_v2":
                 if detected_unsupported_claims is not None:
                     detected_unsupported_claims.extend(
                         claim for _section, claim, _code in seen_unsupported_claims
                     )
-                payload = {
-                    "unsupported": [
-                        {
-                            "section": section,
-                            "text": claim,
-                            "classification": "factual_claim",
-                            "entailment_outcome": "not_established",
-                            "violation_type": "unsupported_factual_claim",
-                            "reason": (
-                                "The retained source does not establish this claim"
-                                + (f" ({code})." if code else ".")
-                            ),
-                        }
-                        for section, claim, code in seen_unsupported_claims
-                    ],
-                    "checks": [],
-                }
+                payload = _full_chain_grounding_response(
+                    call, unsupported_claims=seen_unsupported_claims
+                )
             response = FakeOpenAIResult(
                 output_text=json.dumps(payload),
                 usage=response.usage,

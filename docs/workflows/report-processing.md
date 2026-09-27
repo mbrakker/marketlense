@@ -84,6 +84,32 @@ A completed render checkpoint is reusable only with an explicit passing
 rejects that checkpoint and makes `latest_safe` fall back to an earlier validated
 checkpoint; HTML existence never supplies readiness by inference.
 
+Once promotion or rollback has selected the canonical artifacts and the final
+HTML is rendered, report finalization materializes exactly one
+`retained_claim_validation` package immediately before publication readiness.
+The package binds the report ID, final artifact and publication-projection
+hashes, evidence-pack hash, source ID and checksum, validator versions,
+configuration and policy hashes, claim/evidence identities, and any retained
+semantic execution identities. The validation-stage package is only a
+candidate: finalization reuses each semantic result only when its exact claim,
+deterministic checks, evidence references, report, source, validator,
+configuration, and policy identities still match. Results for changed claims
+are discarded. The final package combines only matching semantic results with
+deterministic checks rebuilt from the canonical artifacts, without a provider
+call. Unsupported and unresolved factual claims remain `not_publishable` and
+block readiness.
+
+The final package is written through the atomic report-analysis store before
+readiness is evaluated. A finalization rerun with unchanged inputs has the same
+package hash. If a required identity or final input prevents materialization,
+the render outcome terminates with a typed
+`retained_claim_materialization_*` reason. Readiness reads only the report's
+final package; a candidate-only package is `package_invalid`, an absent final
+package is `package_missing`, and a current package with unsupported or
+unresolved claims is `not_publishable`. Readiness performs no semantic or
+model calls and still rejects every stale artifact, evidence, source,
+validator, configuration, policy, or semantic-execution identity.
+
 If checkpoint lineage is subsequently found non-reusable, its retained processed
 state does not suppress the next normal immutable-cohort replay. The ingest
 selector explicitly returns that source to the repair path while preserving the

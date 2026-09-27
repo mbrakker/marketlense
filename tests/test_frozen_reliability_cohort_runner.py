@@ -416,7 +416,7 @@ def test_frozen_manifest_requires_pinned_source_provenance(tmp_path: Path) -> No
     try:
         _load_members(manifest)
     except ValueError as exc:
-        assert "exactly 10 or 20 members" in str(exc)
+        assert "exactly 5, 10, or 20 members" in str(exc)
     else:
         raise AssertionError("incomplete frozen manifest was accepted")
 
@@ -447,6 +447,59 @@ def test_frozen_manifest_accepts_the_future_ten_report_cohort_size(
     loaded = _load_members(manifest)
 
     assert len(loaded) == 10
+
+
+def test_frozen_manifest_accepts_the_pinned_five_report_grounding_cohort(
+    tmp_path: Path,
+) -> None:
+    publishers = [
+        "Merchant Risk Council",
+        "Deloitte",
+        "Emplifi",
+        "StackAdapt Inc.",
+        "DoubleVerify",
+    ]
+    members = []
+    for index, publisher in enumerate(publishers):
+        source_path = tmp_path / f"source-{index}.pdf"
+        content = f"pinned-grounding-regression-{publisher}".encode("utf-8")
+        source_path.write_bytes(content)
+        members.append(
+            {
+                "source_path": str(source_path.resolve()),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Frozen report {index}",
+                "landing_page_url": f"https://publisher.example/reports/{index}",
+                "source_page_url": "https://publisher.example/reports",
+                "publisher_name": publisher,
+                "downloaded_at_utc": "2026-09-27T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "pinned-five.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+
+    loaded = _load_members(manifest)
+
+    assert [item["publisher_name"] for item in loaded] == publishers
+    assert all(Path(item["resolved_source_path"]).is_file() for item in loaded)
+
+
+def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() -> None:
+    manifest = Path(
+        "docs/quality/reliability-cohort-20260927-grounding/"
+        "final-package-lifecycle-5/frozen_cohort.json"
+    )
+
+    loaded = _load_members(manifest)
+
+    assert [item["publisher_name"] for item in loaded] == [
+        "Merchant Risk Council",
+        "Deloitte",
+        "Emplifi",
+        "StackAdapt Inc.",
+        "DoubleVerify",
+    ]
 
 
 def test_default_frozen_manifest_contains_ten_reports() -> None:

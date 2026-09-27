@@ -15007,6 +15007,9 @@
         "policy_hash": {
           "type": "string"
         },
+        "report_id": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -15019,6 +15022,7 @@
       },
       "required": [
         "schema_version",
+        "report_id",
         "source_id",
         "source_md5",
         "claim_validation_validator_version",
@@ -15052,6 +15056,9 @@
         "publication_projection_hash": {
           "type": "string"
         },
+        "report_id": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -15082,6 +15089,7 @@
       },
       "required": [
         "schema_version",
+        "report_id",
         "final_artifact_hash",
         "publication_projection_hash",
         "evidence_pack_hash",

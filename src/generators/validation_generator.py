@@ -166,6 +166,7 @@ def validate_report(
     if runtime.retained_claim_validation is not None:
         candidate_package = attach_claim_validation_execution_identity(
             runtime.retained_claim_validation,
+            report_id=str(request.report_id),
             source_id=runtime.source_id,
             source_md5=str(md5 or ""),
             configuration_hash=ctx.configuration_hash,

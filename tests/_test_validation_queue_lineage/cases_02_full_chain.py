@@ -13,16 +13,20 @@ from ._shared import (
 @pytest.mark.parametrize(
     ("repair_soft_copy", "reproduce_ias_soft_copy"),
     ((False, False), (True, False), (False, True)),
-    ids=("clean", "unsupported-soft-copy-repair", "ias-known-claim-repair"),
+    ids=(
+        "clean-awaiting-review",
+        "unsupported-soft-copy-blocked",
+        "ias-known-claims-blocked",
+    ),
 )
-def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
+def test_a21_full_chain_preserves_grounding_disposition(
     tmp_path,
     external_boundary_mocks_only,
     fake_openai,
     repair_soft_copy: bool,
     reproduce_ias_soft_copy: bool,
 ) -> None:
-    """Run the deterministic durable A21 chain with clean and repaired fixtures."""
+    """Keep clean claims publishable and unestablished final claims blocked."""
     external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
     fake_openai.add("vector_stores.create", {"id": "vs_queue_test"})
     fake_openai.add("files.create", {"id": "file_queue_test"})
@@ -123,6 +127,8 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
     )
     assert worker_result.terminal_status == "succeeded"
     materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
+    unsupported_final = repair_soft_copy or reproduce_ias_soft_copy
+    blocked_render_job = None
     for queue_name in (
         "report_selection",
         "report_analysis",
@@ -136,6 +142,12 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
             ctx=_ctx(),
         )
         completed_job = get_workflow_job(state_db, result.claimed_job_id, _ctx())
+        if unsupported_final and queue_name == "report_render":
+            assert result.terminal_status == "dead_letter"
+            assert completed_job is not None
+            assert completed_job.error_code == "publish_readiness_failed"
+            blocked_render_job = completed_job
+            break
         assert result.terminal_status == "succeeded", (
             f"queue={queue_name} model_schemas="
             f"{[call['text']['format']['name'] for call in fake_openai.calls['responses.create']]}"
@@ -144,6 +156,50 @@ def test_a21_full_chain_from_frozen_cohort_through_awaiting_review(
             f" message={completed_job.error_message_summary if completed_job else ''}"
         )
         materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
+    if unsupported_final:
+        assert blocked_render_job is not None
+        assert detected_unsupported_claims
+        analysis_dirs = sorted((tmp_path / "out").glob("*/report_analysis"))
+        artifact_dirs = [
+            directory
+            for directory in analysis_dirs
+            if (directory / "artifacts.json").is_file()
+            and (directory / "publish_readiness.json").is_file()
+        ]
+        assert len(artifact_dirs) == 1, [str(directory) for directory in artifact_dirs]
+        analysis_dir = artifact_dirs[0]
+        artifacts = json.loads(
+            (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
+        )
+        package = json.loads(
+            (analysis_dir / "retained_claim_validation.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness = json.loads(
+            (analysis_dir / "publish_readiness.json").read_text(encoding="utf-8")
+        )
+        assert package["readiness_status"] == "not_publishable"
+        assert package["unresolved_factual_count"] > 0
+        assert package["lineage"]["report_id"] == "report-1"
+        assert package["lineage"]["final_artifact_hash"] == sha256_json(artifacts)
+        assert readiness["status"] == "fail"
+        grounding_rule = next(
+            rule
+            for rule in readiness["rule_results"]
+            if rule["rule_id"] == "publish_readiness.retained_claim_grounding"
+        )
+        assert "not_publishable" in grounding_rule["detail"]
+        with sqlite3.connect(state_db) as conn:
+            assert conn.execute(
+                "SELECT COUNT(*) FROM workflow_jobs "
+                "WHERE report_id=? AND queue_name='publication_readiness'",
+                ("report-1",),
+            ).fetchone() == (0,)
+            assert conn.execute(
+                "SELECT COUNT(*) FROM workflow_publication_readiness"
+            ).fetchone() == (0,)
+        return
     with sqlite3.connect(reports_db) as conn:
         run = conn.execute(
             "SELECT workflow_run_id FROM validation_runs WHERE validation_run_id=?",

@@ -128,6 +128,7 @@ def claim_validation_package_hash_valid(package: object) -> bool:
 def attach_claim_validation_execution_identity(
     package: ClaimValidationPackage,
     *,
+    report_id: str,
     source_id: str,
     source_md5: str,
     configuration_hash: str,
@@ -137,7 +138,8 @@ def attach_claim_validation_execution_identity(
     payload = asdict(package)
     payload["validation_identity"] = asdict(
         ClaimValidationExecutionIdentity(
-            schema_version="1.0",
+            schema_version="1.1",
+            report_id=str(report_id or ""),
             source_id=str(source_id or ""),
             source_md5=str(source_md5 or ""),
             claim_validation_validator_version=CLAIM_VALIDATION_VALIDATOR_VERSION,
@@ -911,8 +913,9 @@ def _claim_validation_package_for_hash(
 
 
 def materialize_retained_claim_package(
-    package: ClaimValidationPackage | dict,
+    package: ClaimValidationPackage | dict | None,
     *,
+    report_id: str,
     artifacts: dict,
     evidence_packs: dict,
     final_html: str,
@@ -920,94 +923,263 @@ def materialize_retained_claim_package(
     source_md5: str = "",
     configuration_hash: str = "",
     policy_hash: str = "",
-) -> dict | None:
-    """Bind the validated claim result to the exact final report inputs.
+) -> tuple[dict | None, str]:
+    """Bind current deterministic grounding and matching semantic results.
 
-    The validation-stage package is only a candidate. It is accepted here when
-    its self-hash, final artifact hash, and claim/evidence identities still
-    match the deterministic validation of the final accepted artifact set.
-    This function never invokes a semantic provider.
+    The persisted validation package is only a candidate. A candidate that no
+    longer matches the canonical final artifacts is discarded; deterministic
+    grounding is rebuilt from those final inputs, while no semantic provider is
+    called. Missing identities that prevent an authoritative package return a
+    stable terminal code.
     """
-    raw = (
-        asdict(package)
-        if isinstance(package, ClaimValidationPackage)
-        else dict(package)
-    )
-    if not claim_validation_package_hash_valid(raw):
-        return None
-    validation_identity = raw.get("validation_identity")
-    if not isinstance(validation_identity, dict):
-        return None
+    report_id = str(report_id or "").strip()
+    source_id = str(source_id or "").strip()
+    configuration_hash = str(configuration_hash or "").strip()
+    policy_hash = str(policy_hash or "").strip()
+    if not report_id or not source_id or not configuration_hash or not policy_hash:
+        return None, "retained_claim_materialization_identity_missing"
     if (
-        validation_identity.get("schema_version") != "1.0"
-        or validation_identity.get("claim_validation_validator_version")
-        != CLAIM_VALIDATION_VALIDATOR_VERSION
-        or validation_identity.get("grounding_validator_version")
-        != CLAIM_GROUNDING_VALIDATOR_VERSION
-        or validation_identity.get("source_id") != source_id
-        or validation_identity.get("source_md5") != source_md5
-        or validation_identity.get("configuration_hash") != configuration_hash
-        or validation_identity.get("policy_hash") != policy_hash
+        not isinstance(artifacts, dict)
+        or not isinstance(evidence_packs, dict)
+        or not isinstance(final_html, str)
     ):
-        return None
+        return None, "retained_claim_materialization_input_invalid"
 
     current = validate_retained_claims(
         artifacts,
         evidence_packs,
         source_identity=source_id,
     )
-    if str(raw.get("artifact_hash") or "") != current.artifact_hash:
-        return None
-    raw_results = raw.get("results")
-    if not isinstance(raw_results, list) or len(raw_results) != len(current.results):
-        return None
-    for stored_result, current_result in zip(
-        raw_results, current.results, strict=True
-    ):
-        if not isinstance(stored_result, dict):
-            return None
-        if (
-            _hash(stored_result.get("candidate"))
-            != _hash(asdict(current_result.candidate))
-            or stored_result.get("deterministic_status")
-            != current_result.deterministic_status
-            or _hash(stored_result.get("checks"))
-            != _hash([asdict(check) for check in current_result.checks])
-            or _hash(stored_result.get("protected_facts"))
-            != _hash(
-                asdict(current_result.protected_facts)
-                if current_result.protected_facts is not None
-                else None
+    current_payload = attach_claim_validation_execution_identity(
+        current,
+        report_id=report_id,
+        source_id=source_id,
+        source_md5=source_md5,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+    candidate_payload = (
+        asdict(package)
+        if isinstance(package, ClaimValidationPackage)
+        else dict(package)
+        if isinstance(package, dict)
+        else {}
+    )
+    reusable_semantic_results = _claim_validation_semantic_results_for_final_inputs(
+        candidate_payload,
+        current=current,
+        report_id=report_id,
+        source_id=source_id,
+        source_md5=source_md5,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+    current_results = current_payload["results"]
+    current_by_candidate: dict[str, list[dict]] = {}
+    for result in current_results:
+        if isinstance(result, dict) and isinstance(result.get("candidate"), dict):
+            current_by_candidate.setdefault(_hash(result["candidate"]), []).append(
+                result
             )
-        ):
-            return None
-        if stored_result.get("semantic_validator_used") is not True:
-            if _hash(stored_result) != _hash(asdict(current_result)):
-                return None
-        elif (
-            current_result.candidate.factual is not True
-            or current_result.deterministic_status != "unresolved"
-        ):
-            return None
-
+    for candidate_hash, stored_result in reusable_semantic_results.items():
+        matching_current = current_by_candidate.get(candidate_hash, [])
+        if len(matching_current) != 1:
+            continue
+        current_result = matching_current[0]
+        current_result.update(
+            {
+                field: stored_result.get(field)
+                for field in (
+                    "status",
+                    "reasons",
+                    "semantic_outcome",
+                    "semantic_reason",
+                    "semantic_protected_facts",
+                    "semantic_identity",
+                    "semantic_disagreement",
+                    "semantic_validator_used",
+                    "semantic_execution_identity",
+                )
+            }
+        )
     semantic_results = [
         result
-        for result in raw_results
+        for result in current_results
         if isinstance(result, dict) and result.get("semantic_validator_used") is True
     ]
+    factual_results = [
+        result
+        for result in current_results
+        if isinstance(result, dict)
+        and isinstance(result.get("candidate"), dict)
+        and result["candidate"].get("factual") is True
+    ]
+    unsupported = sum(result.get("status") == "unsupported" for result in factual_results)
+    unresolved = sum(result.get("status") == "unresolved" for result in factual_results)
+    deterministic_passes = sum(
+        result.get("status") == "supported"
+        and result.get("semantic_validator_used") is not True
+        for result in current_results
+    )
+    raw = current_payload
+    raw["unsupported_factual_count"] = unsupported
+    raw["unresolved_factual_count"] = unresolved
+    raw["deterministic_pass_count"] = deterministic_passes
+    raw["semantic_validation_count"] = len(semantic_results)
+    raw["semantic_execution_identities"] = sorted(
+        {
+            str(result["semantic_identity"]["execution_identity"])
+            for result in semantic_results
+            if isinstance(result.get("semantic_identity"), dict)
+        }
+    )
+    raw["readiness_status"] = (
+        "not_publishable" if unsupported or unresolved else "awaiting_review"
+    )
+    semantic_execution_ids = sorted(
+        {
+            str(result["semantic_identity"]["execution_identity"])
+            for result in semantic_results
+            if isinstance(result.get("semantic_identity"), dict)
+        }
+    )
+    prompt_hashes = sorted(
+        {
+            str(result["semantic_identity"]["prompt_content_hash"])
+            for result in semantic_results
+            if isinstance(result.get("semantic_identity"), dict)
+        }
+    )
+    model_identities = sorted(
+        {
+            f"{result['semantic_identity']['model_provider']}"
+            f"/{result['semantic_identity']['model_name']}"
+            for result in semantic_results
+            if isinstance(result.get("semantic_identity"), dict)
+        }
+    )
+    lineage = ClaimValidationLineage(
+        schema_version="1.1",
+        report_id=report_id,
+        final_artifact_hash=current.artifact_hash,
+        publication_projection_hash=publication_projection_hash(final_html),
+        evidence_pack_hash=_hash(evidence_packs),
+        source_id=source_id,
+        source_md5=str(source_md5 or ""),
+        claim_validation_validator_version=CLAIM_VALIDATION_VALIDATOR_VERSION,
+        grounding_validator_version=CLAIM_GROUNDING_VALIDATOR_VERSION,
+        semantic_execution_identities=semantic_execution_ids,
+        semantic_prompt_content_hashes=prompt_hashes,
+        semantic_model_identities=model_identities,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+    raw["schema_version"] = CLAIM_VALIDATION_SCHEMA_VERSION
+    raw["lineage"] = asdict(lineage)
+    raw["package_hash"] = ""
+    raw["package_hash"] = claim_validation_package_hash(raw)
+    return raw, ""
+
+
+def _claim_validation_semantic_results_for_final_inputs(
+    raw: dict,
+    *,
+    current: ClaimValidationPackage,
+    report_id: str,
+    source_id: str,
+    source_md5: str,
+    configuration_hash: str,
+    policy_hash: str,
+) -> dict[str, dict]:
+    """Return only semantic claim results whose exact inputs survive finalization."""
+    if (
+        raw.get("schema_version") != CLAIM_VALIDATION_SCHEMA_VERSION
+        or not claim_validation_package_hash_valid(raw)
+    ):
+        return {}
+    artifact_hash = str(raw.get("artifact_hash") or "")
+    if len(artifact_hash) != 64 or any(
+        character not in "0123456789abcdef" for character in artifact_hash
+    ):
+        return {}
+    validation_identity = raw.get("validation_identity")
+    if not isinstance(validation_identity, dict) or any(
+        (
+            validation_identity.get("schema_version") != "1.1",
+            validation_identity.get("report_id") != report_id,
+            validation_identity.get("claim_validation_validator_version")
+            != CLAIM_VALIDATION_VALIDATOR_VERSION,
+            validation_identity.get("grounding_validator_version")
+            != CLAIM_GROUNDING_VALIDATOR_VERSION,
+            validation_identity.get("source_id") != source_id,
+            validation_identity.get("source_md5") != source_md5,
+            validation_identity.get("configuration_hash") != configuration_hash,
+            validation_identity.get("policy_hash") != policy_hash,
+        )
+    ):
+        return {}
+
+    raw_results = raw.get("results")
+    if not isinstance(raw_results, list) or any(
+        not isinstance(result, dict)
+        or not isinstance(result.get("candidate"), dict)
+        or not isinstance(result["candidate"].get("factual"), bool)
+        or result.get("status")
+        not in {"supported", "unsupported", "unresolved", "not_applicable"}
+        or result.get("deterministic_status")
+        not in {"supported", "unsupported", "unresolved", "not_applicable"}
+        or not isinstance(result.get("semantic_validator_used"), bool)
+        for result in raw_results
+    ):
+        return {}
+    semantic_results = [
+        result for result in raw_results if result["semantic_validator_used"] is True
+    ]
+    factual_results = [
+        result
+        for result in raw_results
+        if result["candidate"]["factual"] is True
+    ]
+    unsupported = sum(result["status"] == "unsupported" for result in factual_results)
+    unresolved = sum(result["status"] == "unresolved" for result in factual_results)
+    deterministic_passes = sum(
+        result["status"] == "supported"
+        and result["semantic_validator_used"] is not True
+        for result in raw_results
+    )
+    if (
+        type(raw.get("unsupported_factual_count")) is not int
+        or raw.get("unsupported_factual_count") != unsupported
+        or type(raw.get("unresolved_factual_count")) is not int
+        or raw.get("unresolved_factual_count") != unresolved
+        or type(raw.get("deterministic_pass_count")) is not int
+        or raw.get("deterministic_pass_count") != deterministic_passes
+        or type(raw.get("semantic_validation_count")) is not int
+        or raw.get("semantic_validation_count") != len(semantic_results)
+        or raw.get("readiness_status")
+        != ("not_publishable" if unsupported or unresolved else "awaiting_review")
+    ):
+        return {}
+
+    current_by_candidate: dict[str, list[dict]] = {}
+    for result in current.results:
+        current_by_candidate.setdefault(_hash(asdict(result.candidate)), []).append(
+            asdict(result)
+        )
     semantic_execution_ids: set[str] = set()
-    prompt_hashes: set[str] = set()
-    model_identities: set[str] = set()
+    reusable: dict[str, dict] = {}
+    ambiguous: set[str] = set()
     for result in semantic_results:
         identity = result.get("semantic_identity")
         candidate = result.get("candidate")
         if not isinstance(identity, dict) or not isinstance(candidate, dict):
-            return None
+            return {}
+        candidate_hash = _hash(candidate)
         references = candidate.get("evidence_references")
         if not isinstance(references, list) or any(
             not isinstance(reference, dict) for reference in references
         ):
-            return None
+            return {}
         expected_evidence_ids = [
             str(reference.get("evidence_id") or "") for reference in references
         ]
@@ -1022,7 +1194,8 @@ def materialize_retained_claim_package(
         ]
         execution_identity = str(identity.get("execution_identity") or "")
         if (
-            not execution_identity
+            identity.get("schema_version") != "1.0"
+            or not execution_identity
             or str(result.get("semantic_execution_identity") or "")
             != execution_identity
             or str(identity.get("validator_version") or "")
@@ -1046,45 +1219,38 @@ def materialize_retained_claim_package(
             }.get(result.get("semantic_outcome"))
             != result.get("status")
         ):
-            return None
+            return {}
         semantic_execution_ids.add(execution_identity)
-        prompt_hashes.add(str(identity["prompt_content_hash"]))
-        model_identities.add(
-            f"{identity['model_provider']}/{identity['model_name']}"
-        )
-    expected_semantic_execution_ids = sorted(semantic_execution_ids)
-    if (
-        int(raw.get("semantic_validation_count") or 0) != len(semantic_results)
-        or not isinstance(raw.get("semantic_execution_identities"), list)
-        or sorted(
-            str(item) for item in raw.get("semantic_execution_identities", [])
-        )
-        != expected_semantic_execution_ids
-    ):
-        return None
+        current_matches = current_by_candidate.get(candidate_hash, [])
+        if len(current_matches) != 1:
+            continue
+        current_result = current_matches[0]
+        if (
+            result.get("deterministic_status")
+            != current_result.get("deterministic_status")
+            or _hash(result.get("checks")) != _hash(current_result.get("checks"))
+            or _hash(result.get("protected_facts"))
+            != _hash(current_result.get("protected_facts"))
+            or candidate.get("factual") is not True
+            or result.get("deterministic_status") != "unresolved"
+        ):
+            continue
+        if candidate_hash in reusable:
+            ambiguous.add(candidate_hash)
+        else:
+            reusable[candidate_hash] = result
 
-    lineage = ClaimValidationLineage(
-        schema_version="1.0",
-        final_artifact_hash=current.artifact_hash,
-        publication_projection_hash=publication_projection_hash(final_html),
-        evidence_pack_hash=_hash(evidence_packs),
-        source_id=str(source_id or ""),
-        source_md5=str(source_md5 or ""),
-        claim_validation_validator_version=(
-            CLAIM_VALIDATION_VALIDATOR_VERSION
-        ),
-        grounding_validator_version=CLAIM_GROUNDING_VALIDATOR_VERSION,
-        semantic_execution_identities=expected_semantic_execution_ids,
-        semantic_prompt_content_hashes=sorted(prompt_hashes),
-        semantic_model_identities=sorted(model_identities),
-        configuration_hash=str(configuration_hash or ""),
-        policy_hash=str(policy_hash or ""),
-    )
-    raw["schema_version"] = CLAIM_VALIDATION_SCHEMA_VERSION
-    raw["lineage"] = asdict(lineage)
-    raw["package_hash"] = ""
-    raw["package_hash"] = claim_validation_package_hash(raw)
-    return raw
+    if (
+        not isinstance(raw.get("semantic_execution_identities"), list)
+        or sorted(str(item) for item in raw["semantic_execution_identities"])
+        != sorted(semantic_execution_ids)
+    ):
+        return {}
+    return {
+        candidate_hash: result
+        for candidate_hash, result in reusable.items()
+        if candidate_hash not in ambiguous
+    }
 
 
 def retained_claim_semantic_inputs(

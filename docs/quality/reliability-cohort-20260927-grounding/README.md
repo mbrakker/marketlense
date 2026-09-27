@@ -4,6 +4,11 @@
 
 **The architecture is not proven complete.** The exact post-fix 20-report cohort admitted all frozen sources, but only 1/20 reached `awaiting_review` and passed publication readiness. Source review found 11 confirmed false-positive claim decisions among the eight reports that had passed the 2026-09-20 cohort. Several additional outcomes remain unresolved because the failed intermediate artifact or exact evidence binding was not retained. No validation rule was weakened to raise cohort pass rate.
 
+The later five-report final-package lifecycle regression is tracked separately
+in [`final-package-lifecycle-5/`](final-package-lifecycle-5/). It pins Merchant
+Risk Council, Deloitte, Emplifi, StackAdapt, and DoubleVerify and does not rerun
+this 20-report cohort.
+
 Phase 3 semantic-overlap analysis was not performed: Phases 1–2 do not support a consolidation decision. `validation/semantic.py` and legacy semantic behavior were not changed. The required mapping of `runtime.semantic_outcome` consumers, including metric and quote outputs, remains outstanding.
 
 ## User-directed partial follow-up (2026-09-27)
