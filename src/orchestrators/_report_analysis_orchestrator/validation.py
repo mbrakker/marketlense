@@ -61,6 +61,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 from src.orchestrators._report_analysis_orchestrator.shared import logger
 from src.utils.cache_utils import sha256_json
 from src.utils.editorial_identity import failed_insight_id
+from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
 
 __all__ = [
@@ -324,7 +325,16 @@ def _candidate_validation_report(
     validation: ValidationReport,
     candidate: CandidateIntegrityResult,
 ) -> ValidationReport:
-    issues = list(candidate.issues) + list(validation.issues)
+    severity_rank = {"info": 0, "warning": 1, "error": 2}
+    issues_by_fingerprint: Dict[str, ValidationIssue] = {}
+    for item in [*candidate.issues, *validation.issues]:
+        fingerprint = _failure_fingerprint(item).key
+        existing = issues_by_fingerprint.get(fingerprint)
+        if existing is None or severity_rank.get(
+            str(item.severity or "").strip().lower(), -1
+        ) > severity_rank.get(str(existing.severity or "").strip().lower(), -1):
+            issues_by_fingerprint[fingerprint] = item
+    issues = list(issues_by_fingerprint.values())
     severity = (
         "error"
         if any(item.severity == "error" for item in issues)
@@ -1419,13 +1429,6 @@ def _run_validation_regeneration_loop(
             # they are validated with it and promoted (or dropped) with it.
             for field_name, value in payload_overrides.items():
                 setattr(regenerated_payload, field_name, str(value))
-        _ensure_report_payload_complete(
-            regenerated_payload,
-            artifacts=candidate_artifacts,
-            ctx=attempt_ctx,
-            file_id=runtime.file.file_id,
-            stage=f"regeneration_attempt_{attempt_index}",
-        )
         validation_pack_name = (
             f"validation_regen_candidate_{attempt_index}"
             if candidate_enforced
@@ -1437,46 +1440,76 @@ def _run_validation_regeneration_loop(
             plan=plan,
             verified_derived_roots=candidate_result.verified_derived_roots,
         )
+        payload_completeness_issue = None
+        try:
+            _ensure_report_payload_complete(
+                regenerated_payload,
+                artifacts=candidate_artifacts,
+                ctx=attempt_ctx,
+                file_id=runtime.file.file_id,
+                stage=f"regeneration_attempt_{attempt_index}",
+            )
+        except AppError as exc:
+            if exc.code != "report_payload_incomplete":
+                raise
+            missing_fields = [
+                str(value).strip()
+                for value in exc.context.get("missing_fields", [])
+                if str(value).strip()
+            ]
+            missing_summary = ", ".join(missing_fields) or "required fields"
+            payload_completeness_issue = ValidationIssue(
+                schema_version="1.0",
+                message=(
+                    "[report_payload_incomplete] Candidate report payload is "
+                    f"missing {missing_summary}."
+                ),
+                severity="error",
+                affected_section="report_payload",
+                rule_id="report_payload_incomplete",
+                entity_id=str(runtime.file.file_id),
+            )
         deterministic_candidate_rejection = bool(
             not candidate_result.passed
             or any(
                 str(issue.severity or "").strip().lower() == "error"
                 for issue in scope_validation.issues
             )
+            or payload_completeness_issue is not None
         )
-        if deterministic_candidate_rejection:
-            candidate_provider_validation = ValidationReport(
-                schema_version="1.1",
-                status="pass",
-                issues=[],
-                severity="pass",
-            )
-            semantic_grounding_validation_status = (
-                "not_evaluated_due_to_deterministic_failure"
-            )
-        else:
-            candidate_provider_validation = _run_validation_with_fallback(
-                runtime=runtime,
-                mode_ctx=attempt_ctx,
-                dependencies=dependencies,
-                validation_req=ValidationRequest(
-                    schema_version="1.0",
-                    report_id=ReportId(runtime.file.file_id),
-                    report=regenerated_payload,
-                    artifacts=candidate_artifacts,
-                    evidence_packs=evidence_packs,
-                    vector_store_id=vector_store_id,
-                    source_id=str(runtime.ctx.source_identity_id or "").strip(),
-                    deterministic_grounding_passed=candidate_result.passed,
-                    publisher_name=runtime.publisher_name,
-                    report_name=runtime.source_report_name or runtime.report_title,
-                    source_url=runtime.source_url,
-                    source_text=source_text,
+        candidate_provider_validation = _run_validation_with_fallback(
+            runtime=runtime,
+            mode_ctx=attempt_ctx,
+            dependencies=dependencies,
+            validation_req=ValidationRequest(
+                schema_version="1.0",
+                report_id=ReportId(runtime.file.file_id),
+                report=regenerated_payload,
+                artifacts=candidate_artifacts,
+                evidence_packs=evidence_packs,
+                vector_store_id=vector_store_id,
+                source_id=str(runtime.ctx.source_identity_id or "").strip(),
+                validation_mode=(
+                    "inline_deterministic"
+                    if deterministic_candidate_rejection
+                    else "full"
                 ),
-                pack_name=validation_pack_name,
-                openai_client=validation_openai_client,
-            )
-            semantic_grounding_validation_status = "evaluated"
+                deterministic_grounding_passed=candidate_result.passed,
+                publisher_name=runtime.publisher_name,
+                report_name=runtime.source_report_name or runtime.report_title,
+                source_url=runtime.source_url,
+                source_text=source_text,
+            ),
+            pack_name=validation_pack_name,
+            openai_client=(
+                None if deterministic_candidate_rejection else validation_openai_client
+            ),
+        )
+        semantic_grounding_validation_status = (
+            "not_evaluated_due_to_deterministic_failure"
+            if deterministic_candidate_rejection
+            else "evaluated"
+        )
         candidate_validation_report = _candidate_validation_report(
             candidate_provider_validation, candidate_result
         )
@@ -1496,6 +1529,16 @@ def _run_validation_regeneration_loop(
         candidate_validation_report = _merge_public_editorial_quality(
             candidate_validation_report, editorial_validation
         )
+        if payload_completeness_issue is not None:
+            candidate_validation_report = replace(
+                candidate_validation_report,
+                status="fail",
+                severity="error",
+                issues=[
+                    *candidate_validation_report.issues,
+                    payload_completeness_issue,
+                ],
+            )
         candidate_input_sha256 = sha256_json(artifacts_before)
         candidate_sha256 = sha256_json(candidate_artifacts)
         validator_identity = _candidate_validator_identity(runtime)

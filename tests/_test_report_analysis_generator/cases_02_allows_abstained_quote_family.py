@@ -7,7 +7,12 @@ from pathlib import Path
 
 from src.contracts.regeneration import RepairDecision, RepairPatchOperation
 from src.generators.validation.regeneration_candidate import (
+    CandidateIntegrityResult,
     retained_claim_repair_issues,
+)
+from src.generators.validation_generator import validate_report
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _candidate_validation_report,
 )
 
 from ._shared import *  # noqa: F401,F403
@@ -408,11 +413,7 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
     )
 
     assert len(state.regeneration_attempts) == 1
-    assert validation_calls == (
-        ["validation"]
-        if baseline_retained_severity == "error"
-        else ["validation", "validation_regen_candidate_1"]
-    )
+    assert validation_calls == ["validation", "validation_regen_candidate_1"]
     assert state.regeneration_attempts[0].promotion_outcome == expected_outcome
     assert state.artifacts_payload["summary"]["tldr"] == (
         "Repaired summary" if expected_outcome == "promoted" else "Broken summary"
@@ -443,7 +444,7 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
         )
 
 
-def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
+def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
     tmp_path,
 ) -> None:
     runtime = replace(
@@ -467,16 +468,54 @@ def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
     candidates = []
     for index in (1, 2):
         candidate = deepcopy(original)
+        candidate["summary"]["tldr"] = (
+            "not available from text"
+            if index == 2
+            else f"European loyalty reached 99% in 2025, attempt {index}."
+        )
         candidate["summary"]["executive_summary"] = f"Candidate summary {index}"
+        candidate["summary"]["claim_evidence_map"] = [
+            {
+                "id": f"candidate-claim-{index}",
+                "claim": "European loyalty reached 99% in 2025.",
+                "evidence_id": "f1",
+            }
+        ]
         candidate["linkedin_post"] = f"Unplanned LinkedIn change {index}"
         _set_interpretive_summary_provenance(candidate)
         candidates.append(candidate)
     validation_calls: list[str] = []
+    validation_modes: list[str] = []
     retry_memories = []
 
+    class ProviderSpy:
+        def __init__(self):
+            self.calls = []
+
+        def openai_chat_json(self, request, ctx):
+            self.calls.append(str(getattr(ctx, "task_id", "")))
+            raise AssertionError("semantic/grounding providers must be skipped")
+
+        def openai_respond_with_vector_store(self, request, ctx):
+            self.calls.append(str(getattr(ctx, "task_id", "")))
+            raise AssertionError("semantic/grounding providers must be skipped")
+
+    provider_spy = ProviderSpy()
+
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
-        del req, settings, ctx, report_name, md5
+        validation_modes.append(req.validation_mode)
         validation_calls.append(pack_name)
+        if req.validation_mode == "inline_deterministic":
+            return validate_report(
+                req,
+                settings,
+                ctx,
+                openai_client=provider_spy,
+                pack_name=pack_name,
+                report_name=report_name,
+                md5=md5,
+            )
+        del settings, ctx, report_name, md5
         return ValidationReport(
             schema_version="1.1",
             status="fail",
@@ -545,7 +584,13 @@ def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
         deps,
     )
 
-    assert validation_calls == ["validation"]
+    assert validation_calls == [
+        "validation",
+        "validation_regen_candidate_1",
+        "validation_regen_candidate_2",
+    ]
+    assert validation_modes == ["full", "inline_deterministic", "inline_deterministic"]
+    assert provider_spy.calls == []
     assert len(state.regeneration_attempts) == 2
     assert all(
         attempt.promotion_outcome == "rolled_back"
@@ -558,6 +603,14 @@ def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
         issue.rule_id == "regeneration_scope_violation"
         for issue in state.regeneration_attempts[0].repair_delta.introduced
     )
+    assert any(
+        issue.rule_id == "claim_support"
+        for issue in state.regeneration_attempts[0].repair_delta.introduced
+    )
+    assert any(
+        issue.rule_id == "grounding" and issue.affected_section == "executive_summary"
+        for issue in state.regeneration_attempts[0].repair_delta.resolved
+    )
     first_audit = json.loads(
         Path(state.regeneration_attempts[0].candidate_audit_path).read_text(
             encoding="utf-8"
@@ -568,6 +621,10 @@ def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
         first_audit["repair_delta"]["semantic_grounding_validation_status"]
         == "not_evaluated_due_to_deterministic_failure"
     )
+    assert any(
+        item["rule_id"] == "claim_support"
+        for item in first_audit["repair_delta"]["introduced"]
+    )
     assert "public_editorial_quality_regen_attempt_1" in state.evidence_paths
     assert retry_memories[0] == []
     assert retry_memories[1][0].mutation_scope_result == "fail"
@@ -575,6 +632,56 @@ def test_scope_rejection_skips_provider_validation_and_preserves_retry_memory(
         issue.rule_id == "regeneration_scope_violation"
         for issue in retry_memories[1][0].introduced
     )
+    assert any(
+        issue.rule_id == "claim_support" for issue in retry_memories[1][0].introduced
+    )
+    assert any(
+        issue.rule_id == "report_payload_incomplete"
+        for issue in state.regeneration_attempts[1].repair_delta.introduced
+    )
+    second_audit = json.loads(
+        Path(state.regeneration_attempts[1].candidate_audit_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert any(
+        item["rule_id"] == "report_payload_incomplete"
+        for item in second_audit["repair_delta"]["introduced"]
+    )
+    assert any(
+        item["rule_id"] == "claim_support"
+        for item in second_audit["repair_delta"]["introduced"]
+    )
+
+
+def test_candidate_validation_merges_duplicate_fingerprints_at_strongest_severity():
+    deterministic_issue = ValidationIssue(
+        schema_version="1.0",
+        message="Unsupported claim relationship",
+        severity="error",
+        affected_section="summary.claim_evidence_map[0]",
+        rule_id="claim_support",
+        entity_id="f1",
+        evidence_ids=["f1"],
+    )
+    inline_duplicate = replace(deterministic_issue, severity="warning")
+
+    report = _candidate_validation_report(
+        ValidationReport(
+            schema_version="1.1",
+            status="pass",
+            issues=[inline_duplicate],
+            severity="warning",
+        ),
+        CandidateIntegrityResult(
+            issues=[deterministic_issue],
+            evidence_lineage=[],
+        ),
+    )
+
+    assert report.status == "fail"
+    assert report.severity == "error"
+    assert report.issues == [deterministic_issue]
 
 
 def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback(
@@ -1136,7 +1243,8 @@ __all__ = [
     "test_run_report_analysis_regenerates_failed_section_until_pass",
     "test_run_report_analysis_rolls_back_failed_candidate_regeneration",
     "test_candidate_promotion_preserves_promoted_retained_claim_severity",
-    "test_scope_rejection_skips_provider_validation_and_preserves_retry_memory",
+    "test_scope_rejection_runs_deterministic_validation_without_provider_calls",
+    "test_candidate_validation_merges_duplicate_fingerprints_at_strongest_severity",
     "test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback",
     "test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration",
     "test_run_report_analysis_stops_after_regeneration_max_attempts",

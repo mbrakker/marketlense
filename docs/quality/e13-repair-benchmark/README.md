@@ -653,3 +653,21 @@ and canary evidence are in the [2026-09-27 root-target measurement](results/2026
 (SHA-256 recorded in its [sidecar](results/2026-09-27-6854d5d2.json.sha256)).
 E13 remains **Active**: no reproducible case met scorecard closure, and the
 required isolated workflow did not pass.
+
+## Deterministic diagnostics after candidate rejection
+
+When candidate integrity or mutation-scope validation rejects an attempt,
+the orchestrator still runs the existing validation registry in
+`inline_deterministic` mode. This retains deterministic findings such as
+numbers, metrics, quotes, claim support, artifact quality, and family
+confidence in the candidate report and `RepairDelta`. Existing deterministic
+public-editorial validation also runs. Semantic and grounding provider calls
+remain skipped, and the audit records
+`semantic_grounding_validation_status=not_evaluated_due_to_deterministic_failure`.
+Issues with the same existing failure fingerprint are emitted once, keeping
+the strongest severity. Retry memory receives the merged deterministic delta;
+promotion, scope, integrity, retained-claim, and rollback gates are unchanged.
+Candidate report-payload incompleteness is retained as a hard validation issue
+in the same audit and delta, so it cannot bypass deterministic diagnostics.
+Candidates that pass deterministic candidate checks continue through the full
+validation path.
