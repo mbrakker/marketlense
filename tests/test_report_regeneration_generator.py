@@ -9,10 +9,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from ._test_report_regeneration_generator._shared import (
-    _legacy_repair_decision_response,
-)
-
 from src.contracts.ingest import IngestSettings
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.prompts import (
@@ -35,6 +31,11 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
+from src.generators._artifact_generator.storage import (
+    build_chart_insight_cards,
+    build_key_figures,
+    derive_metric_spine_from_insights,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
@@ -46,6 +47,8 @@ from src.generators.report_regeneration_generator import (
     _merge_regenerated_insights_by_stable_id,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
+)
+from src.generators.report_regeneration_generator import (
     regenerate_artifacts as _regenerate_artifacts,
 )
 from src.generators.soft_copy_claim_provenance import (
@@ -57,10 +60,17 @@ from src.generators.validation.regeneration_candidate import (
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _allowed_paths,
-    _build_target,
     _build_regeneration_plan,
+    _build_target,
+)
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _scope_validation_report,
 )
 from src.utils.errors import AppError
+
+from ._test_report_regeneration_generator._shared import (
+    _legacy_repair_decision_response,
+)
 
 METRIC = {
     "value": "",
@@ -1340,6 +1350,82 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
     )
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
     assert Path(response.candidate_artifacts_path).is_file()
+
+
+@pytest.mark.parametrize("attempt_index", [2, 3])
+def test_later_no_prompt_repair_does_not_add_empty_prompt_requirements_to_cache(
+    tmp_path, attempt_index: int,
+) -> None:
+    current = _current_artifacts()
+    current["_cache"] = {
+        "prompts": {},
+        "producing_prompt_identities": {},
+    }
+    evidence_packs = _evidence_packs()
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="linkedin_post",
+                repair_action="REMOVE_CLAIM",
+                repair_strategy="safe_removal",
+                allowed_paths=["linkedin_post[claim_index=0]"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="numbers",
+                        affected_section="linkedin_post",
+                        message="Unsupported numeric claim.",
+                        severity="error",
+                        entity_id=current["soft_copy_claim_provenance"]["claims"][-1][
+                            "claim_id"
+                        ],
+                        evidence_ids=["f1"],
+                    )
+                ],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=attempt_index,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+    candidate = deepcopy(current)
+    candidate["_cache"] = deepcopy(response.updated_artifacts["_cache"])
+    assert "regeneration_prompt_requirements" not in candidate["_cache"]
+
+    integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+    scope = _scope_validation_report(
+        before=current,
+        after=candidate,
+        plan=plan,
+        verified_derived_roots=integrity.verified_derived_roots,
+    )
+    assert scope.status == "pass", [
+        (issue.rule_id, issue.affected_section) for issue in scope.issues
+    ]
 
 
 @pytest.mark.parametrize(
@@ -3189,6 +3275,157 @@ def test_regenerate_artifacts_summary_only_keeps_other_sections_unchanged(tmp_pa
         response.updated_artifacts["insights_final"][0]["text"] == "Old final insight"
     )
     assert response.updated_artifacts["quotes_final"][0]["text"] == "Old quote"
+
+
+def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_path):
+    current = _current_artifacts()
+    evidence_packs = _evidence_packs()
+    evidence_text = "Retail media adoption reached 42 percent among merchants."
+    evidence_packs["findings"]["findings"][0] = {
+        "id": "f1",
+        "text": evidence_text,
+        "evidence": evidence_text,
+        "pages": [2],
+    }
+    current["insights_final"][0].update(
+        {
+            "text": evidence_text,
+            "evidence": "Retail media adoption was reported at 42%.",
+            "evidence_spans": [
+                {
+                    "evidence_id": "f1",
+                    "source_pack": "findings",
+                    "page": 2,
+                    "text": evidence_text,
+                }
+            ],
+            "pages": [2],
+            "metric": {
+                **METRIC,
+                "label": "Retail media adoption",
+                "value": "42",
+                "unit": "percent",
+                "confidence": "high",
+                "segment": "merchants",
+            },
+        }
+    )
+    current["_cache"] = {
+        "prompts": {},
+        "producing_prompt_identities": {},
+        "regeneration_prompt_requirements": {},
+    }
+    current["metric_spine"] = derive_metric_spine_from_insights(
+        current["insights_final"],
+        editorial_plan=current["editorial_plan"],
+        evidence_packs=evidence_packs,
+    )
+    normalized_insight = deepcopy(current["insights_final"][0])
+    normalized_insight["evidence"] = evidence_text
+    normalized_insights = [normalized_insight, *current["insights_final"][1:]]
+    current["key_figures"] = build_key_figures(
+        metric_spine=current["metric_spine"],
+        evidence_packs=evidence_packs,
+        summary=current["summary"],
+        insights_final=normalized_insights,
+        editorial_plan=current["editorial_plan"],
+    )
+    current["chart_insight_cards"] = build_chart_insight_cards(
+        key_figures=current["key_figures"],
+        evidence_packs=evidence_packs,
+        insights_final=normalized_insights,
+    )
+    assert [figure["figure"] for figure in current["key_figures"]] == [
+        "42 percent"
+    ]
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="summary",
+                regenerate_steps=["summary"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="summary.tldr",
+                        message="Repair the unsupported summary sentence.",
+                        severity="error",
+                        evidence_ids=["f1"],
+                    )
+                ],
+                repair_action="REGENERATE_ITEM",
+                repair_strategy="current_evidence",
+                allowed_paths=["summary.tldr[claim_index=0]"],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+    candidate = response.updated_artifacts
+
+    assert candidate["insights_final"][0]["evidence"] == (
+        "Retail media adoption was reported at 42%."
+    )
+    assert candidate["key_figures"] == []
+    assert candidate["chart_insight_cards"] == []
+    integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        planned_prompt_namespaces=("report_vs/artifacts/regenerate/summary",),
+        actual_prompt_namespaces=tuple(response.prompt_namespaces),
+    )
+    assert not any(
+        issue.rule_id == "regeneration_derived_projection"
+        and issue.affected_section in {"key_figures", "chart_insight_cards"}
+        for issue in integrity.issues
+    )
+    assert {"key_figures", "chart_insight_cards"} <= integrity.verified_derived_roots
+    projection_scope = _scope_validation_report(
+        before={
+            root: current[root]
+            for root in (
+                "summary",
+                "metric_spine",
+                "key_figures",
+                "chart_insight_cards",
+            )
+        },
+        after={
+            root: candidate[root]
+            for root in (
+                "summary",
+                "metric_spine",
+                "key_figures",
+                "chart_insight_cards",
+            )
+        },
+        plan=plan,
+        verified_derived_roots=integrity.verified_derived_roots,
+    )
+    assert projection_scope.status == "pass"
 
 
 def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):

@@ -475,6 +475,10 @@ def test_multiple_required_insight_leaves_are_writable_and_siblings_protected() 
             "insights_final[item=insight-1].metric.subject",
             "changed_path_outside_allowed_paths",
         ),
+        (
+            "key_figures[0].figure",
+            "changed_path_outside_allowed_paths",
+        ),
     ],
 )
 def test_model_cannot_replace_an_item_or_write_an_undeclared_path(

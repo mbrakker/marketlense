@@ -8,45 +8,37 @@ __file__ = str(
 )
 
 import hashlib
-
 import json
-
 from copy import deepcopy
-
 from pathlib import Path
-
 from types import SimpleNamespace
 
 import pytest
 
 from src.contracts.run_context import RunContext
-
 from src.contracts.validation import ValidationReport
-
+from src.generators._artifact_generator.family_policy import (
+    build_artifact_family_status,
+)
+from src.generators._artifact_generator.storage import (
+    derive_metric_spine_from_insights,
+    rebuild_regeneration_derived_artifacts,
+)
 from src.generators.artifact_normalization import (
     discard_location_only_insights,
     discard_location_only_quotes,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
 )
-
-from src.generators._artifact_generator.family_policy import (
-    build_artifact_family_status,
-)
-
 from src.generators.claim_validation_generator import validate_retained_claims
-
 from src.generators.validation.metrics import validate_insight_metrics
-
 from src.generators.validation.numbers import validate_new_numbers
-
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
     _verify_derived_artifact_roots,
     retained_claim_repair_issues,
     validate_regeneration_candidate,
 )
-
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _candidate_audit,
     _failure_fingerprint,
@@ -54,7 +46,6 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _scope_validation_report,
     _with_retained_claim_repair_diagnostics,
 )
-
 from tests._test_validation_generator._shared import _report
 
 _FIXTURE_ROOT = (

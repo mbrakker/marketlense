@@ -37,6 +37,9 @@ from src.contracts.validation import (
     ValidationReport,
     ValidationRequest,
 )
+from src.generators._artifact_generator.storage import (
+    CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     merge_public_editorial_quality_validation,
@@ -71,24 +74,9 @@ __all__ = [
 
 
 _DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
+    **CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES,
     "soft_copy_claim_provenance": frozenset(
         {"summary", "expert_comment", "linkedin_post"}
-    ),
-    "metric_spine": frozenset({"insights_final"}),
-    "topics_covered": frozenset({"summary", "insights_final"}),
-    "key_figures": frozenset({"insights_final", "summary"}),
-    "chart_insight_cards": frozenset({"insights_final", "key_figures", "summary"}),
-    "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),
-    "claim_ledgers": frozenset({"insights_final", "summary", "quotes_final"}),
-    "family_status": frozenset(
-        {
-            "summary",
-            "insights_candidates",
-            "insights_final",
-            "quotes_final",
-            "expert_comment",
-            "linkedin_post",
-        }
     ),
     "_repair_evidence_selection": frozenset(
         {"summary", "expert_comment", "linkedin_post"}

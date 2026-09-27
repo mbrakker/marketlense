@@ -100,6 +100,21 @@ to be recorded and checked through the existing verified-derived-path audit;
 they do not become model-writable paths. This contract change is measured
 against the unchanged seven-case manifests after the implementation commit.
 
+After the generator restores the declared atomic leaves onto the promoted
+artifact, it rebuilds only downstream deterministic projections for source
+roots that actually changed. The dependency map is shared by the projection
+builders and mutation-scope check. The candidate validator independently
+recomputes changed projections through those same canonical builders; only an
+exact match makes that changed root's paths legal dependents. A mismatch stays
+a `regeneration_derived_projection` error and its changed paths remain outside
+scope. The model cannot write projection roots directly.
+
+Prompt cache identities are updated only for prompt calls made during that
+repair. A deterministic attempt that makes no prompt call does not add empty
+cache maps, so retry metadata does not appear as a candidate mutation. Existing
+cache entries are retained, and changed prompt metadata still has to pass the
+candidate validator's planned-versus-actual identity checks.
+
 An atomic target is planned as a unit: if any issue in that target has no exact
 leaf resolution, the planner abstains for the whole target instead of dropping
 the unresolved issue and widening the remaining repair to its family. Stable

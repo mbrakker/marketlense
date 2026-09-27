@@ -12,10 +12,10 @@ from typing import Any, Callable, Dict, List, Sequence
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
-    RepairDecision,
-    RepairPatchOperation,
     RegenerationIssue,
     RegenerationTarget,
+    RepairDecision,
+    RepairPatchOperation,
 )
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
@@ -27,6 +27,9 @@ from src.contracts.soft_copy_claim_provenance import (
     valid_soft_copy_evidence_selection,
 )
 from src.contracts.validation import ValidationRequest
+from src.generators._artifact_generator.storage import (
+    rebuild_regeneration_derived_artifacts,
+)
 from src.generators.artifact_generator import (
     apply_artifact_family_policy,
     assemble_artifacts_payload,
@@ -330,12 +333,17 @@ def regenerate_artifacts(
         cache_meta = {}
     cached_prompts = cache_meta.get("prompts")
     prompts = dict(cached_prompts) if isinstance(cached_prompts, dict) else {}
-    prompts.update(state.prompt_identities)
-    cache_meta["prompts"] = prompts
-    cache_meta["producing_prompt_identities"] = state.producing_prompt_identities
-    cache_meta["regeneration_prompt_requirements"] = (
-        state.regeneration_prompt_requirements
-    )
+    if state.prompt_identities:
+        prompts.update(state.prompt_identities)
+        cache_meta["prompts"] = prompts
+    if state.producing_prompt_identities:
+        cache_meta["producing_prompt_identities"] = (
+            state.producing_prompt_identities
+        )
+    if state.regeneration_prompt_requirements:
+        cache_meta["regeneration_prompt_requirements"] = (
+            state.regeneration_prompt_requirements
+        )
     updated_artifacts = assemble_artifacts_payload(
         report_id=request.report_id,
         report_name=request.report_name,
@@ -383,6 +391,11 @@ def regenerate_artifacts(
         for target in request.plan.targets
         for path in target.allowed_paths
     }
+    modified_writable_roots = {
+        root
+        for root in changed_roots
+        if updated_artifacts.get(root) != safe_artifacts.get(root)
+    }
     derived_inputs = {
         "topics_covered": {"summary", "insights_final"},
         "claim_ledgers": {"summary", "insights_final", "quotes_final"},
@@ -396,6 +409,11 @@ def regenerate_artifacts(
             # A targeted repair must not introduce an unrelated derived
             # projection that was absent from the last promoted artifact set.
             updated_artifacts.pop(artifact_root, None)
+    rebuild_regeneration_derived_artifacts(
+        artifacts=updated_artifacts,
+        evidence_packs=safe_evidence,
+        writable_roots=modified_writable_roots,
+    )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.
         updated_artifacts["_repair_evidence_selection"] = {

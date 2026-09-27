@@ -646,4 +646,107 @@ def test_summary_repair_allows_only_verified_chart_projection() -> None:
     assert any(issue.affected_section == "chart_insight_cards" for issue in issues)
 
 
+def test_summary_repair_rebuilds_exact_key_figure_and_chart_dependents() -> None:
+    evidence_text = "Retail media adoption reached 42% among merchants."
+    insight = {
+        "id": "metric-one",
+        "text": evidence_text,
+        "evidence": evidence_text,
+        "evidence_id": "f1",
+        "metric": {
+            "label": "Retail media adoption",
+            "value": "42%",
+            "unit": "",
+            "confidence": "high",
+            "segment": "merchants",
+        },
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": evidence_text, "evidence": evidence_text}
+            ]
+        }
+    }
+    before = {
+        "summary": {
+            "executive_summary": "A broad overview.",
+            "claim_evidence_map": [{"claim": "Old claim.", "evidence_id": "f1"}],
+        },
+        "insights_final": [insight],
+        "metric_spine": derive_metric_spine_from_insights([insight]),
+        "key_figures": [],
+        "chart_insight_cards": [],
+    }
+    candidate = deepcopy(before)
+    candidate["summary"]["executive_summary"] = (
+        "Retail media adoption reached 42% among merchants."
+    )
+    writable_roots = {"summary"}
+
+    rebuilt_roots = rebuild_regeneration_derived_artifacts(
+        artifacts=candidate,
+        evidence_packs=evidence_packs,
+        writable_roots=writable_roots,
+    )
+
+    assert {"key_figures", "chart_insight_cards"} <= rebuilt_roots
+    assert [figure["figure"] for figure in candidate["key_figures"]] == ["42%"]
+    assert candidate["chart_insight_cards"][0]["evidence_id"] == "f1"
+    verified_roots, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+    )
+    assert not issues
+    assert {"key_figures", "chart_insight_cards"} <= verified_roots
+
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(
+                allowed_paths=["summary.executive_summary[claim_index=0]"]
+            )
+        ]
+    )
+    assert (
+        _scope_validation_report(
+            before=before,
+            after=candidate,
+            plan=plan,
+            verified_derived_roots=verified_roots,
+        ).status
+        == "pass"
+    )
+
+    for root, field in (
+        ("key_figures", "figure"),
+        ("chart_insight_cards", "caption"),
+    ):
+        unrelated_change = deepcopy(candidate)
+        unrelated_change[root][0][field] = "Unrelated mutation"
+        verified_roots, issues = _verify_derived_artifact_roots(
+            current_artifacts=before,
+            candidate_artifacts=unrelated_change,
+            evidence_packs=evidence_packs,
+        )
+        assert root not in verified_roots
+        assert any(
+            issue.rule_id == "regeneration_derived_projection"
+            and issue.affected_section == root
+            for issue in issues
+        )
+        scope = _scope_validation_report(
+            before=before,
+            after=unrelated_change,
+            plan=plan,
+            verified_derived_roots=verified_roots,
+        )
+        assert scope.status == "fail"
+        assert any(
+            issue.rule_id == "regeneration_scope_violation"
+            and issue.affected_section.startswith(root)
+            for issue in scope.issues
+        )
+
+
 __all__ = [name for name in globals() if name.startswith("test_")]

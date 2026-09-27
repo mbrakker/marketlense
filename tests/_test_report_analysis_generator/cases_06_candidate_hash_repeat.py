@@ -51,7 +51,7 @@ def test_rejected_candidate_hash_stops_an_equivalent_retry(tmp_path) -> None:
                         schema_version="1.0",
                         message="[grounding] Initial promoted failure",
                         severity="error",
-                        affected_section="summary",
+                        affected_section="summary.tldr",
                         rule_id="grounding",
                         repair_target="summary",
                     )

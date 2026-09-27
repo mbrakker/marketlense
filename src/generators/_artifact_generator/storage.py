@@ -4,7 +4,7 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import asdict, replace
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.prompts import PromptLoadRequest
@@ -30,6 +30,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.generators._artifact_generator.family_policy import (
     apply_artifact_family_policy,
+    build_artifact_family_status,
 )
 from src.generators._artifact_generator.toc import (
     TOC_STRUCTURE_VERSION,
@@ -92,6 +93,27 @@ from src.utils.model_resolver import (
 from src.utils.numeric_display import numeric_metadata_for_complete_display
 from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.quantity import extract_quantities
+
+CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES = {
+    "metric_spine": frozenset({"insights_final"}),
+    "topics_covered": frozenset({"summary", "insights_final"}),
+    "key_figures": frozenset({"insights_final", "summary"}),
+    "chart_insight_cards": frozenset(
+        {"insights_final", "key_figures", "summary"}
+    ),
+    "executive_advisory": frozenset({"insights_final", "summary", "quotes_final"}),
+    "claim_ledgers": frozenset({"insights_final", "summary", "quotes_final"}),
+    "family_status": frozenset(
+        {
+            "summary",
+            "insights_candidates",
+            "insights_final",
+            "quotes_final",
+            "expert_comment",
+            "linkedin_post",
+        }
+    ),
+}
 
 logger = logging.getLogger("market_lense.artifact_generator")
 EVIDENCE_QUALITY_BY_SUPPORT_TYPE = {
@@ -1830,6 +1852,130 @@ def build_chart_insight_cards(
             }
         )
     return cards
+
+
+def rebuild_regeneration_derived_artifacts(
+    *,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    writable_roots: Iterable[str],
+) -> frozenset[str]:
+    """Rebuild only present deterministic projections downstream of a repair."""
+
+    affected_roots = {str(root).strip() for root in writable_roots if str(root).strip()}
+    required_roots: set[str] = set()
+    while True:
+        newly_required = {
+            root
+            for root, dependencies in (
+                CANONICAL_DERIVED_ARTIFACT_ROOT_DEPENDENCIES.items()
+            )
+            if root not in required_roots and dependencies.intersection(affected_roots)
+        }
+        if not newly_required:
+            break
+        required_roots.update(newly_required)
+        affected_roots.update(newly_required)
+
+    present_roots = required_roots.intersection(artifacts)
+    if not present_roots:
+        return frozenset()
+    expected = build_canonical_regeneration_derived_artifacts(
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        roots=present_roots,
+    )
+    for root in present_roots:
+        artifacts[root] = expected[root]
+    return frozenset(present_roots)
+
+
+def build_canonical_regeneration_derived_artifacts(
+    *,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    roots: Iterable[str],
+) -> Dict[str, Any]:
+    """Return requested projections from the canonical artifact builders."""
+
+    requested = set(roots)
+    builder_roots = set(requested)
+    if "chart_insight_cards" in builder_roots:
+        builder_roots.add("key_figures")
+    if builder_roots.intersection(
+        {"key_figures", "executive_advisory", "claim_ledgers"}
+    ):
+        builder_roots.add("metric_spine")
+    if "claim_ledgers" in builder_roots:
+        builder_roots.add("executive_advisory")
+
+    insights = artifacts.get("insights_final") or []
+    summary = artifacts.get("summary") or {}
+    quotes = artifacts.get("quotes_final") or []
+    editorial_plan = artifacts.get("editorial_plan") or {}
+    canonical: Dict[str, Any] = {}
+    if "metric_spine" in builder_roots:
+        canonical["metric_spine"] = derive_metric_spine_from_insights(
+            insights,
+            editorial_plan=editorial_plan,
+            evidence_packs=evidence_packs,
+        )
+    if "topics_covered" in builder_roots:
+        canonical["topics_covered"] = build_topics_covered(
+            toc_entries=artifacts.get("toc_entries") or [],
+            evidence_packs=evidence_packs,
+            summary=summary,
+            insights_final=insights,
+        )
+    if "key_figures" in builder_roots:
+        canonical["key_figures"] = build_key_figures(
+            metric_spine=canonical["metric_spine"],
+            evidence_packs=evidence_packs,
+            summary=summary,
+            insights_final=insights,
+            editorial_plan=editorial_plan,
+        )
+    if "chart_insight_cards" in builder_roots:
+        canonical["chart_insight_cards"] = build_chart_insight_cards(
+            key_figures=canonical["key_figures"],
+            evidence_packs=evidence_packs,
+            insights_final=insights,
+        )
+    if "executive_advisory" in builder_roots:
+        canonical["executive_advisory"] = build_executive_advisory_artifacts(
+            summary=summary,
+            insights_final=insights,
+            quotes_final=quotes,
+            metric_spine=canonical["metric_spine"],
+            evidence_packs=evidence_packs,
+        )
+    if "claim_ledgers" in builder_roots:
+        claim_ledger = artifacts.get("claim_ledgers") or []
+        report_id = (
+            str(claim_ledger[0].get("canonical_claim_id") or "").split(":", 1)[0]
+            if isinstance(claim_ledger, list)
+            and claim_ledger
+            and isinstance(claim_ledger[0], dict)
+            else ""
+        )
+        canonical["claim_ledgers"] = build_universal_claim_ledger(
+            report_id=report_id,
+            summary=summary,
+            insights_final=insights,
+            quotes_final=quotes,
+            metric_spine=canonical["metric_spine"],
+            executive_advisory=canonical["executive_advisory"],
+        )
+    if "family_status" in builder_roots:
+        canonical["family_status"] = build_artifact_family_status(
+            summary=summary,
+            insights_candidates=artifacts.get("insights_candidates") or [],
+            insights_final=insights,
+            quotes_final=quotes,
+            expert_comment=_s(artifacts.get("expert_comment")),
+            linkedin_post=_s(artifacts.get("linkedin_post")),
+        )
+    return {root: canonical[root] for root in requested}
 
 
 def _int_list(value: Any) -> List[int]:

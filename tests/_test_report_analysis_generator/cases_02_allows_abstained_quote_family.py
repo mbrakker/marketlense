@@ -198,6 +198,7 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     original = _artifacts_without_retained_claims(
         summary={
             "tldr": "current artifact",
+            "card_tldr_compact": "current artifact",
             "executive_summary": "Current summary",
             "claim_evidence_map": [],
         }
@@ -205,8 +206,8 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
     candidate = _artifacts_without_retained_claims(
         summary={
             "tldr": "candidate artifact",
-            "card_tldr_compact": "Candidate summary",
-            "executive_summary": "Candidate summary",
+            "card_tldr_compact": "current artifact",
+            "executive_summary": "Current summary",
             "claim_evidence_map": [],
         },
     )
@@ -227,7 +228,7 @@ def test_run_report_analysis_rolls_back_failed_candidate_regeneration(tmp_path):
                         schema_version="1.0",
                         message="[grounding] Unsupported summary claim",
                         severity="error",
-                        affected_section="summary",
+                        affected_section="summary.tldr",
                         rule_id="grounding",
                         repair_target="summary",
                     )
@@ -590,6 +591,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     original = _artifacts_without_retained_claims(
         summary={
             "tldr": "original artifact",
+            "card_tldr_compact": "original artifact",
             "executive_summary": "Original summary",
             "claim_evidence_map": [],
         }
@@ -598,16 +600,16 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         _artifacts_without_retained_claims(
             summary={
                 "tldr": "failed candidate",
-                "card_tldr_compact": "Failed candidate summary",
-                "executive_summary": "Failed candidate summary",
+                "card_tldr_compact": "original artifact",
+                "executive_summary": "Original summary",
                 "claim_evidence_map": [],
             },
         ),
         _artifacts_without_retained_claims(
             summary={
                 "tldr": "repaired artifact",
-                "card_tldr_compact": "Repaired summary",
-                "executive_summary": "Repaired summary",
+                "card_tldr_compact": "original artifact",
+                "executive_summary": "Original summary",
                 "claim_evidence_map": [],
             },
         ),
@@ -615,6 +617,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     for artifact in [original, *candidates]:
         _set_interpretive_summary_provenance(artifact)
     regeneration_inputs = []
+    regeneration_artifact_inputs = []
     repair_usage_attempts = []
     regeneration_targets = []
     regeneration_strategies = []
@@ -634,7 +637,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                         schema_version="1.0",
                         message="[grounding] Unsupported summary claim",
                         severity="error",
-                        affected_section="summary",
+                        affected_section="summary.tldr",
                         rule_id="grounding",
                         repair_target="summary",
                     )
@@ -664,6 +667,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     def _regenerate(request):
         repair_usage_attempts.append(request.ctx.repair_attempt)
         regeneration_inputs.append(request.current_artifacts["summary"]["tldr"])
+        regeneration_artifact_inputs.append(deepcopy(request.current_artifacts))
         regeneration_targets.append(
             [target.target_section for target in request.plan.targets]
         )
@@ -730,6 +734,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
 
     assert regeneration_inputs == ["original artifact", "original artifact"]
+    assert regeneration_artifact_inputs[0] == regeneration_artifact_inputs[1]
     assert repair_usage_attempts == [1, 2]
     assert regeneration_targets == [["summary"], ["summary"]]
     assert regeneration_strategies == ["current_evidence", "alternative_evidence"]

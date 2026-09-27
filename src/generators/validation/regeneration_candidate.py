@@ -16,15 +16,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
-    build_chart_insight_cards,
-    build_executive_advisory_artifacts,
-    build_key_figures,
-    build_topics_covered,
-    build_universal_claim_ledger,
-    derive_metric_spine_from_insights,
-)
-from src.generators._artifact_generator.family_policy import (
-    build_artifact_family_status,
+    build_canonical_regeneration_derived_artifacts,
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import validate_retained_claims
@@ -536,67 +528,11 @@ def _verify_derived_artifact_roots(
     }
     if not changed:
         return frozenset(), []
-    insights = candidate_artifacts.get("insights_final") or []
-    summary = candidate_artifacts.get("summary") or {}
-    quotes = candidate_artifacts.get("quotes_final") or []
-    editorial_plan = candidate_artifacts.get("editorial_plan") or {}
-    metric_spine = derive_metric_spine_from_insights(
-        insights, editorial_plan=editorial_plan, evidence_packs=evidence_packs
-    )
-    key_figures = build_key_figures(
-        metric_spine=metric_spine,
+    expected = build_canonical_regeneration_derived_artifacts(
+        artifacts=candidate_artifacts,
         evidence_packs=evidence_packs,
-        summary=summary,
-        insights_final=insights,
-        editorial_plan=editorial_plan,
+        roots=changed,
     )
-    executive_advisory = build_executive_advisory_artifacts(
-        summary=summary,
-        insights_final=insights,
-        quotes_final=quotes,
-        metric_spine=metric_spine,
-        evidence_packs=evidence_packs,
-    )
-    claim_ledger = candidate_artifacts.get("claim_ledgers") or []
-    report_id = (
-        str(claim_ledger[0].get("canonical_claim_id") or "").split(":", 1)[0]
-        if isinstance(claim_ledger, list)
-        and claim_ledger
-        and isinstance(claim_ledger[0], dict)
-        else ""
-    )
-    expected = {
-        "metric_spine": metric_spine,
-        "topics_covered": build_topics_covered(
-            toc_entries=candidate_artifacts.get("toc_entries") or [],
-            evidence_packs=evidence_packs,
-            summary=summary,
-            insights_final=insights,
-        ),
-        "key_figures": key_figures,
-        "chart_insight_cards": build_chart_insight_cards(
-            key_figures=key_figures,
-            evidence_packs=evidence_packs,
-            insights_final=insights,
-        ),
-        "executive_advisory": executive_advisory,
-        "claim_ledgers": build_universal_claim_ledger(
-            report_id=report_id,
-            summary=summary,
-            insights_final=insights,
-            quotes_final=quotes,
-            metric_spine=metric_spine,
-            executive_advisory=executive_advisory,
-        ),
-        "family_status": build_artifact_family_status(
-            summary=summary,
-            insights_candidates=candidate_artifacts.get("insights_candidates") or [],
-            insights_final=insights,
-            quotes_final=quotes,
-            expert_comment=s(candidate_artifacts.get("expert_comment")),
-            linkedin_post=s(candidate_artifacts.get("linkedin_post")),
-        ),
-    }
     verified = frozenset(
         root for root in changed if candidate_artifacts.get(root) == expected[root]
     )
