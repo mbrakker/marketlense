@@ -12,6 +12,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
 from src.contracts.pdf_utils import PdfInfoResponse
+from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_cards import (
     CardCoverAsset,
     CardCoverAssetSet,
@@ -29,7 +30,13 @@ from src.contracts.report_store import (
     ReportMetadataGetResponse,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.semantic_ids import ReportId
 from src.contracts.validation import ValidationReport
+from src.generators.claim_validation_generator import (
+    attach_claim_validation_execution_identity,
+    claim_validation_package_hash_valid,
+    validate_retained_claims,
+)
 from src.generators.report_generation_dependencies import ReportRenderDependencies
 from src.generators.report_generation_shared import (
     derive_title,
@@ -43,8 +50,10 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
+from src.services.report_analysis_store_service import store_pack
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
+from src.utils.publication_projection import publication_projection_hash
 
 
 def _template_bundle_sha(template_contents: dict[str, str]) -> str:
@@ -516,6 +525,119 @@ def test_render_report_output_sources_metadata_from_db_and_returns_complete_outc
     assert outcome.status == "error"
     assert outcome.error == "publish_readiness_failed"
     assert render_calls == ["DB Title"]
+
+
+def test_render_materializes_final_retained_claim_package_with_current_lineage(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="source-md5")
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="source:report-1",
+            configuration_hash="a" * 64,
+            policy_hash="b" * 64,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    candidate = attach_claim_validation_execution_identity(
+        validate_retained_claims(
+            analysis.artifacts_payload or {},
+            analysis.evidence_packs,
+            source_identity=runtime.ctx.source_identity_id,
+        ),
+        source_id=runtime.ctx.source_identity_id,
+        source_md5=runtime.md5 or "",
+        configuration_hash=runtime.ctx.configuration_hash,
+        policy_hash=runtime.ctx.policy_hash,
+    )
+    store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="validation_retained_claim_validation_candidate",
+            payload=candidate,
+            report_slug=runtime.report_name,
+        ),
+        runtime.ctx,
+    )
+    html_path = Path(runtime.settings.output_dir) / "final-report.html"
+    rendered_html = "<html><body><h1>Rendered report</h1></body></html>"
+
+    def render_report(_request, _ctx):
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text(rendered_html, encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    dependencies = _deps(render_report=render_report)
+    outcome = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        dependencies,
+        preview_resp=render_preview_asset(runtime, source, dependencies),
+    )
+
+    retained_path = outcome.evidence_packs["retained_claim_validation"]
+    retained = json.loads(Path(retained_path).read_text(encoding="utf-8"))
+    readiness = json.loads(
+        Path(outcome.evidence_packs["publish_readiness"]).read_text(encoding="utf-8")
+    )
+
+    assert retained["lineage"]["final_artifact_hash"] == sha256_json(
+        analysis.artifacts_payload or {}
+    )
+    assert retained["lineage"]["publication_projection_hash"] == (
+        publication_projection_hash(rendered_html)
+    )
+    assert retained["lineage"]["evidence_pack_hash"] == sha256_json(
+        analysis.evidence_packs
+    )
+    assert retained["lineage"]["source_md5"] == "source-md5"
+    assert retained["lineage"]["source_id"] == "source:report-1"
+    assert retained["lineage"]["claim_validation_validator_version"] == (
+        "retained_claim_validation:v1"
+    )
+    assert retained["lineage"]["grounding_validator_version"] == (
+        "grounding_validation_output:1.1"
+    )
+    assert retained["validation_identity"]["source_md5"] == "source-md5"
+    assert claim_validation_package_hash_valid(retained)
+    assert readiness["artifact_hashes"]["retained_claim_validation"] == retained[
+        "package_hash"
+    ]
+    assert any(
+        item["rule_id"] == "publish_readiness.retained_claim_grounding"
+        for item in readiness["rule_results"]
+    )
+    grounding_rule = next(
+        item
+        for item in readiness["rule_results"]
+        if item["rule_id"] == "publish_readiness.retained_claim_grounding"
+    )
+    actual_unsupported_count = sum(
+        result["candidate"]["factual"] and result["status"] == "unsupported"
+        for result in retained["results"]
+    )
+    actual_unresolved_count = sum(
+        result["candidate"]["factual"] and result["status"] == "unresolved"
+        for result in retained["results"]
+    )
+    assert retained["unsupported_factual_count"] == actual_unsupported_count
+    assert retained["unresolved_factual_count"] == actual_unresolved_count
+    assert f"unsupported_factual_count={actual_unsupported_count}" in grounding_rule[
+        "detail"
+    ]
+    assert f"unresolved_factual_count={actual_unresolved_count}" in grounding_rule[
+        "detail"
+    ]
+    assert "current_configuration_identity_missing" not in grounding_rule["detail"]
+    assert "current_policy_identity_missing" not in grounding_rule["detail"]
 
 
 def test_render_report_output_does_not_emit_html_for_failed_canonical_validation(

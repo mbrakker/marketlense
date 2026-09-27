@@ -90,6 +90,82 @@ def test_grounding_accepts_compatible_creative_paraphrase(tmp_path) -> None:
     assert issues == []
 
 
+@pytest.mark.parametrize(
+    ("violation_type", "entailment_outcome"),
+    [("contradicted", "contradicted"), ("unsupported_number", "not_established")],
+)
+def test_explicit_factual_failure_is_not_reclassified_by_retrieval_wording(
+    tmp_path, violation_type: str, entailment_outcome: str
+) -> None:
+    entry = {
+        "section": "summary",
+        "text": "Revenue rose 42%.",
+        "classification": "factual_claim",
+        "entailment_outcome": entailment_outcome,
+        "violation_type": violation_type,
+        "reason": "Retrieval failed, and the cited source contradicts the claim.",
+    }
+    issues = run_grounding_check(
+        request=ValidationRequest(
+            schema_version="1.0",
+            report_id="retrieval-does-not-mask-fact-failure",
+            report=_report(),
+            artifacts={"summary": {"tldr": entry["text"]}},
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=["Revenue fell 42% in 2025."],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            grounding_payload={"unsupported": [entry], "checks": []}
+        ),
+        ctx=_ctx(),
+    )
+
+    assert len(issues) == 1
+    assert f"|{violation_type}]" in issues[0].message
+    assert "evidence_retrieval_failure" not in issues[0].message
+    assert issues[0].severity == "error"
+
+
+def test_retrieval_wording_without_structured_type_does_not_soften_grounding(
+    tmp_path,
+) -> None:
+    entry = {
+        "section": "summary",
+        "text": "Revenue rose 42%.",
+        "classification": "factual_claim",
+        "reason": "Retrieval failed; the evidence does not support the claim.",
+    }
+    issues = run_grounding_check(
+        request=ValidationRequest(
+            schema_version="1.0",
+            report_id="untyped-retrieval-reason",
+            report=_report(),
+            artifacts={"summary": {"tldr": entry["text"]}},
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=["Revenue fell 42% in 2025."],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            grounding_payload={"unsupported": [entry], "checks": []}
+        ),
+        ctx=_ctx(),
+    )
+
+    assert len(issues) == 1
+    assert "unsupported_factual_claim" in issues[0].message
+    assert "evidence_retrieval_failure" not in issues[0].message
+    assert issues[0].severity == "error"
+
+
 @pytest.mark.parametrize("dimension", PROTECTED_FACT_DIMENSIONS)
 def test_grounding_blocks_each_incompatible_protected_dimension(
     tmp_path, dimension: str

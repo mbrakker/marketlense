@@ -344,12 +344,12 @@ def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
     initial_package = next(
         item[3]
         for item in initial_store.stored
-        if item[2] == "validation_retained_claim_validation"
+        if item[2] == "validation_retained_claim_validation_candidate"
     )
     candidate_package = next(
         item[3]
         for item in candidate_store.stored
-        if item[2] == "validation_regen_candidate_1_retained_claim_validation"
+        if item[2] == "validation_regen_candidate_1_retained_claim_validation_candidate"
     )
     initial_result = initial_package["results"][0]
     candidate_result = candidate_package["results"][0]
@@ -365,7 +365,7 @@ def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
     assert initial_result["semantic_identity"] == candidate_result["semantic_identity"]
 
 
-def test_unresolved_claim_package_is_persisted_without_becoming_a_readiness_gate(
+def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materialization(
     tmp_path,
 ) -> None:
     request = _retained_request()
@@ -409,11 +409,17 @@ def test_unresolved_claim_package_is_persisted_without_becoming_a_readiness_gate
     package_entry = next(
         item
         for item in analysis_store.stored
-        if item[2] == "validation_retained_claim_validation"
+        if item[2] == "validation_retained_claim_validation_candidate"
     )
     package = package_entry[3]
+    assert not any(
+        item[2] == "retained_claim_validation" for item in analysis_store.stored
+    )
     assert package["unresolved_factual_count"] == 1
     assert package["readiness_status"] == "not_publishable"
+    assert package["validation_identity"]["grounding_validator_version"] == (
+        "grounding_validation_output:1.1"
+    )
     result = package["results"][0]
     assert result["status"] == "unresolved"
     assert result["semantic_outcome"] == "not_established"

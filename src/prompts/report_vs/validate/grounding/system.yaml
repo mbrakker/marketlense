@@ -62,6 +62,11 @@ text: |
     `unsupported_operational_or_financial_benefit` respectively. Use the
     existing `report_directive_misattribution` for false attribution of a
     report recommendation or instruction.
+  - Use `evidence_retrieval_failure` only when source evidence or context could
+    not be retrieved or accessed. Do not use it for missing or unknown evidence
+    IDs, unsupported facts or numbers, quote mismatch, contradiction, or any
+    other source-fidelity failure. When an explicit factual failure is known,
+    return its hard violation type even if retrieval was also difficult.
 
   Return JSON with one `checks` entry for every material factual claim and an
   `unsupported` entry only for failed claims. A check records whether the
@@ -96,7 +101,7 @@ text: |
         "text": "...",
         "classification": "factual_claim|analyst_interpretation|prescriptive_recommendation",
         "entailment_outcome": "contradicted|not_established",
-        "violation_type": "hallucinated_entity_or_event|unsupported_number|misattributed_quote|report_directive_misattribution|unsupported_factual_claim|contradicted|unsupported_causal_outcome|unsupported_certainty|unsupported_operational_or_financial_benefit|non_fatal_interpretation",
+        "violation_type": "hallucinated_entity_or_event|unsupported_number|misattributed_quote|report_directive_misattribution|unsupported_factual_claim|contradicted|unsupported_causal_outcome|unsupported_certainty|unsupported_operational_or_financial_benefit|evidence_retrieval_failure|non_fatal_interpretation",
         "reason": "..."
       }
     ]

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
+
+import pytest
 
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
@@ -11,6 +14,8 @@ from src.generators.publish_readiness_generator import (
     publish_readiness_payload,
     verify_publish_readiness,
 )
+from src.utils.cache_utils import sha256_json
+from src.utils.publication_projection import publication_projection_hash
 
 
 def _ready_inputs() -> tuple[dict, dict, str, dict]:
@@ -78,6 +83,192 @@ Open original source</a></section>
     return artifacts, evidence_packs, html, provenance
 
 
+def _seal_claim_package(package: dict) -> dict:
+    sealed = deepcopy(package)
+    sealed["package_hash"] = ""
+    sealed["package_hash"] = sha256_json(sealed)
+    return sealed
+
+
+def _retained_claim_package(
+    artifacts: dict,
+    evidence_packs: dict,
+    html: str,
+    *,
+    source_id: str = "source:example",
+    source_md5: str = "b" * 32,
+    configuration_hash: str = "config-current",
+    policy_hash: str = "policy-current",
+    unsupported: int = 0,
+    unresolved: int = 0,
+    semantic: bool = False,
+) -> dict:
+    statuses = ["supported"] + ["unsupported"] * unsupported + [
+        "unresolved"
+    ] * unresolved
+    results = []
+    for index, status in enumerate(statuses, start=1):
+        evidence_references = (
+            [
+                {
+                    "schema_version": "1.2",
+                    "evidence_id": "F1",
+                    "source_pack": "findings",
+                    "page": 1,
+                    "text_hash": sha256_json(
+                        "Revenue grew in the measured market."
+                    ),
+                }
+            ]
+            if semantic and index == 1
+            else []
+        )
+        result = {
+            "schema_version": "1.2",
+            "candidate": {
+                "schema_version": "1.2",
+                "claim_id": f"claim:{index}",
+                "source_family": "summary",
+                "text": f"Retained factual claim {index}.",
+                "text_hash": sha256_json(f"Retained factual claim {index}."),
+                "kind": "descriptive",
+                "factual": True,
+                "evidence_references": evidence_references,
+                "affected_section": "summary",
+                "entity_id": "",
+            },
+            "checks": [],
+            "status": status,
+            "deterministic_status": (
+                "unresolved"
+                if semantic and index == 1
+                else "supported"
+                if status == "supported"
+                else status
+            ),
+            "reasons": [],
+            "protected_facts": None,
+            "semantic_outcome": "entailed" if semantic and index == 1 else None,
+            "semantic_reason": (
+                "entailed from linked evidence" if semantic and index == 1 else ""
+            ),
+            "semantic_protected_facts": None,
+            "semantic_identity": (
+                {
+                    "schema_version": "1.0",
+                    "claim_id": f"claim:{index}",
+                    "claim_text_hash": sha256_json(f"Retained factual claim {index}."),
+                    "evidence_ids": ["F1"],
+                    "evidence_hash": sha256_json(
+                        [
+                            {
+                                "evidence_id": "F1",
+                                "source_pack": "findings",
+                                "page": 1,
+                                "text_hash": sha256_json(
+                                    "Revenue grew in the measured market."
+                                ),
+                            }
+                        ]
+                    ),
+                    "source_identity": source_id,
+                    "prompt_family": "report_vs/validate/grounding",
+                    "prompt_content_hash": "prompt-content-hash",
+                    "execution_identity": "grounding-execution-1",
+                    "validator_version": "grounding_validation_output:1.1",
+                    "model_provider": "openai",
+                    "model_name": "gpt-4.1-mini",
+                    "configuration_policy_identity": "grounding-policy-hash",
+                    "relevant_input_hash": "grounding-input-hash",
+                }
+                if semantic and index == 1
+                else None
+            ),
+            "semantic_disagreement": "",
+            "semantic_validator_used": semantic and index == 1,
+            "semantic_execution_identity": "grounding-execution-1"
+            if semantic and index == 1
+            else "",
+        }
+        results.append(result)
+    package = {
+        "schema_version": "1.2",
+        "artifact_hash": sha256_json(artifacts),
+        "package_hash": "",
+        "results": results,
+        "readiness_status": (
+            "not_publishable" if unsupported or unresolved else "awaiting_review"
+        ),
+        "unsupported_factual_count": unsupported,
+        "unresolved_factual_count": unresolved,
+        "deterministic_pass_count": 0 if semantic else 1,
+        "semantic_validation_count": 1 if semantic else 0,
+        "semantic_execution_identities": ["grounding-execution-1"] if semantic else [],
+        "validation_identity": {
+            "schema_version": "1.0",
+            "source_id": source_id,
+            "source_md5": source_md5,
+            "claim_validation_validator_version": "retained_claim_validation:v1",
+            "grounding_validator_version": "grounding_validation_output:1.1",
+            "configuration_hash": configuration_hash,
+            "policy_hash": policy_hash,
+        },
+        "lineage": {
+            "schema_version": "1.0",
+            "final_artifact_hash": sha256_json(artifacts),
+            "publication_projection_hash": publication_projection_hash(html),
+            "evidence_pack_hash": sha256_json(evidence_packs),
+            "source_id": source_id,
+            "source_md5": source_md5,
+            "claim_validation_validator_version": "retained_claim_validation:v1",
+            "grounding_validator_version": "grounding_validation_output:1.1",
+            "semantic_execution_identities": (
+                ["grounding-execution-1"] if semantic else []
+            ),
+            "semantic_prompt_content_hashes": (
+                ["prompt-content-hash"] if semantic else []
+            ),
+            "semantic_model_identities": ["openai/gpt-4.1-mini"] if semantic else [],
+            "configuration_hash": configuration_hash,
+            "policy_hash": policy_hash,
+        },
+    }
+    return _seal_claim_package(package)
+
+
+def _readiness_with_package(
+    package: dict,
+    *,
+    configuration_hash: str = "config-current",
+    policy_hash: str = "policy-current",
+) -> object:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    return evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        retained_claim_package=package,
+        retained_claim_required=True,
+        source_id="source:example",
+        source_md5="b" * 32,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+
+
+def _retained_grounding_rule(readiness):
+    return next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.retained_claim_grounding"
+    )
+
+
 def test_publish_readiness_binds_rendered_html_and_publication_projection() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     artifact = evaluate_publish_readiness(
@@ -107,6 +298,168 @@ def test_publish_readiness_binds_rendered_html_and_publication_projection() -> N
         "publish_readiness.final_html_changed",
         "publish_readiness.publication_projection_changed",
     ]
+
+
+def test_current_supported_retained_claim_package_passes_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+
+    readiness = _readiness_with_package(package)
+
+    assert readiness.status == "pass"
+    assert _retained_grounding_rule(readiness).status == "pass"
+    assert (
+        readiness.artifact_hashes["retained_claim_validation"]
+        == package["package_hash"]
+    )
+
+
+def test_missing_required_retained_claim_package_blocks_readiness() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        retained_claim_package=None,
+        retained_claim_required=True,
+        source_id="source:example",
+        source_md5="b" * 32,
+    )
+
+    assert readiness.status == "fail"
+    assert "package_missing" in _retained_grounding_rule(readiness).detail
+
+
+def test_unsupported_retained_claim_blocks_readiness_with_separate_count() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, unsupported=1
+    )
+
+    readiness = _readiness_with_package(package)
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert rule.status == "fail"
+    assert "unsupported_factual_count=1" in rule.detail
+    assert "unresolved_factual_count=0" in rule.detail
+
+
+def test_unresolved_retained_claim_blocks_readiness_as_incomplete_grounding() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html, unresolved=1)
+
+    readiness = _readiness_with_package(package)
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert rule.status == "fail"
+    assert "unsupported_factual_count=0" in rule.detail
+    assert "unresolved_factual_count=1" in rule.detail
+
+
+def test_stale_final_artifact_hash_blocks_retained_grounding_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    package["lineage"]["final_artifact_hash"] = "f" * 64
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+
+    assert readiness.status == "fail"
+    assert "artifact_hash" in _retained_grounding_rule(readiness).detail
+
+
+def test_stale_evidence_and_source_identity_block_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    package["lineage"]["evidence_pack_hash"] = "f" * 64
+    package["lineage"]["source_id"] = "source:stale"
+    package["lineage"]["source_md5"] = "stale-source-md5"
+    package["validation_identity"]["source_id"] = "source:stale"
+    package["validation_identity"]["source_md5"] = "stale-source-md5"
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert "evidence_pack_hash" in rule.detail
+    assert "source_id" in rule.detail
+    assert "source_md5" in rule.detail
+
+
+def test_stale_validator_and_configuration_identity_block_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    package["lineage"]["claim_validation_validator_version"] = "old-validator"
+    package["lineage"]["grounding_validator_version"] = "old-grounding-validator"
+    package["lineage"]["configuration_hash"] = "config-old"
+    package["lineage"]["policy_hash"] = "policy-old"
+    package["validation_identity"]["configuration_hash"] = "config-old"
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert "claim_validation_validator_version" in rule.detail
+    assert "grounding_validator_version" in rule.detail
+    assert "configuration_hash" in rule.detail
+    assert "policy_hash" in rule.detail
+
+
+def test_missing_semantic_grounding_identity_blocks_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, semantic=True
+    )
+    package["results"][0]["semantic_identity"] = None
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert "semantic_execution_identity_missing" in rule.detail
+
+
+@pytest.mark.parametrize(
+    ("configuration_hash", "policy_hash", "problem"),
+    [
+        ("", "policy-current", "current_configuration_identity_missing"),
+        ("config-current", "", "current_policy_identity_missing"),
+    ],
+)
+def test_missing_readiness_execution_identity_blocks_retained_grounding(
+    configuration_hash: str, policy_hash: str, problem: str
+) -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+
+    readiness = _readiness_with_package(
+        package,
+        configuration_hash=configuration_hash,
+        policy_hash=policy_hash,
+    )
+
+    assert readiness.status == "fail"
+    assert problem in _retained_grounding_rule(readiness).detail
+
+
+def test_semantically_grounded_package_is_consumed_without_regrounding() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, semantic=True
+    )
+
+    readiness = _readiness_with_package(package)
+
+    assert readiness.status == "pass"
+    assert _retained_grounding_rule(readiness).status == "pass"
+    assert package["semantic_execution_identities"] == ["grounding-execution-1"]
 
 
 def test_publish_readiness_rejects_html_without_build_traceability() -> None:

@@ -27,6 +27,12 @@ class ValidationIssue:
             "doc": "Machine-readable validation rule identifier for routing and reporting."
         },
     )
+    violation_type: str = field(
+        default="",
+        metadata={
+            "doc": "Optional machine-readable subtype for a validation finding."
+        },
+    )
     repair_target: str = field(
         default="",
         metadata={
@@ -84,6 +90,11 @@ class ValidationReport:
                     "severity": issue.severity,
                     "affected_section": issue.affected_section,
                     "rule_id": issue.rule_id,
+                    **(
+                        {"violation_type": issue.violation_type}
+                        if issue.violation_type
+                        else {}
+                    ),
                     "repair_target": issue.repair_target,
                     "entity_id": issue.entity_id,
                     "evidence_ids": issue.evidence_ids,

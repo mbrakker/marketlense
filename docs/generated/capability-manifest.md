@@ -135,6 +135,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 ## JSON schemas
 
 - `src/schemas/artifacts.schema.json`
+- `src/schemas/claim_validation_package.schema.json`
 - `src/schemas/context_category_fit.schema.json`
 - `src/schemas/doc_map.schema.json`
 - `src/schemas/evidence_pack.schema.json`

@@ -298,8 +298,8 @@ def test_grounding_keeps_factual_sentence_in_creative_paragraph_strict(
     )
 
     assert len(issues) == 1
-    assert issues[0].severity == "error"
-    assert "[factual_claim|unsupported_factual_claim]" in issues[0].message
+    assert issues[0].severity == "warning"
+    assert "[factual_claim|not_established]" in issues[0].message
 
 
 @pytest.mark.parametrize(

@@ -96,7 +96,9 @@ def test_grounding_prompt_accepts_materially_entailed_paraphrases() -> None:
         _ctx(),
     )
 
-    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+    prompt_text = " ".join(
+        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
+    )
 
     for allowed_transformation in (
         "synonyms",

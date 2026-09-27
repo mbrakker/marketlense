@@ -11,9 +11,11 @@ from src.contracts.files import (
     JsonObjectCacheReadRequest,
     JsonObjectCacheWriteRequest,
     ReadTextRequest,
+    ReadJsonRequest,
     WriteBytesRequest,
 )
 from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_assets import PreviewRequest, RenderRequest, RenderResponse
 from src.contracts.report_cards import (
     ReportCardManifestWriteRequest,
@@ -34,13 +36,17 @@ from src.services.file_service import (
     hash_file_bundle,
     read_json_object_cache,
     read_text,
+    read_json,
     write_bytes,
     write_json_object_cache,
     write_report_card_manifest,
 )
 from src.services.pdf_service import render_preview as render_preview_service
 from src.services.render_service import render_report as render_report_service
-from src.services.report_analysis_store_service import store_pack as analysis_store_pack
+from src.services.report_analysis_store_service import (
+    pack_path as analysis_pack_path,
+    store_pack as analysis_store_pack,
+)
 from src.services.report_store_service import (
     get_metadata as get_report_metadata,
 )
@@ -89,6 +95,10 @@ class ReportRenderDependencies:
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any] = (
         analysis_store_pack
     )
+    analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any] = (
+        analysis_pack_path
+    )
+    read_json: Callable[[ReadJsonRequest, RunContext], Any] = read_json
 
     @classmethod
     def default(cls) -> "ReportRenderDependencies":

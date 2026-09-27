@@ -11,10 +11,14 @@ from src.contracts.files import (
     FileBundleHashRequest,
     FileExistsRequest,
     FileStatRequest,
+    ReadJsonRequest,
     ReadTextRequest,
 )
 from src.contracts.ingest import IngestOutcome
-from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_cards import (
     CardCoverAssetSet,
@@ -33,6 +37,9 @@ from src.contracts.report_store import (
     ReportMetadataUpsertRequest,
 )
 from src.contracts.semantic_ids import ReportId
+from src.generators.claim_validation_generator import (
+    materialize_retained_claim_package,
+)
 from src.generators.evidence_packs.common import derive_publisher_from_document_text
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness,
@@ -921,7 +928,11 @@ def render_report_output(
             else None
         )
         if report_card_manifest_path:
-            readiness_path, readiness_status = _persist_publish_readiness(
+            (
+                readiness_path,
+                readiness_status,
+                retained_claim_path,
+            ) = _persist_publish_readiness(
                 runtime=runtime,
                 source=source,
                 analysis=analysis,
@@ -959,6 +970,11 @@ def render_report_output(
                 openai_file_id=analysis.openai_file_id,
                 evidence_packs={
                     **analysis.evidence_paths,
+                    **(
+                        {"retained_claim_validation": retained_claim_path}
+                        if retained_claim_path
+                        else {}
+                    ),
                     "publish_readiness": readiness_path,
                 },
                 vector_store_last_error=analysis.last_error,
@@ -1228,7 +1244,7 @@ def render_report_output(
         )
     )
 
-    readiness_path, readiness_status = _persist_publish_readiness(
+    readiness_path, readiness_status, retained_claim_path = _persist_publish_readiness(
         runtime=runtime,
         source=source,
         analysis=analysis,
@@ -1258,6 +1274,11 @@ def render_report_output(
         openai_file_id=analysis.openai_file_id,
         evidence_packs={
             **analysis.evidence_paths,
+            **(
+                {"retained_claim_validation": retained_claim_path}
+                if retained_claim_path
+                else {}
+            ),
             "publish_readiness": readiness_path,
         },
         vector_store_last_error=analysis.last_error,
@@ -1279,7 +1300,7 @@ def _persist_publish_readiness(
     final_html_path: str,
     report_card_manifest_path: str | None,
     build_provenance: dict[str, str],
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Persist the single readiness decision after the final render is complete."""
     final_html = dependencies.read_text(
         ReadTextRequest(schema_version="1.0", path=final_html_path),
@@ -1288,6 +1309,77 @@ def _persist_publish_readiness(
         ),
     ).content
     artifacts = analysis.artifacts_payload or {}
+    source_id = str(runtime.ctx.source_identity_id or "").strip()
+    source_md5 = str(runtime.md5 or "").strip()
+    candidate_path = dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="validation_retained_claim_validation_candidate",
+            report_slug=runtime.report_name,
+        ),
+        child_context(
+            runtime.ctx,
+            task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_path",
+        ),
+    ).output_path
+    retained_claim_payload = None
+    retained_claim_path = ""
+    if dependencies.file_exists(
+        FileExistsRequest(schema_version="1.0", path=candidate_path),
+        child_context(
+            runtime.ctx,
+            task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_exists",
+        ),
+    ).exists:
+        try:
+            candidate_response = dependencies.read_json(
+                ReadJsonRequest(schema_version="1.0", path=candidate_path),
+                child_context(
+                    runtime.ctx,
+                    task_id=f"{runtime.ctx.task_id}:retained_claim_candidate_read",
+                ),
+            )
+        except AppError as exc:
+            if exc.code not in {"file_not_found", "file_json_invalid"}:
+                raise
+            logger.info(
+                log_event(
+                    runtime.ctx,
+                    role="generator",
+                    event="retained_claim_candidate_unreadable",
+                    module=logger.name,
+                    fields={"file_id": runtime.file.file_id, "code": exc.code},
+                )
+            )
+        else:
+            if isinstance(candidate_response.payload, dict):
+                retained_claim_payload = materialize_retained_claim_package(
+                    candidate_response.payload,
+                    artifacts=artifacts,
+                    evidence_packs=analysis.evidence_packs,
+                    final_html=final_html,
+                    source_id=source_id,
+                    source_md5=source_md5,
+                    configuration_hash=runtime.ctx.configuration_hash,
+                    policy_hash=runtime.ctx.policy_hash,
+                )
+    if retained_claim_payload is not None:
+        retained_claim_path = dependencies.analysis_store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                pack_name="retained_claim_validation",
+                payload=retained_claim_payload,
+                report_slug=runtime.report_name,
+            ),
+            child_context(
+                runtime.ctx,
+                task_id=f"{runtime.ctx.task_id}:retained_claim_final",
+            ),
+        ).output_path
     artifact_hashes = {
         "artifacts": sha256_json(artifacts),
         "validation": sha256_json(
@@ -1324,6 +1416,10 @@ def _persist_publish_readiness(
             },
         },
         metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
+        retained_claim_package=retained_claim_payload,
+        retained_claim_required=True,
+        source_id=source_id,
+        source_md5=source_md5,
     )
     response = dependencies.analysis_store_pack(
         AnalysisStorePackRequest(
@@ -1347,12 +1443,13 @@ def _persist_publish_readiness(
                 "status": readiness.status,
                 "rule_count": len(readiness.rule_results),
                 "path": response.output_path,
+                "retained_claim_validation_path": retained_claim_path,
                 "final_html_hash": readiness.final_html_hash,
                 "publication_projection_hash": readiness.publication_projection_hash,
             },
         )
     )
-    return response.output_path, readiness.status
+    return response.output_path, readiness.status, retained_claim_path
 
 
 def _source_fidelity_metadata(

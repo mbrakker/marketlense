@@ -14992,6 +14992,104 @@
       ],
       "type": "object"
     },
+    "src.contracts.claim_validation.ClaimValidationExecutionIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_validation_validator_version": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "grounding_validator_version": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_md5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_id",
+        "source_md5",
+        "claim_validation_validator_version",
+        "grounding_validator_version",
+        "configuration_hash",
+        "policy_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimValidationLineage": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_validation_validator_version": {
+          "type": "string"
+        },
+        "configuration_hash": {
+          "type": "string"
+        },
+        "evidence_pack_hash": {
+          "type": "string"
+        },
+        "final_artifact_hash": {
+          "type": "string"
+        },
+        "grounding_validator_version": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "publication_projection_hash": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "semantic_execution_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "semantic_model_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "semantic_prompt_content_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_md5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "final_artifact_hash",
+        "publication_projection_hash",
+        "evidence_pack_hash",
+        "claim_validation_validator_version",
+        "grounding_validator_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.claim_validation.ClaimValidationPackage": {
       "additionalProperties": false,
       "properties": {
@@ -15000,6 +15098,16 @@
         },
         "deterministic_pass_count": {
           "type": "integer"
+        },
+        "lineage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.claim_validation.ClaimValidationLineage"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "package_hash": {
           "type": "string"
@@ -15030,6 +15138,16 @@
         },
         "unsupported_factual_count": {
           "type": "integer"
+        },
+        "validation_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.claim_validation.ClaimValidationExecutionIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -42390,6 +42508,9 @@
           "type": "string"
         },
         "severity": {
+          "type": "string"
+        },
+        "violation_type": {
           "type": "string"
         }
       },

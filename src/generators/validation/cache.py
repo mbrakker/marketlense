@@ -240,6 +240,7 @@ def validation_report_from_payload(payload: dict, path: str) -> ValidationReport
                 severity=str(entry.get("severity") or "warning"),
                 affected_section=str(entry.get("affected_section") or ""),
                 rule_id=str(entry.get("rule_id") or ""),
+                violation_type=str(entry.get("violation_type") or ""),
                 repair_target=str(entry.get("repair_target") or ""),
                 entity_id=str(entry.get("entity_id") or ""),
             )

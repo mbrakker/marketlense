@@ -112,6 +112,7 @@ def parse_validation_report_payload(
                     severity=str(item.get("severity", "warning")),
                     affected_section=str(item.get("affected_section", "")),
                     rule_id=str(item.get("rule_id", "")),
+                    violation_type=str(item.get("violation_type", "")),
                     repair_target=str(item.get("repair_target", "")),
                     entity_id=str(item.get("entity_id", "")),
                 )

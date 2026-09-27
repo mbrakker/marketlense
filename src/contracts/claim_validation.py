@@ -7,7 +7,9 @@ from typing import Literal
 
 from src.contracts.protected_facts import ProtectedFactComparison
 
-CLAIM_VALIDATION_SCHEMA_VERSION = "1.1"
+CLAIM_VALIDATION_SCHEMA_VERSION = "1.2"
+CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v1"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.1"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[
@@ -150,6 +152,75 @@ class ClaimValidationResult:
 
 
 @dataclass(frozen=True)
+class ClaimValidationExecutionIdentity:
+    """Validation-stage identities checked before final artifact materialization."""
+
+    schema_version: str = field(
+        metadata={"doc": "Claim validation execution identity schema."}
+    )
+    source_id: str = field(metadata={"doc": "Source identity validated."})
+    source_md5: str = field(metadata={"doc": "Source MD5 validated, if available."})
+    claim_validation_validator_version: str = field(
+        metadata={"doc": "Deterministic retained-claim validator identity."}
+    )
+    grounding_validator_version: str = field(
+        metadata={"doc": "Semantic grounding validator identity."}
+    )
+    configuration_hash: str = field(
+        metadata={"doc": "Resolved configuration identity used during validation."}
+    )
+    policy_hash: str = field(
+        metadata={"doc": "Resolved policy identity used during validation."}
+    )
+
+
+@dataclass(frozen=True)
+class ClaimValidationLineage:
+    """Current final artifact and execution identities for a retained package."""
+
+    schema_version: str = field(metadata={"doc": "Claim lineage schema version."})
+    final_artifact_hash: str = field(
+        metadata={"doc": "SHA-256 of the exact final retained artifact set."}
+    )
+    publication_projection_hash: str = field(
+        metadata={"doc": "Hash of the final public publication projection."}
+    )
+    evidence_pack_hash: str = field(
+        metadata={"doc": "Hash of the exact evidence packs used for grounding."}
+    )
+    claim_validation_validator_version: str = field(
+        metadata={"doc": "Deterministic retained-claim validator identity."}
+    )
+    grounding_validator_version: str = field(
+        metadata={"doc": "Semantic grounding output validator identity."}
+    )
+    source_id: str = field(
+        default="", metadata={"doc": "Current immutable source identity, if known."}
+    )
+    source_md5: str = field(
+        default="", metadata={"doc": "Current source MD5, if available."}
+    )
+    semantic_execution_identities: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Exact report-level grounding executions used."},
+    )
+    semantic_prompt_content_hashes: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Rendered grounding prompt hashes used by semantic checks."},
+    )
+    semantic_model_identities: list[str] = field(
+        default_factory=list,
+        metadata={"doc": "Resolved provider/model identities used by semantic checks."},
+    )
+    configuration_hash: str = field(
+        default="", metadata={"doc": "Current resolved configuration identity."}
+    )
+    policy_hash: str = field(
+        default="", metadata={"doc": "Current resolved policy identity."}
+    )
+
+
+@dataclass(frozen=True)
 class ClaimValidationPackage:
     schema_version: str = field(metadata={"doc": "Claim validation package schema."})
     artifact_hash: str = field(
@@ -163,3 +234,11 @@ class ClaimValidationPackage:
     deterministic_pass_count: int = field(default=0)
     semantic_validation_count: int = field(default=0)
     semantic_execution_identities: list[str] = field(default_factory=list)
+    validation_identity: ClaimValidationExecutionIdentity | None = field(
+        default=None,
+        metadata={"doc": "Source and policy identity of validation-stage results."},
+    )
+    lineage: ClaimValidationLineage | None = field(
+        default=None,
+        metadata={"doc": "Final retained artifact and grounding execution lineage."},
+    )

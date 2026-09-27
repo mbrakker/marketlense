@@ -35,6 +35,8 @@ _PACK_SCHEMA_NAMES: dict[str, str] = {
     "scope": "scope_pack",
     "taxonomy": "taxonomy",
     "validation": "validation_report",
+    "retained_claim_validation": "claim_validation_package",
+    "validation_retained_claim_validation_candidate": "claim_validation_package",
 }
 
 

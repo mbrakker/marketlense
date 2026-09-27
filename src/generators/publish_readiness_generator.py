@@ -13,6 +13,12 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
+    CLAIM_VALIDATION_SCHEMA_VERSION,
+    CLAIM_VALIDATION_VALIDATOR_VERSION,
+    ClaimValidationPackage,
+)
 from src.contracts.public_editorial_quality import PublicEditorialQualityReport
 from src.contracts.publish_readiness import (
     PUBLISH_READINESS_SCHEMA_VERSION,
@@ -22,9 +28,13 @@ from src.contracts.publish_readiness import (
     PublishReadinessRuleResult,
 )
 from src.contracts.validation import ValidationReport
+from src.generators.claim_validation_generator import (
+    claim_validation_package_hash_valid,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.publication_projection import publication_projection_hash
 
 _INTERNAL_TOKEN = re.compile(
@@ -406,6 +416,10 @@ def evaluate_publish_readiness(
     provenance: dict[str, str] | None = None,
     metadata_evidence: Mapping[str, object] | None = None,
     created_at: datetime | None = None,
+    retained_claim_package: ClaimValidationPackage | Mapping[str, Any] | None = None,
+    retained_claim_required: bool = False,
+    source_id: str = "",
+    source_md5: str = "",
 ) -> PublishReadinessArtifact:
     """Evaluate the one release policy over artifacts, final HTML and projection."""
     safe_artifacts = artifacts if isinstance(artifacts, dict) else {}
@@ -413,6 +427,19 @@ def evaluate_publish_readiness(
     now = created_at or datetime.now(UTC)
     results: list[PublishReadinessRuleResult] = []
     results.append(_validation_result(validation_report))
+    results.append(
+        _retained_claim_grounding_result(
+            retained_claim_package=retained_claim_package,
+            required=retained_claim_required,
+            artifacts=safe_artifacts,
+            evidence_packs=safe_packs,
+            final_html=final_html,
+            source_id=source_id,
+            source_md5=source_md5,
+            configuration_hash=configuration_hash,
+            policy_hash=policy_hash,
+        )
+    )
     results.append(_category_result(safe_artifacts, category_ids, safe_packs))
     results.append(_material_evidence_result(safe_artifacts, safe_packs))
     results.append(_evidence_fidelity_result(safe_artifacts, safe_packs, final_html))
@@ -442,7 +469,8 @@ def evaluate_publish_readiness(
             str(key): str(value)
             for key, value in sorted((artifact_hashes or {}).items())
             if str(key).strip() and str(value).strip()
-        },
+        }
+        | _retained_claim_package_artifact_hash(retained_claim_package),
         rule_results=results,
         final_html_hash=_sha256(final_html),
         publication_projection_hash=publication_projection_hash(final_html),
@@ -455,6 +483,7 @@ def evaluate_publish_readiness(
             "final_html_hash_changed",
             "publication_projection_hash_changed",
             "artifact_hash_changed",
+            "retained_claim_grounding_changed",
             "configuration_hash_changed",
             "policy_hash_changed",
             "producer_revision_changed",
@@ -617,6 +646,305 @@ def _validation_result(
             "semantic or grounding validation did not pass",
         )
     return _pass("publish_readiness.semantic_grounding", ["validation"])
+
+
+def _retained_claim_grounding_result(
+    *,
+    retained_claim_package: ClaimValidationPackage | Mapping[str, Any] | None,
+    required: bool,
+    artifacts: dict[str, Any],
+    evidence_packs: dict[str, dict[str, Any]],
+    final_html: str,
+    source_id: str,
+    source_md5: str,
+    configuration_hash: str,
+    policy_hash: str,
+) -> PublishReadinessRuleResult:
+    if retained_claim_package is None:
+        if not required:
+            return _pass(
+                "publish_readiness.retained_claim_grounding",
+                ["retained_claim_validation"],
+                "package not required for this readiness evaluation",
+            )
+        return _fail(
+            "publish_readiness.retained_claim_grounding",
+            ["retained_claim_validation"],
+            "package_missing; unsupported_factual_count=unknown; "
+            "unresolved_factual_count=unknown",
+        )
+
+    payload = (
+        asdict(retained_claim_package)
+        if isinstance(retained_claim_package, ClaimValidationPackage)
+        else dict(retained_claim_package)
+    )
+    lineage = payload.get("lineage")
+    lineage = lineage if isinstance(lineage, Mapping) else {}
+    results = payload.get("results")
+    results = results if isinstance(results, list) else []
+    problems: set[str] = set()
+    if not str(configuration_hash or "").strip():
+        problems.add("current_configuration_identity_missing")
+    if not str(policy_hash or "").strip():
+        problems.add("current_policy_identity_missing")
+    unsupported = 0
+    unresolved = 0
+    semantic_rows: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    for result in results:
+        if not isinstance(result, Mapping):
+            problems.add("package_result_invalid")
+            continue
+        candidate = result.get("candidate")
+        if not isinstance(candidate, Mapping) or not isinstance(
+            candidate.get("factual"), bool
+        ):
+            problems.add("package_candidate_invalid")
+            continue
+        if candidate.get("factual") is True:
+            if result.get("status") == "unsupported":
+                unsupported += 1
+            elif result.get("status") == "unresolved":
+                unresolved += 1
+            elif result.get("status") not in {"supported", "not_applicable"}:
+                problems.add("package_claim_status_invalid")
+        if result.get("semantic_validator_used") is True:
+            identity = result.get("semantic_identity")
+            if not isinstance(identity, Mapping):
+                problems.add("semantic_execution_identity_missing")
+            else:
+                semantic_rows.append((result, identity))
+
+    recorded_unsupported = payload.get("unsupported_factual_count")
+    recorded_unresolved = payload.get("unresolved_factual_count")
+    recorded_semantic = payload.get("semantic_validation_count")
+    if (
+        not _is_nonnegative_int(recorded_unsupported)
+        or recorded_unsupported != unsupported
+    ):
+        problems.add("unsupported_factual_count_mismatch")
+    if (
+        not _is_nonnegative_int(recorded_unresolved)
+        or recorded_unresolved != unresolved
+    ):
+        problems.add("unresolved_factual_count_mismatch")
+    if (
+        not _is_nonnegative_int(recorded_semantic)
+        or recorded_semantic != len(semantic_rows)
+    ):
+        problems.add("semantic_validation_count_mismatch")
+    expected_package_status = (
+        "not_publishable" if unsupported or unresolved else "awaiting_review"
+    )
+    if payload.get("readiness_status") != expected_package_status:
+        problems.add("package_readiness_status_mismatch")
+
+    if payload.get("schema_version") != CLAIM_VALIDATION_SCHEMA_VERSION:
+        problems.add("package_schema_version_stale")
+    if not claim_validation_package_hash_valid(payload):
+        problems.add("package_hash_invalid")
+    validation_identity = payload.get("validation_identity")
+    if not isinstance(validation_identity, Mapping):
+        problems.add("validation_execution_identity_missing")
+    else:
+        if validation_identity.get("schema_version") != "1.0":
+            problems.add("validation_execution_identity_invalid")
+        if not str(validation_identity.get("configuration_hash") or "").strip():
+            problems.add("validation_execution_configuration_identity_missing")
+        if not str(validation_identity.get("policy_hash") or "").strip():
+            problems.add("validation_execution_policy_identity_missing")
+        if (
+            validation_identity.get("claim_validation_validator_version")
+            != CLAIM_VALIDATION_VALIDATOR_VERSION
+            or validation_identity.get("grounding_validator_version")
+            != CLAIM_GROUNDING_VALIDATOR_VERSION
+        ):
+            problems.add("validation_execution_validator_version_stale")
+        if validation_identity.get("source_id") != source_id:
+            problems.add("validation_execution_source_id_stale")
+        if validation_identity.get("source_md5") != source_md5:
+            problems.add("validation_execution_source_md5_stale")
+        if (
+            configuration_hash
+            and validation_identity.get("configuration_hash") != configuration_hash
+        ):
+            problems.add("validation_execution_configuration_hash_stale")
+        if policy_hash and validation_identity.get("policy_hash") != policy_hash:
+            problems.add("validation_execution_policy_hash_stale")
+
+    current_artifact_hash = sha256_json(artifacts)
+    if payload.get("artifact_hash") != current_artifact_hash:
+        problems.add("artifact_hash_stale")
+    if lineage.get("final_artifact_hash") != current_artifact_hash:
+        problems.add("final_artifact_hash_stale")
+    if lineage.get("publication_projection_hash") != publication_projection_hash(
+        final_html
+    ):
+        problems.add("publication_projection_hash_stale")
+    if lineage.get("evidence_pack_hash") != sha256_json(evidence_packs):
+        problems.add("evidence_pack_hash_stale")
+    if lineage.get("source_id") != source_id:
+        problems.add("source_id_stale")
+    if lineage.get("source_md5") != source_md5:
+        problems.add("source_md5_stale")
+    if (
+        lineage.get("claim_validation_validator_version")
+        != CLAIM_VALIDATION_VALIDATOR_VERSION
+    ):
+        problems.add("claim_validation_validator_version_stale")
+    if lineage.get("grounding_validator_version") != CLAIM_GROUNDING_VALIDATOR_VERSION:
+        problems.add("grounding_validator_version_stale")
+    if configuration_hash and lineage.get("configuration_hash") != configuration_hash:
+        problems.add("configuration_hash_stale")
+    if policy_hash and lineage.get("policy_hash") != policy_hash:
+        problems.add("policy_hash_stale")
+    if not str(lineage.get("configuration_hash") or "").strip():
+        problems.add("lineage_configuration_identity_missing")
+    if not str(lineage.get("policy_hash") or "").strip():
+        problems.add("lineage_policy_identity_missing")
+
+    execution_identities: set[str] = set()
+    prompt_hashes: set[str] = set()
+    model_identities: set[str] = set()
+    for result, identity in semantic_rows:
+        if identity.get("schema_version") != "1.0":
+            problems.add("semantic_execution_identity_invalid")
+        required_identity_fields = (
+            "claim_id",
+            "claim_text_hash",
+            "evidence_hash",
+            "prompt_family",
+            "prompt_content_hash",
+            "execution_identity",
+            "validator_version",
+            "model_provider",
+            "model_name",
+            "configuration_policy_identity",
+            "relevant_input_hash",
+        )
+        if any(
+            not str(identity.get(field) or "").strip()
+            for field in required_identity_fields
+        ):
+            problems.add("semantic_execution_identity_incomplete")
+        if identity.get("validator_version") != CLAIM_GROUNDING_VALIDATOR_VERSION:
+            problems.add("semantic_validator_version_stale")
+        candidate = result.get("candidate")
+        candidate = candidate if isinstance(candidate, Mapping) else {}
+        if candidate.get("factual") is not True:
+            problems.add("semantic_claim_not_factual")
+        references = candidate.get("evidence_references")
+        references = references if isinstance(references, list) else []
+        reference_identity: list[dict[str, Any]] = []
+        reference_ids: list[str] = []
+        for reference in references:
+            if not isinstance(reference, Mapping):
+                problems.add("semantic_evidence_reference_invalid")
+                continue
+            reference_ids.append(str(reference.get("evidence_id") or ""))
+            reference_identity.append(
+                {
+                    "evidence_id": reference.get("evidence_id"),
+                    "source_pack": reference.get("source_pack", ""),
+                    "page": reference.get("page"),
+                    "text_hash": reference.get("text_hash", ""),
+                }
+            )
+        if (
+            identity.get("claim_id") != candidate.get("claim_id")
+            or identity.get("claim_text_hash") != candidate.get("text_hash")
+            or identity.get("evidence_ids") != reference_ids
+            or identity.get("evidence_hash") != sha256_json(reference_identity)
+        ):
+            problems.add("semantic_claim_evidence_identity_mismatch")
+        if identity.get("source_identity") != source_id:
+            problems.add("semantic_source_identity_stale")
+        expected_status = {
+            "entailed": "supported",
+            "contradicted": "unsupported",
+            "not_established": "unresolved",
+        }.get(result.get("semantic_outcome"))
+        if (
+            result.get("deterministic_status") != "unresolved"
+            or expected_status != result.get("status")
+        ):
+            problems.add("semantic_disposition_mismatch")
+        execution_identity = str(identity.get("execution_identity") or "")
+        prompt_hash = str(identity.get("prompt_content_hash") or "")
+        provider = str(identity.get("model_provider") or "")
+        model = str(identity.get("model_name") or "")
+        if execution_identity:
+            execution_identities.add(execution_identity)
+        if prompt_hash:
+            prompt_hashes.add(prompt_hash)
+        if provider and model:
+            model_identities.add(f"{provider}/{model}")
+    expected_execution_identities = sorted(execution_identities)
+    if (
+        sorted(_string_list(payload.get("semantic_execution_identities")))
+        != expected_execution_identities
+    ):
+        problems.add("semantic_execution_identities_mismatch")
+    if (
+        sorted(_string_list(lineage.get("semantic_execution_identities")))
+        != expected_execution_identities
+    ):
+        problems.add("lineage_semantic_execution_identities_mismatch")
+    if sorted(_string_list(lineage.get("semantic_prompt_content_hashes"))) != sorted(
+        prompt_hashes
+    ):
+        problems.add("semantic_prompt_identity_mismatch")
+    if sorted(_string_list(lineage.get("semantic_model_identities"))) != sorted(
+        model_identities
+    ):
+        problems.add("semantic_model_identity_mismatch")
+
+    surfaces = ["retained_claim_validation"]
+    if unsupported:
+        surfaces.append("unsupported_factual_claims")
+    if unresolved:
+        surfaces.append("unresolved_material_factual_claims")
+    detail = (
+        f"unsupported_factual_count={unsupported}; "
+        f"unresolved_factual_count={unresolved}"
+    )
+    if problems:
+        detail += "; " + "; ".join(sorted(problems))
+    if unsupported or unresolved or problems:
+        return _fail(
+            "publish_readiness.retained_claim_grounding",
+            surfaces,
+            detail,
+        )
+    return _pass(
+        "publish_readiness.retained_claim_grounding",
+        surfaces,
+        detail,
+    )
+
+
+def _retained_claim_package_artifact_hash(
+    package: ClaimValidationPackage | Mapping[str, Any] | None,
+) -> dict[str, str]:
+    if isinstance(package, ClaimValidationPackage):
+        package_hash = package.package_hash
+    elif isinstance(package, Mapping):
+        package_hash = str(package.get("package_hash") or "")
+    else:
+        package_hash = ""
+    return {"retained_claim_validation": package_hash} if package_hash else {}
+
+
+def _is_nonnegative_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _string_list(value: object) -> list[str]:
+    return (
+        [str(item) for item in value if str(item).strip()]
+        if isinstance(value, list)
+        else []
+    )
 
 
 def _category_result(

@@ -7,6 +7,7 @@ from dataclasses import asdict
 from typing import Any, Callable, List, Sequence
 
 from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
     ClaimSemanticValidationIdentity,
@@ -59,7 +60,6 @@ from .shared import (
     GROUNDING_HARD_FAILURES,
     LOGGER_NAME,
     METRIC_ATTRIBUTION_RE,
-    RETRIEVAL_FAILURE_HINTS,
     ensure_dict,
     grounding_retrieval_mode,
     issue,
@@ -72,7 +72,7 @@ from .shared import (
 RULE_ID = "grounding"
 GROUNDING_FAMILY_SCHEMA_VERSION = "1.1"
 GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v2"
-GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.1"
+GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 
 
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
@@ -490,6 +490,7 @@ def run_grounding_check(
                         ),
                         severity="warning" if unresolved else "error",
                         section=section,
+                        violation_type=violation_type,
                         entity_id=_public_item_id_for_failure(
                             section, text, public_item_ids
                         ),
@@ -543,9 +544,6 @@ def run_grounding_check(
                     and violation_type == "non_fatal_interpretation"
                 ):
                     violation_type = "unsupported_factual_claim"
-                if is_retrieval_failure(reason):
-                    violation_type = "evidence_retrieval_failure"
-
                 severity = grounding_issue_severity(
                     section_policy_value=current_policy,
                     classification=classification,
@@ -564,6 +562,7 @@ def run_grounding_check(
                             ),
                             severity=severity,
                             section=section,
+                            violation_type=violation_type,
                             entity_id=_public_item_id_for_failure(
                                 section, text, public_item_ids
                             ),
@@ -1203,13 +1202,6 @@ def is_report_directive_misattribution(text: str) -> bool:
     )
 
 
-def is_retrieval_failure(reason: str) -> bool:
-    reason_norm = normalize_text(reason)
-    if not reason_norm:
-        return False
-    return any(hint in reason_norm for hint in RETRIEVAL_FAILURE_HINTS)
-
-
 def grounding_issue_severity(
     *,
     section_policy_value: str,
@@ -1222,7 +1214,7 @@ def grounding_issue_severity(
     if violation_type == "not_established":
         return "warning"
     if violation_type == "evidence_retrieval_failure":
-        return "warning"
+        return "error"
     if section_policy_value == "soft" and classification in {
         "analyst_interpretation",
         "prescriptive_recommendation",

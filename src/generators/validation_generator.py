@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport, ValidationRequest
+from src.generators.claim_validation_generator import (
+    attach_claim_validation_execution_identity,
+)
 from src.services import prompt_service, report_analysis_store_service
 from src.utils.errors import AppError
 from src.utils.logging import log_event, new_run_context
@@ -162,12 +164,19 @@ def validate_report(
         report_name=report_name,
     )
     if runtime.retained_claim_validation is not None:
+        candidate_package = attach_claim_validation_execution_identity(
+            runtime.retained_claim_validation,
+            source_id=runtime.source_id,
+            source_md5=str(md5 or ""),
+            configuration_hash=ctx.configuration_hash,
+            policy_hash=ctx.policy_hash,
+        )
         store_pack(
             analysis_store=analysis_store,
             output_dir=settings.output_dir,
             report_id=request.report_id,
-            pack_name=f"{pack_name}_retained_claim_validation",
-            payload=asdict(runtime.retained_claim_validation),
+            pack_name=f"{pack_name}_retained_claim_validation_candidate",
+            payload=candidate_package,
             ctx=ctx,
             report_name=report_name,
         )

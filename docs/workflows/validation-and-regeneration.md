@@ -14,6 +14,15 @@ remain blocking. Material unsupported claims, numbers, contradictions, missing
 evidence, and other error-severity grounding findings are unchanged and still
 fail the report before publication.
 
+When the source status records a data gap and the configured policy is `warn`,
+only a grounding issue with the structured `violation_type` set to
+`evidence_retrieval_failure` may be softened. Retrieval failures remain
+blocking without that configured data-gap policy. Unsupported numbers,
+contradictions, unknown evidence IDs, quote mismatches, provenance failures,
+report-identity errors, and other integrity rules remain blocking. An explicit
+contradiction or hard violation type takes precedence over retrieval wording in
+a model reason.
+
 Grounding judges semantic entailment against linked retained evidence, not
 wording similarity. It accepts synonyms, natural paraphrase, sentence or
 clause reordering, active/passive voice, concise executive wording, and
@@ -35,10 +44,9 @@ undecidable enter the existing report-level grounding batch, with their exact
 linked evidence. That batch returns `entailed`, `contradicted`, or
 `not_established`; these map to supported, unsupported, and unresolved
 respectively. An unresolved result remains a warning and does not become a
-factual contradiction or an independent publish-readiness gate. Missing or
-invalid provenance and mechanically proven source-fidelity failures remain
-blocking. The check uses retained evidence only and does not contain publisher-
-or report-specific exceptions.
+factual contradiction. Missing or invalid provenance and mechanically proven
+source-fidelity failures remain blocking. The check uses retained evidence only
+and does not contain publisher- or report-specific exceptions.
 
 Grounding uses the existing `report_vs/validate/grounding` prompt family and one
 report-level execution for all unresolved retained claims. Each returned claim
@@ -48,9 +56,23 @@ validator version, model provider and name, configuration-policy identity, and
 the current report-level input hash. The existing prompt-family materialization
 is reusable only when its source, full input, prompt, execution, validator,
 model, and policy identities still match; stale results leave claims unresolved
-and go through the current report-level execution. The resulting
-`retained_claim_validation` pack is diagnostic and does not alter the aggregate
-validation disposition by itself.
+and go through the current report-level execution. Validation persists this
+result as a candidate with its source, validator, configuration, and policy
+identity. After the final accepted artifacts are rendered, the renderer checks
+the candidate against the exact artifact and evidence set, binds the final
+public projection hash and source lineage, and writes the canonical
+`retained_claim_validation` package. A candidate with changed inputs or stale
+execution identity is rejected.
+
+The signed `publish_readiness.json` consumes that retained package through
+`publish_readiness.retained_claim_grounding`. Unsupported factual claims and
+unresolved material factual claims both block release, with separate counts;
+unresolved means grounding is incomplete, not that the claim was proven false.
+Readiness compares the package hash, final artifact and publication-projection
+hashes, evidence-pack hash, source identity, validator versions, configuration
+and policy identities, and semantic execution/prompt/model identities when
+semantic grounding ran. It makes no provider call. A missing required package
+or any stale lineage also blocks readiness.
 
 Every material sentence is also classified as a factual claim, an analyst
 interpretation, or a prescriptive recommendation. Final-insight `so_what` and

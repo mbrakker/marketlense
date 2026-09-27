@@ -33,13 +33,6 @@ METRIC_ATTRIBUTION_RE = re.compile(
     r"\b(report\s+(states|shows|documents|finds|found|says|said|recommends|recommended|instructs|instructed))\b",
     re.IGNORECASE,
 )
-RETRIEVAL_FAILURE_HINTS = {
-    "insufficient evidence",
-    "retrieval failed",
-    "unable to retrieve",
-    "no relevant evidence",
-    "context window missing",
-}
 QUOTE_PARAPHRASE_HINTS = {"paraphrase", "paraphrased", "summary", "adapted"}
 WINDOW_TOKEN_TARGET = 420
 WINDOW_TOKEN_MIN = 260
@@ -94,6 +87,7 @@ def issue(
     section: str,
     repair_target: str = "",
     entity_id: str = "",
+    violation_type: str = "",
 ) -> ValidationIssue:
     return ValidationIssue(
         schema_version="1.0",
@@ -101,6 +95,7 @@ def issue(
         severity=severity if severity in {"error", "warning", "info"} else "warning",
         affected_section=section,
         rule_id=rule_id,
+        violation_type=violation_type,
         repair_target=repair_target,
         entity_id=entity_id,
     )
@@ -121,14 +116,29 @@ def downgrade_issues_for_data_gap(
         ValidationIssue(
             schema_version=issue.schema_version,
             message=issue.message,
-            severity="warning" if issue.severity == "error" else issue.severity,
+            severity=(
+                "warning"
+                if issue.severity == "error" and _is_retrieval_availability_issue(issue)
+                else issue.severity
+            ),
             affected_section=issue.affected_section,
             rule_id=issue.rule_id,
+            violation_type=issue.violation_type,
             repair_target=issue.repair_target,
             entity_id=issue.entity_id,
         )
         for issue in issues
     ]
+
+
+def _is_retrieval_availability_issue(issue: ValidationIssue) -> bool:
+    """Recognize only the canonical structured grounding retrieval failure."""
+    if str(issue.rule_id or "").strip().casefold() != "grounding":
+        return False
+    return (
+        str(issue.violation_type or "").strip().casefold()
+        == "evidence_retrieval_failure"
+    )
 
 
 def format_confidence(value: float) -> str:

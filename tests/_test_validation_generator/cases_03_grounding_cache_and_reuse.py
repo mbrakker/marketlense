@@ -1,12 +1,17 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from dataclasses import replace
+
+from src.contracts.validation import ValidationIssue, ValidationReport
+from src.generators.validation.cache import validation_report_from_payload
 from src.generators.validation.semantic import run_semantic_validation
+from src.generators.validation.shared import downgrade_issues_for_data_gap
 
 from ._shared import *  # noqa: F401,F403
 
 
-def test_validation_warns_on_data_gap(tmp_path):
+def test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
         "insights_final": [
@@ -37,9 +42,212 @@ def test_validation_warns_on_data_gap(tmp_path):
         openai_client=fake_openai,
         analysis_store=analysis_store,
     )
+    assert result.status == "fail"
+    assert result.severity == "error"
+    assert {issue.rule_id for issue in result.issues if issue.severity == "error"} == {
+        "metrics",
+        "quotes",
+    }
+
+
+def test_validation_allows_structured_retrieval_failure_under_data_gap_policy(
+    tmp_path,
+):
+    settings = _settings(tmp_path, validation_data_gap_policy="warn")
+    report = replace(
+        _report(),
+        insights=[],
+        quote=Quote(text="", author=""),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+    )
+    fake_openai = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []},
+        grounding_payload={
+            "unsupported": [
+                {
+                    "section": "summary",
+                    "text": "The market expanded.",
+                    "violation_type": "evidence_retrieval_failure",
+                    "reason": "retrieval failed; no relevant evidence was available",
+                }
+            ]
+        },
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="low_text_retrieval_report",
+            report=report,
+            artifacts={"source_status": _low_text_status()},
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=fake_openai,
+        analysis_store=FakeAnalysisStore(),
+    )
+
     assert result.status == "pass"
     assert result.severity == "warning"
-    assert any(issue.severity == "warning" for issue in result.issues)
+    retrieval = next(issue for issue in result.issues if issue.rule_id == "grounding")
+    assert "evidence_retrieval_failure" in retrieval.message
+    assert retrieval.violation_type == "evidence_retrieval_failure"
+    assert retrieval.severity == "warning"
+
+
+def test_structured_retrieval_failure_without_data_gap_remains_blocking(tmp_path):
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="retrieval_without_gap_report",
+            report=replace(
+                _report(),
+                insights=[],
+                quote=Quote(text="", author=""),
+                figure=Figure(title="", evidence=""),
+                commentary="",
+            ),
+            artifacts={},
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        _settings(tmp_path, validation_data_gap_policy="warn"),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={
+                "unsupported": [
+                    {
+                        "section": "summary",
+                        "text": "The market expanded.",
+                        "violation_type": "evidence_retrieval_failure",
+                        "reason": "source context could not be accessed",
+                    }
+                ]
+            },
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    retrieval = next(issue for issue in result.issues if issue.rule_id == "grounding")
+    assert result.status == "fail"
+    assert retrieval.severity == "error"
+
+
+def test_blocking_data_gap_policy_keeps_retrieval_failure_blocking(tmp_path):
+    report = replace(
+        _report(),
+        insights=[],
+        quote=Quote(text="", author=""),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="retrieval_block_policy_report",
+            report=report,
+            artifacts={"source_status": _low_text_status()},
+            evidence_packs={},
+            vector_store_id=None,
+        ),
+        _settings(tmp_path, validation_data_gap_policy="block"),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={
+                "unsupported": [
+                    {
+                        "section": "summary",
+                        "text": "The market expanded.",
+                        "violation_type": "evidence_retrieval_failure",
+                        "reason": "source context could not be accessed",
+                    }
+                ]
+            },
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    retrieval = next(issue for issue in result.issues if issue.rule_id == "grounding")
+    assert result.status == "fail"
+    assert retrieval.severity == "error"
+
+
+def test_data_gap_downgrades_only_structured_retrieval_failures():
+    issues = [
+        ValidationIssue(
+            schema_version="1.0",
+            rule_id="grounding",
+            message="[grounding] Evidence was unavailable.",
+            severity="error",
+            affected_section="summary",
+            violation_type="evidence_retrieval_failure",
+        ),
+        ValidationIssue(
+            schema_version="1.0",
+            rule_id="grounding",
+            message=(
+                "[grounding] [factual_claim|evidence_retrieval_failure] "
+                "Evidence was unavailable."
+            ),
+            severity="error",
+            affected_section="summary",
+        ),
+        ValidationIssue(
+            schema_version="1.0",
+            rule_id="grounding",
+            message=(
+                "[grounding] [factual_claim|unsupported_number] "
+                "Unsupported value: 42%."
+            ),
+            severity="error",
+            affected_section="summary",
+        ),
+        ValidationIssue(
+            schema_version="1.0",
+            rule_id="grounding",
+            message=(
+                "[grounding] [factual_claim|contradicted] "
+                "Source reports a decline."
+            ),
+            severity="error",
+            affected_section="summary",
+        ),
+        ValidationIssue(
+            schema_version="1.0",
+            rule_id="report_identity",
+            message="[report_identity] Identity mismatch.",
+            severity="error",
+            affected_section="report",
+        ),
+    ]
+
+    downgraded = downgrade_issues_for_data_gap(issues)
+
+    assert [item.severity for item in downgraded] == [
+        "warning",
+        "error",
+        "error",
+        "error",
+        "error",
+    ]
+    serialized = ValidationReport(
+        schema_version="1.1",
+        status="pass",
+        severity="warning",
+        issues=[downgraded[0]],
+    ).to_dict()
+    assert serialized["issues"][0]["violation_type"] == "evidence_retrieval_failure"
+    assert (
+        validation_report_from_payload(serialized, "").issues[0].violation_type
+        == "evidence_retrieval_failure"
+    )
 
 
 def test_validation_issue_order_preserved_with_parallel_checks(tmp_path):
@@ -319,7 +527,11 @@ def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_p
 
 
 __all__ = [
-    "test_validation_warns_on_data_gap",
+    "test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap",
+    "test_validation_allows_structured_retrieval_failure_under_data_gap_policy",
+    "test_structured_retrieval_failure_without_data_gap_remains_blocking",
+    "test_blocking_data_gap_policy_keeps_retrieval_failure_blocking",
+    "test_data_gap_downgrades_only_structured_retrieval_failures",
     "test_validation_issue_order_preserved_with_parallel_checks",
     "test_validation_grounding_uses_chat_path_when_flag_disabled",
     "test_validation_grounding_uses_vector_path_when_flag_enabled",

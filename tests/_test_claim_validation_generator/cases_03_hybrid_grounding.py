@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 import pytest
 
+import src.generators.claim_validation_generator as claim_validation
 from src.contracts.claim_validation import (
     ClaimSemanticGroundingResult,
     ClaimSemanticValidationIdentity,
@@ -244,3 +245,174 @@ def test_missing_semantic_batch_result_is_explicitly_diagnostic() -> None:
     assert result.status == "unresolved"
     assert result.semantic_outcome is None
     assert result.semantic_disagreement == "semantic_result_missing"
+
+
+def test_final_claim_package_binds_current_artifact_evidence_and_source_lineage():
+    artifacts, evidence = _ambiguous_claim(
+        "Wallet use is becoming a common checkout method."
+    )
+    semantic_calls = 0
+
+    def ground(claims):
+        nonlocal semantic_calls
+        semantic_calls += 1
+        return [_semantic_result(claims[0], "entailed")]
+
+    validation_package = validate_retained_claims(
+        artifacts,
+        evidence,
+        semantic_batch_validator=ground,
+        source_identity="source-1",
+    )
+    assert semantic_calls == 1
+    package = claim_validation.attach_claim_validation_execution_identity(
+        validation_package,
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+    materialize = getattr(
+        claim_validation, "materialize_retained_claim_package", None
+    )
+    assert callable(materialize)
+
+    final_html = "<html><body>Current report.</body></html>"
+    retained = materialize(
+        package,
+        artifacts=artifacts,
+        evidence_packs=evidence,
+        final_html=final_html,
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    assert retained is not None
+    assert semantic_calls == 1
+    assert (
+        retained["lineage"]["final_artifact_hash"]
+        == validation_package.artifact_hash
+    )
+    assert retained["lineage"]["publication_projection_hash"]
+    assert retained["lineage"]["evidence_pack_hash"]
+    assert retained["lineage"]["source_id"] == "source-1"
+    assert retained["lineage"]["source_md5"] == "source-md5"
+    assert retained["lineage"]["configuration_hash"] == "config-1"
+    assert retained["lineage"]["policy_hash"] == "policy-1"
+    assert retained["lineage"]["claim_validation_validator_version"]
+    assert retained["lineage"]["grounding_validator_version"]
+    assert retained["lineage"]["semantic_execution_identities"] == [
+        "execution-1"
+    ]
+    assert retained["lineage"]["semantic_prompt_content_hashes"] == [
+        "prompt-content-1"
+    ]
+    assert retained["lineage"]["semantic_model_identities"]
+
+
+def test_final_claim_package_materialization_rejects_stale_evidence() -> None:
+    artifacts, evidence = _ambiguous_claim(
+        "Wallet use is becoming a common checkout method."
+    )
+    package = claim_validation.attach_claim_validation_execution_identity(
+        validate_retained_claims(artifacts, evidence, source_identity="source-1"),
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+    evidence["findings"]["findings"][0]["text"] = "A different source fact."
+    materialize = getattr(
+        claim_validation, "materialize_retained_claim_package", None
+    )
+    assert callable(materialize)
+
+    retained = materialize(
+        package,
+        artifacts=artifacts,
+        evidence_packs=evidence,
+        final_html="<html><body>Current report.</body></html>",
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    assert retained is None
+
+
+def test_final_claim_package_rejects_changed_deterministic_disposition() -> None:
+    artifacts, evidence = _ambiguous_claim(
+        "Wallet use is becoming a common checkout method."
+    )
+    package = claim_validation.attach_claim_validation_execution_identity(
+        validate_retained_claims(artifacts, evidence, source_identity="source-1"),
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+    package["results"][0]["status"] = "supported"
+    package["results"][0]["deterministic_status"] = "supported"
+    package["package_hash"] = ""
+    package["package_hash"] = claim_validation.claim_validation_package_hash(package)
+
+    retained = claim_validation.materialize_retained_claim_package(
+        package,
+        artifacts=artifacts,
+        evidence_packs=evidence,
+        final_html="<html><body>Current report.</body></html>",
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    assert retained is None
+
+
+@pytest.mark.parametrize(
+    ("identity_field", "stale_value"),
+    [
+        ("source_id", "source:old"),
+        ("source_md5", "source-md5-old"),
+        ("configuration_hash", "config-old"),
+        ("policy_hash", "policy-old"),
+    ],
+)
+def test_final_claim_package_rejects_stale_validation_identity(
+    identity_field: str, stale_value: str
+) -> None:
+    artifacts, evidence = _ambiguous_claim(
+        "Wallet use is becoming a common checkout method."
+    )
+    package = asdict(
+        validate_retained_claims(artifacts, evidence, source_identity="source-1")
+    )
+    package["validation_identity"] = {
+        "schema_version": "1.0",
+        "source_id": "source-1",
+        "source_md5": "source-md5",
+        "claim_validation_validator_version": "retained_claim_validation:v1",
+        "grounding_validator_version": "grounding_validation_output:1.1",
+        "configuration_hash": "config-1",
+        "policy_hash": "policy-1",
+    }
+    package["validation_identity"][identity_field] = stale_value
+    package["package_hash"] = ""
+    package["package_hash"] = claim_validation.claim_validation_package_hash(package)
+
+    retained = claim_validation.materialize_retained_claim_package(
+        package,
+        artifacts=artifacts,
+        evidence_packs=evidence,
+        final_html="<html><body>Current report.</body></html>",
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    assert retained is None

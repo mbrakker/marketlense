@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaimValidationPackage",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_hash",
+    "package_hash",
+    "results",
+    "readiness_status",
+    "unsupported_factual_count",
+    "unresolved_factual_count",
+    "deterministic_pass_count",
+    "semantic_validation_count",
+    "semantic_execution_identities",
+    "validation_identity",
+    "lineage"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.2"},
+    "artifact_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "package_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["candidate", "status", "deterministic_status", "semantic_validator_used", "semantic_execution_identity"],
+        "properties": {
+          "candidate": {"type": "object"},
+          "status": {"type": "string", "enum": ["supported", "unsupported", "unresolved", "not_applicable"]},
+          "deterministic_status": {"type": "string", "enum": ["supported", "unsupported", "unresolved", "not_applicable"]},
+          "semantic_validator_used": {"type": "boolean"},
+          "semantic_execution_identity": {"type": "string"},
+          "semantic_identity": {"type": ["object", "null"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "readiness_status": {"type": "string", "enum": ["awaiting_review", "not_publishable"]},
+    "unsupported_factual_count": {"type": "integer", "minimum": 0},
+    "unresolved_factual_count": {"type": "integer", "minimum": 0},
+    "deterministic_pass_count": {"type": "integer", "minimum": 0},
+    "semantic_validation_count": {"type": "integer", "minimum": 0},
+    "semantic_execution_identities": {"type": "array", "items": {"type": "string"}},
+    "validation_identity": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["schema_version", "source_id", "source_md5", "claim_validation_validator_version", "grounding_validator_version", "configuration_hash", "policy_hash"],
+          "properties": {
+            "schema_version": {"type": "string", "const": "1.0"},
+            "source_id": {"type": "string"},
+            "source_md5": {"type": "string"},
+            "claim_validation_validator_version": {"type": "string", "minLength": 1},
+            "grounding_validator_version": {"type": "string", "minLength": 1},
+            "configuration_hash": {"type": "string"},
+            "policy_hash": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "lineage": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "final_artifact_hash",
+            "publication_projection_hash",
+            "evidence_pack_hash",
+            "source_id",
+            "source_md5",
+            "claim_validation_validator_version",
+            "grounding_validator_version",
+            "semantic_execution_identities",
+            "semantic_prompt_content_hashes",
+            "semantic_model_identities",
+            "configuration_hash",
+            "policy_hash"
+          ],
+          "properties": {
+            "schema_version": {"type": "string", "const": "1.0"},
+            "final_artifact_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "publication_projection_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "evidence_pack_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "source_id": {"type": "string"},
+            "source_md5": {"type": "string"},
+            "claim_validation_validator_version": {"type": "string", "minLength": 1},
+            "grounding_validator_version": {"type": "string", "minLength": 1},
+            "semantic_execution_identities": {"type": "array", "items": {"type": "string"}},
+            "semantic_prompt_content_hashes": {"type": "array", "items": {"type": "string"}},
+            "semantic_model_identities": {"type": "array", "items": {"type": "string"}},
+            "configuration_hash": {"type": "string"},
+            "policy_hash": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}
