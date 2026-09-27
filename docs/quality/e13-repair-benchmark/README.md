@@ -598,3 +598,58 @@ The insight safe-removal strategy is planned only when its issue set resolves
 to one stable failed insight ID, which is the existing removal handler's
 atomicity contract. A multi-insight batch that exhausts its rewrite and
 rebind strategies is left blocked before the invalid single-item removal path.
+
+## Root-target planner replay — 2026-09-27, implementation SHA `6854d5d2`
+
+The unchanged A21, Mobile editorial, and DoubleVerify manifests were replayed
+at the committed planner SHA. Their hashes match the frozen manifests. Four of
+seven cases reproduced at the current validator; three A21 cases were no
+longer reproducible. The current case-level denominator is four, and success
+at one or three attempts is 0/4. One A21 attachment candidate was promoted,
+but its case did not meet the scorecard closure condition. E13 remains
+**Active**.
+
+Mobile's four root fingerprints cover the unsupported `1.0` number in
+`insight-005.so_what`, grounding failures in insight 002 and insight 005, and a
+LinkedIn grounding failure. The planner targeted the two exact `so_what`
+leaves and LinkedIn claim 5. All three attempts reached candidate validation;
+none promoted. Candidate diagnostics resolved the baseline number and
+grounding failures, but each candidate introduced unsupported key-figure facts
+and unverified downstream projection or scope changes across `key_figures`,
+`chart_insight_cards`, `metric_spine`, or `executive_advisory`. The old
+`regeneration_target_item_unchanged` terminal did not recur.
+
+DoubleVerify's six root fingerprints include three retained metric
+value/unit/number failures, Expert View and LinkedIn metric-label relationship
+failures, and a LinkedIn grounding failure. Attempt 1 targeted the canonical
+insight metric's exact `value` and `unit` leaves before the LinkedIn claim; the
+retained metric failures persisted. Attempt 2 kept the metric source first and
+cleared the retained metric and metric-label findings in the candidate, but
+introduced `unsupported_numeric_claim` and `regeneration_source_page`. On the
+next planning pass, retry memory admitted the dependent metric-label repairs
+for Expert View and LinkedIn. Attempt 3 included those claims; deterministic
+validation rejected the candidate for an executive-advisory projection
+mismatch and reintroduced removed insight. All three candidates rolled back.
+
+The A21 ebook case reached two candidate validations for the exact summary
+claim/evidence-map item. Both rolled back, and the case ended at
+`schema_type_mismatch`. A21 attachment reached candidate validation twice and
+promoted its second evidence rebind, while the A21 scorecard still recorded
+0/2 case-level closures. Across reproducible cases, the isolated usage ledgers
+recorded 17 artifact-generation provider calls (146,927 input and 19,082
+output tokens; estimated USD 0.023329). The benchmark scorecard could not
+attribute Mobile and DoubleVerify aggregate usage.
+
+The final isolated IAS workflow used fresh state and kept publication disabled,
+but did not pass. It terminated at `regeneration_repair_decision_invalid` with
+reason `patch_value_over_broad` before reaching `awaiting_review` (39 provider
+calls, 265,570 input and 51,388 output tokens, USD 0.052109). The model's
+over-broad patch was rejected by the existing repair contract. The specific
+multi-insight safe-removal failure seen in the previous canary was not reached
+in this run; the planner regression test covers that guard directly.
+
+Per-case fingerprints, targets, candidate deltas, usage, validation commands,
+and canary evidence are in the [2026-09-27 root-target measurement](results/2026-09-27-6854d5d2.json)
+(SHA-256 recorded in its [sidecar](results/2026-09-27-6854d5d2.json.sha256)).
+E13 remains **Active**: no reproducible case met scorecard closure, and the
+required isolated workflow did not pass.

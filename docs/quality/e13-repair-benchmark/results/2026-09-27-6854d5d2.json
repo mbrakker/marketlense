@@ -1,0 +1,325 @@
+{
+  "schema_version": "1.0",
+  "measured_at_utc_date": "2026-09-27",
+  "implementation_sha": "6854d5d24b6af7ba42102f59756ba9ef328dd486",
+  "e13_status": "active",
+  "manifest_sha256": {
+    "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+    "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+    "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+  },
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-planner-fix-6854d5d24b6af7ba42102f59756ba9ef328dd486/a21 --implementation-sha 6854d5d24b6af7ba42102f59756ba9ef328dd486",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-planner-fix-6854d5d24b6af7ba42102f59756ba9ef328dd486/mobile --implementation-sha 6854d5d24b6af7ba42102f59756ba9ef328dd486",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-planner-fix-6854d5d24b6af7ba42102f59756ba9ef328dd486/doubleverify --implementation-sha 6854d5d24b6af7ba42102f59756ba9ef328dd486"
+  ],
+  "aggregate": {
+    "cases": 7,
+    "reproducible_cases": 4,
+    "no_longer_reproducible_cases": 3,
+    "artifact_generation_provider_calls": 17,
+    "artifact_generation_input_tokens": 146927,
+    "artifact_generation_output_tokens": 19082,
+    "artifact_generation_estimated_cost_usd": 0.023329,
+    "candidate_validation_attempts": 10,
+    "candidate_promotions": 1,
+    "case_success_at_1": "0/4",
+    "case_success_at_3": "0/4",
+    "e13_closure": false,
+    "usage_source": "isolated replay llm_usage.sqlite events where action starts with artifacts:regenerate"
+  },
+  "cases": [
+    {
+      "case_id": "attachment-the-6dddc246d289",
+      "cohort": "a21",
+      "reproducible": true,
+      "root_failure_fingerprints": [
+        "6e16bff4f06c6aab43f6d9ea601b584658274eeb5476e50f0636bfe82be4eb3c"
+      ],
+      "targets_by_attempt": [
+        {
+          "target": "insights_final[item=insight-002].text",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "grounding"
+          ],
+          "persisting": [],
+          "introduced": [
+            "grounding:metadata.title"
+          ]
+        },
+        {
+          "target": "insights_final[item=insight-002].text",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "promoted",
+          "resolved": [
+            "grounding"
+          ],
+          "persisting": [],
+          "introduced": []
+        }
+      ],
+      "artifact_generation_provider_calls": 2,
+      "artifact_generation_input_tokens": 11663,
+      "artifact_generation_output_tokens": 2030,
+      "artifact_generation_estimated_cost_usd": 0.002181,
+      "candidate_validation_attempts": 2,
+      "case_final_status": "pass",
+      "case_success_at_1_or_3": false,
+      "note": "One candidate promoted, but current-validator case-level closure criteria remained unmet."
+    },
+    {
+      "case_id": "ebook-0225-fut-997cc1cccd6a",
+      "cohort": "a21",
+      "reproducible": true,
+      "root_failure_fingerprints": [
+        "4a2acfa9f37e309f1860c315920f2b428344a62eff97f17e6c367a6850ceadff",
+        "7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6",
+        "bee0bdcce9d2af6c08ddab4d09b6361ad0df9550fe84ab06e98c62915c11a089"
+      ],
+      "targets_by_attempt": [
+        {
+          "target": "summary.claim_evidence_map[0].claim; summary.executive_summary[claim_index=0]",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "retained_claim.protected_fact_attribution_consistency"
+          ],
+          "persisting": [
+            "retained_claim.protected_fact_attribution_consistency"
+          ],
+          "introduced": []
+        },
+        {
+          "target": "summary.claim_evidence_map[0].claim; summary.executive_summary[claim_index=0]",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "retained_claim.protected_fact_attribution_consistency"
+          ],
+          "persisting": [
+            "grounding:metadata.title",
+            "artifact_quality"
+          ],
+          "introduced": []
+        }
+      ],
+      "artifact_generation_provider_calls": 2,
+      "artifact_generation_input_tokens": 11663,
+      "artifact_generation_output_tokens": 2030,
+      "artifact_generation_estimated_cost_usd": 0.002181,
+      "candidate_validation_attempts": 2,
+      "terminal_failure": "schema_type_mismatch",
+      "promotion": "none",
+      "case_success_at_1_or_3": false
+    },
+    {
+      "case_id": "public-editorial-linkedin-mobile-app",
+      "cohort": "mobile_editorial",
+      "reproducible": true,
+      "root_failure_fingerprints": [
+        "13427384dc4d6e3b9f5540858aa78ddc64027d153493682ef51b851c3a743a2a",
+        "5994591c255f45b5fc00805115a4d7cbaed223580f5f4b24352071664b1423fa",
+        "a546e6b177710586a8b1f5ec052ecd1035c0227d51322a378868ac703944b24d",
+        "f01186026598a3ef1683d18dec85acb428fbb991af59662d90abb867af250143"
+      ],
+      "root_failure_rules": [
+        "grounding:insights:insight-002.so_what",
+        "grounding:insights:insight-005.so_what",
+        "grounding:linkedin_post",
+        "numbers:insights:insight-005.so_what"
+      ],
+      "targets_by_attempt": [
+        {
+          "target": "insights_final[item=insight-002].so_what; insights_final[item=insight-005].so_what; linkedin_post[claim_index=5]",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "numbers",
+            "grounding"
+          ],
+          "introduced": [
+            "regeneration_scope_violation",
+            "regeneration_derived_projection",
+            "retained_claim.protected_fact_*"
+          ]
+        },
+        {
+          "target": "insights_final[item=insight-002].so_what; insights_final[item=insight-005].so_what; linkedin_post[claim_index=5]",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "numbers",
+            "grounding"
+          ],
+          "introduced": [
+            "regeneration_scope_violation",
+            "regeneration_derived_projection",
+            "retained_claim.protected_fact_*"
+          ]
+        },
+        {
+          "target": "linkedin_post[claim_index=5]",
+          "action": "REMOVE_CLAIM/safe_removal",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "numbers",
+            "grounding"
+          ],
+          "introduced": [
+            "regeneration_scope_violation",
+            "regeneration_derived_projection",
+            "retained_claim.protected_fact_direction_consistency"
+          ]
+        }
+      ],
+      "artifact_generation_provider_calls": 6,
+      "artifact_generation_input_tokens": 74775,
+      "artifact_generation_output_tokens": 9398,
+      "artifact_generation_estimated_cost_usd": 0.012178,
+      "candidate_validation_attempts": 3,
+      "hard_failure_introduction_attempt_count": 3,
+      "hard_failure_introduction_count": 73,
+      "out_of_scope_mutation_attempts": 3,
+      "unsupported_claim_evidence_introduction_attempts": 3,
+      "promotion": "none",
+      "case_success_at_1_or_3": false,
+      "usage_attribution": "benchmark scorecard unavailable; observed artifact-generation events in isolated llm_usage.sqlite"
+    },
+    {
+      "case_id": "doubleverify-linkedin-public-editorial-hard-failure",
+      "cohort": "doubleverify",
+      "reproducible": true,
+      "root_failure_fingerprints": [
+        "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+        "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+        "424e17b8cc545177bb6648aaba8c5f993f2b86a9e2bb887e346c9bb6b19f6bbb",
+        "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+        "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+        "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f"
+      ],
+      "root_failure_rules": [
+        "retained_claim.protected_fact_value_consistency:insights:q1-regional-ad-attention-index.metric",
+        "retained_claim.protected_fact_unit_currency_consistency:insights:q1-regional-ad-attention-index.metric",
+        "retained_claim.number_value_unit_match:insights:q1-regional-ad-attention-index.metric",
+        "public_editorial_quality.metric_label_relationship:expert_comment",
+        "public_editorial_quality.metric_label_relationship:linkedin_post",
+        "grounding:linkedin_post"
+      ],
+      "targets_by_attempt": [
+        {
+          "target": "insights_final[item=q1-regional-ad-attention-index].metric.value; insights_final[item=q1-regional-ad-attention-index].metric.unit; linkedin_post[claim_index=1]",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "grounding:linkedin_post",
+            "metrics"
+          ],
+          "persisting": [
+            "retained_claim.protected_fact_value_consistency",
+            "retained_claim.protected_fact_unit_currency_consistency",
+            "retained_claim.number_value_unit_match",
+            "public_editorial_quality.metric_label_relationship"
+          ],
+          "introduced": []
+        },
+        {
+          "target": "insights_final[item=q1-regional-ad-attention-index].metric.value; insights_final[item=q1-regional-ad-attention-index].metric.unit; linkedin_post[claim_index=1]",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [
+            "retained_claim.protected_fact_value_consistency",
+            "retained_claim.protected_fact_unit_currency_consistency",
+            "retained_claim.number_value_unit_match",
+            "public_editorial_quality.metric_label_relationship",
+            "metrics"
+          ],
+          "persisting": [],
+          "introduced": [
+            "public_editorial_quality.unsupported_numeric_claim",
+            "regeneration_source_page"
+          ]
+        },
+        {
+          "target": "insights_bundle safe-removal target; expert_comment[claim_index=0]; linkedin_post[claim_index=1,3]",
+          "action": "REMOVE_CLAIM/safe_removal + REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved": [],
+          "persisting": [],
+          "introduced": [
+            "regeneration_derived_projection:executive_advisory",
+            "regeneration_removed_insight_reintroduced"
+          ]
+        }
+      ],
+      "artifact_generation_provider_calls": 7,
+      "artifact_generation_input_tokens": 47429,
+      "artifact_generation_output_tokens": 5915,
+      "artifact_generation_estimated_cost_usd": 0.006795,
+      "candidate_validation_attempts": 3,
+      "promotion": "none",
+      "terminal_failure": "report_payload_incomplete",
+      "case_success_at_1_or_3": false,
+      "usage_attribution": "benchmark scorecard unavailable; observed artifact-generation events in isolated llm_usage.sqlite"
+    },
+    {
+      "case_id": "2026-global-co-8970fc13f012",
+      "cohort": "a21",
+      "reproducible": false,
+      "root_failure_fingerprints": [
+        "2c0273babad45f3efe1e5adb360fc2c5ca7fb296446820ddb761b48045670aa1",
+        "5b66c6ac81180a653c9b42843347a3184937440a7c13e720dc4d85eb31fb3e74"
+      ]
+    },
+    {
+      "case_id": "final-web-vers-1d9e64dd7425",
+      "cohort": "a21",
+      "reproducible": false,
+      "root_failure_fingerprints": [
+        "05e6f190900d8280e42ca4a077e2bb78cf24d7691b8d36fe0b255ffb9f7438d0"
+      ]
+    },
+    {
+      "case_id": "g0-ec-trends-r-41f8ffd78145",
+      "cohort": "a21",
+      "reproducible": false,
+      "root_failure_fingerprints": []
+    }
+  ],
+  "verification": {
+    "focused_tests": "3 passed for multi-insight removal eligibility, dependent-target retry planning, and canonical metric no-op/copy",
+    "broad_regeneration_suite": "268 passed, 2 pre-existing queue-lineage failures",
+    "baseline_failures": [
+      "test_a21_full_chain_from_frozen_cohort_through_awaiting_review[unsupported-soft-copy-repair]",
+      "test_a21_full_chain_from_frozen_cohort_through_awaiting_review[ias-known-claim-repair]"
+    ],
+    "ruff": "passed",
+    "mypy": "764 source files, zero tracked baseline errors",
+    "format": "passed",
+    "ias_canary": {
+      "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-canary-6854d5d2",
+      "result": "failed",
+      "final_state": "failed",
+      "terminal_failure_code": "regeneration_repair_decision_invalid",
+      "terminal_reason": "patch_value_over_broad",
+      "workflow_attempts": 1,
+      "publication_enabled": false,
+      "provider_calls": 39,
+      "input_tokens": 265570,
+      "output_tokens": 51388,
+      "estimated_cost_usd": 0.052109,
+      "duration_seconds": 301.39
+    }
+  }
+}
