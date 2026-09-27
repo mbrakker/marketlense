@@ -46,6 +46,7 @@ from src.generators.report_regeneration_generator import (
     _build_grounding_package,
     _build_regeneration_state,
     _build_soft_copy_claim_evidence_package,
+    _deterministic_family_soft_copy_bindings,
     _merge_regenerated_insights_by_stable_id,
     _repair_decision_protected_fields_are_complete,
     _restore_final_insight_evidence_bindings,
@@ -327,6 +328,46 @@ def test_handcrafted_incomplete_protected_field_complement_is_rejected() -> None
             repair_strategy="current_evidence",
         ),
         [],
+    )
+
+
+def test_family_soft_copy_repair_rebuilds_only_new_claim_bindings() -> None:
+    sibling_text = "Unchanged sibling claim."
+    sibling = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:sibling",
+        text_hash=hashlib.sha256(sibling_text.encode()).hexdigest(),
+        classification="interpretive",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+
+    bindings = _deterministic_family_soft_copy_bindings(
+        artifact_family="expert_comment",
+        text=f"{sibling_text} New factual sentence.",
+        selected_evidence_ids=["f2"],
+        existing_claims=[sibling],
+    )
+
+    assert bindings == [
+        {
+            "claim": "New factual sentence.",
+            "classification": "factual",
+            "evidence_ids": ["f2"],
+        }
+    ]
+    assert (
+        _deterministic_family_soft_copy_bindings(
+            artifact_family="expert_comment",
+            text="New unsupported sentence.",
+            selected_evidence_ids=[],
+            existing_claims=[sibling],
+        )
+        is None
     )
 
 

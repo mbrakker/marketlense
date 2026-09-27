@@ -114,6 +114,11 @@ authorized route when support cannot be established. Candidate integrity reruns
 `validate_retained_claims()` and the soft-copy provenance checks before semantic and
 grounding provider validation.
 
+For family-level soft-copy regeneration, exact unchanged sentences keep their
+retained records. New sentences receive factual bindings from the repair's selected
+retained IDs and are checked by the same retained-claim validators; ambiguous or
+unsupported replacements fail closed.
+
 After a rollback, the next plan and prompt receive a bounded `RepairDelta` containing
 resolved, persisting, and introduced issue fingerprints, severity transitions,
 mutation-scope and evidence-lineage outcomes, and the actual action, strategy, evidence

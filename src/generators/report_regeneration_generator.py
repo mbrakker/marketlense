@@ -2547,15 +2547,115 @@ def _record_soft_copy_claim_bindings(
             declared_bindings
         )
     else:
-        execution.state.soft_copy_claim_bindings[artifact_family] = declared_bindings
+        if not isinstance(decision, RepairDecision):
+            raise _repair_decision_error(execution, "repair_decision_missing")
+        public_output = result.get(artifact_family)
+        public_text = soft_copy_public_text(artifact_family, public_output)
+        if artifact_family == "linkedin_post":
+            public_text = strip_linkedin_inline_reference_ids(public_text)
+        try:
+            existing_claims = soft_copy_claim_provenance_from_payload(
+                execution.state.existing_soft_copy_claim_provenance
+            )
+        except AppError as exc:
+            raise _repair_decision_error(
+                execution, "retained_claim_provenance_invalid"
+            ) from exc
+        family_claims = [
+            claim
+            for claim in existing_claims
+            if claim.artifact_family == artifact_family
+        ]
+        family_bindings = _deterministic_family_soft_copy_bindings(
+            artifact_family=artifact_family,
+            text=public_text,
+            selected_evidence_ids=decision.evidence_ids_used,
+            existing_claims=family_claims,
+        )
+        if family_bindings is None:
+            raise _repair_decision_error(
+                execution, "family_claim_binding_not_deterministic"
+            )
+        public_hashes = {
+            hashlib.sha256(_normalized_soft_copy_text(sentence).encode()).hexdigest()
+            for sentence in soft_copy_material_sentences(public_text)
+        }
+        retained_hashes = {
+            claim.text_hash
+            for claim in family_claims
+            if claim.text_hash in public_hashes
+        }
+        repaired_hashes = {
+            hashlib.sha256(
+                _normalized_soft_copy_text(binding["claim"]).encode()
+            ).hexdigest()
+            for binding in family_bindings
+        }
+        if public_hashes != retained_hashes | repaired_hashes:
+            raise _repair_decision_error(
+                execution, "family_claim_binding_coverage_incomplete"
+            )
+        before_output = _current_repair_artifacts(execution.state).get(artifact_family)
+        before_text = soft_copy_public_text(artifact_family, before_output)
+        if artifact_family == "linkedin_post":
+            before_text = strip_linkedin_inline_reference_ids(before_text)
+        before_sentences = soft_copy_material_sentences(before_text)
+        after_sentences = soft_copy_material_sentences(public_text)
+        for code, old_start, old_end, new_start, new_end in SequenceMatcher(
+            a=before_sentences, b=after_sentences, autojunk=False
+        ).get_opcodes():
+            if (
+                code == "equal"
+                or old_end - old_start != 1
+                or new_end - new_start != 1
+            ):
+                continue
+            old_hash = hashlib.sha256(
+                _normalized_soft_copy_text(before_sentences[old_start]).encode()
+            ).hexdigest()
+            predecessors = [
+                claim
+                for claim in family_claims
+                if claim.text_hash == old_hash
+            ]
+            new_hash = hashlib.sha256(
+                _normalized_soft_copy_text(after_sentences[new_start]).encode()
+            ).hexdigest()
+            if len(predecessors) == 1 and new_hash in repaired_hashes:
+                repaired_claim_id = f"soft_copy:{artifact_family}:{new_hash[:16]}"
+                execution.state.soft_copy_repair_lineage[
+                    f"{artifact_family}:{repaired_claim_id}"
+                ] = predecessors[0].claim_id
+        stale_claim_ids = [
+            claim.claim_id
+            for claim in family_claims
+            if claim.text_hash not in public_hashes
+        ]
+        if not public_text:
+            _mark_soft_copy_family_replaced(execution, artifact_family)
+        else:
+            replaced_ids = execution.state.replaced_soft_copy_claim_ids.setdefault(
+                artifact_family, []
+            )
+            replaced_ids.extend(
+                claim_id for claim_id in stale_claim_ids if claim_id not in replaced_ids
+            )
+            if family_bindings:
+                execution.state.soft_copy_claim_bindings.setdefault(
+                    artifact_family, []
+                ).extend(family_bindings)
+                execution.state.soft_copy_repair_texts.setdefault(
+                    artifact_family, []
+                ).extend(binding["claim"] for binding in family_bindings)
+                execution.state.selected_evidence_ids.extend(
+                    decision.evidence_ids_used
+                )
     execution.state.soft_copy_prompt_identities[artifact_family] = dict(
         execution.state.prompt_identities.get(namespace) or {}
     )
     execution.state.soft_copy_generation_attempts[artifact_family] = max(
         1, int(result.get("_soft_copy_generation_attempt") or 1)
     )
-    if repaired_claim is None:
-        _mark_soft_copy_family_replaced(execution, artifact_family)
 
 
 def _mark_soft_copy_family_replaced(
@@ -2604,6 +2704,44 @@ def _repair_claim_bindings(
             "evidence_ids": selected_ids,
         }
     ]
+
+
+def _deterministic_family_soft_copy_bindings(
+    *,
+    artifact_family: str,
+    text: str,
+    selected_evidence_ids: Sequence[str],
+    existing_claims: Sequence[SoftCopyClaimProvenance],
+) -> List[Dict[str, Any]] | None:
+    """Bind changed family sentences while leaving exact retained claims alone."""
+
+    claims_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in existing_claims:
+        if claim.artifact_family == artifact_family:
+            claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+    bindings: List[Dict[str, Any]] = []
+    seen_hashes: set[str] = set()
+    for sentence in soft_copy_material_sentences(_normalized_soft_copy_text(text)):
+        text_hash = hashlib.sha256(
+            _normalized_soft_copy_text(sentence).encode()
+        ).hexdigest()
+        if text_hash in seen_hashes:
+            continue
+        seen_hashes.add(text_hash)
+        retained = claims_by_hash.get(text_hash, [])
+        if len(retained) == 1:
+            continue
+        if retained:
+            return None
+        sentence_bindings = _repair_claim_bindings(
+            classification="factual",
+            text=sentence,
+            evidence_ids=selected_evidence_ids,
+        )
+        if sentence_bindings is None:
+            return None
+        bindings.extend(sentence_bindings)
+    return bindings
 
 
 def _rebuild_soft_copy_repair_selection(
@@ -3256,51 +3394,41 @@ def _record_atomic_summary_claim_bindings(
         for code, old_start, old_end, new_start, new_end in matcher.get_opcodes():
             if code == "equal" or new_start == new_end:
                 continue
-            if old_end - old_start != 1 or new_end - new_start != 1:
-                return False
-            old_text = before_sentences[old_start]
-            new_text = after_sentences[new_start]
-            old_hash = hashlib.sha256(
-                _normalized_soft_copy_text(old_text).encode("utf-8")
-            ).hexdigest()
-            predecessors = retained_by_hash.get(old_hash, [])
-            if len(predecessors) == 1:
-                classification = predecessors[0].classification
-            elif decision.evidence_ids_used:
-                # The predecessor binding is stale or absent. Carry the
-                # replacement conservatively as factual so the canonical
-                # evidence and retained-claim checks must ground it.
-                classification = "factual"
-            else:
-                return False
-            bindings = _repair_claim_bindings(
-                text=new_text,
-                classification=classification,
-                evidence_ids=decision.evidence_ids_used,
-            )
-            if bindings is None:
-                return False
-            repaired_bindings.extend(bindings)
-            repaired_hash = hashlib.sha256(
-                _normalized_soft_copy_text(new_text).encode("utf-8")
-            ).hexdigest()
-            repaired_claim_id = f"soft_copy:summary:{repaired_hash[:16]}"
-            if len(predecessors) == 1:
-                repaired_lineage[f"summary:{repaired_claim_id}"] = (
-                    predecessors[0].claim_id
+            old_sentences = before_sentences[old_start:old_end]
+            new_sentences = after_sentences[new_start:new_end]
+            for new_text in new_sentences:
+                repaired_hash = hashlib.sha256(
+                    _normalized_soft_copy_text(new_text).encode("utf-8")
+                ).hexdigest()
+                existing_matches = retained_by_hash.get(repaired_hash, [])
+                if len(existing_matches) == 1:
+                    continue
+                if existing_matches or not decision.evidence_ids_used:
+                    return False
+                bindings = _repair_claim_bindings(
+                    text=new_text,
+                    classification="factual",
+                    evidence_ids=decision.evidence_ids_used,
                 )
+                if bindings is None:
+                    return False
+                repaired_bindings.extend(bindings)
+                if len(old_sentences) == 1 and len(new_sentences) == 1:
+                    old_hash = hashlib.sha256(
+                        _normalized_soft_copy_text(old_sentences[0]).encode("utf-8")
+                    ).hexdigest()
+                    predecessors = retained_by_hash.get(old_hash, [])
+                    if len(predecessors) == 1:
+                        repaired_claim_id = f"soft_copy:summary:{repaired_hash[:16]}"
+                        repaired_lineage[f"summary:{repaired_claim_id}"] = (
+                            predecessors[0].claim_id
+                        )
 
     stale_claim_ids = [
         claim.claim_id
         for claim in retained_claims
         if claim.artifact_family == "summary" and claim.text_hash not in public_hashes
     ]
-    replaced_claim_ids = execution.state.replaced_soft_copy_claim_ids.setdefault(
-        "summary", []
-    )
-    replaced_claim_ids.extend(
-        claim_id for claim_id in stale_claim_ids if claim_id not in replaced_claim_ids
-    )
     retained_hashes = {
         claim.text_hash
         for claim in retained_claims
@@ -3314,6 +3442,12 @@ def _record_atomic_summary_claim_bindings(
     }
     if public_hashes != retained_hashes | repaired_hashes:
         return False
+    replaced_claim_ids = execution.state.replaced_soft_copy_claim_ids.setdefault(
+        "summary", []
+    )
+    replaced_claim_ids.extend(
+        claim_id for claim_id in stale_claim_ids if claim_id not in replaced_claim_ids
+    )
     execution.state.soft_copy_claim_bindings.setdefault("summary", []).extend(
         repaired_bindings
     )
