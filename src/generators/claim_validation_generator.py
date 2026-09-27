@@ -25,12 +25,12 @@ from src.contracts.protected_facts import (
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
 )
 from src.utils.errors import AppError
 from src.utils.quantity import extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup
 
-_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 _CAUSAL_RE = re.compile(
     r"\b(cause[sd]?|driv(?:e|es|en)|lead(?:s|ing)? to|result(?:s|ed)? in)\b", re.I
 )
@@ -288,7 +288,7 @@ def _candidates(
                     entity_id=f"summary_claim:{claim_identity}",
                 )
         for key in ("tldr", "card_tldr_compact", "executive_summary"):
-            for sentence in _SENTENCE_RE.split(str(summary.get(key) or "")):
+            for sentence in soft_copy_material_sentences(summary.get(key)):
                 add_soft_copy("summary", sentence, affected_section=f"summary.{key}")
     for family, item_key, text_key in (
         ("insights_final", "insights_final", "text"),
@@ -356,12 +356,12 @@ def _candidates(
     for family in ("expert_comment", "linkedin_post"):
         value = artifacts.get(family)
         if isinstance(value, str):
-            for sentence in _SENTENCE_RE.split(value):
+            for sentence in soft_copy_material_sentences(value):
                 add_soft_copy(family, sentence, affected_section=family)
     for family in ("executive_summary", "executive_takeaways"):
         value = artifacts.get(family)
         if isinstance(value, str):
-            for sentence in _SENTENCE_RE.split(value):
+            for sentence in soft_copy_material_sentences(value):
                 add(family, sentence)
     return output
 

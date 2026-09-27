@@ -60,16 +60,29 @@ comparison endpoints and forecast qualifiers.
 
 Numeric grounding compares explicit universal quantity primitives in canonical
 form. It normalizes equivalent notation such as `$3T` and `$3 trillion`,
-`20%` and `20 percent`, or `2x` and `2 times`, but does not equate currencies,
-scales, unit families, count units, signs, ratios, ranges, or attached
-timeframes. This numeric comparison does not establish that different business
+`20%` and `20 percent`, or `2x` and `2 times`, including magnitude notation
+that represents the same total. It preserves currency, unit-family, count-unit,
+sign, ratio, range, and timeframe distinctions. This numeric comparison does
+not establish that different business
 subjects or metrics are equivalent; semantic grounding and the unchanged
 publication-readiness decision remain responsible for that validation.
+Unsupported-number checks and the numeric values inside period, category, and
+cohort relationships use the same quantity parser and matcher. A relationship
+failure is emitted only when its value and label binding can be parsed
+unambiguously; equivalent precision and magnitude notation remains equivalent,
+while a proven value, unit, or period inversion remains blocking. Direction
+checks bind one explicit direction to its exact subject and, when present, its
+matching quantity. Mixed or ambiguous bindings stay unknown. Geography aliases
+are limited to `US`, `U.S.`, and `United States`, plus `UK`, `U.K.`, and
+`United Kingdom`; broader or ambiguous geography comparisons stay unknown.
 Quantity extraction recognizes data-rate units and can retain a count unit
 after neutral descriptive words following a magnitude. It also treats `H:MM`
 viewing durations as one minute-valued time quantity (rather than independent
-hour and minute numbers) and recognizes compact forecast labels such as
-`2024E`. It still compares the full unit and any attached temporal context
+hour and minute numbers), recognizes financial source shorthand `mil` and `bil`
+as million and billion, and recognizes compact forecast labels such as `2024E`.
+The `k` thousand abbreviation must be attached to a value or an explicit
+currency-scale form; punctuation in `U.K.` does not supply a numeric magnitude.
+Extraction still compares the full unit and any attached temporal context
 rather than inferring a metric.
 
 ## Blocking rules

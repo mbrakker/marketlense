@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import pytest
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -48,6 +50,53 @@ def test_retained_claim_validation_uses_soft_copy_factual_provenance() -> None:
         "expert_comment",
         "linkedin_post",
     }
+
+
+@pytest.mark.parametrize(
+    ("family", "claim", "evidence"),
+    [
+        (
+            "summary",
+            "U.S. wallet adoption reached 42% in 2026.",
+            "US wallet adoption reached 42% in 2026.",
+        ),
+        (
+            "expert_comment",
+            "U.K. wallet adoption reached 42% in 2026.",
+            "United Kingdom wallet adoption reached 42% in 2026.",
+        ),
+        (
+            "linkedin_post",
+            "U.S. wallet adoption reached 42% in 2026.",
+            "United States wallet adoption reached 42% in 2026.",
+        ),
+    ],
+)
+def test_retained_claim_validation_uses_canonical_abbreviation_sentence_grid(
+    family: str, claim: str, evidence: str
+) -> None:
+    artifacts = {
+        "summary": {"tldr": claim} if family == "summary" else {},
+        **({family: claim} if family != "summary" else {}),
+        "soft_copy_claim_provenance": {
+            "schema_version": "1.0",
+            "claims": [
+                _soft_copy_claim(
+                    artifact_family=family,
+                    text=claim,
+                    classification="factual",
+                    evidence_ids=["f1"],
+                )
+            ],
+        },
+    }
+    package = validate_retained_claims(
+        artifacts,
+        {"findings": {"findings": [{"id": "f1", "text": evidence}]}},
+    )
+
+    assert len(package.results) == 1
+    assert package.results[0].status == "supported"
 
 
 def test_retained_claim_validation_fails_closed_for_unknown_soft_copy_evidence() -> (

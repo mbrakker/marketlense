@@ -32,6 +32,12 @@ from src.services.render_service import _sanitize_public_prose
 from src.utils.editorial_identity import insight_entity_id
 from src.utils.errors import AppError
 from src.utils.numeric_display import incomplete_source_numeric_displays
+from src.utils.quantity import (
+    Quantity,
+    canonicalize_quantity,
+    extract_quantities,
+    quantities_match,
+)
 
 BLOCKING_RULE_IDS = {
     "public_editorial_quality.unsupported_numeric_claim",
@@ -148,8 +154,8 @@ _FORECAST_MARKER = re.compile(
     re.IGNORECASE,
 )
 _RELATIONSHIP_VALUE = (
-    r"(?:\d{1,3}:\d{2}|\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)"
-    r"(?:\s*%|\s*(?:million|billion|m|bn|x))?"
+    r"(?:[$€£¥]\s*)?[+-]?(?:\d{1,3}:\d{2}|\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?)"
+    r"(?:\s*%|\s*(?:thousand|million|billion|trillion|mm|mn|mil|bn|bil|tn|tril|k|m|b|t|x))?"
 )
 _PERIOD_LABEL = (
     r"(?:Q[1-4]\s*(?:FY\s*)?(?:19|20)\d{2}E?|"
@@ -511,7 +517,7 @@ def _insight_issues(
                 )
             )
         tokens = _content_tokens(text)
-        numbers = {_normalized_number(value) for value in _NUMBER.findall(text)}
+        numbers = _material_numbers(text)
         for prior_index, prior_tokens, prior_numbers in seen:
             if _near_duplicate(tokens, numbers, prior_tokens, prior_numbers):
                 prior_id = insight_entity_id(insights[prior_index]) or str(
@@ -1391,9 +1397,22 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
 
     evidence_period_pairs = _period_value_pairs(evidence_text)
     claim_period_pairs = _period_value_pairs(text)
-    evidence_period_values = {value for _period, value in evidence_period_pairs}
     for pair in claim_period_pairs:
-        if pair[1] in evidence_period_values and pair not in evidence_period_pairs:
+        same_period_values = [
+            value for period, value in evidence_period_pairs if period == pair[0]
+        ]
+        if any(
+            _relationship_values_match(pair[1], value) is True
+            for value in same_period_values
+        ):
+            continue
+        other_period_values = [
+            value for period, value in evidence_period_pairs if period != pair[0]
+        ]
+        if any(
+            _relationship_values_match(pair[1], value) is True
+            for value in other_period_values
+        ):
             return "attaches a retained metric value to a different source period"
 
     evidence_category_pairs = _structured_category_value_pairs(evidence_text)
@@ -1401,8 +1420,8 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
     validated_table_claims = {
         (region, category)
         for region, category, value in ordered_table_relationships
-        if value in _values_near_label(text, region)
-        and value in _values_near_label(text, category)
+        if _has_relationship_value(value, _values_near_label(text, region))
+        and _has_relationship_value(value, _values_near_label(text, category))
     }
     evidence_values_by_category: dict[str, set[str]] = {}
     if len(evidence_category_pairs) >= 2:
@@ -1415,7 +1434,11 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
             ):
                 continue
             for value in _values_near_label(text, category):
-                if value not in values:
+                comparisons = [
+                    _relationship_values_match(value, source_value)
+                    for source_value in values
+                ]
+                if comparisons and all(result is False for result in comparisons):
                     return (
                         "attaches a retained metric value to a different source "
                         "category"
@@ -1430,15 +1453,19 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
     for relationship, value in claim_relationships:
         # A value that occurs in retained evidence is not automatically valid:
         # it must remain bound to this exact subject and reported base.
-        if (
-            relationship in values_by_relationship
-            and value not in values_by_relationship[relationship]
-        ):
+        related_values = values_by_relationship.get(relationship, set())
+        comparisons = [
+            _relationship_values_match(value, source_value)
+            for source_value in related_values
+        ]
+        if comparisons and all(result is False for result in comparisons):
             return (
                 "attaches a retained metric value to a different source cohort "
                 "or denominator"
             )
-        if relationship not in values_by_relationship and value in evidence_values:
+        if relationship not in values_by_relationship and _has_relationship_value(
+            value, evidence_values
+        ):
             subject = relationship.split(" | ", 1)[0]
             if any(
                 source.startswith(f"{subject} | ") for source in values_by_relationship
@@ -1474,9 +1501,7 @@ def _ordered_category_row_value_pairs(text: str) -> set[tuple[str, str, str]]:
         explicit = [
             match
             for match in _CAPITALIZED_CATEGORY_VALUE_PAIR.finditer(cells)
-            if not _is_year_value(
-                _normalized_relationship_value(match.group("value"))
-            )
+            if not _is_year_value(_normalized_relationship_value(match.group("value")))
         ]
         if len(explicit) >= 2:
             labels = [
@@ -1574,16 +1599,36 @@ def _values_near_label(text: str, label: str) -> set[str]:
     label_pattern = re.compile(
         rf"(?<![A-Za-z0-9]){re.escape(label)}(?![A-Za-z0-9])", re.IGNORECASE
     )
-    for label_match in label_pattern.finditer(normalized_text):
-        window = normalized_text[label_match.end() : label_match.end() + 80]
-        value_match = re.search(
-            rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])", window, re.IGNORECASE
-        )
-        if value_match:
-            value = _normalized_relationship_value(value_match.group(0))
-            if value and not _is_year_value(value):
-                values.add(value)
+    fragments = re.split(r";|\n|(?<=[.!?])\s+", normalized_text)
+    for fragment in fragments:
+        for label_match in label_pattern.finditer(fragment):
+            if _is_compound_category_header(fragment, label_match.start()):
+                continue
+            window = fragment[label_match.end() : label_match.end() + 80]
+            value_match = re.search(
+                rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])", window, re.IGNORECASE
+            )
+            if value_match:
+                value = _normalized_relationship_value(value_match.group(0))
+                if value and not _is_year_value(value):
+                    values.add(value)
     return values
+
+
+def _is_compound_category_header(text: str, label_start: int) -> bool:
+    header_start = (
+        max(
+            text.rfind(".", 0, label_start),
+            text.rfind(";", 0, label_start),
+            text.rfind("\n", 0, label_start),
+        )
+        + 1
+    )
+    header_end_match = re.search(r"[:=]", text[label_start : label_start + 80])
+    if not header_end_match:
+        return False
+    header = text[header_start : label_start + header_end_match.start()]
+    return bool(re.search(r"\b(?:and|&)\b|&", header))
 
 
 def _normalized_relationship_label(value: str) -> str:
@@ -1603,12 +1648,7 @@ def _is_year_value(value: str) -> bool:
 
 
 def _material_numbers(text: str) -> set[str]:
-    return {
-        normalized
-        for value in _NUMBER.findall(text)
-        if (normalized := _normalized_number(value))
-        and not (len(normalized) == 4 and 1900 <= int(normalized) <= 2100)
-    }
+    return {_quantity_identity(quantity) for quantity in _material_quantities(text)}
 
 
 def _temporal_qualifiers(text: str) -> set[str]:
@@ -1620,23 +1660,21 @@ def _temporal_qualifiers(text: str) -> set[str]:
 
 def _number_temporal_qualifier_pairs(text: str) -> list[tuple[str, str]]:
     material_matches = [
-        (match, normalized)
-        for match in _NUMBER.finditer(text)
-        if (normalized := _normalized_number(match.group(0)))
-        and not (len(normalized) == 4 and 1900 <= int(normalized) <= 2100)
+        (quantity, _quantity_identity(quantity))
+        for quantity in _material_quantities(text)
     ]
     pairs: list[tuple[str, str]] = []
-    for index, (match, number) in enumerate(material_matches):
+    for index, (quantity, identity) in enumerate(material_matches):
         next_start = (
-            material_matches[index + 1][0].start()
+            material_matches[index + 1][0].start
             if index + 1 < len(material_matches)
             else len(text)
         )
-        qualifier = _TEMPORAL_QUALIFIER.search(text[match.end() : next_start])
+        qualifier = _TEMPORAL_QUALIFIER.search(text[quantity.end : next_start])
         if qualifier:
             pairs.append(
                 (
-                    number,
+                    identity,
                     " ".join(qualifier.group(0).casefold().replace(".", "").split()),
                 )
             )
@@ -1686,23 +1724,66 @@ def _content_tokens(text: str) -> set[str]:
     }
 
 
-def _normalized_number(value: str) -> str:
-    match = re.search(r"\d{1,3}(?:[,.]\d{3})+|\d+(?:[.,]\d+)?", value)
-    return re.sub(r"[,.]", "", match.group(0)) if match else ""
-
-
 def _unsupported_numbers(text: str, evidence: str, metric: object) -> bool:
-    evidence_text = " ".join([evidence, str(metric or "")])
-    evidence_numbers = {
-        _normalized_number(value) for value in _NUMBER.findall(evidence_text)
-    }
-    material_numbers = {
-        normalized
-        for value in _NUMBER.findall(text)
-        if (normalized := _normalized_number(value))
-        and not (len(normalized) == 4 and 1900 <= int(normalized) <= 2100)
-    }
-    return bool(material_numbers - evidence_numbers)
+    evidence_text = " ".join([evidence, _metric_quantity_text(metric)])
+    evidence_quantities = _material_quantities(evidence_text)
+    return any(
+        not any(quantities_match(claim, source) for source in evidence_quantities)
+        for claim in _material_quantities(text)
+    )
+
+
+def _metric_quantity_text(value: object) -> str:
+    if isinstance(value, Mapping):
+        return " ".join(_metric_quantity_text(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_metric_quantity_text(item) for item in value)
+    if isinstance(value, (str, int, float)):
+        return str(value)
+    return ""
+
+
+def _material_quantities(text: str) -> list[Quantity]:
+    return [
+        quantity
+        for quantity in extract_quantities(text)
+        if not (
+            quantity.unit_family == "unknown"
+            and quantity.value.is_integer()
+            and 1900 <= int(quantity.value) <= 2100
+        )
+    ]
+
+
+def _quantity_identity(quantity: Quantity) -> str:
+    canonical = canonicalize_quantity(quantity)
+    return "|".join(
+        str(value)
+        for value in (
+            canonical.value * canonical.scale,
+            canonical.sign,
+            canonical.comparator,
+            canonical.unit_family,
+            canonical.unit,
+            canonical.currency,
+            (canonical.low * canonical.scale) if canonical.low is not None else "",
+            (canonical.high * canonical.scale) if canonical.high is not None else "",
+        )
+    )
+
+
+def _relationship_values_match(left: str, right: str) -> bool | None:
+    left_values = extract_quantities(left)
+    right_values = extract_quantities(right)
+    if len(left_values) != 1 or len(right_values) != 1:
+        return None
+    return quantities_match(left_values[0], right_values[0])
+
+
+def _has_relationship_value(value: str, candidates: Iterable[str]) -> bool:
+    return any(
+        _relationship_values_match(value, candidate) is True for candidate in candidates
+    )
 
 
 def _near_duplicate(

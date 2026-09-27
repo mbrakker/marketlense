@@ -4,7 +4,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, cast
 
-from src.utils.quantity import extract_quantities, quantities_match
+from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+from src.utils.quantity import Quantity, extract_quantities, quantities_match
 
 ProtectedFactStatus = Literal["compatible", "incompatible", "unknown"]
 
@@ -82,40 +83,50 @@ class ProtectedFactComparison:
 
 
 _YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
-_DIRECTION_RE = re.compile(
-    r"\b(?:grew|growth|increased?|rose|rising|up|gained?|declined?|decreased?|"
-    r"fell|falling|dropped?|down|lost)\b",
-    re.IGNORECASE,
+_DIRECTION_WORD = (
+    r"(?:grew|growth|increas(?:e|es|ed|ing)|rose|rising|up|gain(?:s|ed)?|"
+    r"declin(?:e|es|ed|ing)|decreas(?:e|s|ed|ing)|fell|falling|"
+    r"drop(?:s|ped|ping)?|down|lost|loss)"
 )
 _UPWARD_DIRECTIONS = {
     "grew",
     "growth",
     "increase",
+    "increases",
     "increased",
+    "increasing",
     "rose",
     "rising",
     "up",
     "gained",
     "gain",
+    "gains",
 }
 _DOWNWARD_DIRECTIONS = {
     "decline",
+    "declines",
     "declined",
+    "declining",
     "decrease",
+    "decreases",
     "decreased",
+    "decreasing",
     "fell",
     "falling",
     "dropped",
     "drop",
+    "drops",
+    "dropping",
     "down",
     "lost",
     "loss",
 }
 _GEOGRAPHY_RE = re.compile(
-    r"\b(?:africa|america|americas|asia|australia|europe|global|india|china|"
-    r"japan|canada|mexico|brazil|france|germany|italy|spain|sweden|norway|"
-    r"finland|denmark|ireland|poland|uk|u\.s\.|united states|united kingdom|"
-    r"middle east|north america|south america|latin america|apac|emea)\b",
+    r"(?<![A-Za-z])(?:africa|america|americas|asia|australia|europe|global|"
+    r"india|china|japan|canada|mexico|brazil|france|germany|italy|spain|"
+    r"sweden|norway|finland|denmark|ireland|poland|u\.s\.|us|united states|"
+    r"u\.k\.|uk|united kingdom|middle east|north america|south america|"
+    r"latin america|apac|emea)(?![A-Za-z])",
     re.IGNORECASE,
 )
 _ATTRIBUTION_RE = re.compile(
@@ -127,6 +138,11 @@ _SUBJECT_RE = re.compile(
     r"(?:grew|increased?|rose|declined?|decreased?|fell|dropped?)\b",
     re.IGNORECASE,
 )
+_DIRECTION_SUBJECT_RE = re.compile(
+    rf"\b(?:the\s+)?(?P<subject>[A-Za-z][A-Za-z0-9&/-]*(?:\s+[A-Za-z][A-Za-z0-9&/-]*){{0,5}})"
+    rf"\s+(?P<direction>{_DIRECTION_WORD})\b",
+    re.IGNORECASE,
+)
 _RANK_RE = re.compile(
     r"(?:#\s?(\d+)|\b(number\s+one|first(?!\s+time)|second|third|fourth|fifth|largest|smallest)\b)",
     re.IGNORECASE,
@@ -134,6 +150,15 @@ _RANK_RE = re.compile(
 _COMPARISON_RE = re.compile(
     r"\b(?:versus|vs\.?|compared with|compared to)\s+([^.;,:]+)", re.IGNORECASE
 )
+_EXPLICIT_BASELINE_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+
+
+@dataclass(frozen=True)
+class _DirectionFact:
+    subject: str
+    direction: str
+    quantity: Quantity | None
+    ambiguous_quantity: bool
 
 
 def compare_protected_fact_texts(
@@ -214,33 +239,42 @@ def compare_protected_fact_texts(
             ),
         }
 
-    claim_direction = _direction(claim_text)
-    evidence_direction = _direction(evidence_text)
-    if claim_direction:
+    claim_directions = _direction_facts(claim_text)
+    evidence_directions = _direction_facts(evidence_text)
+    if claim_directions:
+        direction_status = _direction_status(claim_directions, evidence_directions)
         payload["direction"] = {
-            "claim_value": claim_direction,
-            "evidence_value": evidence_direction or None,
-            "status": (
-                "compatible"
-                if claim_direction == evidence_direction
-                else "incompatible"
-                if evidence_direction
-                else "unknown"
+            "claim_value": ", ".join(
+                sorted({fact.direction for fact in claim_directions})
             ),
+            "evidence_value": ", ".join(
+                sorted({fact.direction for fact in evidence_directions})
+            )
+            or None,
+            "status": direction_status,
         }
     claim_geographies = _geographies(claim_text)
     evidence_geographies = _geographies(evidence_text)
     if claim_geographies:
+        if claim_geographies <= evidence_geographies:
+            geography_status: ProtectedFactStatus = "compatible"
+        elif len(claim_geographies) == len(evidence_geographies) == 1:
+            claim_geography = next(iter(claim_geographies))
+            evidence_geography = next(iter(evidence_geographies))
+            geography_status = (
+                "incompatible"
+                if claim_geography != evidence_geography
+                and _geography_tier(claim_geography) is not None
+                and _geography_tier(claim_geography)
+                == _geography_tier(evidence_geography)
+                else "unknown"
+            )
+        else:
+            geography_status = "unknown"
         payload["geography"] = {
             "claim_value": ", ".join(sorted(claim_geographies)),
             "evidence_value": ", ".join(sorted(evidence_geographies)) or None,
-            "status": (
-                "compatible"
-                if claim_geographies <= evidence_geographies
-                else "incompatible"
-                if evidence_geographies
-                else "unknown"
-            ),
+            "status": geography_status,
         }
     claim_attribution = _attribution(claim_text)
     evidence_attribution = _attribution(evidence_text)
@@ -291,33 +325,135 @@ def compare_protected_fact_texts(
     claim_comparison = _comparison(claim_text)
     evidence_comparison = _comparison(evidence_text)
     if claim_comparison:
+        claim_baselines = _comparison_baselines(claim_text)
+        evidence_baselines = _comparison_baselines(evidence_text)
+        comparison_status: ProtectedFactStatus = "unknown"
+        if len(claim_baselines) == len(evidence_baselines) == 1:
+            comparison_status = (
+                "compatible"
+                if claim_baselines[0] == evidence_baselines[0]
+                else "incompatible"
+            )
         payload["comparison"] = {
             "claim_value": claim_comparison,
             "evidence_value": evidence_comparison,
-            "status": (
-                "compatible"
-                if claim_comparison == evidence_comparison
-                else "incompatible"
-                if evidence_comparison
-                else "unknown"
-            ),
+            "status": comparison_status,
         }
     return ProtectedFactComparison.from_payload(payload)
 
 
-def _direction(text: str) -> str | None:
-    for match in _DIRECTION_RE.finditer(text):
-        value = match.group(0).casefold()
-        if value in _UPWARD_DIRECTIONS:
-            return "up"
-        if value in _DOWNWARD_DIRECTIONS:
-            return "down"
+def _direction_facts(text: str) -> tuple[_DirectionFact, ...]:
+    facts: list[_DirectionFact] = []
+    for sentence in soft_copy_material_sentences(text):
+        clauses = re.split(
+            r";|,(?:\s+)|\b(?:while|whereas|but)\b", sentence, flags=re.I
+        )
+        for clause in clauses:
+            matches = list(_DIRECTION_SUBJECT_RE.finditer(clause))
+            if len(matches) != 1:
+                continue
+            match = matches[0]
+            direction_word = match.group("direction").casefold()
+            direction = (
+                "up"
+                if direction_word in _UPWARD_DIRECTIONS
+                else "down"
+                if direction_word in _DOWNWARD_DIRECTIONS
+                else ""
+            )
+            if not direction:
+                continue
+            quantities = [
+                quantity
+                for quantity in extract_quantities(clause)
+                if not (
+                    quantity.unit_family == "unknown"
+                    and quantity.value.is_integer()
+                    and 1900 <= int(quantity.value) <= 2100
+                )
+            ]
+            facts.append(
+                _DirectionFact(
+                    subject=re.sub(
+                        r"\s+", " ", match.group("subject").casefold()
+                    ).strip(),
+                    direction=direction,
+                    quantity=quantities[0] if len(quantities) == 1 else None,
+                    ambiguous_quantity=len(quantities) > 1,
+                )
+            )
+    return tuple(facts)
+
+
+def _direction_status(
+    claim_facts: tuple[_DirectionFact, ...],
+    evidence_facts: tuple[_DirectionFact, ...],
+) -> ProtectedFactStatus:
+    unresolved = False
+    for claim in claim_facts:
+        if claim.ambiguous_quantity:
+            unresolved = True
+            continue
+        relevant = [
+            evidence
+            for evidence in evidence_facts
+            if evidence.subject == claim.subject
+            and not evidence.ambiguous_quantity
+            and (
+                (claim.quantity is None and evidence.quantity is None)
+                or (
+                    claim.quantity is not None
+                    and evidence.quantity is not None
+                    and quantities_match(claim.quantity, evidence.quantity)
+                )
+            )
+        ]
+        if len(relevant) != 1:
+            unresolved = True
+        elif relevant[0].direction != claim.direction:
+            return "incompatible"
+    return "unknown" if unresolved else "compatible"
+
+
+def _geography_tier(value: str) -> str | None:
+    if value in {
+        "us",
+        "uk",
+        "india",
+        "china",
+        "japan",
+        "canada",
+        "mexico",
+        "brazil",
+        "france",
+        "germany",
+        "italy",
+        "spain",
+        "sweden",
+        "norway",
+        "finland",
+        "denmark",
+        "ireland",
+        "poland",
+    }:
+        return "country"
+    if value in {"africa", "asia", "australia", "europe"}:
+        return "continent"
     return None
 
 
 def _geographies(text: str) -> set[str]:
+    aliases = {
+        "u.s.": "us",
+        "united states": "us",
+        "u.k.": "uk",
+        "united kingdom": "uk",
+    }
     return {
-        re.sub(r"\s+", " ", match.group(0).casefold()).strip()
+        aliases.get(
+            re.sub(r"\s+", " ", match.group(0).casefold()).strip(),
+            re.sub(r"\s+", " ", match.group(0).casefold()).strip(),
+        )
         for match in _GEOGRAPHY_RE.finditer(text)
     }
 
@@ -387,6 +523,16 @@ def _rank(text: str) -> str | None:
 def _comparison(text: str) -> str | None:
     match = _COMPARISON_RE.search(text)
     return re.sub(r"\s+", " ", match.group(1).casefold()).strip() if match else None
+
+
+def _comparison_baselines(text: str) -> list[str]:
+    baselines: list[str] = []
+    for match in _COMPARISON_RE.finditer(text):
+        years = _EXPLICIT_BASELINE_YEAR_RE.findall(match.group(1))
+        if len(years) != 1:
+            return []
+        baselines.append(years[0])
+    return baselines
 
 
 def _quantity_entailed_by_evidence(claim: object, evidence: object) -> bool:

@@ -19,12 +19,12 @@ _COMP_RE = (
     r"more than|over|above|greater than|at least|"
     r"less than|under|below|at most|about|around|approximately)"
 )
-_MAG_RE = r"(?:k|m|mm|mn|b|bn|t|tn|thousand|million|billion|trillion)\b"
+_MAG_RE = r"(?:k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|million|billion|trillion)\b"
 
 _RANGE_RE = re.compile(
     rf"(?<!\w)(?:between\s+)?(?P<low>{_NUMBER_RE})\s*(?:-|to|and)\s*(?P<high>{_NUMBER_RE})\s*"
     r"(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
-    r"k|m|mm|mn|b|bn|tn|thousand|million|billion|trillion)?(?!\w)",
+    r"k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|million|billion|trillion)?(?!\w)",
     re.IGNORECASE,
 )
 _RATIO_RE = re.compile(
@@ -71,12 +71,15 @@ _MAG_FACTORS = {
     "m": 1_000_000.0,
     "mm": 1_000_000.0,
     "mn": 1_000_000.0,
+    "mil": 1_000_000.0,
     "million": 1_000_000.0,
     "b": 1_000_000_000.0,
     "bn": 1_000_000_000.0,
+    "bil": 1_000_000_000.0,
     "billion": 1_000_000_000.0,
     "t": 1_000_000_000_000.0,
     "tn": 1_000_000_000_000.0,
+    "tril": 1_000_000_000_000.0,
     "trillion": 1_000_000_000_000.0,
 }
 _WORDS_TO_NUM = {
@@ -574,7 +577,9 @@ def _resolve_unit_family(
             magnitude_norm = "b"
         elif "million" in magnitude_text or re.search(r"\bmn\b|\bmm\b", magnitude_text):
             magnitude_norm = "m"
-        elif "thousand" in magnitude_text or re.search(r"\bk\b", magnitude_text):
+        elif "thousand" in magnitude_text or (
+            currency_scale_context and re.search(r"\bk\b", magnitude_text)
+        ):
             magnitude_norm = "k"
 
     if currency in _CURRENCY_SYMBOL_TO_CODE:
@@ -895,11 +900,11 @@ def _clean_unit(value: str) -> str:
     unit = re.sub(r"\s*-\s*", "-", unit)
     if unit.endswith("."):
         unit = unit[:-1]
-    if unit in {"billions", "billion"}:
+    if unit in {"billions", "billion", "bil"}:
         return "billion"
-    if unit in {"millions", "million"}:
+    if unit in {"millions", "million", "mil"}:
         return "million"
-    if unit in {"trillions", "trillion"}:
+    if unit in {"trillions", "trillion", "tril"}:
         return "trillion"
     if unit in {"thousands", "thousand"}:
         return "thousand"

@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v6"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v7"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -585,3 +585,92 @@ def test_temporal_integrity_blocks_malformed_between_comparison() -> None:
     )
 
     assert "public_editorial_quality.temporal_integrity" in _rule_ids(report)
+
+
+@pytest.mark.parametrize(
+    ("claim_value", "source_value"),
+    [("50.0%", "50%"), ("$3 trillion", "$3T"), ("3T", "3000B")],
+)
+def test_public_numeric_validation_uses_quantity_equivalence(
+    claim_value: str, source_value: str
+) -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="quantity-equivalence",
+        artifacts=_temporal_artifacts(
+            text=f"Revenue reached {claim_value} in 2025.",
+            evidence=f"Revenue reached {source_value} in 2025.",
+        ),
+    )
+
+    assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(report)
+
+
+@pytest.mark.parametrize(
+    ("claim", "evidence", "expected_rule"),
+    [
+        (
+            "Revenue reached 43% in 2025.",
+            "Revenue reached 42% in 2025.",
+            "public_editorial_quality.unsupported_numeric_claim",
+        ),
+        (
+            "Revenue reached $18m in 2025.",
+            "Revenue reached 18% in 2025.",
+            "public_editorial_quality.unsupported_numeric_claim",
+        ),
+        (
+            "EMEA Engagement Index reached 50.0% in 2026.",
+            "EMEA Engagement Index reached 50% in 2025.",
+            "public_editorial_quality.metric_label_relationship",
+        ),
+    ],
+)
+def test_public_numeric_validation_keeps_value_unit_and_period_mismatches_blocking(
+    claim: str, evidence: str, expected_rule: str
+) -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="quantity-mismatch",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
+    assert expected_rule in _rule_ids(report)
+
+
+@pytest.mark.parametrize(
+    ("claim", "evidence", "expected_relationship_failure"),
+    [
+        (
+            "Alpha accounts for 50.0% of platform preference.",
+            "Platform preference: Alpha 50%; Beta 40%.",
+            False,
+        ),
+        (
+            "Beta accounts for 50.0% of platform preference.",
+            "Platform preference: Alpha 50%; Beta 40%.",
+            True,
+        ),
+        (
+            "Alpha represents 3000B of platform spend.",
+            "Platform spend: Alpha 3T; Beta 2T.",
+            False,
+        ),
+    ],
+)
+def test_metric_category_relationship_uses_canonical_quantity_matching(
+    claim: str, evidence: str, expected_relationship_failure: bool
+) -> None:
+    explanation = _metric_label_relationship_explanation(claim, evidence)
+
+    assert bool(explanation) is expected_relationship_failure
+
+
+def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown() -> (
+    None
+):
+    explanation = _metric_label_relationship_explanation(
+        "88% spend most free time online. Size and spend: "
+        "200+ million globally; $400–450B spending power.",
+        "Generation Q: Size: 200+ mil globally; Spend: $400–450 bil.",
+    )
+
+    assert explanation == ""

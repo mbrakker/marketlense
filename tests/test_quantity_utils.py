@@ -88,6 +88,26 @@ def test_currency_magnitude_forms_match() -> None:
     assert _any_match("£333mn annual spend", "333 million GBP annual spend")
 
 
+def test_percent_precision_and_canonical_magnitude_displays_match() -> None:
+    assert _any_match("50.0%", "50%")
+    assert _any_match("$3 trillion", "$3T")
+    assert _any_match("3T", "3000B")
+    assert not _any_match("42%", "43%")
+    assert not _any_match("18%", "$18m")
+
+
+def test_financial_magnitude_abbreviations_match_their_canonical_forms() -> None:
+    assert _any_match("200+ mil globally", "200+ million globally")
+    assert _any_match("$450 bil", "$450B")
+
+
+def test_uk_initialism_does_not_turn_a_nearby_percentage_into_thousands() -> None:
+    parsed = extract_quantities("50% of U.K. media experts expressed interest.")
+
+    assert [(quantity.value, quantity.magnitude) for quantity in parsed] == [(50.0, "")]
+    assert _any_match("50% of U.K. media experts", "50 percent of media experts")
+
+
 def test_month_unit_is_not_parsed_as_million_magnitude() -> None:
     parsed = extract_quantities("Actions for the next 12 months: integrate checks.")
     assert any(q.unit_family == "time" and q.unit == "months" for q in parsed)

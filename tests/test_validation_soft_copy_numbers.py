@@ -29,6 +29,21 @@ def test_number_validation_ignores_soft_planning_timeframes():
     assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
+def test_number_validation_does_not_treat_uk_initialism_as_a_magnitude():
+    claim = "The report says 50% of U.K. media experts are excited about AI."
+    evidence = "The report says 50 percent of media experts are excited about AI."
+
+    issues = validate_new_numbers(
+        artifacts={"linkedin_post": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=[],
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
 def test_number_issue_identifies_full_soft_copy_claim_with_us_initialism() -> None:
     sentence = "U.S. revenue reached $918 billion."
     claim = SoftCopyClaimProvenance(
