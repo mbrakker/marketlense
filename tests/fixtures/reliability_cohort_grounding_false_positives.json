@@ -5,23 +5,31 @@
       "case_id": "doubleverify-emea-ad-attention-index",
       "report": "DoubleVerify",
       "claim_id": "insight:q1-2026-ad-attention-regional:metric",
-      "rule_id": "protected_fact_value_consistency",
+      "rule_id": "protected_fact_value_incompatible",
       "kind": "quantity",
       "expected_unit_family": "index",
       "source_page": "PDF p.9",
       "claim": "EMEA Ad Attention Index 110",
-      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99"
+      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99",
+      "cohort_report_id": "cohort-e854b71d6fb10333b47f",
+      "affected_section": "insights:q1-2026-ad-attention-regional.metric",
+      "cohort_evidence_id": "doc_map:section-7",
+      "classification": "confirmed"
     },
     {
       "case_id": "doubleverify-emea-engagement-index",
       "report": "DoubleVerify",
       "claim_id": "insight:q1-2026-engagement-regional:metric",
-      "rule_id": "protected_fact_unit_currency_consistency",
+      "rule_id": "protected_fact_unit_currency_incompatible",
       "kind": "quantity",
       "expected_unit_family": "index",
       "source_page": "PDF p.9",
       "claim": "EMEA Engagement Index 116",
-      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99"
+      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99",
+      "cohort_report_id": "cohort-e854b71d6fb10333b47f",
+      "affected_section": "insights:q1-2026-engagement-regional.metric",
+      "cohort_evidence_id": "doc_map:section-7",
+      "classification": "confirmed"
     },
     {
       "case_id": "doubleverify-index-normalization-retains-index-unit",
@@ -69,7 +77,11 @@
       "dimension": "population",
       "source_page": "PDF p.19 (printed p.18)",
       "claim": "That is a stated expectation, not a reported increase in completed activity.",
-      "evidence": "Half of dealmakers expect carve-out activity to increase over the next 12-24 months, while very few anticipate a decline."
+      "evidence": "Half of dealmakers expect carve-out activity to increase over the next 12-24 months, while very few anticipate a decline.",
+      "cohort_report_id": "cohort-2acb4a56e14add5d7717",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:portfolio-simplification-as-a-value-creation-strategy",
+      "classification": "confirmed"
     },
     {
       "case_id": "deloitte-strategic-choice-is-not-observation-status",
@@ -80,7 +92,11 @@
       "dimension": "observation_status",
       "source_page": "PDF p.7",
       "claim": "Retailers face a choice between retailer-owned assistants and third-party AI shopping journeys, guided by brand and data-control priorities.",
-      "evidence": "Retailers should define their strategic posture across three dimensions: brand positioning, data control requirements, and ecosystem participation across the customer journey. Retailers prioritizing first-party data control can deploy onsite assistants, while LLM partnerships can help those seeking early access to AI-native shoppers."
+      "evidence": "Retailers should define their strategic posture across three dimensions: brand positioning, data control requirements, and ecosystem participation across the customer journey. Retailers prioritizing first-party data control can deploy onsite assistants, while LLM partnerships can help those seeking early access to AI-native shoppers.",
+      "cohort_report_id": "cohort-b10ed6c82b76739a806a",
+      "affected_section": "summary.tldr",
+      "cohort_evidence_id": "doc_map:getting-involved",
+      "classification": "confirmed"
     },
     {
       "case_id": "adjust-edition-year-is-not-data-period",
@@ -91,29 +107,58 @@
       "dimension": "timeframe",
       "source_page": "PDF pp.1, 41",
       "claim": "That split is one representative lens from Mobile app trends: 2026 edition.",
-      "evidence": "Mobile app trends: 2026 edition. The average global e-commerce app session length declined year over year in 2025."
+      "evidence": "Mobile app trends: 2026 edition. The average global e-commerce app session length declined year over year in 2025.",
+      "cohort_report_id": "cohort-b638414df0b1fccea1cd",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:ecommerce-finding-keeping-users",
+      "classification": "confirmed"
     },
     {
       "case_id": "algolia-42-percent-up-from-34-percent",
       "report": "Algolia",
       "claim_id": "summary_claim:1",
       "rule_id": "quantity_not_entailed",
-      "kind": "quantity",
+      "kind": "partial_quantity",
       "expected_unit_family": "percent",
       "source_page": "PDF p.10",
-      "claim": "42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
-      "evidence": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024."
+      "claim": "In a survey of 110 respondents, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "expected_value": 42,
+      "expected_context": "42% of respondents",
+      "evidence_pack": "findings",
+      "evidence_entity_id": "intent-understanding-priority",
+      "unlinked_value": 110,
+      "supported_values": [
+        42,
+        34
+      ],
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "affected_section": "summary.claim_evidence_map:1.claim",
+      "cohort_evidence_id": "findings:intent-understanding-priority",
+      "classification": "partial_false_positive_plus_unresolved_sample_size"
     },
     {
       "case_id": "criteo-94-percent-survey-result",
       "report": "Criteo",
       "claim_id": "soft_copy:summary:72bf43055e321462",
       "rule_id": "quantity_not_entailed",
-      "kind": "quantity",
+      "kind": "partial_quantity",
       "expected_unit_family": "percent",
       "source_page": "PDF p.5",
-      "claim": "94% of US media agency professionals agreed that their brand clients should explore new digital media channels.",
-      "evidence": "94% of media agency professionals in the US agree that their brand clients should be exploring new digital media channels."
+      "claim": "In a survey of 238 respondents from US media agencies, 94% agreed that their brand clients should explore new digital media channels.",
+      "evidence": "94% of media agency professionals in the US agree that their brand clients should be exploring new digital media channels.",
+      "expected_value": 94,
+      "expected_context": "94%",
+      "evidence_pack": "findings",
+      "evidence_entity_id": "explore-new-channels",
+      "unlinked_value": 238,
+      "supported_values": [
+        94
+      ],
+      "cohort_report_id": "cohort-979a63a1633a7f2ccc51",
+      "affected_section": "summary.executive_summary",
+      "cohort_evidence_id": "findings:explore-new-channels",
+      "classification": "partial_false_positive_plus_unresolved_sample_size"
     },
     {
       "case_id": "criteo-november-2022-fieldwork",
@@ -130,21 +175,29 @@
       "case_id": "emplifi-79-91-84-spelled-percentages",
       "report": "Emplifi",
       "claim_id": "soft_copy:expert_comment:790a7f54bd7ebc5d",
-      "rule_id": "number_value_unit_match",
+      "rule_id": "quantity_not_entailed",
       "kind": "spelled_percentages",
       "source_page": "PDF pp.10, 13, 15",
       "claim": "91% of consumers expect brands to disclose AI use in marketing, while 84% say service interactions should feel authentic.",
-      "evidence": "Ninety-one percent of consumers expect brands to disclose AI use in marketing. Eighty-four percent say customer service interactions should feel authentic."
+      "evidence": "Ninety-one percent of consumers expect brands to disclose AI use in marketing. Eighty-four percent say customer service interactions should feel authentic.",
+      "cohort_report_id": "cohort-f62048b469dd784e6e7c",
+      "affected_section": "expert_comment",
+      "cohort_evidence_id": "doc_map:authenticity; doc_map:customer_service",
+      "classification": "confirmed"
     },
     {
       "case_id": "stackadapt-display-and-ctv-combined-share",
-      "report": "StackAdapt",
+      "report": "StackAdapt Inc",
       "claim_id": "insight:display-ctv-programmatic-spend:text",
       "rule_id": "public_editorial_quality.metric_label_relationship",
       "kind": "combined_category",
       "source_page": "PDF p.7",
       "claim": "Display and CTV together account for 77% of programmatic spend.",
-      "evidence": "Display accounts for 45.85% of programmatic spend. CTV accounts for 30.83%. Display and CTV alone account for 77% of spend."
+      "evidence": "Display accounts for 45.85% of programmatic spend. CTV accounts for 30.83%. Display and CTV alone account for 77% of spend.",
+      "cohort_report_id": "cohort-8ef1021c332aa85ba008",
+      "affected_section": "insights:display-ctv-programmatic-spend.text",
+      "cohort_evidence_id": "doc_map:display-ctv-programmatic-spend",
+      "classification": "confirmed"
     },
     {
       "case_id": "bain-asset-light-exact-quoted-span",
@@ -154,7 +207,11 @@
       "kind": "quote",
       "source_page": "PDF p.1",
       "claim": "The infographic recommends scaling rapidly with an 'asset-light' model and adding capabilities through partnerships.",
-      "evidence": "Scale rapidly with an 'asset-light' model. Add capabilities via partnerships."
+      "evidence": "Scale rapidly with an 'asset-light' model. Add capabilities via partnerships.",
+      "cohort_report_id": "cohort-77bc67b2bc98187d9d58",
+      "affected_section": "summary.executive_summary",
+      "cohort_evidence_id": "doc_map:section-4",
+      "classification": "confirmed"
     },
     {
       "case_id": "robeco-report-summary-is-not-publisher-attribution",
@@ -165,7 +222,11 @@
       "dimension": "attribution",
       "source_page": "PDF p.2",
       "claim": "The report presents engagement and voting as stewardship activities.",
-      "evidence": "We use engagement and voting to strengthen corporates' approach towards responsible business conduct and sustainable growth. Exercising our stewardship responsibilities is an integral part of Robeco's approach to sustainability investing. Quarterly reports provide updates on engagement and voting activities."
+      "evidence": "We use engagement and voting to strengthen corporates' approach towards responsible business conduct and sustainable growth. Exercising our stewardship responsibilities is an integral part of Robeco's approach to sustainability investing. Quarterly reports provide updates on engagement and voting activities.",
+      "cohort_report_id": "cohort-5ceb3b4498de7288ce5a",
+      "affected_section": "summary.executive_summary",
+      "cohort_evidence_id": "doc_map:active-ownership-vision",
+      "classification": "confirmed"
     },
     {
       "case_id": "mintel-maxxing-exact-quoted-span",
@@ -175,7 +236,11 @@
       "kind": "quote",
       "source_page": "PDF p.3",
       "claim": "Mintel predicts a shift from daily nutrient 'maxxing' toward varied diets linked to long-term health.",
-      "evidence": "'Maxxing' Out, Diversity In: Consumers will move past the viral advice and goal of 'maxxing' their daily protein or fiber intake."
+      "evidence": "'Maxxing' Out, Diversity In: Consumers will move past the viral advice and goal of 'maxxing' their daily protein or fiber intake.",
+      "cohort_report_id": "cohort-b3cb5f66cccda4420be2",
+      "affected_section": "summary.claim_evidence_map:2.claim",
+      "cohort_evidence_id": "findings:diversity-in",
+      "classification": "confirmed"
     },
     {
       "case_id": "adjust-complete-short-sentence",
@@ -185,7 +250,11 @@
       "kind": "complete_sentence",
       "source_page": "retained LinkedIn artifact",
       "claim": "Scope matters.",
-      "evidence": "Scope matters."
+      "evidence": "Scope matters.",
+      "cohort_report_id": "cohort-b638414df0b1fccea1cd",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:conclusion; doc_map:key-takeaways-methodology",
+      "classification": "confirmed"
     },
     {
       "case_id": "capgemini-human-assistance-separate-stages",
@@ -196,7 +265,11 @@
       "dimension": "attribution",
       "source_page": "PDF pp.5, 45",
       "claim": "It says human assistance remains important alongside digital tools, so the account of support includes both digital convenience and human interaction.",
-      "evidence": "Preference for in-person assistance has risen sharply: 74% value human support during customer service and 66% during the purchase stage, up from 54% and 40% last year."
+      "evidence": "Preference for in-person assistance has risen sharply: 74% value human support during customer service and 66% during the purchase stage, up from 54% and 40% last year.",
+      "cohort_report_id": "cohort-81af3890cd84ece81ef1",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:reliable-tech-loyalty; findings:technology-and-human-support",
+      "classification": "confirmed"
     },
     {
       "case_id": "reuters-marketlense-summary-is-not-reuters-attribution",
@@ -207,7 +280,255 @@
       "dimension": "attribution",
       "source_page": "PDF pp.2, 3, 5, 7",
       "claim": "The report describes journalism adapting to AI-driven discovery and creator competition, with publishers emphasizing distinctive work and changing newsroom practices.",
-      "evidence": "Publishers will be focused this year on re-engineering their businesses for the age of AI, with more distinctive content and a more human face."
+      "evidence": "Publishers will be focused this year on re-engineering their businesses for the age of AI, with more distinctive content and a more human face.",
+      "cohort_report_id": "cohort-4b763ae2286ca69fe8ac",
+      "affected_section": "summary.tldr",
+      "cohort_evidence_id": "doc_map:section-2; section-3; section-5; section-7",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "algolia-full-report-scope-claim-five",
+      "report": "Algolia",
+      "claim_id": "summary_claim:5",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF p.29",
+      "claim": "The report's stated scope is retail and ecommerce search and discovery across North America, Europe, and APAC.",
+      "evidence": "The closing section describes the broader B2C Site Search Trends Report and its survey audience. It says the report covers search and discovery issues in North America, Europe, and APAC and draws on responses from IT and business decision makers at ecommerce businesses.",
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "affected_section": "summary.claim_evidence_map:5.claim",
+      "cohort_evidence_id": "doc_map:about-the-full-report",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "algolia-full-report-scope-executive-summary",
+      "report": "Algolia",
+      "claim_id": "soft_copy:summary:9be65407fae04a51",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF p.29",
+      "claim": "The report's stated scope is retail and ecommerce search and discovery across North America, Europe, and APAC.",
+      "evidence": "The closing section describes the broader B2C Site Search Trends Report and its survey audience. It says the report covers search and discovery issues in North America, Europe, and APAC and draws on responses from IT and business decision makers at ecommerce businesses.",
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "affected_section": "summary.executive_summary",
+      "cohort_evidence_id": "doc_map:about-the-full-report",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "algolia-unlinked-sample-size-tldr",
+      "report": "Algolia",
+      "claim_id": "soft_copy:summary:dc0a7cbf8d377dcc",
+      "rule_id": "quantity_not_entailed",
+      "kind": "partial_quantity",
+      "expected_unit_family": "percent",
+      "expected_value": 42,
+      "expected_context": "42% of respondents",
+      "source_page": "PDF p.10",
+      "unlinked_value": 110,
+      "supported_values": [
+        42,
+        34
+      ],
+      "claim": "In a survey of 110 respondents, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence_pack": "findings",
+      "evidence_entity_id": "intent-understanding-priority",
+      "affected_section": "summary.tldr",
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "cohort_evidence_id": "findings:intent-understanding-priority",
+      "classification": "partial_false_positive_plus_unresolved_sample_size"
+    },
+    {
+      "case_id": "algolia-unlinked-sample-size-executive-summary",
+      "report": "Algolia",
+      "claim_id": "soft_copy:summary:dc0a7cbf8d377dcc",
+      "rule_id": "quantity_not_entailed",
+      "kind": "partial_quantity",
+      "expected_unit_family": "percent",
+      "expected_value": 42,
+      "expected_context": "42% of respondents",
+      "source_page": "PDF p.10",
+      "unlinked_value": 110,
+      "supported_values": [
+        42,
+        34
+      ],
+      "claim": "In a survey of 110 respondents, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence_pack": "findings",
+      "evidence_entity_id": "intent-understanding-priority",
+      "affected_section": "summary.executive_summary",
+      "cohort_report_id": "cohort-86858bdcb370266f26c2",
+      "cohort_evidence_id": "findings:intent-understanding-priority",
+      "classification": "partial_false_positive_plus_unresolved_sample_size"
+    },
+    {
+      "case_id": "criteo-incrementality-survey-vs-cost-forecast",
+      "report": "Criteo",
+      "claim_id": "insight:incrementality-metrics-retail-media:metric",
+      "rule_id": "protected_fact_timeframe_incompatible",
+      "kind": "protected",
+      "dimension": "timeframe",
+      "source_page": "PDF pp.7, 9",
+      "claim": "Agency professionals reporting incrementality metrics as a driver toward retail media Incrementality metrics reported as pushing professionals toward retail media 50% US, UK, France, and Germany Agency professionals Agency professionals November 2022 survey observed",
+      "evidence": "Fieldwork took place in November 2022. For many agency professionals (50%) such metrics are pushing them towards retail media in particular. US agencies estimate the cost of running campaigns across digital media channels will rise by 22% in 2023.",
+      "cohort_report_id": "cohort-979a63a1633a7f2ccc51",
+      "affected_section": "insights:incrementality-metrics-retail-media.metric",
+      "cohort_evidence_id": "doc_map:section-3-new-concepts-in-measurement",
+      "classification": "confirmed",
+      "expected_dimension_status": "compatible"
+    },
+    {
+      "case_id": "criteo-ad-frequency-survey-vs-cost-forecast",
+      "report": "Criteo",
+      "claim_id": "insight:us-ad-frequency-measurement-priority:metric",
+      "rule_id": "protected_fact_timeframe_incompatible",
+      "kind": "protected",
+      "dimension": "timeframe",
+      "source_page": "PDF pp.7, 9",
+      "claim": "US respondents naming average ad frequency as a key metric Average ad frequency identified as a key metric 31% US US respondents US respondents November 2022 survey observed",
+      "evidence": "Fieldwork took place in November 2022. 31% of US respondents identified average ad frequency as a key metric. US agencies estimate the cost of running campaigns across digital media channels will rise by 22% in 2023.",
+      "cohort_report_id": "cohort-979a63a1633a7f2ccc51",
+      "affected_section": "insights:us-ad-frequency-measurement-priority.metric",
+      "cohort_evidence_id": "doc_map:section-3-new-concepts-in-measurement",
+      "classification": "confirmed",
+      "expected_dimension_status": "compatible"
+    },
+    {
+      "case_id": "criteo-key-figure-survey-vs-cost-forecast",
+      "report": "Criteo",
+      "claim_id": "key_figure:2:figure",
+      "rule_id": "protected_fact_timeframe_incompatible",
+      "kind": "protected",
+      "dimension": "timeframe",
+      "source_page": "PDF pp.7, 9",
+      "claim": "Agency professionals reporting incrementality metrics as a driver toward retail media Incrementality metrics reported as pushing professionals toward retail media US, UK, France, and Germany Agency professionals Agency professionals November 2022 survey observed",
+      "evidence": "Fieldwork took place in November 2022. For many agency professionals (50%) such metrics are pushing them towards retail media in particular. US agencies estimate the cost of running campaigns across digital media channels will rise by 22% in 2023.",
+      "cohort_report_id": "cohort-979a63a1633a7f2ccc51",
+      "affected_section": "key_figures:2.figure",
+      "cohort_evidence_id": "doc_map:section-3-new-concepts-in-measurement",
+      "classification": "confirmed",
+      "expected_dimension_status": "compatible"
+    },
+    {
+      "case_id": "deloitte-expert-comment-third-party-pathway",
+      "report": "Deloitte",
+      "claim_id": "soft_copy:expert_comment:e73b39c5e91295b9",
+      "rule_id": "protected_fact_observation_status_incompatible",
+      "kind": "protected",
+      "dimension": "observation_status",
+      "source_page": "PDF pp.4, 6-7",
+      "claim": "The report frames AI-shopping participation as a tradeoff: retailer-owned assistants keep recommendations and customer interactions within the retailer’s ecosystem, while LLM partnerships can help retailers seeking early access to AI-native shoppers; restricting third-party access may protect control but can also limit demand from LLM-led discovery.",
+      "evidence": "Retailers should define their strategic posture across brand positioning, data control requirements, and ecosystem participation. Retailers prioritizing first-party data control can deploy onsite assistants. LLM partnerships can provide early access to AI-native shoppers.",
+      "cohort_report_id": "cohort-b10ed6c82b76739a806a",
+      "affected_section": "expert_comment",
+      "cohort_evidence_id": "doc_map:getting-involved; quote_candidates:quote-2; doc_map:trend-3",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "deloitte-linkedin-third-party-pathway",
+      "report": "Deloitte",
+      "claim_id": "soft_copy:linkedin_post:d039d5abcfa42d08",
+      "rule_id": "protected_fact_observation_status_incompatible",
+      "kind": "protected",
+      "dimension": "observation_status",
+      "source_page": "PDF pp.4, 6-7",
+      "claim": "One representative lens from Q1 2026 Emerging retail and consumer trends is how retailers participate in AI-mediated discovery and purchasing while balancing third-party visibility with control over customer interactions.",
+      "evidence": "Retailers should define their strategic posture across brand positioning, data control requirements, and ecosystem participation. Retailers prioritizing first-party data control can deploy onsite assistants. LLM partnerships can provide early access to AI-native shoppers.",
+      "cohort_report_id": "cohort-b10ed6c82b76739a806a",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:getting-involved; quote_candidates:quote-2; doc_map:trend-3",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "emplifi-purchase-value-and-review-count",
+      "report": "Emplifi",
+      "claim_id": "soft_copy:expert_comment:6798f3e99fda2633",
+      "rule_id": "quantity_not_entailed",
+      "kind": "quantity",
+      "expected_unit_family": "percent",
+      "expected_value": 79,
+      "expected_context": "79% of consumers",
+      "source_page": "PDF pp.4, 10",
+      "claim": "For purchases over $/£500, more than half of consumers visit at least three websites and spend over an hour researching; separately, 79% of consumers read three or more reviews before buying.",
+      "evidence": "For purchases over $/£500, more than half of consumers visit three or more websites and spend over an hour researching. 79% read three or more reviews before buying.",
+      "cohort_report_id": "cohort-f62048b469dd784e6e7c",
+      "affected_section": "expert_comment",
+      "cohort_evidence_id": "doc_map:behavior; doc_map:trust",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "robeco-expert-comment-is-not-quarterly-attribution",
+      "report": "Robeco",
+      "claim_id": "soft_copy:expert_comment:00393ba9cc950235",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF pp.2, 9-11",
+      "claim": "The report presents engagement and voting as core stewardship activities, while water-management outcomes vary: engagements were most successful with utilities and breweries, whereas shale gas and chemical fertilizer companies faced continuing challenges.",
+      "evidence": "On behalf of our clients, we use engagement and voting to strengthen corporates’ approach towards responsible business conduct and sustainable growth. Exercising our stewardship responsibilities is an integral part of Robeco’s approach to sustainability investing. The quarterly Active Ownership reports provide regular updates on engagement and voting activities.",
+      "cohort_report_id": "cohort-5ceb3b4498de7288ce5a",
+      "affected_section": "expert_comment",
+      "cohort_evidence_id": "doc_map:active-ownership-vision; doc_map:natural-resource-management",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "mintel-expert-comment-maxxing-quoted-span",
+      "report": "Mintel",
+      "claim_id": "soft_copy:expert_comment:8d45af962ac4cd84",
+      "rule_id": "quote_not_matched",
+      "kind": "quote",
+      "source_page": "PDF p.3",
+      "claim": "It predicts consumers will move past the goal of ‘maxxing’ daily protein or fiber in favor of a diverse variety of ingredients each week, while forecasting that in 2026 multisensory products will mature into purposeful creations intended to deepen emotional connections with better-for-you food.",
+      "evidence": "Consumers will move past the viral advice and goal of ‘maxxing’ their daily protein or fiber intake, to adopt inclusive diets that celebrate the functional benefits of incorporating a diverse variety of ingredients each week to fortify and sustain their long-term health. 2026 will see multisensory products maturing from whimsical novelties to purposeful creations that intensify consumers’ emotional connections with better-for-you food.",
+      "cohort_report_id": "cohort-b3cb5f66cccda4420be2",
+      "affected_section": "expert_comment",
+      "cohort_evidence_id": "quote_candidates:q3; quote_candidates:q5",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "mintel-linkedin-maxxing-quoted-span",
+      "report": "Mintel",
+      "claim_id": "soft_copy:linkedin_post:796d61c4d921ce91",
+      "rule_id": "quote_not_matched",
+      "kind": "quote",
+      "source_page": "PDF p.3",
+      "claim": "Mintel predicts consumers will move past viral advice to “maxxing” daily protein or fibre and adopt inclusive diets that incorporate a diverse variety of ingredients each week.",
+      "evidence": "Consumers will move past the viral advice and goal of ‘maxxing’ their daily protein or fiber intake, to adopt inclusive diets that celebrate the functional benefits of incorporating a diverse variety of ingredients each week to fortify and sustain their long-term health.",
+      "cohort_report_id": "cohort-b3cb5f66cccda4420be2",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "findings:diversity-in; quote_candidates:q3",
+      "classification": "confirmed"
+    },
+    {
+      "case_id": "bain-technology-heading-not-in-linked-section-four",
+      "report": "Bain & Company",
+      "claim_id": "soft_copy:linkedin_post:f11515c2cf712977",
+      "rule_id": "quote_not_matched",
+      "kind": "quote_unresolved",
+      "source_page": "PDF p.1",
+      "claim": "One representative lens from the infographic “Technology is powering the economy” is the distinction between being born in technology and having a tech-led strategy.",
+      "evidence": "The infographic recommends four actions, drawing on companies capitalizing on cloud technology and platform business models.",
+      "cohort_report_id": "cohort-77bc67b2bc98187d9d58",
+      "affected_section": "linkedin_post",
+      "cohort_evidence_id": "doc_map:section-4",
+      "classification": "not_confirmed_unresolved_do_not_expand_evidence"
+    },
+    {
+      "case_id": "bain-insight-asset-light-quoted-span",
+      "report": "Bain & Company",
+      "claim_id": "insight:asset-light-and-partnership-actions:text",
+      "rule_id": "quote_not_matched",
+      "kind": "quote",
+      "source_page": "PDF p.1",
+      "claim": "The infographic recommends scaling rapidly with an 'asset-light' model and adding capabilities through partnerships.",
+      "evidence": "Scale rapidly with an 'asset-light' model. Add capabilities via partnerships.",
+      "cohort_report_id": "cohort-77bc67b2bc98187d9d58",
+      "affected_section": "insights:asset-light-and-partnership-actions.text",
+      "cohort_evidence_id": "doc_map:section-4",
+      "classification": "confirmed"
     }
   ]
 }

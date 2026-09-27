@@ -93,8 +93,10 @@ Protected-fact quantity dimensions report `compatible` when every explicit
 claim quantity matches linked evidence. A clear one-to-one mismatch remains
 `incompatible`; when a claim or evidence contains several independently stated
 quantities and their relationship cannot be paired safely, the dimension stays
-`unknown`. The direct numeric-grounding check still blocks any material number
-that is absent from its linked evidence.
+`unknown`. The retained-claim numeric check marks a material quantity
+`unresolved` when linked evidence has no comparable quantity or has an
+ambiguous multi-value relationship. A one-to-one value or unit mismatch remains
+`unsupported`; both unresolved and unsupported claims block publication.
 
 An explicitly spelled percentage from zero through ninety-nine is parsed as
 the same percentage as its digit form. An unadorned number following an index

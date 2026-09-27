@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -440,6 +441,60 @@ def test_frozen_cohort_quantity_cases_retain_exact_units(
 
 
 @pytest.mark.parametrize(
+    "case", _cohort_cases("partial_quantity"), ids=lambda case: str(case["case_id"])
+)
+def test_frozen_cohort_unlinked_sample_sizes_remain_unresolved(
+    case: dict[str, object],
+) -> None:
+    evidence_id = str(case["evidence_entity_id"])
+    evidence_pack = str(case["evidence_pack"])
+    claim = str(case["claim"])
+    evidence = str(case["evidence"])
+    package = validate_retained_claims(
+        {
+            "summary": {
+                "claim_evidence_map": [
+                    {"claim": claim, "evidence_ids": [evidence_id]}
+                ]
+            }
+        },
+        {
+            evidence_pack: {
+                evidence_pack: [{"id": evidence_id, "text": evidence}]
+            }
+        },
+    )
+    result = package.results[0]
+    quantity_check = next(
+        check for check in result.checks if check.name == "number_value_unit_match"
+    )
+    claim_quantities = extract_quantities(claim)
+    evidence_quantities = extract_quantities(evidence)
+    unlinked_value = float(case["unlinked_value"])
+
+    assert result.status == "unresolved"
+    assert result.deterministic_status == "unresolved"
+    assert quantity_check.status == "not_applicable"
+    assert quantity_check.reason == "quantity_not_established"
+    assert result.protected_facts is not None
+    assert result.protected_facts.dimension("value").status == "unknown"
+    assert any(
+        quantity.value == unlinked_value and quantity.unit_family == "count"
+        for quantity in claim_quantities
+    )
+    for value in case["supported_values"]:
+        assert any(
+            claim_quantity.value == float(value)
+            and claim_quantity.unit_family == "percent"
+            and any(
+                quantities_match(claim_quantity, evidence_quantity)
+                for evidence_quantity in evidence_quantities
+            )
+            for claim_quantity in claim_quantities
+        )
+
+
+@pytest.mark.parametrize(
     "case", _cohort_cases("protected"), ids=lambda case: str(case["case_id"])
 )
 def test_frozen_cohort_protected_fact_cases_stay_unknown(
@@ -447,7 +502,9 @@ def test_frozen_cohort_protected_fact_cases_stay_unknown(
 ) -> None:
     comparison = compare_protected_fact_texts(str(case["claim"]), str(case["evidence"]))
 
-    assert comparison.dimension(str(case["dimension"])).status == "unknown"
+    assert comparison.dimension(str(case["dimension"])).status == case.get(
+        "expected_dimension_status", "unknown"
+    )
 
 
 @pytest.mark.parametrize(
@@ -462,6 +519,47 @@ def test_frozen_cohort_quoted_spans_are_matched_without_accepting_paraphrase(
     )
 
     assert package.results[0].status == "supported"
+
+
+def test_unlinked_cohort_quote_remains_blocked() -> None:
+    case = next(case for case in _cohort_cases("quote_unresolved"))
+    package = validate_retained_claims(
+        {"quotes_final": [{"text": case["claim"], "evidence_id": case["case_id"]}]},
+        {
+            "doc_map": {
+                "sections": [
+                    {
+                        "id": case["case_id"],
+                        "title": "Technology strategy",
+                        "summary": case["evidence"],
+                    }
+                ]
+            }
+        },
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert "quote_not_matched" in package.results[0].reasons
+
+
+@pytest.mark.parametrize(
+    "case", _cohort_cases("spelled_percentages"), ids=lambda case: str(case["case_id"])
+)
+def test_frozen_cohort_spelled_percentages_match_digit_evidence(
+    case: dict[str, object],
+) -> None:
+    claim_quantities = [
+        quantity
+        for quantity in extract_quantities(str(case["claim"]))
+        if quantity.unit_family == "percent"
+    ]
+    evidence_quantities = extract_quantities(str(case["evidence"]))
+
+    assert claim_quantities
+    assert all(
+        any(quantities_match(claim, evidence) for evidence in evidence_quantities)
+        for claim in claim_quantities
+    )
 
 
 def test_frozen_cohort_combined_category_fixture_accepts_only_rounded_sum() -> None:
@@ -541,6 +639,46 @@ def test_algolia_multi_evidence_links_ground_sample_and_distinct_percentages() -
     )
 
     assert package.results[0].status == "supported"
+
+
+def test_algolia_unlinked_sample_size_remains_unresolved() -> None:
+    claim = (
+        "In a survey of 110 respondents, 42% focused on AI to understand user "
+        "intent, up from 34% in 2024."
+    )
+    package = validate_retained_claims(
+        {
+            "summary": {
+                "claim_evidence_map": [
+                    {"claim": claim, "evidence_ids": ["intent"]}
+                ]
+            }
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "intent",
+                        "text": (
+                            "42% of respondents focused on AI to understand user "
+                            "intent, up from 34% in 2024."
+                        ),
+                    }
+                ]
+            }
+        },
+    )
+
+    result = package.results[0]
+    quantity_check = next(
+        check for check in result.checks if check.name == "number_value_unit_match"
+    )
+    assert result.status == "unresolved"
+    assert result.deterministic_status == "unresolved"
+    assert quantity_check.status == "not_applicable"
+    assert quantity_check.reason == "quantity_not_established"
+    assert result.protected_facts is not None
+    assert result.protected_facts.dimension("value").status == "unknown"
 
 
 def test_algolia_multi_evidence_mutation_keeps_the_changed_percent_blocked() -> None:
@@ -655,3 +793,42 @@ def test_cohort_claim_fixture_file_has_stable_source_identity_fields() -> None:
         and case.get("evidence")
         for case in _COHORT_CASES
     )
+
+
+def test_every_failure_matrix_row_has_an_exact_fixture_identity() -> None:
+    matrix_path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "quality"
+        / "reliability-cohort-20260927-grounding"
+        / "false_positive_failure_matrix.csv"
+    )
+    with matrix_path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    expected = {
+        (
+            row["report_id"],
+            row["publisher"],
+            row["claim_id"],
+            row["rule_id"],
+            row["affected_section"],
+            row["evidence_id"],
+            row["classification"],
+        )
+        for row in rows
+    }
+    actual = {
+        (
+            str(case["cohort_report_id"]),
+            str(case["report"]),
+            str(case["claim_id"]),
+            str(case["rule_id"]),
+            str(case["affected_section"]),
+            str(case["cohort_evidence_id"]),
+            str(case["classification"]),
+        )
+        for case in _COHORT_CASES
+        if case.get("cohort_report_id")
+    }
+
+    assert actual == expected

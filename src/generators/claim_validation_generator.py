@@ -7,7 +7,7 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
-from typing import Callable
+from typing import Callable, Literal, Sequence
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
@@ -35,7 +35,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.utils.errors import AppError
 from src.utils.publication_projection import publication_projection_hash
-from src.utils.quantity import extract_quantities, quantities_match
+from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup
 
 _CAUSAL_RE = re.compile(
@@ -526,30 +526,15 @@ def _checks(
         cited_quantities = [
             value for source in cited for value in extract_quantities(source)
         ]
+        quantity_status, quantity_reason = _numeric_evidence_status(
+            quantities, cited_quantities
+        )
         checks.append(
             ClaimValidationCheck(
                 schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                 name="number_value_unit_match",
-                status="passed"
-                if quantities
-                and all(
-                    any(
-                        _quantity_entailed_by_evidence(candidate, evidence)
-                        for evidence in cited_quantities
-                    )
-                    for candidate in quantities
-                )
-                else "failed",
-                reason="quantities_matched"
-                if quantities
-                and all(
-                    any(
-                        _quantity_entailed_by_evidence(candidate, evidence)
-                        for evidence in cited_quantities
-                    )
-                    for candidate in quantities
-                )
-                else "quantity_not_entailed",
+                status=quantity_status,
+                reason=quantity_reason,
             )
         )
     elif candidate.kind == "quotation":
@@ -1294,6 +1279,40 @@ def _quantity_entailed_by_evidence(candidate: object, evidence: object) -> bool:
     }:
         return False
     return quantities_match(candidate, evidence)  # type: ignore[arg-type]
+
+
+def _numeric_evidence_status(
+    claim_quantities: Sequence[Quantity], evidence_quantities: Sequence[Quantity]
+) -> tuple[Literal["passed", "failed", "not_applicable"], str]:
+    """Separate absent quantitative evidence from a comparable contradiction."""
+    if not claim_quantities:
+        return "failed", "quantity_not_entailed"
+    if all(
+        any(
+            _quantity_entailed_by_evidence(claim, evidence)
+            for evidence in evidence_quantities
+        )
+        for claim in claim_quantities
+    ):
+        return "passed", "quantities_matched"
+
+    # A quantity with no linked evidence of its unit family is unestablished,
+    # not contradicted. If the source does contain that family but the value
+    # fails to match, preserve the hard numeric rejection.
+    for claim in claim_quantities:
+        if any(
+            _quantity_entailed_by_evidence(claim, evidence)
+            for evidence in evidence_quantities
+        ):
+            continue
+        if any(
+            claim.unit_family != "unknown"
+            and claim.unit_family == evidence.unit_family
+            for evidence in evidence_quantities
+        ):
+            return "failed", "quantity_not_entailed"
+
+    return "not_applicable", "quantity_not_established"
 
 
 def _evidence_fidelity_candidates(
