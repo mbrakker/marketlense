@@ -721,3 +721,46 @@ queue-lineage failures recorded in the prior measurement.
 Replay manifests, per-attempt deterministic `RepairDelta` counts, usage totals,
 canary results, and verification outcomes are retained in the [2026-09-27
 measurement](results/2026-09-27-f48f795c.json), with its [SHA-256 sidecar](results/2026-09-27-f48f795c.json.sha256).
+
+## Deferred-grounding RepairDelta cleanup — 2026-09-27, implementation SHA `26be4e17`
+
+The unchanged frozen A21, Mobile editorial, and DoubleVerify manifests were
+replayed after filtering the informational `deferred_grounding_required` issue
+at the `RepairDelta` boundary. The issue remains in candidate validation
+reports and audits, with
+`semantic_grounding_validation_status=not_evaluated_due_to_deterministic_failure`;
+its `RepairDelta` occurrences fell from 5 to **0**. The three deterministic
+rejections in this replay retained their real scope, artifact-quality,
+derived-projection, retained-claim, numbers, and grounding findings. No
+semantic or grounding provider event occurred on those rejected attempts.
+
+This replay was not output-identical to the prior run. It had three
+deterministic rejections and six avoided semantic/grounding calls, compared
+with five rejections and ten avoided calls previously. On all eight overlapping
+attempts, allowed paths, actions, and strategies matched the prior replay;
+seven candidate hashes changed. DoubleVerify attempt 2 used the same plan but
+produced a different candidate hash and promoted. Attempt 1 had full validation,
+so the marker was not in its retry memory. The changed rejection and promotion
+counts therefore followed changed model output, not a retry-plan change caused
+by this cleanup. Artifact-generation usage was 13 calls, 89,246 input tokens,
+12,824 output tokens, and estimated USD 0.015338; these totals are not attributed
+to the marker filter. Skipped provider calls themselves used zero observed
+tokens and cost USD 0; a full-validation counterfactual was not estimated.
+
+Success remained 0/4 at both one and three attempts. Two candidates promoted,
+but no reproducible case met its closure criteria; E13 remains **Active**.
+The required isolated IAS workflow canary also failed before `awaiting_review`
+with `regeneration_repair_decision_invalid` / `patch_application_failed`.
+Its initial repair targeted `summary.claim_evidence_map[3].claim` but proposed
+changes to `summary.executive_summary[claim_index=0..4]` as well, so the existing
+repair contract rejected the out-of-target patch. This was the first repair
+application, before retry memory or `RepairDelta` filtering was involved.
+Publication remained disabled.
+
+The [deferred-grounding cleanup measurement](results/2026-09-27-26be4e17.json)
+contains frozen manifest hashes, per-case attempt outcomes, bounded real
+finding counts, provider usage, and verification results; its [SHA-256
+sidecar](results/2026-09-27-26be4e17.json.sha256) verifies the retained record.
+The broader affected suite had 270 passes and the same two known frozen
+queue-lineage failures recorded in the prior measurement. Focused tests,
+registry tests, scorecard/telemetry tests, lint, formatting, and typing passed.
