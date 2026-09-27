@@ -1,0 +1,740 @@
+{
+  "schema_version": "1.0",
+  "measured_at_utc_date": "2026-09-27",
+  "implementation_sha": "f48f795c70f18a5b62c1482ffda62616de30e9f0",
+  "e13_status": "active",
+  "manifest_sha256": {
+    "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+    "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+    "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+  },
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-f48f795c/a21 --implementation-sha f48f795c70f18a5b62c1482ffda62616de30e9f0",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-f48f795c/mobile --implementation-sha f48f795c70f18a5b62c1482ffda62616de30e9f0",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-f48f795c/doubleverify --implementation-sha f48f795c70f18a5b62c1482ffda62616de30e9f0",
+    "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/e13-canary-f48f795c"
+  ],
+  "aggregate": {
+    "cases": 7,
+    "reproducible_cases": 4,
+    "no_longer_reproducible_cases": 3,
+    "candidate_validation_attempts": 9,
+    "candidate_promotions": 1,
+    "deterministic_rejection_count": 5,
+    "case_success_at_1": "0/4",
+    "case_success_at_3": "0/4",
+    "e13_closure": false,
+    "reproducible_case_ids": [
+      "attachment-the-6dddc246d289",
+      "ebook-0225-fut-997cc1cccd6a",
+      "mobile-app-trends-2026-pdf",
+      "dv-qualityandattentionbenchmark-q1-2026-pdf"
+    ],
+    "no_longer_reproducible_case_ids": [
+      "2026-global-co-8970fc13f012",
+      "final-web-vers-1d9e64dd7425",
+      "g0-ec-trends-r-41f8ffd78145"
+    ],
+    "artifact_generation_provider_calls": 16,
+    "artifact_generation_input_tokens": 108502,
+    "artifact_generation_output_tokens": 13342,
+    "artifact_generation_estimated_cost_usd": 0.016615,
+    "usage_source": "isolated replay llm_usage.sqlite rows whose action starts with artifacts:regenerate"
+  },
+  "fast_fail_impact": {
+    "deterministic_rejections": 5,
+    "semantic_grounding_provider_events_for_rejected_candidates": 0,
+    "semantic_grounding_calls_avoided_vs_normal_two_gate_path": 10,
+    "observed_validation_input_tokens_for_skipped_calls": 0,
+    "observed_validation_output_tokens_for_skipped_calls": 0,
+    "observed_validation_cost_usd_for_skipped_calls": 0.0,
+    "counterfactual_full_validation_tokens_and_cost": "not estimated; no requests were made for rejected candidates",
+    "comparison_to_2026_09_27_6854d5d2_replay": {
+      "prior_artifact_generation_calls": 17,
+      "prior_artifact_generation_input_tokens": 146927,
+      "prior_artifact_generation_output_tokens": 19082,
+      "prior_artifact_generation_estimated_cost_usd": 0.023329,
+      "observed_call_delta": -1,
+      "observed_input_token_delta": -38425,
+      "observed_output_token_delta": -5740,
+      "observed_cost_delta_usd": -0.006714,
+      "causal_attribution": false,
+      "note": "Regeneration model targets and outputs varied between replays; aggregate differences are not attributable to deterministic inline validation."
+    }
+  },
+  "deterministic_findings": {
+    "rejected_attempt_finding_occurrences": 108,
+    "rejected_attempt_findings_by_state": {
+      "introduced": {
+        "artifact_quality": 6,
+        "deferred_grounding_required": 5,
+        "public_editorial_quality.metric_label_relationship": 1,
+        "regeneration_derived_projection": 8,
+        "regeneration_removed_insight_reintroduced": 2,
+        "regeneration_scope_violation": 41,
+        "report_payload_incomplete": 2,
+        "retained_claim.protected_fact_direction_consistency": 1,
+        "retained_claim.soft_copy_provenance_integrity": 2,
+        "soft_copy_claim_provenance": 2
+      },
+      "persisting": {
+        "artifact_quality": 13
+      },
+      "resolved": {
+        "artifact_quality": 2,
+        "grounding": 8,
+        "metrics": 2,
+        "numbers": 3,
+        "public_editorial_quality.metric_label_relationship": 4,
+        "retained_claim.number_value_unit_match": 2,
+        "retained_claim.protected_fact_unit_currency_consistency": 2,
+        "retained_claim.protected_fact_value_consistency": 2
+      }
+    },
+    "rejected_attempts": [
+      {
+        "case_id": "mobile-app-trends-2026-pdf",
+        "cohort": "mobile",
+        "attempt": 1,
+        "promotion_outcome": "rolled_back",
+        "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+        "deterministic_rejection": true,
+        "findings": {
+          "introduced": {
+            "artifact_quality": 2,
+            "deferred_grounding_required": 1,
+            "regeneration_derived_projection": 2,
+            "regeneration_scope_violation": 10,
+            "retained_claim.protected_fact_direction_consistency": 1
+          },
+          "persisting": {
+            "artifact_quality": 3
+          },
+          "resolved": {
+            "grounding": 2,
+            "numbers": 1
+          }
+        },
+        "finding_occurrence_count": 22,
+        "decisions": [
+          {
+            "action": "REGENERATE_ITEM",
+            "strategy": "current_evidence",
+            "paths": [
+              "insights_final[item=insight-005].so_what"
+            ]
+          },
+          {
+            "action": "REGENERATE_ITEM",
+            "strategy": "current_evidence",
+            "paths": [
+              "linkedin_post[claim_index=5]"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "mobile-app-trends-2026-pdf",
+        "cohort": "mobile",
+        "attempt": 2,
+        "promotion_outcome": "rolled_back",
+        "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+        "deterministic_rejection": true,
+        "findings": {
+          "introduced": {
+            "artifact_quality": 2,
+            "deferred_grounding_required": 1,
+            "regeneration_derived_projection": 2,
+            "regeneration_scope_violation": 4
+          },
+          "persisting": {
+            "artifact_quality": 3
+          },
+          "resolved": {
+            "grounding": 2,
+            "numbers": 1
+          }
+        },
+        "finding_occurrence_count": 15,
+        "decisions": [
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "insights_final[item=insight-005].evidence",
+              "insights_final[item=insight-005].evidence_id",
+              "insights_final[item=insight-005].so_what"
+            ]
+          },
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "linkedin_post[claim_index=5]"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "mobile-app-trends-2026-pdf",
+        "cohort": "mobile",
+        "attempt": 3,
+        "promotion_outcome": "rolled_back",
+        "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+        "deterministic_rejection": true,
+        "findings": {
+          "introduced": {
+            "artifact_quality": 2,
+            "deferred_grounding_required": 1,
+            "regeneration_derived_projection": 3,
+            "regeneration_removed_insight_reintroduced": 1,
+            "regeneration_scope_violation": 7,
+            "report_payload_incomplete": 1
+          },
+          "persisting": {
+            "artifact_quality": 3
+          },
+          "resolved": {
+            "grounding": 2,
+            "numbers": 1
+          }
+        },
+        "finding_occurrence_count": 21,
+        "decisions": []
+      },
+      {
+        "case_id": "dv-qualityandattentionbenchmark-q1-2026-pdf",
+        "cohort": "doubleverify",
+        "attempt": 2,
+        "promotion_outcome": "rolled_back",
+        "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+        "deterministic_rejection": true,
+        "findings": {
+          "introduced": {
+            "deferred_grounding_required": 1,
+            "regeneration_scope_violation": 5,
+            "retained_claim.soft_copy_provenance_integrity": 1,
+            "soft_copy_claim_provenance": 1
+          },
+          "persisting": {
+            "artifact_quality": 2
+          },
+          "resolved": {
+            "artifact_quality": 1,
+            "grounding": 1,
+            "metrics": 1,
+            "public_editorial_quality.metric_label_relationship": 2,
+            "retained_claim.number_value_unit_match": 1,
+            "retained_claim.protected_fact_unit_currency_consistency": 1,
+            "retained_claim.protected_fact_value_consistency": 1
+          }
+        },
+        "finding_occurrence_count": 18,
+        "decisions": [
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "insights_final[item=q1-regional-ad-attention-index].metric.value",
+              "insights_final[item=q1-regional-ad-attention-index].metric.unit"
+            ]
+          },
+          {
+            "action": "REGENERATE_ITEM",
+            "strategy": "current_evidence",
+            "paths": [
+              "expert_comment[claim_index=3]"
+            ]
+          },
+          {
+            "action": "REGENERATE_ITEM",
+            "strategy": "current_evidence",
+            "paths": [
+              "expert_comment[claim_index=0]"
+            ]
+          },
+          {
+            "action": "REGENERATE_ITEM",
+            "strategy": "current_evidence",
+            "paths": [
+              "linkedin_post[claim_index=3]"
+            ]
+          }
+        ]
+      },
+      {
+        "case_id": "dv-qualityandattentionbenchmark-q1-2026-pdf",
+        "cohort": "doubleverify",
+        "attempt": 3,
+        "promotion_outcome": "rolled_back",
+        "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+        "deterministic_rejection": true,
+        "findings": {
+          "introduced": {
+            "deferred_grounding_required": 1,
+            "public_editorial_quality.metric_label_relationship": 1,
+            "regeneration_derived_projection": 1,
+            "regeneration_removed_insight_reintroduced": 1,
+            "regeneration_scope_violation": 15,
+            "report_payload_incomplete": 1,
+            "retained_claim.soft_copy_provenance_integrity": 1,
+            "soft_copy_claim_provenance": 1
+          },
+          "persisting": {
+            "artifact_quality": 2
+          },
+          "resolved": {
+            "artifact_quality": 1,
+            "grounding": 1,
+            "metrics": 1,
+            "public_editorial_quality.metric_label_relationship": 2,
+            "retained_claim.number_value_unit_match": 1,
+            "retained_claim.protected_fact_unit_currency_consistency": 1,
+            "retained_claim.protected_fact_value_consistency": 1
+          }
+        },
+        "finding_occurrence_count": 32,
+        "decisions": [
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "expert_comment[claim_index=3]"
+            ]
+          },
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "expert_comment[claim_index=0]"
+            ]
+          },
+          {
+            "action": "REBIND_EVIDENCE",
+            "strategy": "alternative_evidence",
+            "paths": [
+              "linkedin_post[claim_index=3]"
+            ]
+          }
+        ]
+      }
+    ],
+    "rule_counts_are_existing_repair_delta_issue_occurrences; no messages, prompts, or source text retained": true
+  },
+  "cases": [
+    {
+      "case_id": "attachment-the-6dddc246d289",
+      "cohort": "a21",
+      "reproducible": true,
+      "candidate_validation_attempts": 1,
+      "candidate_promotions": 1,
+      "final_promotion_outcome": "candidate_promoted_but_case_not_closed",
+      "case_level_closure": false,
+      "attempts": [
+        {
+          "attempt": 1,
+          "promotion_outcome": "promoted",
+          "semantic_grounding_validation_status": "evaluated",
+          "deterministic_rejection": false,
+          "findings": {
+            "introduced": {},
+            "persisting": {
+              "family_confidence": 1
+            },
+            "resolved": {
+              "grounding": 2
+            }
+          },
+          "finding_occurrence_count": 3,
+          "decisions": [
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "insights_final[item=insight-002].text"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "ebook-0225-fut-997cc1cccd6a",
+      "cohort": "a21",
+      "reproducible": true,
+      "candidate_validation_attempts": 2,
+      "candidate_promotions": 0,
+      "final_promotion_outcome": "none",
+      "case_level_closure": false,
+      "attempts": [
+        {
+          "attempt": 1,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "evaluated",
+          "deterministic_rejection": false,
+          "findings": {
+            "introduced": {
+              "grounding": 1
+            },
+            "persisting": {
+              "artifact_quality": 2
+            },
+            "resolved": {
+              "artifact_quality": 1,
+              "grounding": 1,
+              "retained_claim.protected_fact_attribution_consistency": 2
+            }
+          },
+          "finding_occurrence_count": 7,
+          "decisions": [
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]"
+              ]
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "evaluated",
+          "deterministic_rejection": false,
+          "findings": {
+            "introduced": {},
+            "persisting": {
+              "artifact_quality": 2,
+              "grounding": 1
+            },
+            "resolved": {
+              "artifact_quality": 1,
+              "retained_claim.protected_fact_attribution_consistency": 2
+            }
+          },
+          "finding_occurrence_count": 6,
+          "decisions": [
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "summary.claim_evidence_map[0].claim",
+                "summary.executive_summary[claim_index=0]"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "mobile-app-trends-2026-pdf",
+      "cohort": "mobile",
+      "reproducible": true,
+      "candidate_validation_attempts": 3,
+      "candidate_promotions": 0,
+      "final_promotion_outcome": "none",
+      "case_level_closure": false,
+      "attempts": [
+        {
+          "attempt": 1,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+          "deterministic_rejection": true,
+          "findings": {
+            "introduced": {
+              "artifact_quality": 2,
+              "deferred_grounding_required": 1,
+              "regeneration_derived_projection": 2,
+              "regeneration_scope_violation": 10,
+              "retained_claim.protected_fact_direction_consistency": 1
+            },
+            "persisting": {
+              "artifact_quality": 3
+            },
+            "resolved": {
+              "grounding": 2,
+              "numbers": 1
+            }
+          },
+          "finding_occurrence_count": 22,
+          "decisions": [
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "insights_final[item=insight-005].so_what"
+              ]
+            },
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "linkedin_post[claim_index=5]"
+              ]
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+          "deterministic_rejection": true,
+          "findings": {
+            "introduced": {
+              "artifact_quality": 2,
+              "deferred_grounding_required": 1,
+              "regeneration_derived_projection": 2,
+              "regeneration_scope_violation": 4
+            },
+            "persisting": {
+              "artifact_quality": 3
+            },
+            "resolved": {
+              "grounding": 2,
+              "numbers": 1
+            }
+          },
+          "finding_occurrence_count": 15,
+          "decisions": [
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "insights_final[item=insight-005].evidence",
+                "insights_final[item=insight-005].evidence_id",
+                "insights_final[item=insight-005].so_what"
+              ]
+            },
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "linkedin_post[claim_index=5]"
+              ]
+            }
+          ]
+        },
+        {
+          "attempt": 3,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+          "deterministic_rejection": true,
+          "findings": {
+            "introduced": {
+              "artifact_quality": 2,
+              "deferred_grounding_required": 1,
+              "regeneration_derived_projection": 3,
+              "regeneration_removed_insight_reintroduced": 1,
+              "regeneration_scope_violation": 7,
+              "report_payload_incomplete": 1
+            },
+            "persisting": {
+              "artifact_quality": 3
+            },
+            "resolved": {
+              "grounding": 2,
+              "numbers": 1
+            }
+          },
+          "finding_occurrence_count": 21,
+          "decisions": []
+        }
+      ]
+    },
+    {
+      "case_id": "dv-qualityandattentionbenchmark-q1-2026-pdf",
+      "cohort": "doubleverify",
+      "reproducible": true,
+      "candidate_validation_attempts": 3,
+      "candidate_promotions": 0,
+      "final_promotion_outcome": "none",
+      "case_level_closure": false,
+      "attempts": [
+        {
+          "attempt": 1,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "evaluated",
+          "deterministic_rejection": false,
+          "findings": {
+            "introduced": {},
+            "persisting": {
+              "artifact_quality": 3,
+              "public_editorial_quality.metric_label_relationship": 2
+            },
+            "resolved": {
+              "grounding": 1,
+              "metrics": 1,
+              "retained_claim.number_value_unit_match": 1,
+              "retained_claim.protected_fact_unit_currency_consistency": 1,
+              "retained_claim.protected_fact_value_consistency": 1
+            }
+          },
+          "finding_occurrence_count": 10,
+          "decisions": [
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "insights_final[item=q1-regional-ad-attention-index].metric.value",
+                "insights_final[item=q1-regional-ad-attention-index].metric.unit"
+              ]
+            },
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "expert_comment[claim_index=3]"
+              ]
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+          "deterministic_rejection": true,
+          "findings": {
+            "introduced": {
+              "deferred_grounding_required": 1,
+              "regeneration_scope_violation": 5,
+              "retained_claim.soft_copy_provenance_integrity": 1,
+              "soft_copy_claim_provenance": 1
+            },
+            "persisting": {
+              "artifact_quality": 2
+            },
+            "resolved": {
+              "artifact_quality": 1,
+              "grounding": 1,
+              "metrics": 1,
+              "public_editorial_quality.metric_label_relationship": 2,
+              "retained_claim.number_value_unit_match": 1,
+              "retained_claim.protected_fact_unit_currency_consistency": 1,
+              "retained_claim.protected_fact_value_consistency": 1
+            }
+          },
+          "finding_occurrence_count": 18,
+          "decisions": [
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "insights_final[item=q1-regional-ad-attention-index].metric.value",
+                "insights_final[item=q1-regional-ad-attention-index].metric.unit"
+              ]
+            },
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "expert_comment[claim_index=3]"
+              ]
+            },
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "expert_comment[claim_index=0]"
+              ]
+            },
+            {
+              "action": "REGENERATE_ITEM",
+              "strategy": "current_evidence",
+              "paths": [
+                "linkedin_post[claim_index=3]"
+              ]
+            }
+          ]
+        },
+        {
+          "attempt": 3,
+          "promotion_outcome": "rolled_back",
+          "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+          "deterministic_rejection": true,
+          "findings": {
+            "introduced": {
+              "deferred_grounding_required": 1,
+              "public_editorial_quality.metric_label_relationship": 1,
+              "regeneration_derived_projection": 1,
+              "regeneration_removed_insight_reintroduced": 1,
+              "regeneration_scope_violation": 15,
+              "report_payload_incomplete": 1,
+              "retained_claim.soft_copy_provenance_integrity": 1,
+              "soft_copy_claim_provenance": 1
+            },
+            "persisting": {
+              "artifact_quality": 2
+            },
+            "resolved": {
+              "artifact_quality": 1,
+              "grounding": 1,
+              "metrics": 1,
+              "public_editorial_quality.metric_label_relationship": 2,
+              "retained_claim.number_value_unit_match": 1,
+              "retained_claim.protected_fact_unit_currency_consistency": 1,
+              "retained_claim.protected_fact_value_consistency": 1
+            }
+          },
+          "finding_occurrence_count": 32,
+          "decisions": [
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "expert_comment[claim_index=3]"
+              ]
+            },
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "expert_comment[claim_index=0]"
+              ]
+            },
+            {
+              "action": "REBIND_EVIDENCE",
+              "strategy": "alternative_evidence",
+              "paths": [
+                "linkedin_post[claim_index=3]"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ias_first_attempt_canary": {
+    "final_state": "failed",
+    "awaiting_review": false,
+    "publication_readiness": "fail",
+    "publication_enabled": false,
+    "terminal_failure_code": "regeneration_repair_decision_invalid",
+    "failure_reason": "patch_application_failed",
+    "failure_stage": "report_pipeline",
+    "repair_attempt": 0,
+    "provider_calls": 43,
+    "input_tokens": 345485,
+    "output_tokens": 60666,
+    "estimated_cost_usd": 0.064744,
+    "duration_seconds": 392.188,
+    "same_terminal_failure_code_in_prior_measurement": "regeneration_repair_decision_invalid",
+    "result": "failed; workflow did not reach awaiting_review",
+    "prior_measurement": "2026-09-27-6854d5d2.json",
+    "prior_failure_reason": "patch_value_over_broad"
+  },
+  "verification": {
+    "focused_orchestrator_regression": "4 passed",
+    "registry_candidate_integrity_scope_telemetry_and_regeneration_suite": "216 passed",
+    "broader_affected_suite": "268 passed, 2 failed",
+    "known_broader_failures": [
+      "tests/test_validation_queue_lineage.py::test_a21_full_chain_from_frozen_cohort_through_awaiting_review[unsupported-soft-copy-repair]",
+      "tests/test_validation_queue_lineage.py::test_a21_full_chain_from_frozen_cohort_through_awaiting_review[ias-known-claim-repair]"
+    ],
+    "broad_failure_summary": "Both fail in report_analysis with workflow_queue_programming_defect / Unhandled worker handler exception; same failures were recorded in the prior measurement.",
+    "ruff": "passed at implementation SHA",
+    "format": "passed at implementation SHA",
+    "type_check": "764 source files, zero tracked baseline errors at implementation SHA",
+    "ias_canary": "failed at report_analysis repair application; publication disabled; see ias_first_attempt_canary"
+  }
+}

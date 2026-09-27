@@ -671,3 +671,46 @@ Candidate report-payload incompleteness is retained as a hard validation issue
 in the same audit and delta, so it cannot bypass deterministic diagnostics.
 Candidates that pass deterministic candidate checks continue through the full
 validation path.
+
+## Inline deterministic replay measurement — 2026-09-27, implementation SHA `f48f795c`
+
+The unchanged A21, Mobile editorial, and DoubleVerify manifests were replayed
+with their frozen hashes. Four of seven cases reproduced; three were no longer
+reproducible. The replay produced nine candidate audits and five deterministic
+rejections: three Mobile attempts and two DoubleVerify attempts. Those five
+audits retained a combined 108 `RepairDelta` finding occurrences across
+introduced, persisting, and resolved states. The captured rules include
+`artifact_quality`, `numbers`, `metrics`, `public_editorial_quality`,
+`regeneration_scope_violation`, and provenance findings. The exact per-attempt
+rule counts are in the [inline deterministic measurement](results/2026-09-27-f48f795c.json).
+
+The rejected attempts emitted zero semantic or grounding provider events. This
+preserves ten avoided calls compared with running the normal two-provider path
+for all five rejected candidates. The skipped calls used zero tokens and cost
+zero in the usage ledger; the full-validation counterfactual token and cost
+amount is not estimated because no requests were sent. Across the replay, the
+artifact regeneration ledger recorded 16 calls, 108,502 input tokens, 13,342
+output tokens, and estimated USD 0.016615. Compared with the prior replay, those
+totals were lower by one call, 38,425 input tokens, 5,740 output tokens, and
+USD 0.006714; regeneration targets and model outputs differed, so that aggregate
+difference is not attributed to inline deterministic validation.
+
+Case-level success remains 0/4 at one attempt and 0/4 at three attempts. One
+A21 attachment candidate promoted, but the case did not meet its closure
+criteria. The new findings give retry planning a fuller deterministic delta,
+but did not produce a measured case-level promotion improvement. E13 remains
+**Active**.
+
+The required isolated IAS workflow canary used fresh state with publication
+disabled, but failed in report-analysis repair application with
+`regeneration_repair_decision_invalid` (`patch_application_failed`) before
+`awaiting_review`. The [earlier mainline canary](results/2026-09-27-6854d5d2.json)
+had the same terminal code with a different patch-rejection reason. The full
+workflow gate therefore remains failed. The focused orchestrator and
+regeneration/validation suites passed (4 focused and 216 combined tests); the
+broader affected suite had 268 passes and the same two known frozen
+queue-lineage failures recorded in the prior measurement.
+
+Replay manifests, per-attempt deterministic `RepairDelta` counts, usage totals,
+canary results, and verification outcomes are retained in the [2026-09-27
+measurement](results/2026-09-27-f48f795c.json), with its [SHA-256 sidecar](results/2026-09-27-f48f795c.json.sha256).
