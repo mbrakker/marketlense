@@ -99,8 +99,10 @@ def rank_compatible_alternatives(
     """Return at most ``limit`` retained alternatives ordered by typed fit.
 
     Quarantined identifiers and candidates that conflict on any protected
-    dimension are never returned.  An empty result means no compatible
-    retained evidence exists and the repair must rebind elsewhere or abstain.
+    dimension are never returned. Candidates with explicit values on both
+    sides of a protected dimension are also excluded when equivalence remains
+    unknown. An empty result means no compatible retained evidence exists and
+    the repair must rebind elsewhere or abstain.
     """
 
     blocked = {
@@ -141,14 +143,24 @@ def _score_entry(
     breakdown: Dict[str, float] = {"score": 0.0, "compatible": 1.0}
     score = 0.0
     conflicting = False
+    unresolved = False
     if comparison is not None:
         for dimension, weight in _DIMENSION_WEIGHTS:
-            status = comparison.dimensions[dimension].status
+            fact = comparison.dimensions[dimension]
+            status = fact.status
             if status == "compatible":
                 score += weight
             elif status == "incompatible":
                 conflicting = True
                 score -= _CONFLICT_PENALTY
+            elif fact.claim_value is not None and fact.evidence_value is not None:
+                # Unknown means the evidence did not prove this asserted fact
+                # compatible. It is not a contradiction, but it cannot be
+                # selected when the alternative explicitly asserts a different
+                # but non-comparable value for the same protected dimension.
+                # Missing evidence dimensions remain eligible as broad context
+                # for a repair that may rewrite the claim.
+                unresolved = True
         if comparison.proposition_status == "incompatible":
             conflicting = True
     score += _metric_score(query.metric, evidence_text)
@@ -167,7 +179,7 @@ def _score_entry(
     breakdown["score"] = score
     breakdown["metric_match"] = metric_match
     breakdown["token_relevance"] = token_relevance
-    breakdown["compatible"] = 0.0 if conflicting else 1.0
+    breakdown["compatible"] = 0.0 if conflicting or unresolved else 1.0
     return breakdown
 
 

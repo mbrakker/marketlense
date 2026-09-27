@@ -1,0 +1,21 @@
+report_id,publisher,previous_outcome,previous_failure_code,current_outcome,current_failure_code,current_failure_stage,current_validator_rule,current_claim_or_entity_id
+cohort-81af3890cd84ece81ef1,Capgemini Research Institute,failed,validation_failed,failed,insight_safe_removal_no_replacement,report_pipeline,,
+cohort-cbb6e7df67412186b8bc,Activate,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-e854b71d6fb10333b47f,DoubleVerify,awaiting_review,,failed,validation_failed,semantic_validation,public_editorial_quality.duplicate_insight,insight:apac-fraud-sivt-violation-rate:text
+cohort-2acb4a56e14add5d7717,KPMG,failed,soft_copy_claim_provenance_bindings_incomplete,failed,validation_failed,semantic_validation,grounding,soft_copy:linkedin_post:f3d2f75ece0eca48
+cohort-4b763ae2286ca69fe8ac,Reuters Institute,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-11b0b55157f7d0636815,Merchant Risk Council,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-b638414df0b1fccea1cd,Adjust,failed,soft_copy_claim_provenance_bindings_incomplete,failed,soft_copy_claim_provenance_bindings_incomplete,artifact_generation,,
+cohort-86858bdcb370266f26c2,Algolia,failed,soft_copy_claim_provenance_bindings_incomplete,failed,publish_readiness_failed,,,
+cohort-77bc67b2bc98187d9d58,Bain & Company,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-0a019f840c3f89ad0a96,Bigcommerce,failed,validation_failed,failed,publish_readiness_failed,,,
+cohort-979a63a1633a7f2ccc51,Criteo,failed,soft_copy_claim_provenance_bindings_incomplete,failed,card_tldr_compact_invalid,,,
+cohort-b10ed6c82b76739a806a,Deloitte,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-9b97626fc83c086961a7,DHL eCommerce,failed,validation_failed,failed,publish_readiness_failed,,,
+cohort-f62048b469dd784e6e7c,Emplifi,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-fb16d52bb8f60827077c,Qualtrics,awaiting_review,,failed,validation_failed,semantic_validation,grounding,
+cohort-8ef1021c332aa85ba008,StackAdapt Inc,awaiting_review,,failed,publish_readiness_failed,,,
+cohort-5ceb3b4498de7288ce5a,Robeco,failed,publish_readiness_failed,failed,soft_copy_claim_provenance_bindings_incomplete,artifact_generation,,
+cohort-f1652970000cfe246c94,SimilarWeb,failed,validation_failed,failed,publish_readiness_failed,,,
+cohort-076eca6d31e0c1dcddf0,Contentstack,failed,validation_failed,failed,publish_readiness_failed,,,
+cohort-b3cb5f66cccda4420be2,Mintel,failed,openai_bad_request,failed,publish_readiness_failed,,,

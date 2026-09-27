@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from src.contracts.protected_facts import compare_protected_fact_texts
 from src.generators.evidence_compatibility import (
     CompatibilityQuery,
     rank_compatible_alternatives,
@@ -134,10 +135,23 @@ def test_page_proximity_prefers_same_page_evidence() -> None:
     assert ranked[0].evidence_id == "same-page"
 
 
-def test_conflicting_candidate_only_is_rejected_and_abstains() -> None:
+def test_unproven_geography_candidate_only_is_rejected_and_abstains() -> None:
     query = CompatibilityQuery(text="Reach in Europe grew 20% in 2024.")
     candidates = [
         _entry("wrong-geography", "Reach in the United States grew 20% in 2024."),
     ]
 
     assert rank_compatible_alternatives(query, candidates) == []
+
+
+def test_unknown_geography_abstains_without_becoming_a_conflict() -> None:
+    query = CompatibilityQuery(text="Reach in Europe grew 20% in 2024.")
+    evidence = "Reach in the United States grew 20% in 2024."
+
+    comparison = compare_protected_fact_texts(query.text, evidence)
+
+    assert comparison.dimension("geography").status == "unknown"
+    assert rank_compatible_alternatives(
+        query,
+        [_entry("unknown-geography", evidence)],
+    ) == []
