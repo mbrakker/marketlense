@@ -82,7 +82,43 @@ class ProtectedFactComparison:
         ) + tuple(incompatible)
 
 
-_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+_YEAR = r"(?:19|20)\d{2}"
+_OBSERVATION_YEAR_RE = re.compile(
+    rf"\b(?:in|during|for|as of|as at|collected(?: in)?|fielded(?: in)?|"
+    rf"survey(?:ed)?(?: in)?|observed(?: in)?|reported(?: in)?|"
+    rf"data(?: gathered| collected)?(?: in| for)?|year ended(?: in)?)\s+"
+    rf"(?:the\s+)?(?P<year>{_YEAR})(?:e)?\b"
+    rf"(?!\s+(?:edition|report|publication|outlook))",
+    re.IGNORECASE,
+)
+_MONTH_YEAR_RE = re.compile(
+    rf"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    rf"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|"
+    rf"dec(?:ember)?)\.?\s+(?P<year>{_YEAR})\b",
+    re.IGNORECASE,
+)
+_QUARTER_YEAR_RE = re.compile(
+    rf"\b(?:q[1-4]\s*(?:fy\s*)?|fy\s*)?(?P<year>{_YEAR})\s*(?:q[1-4]|e)\b|"
+    rf"\bq[1-4]\s*(?:fy\s*)?(?P<quarter_year>{_YEAR})\b",
+    re.IGNORECASE,
+)
+_OBSERVATION_RANGE_RE = re.compile(
+    rf"\b(?P<start>{_YEAR})(?:e)?(?:\s+[a-z]+)?\s+"
+    rf"(?:to|through|until|[-–])\s+(?:[a-z]+\s+)?(?P<end>{_YEAR})(?:e)?\b",
+    re.IGNORECASE,
+)
+_FORECAST_YEAR_CONTEXT_RE = re.compile(
+    r"\b(?:estimate[sd]?|expect(?:s|ed|ation|ations)?|forecast(?:s|ed|ing)?|"
+    r"project(?:s|ed|ion|ions)?|will|would|may|might|likely|outlook)\b",
+    re.IGNORECASE,
+)
+_OBSERVED_YEAR_CONTEXT_RE = re.compile(
+    r"\b(?:observ(?:e|ed|ation)|survey(?:ed)?|respondents?|fieldwork|"
+    r"collected|data|grew|growth|increas(?:e|ed|ing)|rose|declin(?:e|ed|ing)|"
+    r"fell|drop(?:ped|ping)?|reached|achieved|attained|measured|reported|"
+    r"recorded|actual|historical)\b",
+    re.IGNORECASE,
+)
 _DIRECTION_WORD = (
     r"(?:grew|growth|increas(?:e|es|ed|ing)|rose|rising|up|gain(?:s|ed)?|"
     r"declin(?:e|es|ed|ing)|decreas(?:e|s|ed|ing)|fell|falling|"
@@ -144,7 +180,8 @@ _DIRECTION_SUBJECT_RE = re.compile(
     re.IGNORECASE,
 )
 _RANK_RE = re.compile(
-    r"(?:#\s?(\d+)|\b(number\s+one|first(?!\s+time)|second|third|fourth|fifth|largest|smallest)\b)",
+    r"(?:#\s?(\d+)|\b(number\s+one|first(?![\w-])|second(?![\w-])|"
+    r"third(?![\w-])|fourth(?![\w-])|fifth(?![\w-])|largest|smallest)\b)",
     re.IGNORECASE,
 )
 _COMPARISON_RE = re.compile(
@@ -224,17 +261,48 @@ def compare_protected_fact_texts(
                 ),
             }
 
-    claim_years = set(_YEAR_RE.findall(claim_text))
-    evidence_years = set(_YEAR_RE.findall(evidence_text))
+    claim_year_facts = _observation_year_facts(claim_text)
+    evidence_year_facts = _observation_year_facts(evidence_text)
+    claim_years = {year for year, status in claim_year_facts if status != "unknown"}
+    evidence_years = {
+        year for year, status in evidence_year_facts if status != "unknown"
+    }
     if claim_years:
+        evidence_ranges = _observation_year_range_facts(evidence_text)
+        same_status_facts = [
+            (year, status)
+            for year, status in claim_year_facts
+            if status != "unknown"
+        ]
+        same_status_evidence = {
+            status
+            for _year, status in evidence_year_facts
+            if status != "unknown"
+        }
+        covered = {
+            (year, status)
+            for year, status in same_status_facts
+            if (year, status) in evidence_year_facts
+            or any(
+                start <= year <= end and range_status == status
+                for start, end, range_status in evidence_ranges
+            )
+        }
+        has_comparable_evidence = any(
+            status in same_status_evidence for _year, status in same_status_facts
+        ) or any(
+            status == range_status
+            for _start, _end, range_status in evidence_ranges
+            for _year, status in same_status_facts
+        )
         payload["timeframe"] = {
             "claim_value": ", ".join(sorted(claim_years)),
             "evidence_value": ", ".join(sorted(evidence_years)) or None,
             "status": (
                 "compatible"
-                if claim_years <= evidence_years
+                if len(covered) == len(same_status_facts)
                 else "incompatible"
-                if evidence_years
+                if has_comparable_evidence
                 else "unknown"
             ),
         }
@@ -460,7 +528,22 @@ def _geographies(text: str) -> set[str]:
 
 def _attribution(text: str) -> str | None:
     match = _ATTRIBUTION_RE.search(text)
-    return match.group(1).casefold() if match else None
+    if not match:
+        return None
+    actor = re.sub(r"\s+", " ", match.group(1).casefold()).strip()
+    if actor.split()[0] in {
+        "a",
+        "an",
+        "annual",
+        "it",
+        "quarterly",
+        "the",
+        "this",
+        "that",
+        "yearly",
+    }:
+        return None
+    return actor
 
 
 def _subject(text: str) -> str | None:
@@ -469,11 +552,30 @@ def _subject(text: str) -> str | None:
 
 
 def _subjects(text: str) -> tuple[str, ...]:
+    discourse_subject_starts = {
+        "a",
+        "an",
+        "as",
+        "because",
+        "expected",
+        "expect",
+        "forecast",
+        "from",
+        "not",
+        "of",
+        "reported",
+        "that",
+        "to",
+    }
     return tuple(
         dict.fromkeys(
             subject.removeprefix("the ")
             for match in _SUBJECT_RE.finditer(text)
             if (subject := re.sub(r"\s+", " ", match.group(1).casefold()).strip())
+            and subject.split()[0] not in discourse_subject_starts
+            and not re.search(
+                r"\b(?:expect|expected|expectation|reported|forecast)\b", subject
+            )
         )
     )
 
@@ -518,6 +620,49 @@ def _rank(text: str) -> str | None:
     word = match.group(2).casefold()
     aliases = {"number one": "1", "first": "1", "second": "2", "third": "3"}
     return f"rank:{aliases.get(word, word)}"
+
+
+def _observation_year_facts(text: str) -> tuple[tuple[str, str], ...]:
+    facts: list[tuple[str, str]] = []
+    for sentence in re.split(r"(?<=[.!?;])\s+|\n+", text):
+        years = {
+            match.group("year")
+            for pattern in (_OBSERVATION_YEAR_RE, _MONTH_YEAR_RE)
+            for match in pattern.finditer(sentence)
+        }
+        for match in _QUARTER_YEAR_RE.finditer(sentence):
+            years.add(match.group("year") or match.group("quarter_year"))
+        ranges = list(_OBSERVATION_RANGE_RE.finditer(sentence))
+        for match in ranges:
+            years.update((match.group("start"), match.group("end")))
+        if not years:
+            continue
+        status = (
+            "forecast"
+            if _FORECAST_YEAR_CONTEXT_RE.search(sentence)
+            else "observed"
+            if _OBSERVED_YEAR_CONTEXT_RE.search(sentence)
+            else "unknown"
+        )
+        facts.extend((year, status) for year in sorted(years))
+    return tuple(dict.fromkeys(facts))
+
+
+def _observation_year_range_facts(text: str) -> tuple[tuple[str, str, str], ...]:
+    ranges: list[tuple[str, str, str]] = []
+    for sentence in re.split(r"(?<=[.!?;])\s+|\n+", text):
+        status = (
+            "forecast"
+            if _FORECAST_YEAR_CONTEXT_RE.search(sentence)
+            else "observed"
+            if _OBSERVED_YEAR_CONTEXT_RE.search(sentence)
+            else "unknown"
+        )
+        ranges.extend(
+            (match.group("start"), match.group("end"), status)
+            for match in _OBSERVATION_RANGE_RE.finditer(sentence)
+        )
+    return tuple(dict.fromkeys(ranges))
 
 
 def _comparison(text: str) -> str | None:

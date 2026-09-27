@@ -85,6 +85,34 @@ currency-scale form; punctuation in `U.K.` does not supply a numeric magnitude.
 Extraction still compares the full unit and any attached temporal context
 rather than inferring a metric.
 
+An explicitly spelled percentage from zero through ninety-nine is parsed as
+the same percentage as its digit form. An unadorned number following an index
+header retains the `index` unit family, so a table's index values are not
+treated as counts. Each explicit quantity in a claim must still match a value
+and unit in its linked evidence; separate cited facts may support different
+values and units within the same claim.
+
+Protected timeframe checks compare years attached to observed facts with other
+observed years, and forecast years with other forecast years. A report's
+edition or publication year does not become an observation period. A year
+listed for a different forecast in mixed evidence does not contradict an
+observed claim; when the linked evidence does not establish a comparable
+period, the dimension stays unknown. An explicit same-status period mismatch
+remains blocking, and a claim within a linked source date range is compatible.
+Attribution and population checks likewise stay unknown when their syntax only
+identifies a generic report/article/pronoun or a negated expectation clause,
+rather than a named source or population.
+
+Quote validation matches every exact quoted span against the linked source
+text. Explanatory prose around a quote may paraphrase the source, but the
+quoted words themselves must occur in the cited evidence; a missing or
+fabricated quoted span remains blocking. A complete short sentence ending in
+terminal punctuation is not classified as a fragment. A metric explicitly
+joining source categories with a combined predicate may use their sum rounded
+to the displayed precision when each component has one unambiguous linked
+percentage. A mismatched component, value, unit, period, or ambiguous source
+row remains blocking.
+
 ## Blocking rules
 
 The gate blocks public release unless semantic and grounding validation passed, a current retained claim-grounding package has zero unsupported and unresolved factual claims, category decisions agree, every material claim has a valid retained evidence ID, and every regenerated artifact was promoted. Unsupported factual claims block as unsupported; unresolved material claims block as incomplete grounding, not as proven falsehood. The package must match the final artifact and publication projection, evidence packs, source identity, validator versions, configuration, and policy. Semantic prompt/model/execution identities are required when semantic grounding ran. Readiness verifies these identities deterministically and makes no provider call. It also blocks unsupported numeric claims; source-proven comparative temporal loss and malformed `in to` / `between and` comparisons; internal IDs and evidence tokens; placeholders; malformed extraction and OCR fragments; mojibake; missing rendered assets; duplicate boilerplate; filename-style titles and duplicated years; fragments; generic figure labels; unsupported certainty; empty or non-specific decision implications; mechanical labels; literal truncation; private paths and Drive URLs; and invalid public source links.

@@ -55,6 +55,8 @@ The eight reports below reached `awaiting_review` in the 2026-09-20 cohort and f
 
 These 11 source-supported failures alone violate the zero-false-positive acceptance criterion. Among other reports, reviewed false-positive findings also include Adjust's complete “Scope matters.” sentence rejected as a fragment and edition year 2026 treated as a 2025 data timeframe; Criteo's linked 94% survey finding; Algolia's 42%/34% comparison and scope attribution; KPMG's explicit distinction between expected and completed carve-out activity; and Capgemini/Robeco attribution findings. These are detailed in the per-report outcome ledger; incomplete exact evidence bindings remain unresolved.
 
+The claim-level inventory with validator rule, affected artifact section, exact retained evidence ID/page, expected result, observed baseline result, and semantic root-cause category is [`false_positive_failure_matrix.csv`](false_positive_failure_matrix.csv). Rows that contain both a confirmed supported subclaim and an unlinked additional number remain marked partial; they do not authorize accepting the unsupported number. Other unlinked quote or sample-size cases remain explicitly unresolved.
+
 ## Recent closure canaries
 
 | Report | Recent targeted result | Post-fix frozen-cohort result | Assessment |

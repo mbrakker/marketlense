@@ -8,8 +8,8 @@ from typing import Literal
 from src.contracts.protected_facts import ProtectedFactComparison
 
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.2"
-CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v1"
-CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.1"
+CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v2"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.2"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[

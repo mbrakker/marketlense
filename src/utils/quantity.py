@@ -33,6 +33,16 @@ _RATIO_RE = re.compile(
     r"(?P<b>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b",
     re.IGNORECASE,
 )
+_SPELLED_PERCENT_RE = re.compile(
+    r"(?<![A-Za-z-])(?P<number>(?:"
+    r"zero|one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
+    r"eighteen|nineteen|"
+    r"twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
+    r"(?:[ -](?:one|two|three|four|five|six|seven|eight|nine))?"
+    r")\s*(?P<unit>percent\b|pct\b|%)",
+    re.IGNORECASE,
+)
 _N_EQUALS_RE = re.compile(r"\bn\s*=\s*(?P<n>\d{1,3}(?:,\d{3})+|\d+)\b", re.IGNORECASE)
 _MULT_RE = re.compile(rf"\b(?P<num>{_NUMBER_RE})\s*x\b", re.IGNORECASE)
 # Editorial reports commonly express daily viewing time as H:MM.  Treat that
@@ -93,6 +103,36 @@ _WORDS_TO_NUM = {
     "eight": 8.0,
     "nine": 9.0,
     "ten": 10.0,
+}
+_SPELLED_INTEGER_VALUES = {
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19,
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90,
 }
 _METRIC_HINTS = {
     "respondents",
@@ -188,11 +228,42 @@ def extract_quantities(text: str) -> List[Quantity]:
     quantities: List[Quantity] = []
     quantities.extend(_extract_ranges(normalized))
     quantities.extend(_extract_ratios(normalized))
+    quantities.extend(_extract_spelled_percentages(normalized))
     quantities.extend(_extract_n_equals(normalized))
     quantities.extend(_extract_durations(normalized))
     quantities.extend(_extract_main(normalized))
     quantities.extend(_extract_multipliers(normalized))
     return _dedupe_quantities(quantities)
+
+
+def _extract_spelled_percentages(text: str) -> List[Quantity]:
+    output: List[Quantity] = []
+    for match in _SPELLED_PERCENT_RE.finditer(text):
+        words = re.split(r"[ -]+", match.group("number").casefold())
+        value = _SPELLED_INTEGER_VALUES.get(words[0])
+        if value is None:
+            continue
+        if len(words) == 2:
+            ones = _SPELLED_INTEGER_VALUES.get(words[1])
+            if ones is None or not 1 <= ones <= 9:
+                continue
+            value += ones
+        output.append(
+            Quantity(
+                value=float(value),
+                comparator="eq",
+                unit_family="percent",
+                unit="percent",
+                magnitude="",
+                start=match.start(),
+                end=match.end(),
+                sentence=text,
+                timeframe=infer_timeframe(text),
+                confidence=0.95,
+                raw=match.group(0),
+            )
+        )
+    return output
 
 
 def quantities_match(candidate: Quantity, evidence: Quantity) -> bool:
@@ -667,6 +738,12 @@ def _resolve_unit_family(
         return "points", "points", magnitude_norm
     if unit_norm in {"index", "rank"}:
         return unit_norm, unit_norm, magnitude_norm
+
+    preceding_metric_label = sentence_norm[max(0, span[0] - 256) : span[0]]
+    if re.search(r"\bindex(?:es|ices)?\b", preceding_metric_label):
+        return "index", "index", magnitude_norm
+    if re.search(r"\brank(?:ing)?\b", preceding_metric_label):
+        return "rank", "rank", magnitude_norm
 
     if ("usd" in around or "eur" in around or "gbp" in around or "jpy" in around) and (
         magnitude_norm

@@ -553,17 +553,28 @@ def _checks(
             )
         )
     elif candidate.kind == "quotation":
-        normalized = normalize_for_lookup(text).replace('"', "")
+        quoted_spans = _QUOTED_RE.findall(text)
+        normalized_sources = [normalize_for_lookup(source) for source in cited]
+        normalized_quotes = [
+            normalize_for_lookup(quote).replace('"', "") for quote in quoted_spans
+        ]
+        if normalized_quotes:
+            quote_matched = all(
+                quote
+                and any(quote in source for source in normalized_sources)
+                for quote in normalized_quotes
+            )
+        else:
+            normalized = normalize_for_lookup(text).replace('"', "")
+            quote_matched = bool(normalized) and any(
+                normalized in source for source in normalized_sources
+            )
         checks.append(
             ClaimValidationCheck(
                 schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                 name="quote_match",
-                status="passed"
-                if any(normalized in normalize_for_lookup(source) for source in cited)
-                else "failed",
-                reason="quote_matched"
-                if any(normalized in normalize_for_lookup(source) for source in cited)
-                else "quote_not_matched",
+                status="passed" if quote_matched else "failed",
+                reason="quote_matched" if quote_matched else "quote_not_matched",
             )
         )
     else:

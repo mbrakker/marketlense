@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "case_id": "doubleverify-emea-ad-attention-index",
+      "report": "DoubleVerify",
+      "claim_id": "insight:q1-2026-ad-attention-regional:metric",
+      "rule_id": "protected_fact_value_consistency",
+      "kind": "quantity",
+      "expected_unit_family": "index",
+      "source_page": "PDF p.9",
+      "claim": "EMEA Ad Attention Index 110",
+      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99"
+    },
+    {
+      "case_id": "doubleverify-emea-engagement-index",
+      "report": "DoubleVerify",
+      "claim_id": "insight:q1-2026-engagement-regional:metric",
+      "rule_id": "protected_fact_unit_currency_consistency",
+      "kind": "quantity",
+      "expected_unit_family": "index",
+      "source_page": "PDF p.9",
+      "claim": "EMEA Engagement Index 116",
+      "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99"
+    },
+    {
+      "case_id": "kpmg-expectation-is-not-completed-activity",
+      "report": "KPMG",
+      "claim_id": "soft_copy:linkedin_post:bfa34894cad82558",
+      "rule_id": "protected_fact_population_incompatible",
+      "kind": "protected",
+      "dimension": "population",
+      "source_page": "PDF p.19 (printed p.18)",
+      "claim": "That is a stated expectation, not a reported increase in completed activity.",
+      "evidence": "Half of dealmakers expect carve-out activity to increase over the next 12-24 months, while very few anticipate a decline."
+    },
+    {
+      "case_id": "deloitte-strategic-choice-is-not-observation-status",
+      "report": "Deloitte",
+      "claim_id": "soft_copy:summary:7a3740ee6896e9c4",
+      "rule_id": "protected_fact_observation_status_incompatible",
+      "kind": "protected",
+      "dimension": "observation_status",
+      "source_page": "PDF p.7",
+      "claim": "Retailers face a choice between retailer-owned assistants and third-party AI shopping journeys, guided by brand and data-control priorities.",
+      "evidence": "Retailers should define their strategic posture across three dimensions: brand positioning, data control requirements, and ecosystem participation across the customer journey. Retailers prioritizing first-party data control can deploy onsite assistants, while LLM partnerships can help those seeking early access to AI-native shoppers."
+    },
+    {
+      "case_id": "adjust-edition-year-is-not-data-period",
+      "report": "Adjust",
+      "claim_id": "soft_copy:linkedin_post:4723b23d6c1f01c6",
+      "rule_id": "protected_fact_timeframe_incompatible",
+      "kind": "protected",
+      "dimension": "timeframe",
+      "source_page": "PDF pp.1, 41",
+      "claim": "That split is one representative lens from Mobile app trends: 2026 edition.",
+      "evidence": "Mobile app trends: 2026 edition. The average global e-commerce app session length declined year over year in 2025."
+    },
+    {
+      "case_id": "algolia-42-percent-up-from-34-percent",
+      "report": "Algolia",
+      "claim_id": "summary_claim:1",
+      "rule_id": "quantity_not_entailed",
+      "kind": "quantity",
+      "expected_unit_family": "percent",
+      "source_page": "PDF p.10",
+      "claim": "42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024.",
+      "evidence": "Notably, 42% of respondents are focusing on using AI to better understand user intent, up from 34% in 2024."
+    },
+    {
+      "case_id": "criteo-94-percent-survey-result",
+      "report": "Criteo",
+      "claim_id": "soft_copy:summary:72bf43055e321462",
+      "rule_id": "quantity_not_entailed",
+      "kind": "quantity",
+      "expected_unit_family": "percent",
+      "source_page": "PDF p.5",
+      "claim": "94% of US media agency professionals agreed that their brand clients should explore new digital media channels.",
+      "evidence": "94% of media agency professionals in the US agree that their brand clients should be exploring new digital media channels."
+    },
+    {
+      "case_id": "criteo-november-2022-fieldwork",
+      "report": "Criteo",
+      "claim_id": "soft_copy:summary:72bf43055e321462",
+      "rule_id": "protected_fact_timeframe_incompatible",
+      "kind": "protected",
+      "dimension": "timeframe",
+      "source_page": "PDF p.9",
+      "claim": "In the November 2022 survey, incrementality metrics were reported by 50% of agency professionals.",
+      "evidence": "US agencies estimate digital media campaign costs will rise by 22% in 2023."
+    },
+    {
+      "case_id": "emplifi-79-91-84-spelled-percentages",
+      "report": "Emplifi",
+      "claim_id": "soft_copy:expert_comment:790a7f54bd7ebc5d",
+      "rule_id": "number_value_unit_match",
+      "kind": "spelled_percentages",
+      "source_page": "PDF pp.10, 13, 15",
+      "claim": "91% of consumers expect brands to disclose AI use in marketing, while 84% say service interactions should feel authentic.",
+      "evidence": "Ninety-one percent of consumers expect brands to disclose AI use in marketing. Eighty-four percent say customer service interactions should feel authentic."
+    },
+    {
+      "case_id": "stackadapt-display-and-ctv-combined-share",
+      "report": "StackAdapt",
+      "claim_id": "insight:display-ctv-programmatic-spend:text",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "kind": "combined_category",
+      "source_page": "PDF p.7",
+      "claim": "Display and CTV together account for 77% of programmatic spend.",
+      "evidence": "Display accounts for 45.85% of programmatic spend. CTV accounts for 30.83%. Display and CTV alone account for 77% of spend."
+    },
+    {
+      "case_id": "bain-asset-light-exact-quoted-span",
+      "report": "Bain & Company",
+      "claim_id": "soft_copy:summary:a633bdb9904a1f2d",
+      "rule_id": "quote_not_matched",
+      "kind": "quote",
+      "source_page": "PDF p.1",
+      "claim": "The infographic recommends scaling rapidly with an 'asset-light' model and adding capabilities through partnerships.",
+      "evidence": "Scale rapidly with an 'asset-light' model. Add capabilities via partnerships."
+    },
+    {
+      "case_id": "robeco-report-summary-is-not-publisher-attribution",
+      "report": "Robeco",
+      "claim_id": "soft_copy:summary:3f006fd5fce6ba59",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF p.2",
+      "claim": "The report presents engagement and voting as stewardship activities.",
+      "evidence": "We use engagement and voting to strengthen corporates' approach towards responsible business conduct and sustainable growth. Exercising our stewardship responsibilities is an integral part of Robeco's approach to sustainability investing. Quarterly reports provide updates on engagement and voting activities."
+    },
+    {
+      "case_id": "mintel-maxxing-exact-quoted-span",
+      "report": "Mintel",
+      "claim_id": "summary_claim:2",
+      "rule_id": "quote_not_matched",
+      "kind": "quote",
+      "source_page": "PDF p.3",
+      "claim": "Mintel predicts a shift from daily nutrient 'maxxing' toward varied diets linked to long-term health.",
+      "evidence": "'Maxxing' Out, Diversity In: Consumers will move past the viral advice and goal of 'maxxing' their daily protein or fiber intake."
+    },
+    {
+      "case_id": "adjust-complete-short-sentence",
+      "report": "Adjust",
+      "claim_id": "soft_copy:linkedin_post:8cf86eac6bb2cb73",
+      "rule_id": "public_editorial_quality.sentence_fragment",
+      "kind": "complete_sentence",
+      "source_page": "retained LinkedIn artifact",
+      "claim": "Scope matters.",
+      "evidence": "Scope matters."
+    },
+    {
+      "case_id": "capgemini-human-assistance-separate-stages",
+      "report": "Capgemini Research Institute",
+      "claim_id": "soft_copy:linkedin_post:e3b9aca8b5c5c483",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF pp.5, 45",
+      "claim": "It says human assistance remains important alongside digital tools, so the account of support includes both digital convenience and human interaction.",
+      "evidence": "Preference for in-person assistance has risen sharply: 74% value human support during customer service and 66% during the purchase stage, up from 54% and 40% last year."
+    },
+    {
+      "case_id": "reuters-marketlense-summary-is-not-reuters-attribution",
+      "report": "Reuters Institute",
+      "claim_id": "soft_copy:summary:8d92571c5b950823",
+      "rule_id": "protected_fact_attribution_incompatible",
+      "kind": "protected",
+      "dimension": "attribution",
+      "source_page": "PDF pp.2, 3, 5, 7",
+      "claim": "The report describes journalism adapting to AI-driven discovery and creator competition, with publishers emphasizing distinctive work and changing newsroom practices.",
+      "evidence": "Publishers will be focused this year on re-engineering their businesses for the age of AI, with more distinctive content and a more human face."
+    }
+  ]
+}

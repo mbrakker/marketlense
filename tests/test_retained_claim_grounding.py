@@ -418,7 +418,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert package["unresolved_factual_count"] == 1
     assert package["readiness_status"] == "not_publishable"
     assert package["validation_identity"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.1"
+        "grounding_validation_output:1.2"
     )
     result = package["results"][0]
     assert result["status"] == "unresolved"
@@ -432,7 +432,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert identity["prompt_family"] == "report_vs/validate/grounding"
     assert identity["prompt_content_hash"]
     assert identity["execution_identity"]
-    assert identity["validator_version"] == "grounding_validation_output:1.1"
+    assert identity["validator_version"] == "grounding_validation_output:1.2"
     assert identity["model_provider"]
     assert identity["model_name"]
     assert identity["configuration_policy_identity"]

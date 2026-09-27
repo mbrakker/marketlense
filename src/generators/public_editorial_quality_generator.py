@@ -13,6 +13,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -1439,6 +1440,12 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
                     for source_value in values
                 ]
                 if comparisons and all(result is False for result in comparisons):
+                    if _combined_category_sum_matches(
+                        text,
+                        candidate_value=value,
+                        values_by_category=evidence_values_by_category,
+                    ):
+                        continue
                     return (
                         "attaches a retained metric value to a different source "
                         "category"
@@ -1474,6 +1481,84 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
                     "attaches a retained metric value to a different source denominator"
                 )
     return ""
+
+
+def _combined_category_sum_matches(
+    text: str,
+    *,
+    candidate_value: str,
+    values_by_category: Mapping[str, set[str]],
+) -> bool:
+    """Allow a rounded total only for explicitly joined source categories."""
+
+    normalized = _normalized_relationship_search_text(text)
+    label_matches: list[tuple[int, int, str]] = []
+    for category in values_by_category:
+        pattern = re.compile(
+            rf"(?<![A-Za-z0-9]){re.escape(category)}(?![A-Za-z0-9])", re.I
+        )
+        label_matches.extend(
+            (match.start(), match.end(), category)
+            for match in pattern.finditer(normalized)
+        )
+    label_matches.sort()
+    category_mentions = Counter(label for _start, _end, label in label_matches)
+    connector = re.compile(r"\s+(?:and|plus|along with|as well as|&)\s*", re.I)
+    combined_predicate = re.compile(
+        r"^\s*(?:(?:alone|together|combined|collectively|both|in total)\s+)?"
+        r"(?:account(?:s)? for|represent(?:s)?|make up|makes up|"
+        r"contribute(?:s)?|comprise(?:s)?|total(?:s)?)\b",
+        re.I,
+    )
+    for index, left in enumerate(label_matches):
+        for right in label_matches[index + 1 :]:
+            if left[2] == right[2]:
+                continue
+            if category_mentions != Counter({left[2]: 1, right[2]: 1}):
+                continue
+            if not connector.fullmatch(normalized[left[1] : right[0]]):
+                continue
+            if not combined_predicate.match(normalized[right[1] :]):
+                continue
+            left_values = values_by_category[left[2]]
+            right_values = values_by_category[right[2]]
+            if len(left_values) != 1 or len(right_values) != 1:
+                continue
+            left_quantities = extract_quantities(next(iter(left_values)))
+            right_quantities = extract_quantities(next(iter(right_values)))
+            claim_quantities = extract_quantities(candidate_value)
+            if not (
+                len(left_quantities)
+                == len(right_quantities)
+                == len(claim_quantities)
+                == 1
+            ):
+                continue
+            first, second, claim = (
+                left_quantities[0],
+                right_quantities[0],
+                claim_quantities[0],
+            )
+            if (
+                first.unit_family != "percent"
+                or second.unit_family != "percent"
+                or claim.unit_family != "percent"
+            ):
+                continue
+            number = re.search(r"\d+(?:\.\d+)?", claim.raw)
+            if not number:
+                continue
+            places = len(number.group(0).partition(".")[2])
+            quantum = Decimal(1).scaleb(-places)
+            try:
+                total = Decimal(str(first.value)) + Decimal(str(second.value))
+                rounded_total = total.quantize(quantum, rounding=ROUND_HALF_UP)
+                claim_value = Decimal(str(claim.value)).quantize(quantum)
+            except InvalidOperation:
+                continue
+            if rounded_total == claim_value:
+                return True
+    return False
 
 
 def _ordered_category_row_value_pairs(text: str) -> set[tuple[str, str, str]]:
@@ -1802,9 +1887,9 @@ def _near_duplicate(
 
 def _looks_fragmentary(text: str) -> bool:
     words = re.findall(r"[A-Za-zÀ-ÿ0-9]+", text)
-    if len(words) < 3:
-        return True
     stripped = text.strip()
+    if len(words) < 3:
+        return not bool(re.search(r"[.!?;:]$", stripped))
     return not re.search(r"[.!?;:]$", stripped) and bool(
         re.search(r"\b(?:and|or|but|because|with|of|to)$", stripped, re.I)
     )

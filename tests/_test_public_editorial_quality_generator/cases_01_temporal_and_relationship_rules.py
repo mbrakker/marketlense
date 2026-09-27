@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v7"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v8"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
