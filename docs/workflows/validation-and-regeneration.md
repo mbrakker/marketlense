@@ -90,6 +90,17 @@ item and field available for a summary claim or variant, insight and metric, key
 figure, quote, Expert View claim, or LinkedIn claim. When identity cannot be
 resolved unambiguously, the planner uses the existing family-level repair.
 
+Summary issues are separated into independent planned targets by claim-map leaf
+or public-copy field. A claim-map repair request contains the selected item and
+its exact writable claim path; failures in `executive_summary`, TLDRs, or other
+claim-map entries remain separate targets. The request names that exact path and
+the existing patch validator rejects any additional path before a candidate is
+created. Candidate assembly merges only declared summary leaves back onto the
+last promoted summary, so normalization or source-display helpers cannot alter
+untargeted sibling claims. A repair that truly needs synchronized leaves must
+declare each exact leaf in its target before the provider call; whole-summary
+replacement is never accepted for an atomic target.
+
 Each model-assisted repair call returns one private `repair_decision` with the
 diagnosed failure class, selected action and strategy, retained evidence IDs actually
 used, changed paths, and a minimal replacement patch. The generator derives the

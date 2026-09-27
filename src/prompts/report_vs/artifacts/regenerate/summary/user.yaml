@@ -23,10 +23,13 @@ text: |
     `grounding_package.relevant_evidence`; never use an ID listed in
     `grounding_package.quarantined_evidence_ids`.
   - Fix the listed failures directly.
+  - For `claim_map_item`, replace only the named item's `claim` leaf; use only
+    `repair_context_json.allowed_paths` and do not patch map siblings, public
+    copy, TLDRs, or metadata.
   - When `claim_repair_scope.mode` is `claim`, return only the named summary
-    field with one replacement sentence. The
-    generator preserves and deterministically reconstructs all sibling claims;
-    never rewrite or repeat them.
+    sentence leaf with one replacement sentence. The generator preserves and
+    deterministically reconstructs all sibling claims; never rewrite or repeat
+    them.
   - Retain the editorial plan's report thesis and themes; do not introduce a competing frame.
   - Every retained `claim_evidence_map` entry must use one existing `evidence_id`; omit a claim rather than output an empty or unverifiable binding.
   - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct finding or quote from `grounding_package.relevant_evidence`. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.

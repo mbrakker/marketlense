@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.regeneration import RepairDecision, RepairPatchOperation
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationReport
 from src.generators._artifact_generator.family_policy import (

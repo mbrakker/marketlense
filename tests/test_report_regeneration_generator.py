@@ -26,13 +26,13 @@ from src.contracts.regeneration import (
     RepairDecision,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.validation import ValidationIssue
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
     soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
+from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
     build_chart_insight_cards,
     build_key_figures,
@@ -4047,31 +4047,24 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
         },
     ]
     before_claims = deepcopy(artifacts["summary"]["claim_evidence_map"])
-    plan = RegenerationPlan(
-        mode="targeted",
-        targets=[
-            RegenerationTarget(
-                target_section="summary",
-                regenerate_steps=["summary"],
-                prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
-                issues=[
-                    RegenerationIssue(
-                        rule_id="retained_claim.number_value_unit_match",
-                        affected_section=("summary.claim_evidence_map:claim-one.claim"),
-                        message="[retained_claim.number_value_unit_match] repair claim",
-                        severity="error",
-                        entity_id="summary_claim:claim-one",
-                        evidence_ids=["f1"],
-                    )
-                ],
-                repair_action="REGENERATE_ITEM",
-                repair_strategy="current_evidence",
-                allowed_paths=["summary.claim_evidence_map[item=claim-one].claim"],
+    before_executive_summary = artifacts["summary"]["executive_summary"]
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                rule_id="retained_claim.number_value_unit_match",
+                affected_section="summary.claim_evidence_map:claim-one.claim",
+                message="[retained_claim.number_value_unit_match] repair claim",
+                severity="error",
+                entity_id="summary_claim:claim-one",
+                evidence_ids=["f1"],
             )
         ],
-        unmappable_issues=[],
-        broad_retry_allowed=False,
+        artifacts=artifacts,
+        broad_retry_available=False,
     )
+    assert plan.targets[0].allowed_paths == [
+        "summary.claim_evidence_map[item=claim-one].claim"
+    ]
     openai_client = _ClaimMapOpenAIClient()
 
     response = regenerate_artifacts(
@@ -4098,7 +4091,11 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     assert len(openai_client.calls) == 1
     request_variables = json.loads(openai_client.calls[0].user_prompt.split("|", 1)[1])
     claim_scope = json.loads(request_variables["claim_repair_scope_json"])
+    repair_context = json.loads(request_variables["repair_context_json"])
     assert claim_scope["claim_id"] == "claim-one"
+    assert repair_context["allowed_paths"] == [
+        "summary.claim_evidence_map[item=claim-one].claim"
+    ]
     assert (
         len(json.loads(request_variables["current_section_json"])["claim_evidence_map"])
         == 1
@@ -4106,6 +4103,122 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     assert claims[0]["claim"] == "Corrected retained claim."
     assert claims[0]["evidence_id"] == before_claims[0]["evidence_id"]
     assert claims[1] == before_claims[1]
+    assert response.updated_artifacts["summary"]["executive_summary"] == (
+        before_executive_summary
+    )
+    assert response.repair_decisions[0].changed_paths == [
+        "summary.claim_evidence_map[item=claim-one].claim"
+    ]
+
+
+def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(
+    tmp_path,
+) -> None:
+    class _OverbroadSummaryOpenAIClient:
+        def __init__(self) -> None:
+            self.calls = []
+
+        def openai_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            repair_context = json.loads(variables["repair_context_json"])
+            assert repair_context["allowed_paths"] == [
+                "summary.claim_evidence_map[item=claim-one].claim"
+            ]
+            unauthorized_path = "summary.executive_summary[claim_index=0]"
+            path = repair_context["allowed_paths"][0]
+            decision = {
+                "schema_version": "1.0",
+                "repair_action": repair_context["repair_action"],
+                "repair_strategy": repair_context["repair_strategy"],
+                "evidence_ids_used": ["f1"],
+                "changed_paths": [path, unauthorized_path],
+                "minimal_patch": [
+                    {
+                        "op": "replace",
+                        "path": path,
+                        "value_json": json.dumps("Corrected retained claim."),
+                    },
+                    {
+                        "op": "replace",
+                        "path": unauthorized_path,
+                        "value_json": json.dumps("Rewritten sibling summary claim."),
+                    },
+                ],
+            }
+            payload = {"repair_decision": decision}
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-summary-overbroad-patch",
+            )
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "id": "claim-one",
+            "claim": "Unsupported original claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        },
+        {
+            "id": "claim-two",
+            "claim": "Untouched sibling claim.",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "pages": [2],
+        },
+    ]
+    target = RegenerationTarget(
+        target_section="summary",
+        regenerate_steps=["summary"],
+        prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+        issues=[
+            RegenerationIssue(
+                rule_id="retained_claim.number_value_unit_match",
+                affected_section="summary.claim_evidence_map:claim-one.claim",
+                message="[retained_claim.number_value_unit_match] repair claim",
+                severity="error",
+                entity_id="summary_claim:claim-one",
+                evidence_ids=["f1"],
+            )
+        ],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["summary.claim_evidence_map[item=claim-one].claim"],
+    )
+    openai_client = _OverbroadSummaryOpenAIClient()
+
+    with pytest.raises(AppError) as error:
+        regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=1,
+                plan=RegenerationPlan(
+                    mode="targeted",
+                    targets=[target],
+                    unmappable_issues=[],
+                    broad_retry_allowed=False,
+                ),
+                current_artifacts=artifacts,
+                doc_map=_evidence_packs()["doc_map"],
+                evidence_packs=_evidence_packs(),
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=artifacts["source_status"],
+                categories=["Category"],
+            ),
+            openai_client=openai_client,
+            prompt_client=_FakePromptClient(),
+        )
+
+    assert error.value.context["reason"] == "changed_path_outside_allowed_paths"
+    assert len(openai_client.calls) == 1
 
 
 def test_regeneration_repairs_a_source_proven_lost_quarterly_comparison(tmp_path):

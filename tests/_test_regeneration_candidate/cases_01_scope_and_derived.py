@@ -156,6 +156,89 @@ def test_candidate_audit_records_verified_dependent_paths() -> None:
     assert audit.verified_dependent_paths == ["metric_spine[item=one].value"]
 
 
+def test_candidate_audit_retains_planned_and_applied_summary_leaf_paths() -> None:
+    claim_path = "summary.claim_evidence_map[item=claim-one].claim"
+    copy_path = "summary.executive_summary[claim_index=0]"
+    before = {
+        "summary": {
+            "claim_evidence_map": [
+                {"id": "claim-one", "claim": "Old source claim."}
+            ],
+            "executive_summary": "Old public claim. Stable sibling.",
+        }
+    }
+    after = deepcopy(before)
+    after["summary"]["claim_evidence_map"][0]["claim"] = "New source claim."
+    after["summary"]["executive_summary"] = "New public claim. Stable sibling."
+    target_fields = {
+        "repair_action": "REGENERATE_ITEM",
+        "repair_strategy": "current_evidence",
+        "selected_evidence_ids": ["evidence-1"],
+        "quarantined_evidence_ids": [],
+    }
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(allowed_paths=[claim_path], **target_fields),
+            SimpleNamespace(allowed_paths=[copy_path], **target_fields),
+        ]
+    )
+    decisions = [
+        RepairDecision(
+            diagnosed_failure_class="retained_claim.number_value_unit_match",
+            repair_action="REGENERATE_ITEM",
+            repair_strategy="current_evidence",
+            evidence_ids_used=["evidence-1"],
+            changed_paths=[path],
+            minimal_patch=[
+                RepairPatchOperation(op="replace", path=path, value=value)
+            ],
+        )
+        for path, value in (
+            (claim_path, "New source claim."),
+            (copy_path, "New public claim."),
+        )
+    ]
+    response = SimpleNamespace(
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        selected_evidence_ids=["evidence-1"],
+        repair_decisions=decisions,
+    )
+    runtime = SimpleNamespace(
+        ctx=SimpleNamespace(
+            report_id="report",
+            validation_run_id="validation",
+            cohort_id="cohort",
+            run_id="run",
+            configuration_hash="config",
+            policy_hash="policy",
+            producer_commit_sha="commit",
+        ),
+        file=SimpleNamespace(file_id="report"),
+    )
+
+    audit = _candidate_audit(
+        runtime=runtime,
+        attempt_index=1,
+        transformation_scope=["summary"],
+        current_artifacts=before,
+        candidate_artifacts=after,
+        current_artifacts_path="artifacts.json",
+        candidate_artifacts_path="candidate.json",
+        candidate_result=CandidateIntegrityResult(
+            issues=[], evidence_lineage=[], verified_derived_roots=frozenset()
+        ),
+        plan=plan,
+        regeneration_response=response,
+    )
+
+    assert audit.allowed_paths == sorted([claim_path, copy_path])
+    assert [decision.changed_paths for decision in audit.repair_decisions] == [
+        [claim_path],
+        [copy_path],
+    ]
+
+
 def test_scope_validation_allows_only_verified_deterministic_dependents() -> None:
     before = {
         "insights_final": [{"id": "one", "text": "Old claim."}],

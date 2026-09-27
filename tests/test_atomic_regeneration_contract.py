@@ -498,6 +498,189 @@ def test_model_cannot_replace_an_item_or_write_an_undeclared_path(
     assert error.value.context["reason"] == reason
 
 
+def test_summary_claim_map_and_public_copy_failures_plan_as_separate_targets() -> None:
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": "claim-one",
+                    "claim": "The unsupported metric reached 25%.",
+                    "evidence_id": "retained-evidence",
+                }
+            ],
+            "executive_summary": "First public claim. Second public claim.",
+        }
+    }
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                message="The retained summary claim does not match its evidence.",
+                severity="error",
+                affected_section="summary.claim_evidence_map:claim-one.claim",
+                rule_id="retained_claim.number_value_unit_match",
+                entity_id="summary_claim:claim-one",
+                evidence_ids=["retained-evidence"],
+            ),
+            ValidationIssue(
+                message="The executive summary contains a failed retained claim.",
+                severity="error",
+                affected_section="summary.executive_summary",
+                rule_id="retained_claim.soft_copy_provenance_integrity",
+                evidence_ids=["retained-evidence"],
+            ),
+        ],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 2
+    claim_target, copy_target = plan.targets
+    assert claim_target.target_section == copy_target.target_section == "summary"
+    assert [issue.rule_id for issue in claim_target.issues] == [
+        "retained_claim.number_value_unit_match"
+    ]
+    assert claim_target.allowed_paths == [
+        "summary.claim_evidence_map[item=claim-one].claim"
+    ]
+    assert [issue.rule_id for issue in copy_target.issues] == [
+        "retained_claim.soft_copy_provenance_integrity"
+    ]
+    assert copy_target.allowed_paths == [
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+    ]
+
+
+def test_explicit_summary_leaf_set_accepts_all_declared_paths_only() -> None:
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": "claim-one",
+                    "claim": "Original source claim.",
+                    "evidence_id": "retained-evidence",
+                },
+                {
+                    "id": "claim-two",
+                    "claim": "Unchanged map sibling.",
+                    "evidence_id": "other-evidence",
+                },
+            ],
+            "executive_summary": "Original public claim. Unchanged public sibling.",
+            "tldr": "Unchanged TLDR.",
+            "card_tldr_compact": "Compact summary.",
+        }
+    }
+    allowed_paths = [
+        "summary.claim_evidence_map[item=claim-one].claim",
+        "summary.executive_summary[claim_index=0]",
+    ]
+    target = RegenerationTarget(
+        target_section="summary",
+        regenerate_steps=["summary"],
+        prompt_namespaces=[],
+        issues=[
+            RegenerationIssue(
+                rule_id="retained_claim.number_value_unit_match",
+                affected_section="summary.claim_evidence_map:claim-one.claim",
+                message="The summary claim requires a synchronized public copy update.",
+                severity="error",
+                entity_id="summary_claim:claim-one",
+                evidence_ids=["retained-evidence"],
+            )
+        ],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=allowed_paths,
+    )
+    payload = _decision_payload(
+        target=target,
+        artifacts=artifacts,
+        patches=[
+            (allowed_paths[0], "Repaired source claim."),
+            (allowed_paths[1], "Repaired public claim."),
+        ],
+        evidence_ids=["retained-evidence"],
+    )
+
+    decision = _validated_repair_decision(
+        payload,
+        execution=_execution(target),
+        current_artifacts=artifacts,
+        grounding_package={"evidence_ids": ["retained-evidence"]},
+    )
+    patched = _apply_repair_decision_patch(
+        current_artifacts=artifacts,
+        decision=decision,
+    )
+
+    assert decision.changed_paths == allowed_paths
+    assert patched["summary"]["claim_evidence_map"][0]["claim"] == (
+        "Repaired source claim."
+    )
+    assert patched["summary"]["claim_evidence_map"][1] == artifacts["summary"][
+        "claim_evidence_map"
+    ][1]
+    assert patched["summary"]["executive_summary"] == (
+        "Repaired public claim. Unchanged public sibling."
+    )
+    assert patched["summary"]["tldr"] == artifacts["summary"]["tldr"]
+    assert patched["summary"]["card_tldr_compact"] == artifacts["summary"][
+        "card_tldr_compact"
+    ]
+    scope = _scope_validation_report(
+        before=artifacts,
+        after=patched,
+        plan=SimpleNamespace(targets=[target]),
+    )
+    assert scope.status == "pass"
+
+
+def test_atomic_summary_plan_rejects_whole_family_replacement() -> None:
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {"id": "claim-one", "claim": "Original claim."}
+            ],
+            "executive_summary": "Original executive summary.",
+            "tldr": "Original TLDR.",
+            "card_tldr_compact": "Compact sentence.",
+        }
+    }
+    issue = RegenerationIssue(
+        rule_id="retained_claim.number_value_unit_match",
+        affected_section="summary.claim_evidence_map:claim-one.claim",
+        message="The retained summary claim is unsupported.",
+        severity="error",
+        entity_id="summary_claim:claim-one",
+    )
+    target = RegenerationTarget(
+        target_section="summary",
+        regenerate_steps=["summary"],
+        prompt_namespaces=[],
+        issues=[issue],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["summary.claim_evidence_map[item=claim-one].claim"],
+    )
+    payload = _decision_payload(
+        target=target,
+        artifacts=artifacts,
+        patches=[("summary", artifacts["summary"])],
+    )
+
+    with pytest.raises(AppError) as error:
+        _validated_repair_decision(
+            payload,
+            execution=_execution(target),
+            current_artifacts=artifacts,
+            grounding_package={"evidence_ids": []},
+        )
+
+    assert error.value.context["reason"] == "changed_path_outside_allowed_paths"
+
+
 @pytest.mark.parametrize(
     ("path", "value"),
     [

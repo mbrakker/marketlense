@@ -106,6 +106,23 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
 
+def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "For `claim_map_item`, replace only the named item's `claim` leaf" in (
+        prompt_set.user.text
+    )
+    assert "repair_context_json.allowed_paths" in prompt_set.user.text
+    assert "do not patch map siblings, public" in prompt_set.user.text
+
+
 def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
     None
 ):

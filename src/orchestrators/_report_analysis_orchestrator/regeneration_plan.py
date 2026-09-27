@@ -13,10 +13,10 @@ from typing import Any, Dict, List, Sequence
 
 from src.contracts.regeneration import (
     FailureFingerprint,
-    RepairDelta,
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
+    RepairDelta,
     repair_strategy_fingerprint,
 )
 from src.contracts.soft_copy_claim_provenance import (
@@ -1022,6 +1022,38 @@ def _build_target(
     )
 
 
+def _summary_issue_groups(
+    issues: List[RegenerationIssue], artifacts: Dict[str, Any]
+) -> List[List[RegenerationIssue]]:
+    """Keep unrelated summary leaves in separate model-repair targets."""
+
+    paths = [
+        (issue, _issue_allowed_path("summary", issue, artifacts))
+        for issue in issues
+    ]
+    if any(not path for _issue, path in paths):
+        return [issues]
+    grouped: Dict[str, List[RegenerationIssue]] = {}
+    for issue, path in paths:
+        map_claim = re.fullmatch(
+            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\]\.claim",
+            path,
+        )
+        soft_copy_claim = re.fullmatch(
+            r"summary\.(?:tldr|card_tldr_compact|executive_summary)"
+            r"(?:\[claim_index=\d+\])?",
+            path,
+        )
+        if map_claim:
+            group_key = path
+        elif soft_copy_claim:
+            group_key = path.split("[claim_index=", 1)[0]
+        else:
+            group_key = path
+        grouped.setdefault(group_key, []).append(issue)
+    return [grouped[key] for key in sorted(grouped)]
+
+
 def _canonical_metric_copy_changes(paths: List[str], artifacts: Dict[str, Any]) -> bool:
     """Return whether a canonical candidate changes one declared metric leaf."""
 
@@ -1207,16 +1239,21 @@ def _build_regeneration_plan(
     if grouped:
         targets = [
             built_target
-            for built_target in (
+            for target_key in TARGET_ORDER
+            if target_key in grouped
+            for issue_group in (
+                _summary_issue_groups(grouped[target_key], artifacts)
+                if target_key == "summary"
+                else [grouped[target_key]]
+            )
+            for built_target in [
                 _build_target(
                     target_key,
-                    grouped[target_key],
+                    issue_group,
                     rejected_strategy_keys,
                     artifacts,
                 )
-                for target_key in TARGET_ORDER
-                if target_key in grouped
-            )
+            ]
             if built_target is not None
         ]
         if not targets:
