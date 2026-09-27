@@ -141,6 +141,65 @@ def test_adjust_shaped_factual_repair_requires_selected_numeric_support(
         assert "regeneration_claim_support" in claim_lineage.validation_issues
 
 
+def test_candidate_preflight_leaves_ambiguous_claim_for_shared_grounding() -> None:
+    from tests._test_claim_validation_generator.cases_03_hybrid_grounding import (
+        _semantic_result,
+    )
+
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": "claim-1",
+                    "claim": (
+                        "Wallet use is becoming a common checkout method "
+                        "across retailers."
+                    ),
+                    "evidence_id": "f1",
+                }
+            ]
+        }
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+            ]
+        }
+    }
+
+    def existing_report_grounding(claims):
+        return [_semantic_result(claim, "entailed") for claim in claims]
+
+    final_package = validate_retained_claims(
+        artifacts,
+        evidence_packs,
+        semantic_batch_validator=existing_report_grounding,
+    )
+    candidate_package = validate_retained_claims(
+        deepcopy(artifacts),
+        evidence_packs,
+        semantic_batch_validator=existing_report_grounding,
+    )
+    candidate_preflight = retained_claim_repair_issues(
+        artifacts,
+        evidence_packs,
+        previous_artifacts=deepcopy(artifacts),
+    )
+
+    final_result = final_package.results[0]
+    candidate_result = candidate_package.results[0]
+    assert final_result.status == candidate_result.status == "supported"
+    assert final_result.semantic_identity == candidate_result.semantic_identity
+    assert final_result.candidate.claim_id == candidate_result.candidate.claim_id
+    assert final_result.candidate.text_hash == candidate_result.candidate.text_hash
+    assert (
+        final_result.candidate.evidence_references
+        == candidate_result.candidate.evidence_references
+    )
+    assert not candidate_preflight
+
+
 def test_interpretive_numeric_repair_does_not_gain_factual_candidate_gate() -> None:
     current, candidate, evidence_packs = _soft_copy_artifacts()
     candidate["expert_comment"] = "Adjust could reach 1016.8 million."

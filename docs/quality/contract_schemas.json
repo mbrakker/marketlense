@@ -14781,6 +14781,9 @@
         "source_family": {
           "type": "string"
         },
+        "text": {
+          "type": "string"
+        },
         "text_hash": {
           "type": "string"
         }
@@ -14789,6 +14792,7 @@
         "schema_version",
         "claim_id",
         "source_family",
+        "text",
         "text_hash",
         "kind",
         "factual"
@@ -14824,6 +14828,144 @@
       "required": [
         "schema_version",
         "evidence_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimSemanticGroundingResult": {
+      "additionalProperties": false,
+      "properties": {
+        "disagreement": {
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/src.contracts.claim_validation.ClaimSemanticValidationIdentity"
+        },
+        "outcome": {
+          "enum": [
+            "entailed",
+            "contradicted",
+            "not_established"
+          ]
+        },
+        "protected_facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.protected_facts.ProtectedFactComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "outcome",
+        "reason",
+        "identity"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimSemanticInput": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/src.contracts.claim_validation.ClaimCandidate"
+        },
+        "evidence_hash": {
+          "type": "string"
+        },
+        "evidence_texts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "candidate",
+        "evidence_texts",
+        "evidence_hash"
+      ],
+      "type": "object"
+    },
+    "src.contracts.claim_validation.ClaimSemanticValidationIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_text_hash": {
+          "type": "string"
+        },
+        "configuration_policy_identity": {
+          "type": "string"
+        },
+        "evidence_hash": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "execution_identity": {
+          "type": "string"
+        },
+        "model_name": {
+          "type": "string"
+        },
+        "model_provider": {
+          "type": "string"
+        },
+        "prompt_content_hash": {
+          "type": "string"
+        },
+        "prompt_family": {
+          "type": "string"
+        },
+        "relevant_input_hash": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "claim_id",
+        "claim_text_hash",
+        "evidence_ids",
+        "evidence_hash",
+        "source_identity",
+        "prompt_family",
+        "prompt_content_hash",
+        "execution_identity",
+        "validator_version",
+        "model_provider",
+        "model_name",
+        "configuration_policy_identity",
+        "relevant_input_hash"
       ],
       "type": "object"
     },
@@ -14909,6 +15051,14 @@
           },
           "type": "array"
         },
+        "deterministic_status": {
+          "enum": [
+            "supported",
+            "unsupported",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
         "protected_facts": {
           "anyOf": [
             {
@@ -14928,7 +15078,47 @@
         "schema_version": {
           "type": "string"
         },
+        "semantic_disagreement": {
+          "type": "string"
+        },
         "semantic_execution_identity": {
+          "type": "string"
+        },
+        "semantic_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.claim_validation.ClaimSemanticValidationIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "entailed",
+                "contradicted",
+                "not_established"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_protected_facts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.protected_facts.ProtectedFactComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_reason": {
           "type": "string"
         },
         "semantic_validator_used": {
@@ -29179,6 +29369,37 @@
       ],
       "type": "object"
     },
+    "src.contracts.protected_facts._DirectionFact": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguous_quantity": {
+          "type": "boolean"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "quantity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.utils.quantity.Quantity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject",
+        "direction",
+        "quantity",
+        "ambiguous_quantity"
+      ],
+      "type": "object"
+    },
     "src.contracts.public_editorial_quality.PublicEditorialQualityIssue": {
       "additionalProperties": false,
       "properties": {
@@ -31096,13 +31317,6 @@
         "changed_paths": {
           "items": {
             "type": "string"
-          },
-          "type": "array"
-        },
-        "claim_provenance": {
-          "items": {
-            "additionalProperties": {},
-            "type": "object"
           },
           "type": "array"
         },

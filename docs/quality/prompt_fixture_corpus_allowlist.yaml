@@ -27,3 +27,10 @@ allowlist:
     reason: "Expert View now receives bounded plan-linked evidence, implications, limitations, and counter-signals instead of summary prose."
     expires_on: "2026-09-30"
     max_delta_absolute: 320
+
+  - pattern: "families.validation.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "The existing grounding prompt now maps retained claims to exact linked evidence in one stable-ID batch."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 54
+    max_delta_percent: 0.0138

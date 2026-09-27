@@ -10,6 +10,7 @@
         "type": "object",
         "required": ["section", "text", "reason"],
         "properties": {
+          "item_id": {"type": "string"},
           "section": {"type": "string"},
           "text": {"type": "string"},
           "classification": {"type": "string"},
@@ -26,6 +27,7 @@
         "additionalProperties": false,
         "required": ["section", "text", "classification", "entailment_outcome", "proposition_status", "protected_facts", "reason"],
         "properties": {
+          "item_id": {"type": "string"},
           "section": {"type": "string"},
           "text": {"type": "string"},
           "classification": {"type": "string", "const": "factual_claim"},

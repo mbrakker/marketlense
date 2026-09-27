@@ -4,8 +4,14 @@ import hashlib
 import json
 import re
 from dataclasses import asdict
-from typing import Any, List, Sequence
+from typing import Any, Callable, List, Sequence
 
+from src.contracts.claim_validation import (
+    ClaimSemanticGroundingResult,
+    ClaimSemanticInput,
+    ClaimSemanticValidationIdentity,
+    ClaimValidationPackage,
+)
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyMaterializationRequest,
@@ -19,6 +25,11 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
+from src.generators.claim_validation_generator import (
+    apply_retained_claim_semantic_results,
+    retained_claim_semantic_inputs,
+    validate_retained_claims,
+)
 from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.report_title_resolution_generator import is_generic_report_title
 from src.generators.structured_output_execution import (
@@ -59,9 +70,27 @@ from .shared import (
 )
 
 RULE_ID = "grounding"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.1"
+GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v2"
+GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.1"
 
 
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
+    package = validate_retained_claims(
+        runtime.request.artifacts,
+        runtime.request.evidence_packs,
+        source_identity=runtime.source_id,
+    )
+    semantic_inputs = retained_claim_semantic_inputs(
+        package,
+        runtime.request.evidence_packs,
+        source_identity=runtime.source_id,
+    )
+    runtime.retained_claim_validation = package
+
+    def retain_claim_results(updated: ClaimValidationPackage) -> None:
+        runtime.retained_claim_validation = updated
+
     return run_grounding_check(
         request=runtime.request,
         settings=runtime.settings,
@@ -73,6 +102,9 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         ctx=runtime.ctx,
         source_id=runtime.source_id,
         vector_store_content_hash=runtime.vector_store_content_hash,
+        retained_claim_package=package,
+        retained_claim_inputs=semantic_inputs,
+        retained_claim_validation_sink=retain_claim_results,
     )
 
 
@@ -89,12 +121,32 @@ def run_grounding_check(
     vector_store_content_hash: str = "",
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
+    retained_claim_package: ClaimValidationPackage | None = None,
+    retained_claim_inputs: list[ClaimSemanticInput] | None = None,
+    retained_claim_validation_sink: Callable[[ClaimValidationPackage], None]
+    | None = None,
 ) -> List[ValidationIssue]:
     issues: List[ValidationIssue] = []
     prompt_ctx = child_context(ctx, task_id=f"{ctx.task_id}:grounding")
     prompt_namespace = "report_vs/validate/grounding"
     artifacts = request.artifacts if isinstance(request.artifacts, dict) else {}
-    audit_payload = grounding_payload(request, artifacts)
+    if retained_claim_package is None:
+        retained_claim_package = validate_retained_claims(
+            artifacts,
+            request.evidence_packs,
+            source_identity=source_id or request.source_id,
+        )
+    if retained_claim_inputs is None:
+        retained_claim_inputs = retained_claim_semantic_inputs(
+            retained_claim_package,
+            request.evidence_packs,
+            source_identity=source_id or request.source_id,
+        )
+    audit_payload = grounding_payload(
+        request,
+        artifacts,
+        retained_claim_inputs=retained_claim_inputs,
+    )
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
     prompt_vars = {
         "report_json": json.dumps(audit_payload, ensure_ascii=False),
@@ -173,18 +225,14 @@ def run_grounding_check(
     vector_provenance_verified = not grounding_use_vector_store or bool(
         str(vector_store_content_hash or "").strip()
     )
-    relevant_input_hash = (
-        sha256_json(
-            {
-                "grounding_payload": grounding_payload(request, artifacts),
-                "evidence_texts": list(evidence_texts),
-                "vector_store_id": request.vector_store_id or "",
-                "vector_store_content_hash": vector_store_content_hash,
-                "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
-            }
-        )
-        if source_id and vector_provenance_verified
-        else ""
+    relevant_input_hash = sha256_json(
+        {
+            "grounding_payload": audit_payload,
+            "evidence_texts": list(evidence_texts),
+            "vector_store_id": request.vector_store_id or "",
+            "vector_store_content_hash": vector_store_content_hash,
+            "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
+        }
     )
     configuration_policy_hash = sha256_json(
         {
@@ -206,15 +254,15 @@ def run_grounding_check(
                     report_slug=request.report_name or str(request.report_id),
                     source_id=source_id,
                     family_id=prompt_namespace,
-                    family_schema_version="1.0",
-                    processing_version="validation_rule_v2",
+                    family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
+                    processing_version="validation_rule_v3",
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
                     model_name=prompt_bundle.resolved_model,
                     model_policy_namespace="report_vs",
                     routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                    validator_version="grounding_validation_output:1.0",
+                    validator_version=GROUNDING_VALIDATOR_VERSION,
                     relevant_input_hash=relevant_input_hash,
                     configuration_policy_hash=configuration_policy_hash,
                 ),
@@ -279,7 +327,7 @@ def run_grounding_check(
                 report_name=request.report_name,
                 source_url=request.source_url,
                 output_schema=output_schema,
-                output_schema_identity="grounding_validation_output_v1",
+                output_schema_identity=GROUNDING_OUTPUT_SCHEMA_IDENTITY,
                 repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[
                     mode
                 ],
@@ -335,8 +383,8 @@ def run_grounding_check(
                     report_slug=request.report_name or str(request.report_id),
                     source_id=source_id,
                     family_id=prompt_namespace,
-                    family_schema_version="1.0",
-                    processing_version="validation_rule_v2",
+                    family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
+                    processing_version="validation_rule_v3",
                     output_payload=response_payload,
                     system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                     user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
@@ -355,11 +403,31 @@ def run_grounding_check(
                     routing_policy_version=prompt_bundle.execution_policy.policy_hash,
                     relevant_input_hash=relevant_input_hash,
                     configuration_policy_hash=configuration_policy_hash,
-                    validator_version="grounding_validation_output:1.0",
+                    validator_version=GROUNDING_VALIDATOR_VERSION,
                     validation_status="pass",
                 ),
                 prompt_ctx,
             )
+        semantic_results = _retained_claim_semantic_results(
+            checks,
+            retained_claim_inputs,
+            source_identity=source_id or request.source_id,
+            prompt_family=prompt_namespace,
+            prompt_content_hash=prompt_bundle.prompt_content_hash,
+            execution_identity=prompt_bundle.execution_identity.execution_identity,
+            validator_version=GROUNDING_VALIDATOR_VERSION,
+            model_provider=str(prompt_bundle.execution_policy.policy.provider),
+            model_name=prompt_bundle.resolved_model,
+            configuration_policy_identity=configuration_policy_hash,
+            relevant_input_hash=relevant_input_hash,
+        )
+        updated_claim_package = apply_retained_claim_semantic_results(
+            retained_claim_package,
+            retained_claim_inputs,
+            semantic_results,
+        )
+        if retained_claim_validation_sink is not None:
+            retained_claim_validation_sink(updated_claim_package)
         logger.info(
             log_event(
                 prompt_ctx,
@@ -395,8 +463,15 @@ def run_grounding_check(
                     continue
                 text = s(entry.get("text"))
                 section = s(entry.get("section") or "grounding")
+                unresolved = (
+                    outcome == "not_established"
+                    and comparison.proposition_status != "incompatible"
+                    and not incompatible_dimensions
+                )
                 violation_type = (
-                    "contradicted"
+                    "not_established"
+                    if unresolved
+                    else "contradicted"
                     if incompatible_dimensions or outcome == "contradicted"
                     else "unsupported_factual_claim"
                 )
@@ -413,7 +488,7 @@ def run_grounding_check(
                             f"[factual_claim|{violation_type}]"
                             f" {reason}.{dimension_text}: {text[:200]}"
                         ),
-                        severity="error",
+                        severity="warning" if unresolved else "error",
                         section=section,
                         entity_id=_public_item_id_for_failure(
                             section, text, public_item_ids
@@ -452,9 +527,9 @@ def run_grounding_check(
                 elif (
                     entailment_outcome == "not_established"
                     and classification == "factual_claim"
-                    and violation_type not in GROUNDING_HARD_FAILURES
+                    and violation_type in {"", "unsupported_factual_claim"}
                 ):
-                    violation_type = "unsupported_factual_claim"
+                    violation_type = "not_established"
                 if not violation_type:
                     violation_type = infer_violation_type(
                         section_key=section_key,
@@ -528,7 +603,99 @@ def run_grounding_check(
     return issues
 
 
-def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
+def _retained_claim_semantic_results(
+    checks: object,
+    semantic_inputs: Sequence[ClaimSemanticInput],
+    *,
+    source_identity: str,
+    prompt_family: str,
+    prompt_content_hash: str,
+    execution_identity: str,
+    validator_version: str,
+    model_provider: str,
+    model_name: str,
+    configuration_policy_identity: str,
+    relevant_input_hash: str,
+) -> list[ClaimSemanticGroundingResult]:
+    checks_by_id: dict[str, list[dict[str, Any]]] = {}
+    if isinstance(checks, list):
+        for entry in checks:
+            if not isinstance(entry, dict):
+                continue
+            item_id = s(entry.get("item_id"))
+            if item_id:
+                checks_by_id.setdefault(item_id, []).append(entry)
+    semantic_results: list[ClaimSemanticGroundingResult] = []
+    for semantic_input in semantic_inputs:
+        candidate = semantic_input.candidate
+        matching = checks_by_id.get(candidate.claim_id, [])
+        if len(matching) != 1:
+            continue
+        entry = matching[0]
+        outcome = normalize_entailment_outcome(s(entry.get("entailment_outcome")))
+        if (
+            not outcome
+            or s(entry.get("text")) != candidate.text
+            or s(entry.get("classification")) != "factual_claim"
+        ):
+            continue
+        identity = ClaimSemanticValidationIdentity(
+            schema_version="1.0",
+            claim_id=candidate.claim_id,
+            claim_text_hash=candidate.text_hash,
+            evidence_ids=[
+                reference.evidence_id for reference in candidate.evidence_references
+            ],
+            evidence_hash=semantic_input.evidence_hash,
+            source_identity=source_identity,
+            prompt_family=prompt_family,
+            prompt_content_hash=prompt_content_hash,
+            execution_identity=execution_identity,
+            validator_version=validator_version,
+            model_provider=model_provider,
+            model_name=model_name,
+            configuration_policy_identity=configuration_policy_identity,
+            relevant_input_hash=relevant_input_hash,
+        )
+        comparison = ProtectedFactComparison.from_payload(
+            entry.get("protected_facts"),
+            proposition_status=s(entry.get("proposition_status")),
+        )
+        disagreement = (
+            "entailed_with_incompatible_proposition"
+            if outcome == "entailed" and comparison.proposition_status == "incompatible"
+            else ""
+        )
+        semantic_results.append(
+            ClaimSemanticGroundingResult(
+                schema_version="1.0",
+                outcome=outcome,  # type: ignore[arg-type]
+                reason=s(entry.get("reason")),
+                identity=identity,
+                protected_facts=comparison,
+                disagreement=disagreement,
+            )
+        )
+    return semantic_results
+
+
+def grounding_payload(
+    request: ValidationRequest,
+    artifacts: dict,
+    *,
+    retained_claim_inputs: Sequence[ClaimSemanticInput] | None = None,
+) -> dict:
+    if retained_claim_inputs is None:
+        package = validate_retained_claims(
+            artifacts,
+            request.evidence_packs,
+            source_identity=request.source_id,
+        )
+        retained_claim_inputs = retained_claim_semantic_inputs(
+            package,
+            request.evidence_packs,
+            source_identity=request.source_id,
+        )
     summary = artifacts.get("summary") if isinstance(artifacts, dict) else {}
     insights_raw = (
         artifacts.get("insights_final") if isinstance(artifacts, dict) else []
@@ -613,6 +780,35 @@ def grounding_payload(request: ValidationRequest, artifacts: dict) -> dict:
         insights=insights,
         summary=summary_clean,
     )
+    payload["retained_claims_to_ground"] = [
+        {
+            "item_id": semantic_input.candidate.claim_id,
+            "section": semantic_input.candidate.affected_section
+            or semantic_input.candidate.source_family,
+            "text": semantic_input.candidate.text,
+            "text_hash": semantic_input.candidate.text_hash,
+            "evidence_ids": [
+                reference.evidence_id
+                for reference in semantic_input.candidate.evidence_references
+            ],
+            "evidence_hash": semantic_input.evidence_hash,
+            "retained_evidence": [
+                {
+                    "evidence_id": reference.evidence_id,
+                    "text_hash": reference.text_hash,
+                    "source_pack": reference.source_pack,
+                    "page": reference.page,
+                    "text": evidence_text,
+                }
+                for reference, evidence_text in zip(
+                    semantic_input.candidate.evidence_references,
+                    semantic_input.evidence_texts,
+                    strict=True,
+                )
+            ],
+        }
+        for semantic_input in retained_claim_inputs
+    ]
     return payload
 
 
@@ -635,16 +831,17 @@ def _matches_canonical_doc_map_identity(
         ("title", "report_title", "document_title", "document_name", "name")
         if field == "title"
         else (
-            "publisher", "document_publisher", "document_organization",
-            "document_organisation", "organization", "organisation",
+            "publisher",
+            "document_publisher",
+            "document_organization",
+            "document_organisation",
+            "organization",
+            "organisation",
         )
     )
     values = [str(candidate.get(key) or "").strip() for key in aliases]
     if field == "title":
-        values.extend(
-            str(document.get(key) or "").strip()
-            for key in ("title", "name")
-        )
+        values.extend(str(document.get(key) or "").strip() for key in ("title", "name"))
     else:
         values.extend(
             str(document.get(key) or "").strip()
@@ -929,6 +1126,8 @@ def normalize_violation_type(value: str) -> str:
         "numeric_inconsistency": "numerically_inconsistent",
         "contradicted": "contradicted",
         "contradiction": "contradicted",
+        "not_established": "not_established",
+        "unresolved_factual_claim": "not_established",
         "invalid_comparison": "invalid_comparison",
         "invalid_comparator": "invalid_comparison",
         "missing_material_evidence": "missing_material_evidence",
@@ -1020,6 +1219,8 @@ def grounding_issue_severity(
 ) -> str:
     if violation_type in GROUNDING_HARD_FAILURES:
         return "error"
+    if violation_type == "not_established":
+        return "warning"
     if violation_type == "evidence_retrieval_failure":
         return "warning"
     if section_policy_value == "soft" and classification in {

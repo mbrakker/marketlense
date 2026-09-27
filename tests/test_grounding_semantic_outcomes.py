@@ -15,14 +15,14 @@ from tests._test_validation_generator._shared import (
 
 
 @pytest.mark.parametrize(
-    ("outcome", "expected_violation"),
+    ("outcome", "expected_violation", "expected_severity", "expected_status"),
     [
-        ("contradicted", "contradicted"),
-        ("not_established", "unsupported_factual_claim"),
+        ("contradicted", "contradicted", "error", "fail"),
+        ("not_established", "not_established", "warning", "pass"),
     ],
 )
-def test_grounding_semantic_outcome_preserves_hard_failure(
-    tmp_path, outcome, expected_violation
+def test_grounding_semantic_outcome_preserves_distinct_disposition(
+    tmp_path, outcome, expected_violation, expected_severity, expected_status
 ):
     result = validate_report(
         ValidationRequest(
@@ -35,6 +35,7 @@ def test_grounding_semantic_outcome_preserves_hard_failure(
             },
             evidence_packs={},
             vector_store_id=None,
+            validation_mode="deferred_grounding",
         ),
         _settings(tmp_path),
         _ctx(),
@@ -48,7 +49,9 @@ def test_grounding_semantic_outcome_preserves_hard_failure(
                         "text": "Adoption surged in 2025.",
                         "classification": "factual_claim",
                         "entailment_outcome": outcome,
-                        "reason": "Linked retained evidence does not support the claim.",
+                        "reason": (
+                            "Linked retained evidence does not support the claim."
+                        ),
                     }
                 ]
             },
@@ -58,5 +61,6 @@ def test_grounding_semantic_outcome_preserves_hard_failure(
 
     grounding_issues = [item for item in result.issues if item.rule_id == "grounding"]
     assert grounding_issues
-    assert grounding_issues[0].severity == "error"
+    assert grounding_issues[0].severity == expected_severity
+    assert result.status == expected_status
     assert f"[factual_claim|{expected_violation}]" in grounding_issues[0].message

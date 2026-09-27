@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Optional
 
 from src.contracts.config import AppSettings
@@ -160,6 +161,16 @@ def validate_report(
         ctx=ctx,
         report_name=report_name,
     )
+    if runtime.retained_claim_validation is not None:
+        store_pack(
+            analysis_store=analysis_store,
+            output_dir=settings.output_dir,
+            report_id=request.report_id,
+            pack_name=f"{pack_name}_retained_claim_validation",
+            payload=asdict(runtime.retained_claim_validation),
+            ctx=ctx,
+            report_name=report_name,
+        )
     if cache_meta:
         logger.info(
             log_event(

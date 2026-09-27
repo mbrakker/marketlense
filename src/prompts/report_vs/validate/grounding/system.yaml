@@ -10,6 +10,10 @@ text: |
   `declared_classification` is a hint: distinguish self-authored advice from
   source instructions and reject unsupported factual premises.
 
+  For each `retained_claims_to_ground` item, judge only against its attached
+  `retained_evidence`; return one factual `checks` entry with its exact
+  `item_id` and `text`.
+
   For a factual claim, make one semantic-entailment decision:
   - `entailed`: its material meaning follows from the linked retained evidence.
   - `contradicted`: linked retained evidence conflicts with its material meaning.
@@ -75,6 +79,7 @@ text: |
   {
     "checks": [
       {
+        "item_id": "...",
         "section": "...",
         "text": "...",
         "classification": "factual_claim",
@@ -86,6 +91,7 @@ text: |
     ],
     "unsupported": [
       {
+        "item_id": "...",
         "section": "...",
         "text": "...",
         "classification": "factual_claim|analyst_interpretation|prescriptive_recommendation",

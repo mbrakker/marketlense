@@ -28,10 +28,29 @@ The underlying factual proposition must also remain compatible. An incompatible
 proposition or present dimension is an existing blocking contradiction, so a
 forecast cannot become an observation, respondents cannot become companies,
 association cannot become causation, and `may`/`could`/`expect` cannot become
-`will` or a guarantee. The grounding model classifies factual prose as
-`entailed`, `contradicted`, or `not_established`; only the latter two produce
-the existing blocking factual validation failures. The check uses retained
-evidence only and does not contain publisher- or report-specific exceptions.
+`will` or a guarantee. Retained-claim validation first decides mechanically
+provable support and contradictions. Only factual claims that pass provenance,
+evidence-ID, quote, numeric, and protected-fact checks but remain semantically
+undecidable enter the existing report-level grounding batch, with their exact
+linked evidence. That batch returns `entailed`, `contradicted`, or
+`not_established`; these map to supported, unsupported, and unresolved
+respectively. An unresolved result remains a warning and does not become a
+factual contradiction or an independent publish-readiness gate. Missing or
+invalid provenance and mechanically proven source-fidelity failures remain
+blocking. The check uses retained evidence only and does not contain publisher-
+or report-specific exceptions.
+
+Grounding uses the existing `report_vs/validate/grounding` prompt family and one
+report-level execution for all unresolved retained claims. Each returned claim
+result records its stable claim ID and text hash, exact evidence IDs and
+evidence hash, source identity when available, prompt and execution identities,
+validator version, model provider and name, configuration-policy identity, and
+the current report-level input hash. The existing prompt-family materialization
+is reusable only when its source, full input, prompt, execution, validator,
+model, and policy identities still match; stale results leave claims unresolved
+and go through the current report-level execution. The resulting
+`retained_claim_validation` pack is diagnostic and does not alter the aggregate
+validation disposition by itself.
 
 Every material sentence is also classified as a factual claim, an analyst
 interpretation, or a prescriptive recommendation. Final-insight `so_what` and
@@ -122,8 +141,12 @@ entries. Untouched sibling records remain byte/canonically unchanged. Unknown or
 quarantined evidence, ambiguous claim identity, or mismatched page/span lineage fails
 closed; the planner's existing safe removal or abstention strategy remains the
 authorized route when support cannot be established. Candidate integrity reruns
-`validate_retained_claims()` and the soft-copy provenance checks before semantic and
-grounding provider validation.
+`validate_retained_claims()` and the soft-copy provenance checks before provider
+validation. Its deterministic preflight emits only provable findings; unresolved
+claims stay available for the same report-level grounding batch used by final
+artifact validation. Candidate and final results therefore use the same stable
+claim, exact linked evidence, and validator identity rules without a per-claim
+model call.
 
 For family-level soft-copy regeneration, exact unchanged sentences keep their
 retained records. New sentences receive factual bindings from the repair's selected

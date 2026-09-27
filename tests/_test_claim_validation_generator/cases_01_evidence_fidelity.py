@@ -73,7 +73,9 @@ def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
             ],
         },
         _evidence(),
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_batch_validator=lambda *_: (
+            (_ for _ in ()).throw(AssertionError("unused"))
+        ),
     )
 
     assert package.readiness_status == "awaiting_review"
@@ -568,7 +570,9 @@ def test_changed_numeric_claim_blocks_readiness_without_model_call() -> None:
             }
         },
         _evidence(),
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_batch_validator=lambda *_: (
+            (_ for _ in ()).throw(AssertionError("unused"))
+        ),
     )
 
     assert package.readiness_status == "not_publishable"
@@ -603,9 +607,11 @@ def test_unresolved_descriptive_claim_is_the_only_kind_sent_to_semantic_boundary
 ):
     calls = []
 
-    def semantic(candidate, cited):
-        calls.append((candidate.claim_id, cited))
-        return True, "semantic_supported", "exec-identity"
+    from .cases_03_hybrid_grounding import _semantic_result
+
+    def semantic(claims):
+        calls.append(claims)
+        return [_semantic_result(claim, "entailed") for claim in claims]
 
     package = validate_retained_claims(
         {
@@ -619,10 +625,11 @@ def test_unresolved_descriptive_claim_is_the_only_kind_sent_to_semantic_boundary
             }
         },
         _evidence(),
-        semantic_validator=semantic,
+        semantic_batch_validator=semantic,
     )
 
     assert package.readiness_status == "awaiting_review"
     assert package.semantic_validation_count == 1
     assert len(calls) == 1
-    assert package.semantic_execution_identities == ["exec-identity"]
+    assert len(calls[0]) == 1
+    assert package.semantic_execution_identities == ["execution-1"]

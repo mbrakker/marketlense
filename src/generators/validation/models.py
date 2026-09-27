@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from src.contracts.claim_validation import ClaimValidationPackage
 from src.contracts.config import AppSettings
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationRequest
@@ -61,4 +62,5 @@ class ValidationRuntime:
             metric_support={}, quote_support={}, issues=[]
         )
     )
+    retained_claim_validation: ClaimValidationPackage | None = None
     issues_by_rule: Dict[str, List[ValidationIssue]] = field(default_factory=dict)

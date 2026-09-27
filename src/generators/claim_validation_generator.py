@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Callable
 
 from src.contracts.claim_validation import (
@@ -14,6 +14,8 @@ from src.contracts.claim_validation import (
     ClaimCandidate,
     ClaimEvidenceReference,
     ClaimKind,
+    ClaimSemanticGroundingResult,
+    ClaimSemanticInput,
     ClaimValidationCheck,
     ClaimValidationPackage,
     ClaimValidationResult,
@@ -75,6 +77,9 @@ _RECOVERY_STOP_WORDS = {
 }
 
 SemanticValidator = Callable[[ClaimCandidate, list[str]], tuple[bool, str, str]]
+SemanticBatchValidator = Callable[
+    [list[ClaimSemanticInput]], list[ClaimSemanticGroundingResult]
+]
 
 
 @dataclass(frozen=True)
@@ -210,6 +215,7 @@ def _candidates(
             schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
             claim_id=claim_id or f"claim:{len(output) + 1}",
             source_family=family,
+            text=claim,
             text_hash=_hash(claim),
             kind=kind,
             factual=(
@@ -525,12 +531,15 @@ def _validate_claims_against_sources(
     *,
     artifact: object,
     semantic_validator: SemanticValidator | None = None,
+    semantic_batch_validator: SemanticBatchValidator | None = None,
+    semantic_results: list[ClaimSemanticGroundingResult] | None = None,
+    source_identity: str = "",
 ) -> ClaimValidationPackage:
     """Validate claims against authoritative retained source text.
 
-    Candidate extraction remains owned by the artifact or evidence-pack boundary;
-    this shared core owns deterministic checks, semantic fallback, dispositions,
-    and the content-addressed validation package.
+    Candidate extraction remains owned by the artifact or evidence-pack boundary.
+    Deterministic checks always run first. Retained-claim semantic fallback is
+    collected into one batch and consumes only identity-matched tri-state results.
     """
 
     results: list[ClaimValidationResult] = []
@@ -570,8 +579,11 @@ def _validate_claims_against_sources(
             if failed
             else "unresolved"
         )
+        deterministic_status = status
         semantic_used = False
         execution_identity = ""
+        semantic_outcome = None
+        semantic_reason = ""
         if status == "unresolved" and semantic_validator is not None:
             sources = [
                 source_evidence[ref.evidence_id][1]
@@ -584,6 +596,8 @@ def _validate_claims_against_sources(
             semantic_used = True
             status = "supported" if supported else "unsupported"
             failed = [reason]
+            semantic_outcome = "entailed" if supported else None
+            semantic_reason = reason
             if execution_identity:
                 semantic_ids.append(execution_identity)
         results.append(
@@ -592,12 +606,223 @@ def _validate_claims_against_sources(
                 candidate=candidate,
                 checks=checks,
                 status=status,  # type: ignore[arg-type]
+                deterministic_status=deterministic_status,  # type: ignore[arg-type]
                 reasons=failed,
                 protected_facts=protected_facts,
+                semantic_outcome=semantic_outcome,
+                semantic_reason=semantic_reason,
                 semantic_validator_used=semantic_used,
                 semantic_execution_identity=execution_identity,
             )
         )
+
+    if semantic_batch_validator is not None and semantic_results is not None:
+        raise ValueError("Provide a semantic batch validator or results, not both")
+    semantic_inputs = _semantic_inputs(results, source_evidence, source_identity)
+    semantic_results_provided = semantic_results is not None
+    if semantic_batch_validator is not None and semantic_inputs:
+        # One report-level operation receives every eligible unresolved claim.
+        semantic_results = semantic_batch_validator(semantic_inputs)
+        semantic_results_provided = True
+    if semantic_results_provided:
+        results = _apply_semantic_results(
+            results,
+            semantic_inputs,
+            semantic_results or [],
+        )
+
+    return _claim_validation_package(artifact=artifact, results=results)
+
+
+def _semantic_inputs(
+    results: list[ClaimValidationResult],
+    source_evidence: dict[str, tuple[str, str, int | None]],
+    source_identity: str,
+) -> list[ClaimSemanticInput]:
+    inputs: list[ClaimSemanticInput] = []
+    for result in results:
+        candidate = result.candidate
+        if (
+            not candidate.factual
+            or result.deterministic_status != "unresolved"
+            or any(check.status == "failed" for check in result.checks)
+        ):
+            continue
+        refs = candidate.evidence_references
+        if not refs or any(ref.evidence_id not in source_evidence for ref in refs):
+            continue
+        evidence_ids_and_hashes = [
+            {
+                "evidence_id": ref.evidence_id,
+                "source_pack": ref.source_pack,
+                "page": ref.page,
+                "text_hash": ref.text_hash,
+            }
+            for ref in refs
+        ]
+        inputs.append(
+            ClaimSemanticInput(
+                schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+                candidate=candidate,
+                evidence_texts=[source_evidence[ref.evidence_id][1] for ref in refs],
+                evidence_hash=_hash(evidence_ids_and_hashes),
+                source_identity=source_identity,
+            )
+        )
+    return inputs
+
+
+def _apply_semantic_results(
+    results: list[ClaimValidationResult],
+    semantic_inputs: list[ClaimSemanticInput],
+    semantic_results: list[ClaimSemanticGroundingResult],
+) -> list[ClaimValidationResult]:
+    inputs_by_id: dict[str, list[ClaimSemanticInput]] = {}
+    results_by_id: dict[str, list[ClaimSemanticGroundingResult]] = {}
+    for semantic_input in semantic_inputs:
+        inputs_by_id.setdefault(semantic_input.candidate.claim_id, []).append(
+            semantic_input
+        )
+    for semantic_result in semantic_results:
+        results_by_id.setdefault(semantic_result.identity.claim_id, []).append(
+            semantic_result
+        )
+
+    updated: list[ClaimValidationResult] = []
+    for result in results:
+        if result.deterministic_status != "unresolved":
+            updated.append(result)
+            continue
+        candidate = result.candidate
+        matching_inputs = inputs_by_id.get(candidate.claim_id, [])
+        matching_results = results_by_id.get(candidate.claim_id, [])
+        if not matching_inputs:
+            updated.append(result)
+            continue
+        if len(matching_inputs) > 1:
+            updated.append(
+                replace(
+                    result,
+                    semantic_disagreement="ambiguous_semantic_input_identity",
+                )
+            )
+            continue
+        if len(matching_results) > 1:
+            updated.append(
+                replace(
+                    result,
+                    semantic_disagreement="ambiguous_semantic_result_identity",
+                )
+            )
+            continue
+        if not matching_results:
+            expected_evidence_ids = [
+                reference.evidence_id for reference in candidate.evidence_references
+            ]
+            mismatched_claim_ids = [
+                semantic_result
+                for semantic_result in semantic_results
+                if semantic_result.identity.claim_text_hash == candidate.text_hash
+                and semantic_result.identity.evidence_ids == expected_evidence_ids
+                and semantic_result.identity.evidence_hash
+                == matching_inputs[0].evidence_hash
+            ]
+            updated.append(result)
+            if len(mismatched_claim_ids) == 1:
+                updated[-1] = replace(
+                    result,
+                    semantic_disagreement="semantic_result_claim_id_mismatch",
+                )
+            else:
+                updated[-1] = replace(
+                    result,
+                    semantic_disagreement="semantic_result_missing",
+                )
+            continue
+        semantic_input = matching_inputs[0]
+        semantic = matching_results[0]
+        identity = semantic.identity
+        expected_evidence_ids = [
+            reference.evidence_id for reference in candidate.evidence_references
+        ]
+        identity_matches = (
+            identity.schema_version == "1.0"
+            and identity.claim_text_hash == candidate.text_hash
+            and identity.evidence_ids == expected_evidence_ids
+            and identity.evidence_hash == semantic_input.evidence_hash
+            and identity.source_identity == semantic_input.source_identity
+            and bool(identity.prompt_family)
+            and bool(identity.prompt_content_hash)
+            and bool(identity.execution_identity)
+            and bool(identity.validator_version)
+            and bool(identity.model_provider)
+            and bool(identity.model_name)
+            and bool(identity.configuration_policy_identity)
+            and bool(identity.relevant_input_hash)
+        )
+        if not identity_matches:
+            updated.append(
+                replace(
+                    result,
+                    semantic_disagreement="semantic_result_identity_mismatch",
+                )
+            )
+            continue
+
+        disagreement = semantic.disagreement
+        outcome = semantic.outcome
+        incompatible_dimensions = (
+            semantic.protected_facts.incompatible_dimensions
+            if semantic.protected_facts is not None
+            else []
+        )
+        incompatible_proposition = bool(
+            semantic.protected_facts is not None
+            and semantic.protected_facts.proposition_status == "incompatible"
+        )
+        if outcome == "entailed" and (
+            incompatible_dimensions or incompatible_proposition
+        ):
+            disagreement = disagreement or (
+                "entailed_with_incompatible_protected_dimensions"
+                if incompatible_dimensions
+                else "entailed_with_incompatible_proposition"
+            )
+            outcome = "contradicted"
+        status = {
+            "entailed": "supported",
+            "contradicted": "unsupported",
+            "not_established": "unresolved",
+        }[outcome]
+        reasons = [semantic.reason] if semantic.reason and status != "supported" else []
+        updated.append(
+            replace(
+                result,
+                status=status,  # type: ignore[arg-type]
+                reasons=reasons,
+                semantic_outcome=outcome,
+                semantic_reason=semantic.reason,
+                semantic_protected_facts=semantic.protected_facts,
+                semantic_identity=identity,
+                semantic_disagreement=disagreement,
+                semantic_validator_used=True,
+                semantic_execution_identity=identity.execution_identity,
+            )
+        )
+    return updated
+
+
+def _claim_validation_package(
+    *, artifact: object, results: list[ClaimValidationResult]
+) -> ClaimValidationPackage:
+    return _claim_validation_package_for_hash(
+        artifact_hash=_hash(artifact), results=results
+    )
+
+
+def _claim_validation_package_for_hash(
+    *, artifact_hash: str, results: list[ClaimValidationResult]
+) -> ClaimValidationPackage:
     unsupported = sum(
         1 for item in results if item.candidate.factual and item.status == "unsupported"
     )
@@ -609,8 +834,13 @@ def _validate_claims_against_sources(
         for item in results
         if item.status == "supported" and not item.semantic_validator_used
     )
-    artifact_hash = _hash(artifact)
-    semantic_execution_identities = sorted(set(semantic_ids))
+    semantic_execution_identities = sorted(
+        {
+            item.semantic_execution_identity
+            for item in results
+            if item.semantic_execution_identity
+        }
+    )
     package_hash = _hash(
         {
             "artifact_hash": artifact_hash,
@@ -631,6 +861,39 @@ def _validate_claims_against_sources(
         deterministic_pass_count=deterministic_passes,
         semantic_validation_count=sum(item.semantic_validator_used for item in results),
         semantic_execution_identities=semantic_execution_identities,
+    )
+
+
+def retained_claim_semantic_inputs(
+    package: ClaimValidationPackage,
+    evidence_packs: dict,
+    *,
+    source_identity: str = "",
+) -> list[ClaimSemanticInput]:
+    """Return only unresolved factual claims with all exact linked source text."""
+
+    return _semantic_inputs(
+        package.results,
+        _evidence_index(evidence_packs),
+        source_identity,
+    )
+
+
+def apply_retained_claim_semantic_results(
+    package: ClaimValidationPackage,
+    semantic_inputs: list[ClaimSemanticInput],
+    semantic_results: list[ClaimSemanticGroundingResult],
+) -> ClaimValidationPackage:
+    """Attach identity-matched report-level results to deterministic dispositions."""
+
+    results = _apply_semantic_results(
+        package.results,
+        semantic_inputs,
+        semantic_results,
+    )
+    return _claim_validation_package_for_hash(
+        artifact_hash=package.artifact_hash,
+        results=results,
     )
 
 
@@ -824,6 +1087,7 @@ def _evidence_fidelity_candidates(
                         schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                         claim_id=f"evidence:{pack_name}:{evidence_id}",
                         source_family=f"evidence_pack:{pack_name}",
+                        text=text,
                         text_hash=_hash(text),
                         kind=kind,
                         factual=_factual(kind),
@@ -886,14 +1150,18 @@ def validate_retained_claims(
     artifacts: dict,
     evidence_packs: dict,
     *,
-    semantic_validator: SemanticValidator | None = None,
+    semantic_batch_validator: SemanticBatchValidator | None = None,
+    semantic_results: list[ClaimSemanticGroundingResult] | None = None,
+    source_identity: str = "",
 ) -> ClaimValidationPackage:
-    """Validate retained claims; invoke semantic validation only when unresolved."""
+    """Validate retained claims, batching semantic fallback for undecidable facts."""
 
     evidence = _evidence_index(evidence_packs)
     return _validate_claims_against_sources(
         _candidates(artifacts, evidence),
         evidence,
         artifact=artifacts,
-        semantic_validator=semantic_validator,
+        semantic_batch_validator=semantic_batch_validator,
+        semantic_results=semantic_results,
+        source_identity=source_identity,
     )

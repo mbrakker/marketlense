@@ -40,7 +40,9 @@ def test_retained_claim_validation_uses_soft_copy_factual_provenance() -> None:
             },
         },
         _evidence(),
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_batch_validator=lambda *_: (
+            (_ for _ in ()).throw(AssertionError("unused"))
+        ),
     )
 
     assert package.readiness_status == "awaiting_review"
@@ -173,7 +175,9 @@ def test_retained_claim_validation_rejects_invented_soft_copy_quantity() -> None
             },
         },
         _evidence(),
-        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+        semantic_batch_validator=lambda *_: (
+            (_ for _ in ()).throw(AssertionError("unused"))
+        ),
     )
 
     assert package.readiness_status == "not_publishable"
@@ -237,6 +241,8 @@ def test_retained_claim_validation_keeps_soft_copy_interpretation_nonfactual() -
 
 def test_retained_claim_validation_does_not_downgrade_declared_factual_copy() -> None:
     claim = "Leaders should treat wallets as core checkout infrastructure."
+    from .cases_03_hybrid_grounding import _semantic_result
+
     package = validate_retained_claims(
         {
             "linkedin_post": claim,
@@ -253,7 +259,9 @@ def test_retained_claim_validation_does_not_downgrade_declared_factual_copy() ->
             },
         },
         _evidence(),
-        semantic_validator=lambda *_: (True, "semantic_supported", "semantic-1"),
+        semantic_batch_validator=lambda claims: [
+            _semantic_result(claims[0], "entailed")
+        ],
     )
 
     assert package.readiness_status == "awaiting_review"

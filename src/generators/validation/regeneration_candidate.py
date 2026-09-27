@@ -372,7 +372,11 @@ def retained_claim_repair_issues(
     previous_artifacts: dict[str, Any] | None = None,
     baseline_retained_claim_severities: Mapping[str, str] | None = None,
 ) -> list[ValidationIssue]:
-    """Return stable deterministic repair findings without semantic validation."""
+    """Return only mechanically provable repair findings.
+
+    Unresolved factual claims stay eligible for the report-level grounding rule
+    run after candidate integrity; this preflight never invents a contradiction.
+    """
 
     package = validate_retained_claims(artifacts, evidence_packs)
     previous_results = {}
