@@ -82,8 +82,19 @@ hour and minute numbers), recognizes financial source shorthand `mil` and `bil`
 as million and billion, and recognizes compact forecast labels such as `2024E`.
 The `k` thousand abbreviation must be attached to a value or an explicit
 currency-scale form; punctuation in `U.K.` does not supply a numeric magnitude.
-Extraction still compares the full unit and any attached temporal context
-rather than inferring a metric.
+An `index` or `indices` header can identify a following unadorned index value.
+Explicit count nouns such as `countries` and `gainers` keep a count from
+inheriting a nearby percentage unit. Hyphenated measurement units such as
+`28-day` remain time quantities, while compounds such as `first-90-day` retain
+the number without inferring a duration. Extraction still compares the full
+unit and any attached temporal context rather than inferring a metric.
+
+Protected-fact quantity dimensions report `compatible` when every explicit
+claim quantity matches linked evidence. A clear one-to-one mismatch remains
+`incompatible`; when a claim or evidence contains several independently stated
+quantities and their relationship cannot be paired safely, the dimension stays
+`unknown`. The direct numeric-grounding check still blocks any material number
+that is absent from its linked evidence.
 
 An explicitly spelled percentage from zero through ninety-nine is parsed as
 the same percentage as its digit form. An unadorned number following an index

@@ -57,6 +57,31 @@ def test_named_index_values_are_not_inferred_as_counts() -> None:
     assert [(item.value, item.unit_family) for item in engagement] == [(116, "index")]
 
 
+def test_plural_index_header_attaches_to_its_normalization_value() -> None:
+    parsed = extract_quantities(
+        "The report says attention indices are normalized to 100, the average "
+        "value across DV for a 28-day rolling window."
+    )
+
+    assert [(item.value, item.unit_family) for item in parsed] == [
+        (100, "index"),
+        (28, "time"),
+    ]
+
+
+def test_top_gainer_count_does_not_inherit_a_prior_percentage_unit() -> None:
+    claim = (
+        "Share of total market value growth Born-tech companies 52% Across sectors "
+        "Top 20 gainers across sectors Total market value growth for the top 20 "
+        "gainers across sectors Since 2015; market-valuation comparison from "
+        "December 31, 2015, to December 31, 2020"
+    )
+    parsed = extract_quantities(claim)
+    top_twenty = next(item for item in parsed if item.value == 20)
+
+    assert top_twenty.unit_family == "count"
+
+
 def test_spelled_out_percentages_ground_their_digit_forms() -> None:
     source = (
         "Seventy-nine percent read three or more reviews; "
@@ -390,13 +415,28 @@ def test_frozen_cohort_quantity_cases_retain_exact_units(
     evidence_quantities = extract_quantities(str(case["evidence"]))
 
     assert claim_quantities
-    assert any(
-        candidate.unit_family == case["expected_unit_family"]
-        and any(
+    expected_value = case.get("expected_value")
+    expected_context = str(case.get("expected_context", "")).casefold()
+    for candidate in claim_quantities:
+        if expected_value is not None and candidate.value != float(expected_value):
+            continue
+        if expected_context:
+            context = candidate.sentence[
+                max(0, candidate.start - 20) : min(
+                    len(candidate.sentence), candidate.end + 28
+                )
+            ]
+            if expected_context not in context:
+                continue
+        if candidate.unit_family == case["expected_unit_family"] and any(
             quantities_match(candidate, evidence) for evidence in evidence_quantities
+        ):
+            break
+    else:
+        pytest.fail(
+            f"No {case['expected_unit_family']} quantity {expected_value!r} "
+            f"matched context {expected_context!r}"
         )
-        for candidate in claim_quantities
-    )
 
 
 @pytest.mark.parametrize(

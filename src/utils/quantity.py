@@ -54,8 +54,8 @@ _MAIN_RE = re.compile(
     r"(?P<currency>[$€£¥])?\s*"
     rf"(?P<number>{_NUMBER_RE})"
     rf"(?:\s*(?P<magnitude>{_MAG_RE}))?"
-    r"(?:\s*(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
-    r"users?|downloads?|respondents?|impressions?|installs?|visits?|sessions?|"
+    r"(?:\s*-?\s*(?P<unit>percentage[\s-]+points?|basis[\s-]+points?|%|percent|pct|pp|bps|usd|eur|gbp|jpy|"
+    r"users?|downloads?|respondents?|impressions?|installs?|visits?|sessions?|countries?|gainers?|"
     r"kbps|mbps|gbps|"
     r"minutes?|hours?|days?|weeks?|months?|years?|points?|index|rank|"
     r"times?|yoy|mom|qoq|cagr|per day|per month|per year)(?!\w))?",
@@ -538,6 +538,14 @@ def _extract_main(text: str) -> List[Quantity]:
             continue
         magnitude_raw = _clean_unit(match.group("magnitude"))
         unit_raw = _clean_unit(match.group("unit"))
+        if (
+            match.start("number") >= 2
+            and text[match.start("number") - 1] == "-"
+            and text[match.start("number") - 2].isalpha()
+        ):
+            # Compounds such as "first-90-day" are prose labels, not an
+            # explicit duration like "90-day window".
+            unit_raw = ""
         currency = _s(match.group("currency"))
         raw_number = match.group("number").strip()
         if re.fullmatch(r"-\s*20\d{2}", raw_number):
@@ -701,8 +709,18 @@ def _resolve_unit_family(
         "visits",
         "session",
         "sessions",
+        "country",
+        "countries",
+        "gainer",
+        "gainers",
     }:
-        return "count", unit_norm.removesuffix("s"), magnitude_norm
+        count_unit = {
+            "countries": "country",
+            "country": "country",
+            "gainers": "gainer",
+            "gainer": "gainer",
+        }.get(unit_norm, unit_norm.removesuffix("s"))
+        return "count", count_unit, magnitude_norm
 
     if magnitude_norm:
         following_count_unit = re.search(
@@ -740,7 +758,7 @@ def _resolve_unit_family(
         return unit_norm, unit_norm, magnitude_norm
 
     preceding_metric_label = sentence_norm[max(0, span[0] - 256) : span[0]]
-    if re.search(r"\bindex(?:es|ices)?\b", preceding_metric_label):
+    if re.search(r"\b(?:index|indexes|indices)\b", preceding_metric_label):
         return "index", "index", magnitude_norm
     if re.search(r"\brank(?:ing)?\b", preceding_metric_label):
         return "rank", "rank", magnitude_norm

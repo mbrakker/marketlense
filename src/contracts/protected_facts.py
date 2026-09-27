@@ -221,43 +221,22 @@ def compare_protected_fact_texts(
         payload["value"] = {
             "claim_value": claim_value,
             "evidence_value": evidence_value or None,
-            "status": (
-                "compatible"
-                if all(
-                    any(
-                        _quantity_entailed_by_evidence(claim, evidence)
-                        for evidence in evidence_quantities
-                    )
-                    for claim in claim_quantities
-                )
-                else "incompatible"
-                if evidence_quantities
-                else "unknown"
+            "status": _quantity_dimension_status(
+                claim_quantities, evidence_quantities
             ),
         }
-        explicit_claim_units = {
-            item.unit_family
-            for item in claim_quantities
-            if item.unit_family != "unknown"
-        }
+        explicit_claim_quantities = [
+            item for item in claim_quantities if item.unit_family != "unknown"
+        ]
         evidence_units = {item.unit_family for item in evidence_quantities}
-        if explicit_claim_units:
+        if explicit_claim_quantities:
             payload["unit_currency"] = {
-                "claim_value": ", ".join(sorted(explicit_claim_units)),
+                "claim_value": ", ".join(
+                    sorted({item.unit_family for item in explicit_claim_quantities})
+                ),
                 "evidence_value": ", ".join(sorted(evidence_units)) or None,
-                "status": (
-                    "compatible"
-                    if all(
-                        any(
-                            _quantity_entailed_by_evidence(claim, evidence)
-                            for evidence in evidence_quantities
-                        )
-                        for claim in claim_quantities
-                        if claim.unit_family != "unknown"
-                    )
-                    else "incompatible"
-                    if evidence_quantities
-                    else "unknown"
+                "status": _quantity_unit_dimension_status(
+                    explicit_claim_quantities, evidence_quantities
                 ),
             }
 
@@ -693,6 +672,35 @@ def _quantity_entailed_by_evidence(claim: object, evidence: object) -> bool:
     }:
         return False
     return quantities_match(claim, evidence)  # type: ignore[arg-type]
+
+
+def _quantity_dimension_status(
+    claims: list[Quantity], evidence: list[Quantity]
+) -> ProtectedFactStatus:
+    if all(
+        any(_quantity_entailed_by_evidence(claim, source) for source in evidence)
+        for claim in claims
+    ):
+        return "compatible"
+    if len(claims) == len(evidence) == 1:
+        return "incompatible"
+    return "unknown"
+
+
+def _quantity_unit_dimension_status(
+    claims: list[Quantity], evidence: list[Quantity]
+) -> ProtectedFactStatus:
+    if all(
+        any(
+            claim.unit_family == source.unit_family and claim.unit == source.unit
+            for source in evidence
+        )
+        for claim in claims
+    ):
+        return "compatible"
+    if len(claims) == len(evidence) == 1:
+        return "incompatible"
+    return "unknown"
 
 
 def _dimension_from_payload(value: Any) -> ProtectedFactDimension:

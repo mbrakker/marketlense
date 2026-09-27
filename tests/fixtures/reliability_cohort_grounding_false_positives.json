@@ -24,6 +24,43 @@
       "evidence": "Overall Global Attention Benchmarks\nAd Attention Index\nExposure Index\nEngagement Index\nAPAC\n109\n112\n107\nEMEA\n110\n104\n116\nLATAM\n101\n106\n96\nNorth America\n99\n98\n99"
     },
     {
+      "case_id": "doubleverify-index-normalization-retains-index-unit",
+      "report": "DoubleVerify",
+      "claim_id": "soft_copy:linkedin_post:7073a3e13df977ee",
+      "rule_id": "quantity_unit_family",
+      "kind": "quantity",
+      "expected_unit_family": "index",
+      "expected_value": 100,
+      "expected_context": "are normalized to 100",
+      "source_page": "PDF p.9",
+      "claim": "Attention indices are normalized to 100.",
+      "evidence": "The report says attention indices are normalized to 100, the average value across DV for a 28-day rolling window."
+    },
+    {
+      "case_id": "bain-top-twenty-gainers-retain-count-unit",
+      "report": "Bain & Company",
+      "claim_id": "insight:born-tech-market-value-growth-share:metric",
+      "rule_id": "quantity_unit_family",
+      "kind": "quantity",
+      "expected_unit_family": "count",
+      "expected_value": 20,
+      "expected_context": "top 20 gainers",
+      "source_page": "PDF p.1",
+      "claim": "Born-tech companies generated 52% of total market value growth for the top 20 gainers across sectors since 2015.",
+      "evidence": "Born-tech companies created 52% of total market value growth for the top 20 gainers across sectors since 2015."
+    },
+    {
+      "case_id": "capgemini-unlinked-country-count-is-unknown",
+      "report": "Capgemini Research Institute",
+      "claim_id": "insight:switch-for-lower-regular-price:metric",
+      "rule_id": "protected_fact_value_consistency",
+      "kind": "protected",
+      "dimension": "value",
+      "source_page": "finding f2, source PDF pp.4, 10, 12",
+      "claim": "In the October 2025 survey across 12 countries, 74% of respondents would switch for a lower regular price elsewhere.",
+      "evidence": "The executive summary reports that 74% would switch for a lower regular price elsewhere and that 71% would switch if pack sizes or product quality were reduced without clear communication. It also says 64% view shrinkflation as unfair."
+    },
+    {
       "case_id": "kpmg-expectation-is-not-completed-activity",
       "report": "KPMG",
       "claim_id": "soft_copy:linkedin_post:bfa34894cad82558",

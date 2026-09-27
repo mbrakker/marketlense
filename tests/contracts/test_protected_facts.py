@@ -40,6 +40,15 @@ def test_protected_fact_comparison_does_not_mark_a_missing_value_compatible() ->
     assert comparison.dimension("timeframe").status == "unknown"
 
 
+def test_single_explicit_numeric_mismatch_remains_incompatible() -> None:
+    comparison = compare_protected_fact_texts(
+        "Digital advertising grew 28%.", "Digital advertising grew 18%."
+    )
+
+    assert comparison.dimension("value").status == "incompatible"
+    assert comparison.dimension("unit_currency").status == "compatible"
+
+
 @pytest.mark.parametrize("dimension", PROTECTED_FACT_DIMENSIONS)
 def test_protected_fact_comparison_preserves_each_incompatible_dimension(
     dimension: str,
