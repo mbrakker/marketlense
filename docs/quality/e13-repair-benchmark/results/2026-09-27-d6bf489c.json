@@ -1,0 +1,269 @@
+{
+  "schema_version": "1.0",
+  "measured_at_utc_date": "2026-09-27",
+  "implementation_sha": "d6bf489cd670fab029be573ba823d829bfcf56cc",
+  "e13_status": "active",
+  "manifest_sha256": {
+    "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+    "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+    "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+  },
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-planner-fix-d6bf489c/a21 --implementation-sha d6bf489cd670fab029be573ba823d829bfcf56cc",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-planner-fix-d6bf489c/mobile --implementation-sha d6bf489cd670fab029be573ba823d829bfcf56cc",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-planner-fix-d6bf489c/doubleverify --implementation-sha d6bf489cd670fab029be573ba823d829bfcf56cc"
+  ],
+  "aggregate": {
+    "cases": 7,
+    "reproducible_cases": 5,
+    "no_longer_reproducible_cases": 2,
+    "repair_provider_calls": 9,
+    "repair_input_tokens": 63768,
+    "repair_output_tokens": 7948,
+    "repair_estimated_cost_usd": 0.010351,
+    "candidate_validation_attempts": 7,
+    "deterministic_candidate_rejection_attempts": 3,
+    "candidate_semantic_grounding_provider_calls_skipped": 6,
+    "unknown_or_hallucinated_evidence_introductions": 0,
+    "unsupported_claim_evidence_introductions": 2,
+    "provenance_or_lineage_introductions": 0,
+    "case_success_at_1": "0/5",
+    "case_success_at_3": "0/5",
+    "promotion_successes": 2,
+    "e13_closure": false
+  },
+  "cases": [
+    {
+      "case_id": "attachment-the-6dddc246d289",
+      "cohort": "a21",
+      "reproducible": true,
+      "baseline_target_fingerprints": ["34ad592fef31e345b9ac9bfc5832d8c274615de341c340e3b2b719e70597d07d"],
+      "target": "insights_final[item=insight-002].text",
+      "action": "REGENERATE_ITEM/current_evidence",
+      "repair_provider_calls": 1,
+      "candidate_validation_reached": true,
+      "candidate_validation_attempts": 1,
+      "resolved_rules": ["grounding"],
+      "persisting_rules": ["family_confidence"],
+      "introduced_rules": [],
+      "promotion": "promoted",
+      "case_closure_success": false
+    },
+    {
+      "case_id": "ebook-0225-fut-997cc1cccd6a",
+      "cohort": "a21",
+      "reproducible": true,
+      "baseline_target_fingerprints": ["7f963019d7cb2c1b7bda1fec5a429db27e09b775cb8aa9f703a3e63bd4c6fbc6"],
+      "targets_by_attempt": [
+        {
+          "target": "summary.claim_evidence_map[0].claim; summary.executive_summary[claim_index=0]",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved_rules": ["artifact_quality", "grounding", "retained_claim.protected_fact_attribution_consistency"],
+          "persisting_rules": ["retained_claim.protected_fact_attribution_consistency"],
+          "introduced_rules": []
+        },
+        {
+          "target": "summary.claim_evidence_map[0].claim; summary.executive_summary[claim_index=0]",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved_rules": ["retained_claim.protected_fact_attribution_consistency"],
+          "persisting_rules": ["artifact_quality", "grounding"],
+          "introduced_rules": ["grounding"]
+        }
+      ],
+      "repair_provider_calls": 2,
+      "candidate_validation_attempts": 2,
+      "terminal_failure": "schema_type_mismatch",
+      "promotion": "none",
+      "case_closure_success": false
+    },
+    {
+      "case_id": "g0-ec-trends-r-41f8ffd78145",
+      "cohort": "a21",
+      "reproducible": true,
+      "baseline_target_fingerprints": [
+        "100401be35c458e6adfa444f5967495e327393d22679dda5adbeb5b6b67972e2",
+        "d10cccb7a3e581bb4016e98a858d6a77117bc30d1e0762bd309b41708e90f511",
+        "1f3eb7fa86fe157cd1d25da6c112f214c9a01ae553f4688682bb935ea7e767a6"
+      ],
+      "target": "expert_comment[claim_index=4]",
+      "action": "REGENERATE_ITEM/current_evidence",
+      "repair_provider_calls": 1,
+      "candidate_validation_reached": true,
+      "candidate_validation_attempts": 1,
+      "resolved_rules": ["grounding"],
+      "persisting_rules": ["family_confidence", "artifact_quality"],
+      "introduced_rules": [],
+      "promotion": "promoted",
+      "case_closure_success": false
+    },
+    {
+      "case_id": "public-editorial-linkedin-mobile-app",
+      "cohort": "mobile-editorial",
+      "reproducible": true,
+      "baseline_target_fingerprints": [
+        "f01186026598a3ef1683d18dec85acb428fbb991af59662d90abb867af250143",
+        "a546e6b177710586a8b1f5ec052ecd1035c0227d51322a378868ac703944b24d"
+      ],
+      "baseline_root_failures": [
+        {
+          "fingerprint": "f01186026598a3ef1683d18dec85acb428fbb991af59662d90abb867af250143",
+          "rule_id": "numbers",
+          "target": "insights_final[item=insight-005].so_what"
+        },
+        {
+          "fingerprint": "a546e6b177710586a8b1f5ec052ecd1035c0227d51322a378868ac703944b24d",
+          "rule_id": "grounding",
+          "target": "linkedin_post[claim_index=5]"
+        }
+      ],
+      "targets_by_attempt": [
+        {
+          "target": "insights_final[item=insight-005].so_what; linkedin_post[claim_index=5]",
+          "action": "REGENERATE_ITEM/current_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved_rules": ["numbers", "grounding"],
+          "persisting_rules": [],
+          "introduced_rules": ["regeneration_scope_violation", "regeneration_derived_projection", "retained_claim.protected_fact_direction_consistency"]
+        },
+        {
+          "target": "insights_final[item=insight-005].so_what; linkedin_post[claim_index=5]",
+          "action": "REBIND_EVIDENCE/alternative_evidence",
+          "candidate_validation_reached": true,
+          "promotion": "rolled_back",
+          "resolved_rules": ["numbers", "grounding"],
+          "persisting_rules": [],
+          "introduced_rules": ["regeneration_scope_violation", "regeneration_derived_projection"]
+        },
+        {
+          "target": "insights_final[item=insight-005]; linkedin_post[claim_index=5]",
+          "action": "REMOVE_CLAIM/safe_removal",
+          "candidate_validation_reached": true,
+          "promotion": "not_promoted",
+          "resolved_rules": [],
+          "persisting_rules": [],
+          "introduced_rules": ["regeneration_derived_projection", "regeneration_removed_insight_reintroduced"]
+        }
+      ],
+      "repair_provider_calls": 4,
+      "candidate_validation_attempts": 3,
+      "terminal_failure": "report_payload_incomplete",
+      "promotion": "none",
+      "case_closure_success": false
+    },
+    {
+      "case_id": "doubleverify-linkedin-public-editorial-hard-failure",
+      "cohort": "doubleverify",
+      "reproducible": true,
+      "baseline_root_failure_fingerprints": [
+        "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+        "1ad3b89e063267e9161e43ccb715ec224838a33fe498cf183b2afab65697b7fd",
+        "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+        "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+        "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+        "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f"
+      ],
+      "baseline_root_failures": [
+        {
+          "fingerprint": "0b67af8fe3225ecbbaca15a1c0065d7fe0884d2653578b0bb0576bf971873f08",
+          "rule_id": "retained_claim.protected_fact_value_consistency",
+          "target": "insights_final[item=q1-regional-ad-attention-index].metric.value"
+        },
+        {
+          "fingerprint": "a09fd0c0660ffd473be49fa8562f13f7c5775917bf59430e956d252f1ae94a7f",
+          "rule_id": "retained_claim.protected_fact_unit_currency_consistency",
+          "target": "insights_final[item=q1-regional-ad-attention-index].metric.unit"
+        },
+        {
+          "fingerprint": "2d6452e33e8e22f88afc40327d902a87efc8399618f7acd8f90896daa215ae25",
+          "rule_id": "retained_claim.number_value_unit_match",
+          "target": "insights_final[item=q1-regional-ad-attention-index].metric.value"
+        },
+        {
+          "fingerprint": "1ad3b89e063267e9161e43ccb715ec224838a33fe498cf183b2afab65697b7fd",
+          "rule_id": "grounding",
+          "target": "expert_comment[claim_index=3]"
+        },
+        {
+          "fingerprint": "6513319e03100d217bd2c247de70f868a5283c71e5e0fc708b3cf7392eeab095",
+          "rule_id": "public_editorial_quality.metric_label_relationship",
+          "target": "expert_comment[claim_index=3]"
+        },
+        {
+          "fingerprint": "5934e3a1b0f40054dc2989fde34ffc250f82d250b8414b52ee310f39a2752baa",
+          "rule_id": "public_editorial_quality.metric_label_relationship",
+          "target": "linkedin_post[claim_index=3]"
+        }
+      ],
+      "planned_targets_in_order": [
+        "insights_final[item=q1-regional-ad-attention-index].metric.value",
+        "insights_final[item=q1-regional-ad-attention-index].metric.unit",
+        "expert_comment[claim_index=3]"
+      ],
+      "action": "REGENERATE_ITEM/current_evidence",
+      "repair_provider_calls": 1,
+      "recorded_repair_provider_namespaces": ["report_vs/artifacts/regenerate/insights_final"],
+      "candidate_validation_reached": false,
+      "candidate_validation_attempts": 0,
+      "terminal_failure": "regeneration_repair_decision_invalid:repair_scope_partition_invalid",
+      "resolved_rules": [],
+      "persisting_rules": [
+        "retained_claim.protected_fact_value_consistency",
+        "retained_claim.protected_fact_unit_currency_consistency",
+        "retained_claim.number_value_unit_match"
+      ],
+      "introduced_rules": [],
+      "promotion": "none",
+      "case_closure_success": false,
+      "note": "Target order was reconstructed offline from the unchanged persisted current validation report, candidate integrity diagnostics, retained-claim diagnostics, and frozen artifacts. The production replay recorded no candidate audit because generation terminated at the separate Expert View scope partition gate."
+    }
+  ],
+  "verification": {
+    "commands": [
+      "pytest tests/_test_report_analysis_generator/cases_03_rejects_unsupported_repair_target.py::test_mobile_numbers_failure_targets_exact_insight_so_what_leaf tests/_test_report_analysis_generator/cases_03_rejects_unsupported_repair_target.py::test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy tests/_test_report_analysis_generator/cases_03_rejects_unsupported_repair_target.py::test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error -q",
+      "pytest tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py tests/test_atomic_regeneration_contract.py -q",
+      "pytest tests/test_report_regeneration_generator.py tests/test_report_regeneration_identity_and_failures.py tests/test_atomic_regeneration_contract.py tests/test_report_analysis_generator.py -q",
+      "pytest tests/test_lineage_regeneration.py tests/test_replay_validation_repair_benchmark.py tests/test_regeneration_contracts.py tests/test_report_regeneration_identity_and_failures.py tests/test_regeneration_candidate.py tests/test_report_regeneration_generator.py tests/test_schema_validator.py tests/test_validation_reliability_service.py tests/test_validation_queue_lineage.py tests/test_validation_run_manifest.py tests/test_validation_repair_scorecard.py tests/test_atomic_regeneration_contract.py -q",
+      "python scripts/ci/check_ruff_lint.py",
+      "python scripts/ci/run_type_check.py",
+      "python scripts/ci/check_formatting.py",
+      "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-first-attempt-canary-d6bf489c --max-duration-seconds 3600"
+    ],
+    "focused_planner_tests": "3 passed",
+    "generator_identity_atomic_tests": "104 passed",
+    "broader_regeneration_suite": "268 passed, 2 pre-existing queue-lineage failures",
+    "focused_report_analysis_legacy_tests": "6 pre-existing failures reproduced on starting revision",
+    "focused_report_analysis_pre_existing_failure_ids": [
+      "test_run_report_analysis_falls_back_when_validation_raises",
+      "test_run_report_analysis_uses_one_broad_retry_for_unmappable_failures",
+      "test_build_regeneration_plan_skips_info_and_orders_errors_first",
+      "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
+      "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",
+      "test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets"
+    ],
+    "broader_suite_pre_existing_failure_ids": [
+      "test_a21_full_chain_from_frozen_cohort_through_awaiting_review[unsupported-soft-copy-repair]",
+      "test_a21_full_chain_from_frozen_cohort_through_awaiting_review[ias-known-claim-repair]"
+    ],
+    "ruff": "passed",
+    "mypy": "764 source files, zero tracked baseline errors",
+    "format": "passed",
+    "required_ias_workflow": {
+      "command": "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-first-attempt-canary-d6bf489c --max-duration-seconds 3600",
+      "result": "passed",
+      "final_state": "awaiting_review",
+      "publication_readiness": "pass",
+      "publication_enabled": false,
+      "workflow_attempts": 1,
+      "provider_calls": 39,
+      "input_tokens": 253205,
+      "output_tokens": 57405,
+      "estimated_cost_usd": 0.05388,
+      "duration_seconds": 340.689
+    }
+  }
+}

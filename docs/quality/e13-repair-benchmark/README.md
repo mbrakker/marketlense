@@ -537,3 +537,45 @@ recorded in its [sidecar](results/2026-09-27-197ba2d4.json.sha256)). E13 remains
 the DoubleVerify candidate audits had no provenance or protected-field
 contract defects, but content validation blocked promotion and the required
 workflow canary did not pass.
+
+## Atomic source-target planner replay — 2026-09-27, implementation SHA `d6bf489c`
+
+The same three frozen manifests were replayed at the committed planner and
+generator change. All manifest hashes matched. Five of seven cases reproduced
+at current validation; two were no longer reproducible. The Mobile case now
+plans the exact `insight-005.so_what` leaf and reached candidate validation on
+all three attempts instead of stopping at `regeneration_target_item_unchanged`.
+Attempts one and two resolved the original numbers and LinkedIn grounding
+failures, then rolled back on deterministic key-figure/chart projection checks.
+The existing safe-removal attempt also failed candidate integrity and the run
+ended at `report_payload_incomplete`; no Mobile candidate was promoted.
+
+For DoubleVerify, offline reconstruction from the unchanged persisted current
+validation report, deterministic candidate checks, retained-claim diagnostics,
+and frozen artifacts puts the canonical Q1 metric's exact `value` and `unit`
+leaves before Expert View. The replay recorded one insight-generation provider
+call, then failed at the separate Expert View claim scope partition check. It
+produced no candidate audit or candidate validation. This confirms source-first
+planning but does not count as a repair or promotion.
+
+Across the five reproducible cases, the replay made nine repair provider calls
+and reached seven candidate audits. Two candidates were promoted in A21, but
+persisting failures kept case success@1 and success@3 at 0/5. One A21 and one
+Mobile candidate introduced unsupported-claim failures; no attempt introduced
+unknown or hallucinated evidence or a provenance/lineage failure. Three audits
+were explicitly marked `not_evaluated_due_to_deterministic_failure`; a fourth
+Mobile audit recorded deterministic failures with semantic/grounding status
+`not_evaluated`. The unchanged validation checks remain enabled.
+
+The required isolated IAS workflow passed on this SHA in one attempt, with
+validation and publication readiness passing, terminal state `awaiting_review`,
+and publication disabled. It made 39 provider calls (253,205 input and 57,405
+output tokens; USD 0.053880). The PDF float-parse warning appeared, and the
+workflow completed successfully.
+
+The detailed per-case fingerprints, targets, actions, call counts, candidate
+validation and failure deltas, promotion outcomes, verification commands, and
+canary evidence are in the [2026-09-27 planner measurement](results/2026-09-27-d6bf489c.json)
+(SHA-256 recorded in its [sidecar](results/2026-09-27-d6bf489c.json.sha256)).
+E13 remains **Active**: success@1/@3 is 0/5, Mobile did not promote, and
+DoubleVerify did not reach candidate validation or promotion.
