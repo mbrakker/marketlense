@@ -313,6 +313,52 @@ def test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy(
         "retained_claim.number_value_unit_match",
     }
 
+    linkedin_text = artifacts["linkedin_post"]
+    linkedin_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id="soft_copy:linkedin_post:regional-metric",
+        text_hash=hashlib.sha256(" ".join(linkedin_text.split()).encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("s8",),
+        source_spans=(),
+        producing_prompt_identity={
+            "namespace": "report_vs/artifacts/linkedin_post"
+        },
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [linkedin_claim]
+    )
+    current_root_issues = [
+        ValidationIssue(
+            schema_version="1.0",
+            message=f"{fingerprint.rule_id} persists",
+            severity="error",
+            affected_section=fingerprint.affected_section,
+            rule_id=fingerprint.rule_id,
+            entity_id=fingerprint.entity_id,
+            evidence_ids=list(fingerprint.evidence_ids),
+        )
+        for fingerprint in persisted_root_failures
+    ]
+    retry_plan = _build_regeneration_plan(
+        issues=[*current_root_issues, public_issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        repair_memory=[RepairDelta(resolved=persisted_root_failures)],
+    )
+
+    assert [target.target_section for target in retry_plan.targets] == [
+        "insights_bundle",
+        "linkedin_post",
+    ]
+    assert retry_plan.targets[0].allowed_paths == target.allowed_paths
+    assert retry_plan.targets[1].allowed_paths == [
+        "linkedin_post[claim_index=0]"
+    ]
+
 
 def test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error():
     unknown_severity = FailureFingerprint(

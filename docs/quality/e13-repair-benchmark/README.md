@@ -585,3 +585,11 @@ canary evidence are in the [2026-09-27 planner measurement](results/2026-09-27-d
 (SHA-256 recorded in its [sidecar](results/2026-09-27-d6bf489c.json.sha256)).
 E13 remains **Active**: success@1/@3 is 0/5, Mobile did not promote, and
 DoubleVerify did not reach candidate validation or promotion.
+
+When a candidate resolves every authoritative source metric fingerprint but
+still fails downstream public-copy validation, retry planning keeps the source
+target first and also includes the matching public-copy target. The retry
+memory's `resolved` set must cover all current source fingerprints before those
+dependent targets are admitted; otherwise planning remains source-only. This
+lets the next candidate repair the source and its dependent copy in one bounded
+attempt after prior evidence proved that the source edit itself worked.

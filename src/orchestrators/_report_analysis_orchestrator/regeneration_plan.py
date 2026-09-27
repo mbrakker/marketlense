@@ -1057,11 +1057,13 @@ def _build_regeneration_plan(
     repair_memory: Sequence[RepairDelta] = (),
 ) -> RegenerationPlan:
     planning_issues = list(issues)
+    latest_resolved: set[str] = set()
     if repair_memory:
         # Only the most recent candidate describes which baseline failures are
         # still active. Older deltas remain useful prompt memory but must not
         # resurrect a root failure already resolved by a later candidate.
         latest_persisting = repair_memory[-1].persisting
+        latest_resolved = {item.key for item in repair_memory[-1].resolved}
         latest_severity = {
             change.failure_fingerprint: str(change.after or "").strip().lower()
             for change in repair_memory[-1].severity_changes
@@ -1131,6 +1133,14 @@ def _build_regeneration_plan(
         if _is_authoritative_insight_metric_failure(insight_issue)
     ]
     if authoritative_metric_issues:
+        source_fingerprints = {
+            issue.failure_fingerprint
+            for issue in authoritative_metric_issues
+            if issue.failure_fingerprint
+        }
+        source_repaired_in_latest_candidate = bool(source_fingerprints) and (
+            source_fingerprints <= latest_resolved
+        )
         root_evidence_ids = {
             value.casefold()
             for insight_issue in authoritative_metric_issues
@@ -1152,8 +1162,10 @@ def _build_regeneration_plan(
                 issue_evidence_ids = {
                     value.casefold() for value in downstream_issue.evidence_ids
                 }
-                if is_metric_relationship and root_evidence_ids.intersection(
-                    issue_evidence_ids
+                if (
+                    is_metric_relationship
+                    and not source_repaired_in_latest_candidate
+                    and root_evidence_ids.intersection(issue_evidence_ids)
                 ):
                     continue
                 retained.append(downstream_issue)
