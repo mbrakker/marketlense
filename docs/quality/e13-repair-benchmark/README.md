@@ -169,6 +169,39 @@ then replay continues to the next independent frozen case. The case remains
 failed, and this does not create a candidate audit or count as repair success.
 Retryable errors still propagate and stop the replay.
 
+## 2026-09-27 derived-projection disposition — implementation SHA `61aae82d1f2ad36a00281008a40d7cad904f72d2`
+
+The prior retained audits contained two ebook attempts with two
+`regeneration_derived_projection` errors each and six
+`regeneration_scope_violation` paths each: three key figures and three chart
+cards per attempt. A later DoubleVerify audit also contained one scope
+violation for `_cache.regeneration_prompt_requirements`.
+
+The frozen A21 replay's ebook model response left the target item unchanged,
+so that live case stopped before candidate artifact generation. The mobile
+case stopped on an invalid repair decision, and the DoubleVerify case stopped
+on invalid claim-provenance coverage. Across the three new replay outputs,
+the one candidate audit contained zero derived-projection and zero scope
+violations; the other frozen cases did not reach candidate validation. This
+does not count as a live re-execution of those prior scope failures.
+
+To test the exact prior ebook candidate without another model call, the saved
+candidate artifact from the prior replay was run through the new deterministic
+rebuild using the six hash-pinned evidence packs. Before rebuilding it had two
+derived-projection errors and six key-figure/card scope errors. The rebuilt
+`key_figures` and `chart_insight_cards` matched both the canonical builders and
+the last promoted artifact, leaving zero derived-projection errors and zero
+scope errors on those roots. Separate regressions prove the positive case
+where a canonical rebuild changes figure/card entries, verify only those
+roots, and reject tampering within either family.
+
+The isolated discovery-to-publish canary reached validation pass but ended at
+publication readiness failure `card_tldr_compact_invalid`; it made one
+workflow attempt and no automatic repair attempt. The failure occurred
+outside candidate regeneration. Frozen replay details, manifest hashes,
+audit counts, usage, and command outcomes are in the [2026-09-27 result](results/2026-09-27-61aae82d.json)
+(SHA-256 recorded in its sidecar).
+
 ## Prior measurement disposition — 2026-09-26, implementation SHA `09df2bac76111e44b8e811337c83a1995c791954`
 
 The implementation was replayed at exact SHA
