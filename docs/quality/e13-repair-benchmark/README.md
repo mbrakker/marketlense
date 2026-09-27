@@ -672,6 +672,13 @@ in the same audit and delta, so it cannot bypass deterministic diagnostics.
 Candidates that pass deterministic candidate checks continue through the full
 validation path.
 
+The informational `deferred_grounding_required` issue remains in the stored
+candidate validation report and audit, alongside the bounded
+`semantic_grounding_validation_status`. It is excluded only when constructing
+`RepairDelta`, so it cannot be classified as introduced, persisting, resolved,
+or as a severity transition, and retry memory contains only repair findings.
+Other warning, info, and error issues retain their existing delta behavior.
+
 ## Inline deterministic replay measurement — 2026-09-27, implementation SHA `f48f795c`
 
 The unchanged A21, Mobile editorial, and DoubleVerify manifests were replayed

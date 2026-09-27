@@ -504,9 +504,23 @@ def _retained_claim_severity_by_fingerprint(
     return severities
 
 
+def _is_repair_delta_accountable_issue(issue: ValidationIssue) -> bool:
+    """Exclude validation execution metadata from repair-failure accounting."""
+
+    return str(issue.rule_id or "").strip() != "deferred_grounding_required"
+
+
 def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDelta:
-    before_by_key = {_failure_fingerprint(item).key: item for item in before.issues}
-    after_by_key = {_failure_fingerprint(item).key: item for item in after.issues}
+    before_by_key = {
+        _failure_fingerprint(item).key: item
+        for item in before.issues
+        if _is_repair_delta_accountable_issue(item)
+    }
+    after_by_key = {
+        _failure_fingerprint(item).key: item
+        for item in after.issues
+        if _is_repair_delta_accountable_issue(item)
+    }
     before_items = {
         key: _failure_fingerprint(item) for key, item in before_by_key.items()
     }

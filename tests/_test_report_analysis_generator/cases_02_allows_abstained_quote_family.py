@@ -599,6 +599,16 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
         == "not_evaluated_due_to_deterministic_failure"
         for attempt in state.regeneration_attempts
     )
+    assert all(
+        issue.rule_id != "deferred_grounding_required"
+        for attempt in state.regeneration_attempts
+        for issues in (
+            attempt.repair_delta.introduced,
+            attempt.repair_delta.persisting,
+            attempt.repair_delta.resolved,
+        )
+        for issue in issues
+    )
     assert any(
         issue.rule_id == "regeneration_scope_violation"
         for issue in state.regeneration_attempts[0].repair_delta.introduced
@@ -622,6 +632,19 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
         == "not_evaluated_due_to_deterministic_failure"
     )
     assert any(
+        key.startswith("deferred_grounding_required")
+        for key in first_audit["validation_issues"]
+    )
+    validation_snapshot = json.loads(
+        Path(state.regeneration_attempts[0].validation_snapshot_path).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert any(
+        issue["rule_id"] == "deferred_grounding_required"
+        for issue in validation_snapshot["issues"]
+    )
+    assert any(
         item["rule_id"] == "claim_support"
         for item in first_audit["repair_delta"]["introduced"]
     )
@@ -634,6 +657,15 @@ def test_scope_rejection_runs_deterministic_validation_without_provider_calls(
     )
     assert any(
         issue.rule_id == "claim_support" for issue in retry_memories[1][0].introduced
+    )
+    assert all(
+        issue.rule_id != "deferred_grounding_required"
+        for issues in (
+            retry_memories[1][0].introduced,
+            retry_memories[1][0].persisting,
+            retry_memories[1][0].resolved,
+        )
+        for issue in issues
     )
     assert any(
         issue.rule_id == "report_payload_incomplete"

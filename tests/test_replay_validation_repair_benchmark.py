@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -153,6 +154,118 @@ def test_unchanged_candidate_has_zero_failure_delta_under_current_validator() ->
     assert delta.resolved == []
     assert _introduced_hard_failure_count(current_baseline, current_baseline) == 0
     assert {item.rule_id for item in delta.persisting} == {"current_rule"}
+
+
+def test_repair_delta_excludes_deferred_grounding_execution_metadata() -> None:
+    deferred = ValidationIssue(
+        message="Grounding validation was deferred",
+        severity="info",
+        affected_section="validation",
+        rule_id="deferred_grounding_required",
+    )
+    no_issues = ValidationReport(
+        schema_version="1.0", status="pass", severity="pass", issues=[]
+    )
+    deferred_only = ValidationReport(
+        schema_version="1.0", status="pass", severity="pass", issues=[deferred]
+    )
+    deferred_severity_transition = ValidationReport(
+        schema_version="1.0",
+        status="warning",
+        severity="warning",
+        issues=[replace(deferred, severity="warning")],
+    )
+
+    introduced = _repair_delta(no_issues, deferred_only)
+    persisting = _repair_delta(deferred_only, deferred_only)
+    resolved = _repair_delta(deferred_only, no_issues)
+    severity_changed = _repair_delta(deferred_only, deferred_severity_transition)
+
+    for delta in (introduced, persisting, resolved, severity_changed):
+        assert delta.introduced == []
+        assert delta.persisting == []
+        assert delta.resolved == []
+        assert delta.severity_changes == []
+    assert deferred_only.issues == [deferred]
+    assert _introduced_hard_failure_count(no_issues, deferred_only) == 0
+
+
+def test_repair_delta_keeps_real_findings_and_severity_changes_with_deferred_marker() -> (
+    None
+):
+    deferred = ValidationIssue(
+        message="Grounding validation was deferred",
+        severity="info",
+        affected_section="validation",
+        rule_id="deferred_grounding_required",
+    )
+    numbers_warning = ValidationIssue(
+        message="Number support needs review",
+        severity="warning",
+        affected_section="summary.tldr",
+        rule_id="numbers",
+        entity_id="summary:1",
+        evidence_ids=["finding:1"],
+    )
+    provenance_warning = ValidationIssue(
+        message="Provenance coverage is incomplete",
+        severity="warning",
+        affected_section="summary.tldr",
+        rule_id="provenance",
+        entity_id="summary:2",
+        evidence_ids=["finding:2"],
+    )
+    artifact_quality_warning = ValidationIssue(
+        message="Artifact quality needs review",
+        severity="warning",
+        affected_section="summary.tldr",
+        rule_id="artifact_quality",
+        entity_id="summary:3",
+    )
+    claim_support_error = ValidationIssue(
+        message="Claim is not supported by retained evidence",
+        severity="error",
+        affected_section="summary.claim_evidence_map[0]",
+        rule_id="claim_support",
+        entity_id="summary:4",
+        evidence_ids=["finding:4"],
+    )
+    numbers_error = replace(numbers_warning, severity="error")
+    artifact_quality_error = replace(artifact_quality_warning, severity="error")
+    before = ValidationReport(
+        schema_version="1.0",
+        status="warning",
+        severity="warning",
+        issues=[
+            deferred,
+            numbers_warning,
+            provenance_warning,
+            artifact_quality_warning,
+        ],
+    )
+    after = ValidationReport(
+        schema_version="1.0",
+        status="fail",
+        severity="error",
+        issues=[deferred, numbers_error, artifact_quality_error, claim_support_error],
+    )
+
+    delta = _repair_delta(before, after)
+
+    assert [item.rule_id for item in delta.introduced] == ["claim_support"]
+    assert {item.rule_id for item in delta.persisting} == {
+        "numbers",
+        "artifact_quality",
+    }
+    assert [item.rule_id for item in delta.resolved] == ["provenance"]
+    assert {(change.before, change.after) for change in delta.severity_changes} == {
+        ("warning", "error")
+    }
+    assert {change.failure_fingerprint for change in delta.severity_changes} == {
+        item.key
+        for item in delta.persisting
+        if item.rule_id in {"numbers", "artifact_quality"}
+    }
 
 
 def test_candidate_only_failure_is_introduced_against_current_baseline() -> None:
