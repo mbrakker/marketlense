@@ -55,7 +55,9 @@ from src.contracts.run_context import RunContext
 
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    soft_copy_material_sentences,
     soft_copy_claim_provenance_to_payload,
+    soft_copy_public_text,
 )
 
 from src.contracts.taxonomy import TaxonomyExtractResponse
@@ -267,10 +269,8 @@ def _set_interpretive_summary_provenance(artifacts: dict) -> None:
     seen_hashes: set[str] = set()
     summary = artifacts.get("summary")
     if isinstance(summary, dict):
-        for field in ("tldr", "card_tldr_compact", "executive_summary"):
-            text = " ".join(str(summary.get(field) or "").split())
-            if not text:
-                continue
+        summary_text = soft_copy_public_text("summary", summary)
+        for text in soft_copy_material_sentences(summary_text):
             text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
             if text_hash in seen_hashes:
                 continue

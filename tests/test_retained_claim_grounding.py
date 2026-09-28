@@ -11,6 +11,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationRequest
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.validation.grounding import grounding_payload, run_grounding_check
 from src.generators.validation.regeneration_candidate import (
     retained_claim_repair_issues,
@@ -143,6 +144,54 @@ def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -
     assert claim_id in public_ids
     assert retained[0]["item_id"] not in public_ids
     assert retained[0]["text"] == sentence
+
+
+def test_summary_claim_validation_uses_the_joined_canonical_sentence_grid() -> None:
+    summary = {
+        "tldr": "U.S. revenue reached $918 billion",
+        "card_tldr_compact": "in 2025.",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    sentence = "U.S. revenue reached $918 billion in 2025."
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="summary",
+        claim_id="soft_copy:summary:us-revenue",
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "summary": summary,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": "U.S. revenue reached $918 billion in 2025."}
+            ]
+        }
+    }
+
+    package = validate_retained_claims(artifacts, evidence_packs)
+    summary_results = [
+        result
+        for result in package.results
+        if result.candidate.source_family == "summary"
+        and result.candidate.text.startswith("U.S. revenue")
+    ]
+
+    assert len(summary_results) == 1
+    assert summary_results[0].candidate.text == sentence
+    assert summary_results[0].candidate.claim_id == provenance.claim_id
+    assert "soft_copy_provenance_sentence_missing" not in summary_results[0].reasons
 
 
 def test_namespaced_retained_grounding_identity_maps_to_claim_lineage(tmp_path) -> None:
@@ -488,8 +537,10 @@ def test_multiple_retained_claims_use_one_report_level_grounding_call(tmp_path) 
 def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
     tmp_path,
 ) -> None:
-    from src.generators.claim_validation_generator import retained_claim_semantic_inputs
-    from src.generators.claim_validation_generator import validate_retained_claims
+    from src.generators.claim_validation_generator import (
+        retained_claim_semantic_inputs,
+        validate_retained_claims,
+    )
 
     claim_texts = [
         f"The report describes merchant payment operations from a distinctive {word} angle."

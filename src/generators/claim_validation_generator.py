@@ -32,6 +32,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
     soft_copy_material_sentences,
+    soft_copy_public_text,
 )
 from src.utils.errors import AppError
 from src.utils.publication_projection import publication_projection_hash
@@ -348,9 +349,17 @@ def _candidates(
                     affected_section=f"summary.claim_evidence_map:{claim_identity}.claim",
                     entity_id=f"summary_claim:{claim_identity}",
                 )
-        for key in ("tldr", "card_tldr_compact", "executive_summary"):
+        summary_fields = ("tldr", "card_tldr_compact", "executive_summary")
+        field_sentences: dict[str, set[str]] = {}
+        for key in summary_fields:
             for sentence in soft_copy_material_sentences(summary.get(key)):
-                add_soft_copy("summary", sentence, affected_section=f"summary.{key}")
+                field_sentences.setdefault(sentence, set()).add(key)
+        for sentence in soft_copy_material_sentences(
+            soft_copy_public_text("summary", summary)
+        ):
+            owners = field_sentences.get(sentence, set())
+            section = f"summary.{next(iter(owners))}" if len(owners) == 1 else "summary"
+            add_soft_copy("summary", sentence, affected_section=section)
     for family, item_key, text_key in (
         ("insights_final", "insights_final", "text"),
         ("quotes_final", "quotes_final", "text"),

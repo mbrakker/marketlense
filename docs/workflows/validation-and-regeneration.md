@@ -66,6 +66,16 @@ public projection hash and source lineage, and writes the canonical
 `retained_claim_validation` package. A candidate with changed inputs or stale
 execution identity is rejected.
 
+During repair promotion, the candidate validation package is first read from
+its attempt-scoped report path and checked against the exact candidate artifact
+hash. Only a passing candidate whose artifacts are then promoted can replace
+the report-scoped current candidate package used by final materialization. A
+rolled-back candidate never replaces that package. A missing, malformed, or
+artifact-mismatched package fails with a typed promotion reason before artifact
+promotion; a failure to retain the package after artifact promotion is also a
+typed terminal failure. The candidate package remains input to final
+materialization and is never itself accepted as final readiness state.
+
 The public-factual inventory and retained-claim inventory can contain the same
 sentence and stored claim ID. Grounding assigns a distinct provider-facing item
 ID to the retained-claim entry only when that ID collides with a public item.
@@ -371,8 +381,15 @@ repair because finalization mechanically rebuilds it from that public copy.
 Every other derived root remains a strict scope violation unless this boundary
 itself verifies its deterministic recomputation from the allowed canonical
 inputs.
-Claim repair and numeric and grounding attribution use the same material
-sentence grid as retained provenance, including initialisms such as `U.S.`.
+Summary provenance generation and retained-claim validation both segment the
+joined public Summary surface, including boundaries between TLDR variants.
+Expert View and LinkedIn generation, repair validation, number attribution, and
+grounding use the same `soft_copy_material_sentences` grid. Byte-identical
+sentences therefore keep the same content hash, and validators cannot create a
+sentence identity for a fragment absent from that canonical grid, including
+when text contains initialisms such as `U.S.`.
+Claim repair and numeric and grounding attribution use that same material
+sentence grid as retained provenance.
 The grounding inventory carries the model's declared classification as an
 untrusted hint so self-authored advice is evaluated for its factual premises
 without being mistaken for a claim that the source issued that advice.

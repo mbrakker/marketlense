@@ -9,6 +9,7 @@ from src.contracts.context_category_fit import (
     ReportCategoryContext,
     ReportContextBuildRequest,
 )
+from src.contracts.files import ReadJsonRequest
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
@@ -18,7 +19,11 @@ from src.contracts.report_analysis import (
     AnalysisStorePackRequest,
 )
 from src.contracts.run_context import RunContext
-from src.contracts.state import StateGetByMd5Request, StateGetRequest, StateRecordRequest
+from src.contracts.state import (
+    StateGetByMd5Request,
+    StateGetRequest,
+    StateRecordRequest,
+)
 from src.contracts.taxonomy import TaxonomyExtractRequest
 from src.contracts.validation import ValidationReport
 from src.contracts.vector_store import (
@@ -39,6 +44,7 @@ from src.generators.report_regeneration_generator import regenerate_artifacts
 from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services import (
+    file_service,
     report_analysis_store_service,
     state_service,
     vector_store_service,
@@ -74,6 +80,7 @@ class ReportAnalysisDependencies:
     ]
     run_validation: Callable[..., ValidationReport]
     analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
+    read_json: Callable[[ReadJsonRequest, RunContext], Any]
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
     figure_caption: FigureCaptionDependencies
 
@@ -97,6 +104,7 @@ class ReportAnalysisDependencies:
             regenerate_artifacts=regenerate_artifacts,
             run_validation=run_validation,
             analysis_pack_path=report_analysis_store_service.pack_path,
+            read_json=file_service.read_json,
             analysis_store_pack=report_analysis_store_service.store_pack,
             figure_caption=FigureCaptionDependencies.default(),
         )

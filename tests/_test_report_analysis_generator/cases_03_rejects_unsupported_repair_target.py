@@ -1,17 +1,112 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
-from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
-    _build_regeneration_plan,
-)
 from src.contracts.regeneration import (
     FailureFingerprint,
     RepairDelta,
     RepairSeverityChange,
     repair_strategy_fingerprint,
 )
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
+)
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _load_candidate_claim_validation_for_promotion,
+    _store_promoted_candidate_claim_validation,
+)
+from src.utils.cache_utils import sha256_json
 
 from ._shared import *  # noqa: F401,F403
+
+
+def test_load_retained_claim_candidate_binds_to_promoted_artifacts(tmp_path):
+    runtime = _runtime(tmp_path)
+    candidate_artifacts = {"summary": {"tldr": "Promoted copy."}}
+    artifact_hash = sha256_json(candidate_artifacts)
+    candidate_package = {
+        "schema_version": "1.3",
+        "artifact_hash": artifact_hash,
+        "package_hash": "promoted-package-hash",
+    }
+    read_requests = []
+
+    def _analysis_pack_path(request, _ctx):
+        return SimpleNamespace(output_path=f"candidate/{request.pack_name}.json")
+
+    def _read_json(request, _ctx):
+        read_requests.append(request)
+        return SimpleNamespace(payload=candidate_package)
+
+    dependencies = _deps(
+        analysis_pack_path=_analysis_pack_path,
+        read_json=_read_json,
+    )
+
+    loaded_package = _load_candidate_claim_validation_for_promotion(
+        runtime=runtime,
+        dependencies=dependencies,
+        candidate_validation_pack_name="validation_regen_candidate_2",
+        expected_artifact_hash=artifact_hash,
+        ctx=runtime.ctx,
+    )
+
+    assert loaded_package == candidate_package
+    assert len(read_requests) == 1
+    assert read_requests[0].path.endswith(
+        "validation_regen_candidate_2_retained_claim_validation_candidate.json"
+    )
+
+
+def test_store_promoted_retained_claim_candidate_to_report_scoped_pack(tmp_path):
+    runtime = _runtime(tmp_path)
+    stored_requests = []
+    dependencies = _deps(
+        analysis_store_pack=lambda request, _ctx: (
+            stored_requests.append(request)
+            or SimpleNamespace(output_path=f"promoted/{request.pack_name}.json")
+        )
+    )
+    payload = {"schema_version": "1.3", "artifact_hash": "current"}
+
+    stored_path = _store_promoted_candidate_claim_validation(
+        runtime=runtime,
+        dependencies=dependencies,
+        candidate_package=payload,
+        ctx=runtime.ctx,
+    )
+
+    assert len(stored_requests) == 1
+    assert stored_requests[0].pack_name == (
+        "validation_retained_claim_validation_candidate"
+    )
+    assert stored_requests[0].payload == payload
+    assert stored_path.endswith("validation_retained_claim_validation_candidate.json")
+
+
+def test_promote_retained_claim_candidate_rejects_artifact_mismatch(tmp_path):
+    runtime = _runtime(tmp_path)
+    stored_requests = []
+    dependencies = _deps(
+        analysis_pack_path=lambda request, _ctx: SimpleNamespace(
+            output_path=f"candidate/{request.pack_name}.json"
+        ),
+        read_json=lambda _request, _ctx: SimpleNamespace(
+            payload={"schema_version": "1.3", "artifact_hash": "stale"}
+        ),
+        analysis_store_pack=lambda request, _ctx: stored_requests.append(request),
+    )
+
+    with pytest.raises(AppError) as excinfo:
+        _load_candidate_claim_validation_for_promotion(
+            runtime=runtime,
+            dependencies=dependencies,
+            candidate_validation_pack_name="validation_regen_candidate_1",
+            expected_artifact_hash="current",
+            ctx=runtime.ctx,
+        )
+
+    assert excinfo.value.code == "retained_claim_candidate_artifact_mismatch"
+    assert stored_requests == []
 
 
 def test_build_regeneration_plan_skips_info_and_orders_errors_first():
@@ -511,6 +606,9 @@ def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_pa
 
 
 __all__ = [
+    "test_load_retained_claim_candidate_binds_to_promoted_artifacts",
+    "test_store_promoted_retained_claim_candidate_to_report_scoped_pack",
+    "test_promote_retained_claim_candidate_rejects_artifact_mismatch",
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
     "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",

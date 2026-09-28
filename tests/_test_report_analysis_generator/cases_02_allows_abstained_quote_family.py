@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.contracts.regeneration import RepairDecision, RepairPatchOperation
 from src.generators.validation.regeneration_candidate import (
@@ -14,6 +15,8 @@ from src.generators.validation_generator import validate_report
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _candidate_validation_report,
 )
+from src.services import report_analysis_store_service
+from src.utils.cache_utils import sha256_json
 
 from ._shared import *  # noqa: F401,F403
 
@@ -359,9 +362,12 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
         for issue in retained_claim_repair_issues(original, evidence_packs)
     ]
     validation_calls: list[str] = []
+    candidate_package_reads: list[str] = []
+    promoted_candidate_packages = []
+    candidate_package_payload = {}
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
-        del req, settings, ctx, report_name, md5
+        del settings, ctx, report_name, md5
         validation_calls.append(pack_name)
         if len(validation_calls) == 1:
             return ValidationReport(
@@ -380,9 +386,29 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
                 ],
                 severity="error",
             )
+        if expected_outcome == "promoted" and pack_name == (
+            "validation_regen_candidate_1"
+        ):
+            candidate_package_payload.update(
+                {
+                    "schema_version": "1.3",
+                    "artifact_hash": sha256_json(req.artifacts),
+                    "package_hash": "candidate-package-1",
+                }
+            )
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
         )
+
+    def _read_candidate_package(request, _ctx):
+        candidate_package_reads.append(request.path)
+        return SimpleNamespace(payload=candidate_package_payload)
+
+    def _store_analysis_pack(request, ctx):
+        if request.pack_name == "validation_retained_claim_validation_candidate":
+            promoted_candidate_packages.append(request)
+            return SimpleNamespace(output_path=f"promoted/{request.pack_name}.json")
+        return report_analysis_store_service.store_pack(request, ctx)
 
     deps = _deps(
         generate_evidence_packs=lambda **kwargs: evidence_packs,
@@ -396,6 +422,8 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
                 tmp_path / "out" / "artifacts_regen_candidate_1.json"
             ),
         ),
+        read_json=_read_candidate_package,
+        analysis_store_pack=_store_analysis_pack,
     )
 
     state = run_report_analysis(
@@ -415,6 +443,8 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
     assert len(state.regeneration_attempts) == 1
     assert validation_calls == ["validation", "validation_regen_candidate_1"]
     assert state.regeneration_attempts[0].promotion_outcome == expected_outcome
+    assert len(candidate_package_reads) == int(expected_outcome == "promoted")
+    assert len(promoted_candidate_packages) == int(expected_outcome == "promoted")
     assert state.artifacts_payload["summary"]["tldr"] == (
         "Repaired summary" if expected_outcome == "promoted" else "Broken summary"
     )
@@ -430,6 +460,9 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
             for item in state.regeneration_attempts[0].repair_delta.persisting
         )
     else:
+        assert candidate_package_payload["artifact_hash"] == sha256_json(
+            state.artifacts_payload
+        )
         assert (
             state.regeneration_attempts[
                 0
@@ -761,11 +794,14 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     regeneration_targets = []
     regeneration_strategies = []
     retry_memories = []
+    candidate_package_reads = []
+    promoted_candidate_packages = []
+    candidate_package_payload = {}
     validation_calls = 0
 
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
         nonlocal validation_calls
-        del req, settings, ctx, pack_name, report_name, md5
+        del settings, ctx, report_name, md5
         validation_calls += 1
         if validation_calls == 1:
             return ValidationReport(
@@ -799,9 +835,34 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
                 ],
                 severity="error",
             )
+        if pack_name == "validation_regen_candidate_2":
+            candidate_package_payload.update(
+                {
+                    "schema_version": "1.3",
+                    "artifact_hash": sha256_json(req.artifacts),
+                    "package_hash": "candidate-package-2",
+                }
+            )
         return ValidationReport(
             schema_version="1.1", status="pass", issues=[], severity="pass"
         )
+
+    def _read_json(request, _ctx):
+        candidate_package_reads.append(request.path)
+        if not request.path.endswith(
+            "validation_regen_candidate_2_retained_claim_validation_candidate.json"
+        ):
+            raise AppError(
+                code="file_not_found",
+                message="Only a promoted candidate package is retained in this test.",
+            )
+        return SimpleNamespace(payload=candidate_package_payload)
+
+    def _store_analysis_pack(request, ctx):
+        if request.pack_name == "validation_retained_claim_validation_candidate":
+            promoted_candidate_packages.append(request)
+            return SimpleNamespace(output_path=f"promoted/{request.pack_name}.json")
+        return report_analysis_store_service.store_pack(request, ctx)
 
     def _regenerate(request):
         repair_usage_attempts.append(request.ctx.repair_attempt)
@@ -856,6 +917,8 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         generate_artifacts=lambda **kwargs: original,
         run_validation=_run_validation,
         regenerate_artifacts=_regenerate,
+        read_json=_read_json,
+        analysis_store_pack=_store_analysis_pack,
     )
 
     state = run_report_analysis(
@@ -871,7 +934,6 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         ),
         deps,
     )
-
     assert regeneration_inputs == ["original artifact", "original artifact"]
     assert regeneration_artifact_inputs[0] == regeneration_artifact_inputs[1]
     assert repair_usage_attempts == [1, 2]
@@ -911,6 +973,15 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
     assert state.validation_report is not None
     assert state.validation_report.status == "pass"
+    assert len(candidate_package_reads) == 1
+    assert candidate_package_reads[0].endswith(
+        "validation_regen_candidate_2_retained_claim_validation_candidate.json"
+    )
+    assert len(promoted_candidate_packages) == 1
+    assert promoted_candidate_packages[0].payload == candidate_package_payload
+    assert promoted_candidate_packages[0].payload["artifact_hash"] == sha256_json(
+        state.artifacts_payload
+    )
     assert (
         state.regeneration_attempts[1].artifacts_path
         == state.evidence_paths["artifacts"]

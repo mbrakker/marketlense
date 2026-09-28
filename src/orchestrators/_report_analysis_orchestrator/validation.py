@@ -13,6 +13,7 @@ from dataclasses import asdict, replace
 from time import perf_counter
 from typing import Any, Dict, List, Optional
 
+from src.contracts.files import ReadJsonRequest
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     FailureFingerprint,
@@ -996,6 +997,91 @@ def _promote_regeneration_candidate(
     ).output_path
 
 
+def _load_candidate_claim_validation_for_promotion(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    candidate_validation_pack_name: str,
+    expected_artifact_hash: str,
+    ctx,
+) -> Dict[str, Any]:
+    """Load candidate grounding only when it matches the artifacts being promoted."""
+
+    pack_name = f"{candidate_validation_pack_name}_retained_claim_validation_candidate"
+    candidate_path = dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=pack_name,
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+    try:
+        payload = dependencies.read_json(
+            ReadJsonRequest(schema_version="1.0", path=candidate_path),
+            ctx,
+        ).payload
+    except AppError as exc:
+        raise AppError(
+            code="retained_claim_candidate_package_unavailable",
+            message="Validated candidate grounding package could not be read",
+            retryable=False,
+            context={"pack_name": pack_name, "cause_code": exc.code},
+            cause=exc,
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AppError(
+            code="retained_claim_candidate_package_invalid",
+            message="Validated candidate grounding package has an invalid payload",
+            retryable=False,
+            context={"pack_name": pack_name},
+        )
+    if payload.get("artifact_hash") != expected_artifact_hash:
+        raise AppError(
+            code="retained_claim_candidate_artifact_mismatch",
+            message=(
+                "Validated candidate grounding package does not match promoted "
+                "artifacts"
+            ),
+            retryable=False,
+            context={"pack_name": pack_name},
+        )
+    return payload
+
+
+def _store_promoted_candidate_claim_validation(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    candidate_package: Dict[str, Any],
+    ctx,
+) -> str:
+    """Atomically retain promoted candidate grounding for final materialization."""
+
+    try:
+        return dependencies.analysis_store_pack(
+            AnalysisStorePackRequest(
+                schema_version="1.0",
+                output_dir=runtime.settings.output_dir,
+                report_id=ReportId(runtime.file.file_id),
+                pack_name="validation_retained_claim_validation_candidate",
+                payload=candidate_package,
+                report_slug=runtime.report_name,
+            ),
+            ctx,
+        ).output_path
+    except AppError as exc:
+        raise AppError(
+            code="retained_claim_candidate_promotion_failed",
+            message="Promoted candidate grounding package could not be retained",
+            retryable=False,
+            context={"cause_code": exc.code},
+            cause=exc,
+        ) from exc
+
+
 def _validate_regeneration_baseline(
     *,
     runtime: ReportRuntimeState,
@@ -1566,6 +1652,15 @@ def _run_validation_regeneration_loop(
         if candidate_enforced:
             if candidate_validation_report.status == "pass":
                 try:
+                    retained_claim_candidate = (
+                        _load_candidate_claim_validation_for_promotion(
+                            runtime=runtime,
+                            dependencies=dependencies,
+                            candidate_validation_pack_name=validation_pack_name,
+                            expected_artifact_hash=sha256_json(candidate_artifacts),
+                            ctx=attempt_ctx,
+                        )
+                    )
                     artifacts_path = _promote_regeneration_candidate(
                         runtime=runtime,
                         dependencies=dependencies,
@@ -1600,6 +1695,14 @@ def _run_validation_regeneration_loop(
                         ctx=attempt_ctx,
                     )
                     raise
+                retained_claim_candidate_path = (
+                    _store_promoted_candidate_claim_validation(
+                        runtime=runtime,
+                        dependencies=dependencies,
+                        candidate_package=retained_claim_candidate,
+                        ctx=attempt_ctx,
+                    )
+                )
                 canonical_validation_path = _store_validation_snapshot(
                     runtime=runtime,
                     dependencies=dependencies,
@@ -1625,6 +1728,9 @@ def _run_validation_regeneration_loop(
                 promotion_outcome = "promoted"
                 evidence_paths["artifacts"] = artifacts_path
                 evidence_paths["validation"] = canonical_validation_path
+                evidence_paths[
+                    "validation_retained_claim_validation_candidate"
+                ] = retained_claim_candidate_path
                 promoted_payload_overrides = payload_overrides
             else:
                 promotion_outcome = "rolled_back"
