@@ -64,13 +64,15 @@ public projection hash and source lineage, and writes the canonical
 `retained_claim_validation` package. A candidate with changed inputs or stale
 execution identity is rejected.
 
-The grounding output budget is explicitly set to 16,384 tokens because the
-report-level response must include a complete structured check for every unique
-retained claim. Byte-identical claims with the same evidence and source identity
-share one semantic input and result; a reused or newly generated payload with a
-missing, duplicate, or identity-mismatched check is rejected for reuse or enters
-the existing bounded structured-output recovery. It cannot produce an accepted
-claim package.
+The grounding policy uses medium reasoning effort with a 16,384-token output
+budget so the report-level response can return a complete structured check for
+every unique retained claim. A retained provider response at the prior high
+reasoning setting consumed the entire output budget on reasoning and produced no
+parseable result. Byte-identical claims with the same evidence and source
+identity share one semantic input and result; a reused or newly generated
+payload with a missing, duplicate, or identity-mismatched check is rejected for
+reuse or enters the existing bounded structured-output recovery. It cannot
+produce an accepted claim package.
 
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and
@@ -207,11 +209,13 @@ changed siblings and undeclared nested fields as `regeneration_scope_violation`
 before promotion. A changed deterministic projection is allowed only after the
 candidate verifier recomputes it from canonical inputs and confirms that it
 depends on a declared repair path whose source root actually changed. A
-projection that matches its canonical builder is still out of scope when its
-declared source stayed unchanged. The audit records declared paths and exact
-verified dependent paths. Regeneration may also update private prompt-cache
-metadata;
-the verifier admits only namespaces both planned and actually used, checks that
+projection must be reachable from that changed source through the declared
+artifact dependency graph; each changed root must also match its canonical
+builder. A projection that matches its canonical builder is still out of scope
+when its source stayed unchanged or no dependency path connects it to the
+repair. The audit records declared paths and exact verified dependent paths.
+Regeneration may also update private prompt-cache metadata. The verifier admits
+only namespaces both planned and actually used, checks that
 each producing identity matches its retained prompt identity and regeneration
 requirement, and rejects unrelated cache changes. Targeted patches merge onto
 the last promoted artifact, keeping untargeted sibling fields and items
@@ -242,11 +246,11 @@ an unrelated or altered projection remains blocked.
 After the atomic source patch is merged onto the last promoted artifact, one
 finalization step compares patched roots with that promoted baseline. It restores
 existing deterministic projections, rebuilds only dependents of roots that
-actually changed through the canonical artifact builders, and returns exact
-changed projection paths. Assembly-created roots are materialized only when
-they are affected dependents. Unrelated projections remain byte-identical, and
-the candidate verifier independently recomputes every changed root before
-scope admission.
+actually changed through the shared dependency graph and canonical artifact
+builders, including transitive descendants. It returns exact changed projection
+paths. Assembly-created roots are materialized only when they are affected
+dependents. Unrelated projections remain byte-identical, and the candidate
+verifier independently recomputes every changed root before scope admission.
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public

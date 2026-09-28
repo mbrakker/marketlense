@@ -38,6 +38,7 @@ from src.contracts.validation import (
 from src.generators._artifact_generator.storage import (
     ARTIFACT_ROOT_DEPENDENCIES,
     REGENERATION_PRIVATE_METADATA_ROOTS,
+    regeneration_dependent_roots,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -667,13 +668,14 @@ def _scope_validation_report(
         _path_root(value) for value in allowed_paths
     }
     declared_source_roots = {_path_root(value) for value in allowed_paths}
+    dependent_roots = regeneration_dependent_roots(changed_source_roots)
     violations = sorted(
         path
         for path in changed_paths
         if not _path_is_declared(path, allowed_paths)
         and not _is_allowed_derived_artifact_change(
             path=path,
-            changed_source_roots=changed_source_roots,
+            dependent_roots=dependent_roots,
             declared_source_roots=declared_source_roots,
             verified_derived_roots=verified_derived_roots,
         )
@@ -724,7 +726,7 @@ def _path_is_declared(path: str, allowed_paths: set[str]) -> bool:
 def _is_allowed_derived_artifact_change(
     *,
     path: str,
-    changed_source_roots: set[str],
+    dependent_roots: frozenset[str],
     declared_source_roots: set[str],
     verified_derived_roots: frozenset[str],
 ) -> bool:
@@ -738,7 +740,7 @@ def _is_allowed_derived_artifact_change(
         return root in verified_derived_roots and bool(
             dependencies & declared_source_roots
         )
-    return root in verified_derived_roots and bool(dependencies & changed_source_roots)
+    return root in verified_derived_roots and root in dependent_roots
 
 
 def _verified_dependent_paths(
@@ -759,12 +761,13 @@ def _verified_dependent_paths(
         _path_root(value) for value in allowed_paths
     }
     declared_source_roots = {_path_root(value) for value in allowed_paths}
+    dependent_roots = regeneration_dependent_roots(changed_source_roots)
     return sorted(
         path
         for path in changed_paths
         if _is_allowed_derived_artifact_change(
             path=path,
-            changed_source_roots=changed_source_roots,
+            dependent_roots=dependent_roots,
             declared_source_roots=declared_source_roots,
             verified_derived_roots=verified_derived_roots,
         )

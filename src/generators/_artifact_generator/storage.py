@@ -1897,6 +1897,23 @@ def build_chart_insight_cards(
     return cards
 
 
+def regeneration_dependent_roots(source_roots: Iterable[str]) -> frozenset[str]:
+    """Return transitive dependents declared by the canonical artifact graph."""
+
+    affected_roots = {str(root).strip() for root in source_roots if str(root).strip()}
+    required_roots: set[str] = set()
+    while True:
+        newly_required = {
+            root
+            for root, dependencies in ARTIFACT_ROOT_DEPENDENCIES.items()
+            if root not in required_roots and dependencies.intersection(affected_roots)
+        }
+        if not newly_required:
+            return frozenset(required_roots)
+        required_roots.update(newly_required)
+        affected_roots.update(newly_required)
+
+
 def rebuild_regeneration_derived_artifacts(
     *,
     artifacts: Dict[str, Any],
@@ -1906,18 +1923,7 @@ def rebuild_regeneration_derived_artifacts(
 ) -> frozenset[str]:
     """Rebuild present affected projections through the canonical builders."""
 
-    affected_roots = {str(root).strip() for root in writable_roots if str(root).strip()}
-    required_roots: set[str] = set()
-    while True:
-        newly_required = {
-            root
-            for root, dependencies in ARTIFACT_ROOT_DEPENDENCIES.items()
-            if root not in required_roots and dependencies.intersection(affected_roots)
-        }
-        if not newly_required:
-            break
-        required_roots.update(newly_required)
-        affected_roots.update(newly_required)
+    required_roots = set(regeneration_dependent_roots(writable_roots))
 
     present_roots = required_roots.intersection(
         artifacts, CANONICAL_DERIVED_ARTIFACT_ROOTS
