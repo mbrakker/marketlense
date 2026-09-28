@@ -50,6 +50,15 @@ benefits, or mandatory actions. Where evidence cannot support a distinct
 implication or action, the public copy remains descriptive or omits it; the
 existing validators continue to enforce grounding independently.
 
+Public factual wording keeps a dataset's subject population separate from its
+topic and data owner. A population is named only when retained evidence
+explicitly identifies who the dataset represents; otherwise copy describes
+what the data discuss or measure. Private provenance uses the most specific
+retained evidence ID that states each factual detail. A broad coverage finding
+supports only its broad scope, while a DocMap section ID may support a specific
+list when that section contains it. Public paraphrases preserve the source's
+proposition, scope, modality, and certainty rather than strengthening them.
+
 The Executive Summary names a central measured result or comparison when a
 direct finding or quote supplies one. It retains the subject, period, and
 figures and binds that sentence to the same direct evidence ID in its private

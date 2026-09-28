@@ -221,6 +221,35 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
     assert "explicitly named publisher or organization" in doc_map_prompt.user.text
 
 
+def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> None:
+    summary_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    linkedin_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/linkedin_post",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert (
+        "State that a dataset represents or comes from a specific population only when "
+        "retained evidence explicitly identifies that population"
+        in summary_prompt.user.text
+    )
+    assert "use the most specific supplied evidence ID that states that detail" in (
+        linkedin_prompt.user.text
+    )
+    assert "Preserve the source's modality and certainty" in linkedin_prompt.user.text
+
+
 def test_list_prompt_namespaces_returns_hashes() -> None:
     response = list_prompt_namespaces(
         PromptNamespaceListRequest(

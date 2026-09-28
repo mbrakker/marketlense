@@ -38,6 +38,8 @@ text: |
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
   - Do not introduce new metrics, benchmarks, projections, or assumptions
   - Do not generalize beyond what the report explicitly supports
+  - For each factual detail, use the most specific supplied evidence ID that states that detail. A broad coverage finding supports only the broad topics it names; when a DocMap section itself lists more specific topics, cite that section ID. Do not bind a detailed list or relationship to a broader finding that does not state it.
+  - Preserve the source's modality and certainty. Do not strengthen language such as "insufficient" or "has limits" into a stronger claim such as "no longer describes" or "guarantees". Keep the proposition, scope, and qualifiers intact; otherwise omit or narrow the sentence.
   - If something is not clearly supported, omit it
   - Do not reference report pages, sections, evidence packs, evidence IDs, evidence spans, JSON fields, or any internal document structure in `linkedin_post`.
   - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `linkedin_post`, quoting the covered text as its `claim` (one object per sentence or consecutive sentence group; minor punctuation differences are resolved mechanically), a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
