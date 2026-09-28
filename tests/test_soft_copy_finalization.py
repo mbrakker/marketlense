@@ -164,6 +164,86 @@ def test_full_family_finalization_replaces_obsolete_retained_provenance() -> Non
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_full_family_repair_deduplicates_retained_bindings_during_assembly() -> None:
+    retained_text = "Retention demand is rising."
+    replaced_text = "Revenue grew by 12%."
+    repaired_text = "Revenue grew by 15%."
+    original = _assemble_soft_copy(
+        expert_comment=f"{replaced_text} {retained_text}",
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "evidence": replaced_text, "pages": [1]},
+                    {"id": "f2", "evidence": retained_text, "pages": [2]},
+                    {"id": "f3", "evidence": repaired_text, "pages": [3]},
+                ]
+            }
+        },
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": replaced_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+                {
+                    "claim": retained_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f2"],
+                },
+            ]
+        },
+    )
+
+    payload = _assemble_soft_copy(
+        expert_comment=f"{retained_text} {repaired_text}",
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "evidence": replaced_text, "pages": [1]},
+                    {"id": "f2", "evidence": retained_text, "pages": [2]},
+                    {"id": "f3", "evidence": repaired_text, "pages": [3]},
+                ]
+            }
+        },
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": retained_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f2"],
+                },
+                {
+                    "claim": repaired_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f3"],
+                },
+            ]
+        },
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
+        replaced_soft_copy_claim_ids={
+            "expert_comment": [
+                claim["claim_id"]
+                for claim in original["soft_copy_claim_provenance"]["claims"]
+                if claim["text_hash"] == sha256(replaced_text.encode()).hexdigest()
+            ]
+        },
+        # Regeneration records the complete family binding set, including the
+        # unchanged sentence. Assembly must keep that retained claim exactly once.
+        soft_copy_repair_texts={"expert_comment": [retained_text, repaired_text]},
+    )
+
+    claims = payload["soft_copy_claim_provenance"]["claims"]
+    assert [claim["text_hash"] for claim in claims] == [
+        sha256(retained_text.encode()).hexdigest(),
+        sha256(repaired_text.encode()).hexdigest(),
+    ]
+    retained_claim = claims[0]
+    assert retained_claim["evidence_ids"] == ["f2"]
+    assert claims[1]["evidence_ids"] == ["f3"]
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_regeneration_keeps_unchanged_summary_with_retained_provenance() -> None:
     """A sibling repair must not replace an already validated summary."""
     summary = {

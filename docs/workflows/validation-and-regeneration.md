@@ -195,6 +195,18 @@ retained records. New sentences receive factual bindings from the repair's selec
 retained IDs and are checked by the same retained-claim validators; ambiguous or
 unsupported replacements fail closed.
 
+Post-repair finalization receives the last promoted artifacts and the applied
+atomic source patch. It restores unrelated roots, recomputes only present
+dependents reachable from roots that actually changed through the canonical
+artifact dependency map, and rebuilds soft-copy provenance on the shared
+material-sentence grid. A retained sentence keeps its existing claim identity
+once even when a family repair reports bindings for the whole public surface;
+new sentences use the repair's declared binding and selected retained evidence.
+The candidate scope gate independently recomputes each changed projection
+through its canonical builder and admits only exact matches of changed sources.
+Unreconstructable provenance or projections fail with a typed deterministic
+projection error before candidate validation or promotion.
+
 After a rollback, the next plan and prompt receive a bounded `RepairDelta` containing
 resolved, persisting, and introduced issue fingerprints, severity transitions,
 mutation-scope and evidence-lineage outcomes, and the actual action, strategy, evidence

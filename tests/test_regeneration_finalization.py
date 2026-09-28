@@ -7,11 +7,15 @@ import pytest
 
 from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
 )
 from src.generators._artifact_generator.storage import (
     build_canonical_regeneration_derived_artifacts,
     derive_metric_spine_from_insights,
     finalize_regeneration_candidate_artifacts,
+)
+from src.generators.soft_copy_claim_provenance import (
+    build_soft_copy_claim_provenance,
 )
 from src.utils.errors import AppError
 
@@ -406,3 +410,73 @@ def test_finalization_rebinds_unchanged_public_text_to_candidate_provenance() ->
     assert candidate["soft_copy_claim_provenance"]["claims"][0]["evidence_ids"] == [
         "source-current"
     ]
+
+
+def test_byte_identical_expert_and_linkedin_text_reuses_canonical_provenance() -> None:
+    text = "U.S. merchants changed course. Planning followed."
+    sentences = soft_copy_material_sentences(text)
+    bindings = [
+        {
+            "claim": sentences[0],
+            "classification": "interpretive",
+            "evidence_ids": [],
+        },
+        {
+            "claim": sentences[1],
+            "classification": "recommendation",
+            "evidence_ids": [],
+        },
+    ]
+
+    def family_claims(family: str, *, attempt: int, identity: str):
+        return build_soft_copy_claim_provenance(
+            artifact_family=family,
+            text=text,
+            declared_claims=bindings,
+            evidence_span_index={},
+            producing_prompt_identity={"execution_identity": identity},
+            generation_attempt=attempt,
+            regeneration_attempt=attempt - 1,
+        )
+
+    baseline = {
+        "summary": {},
+        "insights_final": [],
+        "quotes_final": [],
+        "expert_comment": text,
+        "linkedin_post": text,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                *family_claims("expert_comment", attempt=1, identity="original"),
+                *family_claims("linkedin_post", attempt=1, identity="original"),
+            ]
+        ),
+    }
+    candidate = deepcopy(baseline)
+    candidate["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            *family_claims("expert_comment", attempt=2, identity="regenerated"),
+            *family_claims("linkedin_post", attempt=2, identity="regenerated"),
+        ]
+    )
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+        atomic_source_patch={"expert_comment": text, "linkedin_post": text},
+    )
+
+    assert (
+        candidate["soft_copy_claim_provenance"]
+        == baseline["soft_copy_claim_provenance"]
+    )
+    claims = candidate["soft_copy_claim_provenance"]["claims"]
+    for family in ("expert_comment", "linkedin_post"):
+        family_hashes = [
+            claim["text_hash"] for claim in claims if claim["artifact_family"] == family
+        ]
+        assert family_hashes == [
+            hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+            for sentence in sentences
+        ]

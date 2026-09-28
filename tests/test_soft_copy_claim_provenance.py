@@ -37,6 +37,8 @@ def _assemble_soft_copy(
     doc_map: dict[str, object] | None = None,
     soft_copy_claim_bindings: dict[str, list[dict[str, object]]] | None = None,
     existing_soft_copy_claim_provenance: dict[str, object] | None = None,
+    replaced_soft_copy_claim_ids: dict[str, list[str]] | None = None,
+    soft_copy_repair_texts: dict[str, list[str]] | None = None,
     validate_references: bool = False,
 ) -> dict[str, object]:
     """Exercise the canonical artifact assembly boundary with no claim bindings."""
@@ -81,6 +83,8 @@ def _assemble_soft_copy(
         ctx=RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s"),
         soft_copy_claim_bindings=soft_copy_claim_bindings,
         existing_soft_copy_claim_provenance=existing_soft_copy_claim_provenance,
+        replaced_soft_copy_claim_ids=replaced_soft_copy_claim_ids,
+        soft_copy_repair_texts=soft_copy_repair_texts,
         validate_references=validate_references,
     )
 
