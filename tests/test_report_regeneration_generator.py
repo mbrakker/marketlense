@@ -4120,6 +4120,96 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     ]
 
 
+def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path):
+    original_claims = [
+        {
+            "claim": "Supported sibling claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text 1",
+            "pages": [1],
+        },
+        {
+            "claim": "Unsupported target claim.",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "pages": [2],
+        },
+    ]
+
+    class _IdlessClaimMapOpenAIClient(_FakeOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            claim_scope = json.loads(variables["claim_repair_scope_json"])
+            repair_context = json.loads(variables["repair_context_json"])
+            assert claim_scope["claim_id"] == "2"
+            assert repair_context["allowed_paths"] == [
+                "summary.claim_evidence_map[1].claim"
+            ]
+            repaired_claims = deepcopy(original_claims)
+            repaired_claims[1]["claim"] = "Corrected supported target claim."
+            payload = {
+                "summary": {"claim_evidence_map": repaired_claims},
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-idless-claim-map-target",
+            )
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = deepcopy(original_claims)
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                rule_id="grounding",
+                affected_section="summary.claim_evidence_map:2.claim",
+                message="[grounding] Unsupported summary claim",
+                severity="error",
+                entity_id="summary_claim:2",
+                evidence_ids=["f2"],
+            )
+        ],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    assert plan.targets[0].allowed_paths == [
+        "summary.claim_evidence_map[1].claim"
+    ]
+
+    openai_client = _IdlessClaimMapOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired_claims = response.updated_artifacts["summary"]["claim_evidence_map"]
+    assert len(openai_client.calls) == 1
+    assert repaired_claims[0] == original_claims[0]
+    assert repaired_claims[1]["claim"] == "Corrected supported target claim."
+    assert response.repair_decisions[0].changed_paths == [
+        "summary.claim_evidence_map[1].claim"
+    ]
+
+
 def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(
     tmp_path,
 ) -> None:

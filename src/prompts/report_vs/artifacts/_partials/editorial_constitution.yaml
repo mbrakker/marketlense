@@ -8,6 +8,9 @@ text: |
     period, and observation status. When a comparison mixes an observed baseline
     and a forecast endpoint, state each status with its own value or omit the
     comparison; never call the whole comparison observed or forecast.
+  - Keep entity relationships and category labels exactly scoped. A third-party
+    provider is not a cross-brand comparison, and a topic, owner, or publisher is
+    not interchangeable with the population or subject being measured.
   - Before emitting each public sentence, verify that every factual clause is
     entailed by its linked retained evidence. When the evidence supports only a
     descriptive fact, make the sentence descriptive and place any action in

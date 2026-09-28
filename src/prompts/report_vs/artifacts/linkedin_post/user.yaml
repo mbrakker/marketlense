@@ -14,9 +14,10 @@ text: |
   Writing requirements:
   - Target 180–280 words. The hard maximum is 500 words.
   - Use the editorial plan to select one central, source-supported insight or tension, and use an implication only when supported. Do not turn the post into a mini-summary.
-  - For a broad report, explicitly frame the post as one representative angle or lens from the report; do not imply that it summarises the whole report. For a narrow report, the post may express the overall report thesis.
+  - For a broad report, select one source-supported theme and express that theme directly. Do not describe the post or selected theme as representative or as a lens on the report unless retained evidence explicitly establishes representativeness. Do not imply that the post summarizes the whole report. For a narrow report, the post may express the overall report thesis.
   - Open with a concrete insight, tension, or material metric. Use an implication only when supported, not as generic framing.
   - Near the beginning, naturally name the report publisher/publication from `provenance_roles.publisher_name` when known. A named byline may be named separately. Never attribute the report to an organisation listed only as a data or research provider.
+    When canonical `publisher_name` is empty, omit publisher attribution; do not infer it from the report title, byline, data provider, or research subject.
   - When the supplied evidence establishes why the selected angle matters, explain that
     relationship, then use two to four supporting proof points from final insights and
     the metric spine. Otherwise remain descriptive. Use no more than four quantitative proof points.

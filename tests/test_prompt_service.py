@@ -248,6 +248,18 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
         linkedin_prompt.user.text
     )
     assert "Preserve the source's modality and certainty" in linkedin_prompt.user.text
+    assert (
+        "Keep entity relationships and category labels exactly scoped" in
+        summary_prompt.user.text
+    )
+    assert (
+        "Do not describe the post or selected theme as representative or as a lens"
+        in linkedin_prompt.user.text
+    )
+    assert (
+        "When canonical `publisher_name` is empty, omit publisher attribution" in
+        linkedin_prompt.user.text
+    )
 
 
 def test_list_prompt_namespaces_returns_hashes() -> None:

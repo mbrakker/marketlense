@@ -172,7 +172,11 @@ created. Candidate assembly merges only declared summary leaves back onto the
 last promoted summary, so normalization or source-display helpers cannot alter
 untargeted sibling claims. A repair that truly needs synchronized leaves must
 declare each exact leaf in its target before the provider call; whole-summary
-replacement is never accepted for an atomic target.
+replacement is never accepted for an atomic target. Claim-map entries with an
+explicit ID resolve by that ID; schema-valid idless entries resolve by their
+stable one-based list identity and the exact planned array index. The repaired
+map must retain the same cardinality so the targeted row cannot shift or become
+ambiguous during reconstruction.
 
 Each model-assisted repair call returns one private `repair_decision` with the
 diagnosed failure class, selected action and strategy, retained evidence IDs actually

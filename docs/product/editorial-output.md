@@ -58,6 +58,13 @@ retained evidence ID that states each factual detail. A broad coverage finding
 supports only its broad scope, while a DocMap section ID may support a specific
 list when that section contains it. Public paraphrases preserve the source's
 proposition, scope, modality, and certainty rather than strengthening them.
+Entity identities and relationships retain their source scope: for example, a
+third-party provider is not recast as a cross-brand comparison. A LinkedIn post
+for a broad report selects and discusses one supported theme directly; it does
+not call that theme representative or a lens on the report unless evidence
+establishes representativeness. Publisher attribution is omitted when canonical
+publisher identity is unavailable rather than inferred from the title, byline,
+or data provider.
 
 The Executive Summary names a central measured result or comparison when a
 direct finding or quote supplies one. It retains the subject, period, and

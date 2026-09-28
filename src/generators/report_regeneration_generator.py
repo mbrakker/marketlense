@@ -3205,15 +3205,21 @@ def _regenerate_summary_claim_map_items(
                 context={"report_id": execution.runtime.request.report_id},
             )
         stable_id = _s(claim.get("id") or claim.get("claim_id")).strip()
-        matching = [
-            item
-            for item in repaired_items
-            if isinstance(item, dict)
-            and (
-                not stable_id
-                or _s(item.get("id") or item.get("claim_id")).strip() == stable_id
-            )
-        ]
+        if stable_id:
+            matching = [
+                item
+                for item in repaired_items
+                if isinstance(item, dict)
+                and _s(item.get("id") or item.get("claim_id")).strip() == stable_id
+            ]
+        elif (
+            len(repaired_items) == len(claims)
+            and 0 <= index < len(repaired_items)
+            and isinstance(repaired_items[index], dict)
+        ):
+            matching = [repaired_items[index]]
+        else:
+            matching = []
         if len(matching) != 1:
             raise AppError(
                 code="regeneration_target_item_unresolved",
