@@ -365,6 +365,110 @@ def test_multiple_retained_claims_use_one_report_level_grounding_call(tmp_path) 
     assert {result.status for result in captured_packages[0].results} == {"supported"}
 
 
+def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
+    tmp_path,
+) -> None:
+    from src.generators.claim_validation_generator import retained_claim_semantic_inputs
+    from src.generators.claim_validation_generator import validate_retained_claims
+
+    claim_texts = [
+        f"The report describes merchant payment operations from a distinctive {word} angle."
+        for word in (
+            "alpha",
+            "bravo",
+            "charlie",
+            "delta",
+            "echo",
+            "foxtrot",
+            "golf",
+            "hotel",
+            "india",
+        )
+    ]
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": f"evidence-{index}",
+                    "text": "A retained passage discusses a separate operational subject.",
+                }
+                for index in range(len(claim_texts))
+            ]
+        }
+    }
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": f"claim-{index}",
+                    "claim": text,
+                    "evidence_id": f"evidence-{index}",
+                }
+                for index, text in enumerate(claim_texts)
+            ]
+        }
+    }
+    request = replace(
+        _retained_request(),
+        source_id="",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+    )
+    package = validate_retained_claims(artifacts, evidence_packs)
+    semantic_inputs = retained_claim_semantic_inputs(package, evidence_packs)
+    assert len(semantic_inputs) == 9
+
+    payload = grounding_payload(
+        request,
+        artifacts,
+        retained_claim_inputs=semantic_inputs,
+    )
+    claim_entries = payload["retained_claims_to_ground"]
+    expected_ids = {item["item_id"] for item in claim_entries}
+    groups = (
+        claim_entries[:4],
+        claim_entries[4:8],
+        claim_entries[8:],
+    )
+    responses = [
+        {
+            "unsupported": [],
+            "checks": [
+                _grounding_check(item["item_id"], item["text"], "entailed")
+                for item in group
+            ],
+        }
+        for group in groups
+    ]
+    model_client = FakeOpenAI(*responses)
+    captured_packages: list[ClaimValidationPackage] = []
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+        retained_claim_package=package,
+        retained_claim_inputs=semantic_inputs,
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    grounding_calls = [
+        call for call in model_client.requests if call[2].endswith(":grounding")
+    ]
+    assert issues == []
+    assert len(grounding_calls) == 3
+    assert len(captured_packages) == 1
+    assert {result.candidate.claim_id for result in captured_packages[0].results} == (
+        expected_ids
+    )
+    assert {result.status for result in captured_packages[0].results} == {"supported"}
+
+
 def test_stale_report_grounding_is_not_reused_for_current_retained_claim(
     tmp_path,
 ) -> None:
@@ -533,7 +637,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert package["unresolved_factual_count"] == 1
     assert package["readiness_status"] == "not_publishable"
     assert package["validation_identity"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.2"
+        "grounding_validation_output:1.3"
     )
     result = package["results"][0]
     assert result["status"] == "unresolved"
@@ -547,7 +651,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert identity["prompt_family"] == "report_vs/validate/grounding"
     assert identity["prompt_content_hash"]
     assert identity["execution_identity"]
-    assert identity["validator_version"] == "grounding_validation_output:1.2"
+    assert identity["validator_version"] == "grounding_validation_output:1.3"
     assert identity["model_provider"]
     assert identity["model_name"]
     assert identity["configuration_policy_identity"]

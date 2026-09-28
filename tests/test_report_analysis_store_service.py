@@ -82,6 +82,23 @@ def _valid_candidate_audit_payload() -> dict:
     }
 
 
+def _valid_retained_claim_package_payload() -> dict:
+    return {
+        "schema_version": "1.3",
+        "artifact_hash": "a" * 64,
+        "package_hash": "b" * 64,
+        "results": [],
+        "readiness_status": "awaiting_review",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "deterministic_pass_count": 0,
+        "semantic_validation_count": 0,
+        "semantic_execution_identities": [],
+        "validation_identity": None,
+        "lineage": None,
+    }
+
+
 def test_store_pack_writes_only_report_scoped_path_when_slug_present(
     run_context, tmp_path: Path
 ) -> None:
@@ -206,6 +223,29 @@ def test_store_pack_validates_schema_backed_candidate_packs(
 
     assert Path(artifact_response.output_path).exists()
     assert Path(audit_response.output_path).exists()
+
+
+def test_store_pack_routes_regenerated_claim_package_to_its_schema(
+    run_context, tmp_path: Path
+) -> None:
+    response = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(tmp_path / "out"),
+            report_id="file123",
+            pack_name=(
+                "validation_regen_candidate_1_"
+                "retained_claim_validation_candidate"
+            ),
+            payload=_valid_retained_claim_package_payload(),
+            report_slug="report",
+        ),
+        run_context,
+    )
+
+    stored = Path(response.output_path)
+    assert stored.exists()
+    assert json.loads(stored.read_text(encoding="utf-8"))["schema_version"] == "1.3"
 
 
 def test_store_pack_rejects_pack_name_path_traversal(

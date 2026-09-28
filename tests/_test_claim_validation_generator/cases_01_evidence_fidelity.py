@@ -54,6 +54,37 @@ def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
     assert package.semantic_validation_count == 0
 
 
+def test_key_figure_claim_includes_its_canonical_display_value() -> None:
+    package = validate_retained_claims(
+        {
+            "key_figures": [
+                {
+                    "figure_id": "survey-coverage",
+                    "figure": "1,200+ merchants",
+                    "label": "Annual survey respondent count",
+                    "unit": "merchants",
+                    "evidence_id": "survey-basis",
+                }
+            ]
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "survey-basis",
+                        "text": "The annual survey included 1,200+ merchants.",
+                    }
+                ]
+            }
+        },
+    )
+
+    result = package.results[0]
+    assert result.candidate.claim_id == "key_figure:survey-coverage:figure"
+    assert "1,200+ merchants" in result.candidate.text
+    assert result.status == "supported"
+
+
 def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
     package = validate_retained_claims(
         {

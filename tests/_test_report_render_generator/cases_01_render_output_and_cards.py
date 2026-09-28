@@ -605,7 +605,7 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
         "retained_claim_validation:v2"
     )
     assert retained["lineage"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.2"
+        "grounding_validation_output:1.3"
     )
     assert retained["validation_identity"]["source_md5"] == "source-md5"
     assert claim_validation_package_hash_valid(retained)

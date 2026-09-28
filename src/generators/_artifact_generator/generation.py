@@ -1072,7 +1072,6 @@ def generate_artifacts(
     metric_spine = derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,
-        evidence_packs=safe_evidence,
     )
     metric_spine_json = _dump_json(metric_spine)
     context_anchor_evidence_ids.clear()

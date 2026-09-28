@@ -1,16 +1,16 @@
 text: |
-  Artifacts to validate (JSON):
+  One bounded grounding batch (JSON). Review only the public items and retained
+  claims listed here:
   {{ report_json }}
 
-  Evidence snippets (JSON):
+  Source text for corroborating those listed items (JSON):
   {{ evidence_json }}
 
   Task:
-  - Review material sentences in insights (including `so_what` and `now_what`),
-    quotes, summaries, expert comment, and LinkedIn post.
-  - Treat `public_factual_items` as the authoritative atomic final-public
-    inventory. Audit each item against its attached retained evidence and
-    relevant report metadata; do not assess style, usefulness, or tone.
+  - Treat the listed `public_factual_items` as the complete public inventory
+    for this batch. Audit each against its attached retained evidence.
+  - Return one identity-matching factual check for every listed
+    `retained_claims_to_ground` item, including supported claims.
   - Apply the system's factual classification, source-fidelity, table/chart
     verification, and structured violation-type rules. Return only JSON with
     `checks` and `unsupported` arrays, without additional prose.

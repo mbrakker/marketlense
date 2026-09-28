@@ -403,11 +403,16 @@ def regenerate_artifacts(
         authorized_source_roots.update(
             legacy_target_roots.get(target.target_section, set())
         )
+    atomic_source_patch = {
+        root: deepcopy(updated_artifacts[root])
+        for root in sorted(authorized_source_roots)
+        if root in updated_artifacts
+    }
     finalized_derived_paths = finalize_regeneration_candidate_artifacts(
         promoted_baseline=request.current_artifacts,
         candidate_artifacts=updated_artifacts,
         evidence_packs=safe_evidence,
-        authorized_source_roots=authorized_source_roots,
+        atomic_source_patch=atomic_source_patch,
     )
     if state.soft_copy_evidence_selections:
         # This is private candidate-audit provenance, never rendered public copy.

@@ -10,6 +10,12 @@ text: |
   `declared_classification` is a hint: distinguish self-authored advice from
   source instructions and reject unsupported factual premises.
 
+  The request contains one bounded batch. Audit every listed public item and
+  retained claim in that batch only; do not recreate or assess unlisted report
+  content. `evidence_json` is source context for checking the listed claims, not
+  additional linked evidence. Never borrow a value or population from a nearby
+  item; use only the item's attached `retained_evidence` to establish it.
+
   For each `retained_claims_to_ground` item, judge only against its attached
   `retained_evidence`; return one factual `checks` entry with its exact
   `item_id` and `text`.

@@ -40,6 +40,25 @@ def test_protected_fact_comparison_does_not_mark_a_missing_value_compatible() ->
     assert comparison.dimension("timeframe").status == "unknown"
 
 
+def test_percentage_unit_is_not_mistaken_for_population_before_increase() -> None:
+    claim = (
+        "Increase in retail-site traffic from generative AI tools Retail-site "
+        "traffic from generative AI tools 693 percent increase Traffic to retail "
+        "sites from generative AI tools 2025 holiday season compared with a year "
+        "earlier observed"
+    )
+    evidence = (
+        "The report gives the 693% traffic increase for the 2025 holiday season "
+        "compared with a year prior."
+    )
+
+    comparison = compare_protected_fact_texts(claim, evidence)
+
+    assert comparison.dimension("value").status == "compatible"
+    assert comparison.dimension("unit_currency").status == "compatible"
+    assert comparison.dimension("population").status != "incompatible"
+
+
 def test_single_explicit_numeric_mismatch_remains_incompatible() -> None:
     comparison = compare_protected_fact_texts(
         "Digital advertising grew 28%.", "Digital advertising grew 18%."

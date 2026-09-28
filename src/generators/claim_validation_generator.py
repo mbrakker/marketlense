@@ -403,7 +403,9 @@ def _candidates(
     for index, raw in enumerate(artifacts.get("key_figures") or [], start=1):
         if not isinstance(raw, dict):
             continue
-        stable_id = str(raw.get("id") or raw.get("key_figure_id") or index).strip()
+        stable_id = str(
+            raw.get("id") or raw.get("figure_id") or raw.get("key_figure_id") or index
+        ).strip()
         figure_text = _metric_claim_text(raw)
         if figure_text:
             add(
@@ -430,12 +432,12 @@ def _candidates(
 def _metric_claim_text(metric: dict) -> str:
     """Create a stable factual display from retained metric fields."""
 
+    display_value = metric.get("value") or metric.get("figure")
     values = [
         str(metric.get(key) or "").strip()
         for key in (
             "label",
             "subject",
-            "value",
             "unit",
             "geography",
             "segment",
@@ -445,6 +447,7 @@ def _metric_claim_text(metric: dict) -> str:
             "observation_status",
         )
     ]
+    values.insert(2, str(display_value or "").strip())
     return " ".join(value for value in values if value)
 
 

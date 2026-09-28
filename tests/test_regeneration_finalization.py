@@ -52,7 +52,7 @@ def test_finalization_preserves_unrelated_derived_roots_byte_for_byte() -> None:
         promoted_baseline=baseline,
         candidate_artifacts=candidate,
         evidence_packs={},
-        authorized_source_roots={"quotes_final"},
+        atomic_source_patch={"quotes_final": deepcopy(candidate["quotes_final"])},
     )
 
     for root in (
@@ -78,7 +78,7 @@ def test_finalization_preserves_unrelated_derived_roots_byte_for_byte() -> None:
         promoted_baseline=baseline,
         candidate_artifacts=candidate,
         evidence_packs={},
-        authorized_source_roots={"quotes_final"},
+        atomic_source_patch={"quotes_final": deepcopy(candidate["quotes_final"])},
     )
     assert candidate == finalized_once
     assert repeated_paths == verified_paths
@@ -137,12 +137,10 @@ def test_finalization_rebuilds_metric_dependents_from_promoted_patch() -> None:
         promoted_baseline=baseline,
         candidate_artifacts=candidate,
         evidence_packs=evidence_packs,
-        authorized_source_roots={"insights_final"},
+        atomic_source_patch={"insights_final": deepcopy(candidate["insights_final"])},
     )
 
-    expected_spine = derive_metric_spine_from_insights(
-        [retained_insight], evidence_packs=evidence_packs
-    )
+    expected_spine = derive_metric_spine_from_insights([retained_insight])
     expected_dependents = build_canonical_regeneration_derived_artifacts(
         artifacts=candidate,
         evidence_packs=evidence_packs,
@@ -171,6 +169,134 @@ def test_finalization_rebuilds_metric_dependents_from_promoted_patch() -> None:
     }
     assert "removed-insight" not in repr(
         [candidate["topics_covered"], candidate["family_status"]]
+    )
+
+
+def test_finalization_uses_only_the_atomic_source_patch() -> None:
+    baseline = {
+        "summary": {"claim_evidence_map": []},
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "text": "Original source-backed finding.",
+                "so_what": "Original implication.",
+                "evidence_id": "f1",
+                "pages": [4],
+            }
+        ],
+        "quotes_final": [],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    atomic_patch = deepcopy(baseline["insights_final"])
+    atomic_patch[0]["so_what"] = "Repaired implication."
+    candidate = deepcopy(baseline)
+    candidate["insights_final"][0]["so_what"] = "Repaired implication."
+    candidate["insights_final"].append(
+        {
+            "id": "out-of-scope-sibling",
+            "text": "Unplanned sibling content.",
+            "evidence_id": "f1",
+            "pages": [4],
+        }
+    )
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={
+            "findings": {
+                "findings": [{"id": "f1", "text": "Source evidence.", "pages": [4]}]
+            }
+        },
+        atomic_source_patch={"insights_final": atomic_patch},
+    )
+
+    assert candidate["insights_final"] == atomic_patch
+    assert all(
+        item["id"] != "out-of-scope-sibling"
+        for item in candidate["insights_final"]
+    )
+
+
+def test_finalization_rejects_derived_roots_in_the_atomic_source_patch() -> None:
+    baseline = {"metric_spine": []}
+    candidate = deepcopy(baseline)
+
+    with pytest.raises(AppError) as error:
+        finalize_regeneration_candidate_artifacts(
+            promoted_baseline=baseline,
+            candidate_artifacts=candidate,
+            evidence_packs={},
+            atomic_source_patch={"metric_spine": [{"value": "99%"}]},
+        )
+
+    assert error.value.code == "regeneration_deterministic_projection_failed"
+    assert error.value.context["projection"] == "atomic_source_patch"
+
+
+def test_finalization_does_not_extract_neighboring_numbers_into_key_figures() -> None:
+    evidence_text = (
+        "Retail media adoption reached 55% among merchants. "
+        "A neighboring measure reached 99% in another cohort."
+    )
+    retained_insight = {
+        "id": "retained-insight",
+        "text": "Retail media adoption reached 55% among merchants.",
+        "evidence": evidence_text,
+        "evidence_id": "f1",
+        "pages": [7],
+        "metric": {
+            "label": "Retail media adoption",
+            "value": "55%",
+            "confidence": "high",
+            "segment": "merchants",
+        },
+    }
+    removed_insight = {
+        "id": "removed-insight",
+        "text": "A neighboring measure reached 99% in another cohort.",
+        "evidence": evidence_text,
+        "evidence_id": "f1",
+        "pages": [7],
+        "metric": {
+            "label": "Neighboring measure",
+            "value": "99%",
+            "confidence": "high",
+            "segment": "another cohort",
+        },
+    }
+    evidence_packs = {
+        "findings": {"findings": [{"id": "f1", "text": evidence_text, "pages": [7]}]}
+    }
+    baseline = {
+        "summary": {"claim_evidence_map": []},
+        "insights_final": [retained_insight, removed_insight],
+        "quotes_final": [],
+        "toc_entries": [],
+        "editorial_plan": {},
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    baseline.update(
+        build_canonical_regeneration_derived_artifacts(
+            artifacts=baseline,
+            evidence_packs=evidence_packs,
+            roots={"metric_spine", "key_figures", "chart_insight_cards"},
+        )
+    )
+    candidate = deepcopy(baseline)
+    candidate["insights_final"] = [retained_insight]
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        atomic_source_patch={"insights_final": deepcopy(candidate["insights_final"])},
+    )
+
+    assert [figure["figure"] for figure in candidate["key_figures"]] == ["55%"]
+    assert all(
+        card["insight_id"] == "retained-insight"
+        for card in candidate["chart_insight_cards"]
     )
 
 
@@ -204,7 +330,7 @@ def test_finalization_rebuilds_topics_after_toc_source_change() -> None:
         promoted_baseline=baseline,
         candidate_artifacts=candidate,
         evidence_packs={},
-        authorized_source_roots={"toc_entries"},
+        atomic_source_patch={"toc_entries": deepcopy(candidate["toc_entries"])},
     )
 
     expected = build_canonical_regeneration_derived_artifacts(
@@ -232,7 +358,7 @@ def test_unreconstructable_final_provenance_has_typed_projection_failure() -> No
             promoted_baseline=baseline,
             candidate_artifacts=candidate,
             evidence_packs={},
-            authorized_source_roots={"summary"},
+            atomic_source_patch={"summary": deepcopy(candidate["summary"])},
         )
 
     assert error.value.code == "regeneration_deterministic_projection_failed"
@@ -274,7 +400,7 @@ def test_finalization_rebinds_unchanged_public_text_to_candidate_provenance() ->
         promoted_baseline=baseline,
         candidate_artifacts=candidate,
         evidence_packs={},
-        authorized_source_roots={"summary"},
+        atomic_source_patch={"summary": deepcopy(candidate["summary"])},
     )
 
     assert candidate["soft_copy_claim_provenance"]["claims"][0]["evidence_ids"] == [

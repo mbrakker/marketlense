@@ -70,9 +70,47 @@ from .shared import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.1"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.2"
 GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v2"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
+GROUNDING_MAX_CLAIMS_PER_CALL = 4
+GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL = 8
+
+
+def _grounding_batches(
+    audit_payload: dict,
+    semantic_inputs: Sequence[ClaimSemanticInput],
+) -> list[tuple[dict, list[ClaimSemanticInput]]]:
+    """Split the canonical public inventories under the provider output ceiling."""
+
+    claim_entries = list(audit_payload.get("retained_claims_to_ground") or [])
+    public_items = list(audit_payload.get("public_factual_items") or [])
+    claim_pairs = list(zip(semantic_inputs, claim_entries, strict=True))
+    claim_groups = [
+        claim_pairs[index : index + GROUNDING_MAX_CLAIMS_PER_CALL]
+        for index in range(0, len(claim_pairs), GROUNDING_MAX_CLAIMS_PER_CALL)
+    ] or [[]]
+    public_groups = [
+        public_items[index : index + GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL]
+        for index in range(0, len(public_items), GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL)
+    ] or [[]]
+    batch_count = max(len(claim_groups), len(public_groups))
+    batches: list[tuple[dict, list[ClaimSemanticInput]]] = []
+    for index in range(batch_count):
+        claim_group = claim_groups[index] if index < len(claim_groups) else []
+        public_group = public_groups[index] if index < len(public_groups) else []
+        batches.append(
+            (
+                {
+                    "public_factual_items": public_group,
+                    "retained_claims_to_ground": [
+                        entry for _semantic_input, entry in claim_group
+                    ],
+                },
+                [semantic_input for semantic_input, _entry in claim_group],
+            )
+        )
+    return batches
 
 
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
@@ -148,18 +186,27 @@ def run_grounding_check(
         retained_claim_inputs=retained_claim_inputs,
     )
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
-    prompt_vars = {
-        "report_json": json.dumps(audit_payload, ensure_ascii=False),
-        "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
-    }
-    prompt_bundle = prepare_prompt_bundle(
-        namespace=prompt_namespace,
-        settings=settings,
-        ctx=prompt_ctx,
-        prompt_client=prompt_client,
-        system_variables=prompt_vars,
-        user_variables=prompt_vars,
-    )
+    grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
+    batch_prompt_vars = [
+        {
+            "report_json": json.dumps(batch_payload, ensure_ascii=False),
+            "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+        }
+        for batch_payload, _batch_semantic_inputs in grounding_batches
+    ]
+
+    def prepare_batch_bundle(variables: dict[str, str]):
+        return prepare_prompt_bundle(
+            namespace=prompt_namespace,
+            settings=settings,
+            ctx=prompt_ctx,
+            prompt_client=prompt_client,
+            system_variables=variables,
+            user_variables=variables,
+        )
+
+    prompt_bundles = [prepare_batch_bundle(variables) for variables in batch_prompt_vars]
+    prompt_bundle = prompt_bundles[0]
     logger.info(
         log_event(
             prompt_ctx,
@@ -222,6 +269,21 @@ def run_grounding_check(
             },
         )
     )
+    logger.info(
+        log_event(
+            prompt_ctx,
+            role="generator",
+            event="grounding_batches_planned",
+            module=LOGGER_NAME,
+            fields={
+                "batch_count": len(grounding_batches),
+                "retained_claim_count": len(retained_claim_inputs),
+                "public_item_count": len(public_item_ids),
+                "max_claims_per_batch": GROUNDING_MAX_CLAIMS_PER_CALL,
+                "max_public_items_per_batch": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+            },
+        )
+    )
     vector_provenance_verified = not grounding_use_vector_store or bool(
         str(vector_store_content_hash or "").strip()
     )
@@ -232,6 +294,11 @@ def run_grounding_check(
             "vector_store_id": request.vector_store_id or "",
             "vector_store_content_hash": vector_store_content_hash,
             "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
+            "batch_policy": {
+                "schema_version": "1.0",
+                "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
+                "max_public_items_per_call": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+            },
         }
     )
     configuration_policy_hash = sha256_json(
@@ -245,7 +312,10 @@ def run_grounding_check(
         output_schema = provider_output_schema("grounding_validation_output")
         _validate_semantic_input_identities(retained_claim_inputs)
 
-        def validate_grounding_payload(payload: object) -> None:
+        def validate_grounding_payload(
+            payload: object,
+            expected_inputs: Sequence[ClaimSemanticInput] | None = None,
+        ) -> None:
             validate_schema(
                 SchemaValidateRequest(
                     schema_version="1.0",
@@ -254,7 +324,10 @@ def run_grounding_check(
                 ),
                 prompt_ctx,
             )
-            _validate_grounding_check_coverage(payload, retained_claim_inputs)
+            _validate_grounding_check_coverage(
+                payload,
+                retained_claim_inputs if expected_inputs is None else expected_inputs,
+            )
 
         reused_payload = None
         if source_id and vector_provenance_verified:
@@ -268,7 +341,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v3",
+                    processing_version="validation_rule_v4",
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -310,75 +383,109 @@ def run_grounding_check(
                         )
                     )
         recovery_attempted = False
-
-        def call_model(mode: str, original_response: str, schema_errors: str):
-            nonlocal recovery_attempted
-            if mode != "primary":
-                recovery_attempted = True
-            bundle = prompt_bundle
-            if mode != "primary":
-                bundle = recovery_prompt_bundle(
-                    mode=mode,
-                    artifact_family="validation_grounding",
-                    schema_errors=schema_errors,
-                    original_response=original_response,
-                    output_schema=output_schema,
-                    source_evidence={
-                        "report_json": prompt_vars["report_json"],
-                        "evidence_json": prompt_vars["evidence_json"],
-                    },
-                    settings=settings,
-                    ctx=prompt_ctx,
-                    prompt_client=prompt_client,
-                    vector_store_id=(
-                        request.vector_store_id if grounding_use_vector_store else None
-                    ),
-                )
-            return invoke_structured_output_model(
-                openai_client=openai_client,
-                prompt_bundle=bundle,
-                settings=settings,
-                ctx=prompt_ctx,
-                vector_store_id=(
-                    request.vector_store_id if grounding_use_vector_store else None
-                ),
-                report_id=str(request.report_id),
-                artifact_family="validation_grounding",
-                stage=f"validation_grounding_{mode}",
-                publisher_name=request.publisher_name,
-                report_name=request.report_name,
-                source_url=request.source_url,
-                output_schema=output_schema,
-                output_schema_identity=GROUNDING_OUTPUT_SCHEMA_IDENTITY,
-                repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[
-                    mode
-                ],
-            )
-
         if reused_payload is None:
-            recovery = execute_structured_output(
-                StructuredOutputExecutionRequest(
-                    schema_version="1.0",
-                    report_id=str(request.report_id),
-                    artifact_family="validation_grounding",
-                    schema_name="grounding_validation_output",
-                    model=prompt_bundle.resolved_model,
-                    workflow="report_analysis",
-                    prompt_family=prompt_bundle.routing_decision.namespace,
-                    terminal_failure_code="validation_grounding_invalid_json",
+            response_payload = {"unsupported": [], "checks": []}
+            for batch_index, (batch_spec, batch_vars, batch_bundle) in enumerate(
+                zip(
+                    grounding_batches,
+                    batch_prompt_vars,
+                    prompt_bundles,
+                    strict=True,
                 ),
-                prompt_ctx,
-                call_model=call_model,
-                normalize_payload=lambda payload: (
-                    dict(payload) if isinstance(payload, dict) else payload
-                ),
-                validate_payload=validate_grounding_payload,
-                is_substantive=lambda payload: (
-                    isinstance(payload, dict) and "unsupported" in payload
-                ),
-                model_pricing=settings.model_pricing,
-            )
-            response_payload = recovery.payload
+                start=1,
+            ):
+                _batch_payload, batch_semantic_inputs = batch_spec
+                def call_model(
+                    mode: str,
+                    original_response: str,
+                    schema_errors: str,
+                    *,
+                    variables=batch_vars,
+                    base_bundle=batch_bundle,
+                    call_index=batch_index,
+                ):
+                    nonlocal recovery_attempted
+                    if mode != "primary":
+                        recovery_attempted = True
+                    bundle = base_bundle
+                    if mode != "primary":
+                        bundle = recovery_prompt_bundle(
+                            mode=mode,
+                            artifact_family="validation_grounding",
+                            schema_errors=schema_errors,
+                            original_response=original_response,
+                            output_schema=output_schema,
+                            source_evidence={
+                                "report_json": variables["report_json"],
+                                "evidence_json": variables["evidence_json"],
+                            },
+                            settings=settings,
+                            ctx=prompt_ctx,
+                            prompt_client=prompt_client,
+                            vector_store_id=(
+                                request.vector_store_id
+                                if grounding_use_vector_store
+                                else None
+                            ),
+                        )
+                    return invoke_structured_output_model(
+                        openai_client=openai_client,
+                        prompt_bundle=bundle,
+                        settings=settings,
+                        ctx=prompt_ctx,
+                        vector_store_id=(
+                            request.vector_store_id
+                            if grounding_use_vector_store
+                            else None
+                        ),
+                        report_id=str(request.report_id),
+                        artifact_family="validation_grounding",
+                        stage=(
+                            f"validation_grounding_batch_{call_index:02d}_{mode}"
+                        ),
+                        publisher_name=request.publisher_name,
+                        report_name=request.report_name,
+                        source_url=request.source_url,
+                        output_schema=output_schema,
+                        output_schema_identity=GROUNDING_OUTPUT_SCHEMA_IDENTITY,
+                        repair_attempt={
+                            "primary": 0,
+                            "model_repair": 1,
+                            "regeneration": 2,
+                        }[mode],
+                    )
+
+                recovery = execute_structured_output(
+                    StructuredOutputExecutionRequest(
+                        schema_version="1.0",
+                        report_id=str(request.report_id),
+                        artifact_family="validation_grounding",
+                        schema_name="grounding_validation_output",
+                        model=batch_bundle.resolved_model,
+                        workflow="report_analysis",
+                        prompt_family=batch_bundle.routing_decision.namespace,
+                        terminal_failure_code="validation_grounding_invalid_json",
+                    ),
+                    prompt_ctx,
+                    call_model=call_model,
+                    normalize_payload=lambda payload: (
+                        dict(payload) if isinstance(payload, dict) else payload
+                    ),
+                    validate_payload=lambda payload: validate_grounding_payload(
+                        payload, batch_semantic_inputs
+                    ),
+                    is_substantive=lambda payload: (
+                        isinstance(payload, dict) and "unsupported" in payload
+                    ),
+                    model_pricing=settings.model_pricing,
+                )
+                response_payload["unsupported"].extend(
+                    recovery.payload.get("unsupported") or []
+                )
+                response_payload["checks"].extend(
+                    recovery.payload.get("checks") or []
+                )
+            validate_grounding_payload(response_payload)
         else:
             response_payload = reused_payload
         unsupported: list[Any] = response_payload.get("unsupported") or []
@@ -399,7 +506,7 @@ def run_grounding_check(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version=GROUNDING_FAMILY_SCHEMA_VERSION,
-                    processing_version="validation_rule_v3",
+                    processing_version="validation_rule_v4",
                     output_payload=response_payload,
                     system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                     user_prompt_hash=prompt_bundle.prompt_set.user.sha256,

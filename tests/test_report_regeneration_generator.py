@@ -3888,7 +3888,6 @@ def test_summary_repair_rebuilds_key_figures_from_final_atomic_artifacts(tmp_pat
     current["metric_spine"] = derive_metric_spine_from_insights(
         current["insights_final"],
         editorial_plan=current["editorial_plan"],
-        evidence_packs=evidence_packs,
     )
     normalized_insight = deepcopy(current["insights_final"][0])
     normalized_insight["evidence"] = evidence_text
@@ -4539,7 +4538,7 @@ def test_atomic_metric_source_repair_rebuilds_key_figures_without_model_calls(
     )
     current_artifacts["key_figures"] = build_key_figures(
         metric_spine=derive_metric_spine_from_insights(
-            current_artifacts["insights_final"], evidence_packs=evidence_packs
+            current_artifacts["insights_final"]
         ),
         evidence_packs=evidence_packs,
         summary=current_artifacts["summary"],

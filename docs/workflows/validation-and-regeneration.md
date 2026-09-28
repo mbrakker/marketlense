@@ -251,6 +251,12 @@ builders, including transitive descendants. It returns exact changed projection
 paths. Assembly-created roots are materialized only when they are affected
 dependents. Unrelated projections remain byte-identical, and the candidate
 verifier independently recomputes every changed root before scope admission.
+The finalizer receives the explicit atomic source patch produced by planner
+path validation; assembled sibling edits cannot become source state through a
+root-level allowlist. Key Figures, chart cards, and metric spine consume the
+retained structured metric fields and their exact evidence IDs. Evidence prose
+can validate a structured display but cannot seed extra metrics or numbers from
+neighboring claims.
 
 For summary, Expert Comment, and LinkedIn output, structured-output validation
 also requires retained private claim bindings to cover every material public

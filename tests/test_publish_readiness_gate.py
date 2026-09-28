@@ -175,7 +175,7 @@ def _retained_claim_package(
                     "prompt_family": "report_vs/validate/grounding",
                     "prompt_content_hash": "prompt-content-hash",
                     "execution_identity": "grounding-execution-1",
-                    "validator_version": "grounding_validation_output:1.2",
+                    "validator_version": "grounding_validation_output:1.3",
                     "model_provider": "openai",
                     "model_name": "gpt-4.1-mini",
                     "configuration_policy_identity": "grounding-policy-hash",
@@ -210,7 +210,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": "retained_claim_validation:v2",
-            "grounding_validator_version": "grounding_validation_output:1.2",
+            "grounding_validator_version": "grounding_validation_output:1.3",
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
         },
@@ -223,7 +223,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": "retained_claim_validation:v2",
-            "grounding_validator_version": "grounding_validation_output:1.2",
+            "grounding_validator_version": "grounding_validation_output:1.3",
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []
             ),

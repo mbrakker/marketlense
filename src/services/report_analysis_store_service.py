@@ -81,6 +81,11 @@ def _schema_name_for_pack(pack_name: str) -> str:
         return "artifacts"
     if normalized.startswith("regeneration_candidate_audit_"):
         return "regeneration_candidate_audit"
+    if (
+        normalized.startswith("validation_regen_candidate_")
+        and normalized.endswith("_retained_claim_validation_candidate")
+    ):
+        return "claim_validation_package"
     if normalized.startswith("validation_regen_candidate_"):
         return "validation_report"
     if normalized.startswith("validation_regen_attempt_"):

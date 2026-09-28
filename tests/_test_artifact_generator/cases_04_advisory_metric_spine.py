@@ -400,7 +400,7 @@ def test_metric_spine_omits_metric_when_no_clean_display_is_available() -> None:
     assert spine == []
 
 
-def test_key_figures_add_a_distinct_retained_evidence_percentage_candidate() -> None:
+def test_key_figures_do_not_extract_an_unstructured_percentage_from_insight_text() -> None:
     insights = [
         {
             "id": "iab-market-scale",
@@ -425,16 +425,12 @@ def test_key_figures_add_a_distinct_retained_evidence_percentage_candidate() -> 
         metric_spine=spine, evidence_packs={}, insights_final=insights
     )
 
-    retained = next(item for item in figures if item["figure"] == "~61%")
-    assert (
-        retained["label"]
-        == "generative AI is expected to augment ~61% of jobs in Europe"
-    )
-    assert retained["geography"] == "Europe"
-    assert retained["observation_status"] == "forecast"
+    structured_values = {item["value"] for item in spine}
+    assert "~61%" not in {item["figure"] for item in figures}
+    assert {item["figure"] for item in figures} <= structured_values
 
 
-def test_key_figures_add_retained_market_range_and_workflow_scale_candidates() -> None:
+def test_key_figures_do_not_extract_numbers_from_evidence_pack_text() -> None:
     evidence_packs = {
         "findings": {
             "findings": [
@@ -460,14 +456,7 @@ def test_key_figures_add_retained_market_range_and_workflow_scale_candidates() -
     }
     figures = build_key_figures(metric_spine=[], evidence_packs=evidence_packs)
 
-    assert [(item["figure"], item["label"]) for item in figures] == [
-        (
-            "$200 billion in 2023 to around $1.4 trillion by 2029",
-            "AI revenue is projected to rise",
-        ),
-        ("20 million", "impression opportunities per second"),
-    ]
-    assert figures[0]["observation_status"] == "forecast"
+    assert figures == []
 
 
 def test_build_executive_advisory_artifacts_surfaces_not_found_states() -> None:

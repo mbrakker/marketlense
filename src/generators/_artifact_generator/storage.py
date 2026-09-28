@@ -429,7 +429,7 @@ def assemble_artifacts_payload(
         if carried:
             soft_copy_claim_bindings[family] = carried
     metric_spine = derive_metric_spine_from_insights(
-        insights_final, editorial_plan=editorial_plan, evidence_packs=evidence_packs
+        insights_final, editorial_plan=editorial_plan
     )
     topics_covered = build_topics_covered(
         toc_entries=toc_entries,
@@ -837,13 +837,10 @@ def derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
     *,
     editorial_plan: Dict[str, Any] | None = None,
-    evidence_packs: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     return _derive_metric_spine_from_insights(
         insights_final,
         editorial_plan=editorial_plan,
-        evidence_packs=evidence_packs,
-        include_retained_evidence_candidates=False,
         limit=6,
     )
 
@@ -852,8 +849,6 @@ def _derive_metric_spine_from_insights(
     insights_final: List[Dict[str, Any]],
     *,
     editorial_plan: Dict[str, Any] | None,
-    evidence_packs: Dict[str, Any] | None,
-    include_retained_evidence_candidates: bool,
     limit: int | None,
 ) -> List[Dict[str, Any]]:
     spine: List[Dict[str, Any]] = []
@@ -881,23 +876,6 @@ def _derive_metric_spine_from_insights(
         ):
             label = _s(insight.get("text")).strip()
         if not value or not evidence_id or not _is_complete_metric_label(label):
-            if include_retained_evidence_candidates and evidence_id:
-                spine.extend(
-                    _retained_evidence_percentage_candidates(
-                        insight=insight,
-                        primary_metric={
-                            "metric_id": _s(
-                                insight.get("id") or metric.get("metric_id")
-                            ).strip()
-                            or f"insight_metric_{index}",
-                            "value": value,
-                            "confidence": _s(metric.get("confidence")).strip()
-                            or "source_backed",
-                            "evidence_id": evidence_id,
-                        },
-                        index=index,
-                    )
-                )
             continue
         missing_context_notes = [
             field_name
@@ -933,206 +911,7 @@ def _derive_metric_spine_from_insights(
             item["source_display_value"] = value
             item["numeric_metadata"] = numeric_metadata
         spine.append(item)
-        if include_retained_evidence_candidates:
-            spine.extend(
-                _retained_evidence_percentage_candidates(
-                    insight=insight,
-                    primary_metric=item,
-                    index=index,
-                )
-            )
-    if include_retained_evidence_candidates:
-        spine.extend(
-            _retained_evidence_pack_metric_candidates(
-                evidence_packs=evidence_packs or {}, existing_metrics=spine
-            )
-        )
     return _rank_metric_spine(spine, editorial_plan=editorial_plan, limit=limit)
-
-
-def _retained_evidence_pack_metric_candidates(
-    *, evidence_packs: Dict[str, Any], existing_metrics: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
-    """Add only directly worded market-range and workflow-scale evidence facts."""
-
-    candidates: List[Dict[str, Any]] = []
-    range_pattern = re.compile(
-        r"(?P<label>[^.;]*?\b(?:projected|forecast|expected)[^.;]*?)\bfrom\s+"
-        r"(?P<value>\$[\d,.]+\s+(?:million|billion|trillion)\s+in\s+(?P<start>\d{4})\s+"
-        r"to\s+(?:around\s+)?\$[\d,.]+\s+(?:million|billion|trillion)\s+(?:by|in)\s+(?P<end>\d{4}))",
-        re.IGNORECASE,
-    )
-    workflow_pattern = re.compile(
-        r"(?P<value>\d+(?:\.\d+)?\s+(?:million|billion|trillion))\s+"
-        r"(?P<label>impression opportunities)\s+(?:per|every)\s+second",
-        re.IGNORECASE,
-    )
-    for item in _evidence_items(evidence_packs):
-        evidence_id = _s(
-            item.get("evidence_id") or item.get("id") or item.get("metric_id")
-        ).strip()
-        text = _s(item.get("text") or item.get("evidence")).strip()
-        if not evidence_id or not text:
-            continue
-        confidence = _s(item.get("confidence")).strip() or "source_backed"
-        for ordinal, match in enumerate(range_pattern.finditer(text), start=1):
-            value = _s(match.group("value")).strip()
-            if _evidence_metric_already_present(
-                evidence_id=evidence_id, value=value, metrics=existing_metrics
-            ):
-                continue
-            candidates.append(
-                _retained_evidence_metric(
-                    metric_id=f"{evidence_id}-range-{ordinal}",
-                    evidence_id=evidence_id,
-                    label=_s(match.group("label")).strip(" :;,."),
-                    value=value,
-                    timeframe=f"{match.group('start')} to {match.group('end')}",
-                    observation_status="forecast",
-                    confidence=confidence,
-                )
-            )
-        for ordinal, match in enumerate(workflow_pattern.finditer(text), start=1):
-            value = _s(match.group("value")).strip()
-            if _evidence_metric_already_present(
-                evidence_id=evidence_id, value=value, metrics=existing_metrics
-            ):
-                continue
-            candidates.append(
-                _retained_evidence_metric(
-                    metric_id=f"{evidence_id}-workflow-{ordinal}",
-                    evidence_id=evidence_id,
-                    label=f"{_s(match.group('label')).strip()} per second",
-                    value=value,
-                    confidence=confidence,
-                )
-            )
-    return candidates
-
-
-def _evidence_metric_already_present(
-    *, evidence_id: str, value: str, metrics: List[Dict[str, Any]]
-) -> bool:
-    target_numbers = set(_metric_measurement_numbers(value, retain_bare=True))
-    return any(
-        _s(metric.get("evidence_id")).strip() == evidence_id
-        and target_numbers
-        <= set(_metric_measurement_numbers(_s(metric.get("value")), retain_bare=True))
-        for metric in metrics
-        if isinstance(metric, dict)
-    )
-
-
-def _retained_evidence_metric(
-    *,
-    metric_id: str,
-    evidence_id: str,
-    label: str,
-    value: str,
-    confidence: str,
-    timeframe: str = "",
-    observation_status: str = "",
-) -> Dict[str, Any]:
-    return {
-        "schema_version": "1.0",
-        "metric_id": metric_id,
-        "label": label,
-        "value": value,
-        "unit": "",
-        "timeframe": timeframe,
-        "segment": "",
-        "geography": "",
-        "comparator": "",
-        "baseline": "",
-        "delta": "",
-        "sample_size": "",
-        "subject": label,
-        "cohort": "",
-        "denominator": "",
-        "observation_status": observation_status,
-        "confidence": confidence,
-        "missing_context_notes": [
-            field_name
-            for field_name, current in (
-                ("timeframe", timeframe),
-                ("segment", ""),
-                ("geography", ""),
-            )
-            if not current
-        ],
-        "evidence_id": evidence_id,
-    }
-
-
-def _retained_evidence_percentage_candidates(
-    *, insight: Dict[str, Any], primary_metric: Dict[str, Any], index: int
-) -> List[Dict[str, Any]]:
-    """Expose distinct, plainly labelled percentages already retained with an insight.
-
-    This is deliberately narrow: it never guesses a metric from arbitrary prose,
-    and keeps each source clause as its label so its qualifiers remain auditable.
-    """
-
-    evidence = _s(insight.get("evidence")).strip()
-    if not evidence:
-        return []
-    primary_numbers = set(
-        _metric_measurement_numbers(_s(primary_metric.get("value")), retain_bare=True)
-    )
-    candidates: List[Dict[str, Any]] = []
-    for clause_index, clause in enumerate(
-        re.split(r"[;.](?:\s+|$)", evidence), start=1
-    ):
-        source_clause = clause.strip(" ;.")
-        match = re.search(r"(?P<display>~?\s*\d+(?:\.\d+)?\s*%)", source_clause)
-        if not source_clause or match is None:
-            continue
-        display = re.sub(r"\s+", "", match.group("display"))
-        number = display.replace("~", "").replace("%", "").strip()
-        if number in primary_numbers:
-            continue
-        geography_match = re.search(
-            r"\b(Europe|European Union|United States|U\.S\.|United Kingdom|U\.K\.|UK|Global)\b",
-            source_clause,
-            re.IGNORECASE,
-        )
-        observation_status = (
-            "forecast"
-            if re.search(r"\b(expected|forecast|projected|will)\b", source_clause, re.I)
-            else ""
-        )
-        candidates.append(
-            {
-                "schema_version": "1.0",
-                "metric_id": (
-                    f"{_s(primary_metric.get('metric_id')).strip() or index}"
-                    f"-retained-{clause_index}"
-                ),
-                "label": source_clause,
-                "value": display,
-                "unit": "",
-                "timeframe": "",
-                "segment": "",
-                "geography": geography_match.group(0) if geography_match else "",
-                "comparator": "",
-                "baseline": "",
-                "delta": "",
-                "sample_size": "",
-                "subject": source_clause,
-                "cohort": "",
-                "denominator": "",
-                "observation_status": observation_status,
-                "confidence": _s(primary_metric.get("confidence")).strip()
-                or "source_backed",
-                "missing_context_notes": [
-                    field_name
-                    for field_name in ("timeframe", "segment", "geography")
-                    if not (geography_match if field_name == "geography" else False)
-                ],
-                "evidence_id": _s(primary_metric.get("evidence_id")).strip(),
-            }
-        )
-    return candidates
 
 
 def _rank_metric_spine(
@@ -1398,27 +1177,8 @@ def build_key_figures(
         and _s(insight.get("id")).strip()
         and _s(insight.get("text")).strip()
     }
-    candidate_metrics = list(metric_spine)
-    if insights_final or evidence_packs:
-        retained_candidates = _derive_metric_spine_from_insights(
-            insights_final or [],
-            editorial_plan=editorial_plan,
-            evidence_packs=evidence_packs,
-            include_retained_evidence_candidates=True,
-            limit=None,
-        )
-        existing_ids = {
-            _s(metric.get("metric_id")).strip()
-            for metric in candidate_metrics
-            if isinstance(metric, dict)
-        }
-        candidate_metrics.extend(
-            candidate
-            for candidate in retained_candidates
-            if _s(candidate.get("metric_id")).strip() not in existing_ids
-        )
     selected_metrics = _select_key_figure_metrics(
-        metric_spine=candidate_metrics,
+        metric_spine=metric_spine,
         evidence_packs=evidence_packs,
         summary=summary or {},
         insights_final=insights_final or [],
@@ -1957,22 +1717,37 @@ def finalize_regeneration_candidate_artifacts(
     promoted_baseline: Dict[str, Any],
     candidate_artifacts: Dict[str, Any],
     evidence_packs: Dict[str, Any],
-    authorized_source_roots: Iterable[str],
+    atomic_source_patch: Dict[str, Any],
 ) -> frozenset[str]:
-    """Finalize deterministic dependents and provenance on the atomic candidate.
+    """Finalize deterministic dependents and provenance on an atomic patch.
 
-    The baseline is the last promoted artifact state. Candidate assembly can
-    contain incidental changes, so only planner-authorized roots are retained
-    as source changes. Projection roots are restored from the baseline, then
-    only dependents of authorized source roots that actually changed are rebuilt
-    through the canonical builders.
+    Candidate assembly can contain incidental changes. The explicit patch is
+    the sole source of public source-root mutations; all other candidate roots
+    are restored from the last promoted baseline except retained provenance
+    and private audit metadata. Projection roots are restored, then only the
+    changed patch roots' dependents are rebuilt through the canonical builders.
     Returned paths are the exact changed dependent paths produced by this step.
     """
 
     projection_roots = set(CANONICAL_DERIVED_ARTIFACT_ROOTS)
-    authorized_roots = {
-        str(root).strip() for root in authorized_source_roots if str(root).strip()
+    patch_roots = {
+        str(root).strip() for root in atomic_source_patch if str(root).strip()
     }
+    invalid_patch_roots = patch_roots.intersection(
+        projection_roots
+        | REGENERATION_PRIVATE_METADATA_ROOTS
+        | {"soft_copy_claim_provenance"}
+    )
+    if invalid_patch_roots:
+        raise AppError(
+            code="regeneration_deterministic_projection_failed",
+            message="Atomic source patch contains a derived or private artifact root",
+            retryable=False,
+            context={
+                "projection": "atomic_source_patch",
+                "roots": sorted(invalid_patch_roots),
+            },
+        )
     candidate_materialized_roots = {
         root for root in projection_roots if root in candidate_artifacts
     }
@@ -1984,7 +1759,7 @@ def finalize_regeneration_candidate_artifacts(
 
     for root in set(promoted_baseline) | set(candidate_artifacts):
         if (
-            root in authorized_roots
+            root in patch_roots
             or root in projection_roots
             or root in REGENERATION_PRIVATE_METADATA_ROOTS
             or root == "soft_copy_claim_provenance"
@@ -1995,11 +1770,13 @@ def finalize_regeneration_candidate_artifacts(
         else:
             candidate_artifacts.pop(root, None)
 
+    for root, value in atomic_source_patch.items():
+        candidate_artifacts[str(root).strip()] = deepcopy(value)
+
     changed_source_roots = {
         root
-        for root in authorized_roots
-        if root not in ARTIFACT_ROOT_DEPENDENCIES
-        and promoted_baseline.get(root) != candidate_artifacts.get(root)
+        for root in patch_roots
+        if promoted_baseline.get(root) != candidate_artifacts.get(root)
     }
     rebuilt_roots = rebuild_regeneration_derived_artifacts(
         artifacts=candidate_artifacts,
@@ -2138,7 +1915,6 @@ def build_canonical_regeneration_derived_artifacts(
         canonical["metric_spine"] = derive_metric_spine_from_insights(
             insights,
             editorial_plan=editorial_plan,
-            evidence_packs=evidence_packs,
         )
     if "topics_covered" in builder_roots:
         canonical["topics_covered"] = build_topics_covered(

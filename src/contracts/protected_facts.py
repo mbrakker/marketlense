@@ -546,17 +546,23 @@ def _subjects(text: str) -> tuple[str, ...]:
         "that",
         "to",
     }
-    return tuple(
-        dict.fromkeys(
-            subject.removeprefix("the ")
-            for match in _SUBJECT_RE.finditer(text)
-            if (subject := re.sub(r"\s+", " ", match.group(1).casefold()).strip())
-            and subject.split()[0] not in discourse_subject_starts
-            and not re.search(
-                r"\b(?:expect|expected|expectation|reported|forecast)\b", subject
-            )
-        )
-    )
+    quantities = extract_quantities(text)
+    subjects: list[str] = []
+    for match in _SUBJECT_RE.finditer(text):
+        subject = re.sub(r"\s+", " ", match.group(1).casefold()).strip()
+        if (
+            not subject
+            or subject.split()[0] in discourse_subject_starts
+            or re.search(r"\b(?:expect|expected|expectation|reported|forecast)\b", subject)
+        ):
+            continue
+        if any(
+            quantity.start <= match.start(1) and match.end(1) <= quantity.end
+            for quantity in quantities
+        ):
+            continue
+        subjects.append(subject.removeprefix("the "))
+    return tuple(dict.fromkeys(subjects))
 
 
 def _subjects_compatible(claim_subject: str, evidence_subject: str) -> bool:
