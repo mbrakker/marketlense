@@ -64,7 +64,7 @@ public projection hash and source lineage, and writes the canonical
 `retained_claim_validation` package. A candidate with changed inputs or stale
 execution identity is rejected.
 
-The grounding output budget is explicitly set to 8,192 tokens because the
+The grounding output budget is explicitly set to 16,384 tokens because the
 report-level response must include a complete structured check for every unique
 retained claim. Byte-identical claims with the same evidence and source identity
 share one semantic input and result; a reused or newly generated payload with a
