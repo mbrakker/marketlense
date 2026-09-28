@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from dataclasses import asdict
-from typing import Any, Callable, List, Sequence
+from typing import Any, Callable, List, Mapping, Sequence
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
@@ -70,7 +70,7 @@ from .shared import (
 )
 
 RULE_ID = "grounding"
-GROUNDING_FAMILY_SCHEMA_VERSION = "1.2"
+GROUNDING_FAMILY_SCHEMA_VERSION = "1.3"
 GROUNDING_OUTPUT_SCHEMA_IDENTITY = "grounding_validation_output_v2"
 GROUNDING_VALIDATOR_VERSION = CLAIM_GROUNDING_VALIDATOR_VERSION
 GROUNDING_MAX_CLAIMS_PER_CALL = 4
@@ -186,6 +186,10 @@ def run_grounding_check(
         retained_claim_inputs=retained_claim_inputs,
     )
     public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
+    retained_item_ids = _retained_claim_grounding_item_ids(
+        retained_claim_inputs,
+        set(public_item_ids.values()),
+    )
     grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
     batch_prompt_vars = [
         {
@@ -327,6 +331,7 @@ def run_grounding_check(
             _validate_grounding_check_coverage(
                 payload,
                 retained_claim_inputs if expected_inputs is None else expected_inputs,
+                retained_item_ids,
             )
 
         reused_payload = None
@@ -533,6 +538,7 @@ def run_grounding_check(
         semantic_results = _retained_claim_semantic_results(
             checks,
             retained_claim_inputs,
+            retained_item_ids=retained_item_ids,
             source_identity=source_id or request.source_id,
             prompt_family=prompt_namespace,
             prompt_content_hash=prompt_bundle.prompt_content_hash,
@@ -756,13 +762,16 @@ def _validate_semantic_input_identities(
 def _validate_grounding_check_coverage(
     payload: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
+    retained_item_ids: Mapping[str, str],
 ) -> None:
     """Require one exact structured check for each unique retained claim."""
 
     if not isinstance(payload, dict):
         return
     expected = {
-        semantic_input.candidate.claim_id: semantic_input.candidate.text
+        retained_item_ids[semantic_input.candidate.claim_id]: (
+            semantic_input.candidate.text
+        )
         for semantic_input in semantic_inputs
     }
     if not expected:
@@ -799,6 +808,7 @@ def _retained_claim_semantic_results(
     checks: object,
     semantic_inputs: Sequence[ClaimSemanticInput],
     *,
+    retained_item_ids: Mapping[str, str],
     source_identity: str,
     prompt_family: str,
     prompt_content_hash: str,
@@ -820,7 +830,7 @@ def _retained_claim_semantic_results(
     semantic_results: list[ClaimSemanticGroundingResult] = []
     for semantic_input in semantic_inputs:
         candidate = semantic_input.candidate
-        matching = checks_by_id.get(candidate.claim_id, [])
+        matching = checks_by_id.get(retained_item_ids[candidate.claim_id], [])
         if len(matching) != 1:
             continue
         entry = matching[0]
@@ -972,9 +982,17 @@ def grounding_payload(
         insights=insights,
         summary=summary_clean,
     )
+    public_item_ids = {
+        s(item.get("item_id"))
+        for item in payload["public_factual_items"]
+        if isinstance(item, dict) and s(item.get("item_id"))
+    }
+    retained_item_ids = _retained_claim_grounding_item_ids(
+        retained_claim_inputs, public_item_ids
+    )
     payload["retained_claims_to_ground"] = [
         {
-            "item_id": semantic_input.candidate.claim_id,
+            "item_id": retained_item_ids[semantic_input.candidate.claim_id],
             "section": semantic_input.candidate.affected_section
             or semantic_input.candidate.source_family,
             "text": semantic_input.candidate.text,
@@ -1002,6 +1020,39 @@ def grounding_payload(
         for semantic_input in retained_claim_inputs
     ]
     return payload
+
+
+def _retained_claim_grounding_item_ids(
+    semantic_inputs: Sequence[ClaimSemanticInput], public_item_ids: set[str]
+) -> dict[str, str]:
+    """Keep provider identities distinct when inventories contain the same ID."""
+
+    assigned = set(public_item_ids)
+    output: dict[str, str] = {}
+    for semantic_input in semantic_inputs:
+        candidate = semantic_input.candidate
+        claim_id = candidate.claim_id
+        provider_id = claim_id
+        if provider_id in assigned:
+            identity = {
+                "claim_id": claim_id,
+                "claim_text_hash": candidate.text_hash,
+                "evidence_hash": semantic_input.evidence_hash,
+                "source_identity": semantic_input.source_identity,
+            }
+            suffix = hashlib.sha256(
+                json.dumps(
+                    identity, ensure_ascii=True, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            ).hexdigest()
+            provider_id = f"retained_claim:{suffix}"
+            collision_index = 1
+            while provider_id in assigned:
+                provider_id = f"retained_claim:{suffix}:{collision_index}"
+                collision_index += 1
+        assigned.add(provider_id)
+        output[claim_id] = provider_id
+    return output
 
 
 def _matches_canonical_doc_map_identity(

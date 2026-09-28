@@ -64,6 +64,14 @@ public projection hash and source lineage, and writes the canonical
 `retained_claim_validation` package. A candidate with changed inputs or stale
 execution identity is rejected.
 
+The public-factual inventory and retained-claim inventory can contain the same
+sentence and stored claim ID. Grounding assigns a distinct provider-facing item
+ID to the retained-claim entry only when that ID collides with a public item.
+The semantic result maps back to the original retained-claim ID before package
+creation, preserving canonical claim lineage while giving each requested check
+one unambiguous provider ID. Missing, duplicated, or mismatched checks remain
+blocking and enter the existing bounded structured-output recovery.
+
 The grounding policy uses medium reasoning effort with a 16,384-token output
 budget so the report-level response can return a complete structured check for
 every unique retained claim. A retained provider response at the prior high
@@ -71,8 +79,10 @@ reasoning setting consumed the entire output budget on reasoning and produced no
 parseable result. Byte-identical claims with the same evidence and source
 identity share one semantic input and result; a reused or newly generated
 payload with a missing, duplicate, or identity-mismatched check is rejected for
-reuse or enters the existing bounded structured-output recovery. It cannot
-produce an accepted claim package.
+reuse or enters the existing bounded structured-output recovery. The grounding
+validator identity changes when provider-facing identity mapping changes, so
+older semantic results cannot be carried into current packages. An invalid
+response cannot produce an accepted claim package.
 
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and

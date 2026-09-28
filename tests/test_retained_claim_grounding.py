@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 from types import SimpleNamespace
 
 from src.contracts.claim_validation import ClaimValidationPackage
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
+)
 from src.contracts.validation import ValidationRequest
 from src.generators.validation.grounding import grounding_payload, run_grounding_check
 from src.generators.validation.regeneration_candidate import (
@@ -90,6 +95,118 @@ def test_grounding_payload_attaches_only_unresolved_claims_to_exact_evidence() -
         "Wallet use is becoming a common checkout method."
     )
     assert len(retained_evidence[0]["text_hash"]) == 64
+
+
+def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -> None:
+    sentence = "Retailer wallet use grew across checkout channels in 2025."
+    claim_id = "soft_copy:expert_comment:1"
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id=claim_id,
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "expert_comment": sentence,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    request = replace(
+        _retained_request(),
+        artifacts=artifacts,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "text": "Retailer wallet use grew across channels."}
+                ]
+            }
+        },
+    )
+
+    payload = grounding_payload(request, artifacts)
+
+    public_ids = {
+        item["item_id"] for item in payload["public_factual_items"]
+    }
+    retained = payload["retained_claims_to_ground"]
+    assert len(retained) == 1
+    assert claim_id in public_ids
+    assert retained[0]["item_id"] not in public_ids
+    assert retained[0]["text"] == sentence
+
+
+def test_namespaced_retained_grounding_identity_maps_to_claim_lineage(tmp_path) -> None:
+    sentence = "Retailer wallet use grew across checkout channels in 2025."
+    claim_id = "soft_copy:expert_comment:1"
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id=claim_id,
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "expert_comment": sentence,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    request = replace(
+        _retained_request(),
+        artifacts=artifacts,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "text": "Retailer wallet use grew across channels."}
+                ]
+            }
+        },
+    )
+    item_id = grounding_payload(request, artifacts)["retained_claims_to_ground"][0][
+        "item_id"
+    ]
+    model_client = FakeOpenAI(
+        grounding_payload={
+            "unsupported": [],
+            "checks": [_grounding_check(item_id, sentence, "entailed")],
+        }
+    )
+    captured_packages: list[ClaimValidationPackage] = []
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert issues == []
+    assert len(captured_packages) == 1
+    result = next(
+        item
+        for item in captured_packages[0].results
+        if item.candidate.claim_id == claim_id
+    )
+    assert result.status == "supported"
+    assert result.semantic_identity is not None
+    assert result.semantic_identity.claim_id == claim_id
 
 
 def test_semantic_fallback_payload_omits_proven_and_failed_claims() -> None:
@@ -637,7 +754,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert package["unresolved_factual_count"] == 1
     assert package["readiness_status"] == "not_publishable"
     assert package["validation_identity"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.3"
+        "grounding_validation_output:1.4"
     )
     result = package["results"][0]
     assert result["status"] == "unresolved"
@@ -651,7 +768,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert identity["prompt_family"] == "report_vs/validate/grounding"
     assert identity["prompt_content_hash"]
     assert identity["execution_identity"]
-    assert identity["validator_version"] == "grounding_validation_output:1.3"
+    assert identity["validator_version"] == "grounding_validation_output:1.4"
     assert identity["model_provider"]
     assert identity["model_name"]
     assert identity["configuration_policy_identity"]

@@ -53,7 +53,7 @@ def _semantic_result(claim_input, outcome: str) -> ClaimSemanticGroundingResult:
         prompt_family="report_vs/validate/grounding",
         prompt_content_hash="prompt-content-1",
         execution_identity="execution-1",
-        validator_version="grounding_validation_output:1.3",
+        validator_version="grounding_validation_output:1.4",
         model_provider="openai",
         model_name="test-model",
         configuration_policy_identity="policy-1",
@@ -511,7 +511,7 @@ def test_final_claim_package_rejects_stale_validation_identity(
         "source_id": "source-1",
         "source_md5": "source-md5",
         "claim_validation_validator_version": "retained_claim_validation:v2",
-        "grounding_validator_version": "grounding_validation_output:1.3",
+        "grounding_validator_version": "grounding_validation_output:1.4",
         "configuration_hash": "config-1",
         "policy_hash": "policy-1",
     }
