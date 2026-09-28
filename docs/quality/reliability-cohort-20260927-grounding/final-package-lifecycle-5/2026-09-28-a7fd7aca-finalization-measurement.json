@@ -1,0 +1,230 @@
+{
+  "schema_version": "1.0",
+  "measurement_date": "2026-09-28",
+  "implementation_commit": "a7fd7aca7eedbb6d27dec11c100cc344ee7dc653",
+  "scope": {
+    "e13_frozen_manifests": [
+      {
+        "path": "docs/quality/e13-repair-benchmark/baseline-a21-five.json",
+        "sha256": "0df61edb0e67f0dfc1ed8a3fb81334fb1f0a1a2a75aff4f07f4b3075399616f2"
+      },
+      {
+        "path": "docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json",
+        "sha256": "de54b796e82d23283c89b32b0b66da93cfc03c8ccf0022f400da204c91c821a1"
+      },
+      {
+        "path": "docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json",
+        "sha256": "24a72c09eee4fc225f128fe680cb4b972cfbd3ca81c19c71ff105a9107a0686a"
+      }
+    ],
+    "pinned_five_report_manifest": {
+      "path": "docs/quality/reliability-cohort-20260927-grounding/final-package-lifecycle-5/frozen_cohort.json",
+      "sha256": "5a2b8bc4dd7c6d919f66770437c83439233e4671c2c673de9dbb30dc5086cc04"
+    },
+    "full_20_report_cohort_run": false,
+    "publication_enabled": false
+  },
+  "e13_unchanged_frozen_corpus": {
+    "invocations": [
+      {
+        "manifest": "baseline-a21-five.json",
+        "run": "tmp/e13-finalization-a7fd7aca/a21-five",
+        "stdout_sha256": "b84129ae7437d1f7dae6f856912582481aa81629a9837747496d7382056b9502",
+        "cases": 5,
+        "no_longer_reproducible": 4,
+        "reproducible": 1,
+        "candidate_validations": 2,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 19,
+        "input_tokens": 495222,
+        "output_tokens": 23970,
+        "estimated_cost_usd": 0.055932
+      },
+      {
+        "manifest": "baseline-mobile-editorial.json",
+        "run": "tmp/e13-finalization-a7fd7aca/mobile-editorial",
+        "stdout_sha256": "adfec1506de6184e7bc0ff4e19d63c65534cf4a1b878861d2313d779e22c6d33",
+        "cases": 1,
+        "no_longer_reproducible": 0,
+        "reproducible": 1,
+        "candidate_validations": 3,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 7,
+        "input_tokens": 224491,
+        "output_tokens": 10985,
+        "estimated_cost_usd": 0.027628
+      },
+      {
+        "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+        "run": "tmp/e13-finalization-a7fd7aca/doubleverify-linkedin",
+        "stdout_sha256": "084b55896fd777d9cf8229ba067cce2fd8636713615b10bc2a8393bd6a636ad8",
+        "cases": 1,
+        "no_longer_reproducible": 0,
+        "reproducible": 1,
+        "candidate_validations": 3,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 13,
+        "input_tokens": 301965,
+        "output_tokens": 13920,
+        "estimated_cost_usd": 0.036531
+      }
+    ],
+    "totals": {
+      "cases": 7,
+      "historically_reproducible_chains": 3,
+      "no_longer_reproducible": 4,
+      "candidate_validations": 8,
+      "promotions": 0,
+      "success_at_1": "0/3",
+      "success_at_3": "0/3",
+      "derived_projection_errors": 0,
+      "deterministic_dependent_scope_violations": 0,
+      "unsupported_evidence_introductions": 0,
+      "provenance_or_lineage_introductions": 0,
+      "removed_insight_reintroductions": 1,
+      "removed_insight_reintroduction_blocked": true,
+      "provider_calls": 39,
+      "input_tokens": 1021678,
+      "output_tokens": 48875,
+      "estimated_cost_usd": 0.120091
+    },
+    "removed_insight_finding": {
+      "manifest": "baseline-mobile-editorial.json",
+      "rule": "regeneration_removed_insight_reintroduced",
+      "outcome": "candidate validation failed; candidate rolled back"
+    },
+    "current_candidate_validation_measurement": "Counts are across the three unchanged frozen manifests; E13 scorecards report zero out-of-scope and unsupported-evidence introductions for these runs. The one removed-insight finding remains blocking.",
+    "retained_failing_candidate_fixture_replay": {
+      "run": "tmp/offline-finalization-fixture-replay-9858ccb0a4c7.json",
+      "sha256": "a429bc6304796090bbc275988a9013773c99c276e6c6f7ec37017c07595d6624",
+      "fixtures": 4,
+      "provider_calls": 0,
+      "derived_projection_findings": 6,
+      "changed_path_scope_violations": 720,
+      "provenance_findings": 6,
+      "claim_support_findings": 1,
+      "number_value_unit_findings": 1,
+      "historical_promotions": 0,
+      "note": "Previously rolled-back Mobile and DoubleVerify snapshots replayed through current validators; counts describe these retained snapshots, not newly produced candidates."
+    },
+    "historical_manifest_issue_introductions": {
+      "candidate_attempts": 19,
+      "all_rolled_back": true,
+      "deterministic_dependent_scope_violations": 37,
+      "provenance_findings": 6,
+      "source": "The frozen E13 manifests' historical attempt records; distinct from the current validator replay counts above."
+    }
+  },
+  "pinned_five_report_cohort": {
+    "run": "tmp/finalization-five-report-a7fd7aca/frozen-reliability-twk1tw9g",
+    "cohort_result_sha256": "8c659d3a740237a2bb1bd45c80d351f995975e5850698054ce923e58194d812a",
+    "implementation_commit": "a7fd7aca7eedbb6d27dec11c100cc344ee7dc653",
+    "fresh_isolated_state": true,
+    "reports_admitted": 5,
+    "publication_disabled": true,
+    "duration_seconds": 1333.021,
+    "provider_calls": 147,
+    "input_tokens": 1520993,
+    "output_tokens": 215865,
+    "estimated_cost_usd": 0.256144,
+    "reports_eligible_for_final_packages": 2,
+    "final_packages_materialized": 2,
+    "legitimate_pre_package_failures": 3,
+    "unexplained_package_missing": 0,
+    "package_invalid": 0,
+    "not_publishable": 2,
+    "readiness_passes": 0,
+    "provider_calls_during_readiness": 0,
+    "publication_or_handoff_attempts": 0,
+    "eligible_reports": [
+      {
+        "publisher": "Deloitte",
+        "report_id": "cohort-b10ed6c82b76739a806a",
+        "package_sha256": "cd88ff70c2fdb3a011486605287c3d22ef1a241c21a20284c77ced08a10f3793",
+        "readiness": "not_publishable",
+        "unsupported_claims": 0,
+        "unresolved_factual_claims": 13,
+        "blocking_rule": "publish_readiness.retained_claim_grounding"
+      },
+      {
+        "publisher": "Emplifi",
+        "report_id": "cohort-f62048b469dd784e6e7c",
+        "package_sha256": "a1fb06f0b44a6c9e28bed3beed537570bbb2a301d14e3610321d81b01c435401",
+        "readiness": "not_publishable",
+        "unsupported_claims": 0,
+        "unresolved_factual_claims": 13,
+        "blocking_rule": "publish_readiness.retained_claim_grounding"
+      }
+    ],
+    "pre_package_failures": [
+      {
+        "publisher": "Merchant Risk Council",
+        "report_id": "cohort-11b0b55157f7d0636815",
+        "stage": "semantic_validation",
+        "terminal_code": "validation_failed",
+        "rule": "public_editorial_quality.duplicate_insight",
+        "claim_or_entity_id": "insight:survey-country-coverage:text"
+      },
+      {
+        "publisher": "StackAdapt",
+        "report_id": "cohort-8ef1021c332aa85ba008",
+        "stage": "report_pipeline",
+        "terminal_code": "insight_safe_removal_no_replacement"
+      },
+      {
+        "publisher": "DoubleVerify",
+        "report_id": "cohort-e854b71d6fb10333b47f",
+        "stage": "report_pipeline",
+        "terminal_code": "insight_safe_removal_no_replacement"
+      }
+    ],
+    "note": "Merchant Risk Council stopped in semantic validation before finalization/readiness; its earlier retained-package regression evidence remains in the prior 2026-09-27 record."
+  },
+  "isolated_ias_canary": {
+    "run": "tmp/ias-finalization-a7fd7aca/ias-first-attempt-xw8ha7tx",
+    "stdout_sha256": "2c33f48752623d09097e0e1441e2a8d0dcbcf87bb64728951e4aff0f70773e28",
+    "publisher": "Integral Ad Science",
+    "report_id": "ias-fccf7f92dc7e14a27ee6",
+    "fresh_isolated_state": true,
+    "publication_disabled": true,
+    "final_state": "failed",
+    "stage": "artifact_generation",
+    "terminal_code": "artifact_structured_output_invalid",
+    "cause": "schema_reference_missing for source:page:2 in summary structured output",
+    "provider_calls": 33,
+    "input_tokens": 208921,
+    "output_tokens": 39651,
+    "estimated_cost_usd": 0.040717,
+    "duration_seconds": 249.685
+  },
+  "verification": {
+    "focused_tests": "331 passed",
+    "passed_gates": [
+      "formatting",
+      "ruff_lint",
+      "forbidden_patching",
+      "architecture_imports",
+      "role_io_boundaries",
+      "service_boundary_map",
+      "contract_schemas",
+      "public_report_quality",
+      "git diff --check"
+    ],
+    "known_repository_gate_failures": [
+      {
+        "command": "python scripts/ci/check_documentation.py --check-generated",
+        "finding": "12 invalid anchors in untouched docs/quality/simplification.md"
+      },
+      {
+        "command": "python scripts/ci/run_type_check.py",
+        "finding": "2 unbaselined mypy errors in untouched src/generators/claim_validation_generator.py:663 and src/generators/publish_readiness_generator.py:876"
+      }
+    ]
+  }
+}

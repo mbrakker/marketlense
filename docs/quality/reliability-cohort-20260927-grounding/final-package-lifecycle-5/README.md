@@ -93,6 +93,64 @@ after its final package and report-level readiness pass; the package remains
 bound, while the overall report correctly retains the later typed terminal
 failure.
 
+## Deterministic repair finalization measurement — 2026-09-28 UTC
+
+The deterministic post-repair finalization changes were measured at
+`a7fd7aca7eedbb6d27dec11c100cc344ee7dc653`. The unchanged E13 frozen corpus was
+replayed using its three existing manifests, followed by the pinned five-report
+cohort from fresh isolated state and one isolated IAS canary. Publication was
+disabled in the live workflow runs. The full 20-report cohort was not run.
+Sanitized per-run measurements, manifest/output hashes, and typed outcomes are
+retained in
+[`2026-09-28-a7fd7aca-finalization-measurement.json`](2026-09-28-a7fd7aca-finalization-measurement.json).
+
+### E13 deterministic finalization
+
+Across seven frozen cases, four historical cases were no longer reproducible.
+The three reproducible chains produced eight candidate validations and no
+promotions. Success@1 and success@3 were both 0/3. Current candidate scorecards
+recorded zero derived-projection errors, zero deterministic-dependent scope
+violations, zero unsupported-evidence introductions, and zero provenance or
+lineage introductions. One Mobile candidate attempted to reintroduce a removed
+insight; validation blocked it and the candidate was rolled back.
+
+Four retained, previously rolled-back Mobile and DoubleVerify candidates were
+also replayed offline through the current validators with zero provider calls.
+That replay found six derived-projection issues, 720 changed-path scope
+violations, six provenance findings, one claim-support finding, and one
+number/value/unit finding. These retained snapshots are historical fixture
+evidence and are separate from the eight newly validated E13 candidates.
+
+The E13 runs used 39 provider calls, 1,021,678 input tokens, 48,875 output
+tokens, and estimated cost `$0.120091`. No readiness provider calls occurred.
+
+### Five-report finalization outcome
+
+All five pinned reports were admitted. Two reached final-package readiness:
+Deloitte and Emplifi each materialized a final package bound to its final
+artifacts. Both were correctly blocked as `not_publishable` with 13 unresolved
+factual claims and no unsupported claims. Readiness passed zero reports; it
+reported zero `package_missing`, zero `package_invalid`, and made zero provider
+calls. There were three typed pre-package failures. Merchant Risk Council
+stopped in semantic validation on
+`public_editorial_quality.duplicate_insight` before finalization or readiness;
+the two other pre-package failures were typed `insight_safe_removal_no_replacement`
+outcomes. Thus this run had two eligible reports, two materialized packages,
+zero unexplained `package_missing` outcomes, and no publication or handoff.
+
+The cohort used 147 provider calls, 1,520,993 input tokens, 215,865 output
+tokens, and estimated cost `$0.256144` over 1,333.021 seconds. The package
+hashes and report-level outcomes are in the retained JSON record.
+
+### Isolated IAS canary
+
+The fresh IAS canary stopped before finalization at artifact generation with
+typed `artifact_structured_output_invalid`: the summary structured output
+referenced missing `source:page:2`. It made 33 provider calls, used 208,921 input
+and 39,651 output tokens, and cost an estimated `$0.040717`. Publication was
+disabled. This is an artifact-generation failure, not a deterministic
+post-repair finalization result.
+
 ## Validation
 
 The focused package, readiness, renderer, retained-grounding, and frozen-cohort
@@ -104,7 +162,14 @@ editorial-output evaluation
 also passed: 61 generator/report-quality tests, 34 public-render tests, and
 `python scripts/ci/check_public_report_quality.py`.
 
-The five-report run used the command shown above. The full 20-report cohort was
-not run. Full raw workflow state remains under ignored `tmp/`; this committed
-record contains only sanitized identities, hashes, rule IDs, typed outcomes,
-and scalar metrics.
+The earlier five-report run used the command shown above. The full 20-report
+cohort was not run. For the 2026-09-28 measurement, the focused deterministic
+finalization suite passed 331 tests; formatting, Ruff, forbidden-patching,
+architecture imports, role I/O boundaries, service-boundary mapping, contract
+schemas, and public-report-quality checks passed. The generated-documentation
+check still reports 12 invalid anchors in untouched
+`docs/quality/simplification.md`; type checking still reports two unbaselined
+errors in untouched `claim_validation_generator.py` and
+`publish_readiness_generator.py`. Full raw workflow state remains under ignored
+`tmp/`; committed measurements contain only sanitized identities, hashes,
+rule IDs, typed outcomes, and scalar metrics.
