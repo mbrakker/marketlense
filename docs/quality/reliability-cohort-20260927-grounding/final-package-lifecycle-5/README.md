@@ -216,3 +216,67 @@ substantive schema-valid artifact. It did not reach package materialization or
 readiness. It used 39 calls, 298,365 input tokens, 65,847 output tokens, and
 estimated cost `$0.062604`; publication was disabled. This is an upstream
 grounding failure and did not exercise finalization.
+
+### 2026-09-28 deterministic post-repair finalization
+
+The atomic source-patch finalizer was measured at
+`a211add35acc733fa987b0ef6dbafcaca61e120e`. The unchanged three-manifest E13
+corpus, the pinned five-report cohort, and one fresh IAS canary ran with
+publication disabled. The full 20-report cohort was not run. Sanitized hashes,
+typed outcomes, report counts, usage, and validation results are retained in
+[`2026-09-28-a211add3-deterministic-finalization-measurement.json`](2026-09-28-a211add3-deterministic-finalization-measurement.json).
+
+| E13 measure | Before (`0be495a9`) | After (`a211add3`) |
+| --- | ---: | ---: |
+| Derived-projection errors | 0 | 0 |
+| Deterministic-dependent scope violations | 0 | 0 |
+| Unsupported-evidence introductions | 0 | 0 |
+| Provenance/lineage introductions | 0 | 0 |
+| Removed-insight reintroductions | 1, blocked | 0 |
+| Candidate validations / promotions | 6 / 0 | 2 / 2 |
+| Success@1 / success@3 | 0/3 / 0/3 | 0/2 / 0/2 |
+| Calls / input tokens / output tokens / estimated cost | 35 / 799,767 / 159,178 / $0.154546 | 45 / 343,217 / 193,333 / $0.125589 |
+
+Four retained Mobile and DoubleVerify candidates were replayed offline with zero
+provider calls. The current finalizer and validators found zero derived
+projection errors, scope violations, and provenance findings in those
+rebuilds. Their existing source-level claim-support findings remain blocking;
+none of the historical candidates was promoted. The previous replay found six
+projection findings and 720 scope violations in those same rolled-back
+snapshots.
+
+The fresh cohort admitted all five sources. DoubleVerify was the only report
+eligible for a final package, and its package was bound to the exact report,
+final artifact, evidence, source, validator, configuration, policy, and
+publication-projection identities. It was correctly blocked as
+`not_publishable` for 22 unresolved factual claims and zero unsupported claims.
+The cohort recorded zero unexplained `package_missing`, zero `package_invalid`,
+zero readiness passes, and zero provider calls during readiness. Four reports
+ended with typed pre-package failures: Merchant Risk Council, Deloitte, and
+Emplifi stopped at summary provenance coverage; StackAdapt stopped at semantic
+grounding validation. Thus the current run has one eligible report and one
+materialized package. The cohort used 170 calls, 1,357,743 input tokens,
+402,674 output tokens, and estimated cost `$0.328751`.
+
+The cohort exercised four repair candidates: one DoubleVerify candidate was
+promoted and three StackAdapt candidates were rolled back. Candidate scope
+checks passed for all four. One blocked candidate had a provenance/source-page
+introduction, and another attempted to reintroduce a removed insight; neither
+was promoted. No unsupported-claim introduction was recorded. Merchant Risk
+Council's typed `soft_copy_claim_provenance_coverage_invalid` failure occurred
+during artifact generation before final package materialization, so it is an
+explicit pre-package terminal reason rather than an unexplained missing
+package.
+
+The IAS canary passed analysis validation and materialized a bound final
+package, then stopped at readiness with `publish_readiness_failed` for seven
+unresolved factual claims and zero unsupported claims. It used 54 calls,
+369,167 input tokens, 114,509 output tokens, and estimated cost `$0.090398`.
+Readiness made zero provider calls; publication remained disabled.
+
+Focused deterministic finalization, provenance, candidate-scope, and
+regeneration tests passed: 159 tests. The broader focused package/readiness/
+lineage suite passed 550 tests. Contract, architecture, service-boundary,
+forbidden-patching, public-report-quality, and scoped Ruff checks passed. The
+documentation checker still reports 12 pre-existing invalid anchors in the
+untouched `docs/quality/simplification.md`.

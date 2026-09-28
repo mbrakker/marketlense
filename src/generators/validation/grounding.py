@@ -471,8 +471,8 @@ def run_grounding_check(
                     normalize_payload=lambda payload: (
                         dict(payload) if isinstance(payload, dict) else payload
                     ),
-                    validate_payload=lambda payload: validate_grounding_payload(
-                        payload, batch_semantic_inputs
+                    validate_payload=lambda payload, inputs=batch_semantic_inputs: (
+                        validate_grounding_payload(payload, inputs)
                     ),
                     is_substantive=lambda payload: (
                         isinstance(payload, dict) and "unsupported" in payload
