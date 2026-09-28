@@ -34,6 +34,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_material_sentences,
     soft_copy_public_text,
 )
+from src.generators.artifact_normalization import canonical_artifact_quote_id
 from src.utils.errors import AppError
 from src.utils.publication_projection import publication_projection_hash
 from src.utils.quantity import Quantity, extract_quantities, quantities_match
@@ -364,14 +365,26 @@ def _candidates(
         ("insights_final", "insights_final", "text"),
         ("quotes_final", "quotes_final", "text"),
     ):
+        quote_occurrences: dict[tuple[str, int], int] = {}
         for raw in artifacts.get(item_key) or []:
             if isinstance(raw, dict):
-                stable_id = str(
-                    raw.get("id")
-                    or raw.get("insight_id")
-                    or raw.get("evidence_id")
-                    or ""
-                ).strip()
+                if family == "quotes_final":
+                    evidence_id = str(raw.get("evidence_id") or "").strip()
+                    page_value = raw.get("page")
+                    page = page_value if isinstance(page_value, int) else 0
+                    occurrence_key = (evidence_id, page)
+                    occurrence_index = quote_occurrences.get(occurrence_key, 0)
+                    quote_occurrences[occurrence_key] = occurrence_index + 1
+                    stable_id = canonical_artifact_quote_id(
+                        raw, occurrence_index=occurrence_index
+                    )
+                else:
+                    stable_id = str(
+                        raw.get("id")
+                        or raw.get("insight_id")
+                        or raw.get("evidence_id")
+                        or ""
+                    ).strip()
                 if family == "insights_final":
                     claim_id = f"insight:{stable_id}:text" if stable_id else ""
                     affected = (

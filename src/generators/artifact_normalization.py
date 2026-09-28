@@ -11,6 +11,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_material_sentences,
     soft_copy_public_text,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.coercion import stripped_string_value as _s
 from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
@@ -1407,25 +1408,52 @@ def _insight_duplicate_key(item: Dict[str, Any]) -> tuple[str, str] | None:
     return (text, normalize_text(_s(item.get("evidence_id"))))
 
 
+def canonical_artifact_quote_id(item: Any, *, occurrence_index: int = 0) -> str:
+    """Return the stable source-slot identity for a normalized quote item."""
+    if not isinstance(item, dict):
+        return ""
+    page_val = item.get("page")
+    page = page_val if isinstance(page_val, int) else 0
+    evidence_id = _s(item.get("evidence_id"))
+    if type(occurrence_index) is not int or occurrence_index < 0:
+        occurrence_index = 0
+    return sha256_json(
+        {
+            "evidence_id": evidence_id,
+            "page": page,
+            "occurrence_index": occurrence_index,
+        }
+    )
+
+
 def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     if not isinstance(items, list):
         return normalized
+    occurrence_counts: dict[tuple[str, int], int] = {}
     for item in items:
         if not isinstance(item, dict):
             continue
         page_val = item.get("page")
         page = page_val if isinstance(page_val, int) else 0
         evidence_id = _s(item.get("evidence_id"))
+        text = _s(item.get("text")).strip()
+        evidence_spans = _normalize_evidence_spans(
+            item.get("evidence_spans"), evidence_id=evidence_id
+        )
+        occurrence_key = (evidence_id, page)
+        occurrence_index = occurrence_counts.get(occurrence_key, 0)
+        occurrence_counts[occurrence_key] = occurrence_index + 1
         quote = {
-            "text": _s(item.get("text")),
+            "id": canonical_artifact_quote_id(
+                item, occurrence_index=occurrence_index
+            ),
+            "text": text,
             "speaker": _s(item.get("speaker") or "Unknown"),
             "citation": _s(item.get("citation")),
             "page": page,
             "evidence_id": evidence_id,
-            "evidence_spans": _normalize_evidence_spans(
-                item.get("evidence_spans"), evidence_id=evidence_id
-            ),
+            "evidence_spans": evidence_spans,
         }
         if item.get("is_paraphrase") is True or item.get("paraphrase") is True:
             quote["is_paraphrase"] = True

@@ -466,6 +466,11 @@
         "type": "object",
         "required": ["text", "evidence_id"],
         "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical quote identity derived from its retained evidence ID, page, and occurrence among quotes with the same binding."
+          },
           "text": { "type": "string" },
           "speaker": { "type": "string" },
           "citation": { "type": "string" },

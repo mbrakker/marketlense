@@ -830,6 +830,14 @@ only the binding fields from a same-stable-ID current candidate or prior final
 insight. Its rewritten prose is never copied or repaired by this step, and an
 unknown or conflicting ID is left for the normal grounding gate to reject.
 
+Each normalized final quote also receives a deterministic `id` derived from
+its evidence ID, page, and position among quotes with that same binding.
+Evidence IDs identify retained source records and may be shared by multiple
+distinct quotes. The quote ID is the stable item identity used by retained
+grounding and regeneration; the retained claim's text hash binds the exact
+wording. Legacy quote records without an `id` receive the same identity when
+retained claims are collected.
+
 Every candidate writes a schema-backed
 `regeneration_candidate_audit_<attempt>.json`. It records the original
 claim/insight identity, original and candidate evidence IDs and source pages,

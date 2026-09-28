@@ -15,6 +15,7 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationReport
+from src.generators.artifact_normalization import normalize_artifact_quotes
 from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.publish_readiness_generator import evaluate_publish_readiness
 from src.utils.cache_utils import sha256_json
@@ -143,6 +144,62 @@ def test_retained_claim_batch_grounding_collects_unresolved_claims_once() -> Non
         "summary_claim:claim-1",
         "summary_claim:claim-2",
     }
+
+
+def test_distinct_quotes_sharing_evidence_id_keep_distinct_grounding_identity() -> None:
+    evidence = {
+        "quote_candidates": {
+            "quote_candidates": [
+                {
+                    "id": "q1",
+                    "page": 1,
+                    "text": (
+                        "The report provides quarterly benchmarks. "
+                        "Teams can compare performance over time."
+                    ),
+                }
+            ]
+        }
+    }
+    raw_quotes = [
+        {
+            "text": "The report provides quarterly benchmarks.",
+            "evidence_id": "q1",
+            "page": 1,
+        },
+        {
+            "text": "Teams can compare performance over time.",
+            "evidence_id": "q1",
+            "page": 1,
+        },
+    ]
+    normalized_quotes = normalize_artifact_quotes(raw_quotes)
+    assert normalize_artifact_quotes(normalized_quotes) == normalized_quotes
+    edited_quote = normalize_artifact_quotes(
+        [{**raw_quotes[0], "text": "A corrected quarterly benchmark statement."}]
+    )[0]
+    assert edited_quote["id"] == normalized_quotes[0]["id"]
+
+    for quotes in (normalized_quotes, raw_quotes):
+        calls = []
+
+        def ground(claims, calls=calls):
+            calls.append([claim.candidate.claim_id for claim in claims])
+            return [_semantic_result(claim, "entailed") for claim in claims]
+
+        package = validate_retained_claims(
+            {"quotes_final": quotes},
+            evidence,
+            semantic_batch_validator=ground,
+            source_identity="source:doubleverify",
+        )
+
+        claim_ids = [result.candidate.claim_id for result in package.results]
+        assert len(set(claim_ids)) == 2
+        assert calls == [claim_ids]
+        assert package.readiness_status == "awaiting_review"
+
+    assert normalized_quotes[0]["id"] != normalized_quotes[1]["id"]
 
 
 def test_identical_soft_copy_claims_share_one_semantic_result() -> None:

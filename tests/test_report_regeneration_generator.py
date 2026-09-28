@@ -38,7 +38,10 @@ from src.generators._artifact_generator.storage import (
     build_key_figures,
     derive_metric_spine_from_insights,
 )
-from src.generators.artifact_normalization import artifact_evidence_span_index
+from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
+    normalize_artifact_quotes,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
@@ -4559,11 +4562,14 @@ def test_quote_leaf_repair_preserves_metadata_and_candidate_rejects_unsupported_
         planned_prompt_namespaces=("report_vs/artifacts/regenerate/quotes",),
         actual_prompt_namespaces=tuple(response.prompt_namespaces),
     )
-    assert any(
-        issue.rule_id == "retained_claim.evidence_reference_completeness"
-        and issue.affected_section == "quotes:q1.text"
+    issue = next(
+        issue
         for issue in candidate_result.issues
+        if issue.rule_id == "retained_claim.evidence_reference_completeness"
+        and issue.affected_section.startswith("quotes:")
     )
+    expected_quote_id = normalize_artifact_quotes([repaired_quote])[0]["id"]
+    assert issue.affected_section == f"quotes:{expected_quote_id}.text"
 
 
 def test_regenerate_artifacts_topics_rebuilds_topic_briefs_without_model_calls(
