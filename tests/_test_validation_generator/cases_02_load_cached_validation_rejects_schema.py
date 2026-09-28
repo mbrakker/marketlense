@@ -1,7 +1,10 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
+
 from ._shared import *  # noqa: F401,F403
+
 
 def test_load_cached_validation_rejects_schema_invalid_payload(tmp_path):
     report_name = "validation cache invalid"
@@ -531,7 +534,45 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
                     }
                 ],
             },
-            grounding_payload={"unsupported": []},
+                grounding_payload={
+                    "unsupported": [],
+                    "checks": [
+                        {
+                            "item_id": "summary_claim:1",
+                            "section": "summary.claim_evidence_map:1.claim",
+                            "text": "Claim",
+                            "classification": "factual_claim",
+                            "entailment_outcome": "entailed",
+                            "proposition_status": "compatible",
+                            "protected_facts": {
+                                dimension: {
+                                    "claim_value": None,
+                                    "evidence_value": None,
+                                    "status": "unknown",
+                                }
+                                for dimension in PROTECTED_FACT_DIMENSIONS
+                            },
+                            "reason": "Grounding comparison completed.",
+                        },
+                        {
+                            "item_id": "quote:q1:text",
+                            "section": "quotes:q1.text",
+                            "text": "Quoted text",
+                            "classification": "factual_claim",
+                            "entailment_outcome": "entailed",
+                            "proposition_status": "compatible",
+                            "protected_facts": {
+                                dimension: {
+                                    "claim_value": None,
+                                    "evidence_value": None,
+                                    "status": "unknown",
+                                }
+                                for dimension in PROTECTED_FACT_DIMENSIONS
+                            },
+                            "reason": "Grounding comparison completed.",
+                        },
+                    ],
+                },
         ),
         analysis_store=FakeAnalysisStore(),
     )
