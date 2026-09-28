@@ -323,11 +323,27 @@ and zero provider calls during readiness. All five outcomes were typed; no
 publication or handoff was attempted. The run used 187 calls, 1,596,576 input
 tokens, 473,571 output tokens, and estimated cost `$0.384146`.
 
+Compared with the prior pinned run at `a211add3`, package-eligible reports and
+materialized packages changed from 1/1 to 4/4, while typed pre-package failures
+changed from four to one. Four candidates validated in both runs; promotions
+changed from one to four. The prior run recorded one provenance/lineage
+introduction attempt and one removed-insight reintroduction attempt; the
+current candidate audits recorded zero of each. Readiness passes remained zero
+because all four current packages retain unresolved claims. Current cohort
+usage was 187 calls, 1,596,576 input tokens, 473,571 output tokens, and
+`$0.384146`, compared with 170 calls, 1,357,743 input tokens, 402,674 output
+tokens, and `$0.328751`. Live provider outputs vary; this is an observation,
+not a causal estimate.
+
 The IAS canary passed validation and materialized a package bound to its final
 artifact, then stopped at readiness with `publish_readiness_failed`: 15 factual
 claims remained unresolved and none were classified unsupported. It used 47
 calls, 302,277 input tokens, 101,352 output tokens, and estimated cost
 `$0.076993`. Readiness made zero provider calls; publication remained disabled.
+The prior IAS canary also passed validation and materialized a bound package,
+then stopped at readiness with seven unresolved factual claims. It used 54
+calls, 369,167 input tokens, 114,509 output tokens, and `$0.090398`. The current
+run's terminal readiness result remains blocking.
 
 The focused deterministic finalization/provenance/scope suite passed 169 tests.
 Ruff, formatting, forbidden-patching, architecture-import, and diff checks
