@@ -3080,6 +3080,115 @@ def test_public_validator_to_plan_to_claim_repair_preserves_sibling_provenance(
     assert original_claims[1].claim_id not in by_id
 
 
+def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> None:
+    current_artifacts = _current_artifacts()
+    sentences = [
+        "Unsupported publisher detail.",
+        "Retained supported context.",
+        "Nonblocking summary warning.",
+    ]
+    current_artifacts["summary"]["executive_summary"] = " ".join(sentences)
+    original_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="summary",
+            claim_id=(
+                "soft_copy:summary:"
+                f"{hashlib.sha256(sentence.encode()).hexdigest()[:16]}"
+            ),
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="factual",
+            evidence_ids=(f"f{index}",),
+            source_spans=(),
+            producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for index, sentence in enumerate(sentences, start=1)
+    ]
+    current_artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "claim": sentence,
+            "evidence_id": f"f{index + 2}",
+            "evidence": sentence,
+            "evidence_spans": [
+                {
+                    "evidence_id": f"f{index + 2}",
+                    "source_pack": "findings",
+                    "text": sentence,
+                }
+            ],
+        }
+        for index, sentence in ((2, sentences[1]), (3, sentences[2]))
+    ]
+    current_artifacts["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "summary"
+        or claim["text_hash"] == hashlib.sha256(b"Old TLDR.").hexdigest()
+    ] + soft_copy_claim_provenance_to_payload(original_claims)["claims"]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].extend(
+        {
+            "id": f"f{index}",
+            "evidence": sentence,
+            "text": sentence,
+        }
+        for index, sentence in ((4, sentences[1]), (5, sentences[2]))
+    )
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                rule_id="grounding",
+                affected_section="summary.executive_summary",
+                message="The publisher attribution is unsupported.",
+                severity="error",
+                entity_id=original_claims[0].claim_id,
+                evidence_ids=["f1"],
+            ),
+            ValidationIssue(
+                rule_id="grounding",
+                affected_section="summary.executive_summary",
+                message="A nonblocking concern remains on another sentence.",
+                severity="warning",
+                entity_id=original_claims[2].claim_id,
+                evidence_ids=["f3"],
+            ),
+        ],
+        artifacts=current_artifacts,
+        broad_retry_available=False,
+    )
+    assert plan.targets[0].allowed_paths == ["summary.executive_summary[claim_index=0]"]
+
+    openai_client = _ClaimScopedSoftCopyOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert openai_client.calls == []
+    assert response.updated_artifacts["summary"]["executive_summary"] == (
+        "Retained supported context. Nonblocking summary warning."
+    )
+    assert original_claims[2].claim_id in {
+        claim["claim_id"]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    }
+
+
 def test_ambiguous_soft_copy_issue_is_not_widened_to_family_regeneration(
     tmp_path,
 ) -> None:

@@ -1506,7 +1506,7 @@ def _combined_category_sum_matches(
     connector = re.compile(r"\s+(?:and|plus|along with|as well as|&)\s*", re.I)
     combined_predicate = re.compile(
         r"^\s*(?:(?:alone|together|combined|collectively|both|in total)\s+)?"
-        r"(?:account(?:s)? for|represent(?:s)?|make up|makes up|"
+        r"(?:account(?:s|ed)? for|represent(?:s)?|make up|makes up|"
         r"contribute(?:s)?|comprise(?:s)?|total(?:s)?)\b",
         re.I,
     )

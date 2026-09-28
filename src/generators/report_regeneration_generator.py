@@ -3065,7 +3065,7 @@ def _summary_claim_repairs(
 
     fields = ("tldr", "card_tldr_compact", "executive_summary")
     grouped: Dict[str, List[RegenerationIssue]] = {}
-    for issue in execution.target.issues:
+    for issue in _summary_repair_issues(execution.target):
         affected = str(issue.affected_section or "").casefold()
         field = next(
             (
@@ -3102,10 +3102,11 @@ def _summary_claim_map_targets(
     """Resolve every failed claim-map issue to one stable summary item."""
 
     claims = execution.state.summary.get("claim_evidence_map")
-    if not isinstance(claims, list) or not execution.target.issues:
+    target_issues = _summary_repair_issues(execution.target)
+    if not isinstance(claims, list) or not target_issues:
         return None
     grouped: Dict[int, List[RegenerationIssue]] = {}
-    for issue in execution.target.issues:
+    for issue in target_issues:
         identity = ""
         entity_match = re.fullmatch(r"summary_claim:(.+)", _s(issue.entity_id).strip())
         affected_match = re.match(
@@ -3139,6 +3140,17 @@ def _summary_claim_map_targets(
             return None
         grouped.setdefault(matches[0], []).append(issue)
     return [(index, claims[index], issues) for index, issues in sorted(grouped.items())]
+
+
+def _summary_repair_issues(target: RegenerationTarget) -> List[RegenerationIssue]:
+    """Keep summary repair claims inside the planner's blocking scope."""
+
+    blocking_issues = [
+        issue
+        for issue in target.issues
+        if str(issue.severity or "").strip().lower() == "error"
+    ]
+    return blocking_issues or list(target.issues)
 
 
 def _regenerate_summary_claim_map_items(

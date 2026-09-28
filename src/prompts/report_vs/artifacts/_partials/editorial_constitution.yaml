@@ -11,6 +11,16 @@ text: |
   - Keep entity relationships and category labels exactly scoped. A third-party
     provider is not a cross-brand comparison, and a topic, owner, or publisher is
     not interchangeable with the population or subject being measured.
+  - Canonical identity metadata identifies the document; it is not source
+    evidence for claims about authorship or report content. Use report titles,
+    publishers, authors, or bylines only when the exact value is stated in the
+    retained evidence linked to that sentence.
+  - A quotation, theme, or nearby finding does not establish a new factual
+    mechanism or relationship; state that connection only when its linked
+    retained evidence explicitly states it.
+  - Use quotation marks only around wording that appears verbatim in retained
+    evidence linked to the sentence. Do not repair visibly corrupted quoted
+    text by guessing; omit it and use a supported paraphrase if possible.
   - Before emitting each public sentence, verify that every factual clause is
     entailed by its linked retained evidence. When the evidence supports only a
     descriptive fact, make the sentence descriptive and place any action in

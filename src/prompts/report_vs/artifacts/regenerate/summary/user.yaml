@@ -1,4 +1,5 @@
 includes:
+  - "report_vs/artifacts/_partials/editorial_constitution.yaml"
   - "report_vs/artifacts/regenerate/_partials/critique_first.yaml"
   - "report_vs/artifacts/regenerate/_partials/repair_decision_contract.yaml"
 text: |

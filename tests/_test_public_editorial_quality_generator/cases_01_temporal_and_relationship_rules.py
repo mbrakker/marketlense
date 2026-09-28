@@ -674,3 +674,23 @@ def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown
     )
 
     assert explanation == ""
+
+
+def test_rounded_combined_categories_accept_past_tense_source_relationship() -> None:
+    evidence = (
+        "Display and CTV together account for a reported 77% of spend. "
+        "Displayed average budget shares for 2025: Display 45.85%; "
+        "CTV 30.83%; Video 7.51%; Native 6.13%; DOOH 3.53%; "
+        "Audio 3.86%; OTT 1.63%."
+    )
+    claim = (
+        "In StackAdapt's 2025 retail programmatic channel data, Display and CTV "
+        "together accounted for a reported 77% of programmatic media spend."
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="stackadapt-rounded-channel-share",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)

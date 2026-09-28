@@ -197,12 +197,14 @@ When evidence supports a Decision Brief, it serves a distinct role from the Exec
 
 LinkedIn output uses the persisted editorial plan as its primary thematic frame,
 then final representative insights and the metric spine as evidence. It targets
-180–280 words (with the retained 500-word hard maximum), opens on one concrete
-report-backed angle, attributes a known publisher naturally, and limits normal
-posts to four quantitative proof points. Broad reports identify the post as a
-representative lens rather than a complete recap; narrow reports may state the
-whole thesis. The prompt retains factual grounding and clean paragraph
-construction. At the public rendering boundary, the LinkedIn-only sanitizer
+180–280 words (with the retained 500-word hard maximum), opens on one concrete,
+source-backed angle, and limits normal posts to four quantitative proof points.
+Publisher names, report titles, and dates may be included only when the exact
+linked retained evidence establishes the detail; report identity metadata alone
+is not evidence for an editorial claim. Selected themes are not described as a
+representative lens unless the retained evidence supports that characterization.
+Factual prose uses the canonical sentence grid for provenance, and quotations
+remain verbatim. At the public rendering boundary, the LinkedIn-only sanitizer
 removes internal identifiers, placeholders, truncation-marked output, bullets,
 and Markdown constructs while preserving newline and paragraph structure for
 the existing `white-space: pre-line` presentation. It does not alter Expert

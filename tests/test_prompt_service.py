@@ -238,6 +238,25 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
         ),
         _ctx(),
     )
+    expert_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/expert_comment",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    regeneration_prompts = [
+        load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=f"report_vs/artifacts/regenerate/{family}",
+                force_reload=True,
+            ),
+            _ctx(),
+        )
+        for family in ("summary", "expert_comment", "linkedin_post")
+    ]
 
     assert (
         "State that a dataset represents or comes from a specific population only when "
@@ -256,9 +275,31 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
         "Do not describe the post or selected theme as representative or as a lens"
         in linkedin_prompt.user.text
     )
+    for prompt in (
+        summary_prompt,
+        expert_prompt,
+        linkedin_prompt,
+        *regeneration_prompts,
+    ):
+        normalized_text = " ".join(prompt.user.text.split())
+        assert "Canonical identity metadata identifies the document" in normalized_text
+        assert (
+            "A quotation, theme, or nearby finding does not establish a new factual"
+            in normalized_text
+        )
     assert (
-        "When canonical `publisher_name` is empty, omit publisher attribution" in
-        linkedin_prompt.user.text
+        "Use quotation marks only around wording that appears verbatim in retained"
+        in " ".join(linkedin_prompt.user.text.split())
+    )
+    assert "Do not repair visibly corrupted quoted text by guessing" in (
+        " ".join(linkedin_prompt.user.text.split())
+    )
+    normalized_regeneration_linkedin = " ".join(
+        regeneration_prompts[2].user.text.split()
+    )
+    assert (
+        "Do not call it representative or a lens unless linked retained evidence"
+        in normalized_regeneration_linkedin
     )
 
 
