@@ -351,3 +351,56 @@ passed. The documentation checker still reports 12 invalid heading anchors
 in the untouched `docs/quality/simplification.md`; it reported no missing
 anchor in this measurement pack. The E13 rerun, five-report cohort, and IAS
 canary commands and retained result hashes are in the linked JSON record.
+
+### 2026-09-28 finalization verification at `b1a6a39e`
+
+The finalizer and its regression tests were already present on `main`; this
+follow-up verified them at implementation SHA
+`b1a6a39e203f045487fda07967e763c12cc77825`. It reran the unchanged three E13
+manifests and replayed four retained Mobile/DoubleVerify candidate snapshots
+without a model. It reused the fresh five-report cohort and isolated IAS run
+at the same SHA. Publication stayed disabled, and the full 20-report cohort
+was not run. Sanitized identities, hashes, outcomes, and counts are retained
+in [`2026-09-28-b1a6a39e-postrepair-finalization-measurement.json`](2026-09-28-b1a6a39e-postrepair-finalization-measurement.json).
+
+| E13 measure | Previous (`f9aee164`) | Current (`b1a6a39e`) |
+| --- | ---: | ---: |
+| Derived-projection errors | 0 | 0 |
+| Deterministic-dependent scope violations | 0 | 0 |
+| Unsupported evidence introduction attempts in repair candidates | 0 | 2, both candidate-scoped |
+| Provenance or evidence-lineage introductions | 0 | 0 |
+| Removed-insight reintroductions | 0 | 0 |
+| Candidate validations / promotions | 2 / 2 | 6 / 2 |
+| Strict success@1 / success@3 | 0/2 / 0/2 | 0/3 / 0/3 |
+| Calls / input tokens / output tokens / estimated cost | 46 / 366,644 / 199,619 / $0.131074 | 69 / 528,051 / 276,017 / $0.181613 |
+
+Two source-root scope violations in A21 were rejected; they are separate from
+deterministic-dependent scope. The four retained historical snapshots had two
+canonical projection findings and two dependent-scope violations before
+finalization, then zero of each afterward. All four repeated finalizations
+were idempotent and verified 65 paths. Claim-support findings already present
+in those rolled-back snapshots stayed blocking; finalization introduced no
+unsupported claim/evidence lineage, provenance sentence hash, or removed
+insight. The offline replay made zero provider calls.
+
+The fresh five-report run at this SHA admitted all five reports and materialized
+five final packages bound to their final artifact and readiness hashes. Three
+reports passed readiness. Merchant Risk Council and StackAdapt remain blocked
+by one and two unresolved factual claims respectively; neither package has an
+unsupported factual claim. There were zero typed pre-package failures, zero
+unexplained `package_missing`, zero `package_invalid`, and zero readiness
+provider calls. Compared with the `f9aee164` run, eligible reports and packages
+changed from 4/4 to 5/5, readiness passes from 0 to 3, and unresolved claims
+across packages from 73 to 3. The current cohort used 169 calls, 1,409,278
+input tokens, 406,635 output tokens, and estimated `$0.331802`.
+
+The isolated IAS run materialized a bound final package, then stopped at
+readiness with `publish_readiness_failed` for two unresolved factual claims and
+zero unsupported claims. It used 44 calls, 277,313 input tokens, 79,181 output
+tokens, and estimated `$0.066176`; readiness used zero provider calls.
+
+The focused deterministic finalization, provenance, candidate-scope, and
+regeneration suite passed 117 tests. The E13 scorecard's A21 repair-only usage
+attribution was unavailable; the full-run totals above come from its isolated
+cost ledger. Provider outcomes and E13 denominators vary between runs and are
+reported as observations, not causal estimates.
