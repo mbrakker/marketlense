@@ -16,6 +16,9 @@ from src.generators.validation.regeneration_candidate import (
     retained_claim_repair_issues,
 )
 from src.generators.validation_generator import validate_report
+from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
+    _build_regeneration_plan,
+)
 from tests._test_validation_generator._shared import (
     FakeAnalysisStore,
     FakeOpenAI,
@@ -629,12 +632,89 @@ def test_stale_report_grounding_is_not_reused_for_current_retained_claim(
     assert len(reuse_requests) == 1
     assert len(model_client.requests) == 1
     assert any(
-        issue.severity == "warning"
+        issue.severity == "error"
         and "[factual_claim|not_established]" in issue.message
         for issue in issues
     )
     assert captured_packages[0].results[0].status == "unresolved"
     assert captured_packages[0].results[0].semantic_outcome == "not_established"
+
+
+def test_unresolved_retained_soft_copy_claim_blocks_report_validation(tmp_path) -> None:
+    sentence = "The report documents wallet use across retail checkout channels."
+    claim_id = "soft_copy:expert_comment:unresolved"
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id=claim_id,
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "expert_comment": sentence,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    request = replace(
+        _retained_request(),
+        artifacts=artifacts,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {"id": "f1", "text": "Wallet use is discussed in checkout."}
+                ]
+            }
+        },
+    )
+    provider_item_id = grounding_payload(request, artifacts)[
+        "retained_claims_to_ground"
+    ][0]["item_id"]
+    model_client = FakeOpenAI(
+        grounding_payload={
+            "unsupported": [],
+            "checks": [
+                {
+                    **_grounding_check(provider_item_id, sentence, "not_established"),
+                    "section": "expert_comment",
+                }
+            ],
+        }
+    )
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+    )
+
+    unresolved = [
+        issue
+        for issue in issues
+        if "[factual_claim|not_established]" in issue.message
+    ]
+    assert len(unresolved) == 1
+    assert unresolved[0].severity == "error"
+    assert unresolved[0].affected_section == "expert_comment"
+    assert unresolved[0].entity_id == claim_id
+    plan = _build_regeneration_plan(
+        issues=unresolved,
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+    assert plan.mode == "targeted"
+    assert plan.targets[0].target_section == "expert_comment"
+    assert plan.targets[0].allowed_paths == ["expert_comment[claim_index=0]"]
 
 
 def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
@@ -741,7 +821,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
         analysis_store=analysis_store,
     )
 
-    assert report.status == "pass"
+    assert report.status == "fail"
     package_entry = next(
         item
         for item in analysis_store.stored

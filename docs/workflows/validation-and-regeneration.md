@@ -43,10 +43,12 @@ evidence-ID, quote, numeric, and protected-fact checks but remain semantically
 undecidable enter the existing report-level grounding batch, with their exact
 linked evidence. That batch returns `entailed`, `contradicted`, or
 `not_established`; these map to supported, unsupported, and unresolved
-respectively. An unresolved result remains a warning and does not become a
-factual contradiction. Missing or invalid provenance and mechanically proven
-source-fidelity failures remain blocking. The check uses retained evidence only
-and does not contain publisher- or report-specific exceptions.
+respectively. An unresolved retained factual claim is a blocking validation
+finding and carries its exact claim identity into the existing claim-scoped
+repair path. It remains typed as unresolved; it is not relabeled as a factual
+contradiction. Missing or invalid provenance and mechanically proven
+source-fidelity failures also remain blocking. The check uses retained evidence
+only and does not contain publisher- or report-specific exceptions.
 
 Grounding uses the existing `report_vs/validate/grounding` prompt family and one
 report-level execution for all unresolved retained claims. Each returned claim

@@ -571,6 +571,7 @@ def run_grounding_check(
             )
         )
         failed_check_keys = set()
+        retained_claim_item_ids = set(retained_item_ids.values())
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
@@ -609,6 +610,10 @@ def run_grounding_check(
                     else ""
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
+                retained_claim_not_established = (
+                    unresolved
+                    and s(entry.get("item_id")) in retained_claim_item_ids
+                )
                 issues.append(
                     issue(
                         rule_id=RULE_ID,
@@ -616,7 +621,11 @@ def run_grounding_check(
                             f"[factual_claim|{violation_type}]"
                             f" {reason}.{dimension_text}: {text[:200]}"
                         ),
-                        severity="warning" if unresolved else "error",
+                        severity=(
+                            "warning"
+                            if unresolved and not retained_claim_not_established
+                            else "error"
+                        ),
                         section=section,
                         violation_type=violation_type,
                         entity_id=_public_item_id_for_failure(
