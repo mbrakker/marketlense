@@ -173,3 +173,46 @@ errors in untouched `claim_validation_generator.py` and
 `publish_readiness_generator.py`. Full raw workflow state remains under ignored
 `tmp/`; committed measurements contain only sanitized identities, hashes,
 rule IDs, typed outcomes, and scalar metrics.
+
+### 2026-09-28 post-repair finalization rerun
+
+The follow-up ran the unchanged three-manifest E13 frozen corpus, the pinned
+five-report cohort, and one isolated IAS canary. It did not run the full
+20-report cohort. The exact per-run evidence, identity hashes, package hashes,
+and typed outcomes are recorded in
+[`2026-09-28-0be495a9-postrepair-finalization-measurement.json`](2026-09-28-0be495a9-postrepair-finalization-measurement.json).
+
+| E13 measure | Before (`a7fd7aca`) | After (`0be495a9`) |
+| --- | ---: | ---: |
+| Derived-projection errors | 0 | 0 |
+| Deterministic-dependent scope violations | 0 | 0 |
+| Unsupported-evidence introductions | 0 | 0 |
+| Provenance/lineage introductions | 0 | 0 |
+| Removed-insight reintroductions | 1, blocked | 1, blocked |
+| Candidate validations / promotions | 8 / 0 | 6 / 0 |
+| Success@1 / success@3 | 0/3 / 0/3 | 0/3 / 0/3 |
+| Calls / input tokens / output tokens / estimated cost | 39 / 1,021,678 / 48,875 / $0.120091 | 35 / 799,767 / 159,178 / $0.154546 |
+
+The live E13 denominator and model output vary between runs, so these are
+observations rather than causal estimates. Four retained Mobile and
+DoubleVerify candidate snapshots were also replayed without a model: six
+projection findings, 720 changed-path scope violations, six provenance
+findings, one claim-support finding, and one number/value/unit finding were
+detected in the historical rolled-back candidates.
+
+The pinned cohort admitted all five reports. Three were eligible and all three
+materialized final packages; two reports ended with typed pre-package failures.
+There were zero unexplained `package_missing`, zero `package_invalid`, two
+`not_publishable`, one readiness pass, and zero provider calls during
+readiness. Merchant Risk Council now has a package bound to its final artifact
+and source identity; readiness blocks it for three unresolved factual claims.
+Deloitte remains blocked for one unsupported claim, and Emplifi passes
+readiness. The cohort used 134 calls, 1,359,596 input tokens, 285,626 output
+tokens, and estimated cost `$0.277995`. Publication and handoff were disabled.
+
+The isolated IAS canary stopped at semantic validation with typed
+`validation_failed` / `grounding` after bounded recovery failed to produce a
+substantive schema-valid artifact. It did not reach package materialization or
+readiness. It used 39 calls, 298,365 input tokens, 65,847 output tokens, and
+estimated cost `$0.062604`; publication was disabled. This is an upstream
+grounding failure and did not exercise finalization.

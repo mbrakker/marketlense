@@ -1,0 +1,232 @@
+{
+  "schema_version": "1.0",
+  "measurement_date": "2026-09-28",
+  "implementation_commit": "0be495a9a10d2dabc3842c1ebc27675c0d07fc1c",
+  "scope": {
+    "e13_frozen_manifest_sha256": {
+      "baseline-a21-five.json": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "baseline-mobile-editorial.json": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "baseline-doubleverify-linkedin-public-editorial.json": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a"
+    },
+    "pinned_five_report_manifest": "frozen_cohort.json",
+    "pinned_five_report_manifest_sha256": "5a2b8bc4dd7c6d919f66770437c83439233e4671c2c673de9dbb30dc5086cc04",
+    "reports": [
+      "Merchant Risk Council",
+      "Deloitte",
+      "Emplifi",
+      "StackAdapt",
+      "DoubleVerify"
+    ],
+    "full_20_report_cohort_run": false,
+    "publication_enabled": false,
+    "fresh_isolated_state": true
+  },
+  "deterministic_finalization_before_after": {
+    "before_commit": "a7fd7aca7eedbb6d27dec11c100cc344ee7dc653",
+    "after_commit": "0be495a9a10d2dabc3842c1ebc27675c0d07fc1c",
+    "e13_before": {
+      "cases": 7,
+      "historically_reproducible_chains": 3,
+      "no_longer_reproducible": 4,
+      "derived_projection_errors": 0,
+      "deterministic_dependent_scope_violations": 0,
+      "unsupported_evidence_introductions": 0,
+      "provenance_or_lineage_introductions": 0,
+      "removed_insight_reintroductions": 1,
+      "candidate_validations": 8,
+      "promotions": 0,
+      "success_at_1": "0/3",
+      "success_at_3": "0/3",
+      "provider_calls": 39,
+      "input_tokens": 1021678,
+      "output_tokens": 48875,
+      "estimated_cost_usd": 0.120091
+    },
+    "e13_after": {
+      "cases": 7,
+      "historically_reproducible_chains": 3,
+      "no_longer_reproducible": 4,
+      "derived_projection_errors": 0,
+      "deterministic_dependent_scope_violations": 0,
+      "unsupported_evidence_introductions": 0,
+      "provenance_or_lineage_introductions": 0,
+      "removed_insight_reintroductions": 1,
+      "removed_insight_reintroduction_outcome": "blocked; candidate rolled back",
+      "candidate_validations": 6,
+      "promotions": 0,
+      "success_at_1": "0/3",
+      "success_at_3": "0/3",
+      "provider_calls": 35,
+      "input_tokens": 799767,
+      "output_tokens": 159178,
+      "estimated_cost_usd": 0.154546,
+      "usage_attribution": "Aggregate of isolated run ledgers; repair attribution is incomplete for the Mobile manifest"
+    },
+    "e13_runs": [
+      {
+        "manifest": "baseline-a21-five.json",
+        "run": "tmp/e13-postrepair-0be495a9/a21",
+        "stdout_sha256": "3c50651b92a6cd8c273feed39f52ceafa3244d3c395ae489f5ab5cc30cc9b1a0",
+        "cases": 5,
+        "reproducible": 1,
+        "no_longer_reproducible": 4,
+        "candidate_validations": 2,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 27,
+        "input_tokens": 752564,
+        "output_tokens": 153644,
+        "estimated_cost_usd": 0.148697
+      },
+      {
+        "manifest": "baseline-mobile-editorial.json",
+        "run": "tmp/e13-postrepair-0be495a9/mobile",
+        "stdout_sha256": "0f1a74a1281b255ec169e12b626fba29274462ac3186e9511a6e5cebc0529765",
+        "cases": 1,
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "candidate_validations": 3,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 3,
+        "input_tokens": 27400,
+        "output_tokens": 3648,
+        "estimated_cost_usd": 0.003545
+      },
+      {
+        "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+        "run": "tmp/e13-postrepair-0be495a9/doubleverify",
+        "stdout_sha256": "fa9ca67d889d810d73b81020d388f35ca99e38e040db9a5b3df24989a5c9fc62",
+        "cases": 1,
+        "reproducible": 1,
+        "no_longer_reproducible": 0,
+        "candidate_validations": 1,
+        "promotions": 0,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "provider_calls": 5,
+        "input_tokens": 19803,
+        "output_tokens": 1886,
+        "estimated_cost_usd": 0.002304
+      }
+    ],
+    "retained_candidate_fixture_replay": {
+      "run": "tmp/offline-finalization-fixture-replay-0be495a9.json",
+      "sha256": "1a34ab8185c529eb98158c77a71a70099169bcd3452c2edf2f5fd64ade087c50",
+      "implementation_commit": "0be495a9a10d2dabc3842c1ebc27675c0d07fc1c",
+      "fixtures": 4,
+      "provider_calls": 0,
+      "derived_projection_findings": 6,
+      "changed_path_scope_violations": 720,
+      "provenance_findings": 6,
+      "claim_support_findings": 1,
+      "number_value_unit_findings": 1,
+      "historical_promotions": 0,
+      "note": "Two retained Mobile and two DoubleVerify candidate snapshots were replayed through current deterministic validators. Findings describe those historical snapshots, not the six newly validated E13 candidates."
+    },
+    "interpretation": "The E13 denominator and model outputs vary between live replays. Current and prior runs both show zero projection, scope, unsupported-evidence, and provenance/lineage introductions; both block one removed-insight reintroduction; neither promotes a candidate. The lower current call and input-token totals and higher output-token cost are observations, not causal estimates."
+  },
+  "pinned_five_report_cohort": {
+    "run": "tmp/retained-claim-package-lifecycle-5-0be495a9/frozen-reliability-i2z6xll6",
+    "stdout_sha256": "7832970186c7937e4b503df1f99dd42e09383f1fbb180a179318cb3c8e4cd8e8",
+    "cohort_result_sha256": "e2590f88d56afcd4584c140a5b9358736621a6c58b18d2d9c7ee717f375309ff",
+    "implementation_commit": "0be495a9a10d2dabc3842c1ebc27675c0d07fc1c",
+    "reports_admitted": 5,
+    "reports_eligible_for_final_packages": 3,
+    "final_packages_materialized": 3,
+    "legitimate_pre_package_failures": 2,
+    "unexplained_package_missing": 0,
+    "package_invalid": 0,
+    "not_publishable": 2,
+    "readiness_passes": 1,
+    "provider_calls_during_readiness": 0,
+    "publication_disabled": true,
+    "publication_or_handoff_attempts": 0,
+    "duration_seconds": 1989.226,
+    "provider_calls": 134,
+    "input_tokens": 1359596,
+    "output_tokens": 285626,
+    "estimated_cost_usd": 0.277995,
+    "eligible_reports": [
+      {
+        "publisher": "Merchant Risk Council",
+        "source_md5": "11b0b55157f7d0636815ad72435e1cf5",
+        "report_id": "cohort-11b0b55157f7d0636815",
+        "final_artifact_sha256": "9728211f79e447a7b92293826de904ebe157f40dd52e762b817cf712abfeaa85",
+        "package_sha256": "da8afd8c60d87cb09a8b7fe76c1bf121fc4f7be90fdc693570285babaf85fa0a",
+        "readiness": "not_publishable",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 3
+      },
+      {
+        "publisher": "Deloitte",
+        "source_md5": "b10ed6c82b76739a806a9f10ec0b9723",
+        "report_id": "cohort-b10ed6c82b76739a806a",
+        "final_artifact_sha256": "19bd40b481b876c6b60791990f05c472b710a4d074f6448bc22a7cf34333f1ae",
+        "package_sha256": "c65c8183b9e620e4403a6aa0f40e6fbb1761ed7237dc8603d9606685a38adb0b",
+        "readiness": "not_publishable",
+        "unsupported_factual_count": 1,
+        "unresolved_factual_count": 0
+      },
+      {
+        "publisher": "Emplifi",
+        "source_md5": "f62048b469dd784e6e7c0349c8b92f9b",
+        "report_id": "cohort-f62048b469dd784e6e7c",
+        "final_artifact_sha256": "ebcd3212475535553134e572b80d8c0238461d0a333964f94d9aa628723f0884",
+        "package_sha256": "0e8cd86fd3c8449d2b3c48f772d782003c2653763be4d4ef590e8284a3f98b48",
+        "readiness": "pass",
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      }
+    ],
+    "pre_package_failures": [
+      {
+        "publisher": "StackAdapt",
+        "report_id": "cohort-8ef1021c332aa85ba008",
+        "terminal_reason": "validation_failed",
+        "stage": "semantic_validation",
+        "validator_rule": "grounding"
+      },
+      {
+        "publisher": "DoubleVerify",
+        "report_id": "cohort-e854b71d6fb10333b47f",
+        "terminal_reason": "insight_safe_removal_no_replacement",
+        "stage": "report_pipeline"
+      }
+    ],
+    "mrc_regression": "MRC now materializes a package bound to its final artifact and source identity. Readiness remains blocked for three unresolved factual claims; it does not fail as package_missing."
+  },
+  "isolated_ias_canary": {
+    "run": "tmp/ias-postrepair-canary-0be495a9/ias-first-attempt-raio3gqo",
+    "stdout_sha256": "c90dc13709cd0721dfb2ee2518646cf38e1c23fe7808dd73dfc5227f4b93cbcf",
+    "source_sha256": "8b05b13067748baebff51844a702a05dd6eb560706db5fa94b2ee5badbd672cd",
+    "implementation_commit": "0be495a9a10d2dabc3842c1ebc27675c0d07fc1c",
+    "publisher": "Integral Ad Science",
+    "fresh_isolated_state": true,
+    "publication_disabled": true,
+    "final_state": "failed",
+    "stage": "semantic_validation",
+    "terminal_reason": "validation_failed",
+    "validator_rule": "grounding",
+    "failure": "validation_grounding did not produce a substantive schema-valid JSON artifact after bounded recovery",
+    "provider_calls": 39,
+    "input_tokens": 298365,
+    "output_tokens": 65847,
+    "estimated_cost_usd": 0.062604,
+    "duration_seconds": 484.34,
+    "final_package_materialized": false,
+    "readiness_evaluated": false,
+    "publication_attempts": 0
+  },
+  "verification": {
+    "focused_test_command": "pytest tests/test_claim_validation_generator.py tests/test_grounding_semantic_outcomes.py tests/test_grounding_protected_facts.py tests/test_grounding_editorial_interpretation.py tests/test_grounding_cohort_false_positive_regressions.py tests/test_validation_generator.py tests/test_publish_readiness_gate.py tests/test_publish_readiness_refresh.py tests/test_publish_readiness_refresh_measurement.py tests/test_regeneration_finalization.py tests/test_regeneration_candidate.py tests/test_soft_copy_claim_provenance.py tests/test_retained_claim_grounding.py tests/test_report_generation_execution_policy.py -q",
+    "focused_tests": "369 passed",
+    "forbidden_patching_gate": "passed",
+    "architecture_import_gate": "passed",
+    "documentation_gate": "12 pre-existing invalid anchors in untouched docs/quality/simplification.md",
+    "ruff_check_changed_test_file": "passed with E501 ignored",
+    "readiness_provider_events": 0
+  }
+}
