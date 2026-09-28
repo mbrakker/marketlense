@@ -280,3 +280,58 @@ lineage suite passed 550 tests. Contract, architecture, service-boundary,
 forbidden-patching, public-report-quality, and scoped Ruff checks passed. The
 documentation checker still reports 12 pre-existing invalid anchors in the
 untouched `docs/quality/simplification.md`.
+
+### 2026-09-28 retained-provenance deduplication rerun
+
+The follow-up implementation is `f9aee1642b89439646017367f56999681f1e9348`.
+It reran the unchanged three-manifest E13 corpus, the pinned five-report
+cohort, and one isolated IAS canary from fresh state with publication disabled.
+The full 20-report cohort was not run. Sanitized per-run counts, identity and
+artifact hashes, and terminal reasons are retained in
+[`2026-09-28-f9aee164-postrepair-finalization-measurement.json`](2026-09-28-f9aee164-postrepair-finalization-measurement.json).
+
+| E13 measure | Previous (`a211add3`) | Current (`f9aee164`) |
+| --- | ---: | ---: |
+| Derived-projection errors in live candidate audits | 0 | 0 |
+| Deterministic-dependent scope violations | 0 | 0 |
+| Unsupported-claim or evidence-lineage introductions | 0 | 0 |
+| Provenance/lineage introductions | 0 | 0 |
+| Removed-insight reintroductions | 0 | 0 |
+| Candidate validations / promotions | 2 / 2 | 2 / 2 |
+| Strict success@1 / success@3 | 0/2 / 0/2 | 0/2 / 0/2 |
+| Calls / input tokens / output tokens / estimated cost | 45 / 343,217 / 193,333 / $0.125589 | 46 / 366,644 / 199,619 / $0.131074 |
+
+The four retained Mobile and DoubleVerify snapshots were replayed without a
+provider. Before finalization, Mobile attempt 2 had two deterministic
+projection findings and two dependent-scope violations; after finalization all
+four snapshots had zero projection findings, zero scope violations, and zero
+provenance-coverage failures. All four reruns were idempotent and reported 65
+verified finalized paths in total. The two live E13 candidates passed mutation
+scope and evidence-lineage checks and introduced no failure categories, but
+their strict E13 success score remained 0/2 because residual historical
+fingerprints persisted. These live results vary between runs and are
+observations, not causal estimates.
+
+The five-report run admitted all five sources. Deloitte, Emplifi, StackAdapt,
+and DoubleVerify each received a final package whose artifact hash matched the
+lineage `final_artifact_hash`; all four remain `not_publishable` with unresolved
+claims (73 total, zero unsupported claims). Merchant Risk Council terminated
+before package materialization with `validation_failed` at semantic grounding.
+Thus four package-eligible reports materialized four packages, with zero
+unexplained `package_missing`, zero `package_invalid`, zero readiness passes,
+and zero provider calls during readiness. All five outcomes were typed; no
+publication or handoff was attempted. The run used 187 calls, 1,596,576 input
+tokens, 473,571 output tokens, and estimated cost `$0.384146`.
+
+The IAS canary passed validation and materialized a package bound to its final
+artifact, then stopped at readiness with `publish_readiness_failed`: 15 factual
+claims remained unresolved and none were classified unsupported. It used 47
+calls, 302,277 input tokens, 101,352 output tokens, and estimated cost
+`$0.076993`. Readiness made zero provider calls; publication remained disabled.
+
+The focused deterministic finalization/provenance/scope suite passed 169 tests.
+Ruff, formatting, forbidden-patching, architecture-import, and diff checks
+passed. The documentation checker still reports 12 invalid heading anchors
+in the untouched `docs/quality/simplification.md`; it reported no missing
+anchor in this measurement pack. The E13 rerun, five-report cohort, and IAS
+canary commands and retained result hashes are in the linked JSON record.
