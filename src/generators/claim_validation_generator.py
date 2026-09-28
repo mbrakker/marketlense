@@ -691,6 +691,7 @@ def _semantic_inputs(
     source_identity: str,
 ) -> list[ClaimSemanticInput]:
     inputs: list[ClaimSemanticInput] = []
+    seen_semantic_identities: set[tuple[object, ...]] = set()
     for result in results:
         candidate = result.candidate
         if (
@@ -711,12 +712,29 @@ def _semantic_inputs(
             }
             for ref in refs
         ]
+        evidence_texts = [source_evidence[ref.evidence_id][1] for ref in refs]
+        evidence_hash = _hash(evidence_ids_and_hashes)
+        semantic_identity = (
+            candidate.claim_id,
+            candidate.source_family,
+            candidate.text,
+            candidate.text_hash,
+            candidate.kind,
+            candidate.factual,
+            tuple(candidate.evidence_references),
+            tuple(evidence_texts),
+            evidence_hash,
+            source_identity,
+        )
+        if semantic_identity in seen_semantic_identities:
+            continue
+        seen_semantic_identities.add(semantic_identity)
         inputs.append(
             ClaimSemanticInput(
                 schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                 candidate=candidate,
-                evidence_texts=[source_evidence[ref.evidence_id][1] for ref in refs],
-                evidence_hash=_hash(evidence_ids_and_hashes),
+                evidence_texts=evidence_texts,
+                evidence_hash=evidence_hash,
                 source_identity=source_identity,
             )
         )

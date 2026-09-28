@@ -64,6 +64,14 @@ public projection hash and source lineage, and writes the canonical
 `retained_claim_validation` package. A candidate with changed inputs or stale
 execution identity is rejected.
 
+The grounding output budget is explicitly set to 8,192 tokens because the
+report-level response must include a complete structured check for every unique
+retained claim. Byte-identical claims with the same evidence and source identity
+share one semantic input and result; a reused or newly generated payload with a
+missing, duplicate, or identity-mismatched check is rejected for reuse or enters
+the existing bounded structured-output recovery. It cannot produce an accepted
+claim package.
+
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and
 unresolved material factual claims both block release, with separate counts;

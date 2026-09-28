@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, replace
 
 import pytest
@@ -8,6 +9,10 @@ import src.generators.claim_validation_generator as claim_validation
 from src.contracts.claim_validation import (
     ClaimSemanticGroundingResult,
     ClaimSemanticValidationIdentity,
+)
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationReport
 from src.generators.claim_validation_generator import validate_retained_claims
@@ -138,6 +143,97 @@ def test_retained_claim_batch_grounding_collects_unresolved_claims_once() -> Non
         "summary_claim:claim-1",
         "summary_claim:claim-2",
     }
+
+
+def test_identical_soft_copy_claims_share_one_semantic_result() -> None:
+    text = "Retailers increasingly support wallet checkout."
+    text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    artifacts = {
+        "summary": {"tldr": text, "executive_summary": text},
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="summary",
+                    claim_id=f"soft_copy:summary:{text_hash[:16]}",
+                    text_hash=text_hash,
+                    classification="factual",
+                    evidence_ids=("f1",),
+                    source_spans=(),
+                    producing_prompt_identity={"namespace": "test/summary"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            ]
+        ),
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+            ]
+        }
+    }
+    calls = []
+
+    def ground_batch(claims):
+        calls.append(claims)
+        return [_semantic_result(claim, "entailed") for claim in claims]
+
+    package = validate_retained_claims(
+        artifacts,
+        evidence,
+        semantic_batch_validator=ground_batch,
+        source_identity="source-1",
+    )
+
+    assert len(package.results) == 2
+    assert len(calls) == 1
+    assert len(calls[0]) == 1
+    assert [result.status for result in package.results] == ["supported", "supported"]
+    assert all(
+        result.semantic_execution_identity == "execution-1"
+        for result in package.results
+    )
+
+
+def test_conflicting_claim_inputs_with_same_id_remain_blocked() -> None:
+    text = "Wallet use is becoming a common checkout method across retailers."
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {"id": "duplicate", "claim": text, "evidence_id": "f1"},
+                {"id": "duplicate", "claim": text, "evidence_id": "f2"},
+            ]
+        }
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": "Wallet use is becoming a common method."},
+                {"id": "f2", "text": "Wallet checkout has grown among retailers."},
+            ]
+        }
+    }
+    calls = []
+
+    def ground_batch(claims):
+        calls.append(claims)
+        return [_semantic_result(claim, "entailed") for claim in claims]
+
+    package = validate_retained_claims(
+        artifacts,
+        evidence,
+        semantic_batch_validator=ground_batch,
+        source_identity="source-1",
+    )
+
+    assert len(calls) == 1
+    assert len(calls[0]) == 2
+    assert [result.status for result in package.results] == ["unresolved", "unresolved"]
+    assert {
+        result.semantic_disagreement for result in package.results
+    } == {"ambiguous_semantic_input_identity"}
 
 
 def test_retained_claim_deterministic_support_and_contradiction_bypass_semantics() -> (

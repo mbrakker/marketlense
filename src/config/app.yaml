@@ -409,6 +409,19 @@ llm_execution_policies:
     structured_output_mode: json_object
     fallback_policy: same_provider_only
     pricing_key: "gpt-6-luna"
+  report_vs/validate/grounding:
+    schema_version: "1.0"
+    provider: openai
+    model: "gpt-6-luna"
+    reasoning_effort: high
+    seed_policy: inherit
+    max_output_tokens: 8192
+    retrieval_mode: inherit
+    timeout_seconds: 600
+    provider_retry_count: 0
+    structured_output_mode: json_object
+    fallback_policy: same_provider_only
+    pricing_key: "gpt-6-luna"
   report_vs/taxonomy:
     schema_version: "1.0"
     provider: openai

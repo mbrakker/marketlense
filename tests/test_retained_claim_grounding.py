@@ -202,6 +202,121 @@ def test_reused_report_grounding_maps_semantics_and_current_identity(tmp_path) -
     )
 
 
+def test_incomplete_reusable_grounding_is_rejected_and_revalidated(tmp_path) -> None:
+    request = _retained_request()
+    item_id = "summary_claim:claim-1"
+    text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    model_client = FakeOpenAI(
+        grounding_payload={
+            "unsupported": [],
+            "checks": [_grounding_check(item_id, text, "entailed")],
+        }
+    )
+    captured_packages: list[ClaimValidationPackage] = []
+
+    def incomplete_reader(_reuse_request, _ctx):
+        return SimpleNamespace(
+            reusable=True,
+            reason="compatible_retained_output",
+            output_payload={"unsupported": [], "checks": []},
+        )
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+        source_id=request.source_id,
+        prompt_family_reuse_reader=incomplete_reader,
+        prompt_family_materializer=lambda *_: None,
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert issues == []
+    assert len(model_client.requests) == 1
+    assert captured_packages[0].results[0].status == "supported"
+
+
+def test_incomplete_grounding_output_exhausts_existing_bounded_recovery(
+    tmp_path,
+) -> None:
+    request = _retained_request()
+    model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": []})
+    captured_packages: list[ClaimValidationPackage] = []
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert len(model_client.requests) == 3
+    assert captured_packages == []
+    assert len(issues) == 1
+    assert issues[0].rule_id == "grounding"
+    assert issues[0].severity == "error"
+    assert (
+        "did not produce a substantive schema-valid JSON artifact" in issues[0].message
+    )
+
+
+def test_conflicting_claim_identity_fails_before_provider_call(tmp_path) -> None:
+    request = _retained_request()
+    text = request.artifacts["summary"]["claim_evidence_map"][0]["claim"]
+    request = replace(
+        request,
+        artifacts={
+            "summary": {
+                "claim_evidence_map": [
+                    {"id": "duplicate", "claim": text, "evidence_id": "f1"},
+                    {"id": "duplicate", "claim": text, "evidence_id": "f2"},
+                ]
+            }
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Wallet use is becoming a common checkout method.",
+                    },
+                    {"id": "f2", "text": "Wallet checkout has grown among retailers."},
+                ]
+            }
+        },
+    )
+    model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": []})
+    captured_packages: list[ClaimValidationPackage] = []
+
+    issues = run_grounding_check(
+        request=request,
+        settings=_settings(tmp_path),
+        grounding_use_vector_store=False,
+        evidence_texts=[],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        ctx=_ctx(),
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert model_client.requests == []
+    assert captured_packages == []
+    assert len(issues) == 1
+    assert issues[0].severity == "error"
+    assert "conflicting text or evidence" in issues[0].message
+
+
 def test_multiple_retained_claims_use_one_report_level_grounding_call(tmp_path) -> None:
     request = _retained_request()
     second_text = (

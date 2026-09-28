@@ -243,6 +243,19 @@ def run_grounding_check(
     )
     try:
         output_schema = provider_output_schema("grounding_validation_output")
+        _validate_semantic_input_identities(retained_claim_inputs)
+
+        def validate_grounding_payload(payload: object) -> None:
+            validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0",
+                    payload=payload,
+                    schema_name="grounding_validation_output",
+                ),
+                prompt_ctx,
+            )
+            _validate_grounding_check_coverage(payload, retained_claim_inputs)
+
         reused_payload = None
         if source_id and vector_provenance_verified:
             reuse = prompt_family_reuse_reader(
@@ -269,24 +282,33 @@ def run_grounding_check(
                 prompt_ctx,
             )
             if reuse.reusable:
-                validate_schema(
-                    SchemaValidateRequest(
-                        schema_version="1.0",
-                        payload=reuse.output_payload,
-                        schema_name="grounding_validation_output",
-                    ),
-                    prompt_ctx,
-                )
-                reused_payload = dict(reuse.output_payload)
-                logger.info(
-                    log_event(
-                        prompt_ctx,
-                        role="generator",
-                        event="grounding_prompt_family_reused",
-                        module=LOGGER_NAME,
-                        fields={"family_id": prompt_namespace, "reason": reuse.reason},
+                candidate_payload = dict(reuse.output_payload)
+                try:
+                    validate_grounding_payload(candidate_payload)
+                except AppError as exc:
+                    logger.info(
+                        log_event(
+                            prompt_ctx,
+                            role="generator",
+                            event="grounding_prompt_family_reuse_rejected",
+                            module=LOGGER_NAME,
+                            fields={"family_id": prompt_namespace, "reason": exc.code},
+                        )
                     )
-                )
+                else:
+                    reused_payload = candidate_payload
+                    logger.info(
+                        log_event(
+                            prompt_ctx,
+                            role="generator",
+                            event="grounding_prompt_family_reused",
+                            module=LOGGER_NAME,
+                            fields={
+                                "family_id": prompt_namespace,
+                                "reason": reuse.reason,
+                            },
+                        )
+                    )
         recovery_attempted = False
 
         def call_model(mode: str, original_response: str, schema_errors: str):
@@ -350,14 +372,7 @@ def run_grounding_check(
                 normalize_payload=lambda payload: (
                     dict(payload) if isinstance(payload, dict) else payload
                 ),
-                validate_payload=lambda payload: validate_schema(
-                    SchemaValidateRequest(
-                        schema_version="1.0",
-                        payload=payload,
-                        schema_name="grounding_validation_output",
-                    ),
-                    prompt_ctx,
-                ),
+                validate_payload=validate_grounding_payload,
                 is_substantive=lambda payload: (
                     isinstance(payload, dict) and "unsupported" in payload
                 ),
@@ -600,6 +615,77 @@ def run_grounding_check(
             )
         )
     return issues
+
+
+def _validate_semantic_input_identities(
+    semantic_inputs: Sequence[ClaimSemanticInput],
+) -> None:
+    """Reject claim IDs that name conflicting semantic grounding inputs."""
+
+    identities: dict[str, tuple[object, ...]] = {}
+    for semantic_input in semantic_inputs:
+        candidate = semantic_input.candidate
+        identity = (
+            candidate.source_family,
+            candidate.text,
+            candidate.text_hash,
+            candidate.kind,
+            candidate.factual,
+            tuple(candidate.evidence_references),
+            semantic_input.evidence_hash,
+            semantic_input.source_identity,
+        )
+        prior = identities.get(candidate.claim_id)
+        if prior is not None and prior != identity:
+            raise AppError(
+                code="grounding_claim_identity_ambiguous",
+                message=("A retained claim ID refers to conflicting text or evidence"),
+                retryable=False,
+                context={"missing_claim_ids": [candidate.claim_id]},
+            )
+        identities[candidate.claim_id] = identity
+
+
+def _validate_grounding_check_coverage(
+    payload: object,
+    semantic_inputs: Sequence[ClaimSemanticInput],
+) -> None:
+    """Require one exact structured check for each unique retained claim."""
+
+    if not isinstance(payload, dict):
+        return
+    expected = {
+        semantic_input.candidate.claim_id: semantic_input.candidate.text
+        for semantic_input in semantic_inputs
+    }
+    if not expected:
+        return
+    checks_by_id: dict[str, list[dict[str, Any]]] = {}
+    checks = payload.get("checks")
+    if isinstance(checks, list):
+        for check in checks:
+            if isinstance(check, dict) and s(check.get("item_id")):
+                checks_by_id.setdefault(s(check.get("item_id")), []).append(check)
+    missing_claim_ids = [
+        claim_id
+        for claim_id, text in expected.items()
+        if len(checks_by_id.get(claim_id, [])) != 1
+        or s(checks_by_id[claim_id][0].get("text")) != text
+        or s(checks_by_id[claim_id][0].get("classification")) != "factual_claim"
+    ]
+    if missing_claim_ids:
+        raise AppError(
+            code="grounding_claim_check_coverage_invalid",
+            message=(
+                "Grounding must return exactly one identity-matching factual check "
+                "for each retained claim"
+            ),
+            retryable=False,
+            context={
+                "missing_claim_ids": missing_claim_ids[:32],
+                "missing_claim_count": len(missing_claim_ids),
+            },
+        )
 
 
 def _retained_claim_semantic_results(

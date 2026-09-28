@@ -9,6 +9,7 @@ def test_report_generation_structured_outputs_have_headroom_for_complete_json() 
     policies = config["llm_execution_policies"]
 
     assert policies["report_vs"]["max_output_tokens"] == 8192
+    assert policies["report_vs/validate/grounding"]["max_output_tokens"] == 8192
     assert policies["report_vs/taxonomy"]["max_output_tokens"] == 8192
     assert policies["report_vs/taxonomy_repair"]["max_output_tokens"] == 8192
     assert policies["report_vs/structured_output"]["max_output_tokens"] == 8192
