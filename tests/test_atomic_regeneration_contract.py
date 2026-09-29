@@ -1175,6 +1175,36 @@ def test_coupled_insight_metric_leaves_remain_explicitly_repairable_together() -
     assert patched["insights_final"][1] == artifacts["insights_final"][1]
 
 
+def test_changed_paths_are_derived_from_authorized_patch_operations() -> None:
+    artifacts = _insight_artifacts()
+    issue = _insight_issue("text")
+    path = "insights_final[item=insight-1].text"
+    target = _target([path], [issue])
+    payload = _decision_payload(
+        target=target,
+        artifacts=artifacts,
+        patches=[(path, "A source-backed replacement.")],
+        evidence_ids=["retained-evidence"],
+    )
+    payload["changed_paths"] = ["insights_final[item=insight-1].so_what"]
+
+    decision = _validated_repair_decision(
+        payload,
+        execution=_execution(target),
+        current_artifacts=artifacts,
+        grounding_package={"evidence_ids": ["retained-evidence"]},
+    )
+
+    assert decision.changed_paths == [path]
+    assert decision.minimal_patch[0].path == path
+    patched = _apply_repair_decision_patch(
+        current_artifacts=artifacts,
+        decision=decision,
+    )
+    assert patched["insights_final"][0]["text"] == "A source-backed replacement."
+    assert patched["insights_final"][0]["so_what"] == "Original implication."
+
+
 def test_model_writable_path_preflight_fails_before_provider_for_non_string_leaf() -> (
     None
 ):

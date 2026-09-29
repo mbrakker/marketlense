@@ -9,6 +9,7 @@ from src.contracts.regeneration import (
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
+    _normalize_regeneration_issue,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _load_candidate_claim_validation_for_promotion,
@@ -533,6 +534,126 @@ def test_multi_insight_retry_does_not_offer_single_item_safe_removal():
     assert {issue.rule_id for issue in exhausted.unmappable_issues} == {
         "retained_claim.protected_fact_value_consistency"
     }
+
+
+def test_soft_copy_repair_fingerprint_stays_with_sentence_slot_after_rewrite():
+    first_text = "The report establishes a global trend."
+    second_text = "The report describes a worldwide pattern."
+    evidence_id = "survey-scope"
+
+    def artifacts_for(text: str) -> tuple[dict, str]:
+        text_hash = hashlib.sha256(" ".join(text.split()).encode()).hexdigest()
+        claim_id = f"soft_copy:linkedin_post:{text_hash[:16]}"
+        artifacts = {
+            "linkedin_post": text,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+                [
+                    SoftCopyClaimProvenance(
+                        schema_version="1.0",
+                        artifact_family="linkedin_post",
+                        claim_id=claim_id,
+                        text_hash=text_hash,
+                        classification="factual",
+                        evidence_ids=(evidence_id,),
+                        source_spans=(),
+                        producing_prompt_identity={"namespace": "test/linkedin"},
+                        generation_attempt=1,
+                        regeneration_attempt=0,
+                    )
+                ]
+            ),
+        }
+        return artifacts, claim_id
+
+    first_artifacts, first_claim_id = artifacts_for(first_text)
+    second_artifacts, second_claim_id = artifacts_for(second_text)
+    first_issue = ValidationIssue(
+        schema_version="1.0",
+        message="Unsupported sentence.",
+        severity="error",
+        affected_section="linkedin_post",
+        rule_id="grounding",
+        entity_id=first_claim_id,
+        repair_target="linkedin_post",
+        evidence_ids=[evidence_id],
+    )
+    second_issue = ValidationIssue(
+        schema_version="1.0",
+        message="Unsupported paraphrase.",
+        severity="error",
+        affected_section="linkedin_post",
+        rule_id="grounding",
+        entity_id=second_claim_id,
+        repair_target="linkedin_post",
+        evidence_ids=[evidence_id],
+    )
+
+    first = _normalize_regeneration_issue(first_issue, first_artifacts)
+    second = _normalize_regeneration_issue(second_issue, second_artifacts)
+
+    assert first.failure_fingerprint == second.failure_fingerprint
+
+    first_plan = _build_regeneration_plan(
+        issues=[first_issue],
+        artifacts=first_artifacts,
+        broad_retry_available=False,
+    )
+    rejected_strategy = repair_strategy_fingerprint(
+        [first.failure_fingerprint],
+        first_plan.targets[0].repair_strategy,
+        first_plan.targets[0].selected_evidence_ids,
+    )
+    next_plan = _build_regeneration_plan(
+        issues=[second_issue],
+        artifacts=second_artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys={rejected_strategy},
+    )
+
+    assert first_plan.targets[0].repair_strategy == "current_evidence"
+    assert next_plan.targets[0].repair_strategy != "current_evidence"
+
+
+def test_duplicate_insight_issue_is_planned_as_its_own_repair_target():
+    artifacts = _artifacts()
+    artifacts["insights_final"][0]["so_what"] = "Current implication."
+    issues = [
+        ValidationIssue(
+            schema_version="1.0",
+            message="An insight implication is unsupported.",
+            severity="error",
+            affected_section="insights:insight-1.so_what",
+            rule_id="grounding",
+            entity_id="insight:insight-1:so_what",
+            evidence_ids=["f1"],
+        ),
+        ValidationIssue(
+            schema_version="1.0",
+            message="This insight duplicates a prior insight.",
+            severity="error",
+            affected_section="insights:insight-2~insights:insight-1",
+            rule_id="public_editorial_quality.duplicate_insight",
+            repair_target="insights_bundle",
+            entity_id="insight:insight-2:text",
+            evidence_ids=["f2"],
+        ),
+    ]
+
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == [
+        "insights_bundle",
+        "insights_bundle",
+    ]
+    assert [target.allowed_paths for target in plan.targets] == [
+        ["insights_final[item=insight-1].so_what"],
+        ["insights_final[item=insight-2].text"],
+    ]
 
 
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):

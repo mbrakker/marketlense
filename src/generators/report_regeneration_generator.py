@@ -2165,6 +2165,9 @@ def _validated_repair_decision(
                 str(value).strip() for value in payload["evidence_ids_used"]
             ],
             protected_fields=required_protected or [],
+            # This provider-reported field duplicates the exact patch paths.
+            # Parse its shape for contract completeness, then derive the
+            # authoritative value from minimal_patch below.
             changed_paths=[str(value).strip() for value in payload["changed_paths"]],
             minimal_patch=patch,
         )
@@ -2186,10 +2189,13 @@ def _validated_repair_decision(
     ):
         raise _repair_decision_error(execution, "patch_operation_unsupported")
     operation_paths = [item.path for item in decision.minimal_patch]
-    if len(operation_paths) != len(set(operation_paths)) or set(
-        decision.changed_paths
-    ) != set(operation_paths):
-        raise _repair_decision_error(execution, "changed_paths_do_not_match_patch")
+    if len(operation_paths) != len(set(operation_paths)):
+        raise _repair_decision_error(execution, "duplicate_patch_path")
+    # `changed_paths` is model-authored duplicate metadata. Scope remains
+    # enforced by each actual operation's exact membership in allowed_paths;
+    # never let an inaccurate summary field reject a legal scalar patch or
+    # authorize a path the patch itself does not contain.
+    decision = replace(decision, changed_paths=operation_paths)
     if not decision.evidence_ids_used == list(
         dict.fromkeys(decision.evidence_ids_used)
     ):

@@ -197,8 +197,12 @@ protected leaf complement from the retained artifact and allowed paths; that
 planner-owned set is checked again before patch application and is not requested from
 the model. Failed and rejected copy are diagnostic context only, never evidence. The
 same model response contains diagnosis and patch, so this contract adds no critique
-call. Each `minimal_patch` operation carries its replacement as a direct string
-`value`; JSON-encoded replacement strings are not part of the provider contract.
+call. `changed_paths` is derived from the operation paths in `minimal_patch`; the
+provider's duplicate summary field cannot reject an otherwise valid scoped patch or
+authorize paths absent from the patch. Duplicate operation paths and every actual
+operation outside the plan remain blocking. Each `minimal_patch` operation carries
+its replacement as a direct string `value`; JSON-encoded replacement strings are not
+part of the provider contract.
 The current model-assisted paths resolve to string leaves in the artifact schema:
 Summary claim text and sentences, candidate/final insight prose and textual metric
 leaves, quote text, and Expert View and LinkedIn sentences. Before provider setup,
@@ -430,7 +434,12 @@ Duplicate-insight quality findings identify the affected stable insight but do
 not quarantine its evidence ID: two insights can legitimately share one source,
 and their wording is the failed field. The targeted insight repair keeps that
 source available while the candidate quality and promotion gates still reject
-an unchanged duplicate or a new unsupported claim.
+an unchanged duplicate or a new unsupported claim. Independent insight findings
+are planned as separate stable-ID repair targets, so one duplicate does not widen
+the model's patch scope to unrelated insights. For soft-copy grounding failures,
+the retry fingerprint follows the canonical sentence slot rather than the
+sentence-hash claim ID; rewriting the sentence therefore advances the existing
+bounded repair ladder instead of restarting it.
 
 Key Figures are rebuilt deterministically from retained metric and evidence
 inputs. Before selection, each rendered numeric display must match every

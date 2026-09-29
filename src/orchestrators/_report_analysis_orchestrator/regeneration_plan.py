@@ -286,10 +286,34 @@ def _normalize_regeneration_issue(
     excluded_evidence_ids = (
         list(evidence_ids) if _quarantines_failed_evidence(issue) else []
     )
+    fingerprint_section = issue.affected_section
+    fingerprint_entity_id = issue.entity_id
+    if str(issue.entity_id or "").startswith("soft_copy:"):
+        family = (
+            "summary"
+            if str(issue.affected_section or "").strip().startswith("summary")
+            else str(issue.affected_section or "").strip().split(".", 1)[0]
+        )
+        stable_claim_path = _soft_copy_claim_path(
+            family=family,
+            entity_id=issue.entity_id,
+            artifacts=artifacts,
+        )
+        if stable_claim_path:
+            # Claim IDs include the current sentence hash. Repairs change that
+            # hash, while the sentence slot and validator rule stay the same.
+            # Fingerprint the stable slot so bounded retries can move on to
+            # the planner's existing safe-removal strategy after a rejection.
+            fingerprint_section = stable_claim_path
+            fingerprint_entity_id = ""
+    if str(issue.affected_section or "").startswith("summary.claim_evidence_map:"):
+        # Id-less map entries have a stable one-based identity in the section
+        # path. The provenance-derived entity ID hashes the changing copy.
+        fingerprint_entity_id = ""
     fingerprint = FailureFingerprint(
         rule_id=issue.rule_id or _extract_rule_id(issue.message),
-        affected_section=issue.affected_section,
-        entity_id=issue.entity_id,
+        affected_section=fingerprint_section,
+        entity_id=fingerprint_entity_id,
         evidence_ids=sorted(evidence_ids),
     )
     return RegenerationIssue(
@@ -1179,6 +1203,32 @@ def _summary_issue_groups(
     return [grouped[key] for key in sorted(grouped)]
 
 
+def _insight_issue_groups(
+    issues: List[RegenerationIssue], artifacts: Dict[str, Any]
+) -> List[List[RegenerationIssue]]:
+    """Isolate duplicate-insight targets while preserving other atomic bundles."""
+    duplicate_rule = "public_editorial_quality.duplicate_insight"
+    duplicate_issues = [issue for issue in issues if issue.rule_id == duplicate_rule]
+    if not duplicate_issues:
+        return [issues]
+
+    identities = [_issue_insight_identity(issue, artifacts) for issue in issues]
+    if any(not identity for identity in identities):
+        # An unresolved family-level finding keeps the target atomic and
+        # prevents a partial repair from silently ignoring that finding.
+        return [issues]
+
+    ordinary = [issue for issue in issues if issue.rule_id != duplicate_rule]
+    grouped_duplicates: Dict[str, List[RegenerationIssue]] = {}
+    for issue in duplicate_issues:
+        identity = _issue_insight_identity(issue, artifacts)
+        grouped_duplicates.setdefault(identity, []).append(issue)
+
+    groups = [ordinary] if ordinary else []
+    groups.extend(grouped_duplicates[key] for key in sorted(grouped_duplicates))
+    return groups
+
+
 def _canonical_metric_copy_changes(paths: List[str], artifacts: Dict[str, Any]) -> bool:
     """Return whether a canonical candidate changes one declared metric leaf."""
 
@@ -1372,7 +1422,11 @@ def _build_regeneration_plan(
             for issue_group in (
                 _summary_issue_groups(grouped[target_key], artifacts)
                 if target_key == "summary"
-                else [grouped[target_key]]
+                else (
+                    _insight_issue_groups(grouped[target_key], artifacts)
+                    if target_key == "insights_bundle"
+                    else [grouped[target_key]]
+                )
             )
             for built_target in [
                 _build_target(
