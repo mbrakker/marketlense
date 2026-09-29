@@ -10,6 +10,15 @@ text: |
   - Evidence packs JSON: {{ evidence_json }}
   - Editorial plan JSON: {{ editorial_plan_json }}
 
+  Evidence identity rules:
+  - Use DocMap for section selection and nonnumeric coverage only. For a
+    source-backed numeric claim, `evidence_id` must equal the `id` of the
+    supporting entry in the `findings` evidence pack. Never use a DocMap section
+    id as `evidence_id` for a numeric claim.
+  - Keep each value beside its explicitly labeled metric/category, subject or
+    cohort, denominator, geography, and period/status from that same finding.
+    Omit the metric if the finding does not state the complete relationship.
+
   Source-of-truth candidate insight schema:
   {{ insights_candidates_schema }}
 

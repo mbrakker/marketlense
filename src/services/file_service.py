@@ -81,18 +81,20 @@ _PIPELINE_CHECKPOINT_DIR = ".checkpoints"
 _COMPACT_PIPELINE_CHECKPOINT_DIR = ".cp"
 _COMPACT_PIPELINE_CHECKPOINT_TOKEN_LENGTH = 12
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
-_ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
+_ATOMIC_WRITE_TEMP_TAG = ".tmp-"
+_LEGACY_ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
+_ATOMIC_WRITE_TARGET_HASH_LENGTH = 16
 _ATOMIC_REPLACE_MAX_ATTEMPTS = 3
 _ATOMIC_REPLACE_RETRY_DELAY_SECONDS = 0.01
 _WINDOWS_REPLACE_RETRYABLE_ERRORS = {5, 32}
 WINDOWS_SAFE_ATOMIC_PATH_LENGTH = 240
 _ATOMIC_TEMP_NAME_LENGTH = (
     1  # leading dot
-    + 16  # stable target-name hash
+    + _ATOMIC_WRITE_TARGET_HASH_LENGTH  # stable target-name hash
     + len(_ATOMIC_WRITE_TEMP_TAG)
     + 10  # maximum Windows process identifier length
     + 1  # process identifier separator
-    + 32  # UUID hex
+    + 24  # 96-bit UUID token
 )
 _WRITE_LOCKS_GUARD = threading.Lock()
 _WRITE_LOCKS: dict[str, threading.Lock] = {}
@@ -1149,8 +1151,10 @@ def _is_retryable_windows_replace_error(error: OSError) -> bool:
 
 
 def _atomic_temp_path(path: Path) -> Path:
-    token = f"{os.getpid()}-{uuid.uuid4().hex}"
-    name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
+    token = f"{os.getpid()}-{uuid.uuid4().hex[:24]}"
+    name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[
+        :_ATOMIC_WRITE_TARGET_HASH_LENGTH
+    ]
     return path.with_name(f".{name_hash}{_ATOMIC_WRITE_TEMP_TAG}{token}")
 
 
@@ -1162,10 +1166,12 @@ def atomic_write_temp_path_length(path: Path) -> int:
 
 def _cleanup_stale_atomic_temp_files(path: Path) -> None:
     now = time.time()
-    name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
+    digest = hashlib.sha256(path.name.encode("utf-8")).hexdigest()
+    name_hash = digest[:_ATOMIC_WRITE_TARGET_HASH_LENGTH]
     patterns = (
         f".{name_hash}{_ATOMIC_WRITE_TEMP_TAG}*",
-        f"{path.name}{_ATOMIC_WRITE_TEMP_TAG}*",
+        f".{name_hash}{_LEGACY_ATOMIC_WRITE_TEMP_TAG}*",
+        f"{path.name}{_LEGACY_ATOMIC_WRITE_TEMP_TAG}*",
     )
     for pattern in patterns:
         for candidate in path.parent.glob(pattern):

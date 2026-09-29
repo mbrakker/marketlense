@@ -713,6 +713,29 @@ def test_write_report_card_manifest_persists_validated_payload_and_logs(
     assert_logs_have_required_fields(manifest_events)
 
 
+def test_write_report_card_manifest_uses_a_windows_safe_temp_path_near_limit(
+    tmp_path: Path,
+) -> None:
+    target_parent_length = 195
+    padding_length = target_parent_length - len(str(tmp_path.resolve())) - 1
+    assert 0 < padding_length < 255
+    output_dir = tmp_path / ("p" * padding_length)
+    target_path = output_dir / "report-card-manifest.json"
+
+    assert atomic_write_temp_path_length(target_path) <= 260
+
+    response = write_report_card_manifest(
+        ReportCardManifestWriteRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            manifest=_report_card_manifest(),
+        ),
+        _ctx(),
+    )
+
+    assert Path(response.manifest_path).is_file()
+
+
 def test_write_report_card_manifest_wraps_real_output_directory_failure(
     tmp_path: Path,
     assert_app_error,

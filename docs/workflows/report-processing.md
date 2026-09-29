@@ -23,6 +23,9 @@ report-card manifest is also retained. If that manifest is missing, the renderer
 regenerates the deterministic cover set and manifest before the package can
 reach the blocking publication boundary; it never reports a package as ready
 with orphaned card assets.
+The manifest is persisted with a unique bounded temporary filename and atomic
+replacement, so long report output paths do not push the temporary file beyond
+the supported Windows path limit.
 
 PDF previews, refinements, and crop regions keep fingerprint sidecars beside
 their rendered artifacts. Crop artifact filenames and, when a deep workspace

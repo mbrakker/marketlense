@@ -189,8 +189,99 @@ def test_primary_generation_prompt_has_no_unconditional_mandatory_pressure(
     assert _mandatory_pressure_conflicts(rendered) == ()
 
 
-def test_mandatory_pressure_conflict_detector_rejects_historical_contradiction(
-) -> None:
+def test_primary_generation_prompts_do_not_turn_missing_context_into_a_claim() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+
+    for namespace in PRIMARY_NAMESPACES:
+        rendered = _render_primary_prompt(namespace, variables[namespace])
+        normalised = _normalise_whitespace(rendered)
+        assert (
+            "do not claim that a detail, period, comparison, population, or source "
+            "qualification is absent unless the linked evidence"
+        ) in normalised
+        assert "explicitly states that absence" in normalised
+
+
+def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references() -> (
+    None
+):
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    rendered = _render_primary_prompt(
+        "report_vs/artifacts/linkedin_post",
+        variables["report_vs/artifacts/linkedin_post"],
+    )
+    normalised = _normalise_whitespace(rendered)
+
+    assert (
+        "name each metric and its subject or observation status in the same clause"
+        in normalised
+    )
+    assert "do not call values the first or second figure" in normalised
+
+
+def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    rendered = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.user,
+            variables={
+                "doc_map_json": "{}",
+                "evidence_json": "{}",
+                "editorial_plan_json": "{}",
+            },
+        ),
+        _ctx(),
+    ).text
+    normalised = _normalise_whitespace(rendered)
+
+    assert "use docmap for section selection and nonnumeric coverage only" in normalised
+    assert (
+        "`evidence_id` must equal the `id` of the supporting entry in the `findings` "
+        "evidence pack"
+    ) in normalised
+    assert (
+        "never use a docmap section id as `evidence_id` for a numeric claim"
+        in normalised
+    )
+
+
+def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    rendered = render_prompt(
+        PromptRenderRequest(
+            schema_version="1.0",
+            template=prompt_set.user,
+            variables={},
+        ),
+        _ctx(),
+    ).text
+    normalised = _normalise_whitespace(rendered)
+
+    assert (
+        "state every numeric value beside its explicit row and column labels"
+        in normalised
+    )
+    assert "do not emit bare ordered value lists" in normalised
+
+
+def test_mandatory_pressure_conflict_detector_rejects_historical_contradiction() -> (
+    None
+):
     conflicting_prompt = (
         "Do not invent unsupported implications. "
         "You must state the executive implication."

@@ -69,7 +69,9 @@ def _target_section(affected_section: str) -> str:
     if section.startswith("insights"):
         return "insights_bundle"
     if section.startswith("key_figures"):
-        return "key_figures"
+        # Key Figures are a canonical projection. Repair the linked source
+        # insight, then let finalization rebuild the projection.
+        return "insights_bundle"
     if section.startswith("key_data_insights"):
         return "insights_bundle"
     if section.startswith("claims_list"):
@@ -156,6 +158,16 @@ def _issue_grounding(
     if not section:
         return [], []
     resolved_entity_id = str(entity_id or "").strip()
+    if section.startswith("key_figures") or resolved_entity_id.startswith(
+        "key_figure:"
+    ):
+        source = _key_figure_source_insight(section, resolved_entity_id, artifacts)
+        if source is None:
+            return [], []
+        insight = source[2]
+        evidence_id = str(insight.get("evidence_id") or "").strip()
+        pages = [page for page in (insight.get("pages") or []) if isinstance(page, int)]
+        return ([evidence_id] if evidence_id else []), pages
     if resolved_entity_id:
         try:
             claims = soft_copy_claim_provenance_from_payload(
@@ -600,6 +612,16 @@ def _issue_insight_allowed_paths(
 ) -> List[str]:
     affected = str(issue.affected_section or "").strip()
     entity_id = str(issue.entity_id or "").strip()
+    if affected.startswith("key_figures") or entity_id.startswith("key_figure:"):
+        source = _key_figure_source_insight(affected, entity_id, artifacts)
+        if source is None:
+            return []
+        root, item_path, item = source
+        return [
+            f"{root}{item_path}.{field}"
+            for field in _key_figure_source_fields(issue)
+            if _has_scalar_leaf(item, field)
+        ]
     indexed_match = re.match(
         r"^(insights_final|insights_candidates)\[(\d+)\]\.(.+)$", affected
     )
@@ -678,9 +700,12 @@ def _identified_item_path(root: str, items: object, identity: str) -> tuple[str,
             return root, f"[item={stable_id}]"
         if not stable_id and str(index + 1) == identity:
             return root, f"[{index}]"
-        if root == "quotes_final" and not stable_id:
-            if str(item.get("evidence_id") or "").strip() == identity:
-                return root, f"[{index}]"
+        if (
+            root == "quotes_final"
+            and not stable_id
+            and str(item.get("evidence_id") or "").strip() == identity
+        ):
+            return root, f"[{index}]"
     return "", ""
 
 
@@ -724,6 +749,10 @@ _INSIGHT_METRIC_FAILURE_FIELDS = {
 def _insight_issue_fields(issue: RegenerationIssue) -> List[str]:
     """Resolve an insight failure to exact scalar leaves, never a metric object."""
 
+    if str(issue.affected_section or "").strip().startswith("key_figures") or str(
+        issue.entity_id or ""
+    ).startswith("key_figure:"):
+        return _key_figure_source_fields(issue)
     field = _insight_issue_field(issue.entity_id, issue.affected_section)
     rule_id = str(issue.rule_id or "").strip().lower()
     mapped_metric_fields = _INSIGHT_METRIC_FAILURE_FIELDS.get(rule_id)
@@ -737,6 +766,19 @@ def _insight_issue_fields(issue: RegenerationIssue) -> List[str]:
 
 
 def _issue_insight_identity(issue: RegenerationIssue, artifacts: Dict[str, Any]) -> str:
+    if str(issue.affected_section or "").strip().startswith("key_figures") or str(
+        issue.entity_id or ""
+    ).startswith("key_figure:"):
+        source = _key_figure_source_insight(
+            str(issue.affected_section or "").strip(),
+            str(issue.entity_id or "").strip(),
+            artifacts,
+        )
+        return (
+            str(source[2].get("id") or source[2].get("insight_id") or "").strip()
+            if source
+            else ""
+        )
     identity = failed_insight_id(issue.entity_id, issue.affected_section)
     if identity:
         return identity
@@ -764,6 +806,89 @@ def _key_figure_issue_field(entity_id: str, affected: str) -> str:
         return match.group(1).strip()
     match = re.match(r"^key_figures:[^.:]+\.(.+)$", affected)
     return match.group(1).strip() if match else ""
+
+
+def _key_figure_source_insight(
+    affected: str, entity_id: str, artifacts: Dict[str, Any]
+) -> tuple[str, str, Dict[str, Any]] | None:
+    """Resolve one derived figure to the final source insight that feeds it."""
+
+    figures = artifacts.get("key_figures")
+    if not isinstance(figures, list):
+        return None
+    identity = _public_item_identity(entity_id, "key_figure") or _section_identity(
+        affected, "key_figures"
+    )
+    figure = None
+    if identity:
+        matches = [
+            item
+            for item in figures
+            if isinstance(item, dict)
+            and identity
+            in {
+                str(item.get(field) or "").strip()
+                for field in ("figure_id", "insight_id", "key_figure_id", "id")
+            }
+        ]
+        if len(matches) == 1:
+            figure = matches[0]
+        elif identity.isdigit():
+            index = int(identity) - 1
+            if 0 <= index < len(figures) and isinstance(figures[index], dict):
+                figure = figures[index]
+    if figure is None:
+        return None
+
+    source_id = str(
+        figure.get("insight_id")
+        or figure.get("metric_id")
+        or figure.get("figure_id")
+        or figure.get("key_figure_id")
+        or figure.get("id")
+        or ""
+    ).strip()
+    if not source_id:
+        return None
+    for root in ("insights_final", "insights_candidates"):
+        items = artifacts.get(root)
+        if not isinstance(items, list):
+            continue
+        matches = [
+            item
+            for item in items
+            if isinstance(item, dict)
+            and str(item.get("id") or item.get("insight_id") or "").strip() == source_id
+        ]
+        if len(matches) == 1:
+            return root, f"[item={source_id}]", matches[0]
+    return None
+
+
+def _key_figure_source_fields(issue: object) -> List[str]:
+    """Map a failed projection field to its planner-owned source leaf."""
+
+    field = _key_figure_issue_field(
+        str(getattr(issue, "entity_id", "") or ""),
+        str(getattr(issue, "affected_section", "") or ""),
+    )
+    violation = str(getattr(issue, "violation_type", "") or "").strip().lower()
+    rule_id = str(getattr(issue, "rule_id", "") or "").strip().lower()
+    message = str(getattr(issue, "message", "") or "").strip().lower()
+    if (
+        violation == "evidence_retrieval_failure"
+        or "evidence_retrieval_failure" in message
+    ):
+        return ["evidence_id"]
+    if rule_id == "public_editorial_quality.metric_label_relationship":
+        return ["metric.label", "metric.value"]
+    if field in {"figure", "value"}:
+        return ["metric.value"]
+    if field == "label":
+        return ["metric.label"]
+    if field == "why_it_matters":
+        return ["text"]
+    return []
 
 
 def _item_at_identity_path(items: object, item_path: str) -> Dict[str, Any] | None:
@@ -1028,8 +1153,7 @@ def _summary_issue_groups(
     """Keep unrelated summary leaves in separate model-repair targets."""
 
     paths = [
-        (issue, _issue_allowed_path("summary", issue, artifacts))
-        for issue in issues
+        (issue, _issue_allowed_path("summary", issue, artifacts)) for issue in issues
     ]
     if any(not path for _issue, path in paths):
         return [issues]
@@ -1137,7 +1261,10 @@ def _build_regeneration_plan(
             planning_issues.append(
                 ValidationIssue(
                     schema_version="1.0",
-                    message="A hard validation fingerprint persisted in the prior candidate.",
+                    message=(
+                        "A hard validation fingerprint persisted in the prior "
+                        "candidate."
+                    ),
                     severity="error",
                     affected_section=fingerprint.affected_section,
                     rule_id=fingerprint.rule_id,
@@ -1354,6 +1481,8 @@ def _keep_atomic_insight_context(
 
 def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
     explicit_target = str(issue.repair_target or "").strip()
+    if explicit_target == "key_figures":
+        return ["insights_bundle"]
     if explicit_target:
         if explicit_target == "artifact_copy":
             # Public-editorial quality deliberately reports the semantic copy

@@ -22,6 +22,10 @@ text: |
     Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure,
     volume, or comparison beyond that selection. Count every supported year/date or
     source period included in the post toward the same limit.
+  - When the post includes multiple values, name each metric and its subject or
+    observation status in the same clause. Do not call values the first or
+    second figure, or imply that they form a comparison, unless their linked
+    evidence explicitly states that order or relationship.
   - Add a distinct interpretation or decision implication only when source-supported.
     An optional closing may ask a genuine professional question or state a supported,
     conditional MarketLense-authored recommendation.

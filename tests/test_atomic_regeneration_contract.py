@@ -8,6 +8,7 @@ import pytest
 
 from src.contracts.regeneration import RegenerationIssue, RegenerationTarget
 from src.contracts.run_context import RunContext
+from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
@@ -15,11 +16,11 @@ from src.contracts.soft_copy_claim_provenance import (
 from src.contracts.validation import ValidationIssue
 from src.generators.report_regeneration_generator import (
     _apply_repair_decision_patch,
-    _render_regeneration_model,
     _read_repair_path,
+    _render_regeneration_model,
     _required_repair_protected_fields,
-    _validated_repair_decision,
     _validate_model_writable_paths,
+    _validated_repair_decision,
 )
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _allowed_paths,
@@ -28,7 +29,6 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _scope_validation_report,
 )
-from src.contracts.schema_validation import SchemaValidateRequest
 from src.services.schema_validator_service import validate_schema
 from src.utils.errors import AppError
 
@@ -323,6 +323,42 @@ def test_planner_skips_an_insight_failure_without_a_resolved_leaf() -> None:
     assert plan.mode == "skip"
     assert plan.targets == []
     assert plan.broad_retry_allowed is False
+
+
+def test_derived_key_figure_failure_routes_to_its_source_insight() -> None:
+    artifacts = _insight_artifacts()
+    artifacts["key_figures"] = [
+        {
+            "schema_version": "1.0",
+            "figure_id": "insight-1",
+            "figure": "25%",
+            "label": "Existing metric",
+            "why_it_matters": "Original insight.",
+            "evidence_id": "evidence-1",
+        }
+    ]
+    issue = ValidationIssue(
+        message=(
+            "[grounding] [factual_claim|evidence_retrieval_failure] "
+            "The numeric source evidence could not be retrieved."
+        ),
+        severity="error",
+        affected_section="key_figures:1.figure",
+        rule_id="grounding",
+        violation_type="evidence_retrieval_failure",
+        entity_id="key_figure:1:figure",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue], artifacts=artifacts, broad_retry_available=True
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    assert plan.targets[0].target_section == "insights_bundle"
+    assert plan.targets[0].allowed_paths == [
+        "insights_final[item=insight-1].evidence_id"
+    ]
 
 
 def test_planner_abstains_when_any_issue_in_an_atomic_target_is_unresolved() -> None:
