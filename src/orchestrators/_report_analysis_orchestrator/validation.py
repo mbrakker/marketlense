@@ -11,7 +11,7 @@ import re
 from copy import deepcopy
 from dataclasses import asdict, replace
 from time import perf_counter
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.files import ReadJsonRequest
 from src.contracts.regeneration import (
@@ -657,6 +657,7 @@ def _scope_validation_report(
     after: Dict[str, Any],
     plan,
     verified_derived_roots: frozenset[str] = frozenset(),
+    deterministic_mutation_paths: Sequence[str] = (),
 ) -> ValidationReport:
     allowed_paths = {
         path.strip()
@@ -664,6 +665,14 @@ def _scope_validation_report(
         for path in target.allowed_paths
         if str(path).strip()
     }
+    allowed_paths.update(
+        _verified_deterministic_mutation_paths(
+            paths=deterministic_mutation_paths,
+            before=before,
+            after=after,
+            plan=plan,
+        )
+    )
     changed_paths = _artifact_diff_paths(before, after)
     changed_source_roots = {_path_root(path) for path in changed_paths} & {
         _path_root(value) for value in allowed_paths
@@ -702,6 +711,73 @@ def _scope_validation_report(
             for path in violations
         ],
     )
+
+
+def _verified_deterministic_mutation_paths(
+    *,
+    paths: Sequence[str],
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+    plan,
+) -> set[str]:
+    """Allow only exact shared-list additions from a planned safe removal."""
+
+    requested = {str(path).strip() for path in paths if str(path).strip()}
+    if not requested:
+        return set()
+    removal_targets = [
+        target
+        for target in plan.targets
+        if target.target_section == "insights_bundle"
+        and target.repair_action == "REMOVE_CLAIM"
+        and target.repair_strategy == "safe_removal"
+    ]
+    if len(removal_targets) != 1:
+        return set()
+    removed_ids = {
+        failed_insight_id(issue.entity_id, issue.affected_section)
+        for issue in removal_targets[0].issues
+    }
+    removed_ids.discard("")
+    if len(removed_ids) != 1:
+        return set()
+
+    def identities(artifacts: Dict[str, Any], root: str) -> set[str]:
+        values = artifacts.get(root)
+        if not isinstance(values, list):
+            return set()
+        return {
+            str(item.get("id") or item.get("insight_id") or "").strip()
+            for item in values
+            if isinstance(item, dict)
+            and str(item.get("id") or item.get("insight_id") or "").strip()
+        }
+
+    candidate_additions = identities(after, "insights_candidates") - identities(
+        before, "insights_candidates"
+    )
+    final_additions = identities(after, "insights_final") - identities(
+        before, "insights_final"
+    )
+    shared_additions = candidate_additions & final_additions
+    if len(shared_additions) > 1 or shared_additions.intersection(removed_ids):
+        return set()
+    expected = {
+        f"insights_candidates[item={identity}]" for identity in shared_additions
+    } | {f"insights_final[item={identity}]" for identity in shared_additions}
+    # A replacement already present in the retained candidate pool needs only
+    # an exact final-list insertion path.
+    final_only_additions = final_additions - candidate_additions
+    if len(final_only_additions) > 1 or final_only_additions.intersection(removed_ids):
+        return set()
+    if len(shared_additions | final_only_additions) > 1:
+        return set()
+    expected.update(
+        f"insights_final[item={identity}]" for identity in final_only_additions
+    )
+    if requested != expected:
+        return set()
+    return expected
 
 
 def _path_root(path: str) -> str:
@@ -873,7 +949,18 @@ def _candidate_audit(
             )
         ),
         allowed_paths=(
-            sorted({path for target in plan.targets for path in target.allowed_paths})
+            sorted(
+                {
+                    *(path for target in plan.targets for path in target.allowed_paths),
+                    *(
+                        getattr(
+                            regeneration_response, "deterministic_mutation_paths", []
+                        )
+                        if regeneration_response is not None
+                        else []
+                    ),
+                }
+            )
             if plan
             else []
         ),
@@ -1447,6 +1534,9 @@ def _run_validation_regeneration_loop(
             after=candidate_artifacts,
             plan=plan,
             verified_derived_roots=candidate_result.verified_derived_roots,
+            deterministic_mutation_paths=tuple(
+                getattr(regeneration_response, "deterministic_mutation_paths", []) or []
+            ),
         )
         payload_completeness_issue = None
         try:

@@ -14,6 +14,9 @@ from src.contracts.regeneration import repair_strategy_fingerprint
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
 from src.contracts.validation import ValidationIssue, ValidationRequest
+from src.generators._artifact_generator.storage import (
+    finalize_regeneration_candidate_artifacts,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
@@ -22,6 +25,7 @@ from src.generators.report_regeneration_generator import (
     _build_grounding_package,
     _build_regeneration_state,
     _handle_insights_bundle_regeneration,
+    _preserve_atomic_target_families,
     _RegenerationHandlerExecution,
     _resolve_regeneration_handler,
 )
@@ -33,6 +37,11 @@ from src.generators.validation.semantic import semantic_payload
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _scope_validation_report,
+    _verified_deterministic_mutation_paths,
+)
+from src.utils.artifact_diff import artifact_diff_paths
 from src.utils.errors import AppError
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "a21_historical_semantic_residuals.json"
@@ -217,6 +226,136 @@ def test_doubleverify_duplicate_strategy_ladder_stops_after_safe_removal() -> No
         ("REMOVE_CLAIM", "safe_removal"),
         ("skip", ""),
     ]
+
+
+def test_safe_removal_authorizes_failed_insight_in_both_artifact_lists() -> None:
+    case = _case("doubleverify")
+    issue = ValidationIssue(**case["blocking_issues"][0])
+    rejected: set[str] = set()
+    for _ in range(2):
+        plan = _build_regeneration_plan(
+            issues=[issue],
+            artifacts=case["artifacts"],
+            broad_retry_available=False,
+            rejected_strategy_keys=rejected,
+        )
+        target = plan.targets[0]
+        rejected.add(
+            repair_strategy_fingerprint(
+                [item.failure_fingerprint for item in target.issues],
+                target.repair_strategy,
+                target.selected_evidence_ids,
+            )
+        )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=case["artifacts"],
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected,
+    )
+
+    assert plan.targets[0].repair_strategy == "safe_removal"
+    assert plan.targets[0].allowed_paths == [
+        "insights_candidates[item=insight-q1-2026-emea-quality]",
+        "insights_final[item=insight-q1-2026-emea-quality]",
+    ]
+
+    finding_text = "The source describes a separate measurement method for channels."
+    replacement_finding = {
+        "id": "retained-independent-finding",
+        "text": finding_text,
+        "evidence": finding_text,
+        "pages": [12],
+    }
+    case["evidence_packs"]["findings"] = {"findings": [replacement_finding]}
+    case["evidence_packs"]["doc_map"]["sections"].append(
+        {
+            "id": replacement_finding["id"],
+            "summary": finding_text,
+            "pages": [12],
+        }
+    )
+    execution = replace(_doubleverify_removal_execution(case), target=plan.targets[0])
+    assert "retained-independent-finding" not in {
+        item["id"] for item in execution.state.insights_candidates
+    }
+    _handle_insights_bundle_regeneration(execution)
+    assert execution.state.deterministic_mutation_paths == [
+        "insights_candidates[item=retained-independent-finding]",
+        "insights_final[item=retained-independent-finding]",
+    ]
+    candidate = deepcopy(case["artifacts"])
+    candidate["insights_candidates"] = execution.state.insights_candidates
+    candidate["insights_final"] = execution.state.insights_final
+
+    _preserve_atomic_target_families(
+        updated_artifacts=candidate,
+        state=execution.state,
+        plan=plan,
+        original_artifacts=case["artifacts"],
+        additional_paths=execution.state.deterministic_mutation_paths,
+    )
+
+    removed_id = "insight-q1-2026-emea-quality"
+    assert removed_id not in {item["id"] for item in candidate["insights_candidates"]}
+    assert removed_id not in {item["id"] for item in candidate["insights_final"]}
+    assert len(candidate["insights_final"]) == 5
+    verified_roots = finalize_regeneration_candidate_artifacts(
+        promoted_baseline=case["artifacts"],
+        candidate_artifacts=candidate,
+        evidence_packs=case["evidence_packs"],
+        atomic_source_patch={
+            "insights_candidates": candidate["insights_candidates"],
+            "insights_final": candidate["insights_final"],
+        },
+    )
+    allowed_scope = _scope_validation_report(
+        before=case["artifacts"],
+        after=candidate,
+        plan=plan,
+        deterministic_mutation_paths=execution.state.deterministic_mutation_paths,
+        verified_derived_roots=verified_roots,
+    )
+    assert allowed_scope.status == "pass", [
+        (issue.affected_section, issue.rule_id) for issue in allowed_scope.issues
+    ]
+
+    tampered = deepcopy(candidate)
+    tampered_insight = deepcopy(tampered["insights_final"][0])
+    tampered_insight["id"] = "unapproved-extra-insight"
+    tampered["insights_final"].append(tampered_insight)
+    tampered["insights_candidates"].append(deepcopy(tampered_insight))
+    blocked_scope = _scope_validation_report(
+        before=case["artifacts"],
+        after=tampered,
+        plan=plan,
+        deterministic_mutation_paths=[
+            *execution.state.deterministic_mutation_paths,
+            "insights_candidates[item=unapproved-extra-insight]",
+            "insights_final[item=unapproved-extra-insight]",
+        ],
+    )
+    assert "insights_final[item=unapproved-extra-insight]" in artifact_diff_paths(
+        case["artifacts"], tampered
+    )
+    assert not _verified_deterministic_mutation_paths(
+        paths=[
+            *execution.state.deterministic_mutation_paths,
+            "insights_candidates[item=unapproved-extra-insight]",
+            "insights_final[item=unapproved-extra-insight]",
+        ],
+        before=case["artifacts"],
+        after=tampered,
+        plan=plan,
+    )
+    assert blocked_scope.status == "fail", [
+        (issue.affected_section, issue.rule_id) for issue in blocked_scope.issues
+    ]
+    assert all(
+        issue.rule_id == "regeneration_scope_violation"
+        for issue in blocked_scope.issues
+    )
 
 
 def _doubleverify_removal_execution(case: dict):

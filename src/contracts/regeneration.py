@@ -534,6 +534,15 @@ class ArtifactRegenerationResponse:
             )
         },
     )
+    deterministic_mutation_paths: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Exact source-item additions produced by deterministic repair "
+                "operations and eligible for candidate scope verification."
+            )
+        },
+    )
     schema_version: str = field(
         default="1.0",
         metadata={"doc": "Artifact regeneration response schema version."},

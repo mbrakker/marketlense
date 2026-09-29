@@ -1837,29 +1837,38 @@ def finalize_regeneration_candidate_artifacts(
         materialize_roots=candidate_materialized_roots,
     )
 
-    try:
-        _rebuild_final_soft_copy_claim_provenance(
-            artifacts=candidate_artifacts,
-            promoted_baseline=promoted_baseline,
+    if changed_source_roots.intersection(
+        {"summary", "expert_comment", "linkedin_post"}
+    ):
+        try:
+            _rebuild_final_soft_copy_claim_provenance(
+                artifacts=candidate_artifacts,
+                promoted_baseline=promoted_baseline,
+            )
+        except AppError as exc:
+            raise AppError(
+                code="regeneration_deterministic_projection_failed",
+                message="Final soft-copy provenance could not be rebuilt deterministically",
+                retryable=False,
+                context={
+                    "projection": "soft_copy_claim_provenance",
+                    "cause_code": exc.code,
+                    "artifact_family": exc.context.get("artifact_family", ""),
+                    "missing_public_sentence_count": exc.context.get(
+                        "missing_public_sentence_count", 0
+                    ),
+                    "obsolete_provenance_sentence_count": exc.context.get(
+                        "obsolete_provenance_sentence_count", 0
+                    ),
+                },
+                cause=exc,
+            ) from exc
+    elif "soft_copy_claim_provenance" in promoted_baseline:
+        candidate_artifacts["soft_copy_claim_provenance"] = deepcopy(
+            promoted_baseline["soft_copy_claim_provenance"]
         )
-    except AppError as exc:
-        raise AppError(
-            code="regeneration_deterministic_projection_failed",
-            message="Final soft-copy provenance could not be rebuilt deterministically",
-            retryable=False,
-            context={
-                "projection": "soft_copy_claim_provenance",
-                "cause_code": exc.code,
-                "artifact_family": exc.context.get("artifact_family", ""),
-                "missing_public_sentence_count": exc.context.get(
-                    "missing_public_sentence_count", 0
-                ),
-                "obsolete_provenance_sentence_count": exc.context.get(
-                    "obsolete_provenance_sentence_count", 0
-                ),
-            },
-            cause=exc,
-        ) from exc
+    else:
+        candidate_artifacts.pop("soft_copy_claim_provenance", None)
 
     changed_paths = artifact_diff_paths(promoted_baseline, candidate_artifacts)
     verified_roots = set(rebuilt_roots)

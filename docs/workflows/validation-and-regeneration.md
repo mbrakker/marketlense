@@ -293,6 +293,11 @@ The candidate continuity gate receives the planned atomic removal ID and
 permits only that missing insight binding. It records the removed item in
 lineage and rejects its reintroduction; schema, reference, source-page,
 derived-root, and all other continuity checks still apply.
+When deterministic source copy supplies a required replacement, finalization
+declares its exact new stable-ID item path after evidence and editorial checks.
+Scope verification accepts at most one replacement and only when it is absent
+from the promoted list and present in the candidate and final lists as
+applicable. Other insertions and sibling edits remain blocked.
 Insight and soft-copy repairs may also change their deterministic projections.
 The candidate gate recomputes the changed metric spine, key figures, chart
 cards, executive advisory, and claim ledger from the candidate's canonical
@@ -306,8 +311,11 @@ existing deterministic projections, rebuilds only dependents of roots that
 actually changed through the shared dependency graph and canonical artifact
 builders, including transitive descendants. It returns exact changed projection
 paths. Assembly-created roots are materialized only when they are affected
-dependents. Unrelated projections remain byte-identical, and the candidate
-verifier independently recomputes every changed root before scope admission.
+dependents. Soft-copy provenance is rebuilt when summary, Expert View, or
+LinkedIn text changed; when those roots are unchanged, the promoted provenance
+is retained byte-for-byte. Unrelated projections remain byte-identical, and the
+candidate verifier independently recomputes every changed root before scope
+admission.
 The finalizer receives the explicit atomic source patch produced by planner
 path validation; assembled sibling edits cannot become source state through a
 root-level allowlist. Key Figures, chart cards, and metric spine consume the

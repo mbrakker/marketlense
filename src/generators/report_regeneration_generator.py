@@ -121,6 +121,7 @@ class _RegenerationState:
     selected_evidence_ids: List[str] = field(default_factory=list)
     repair_decisions: List[RepairDecision] = field(default_factory=list)
     deterministic_repairs: List[str] = field(default_factory=list)
+    deterministic_mutation_paths: List[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -382,12 +383,17 @@ def regenerate_artifacts(
         state=state,
         plan=request.plan,
         original_artifacts=request.current_artifacts,
+        additional_paths=state.deterministic_mutation_paths,
     )
     authorized_source_roots = {
         re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
         for target in request.plan.targets
         for path in target.allowed_paths
     }
+    authorized_source_roots.update(
+        re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
+        for path in state.deterministic_mutation_paths
+    )
     legacy_target_roots = {
         "summary": {"summary"},
         "insights_bundle": {"insights_candidates", "insights_final"},
@@ -441,6 +447,7 @@ def regenerate_artifacts(
         selected_evidence_ids=_unique_strings(state.selected_evidence_ids),
         repair_decisions=list(state.repair_decisions),
         payload_overrides=deepcopy(state.payload_overrides),
+        deterministic_mutation_paths=sorted(set(state.deterministic_mutation_paths)),
     )
     logger.info(
         log_event(
@@ -1254,6 +1261,7 @@ def _preserve_atomic_target_families(
     state: _RegenerationState,
     plan,
     original_artifacts: Dict[str, Any],
+    additional_paths: Sequence[str] = (),
 ) -> None:
     """Apply targeted changes onto the exact current artifact family."""
 
@@ -1286,6 +1294,11 @@ def _preserve_atomic_target_families(
             for root in legacy_roots:
                 paths_by_root[root] = [root]
                 allowed_roots.add(root)
+    for path in additional_paths:
+        root = re.split(r"[.\[]", str(path or ""), maxsplit=1)[0]
+        if root in family_state and root in original_artifacts:
+            paths_by_root.setdefault(root, []).append(str(path))
+            allowed_roots.add(root)
     for root, paths in paths_by_root.items():
         if root not in family_state or root not in original_artifacts:
             continue
@@ -1333,6 +1346,9 @@ def _copy_allowed_mutation_path(
         selector = item_root_match.group(1)
         original_index = _mutation_list_index(original_family, selector)
         target_index = _mutation_list_index(target_family, selector)
+        if original_index is None and target_index is not None:
+            original_family.append(deepcopy(target_family[target_index]))
+            return original_family
         if original_index is not None and (
             target_index is None or target_family[target_index] is None
         ):
@@ -3997,12 +4013,26 @@ def _remove_failed_insight_with_retained_replacement(
                     "insight_id": failed_id,
                 },
             )
+    retained_candidate_ids = {
+        _s(item.get("id")).strip()
+        for item in retained_candidates
+        if isinstance(item, dict)
+    }
     execution.state.insights_candidates = retained_candidates
     if replacement is not None and _s(replacement.get("id")).strip() not in {
         _s(item.get("id")).strip() for item in retained_candidates
     }:
         execution.state.insights_candidates.append(replacement)
     execution.state.insights_final = selected
+    if replacement is not None:
+        replacement_id = _s(replacement.get("id")).strip()
+        if replacement_id not in retained_candidate_ids:
+            execution.state.deterministic_mutation_paths.append(
+                f"insights_candidates[item={replacement_id}]"
+            )
+        execution.state.deterministic_mutation_paths.append(
+            f"insights_final[item={replacement_id}]"
+        )
     execution.state.regenerated_sections.extend(
         ["insights_candidates", "insights_final"]
     )

@@ -495,8 +495,25 @@ def _allowed_paths(
                 paths.add(path)
             continue
         if repair_action == "REMOVE_CLAIM" and target_key == "insights_bundle":
-            item_match = re.match(r"^(insights_(?:final|candidates)\[.+?\])\.", path)
-            paths.add(item_match.group(1) if item_match else path)
+            item_match = re.match(
+                r"^(insights_(?:final|candidates))\[item=([^\]]+)\]\.", path
+            )
+            if item_match:
+                root, insight_id = item_match.groups()
+                selector = f"[item={insight_id}]"
+                paths.add(f"{root}{selector}")
+                sibling_root = (
+                    "insights_candidates"
+                    if root == "insights_final"
+                    else "insights_final"
+                )
+                if isinstance(
+                    _item_at_identity_path(artifacts.get(sibling_root) or [], selector),
+                    dict,
+                ):
+                    paths.add(f"{sibling_root}{selector}")
+            else:
+                paths.add(path)
             continue
         paths.add(path)
     if target_key == "insights_bundle" and repair_action == "REBIND_EVIDENCE":
