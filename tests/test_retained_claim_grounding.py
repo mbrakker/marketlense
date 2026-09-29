@@ -12,7 +12,12 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationRequest
 from src.generators.claim_validation_generator import validate_retained_claims
-from src.generators.validation.grounding import grounding_payload, run_grounding_check
+from src.generators.validation.grounding import (
+    _deterministic_claim_validation_issues,
+    grounding_payload,
+    run_grounding_check,
+    run_grounding_rule,
+)
 from src.generators.validation.regeneration_candidate import (
     retained_claim_repair_issues,
 )
@@ -57,6 +62,65 @@ def _retained_request() -> ValidationRequest:
     )
 
 
+def test_deterministic_retained_claim_failure_enters_candidate_repair_plan() -> None:
+    claim = (
+        "“Actively exploring” and “plan to implement in the near future” are "
+        "distinct positions grouped in the same finding."
+    )
+    source = (
+        "The report highlight states: “63% of merchants are actively exploring "
+        "or plan to implement agentic AI payments in the near future.”"
+    )
+    text_hash = hashlib.sha256(claim.encode("utf-8")).hexdigest()
+    artifacts = {
+        "linkedin_post": claim,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="linkedin_post",
+                    claim_id=f"soft_copy:linkedin_post:{text_hash[:16]}",
+                    text_hash=text_hash,
+                    classification="factual",
+                    evidence_ids=("f1",),
+                    source_spans=(),
+                    producing_prompt_identity={
+                        "namespace": "report_vs/artifacts/linkedin_post"
+                    },
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            ]
+        ),
+    }
+    package = validate_retained_claims(
+        artifacts,
+        {
+            "findings": {
+                "findings": [{"id": "f1", "text": source}]
+            }
+        },
+    )
+
+    assert package.unsupported_factual_count == 1
+    assert "quote_not_matched" in package.results[0].reasons
+    issues = _deterministic_claim_validation_issues(package)
+    assert len(issues) == 1
+    assert issues[0].rule_id == "retained_claim.quote_match"
+    assert issues[0].entity_id == package.results[0].candidate.claim_id
+    assert issues[0].evidence_ids == ["f1"]
+
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    assert plan.mode == "targeted"
+    assert plan.targets[0].target_section == "linkedin_post"
+    assert plan.targets[0].allowed_paths == ["linkedin_post[claim_index=0]"]
+
+
 def _grounding_check(item_id: str, text: str, outcome: str) -> dict:
     return {
         "item_id": item_id,
@@ -75,6 +139,84 @@ def _grounding_check(item_id: str, text: str, outcome: str) -> dict:
         },
         "reason": f"semantic_{outcome}",
     }
+
+
+def test_grounding_rule_blocks_deterministic_quote_failure_before_promotion(
+    tmp_path,
+) -> None:
+    claim = (
+        "“Actively exploring” and “plan to implement in the near future” are "
+        "distinct positions grouped in the same finding."
+    )
+    source = (
+        "The report highlight states: “63% of merchants are actively exploring "
+        "or plan to implement agentic AI payments in the near future.”"
+    )
+    text_hash = hashlib.sha256(claim.encode("utf-8")).hexdigest()
+    artifacts = {
+        "linkedin_post": claim,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="linkedin_post",
+                    claim_id=f"soft_copy:linkedin_post:{text_hash[:16]}",
+                    text_hash=text_hash,
+                    classification="factual",
+                    evidence_ids=("f1",),
+                    source_spans=(),
+                    producing_prompt_identity={"namespace": "test/linkedin"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            ]
+        ),
+    }
+    evidence_packs = {
+        "findings": {"findings": [{"id": "f1", "text": source}]}
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="retained-claim-deterministic-failure",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        vector_store_id=None,
+    )
+    items = grounding_payload(request, artifacts)["public_factual_items"]
+    checks = []
+    for item in items:
+        check = _grounding_check(item["item_id"], item["text"], "entailed")
+        check["section"] = item["section"]
+        checks.append(check)
+    provider = FakeOpenAI(grounding_payload={"unsupported": [], "checks": checks})
+    runtime = SimpleNamespace(
+        request=request,
+        source_id="",
+        settings=_settings(tmp_path),
+        prepared=SimpleNamespace(
+            grounding_use_vector_store=False,
+            evidence_texts=[source],
+            evidence_windows=[],
+        ),
+        prompt_client=FakePromptClient(),
+        openai_client=provider,
+        ctx=_ctx(),
+        vector_store_content_hash="",
+        retained_claim_validation=None,
+    )
+
+    issues = run_grounding_rule(runtime)
+
+    deterministic_failures = [
+        issue for issue in issues if issue.rule_id == "retained_claim.quote_match"
+    ]
+    assert len(deterministic_failures) == 1
+    assert deterministic_failures[0].severity == "error"
+    assert deterministic_failures[0].entity_id == (
+        f"soft_copy:linkedin_post:{text_hash[:16]}"
+    )
+    assert len(provider.requests) == 1
 
 
 def test_grounding_payload_attaches_only_unresolved_claims_to_exact_evidence() -> None:

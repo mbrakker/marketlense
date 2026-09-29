@@ -48,7 +48,10 @@ finding and carries its exact claim identity into the existing claim-scoped
 repair path. It remains typed as unresolved; it is not relabeled as a factual
 contradiction. Missing or invalid provenance and mechanically proven
 source-fidelity failures also remain blocking. The check uses retained evidence
-only and does not contain publisher- or report-specific exceptions.
+only and does not contain publisher- or report-specific exceptions. A failed
+deterministic factual check is also emitted as a typed validation issue before
+candidate promotion, so the candidate repair loop sees the same unsupported quote,
+number, evidence-reference, or provenance result that final readiness will enforce.
 
 Grounding uses the existing `report_vs/validate/grounding` prompt family and one
 report-level execution for all unresolved retained claims. Each returned claim

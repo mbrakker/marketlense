@@ -129,7 +129,7 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     def retain_claim_results(updated: ClaimValidationPackage) -> None:
         runtime.retained_claim_validation = updated
 
-    return run_grounding_check(
+    issues = run_grounding_check(
         request=runtime.request,
         settings=runtime.settings,
         grounding_use_vector_store=runtime.prepared.grounding_use_vector_store,
@@ -144,6 +144,51 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         retained_claim_inputs=semantic_inputs,
         retained_claim_validation_sink=retain_claim_results,
     )
+    issues.extend(
+        _deterministic_claim_validation_issues(
+            runtime.retained_claim_validation or package
+        )
+    )
+    return issues
+
+
+def _deterministic_claim_validation_issues(
+    package: ClaimValidationPackage,
+) -> List[ValidationIssue]:
+    """Expose deterministic retained-claim failures to candidate validation."""
+    issues: List[ValidationIssue] = []
+    for result in package.results:
+        candidate = result.candidate
+        if not candidate.factual or result.deterministic_status != "unsupported":
+            continue
+        for check in result.checks:
+            if check.status != "failed":
+                continue
+            rule_id = f"retained_claim.{check.name}"
+            issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message=(
+                        f"[{rule_id}] Retained factual claim failed deterministic "
+                        f"validation: {check.reason}."
+                    ),
+                    severity="error",
+                    affected_section=(
+                        candidate.affected_section or candidate.source_family
+                    ),
+                    rule_id=rule_id,
+                    violation_type="unsupported_factual_claim",
+                    entity_id=candidate.claim_id,
+                    evidence_ids=list(
+                        dict.fromkeys(
+                            reference.evidence_id
+                            for reference in candidate.evidence_references
+                            if reference.evidence_id
+                        )
+                    ),
+                )
+            )
+    return issues
 
 
 def run_grounding_check(
