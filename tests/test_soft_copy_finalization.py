@@ -454,3 +454,168 @@ def test_finalization_invariant_rejects_public_copy_mutated_after_provenance() -
         assert_retained_soft_copy_claims_match_public_copy(payload)
 
     assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
+
+
+def test_finalization_drops_provenance_for_rolled_back_repair_text() -> None:
+    final_text = "Retailers rely on measurable audience signals."
+    stale_repair_text = "Retailers rely on a 19% lift in audience signals."
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "f1",
+                    "evidence": "Retailers rely on measurable audience signals.",
+                    "pages": [1],
+                }
+            ]
+        }
+    }
+    prior = _assemble_soft_copy(
+        expert_comment=final_text,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": final_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+
+    finalized = _assemble_soft_copy(
+        expert_comment=final_text,
+        evidence_packs=evidence_packs,
+        existing_soft_copy_claim_provenance=prior["soft_copy_claim_provenance"],
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": stale_repair_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+        soft_copy_repair_texts={"expert_comment": [stale_repair_text]},
+    )
+
+    retained_claims = [
+        item
+        for item in finalized["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    ]
+    assert [item["text_hash"] for item in retained_claims] == [
+        sha256(final_text.encode()).hexdigest()
+    ]
+    assert_retained_soft_copy_claims_match_public_copy(finalized)
+
+
+def test_merchant_risk_council_summary_discards_rolled_back_repair_provenance() -> None:
+    final_claim = "The report summarizes merchant payment operations."
+    rolled_back_claim = "The report says digital wallet use rose 31% in 2026."
+    summary = {
+        "tldr": final_claim,
+        "card_tldr_compact": final_claim,
+        "executive_summary": final_claim,
+        "claim_evidence_map": [],
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "mrc-f1",
+                    "evidence": final_claim,
+                    "pages": [1],
+                }
+            ]
+        }
+    }
+    prior = _assemble_soft_copy(
+        summary=summary,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": final_claim,
+                    "classification": "factual",
+                    "evidence_ids": ["mrc-f1"],
+                }
+            ]
+        },
+    )
+
+    finalized = _assemble_soft_copy(
+        summary=summary,
+        evidence_packs=evidence_packs,
+        existing_soft_copy_claim_provenance=prior["soft_copy_claim_provenance"],
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": final_claim,
+                    "classification": "factual",
+                    "evidence_ids": ["mrc-f1"],
+                },
+                {
+                    "claim": rolled_back_claim,
+                    "classification": "factual",
+                    "evidence_ids": ["mrc-f1"],
+                },
+            ]
+        },
+        soft_copy_repair_texts={"summary": [rolled_back_claim]},
+    )
+
+    summary_claims = [
+        item
+        for item in finalized["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "summary"
+    ]
+    assert [item["text_hash"] for item in summary_claims] == [
+        sha256(final_claim.encode()).hexdigest()
+    ]
+    assert_retained_soft_copy_claims_match_public_copy(finalized)
+
+
+def test_finalization_deduplicates_identical_retained_provenance_records() -> None:
+    final_text = "Retailers rely on measurable audience signals."
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "f1",
+                    "evidence": final_text,
+                    "pages": [1],
+                }
+            ]
+        }
+    }
+    prior = _assemble_soft_copy(
+        expert_comment=final_text,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": final_text,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                }
+            ]
+        },
+    )
+    provenance = prior["soft_copy_claim_provenance"]
+    provenance["claims"] = [*provenance["claims"], provenance["claims"][0]]
+
+    finalized = _assemble_soft_copy(
+        expert_comment=final_text,
+        evidence_packs=evidence_packs,
+        existing_soft_copy_claim_provenance=provenance,
+    )
+
+    retained_claims = [
+        item
+        for item in finalized["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    ]
+    assert len(retained_claims) == 1
+    assert_retained_soft_copy_claims_match_public_copy(finalized)

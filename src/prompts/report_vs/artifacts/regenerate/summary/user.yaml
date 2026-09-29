@@ -27,6 +27,12 @@ text: |
   - For `claim_map_item`, replace only the named item's `claim` leaf; use only
     `repair_context_json.allowed_paths` and do not patch map siblings, public
     copy, TLDRs, or metadata.
+  - For a `claim_map_item` failure, provide one non-empty replacement string;
+    never return null. Preserve only propositions established by that item's
+    linked evidence. If a claim combines a reported fact with a purpose,
+    implication, or explanation not established by the linked evidence, remove
+    that unsupported clause. Do not replace it with a detail from neighboring
+    sections or pages, even if that detail concerns the same topic.
   - When `claim_repair_scope.mode` is `claim`, return only the named summary
     sentence leaf with one replacement sentence. The generator preserves and
     deterministically reconstructs all sibling claims; never rewrite or repeat

@@ -1026,25 +1026,36 @@ def materialize_retained_claim_package(
             )
     for candidate_hash, stored_result in reusable_semantic_results.items():
         matching_current = current_by_candidate.get(candidate_hash, [])
-        if len(matching_current) != 1:
+        if not matching_current:
             continue
-        current_result = matching_current[0]
-        current_result.update(
-            {
-                field: stored_result.get(field)
-                for field in (
-                    "status",
-                    "reasons",
-                    "semantic_outcome",
-                    "semantic_reason",
-                    "semantic_protected_facts",
-                    "semantic_identity",
-                    "semantic_disagreement",
-                    "semantic_validator_used",
-                    "semantic_execution_identity",
-                )
-            }
+        semantic_result_fields = (
+            "status",
+            "reasons",
+            "semantic_outcome",
+            "semantic_reason",
+            "semantic_protected_facts",
+            "semantic_identity",
+            "semantic_disagreement",
+            "semantic_validator_used",
+            "semantic_execution_identity",
         )
+        if any(
+            current_result.get("deterministic_status")
+            != stored_result.get("deterministic_status")
+            or _hash(current_result.get("checks"))
+            != _hash(stored_result.get("checks"))
+            or _hash(current_result.get("protected_facts"))
+            != _hash(stored_result.get("protected_facts"))
+            for current_result in matching_current
+        ):
+            continue
+        for current_result in matching_current:
+            current_result.update(
+                {
+                    field: stored_result.get(field)
+                    for field in semantic_result_fields
+                }
+            )
     semantic_results = [
         result
         for result in current_results
@@ -1265,23 +1276,39 @@ def _claim_validation_semantic_results_for_final_inputs(
             return {}
         semantic_execution_ids.add(execution_identity)
         current_matches = current_by_candidate.get(candidate_hash, [])
-        if len(current_matches) != 1:
+        if not current_matches:
             continue
-        current_result = current_matches[0]
-        if (
+        if candidate.get("factual") is not True or any(
             result.get("deterministic_status")
             != current_result.get("deterministic_status")
             or _hash(result.get("checks")) != _hash(current_result.get("checks"))
             or _hash(result.get("protected_facts"))
             != _hash(current_result.get("protected_facts"))
-            or candidate.get("factual") is not True
             or result.get("deterministic_status") != "unresolved"
+            for current_result in current_matches
         ):
             continue
-        if candidate_hash in reusable:
-            ambiguous.add(candidate_hash)
-        else:
+        existing = reusable.get(candidate_hash)
+        if existing is None:
             reusable[candidate_hash] = result
+            continue
+        semantic_result_fields = (
+            "status",
+            "deterministic_status",
+            "reasons",
+            "semantic_outcome",
+            "semantic_reason",
+            "semantic_protected_facts",
+            "semantic_identity",
+            "semantic_disagreement",
+            "semantic_validator_used",
+            "semantic_execution_identity",
+        )
+        if any(
+            existing.get(field) != result.get(field)
+            for field in semantic_result_fields
+        ):
+            ambiguous.add(candidate_hash)
 
     if (
         not isinstance(raw.get("semantic_execution_identities"), list)

@@ -342,8 +342,13 @@ def test_key_figure_relationship_failure_regenerates_only_key_figure_selection()
     artifacts = _temporal_artifacts(
         text="Average daily social-video time reaches 0:52 in 2024E.", evidence=evidence
     )
+    artifacts["insights_final"][0]["metric"] = {
+        "label": "Average daily social-video time",
+        "value": "0:52",
+    }
     artifacts["key_figures"] = [
         {
+            "insight_id": "insight-temporal",
             "label": "Average daily social-video time",
             "figure": "0:48 in 2024E",
             "why_it_matters": "Average daily social-video time reaches 0:48 in 2024E.",
@@ -360,11 +365,14 @@ def test_key_figure_relationship_failure_regenerates_only_key_figure_selection()
         broad_retry_available=True,
     )
 
-    assert [target.target_section for target in plan.targets] == ["key_figures"]
-    assert plan.targets[0].regenerate_steps == ["key_figures"]
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
+    assert plan.targets[0].regenerate_steps == [
+        "insights_candidates",
+        "insights_final",
+    ]
     assert plan.targets[0].allowed_paths == [
-        "key_figures[0].figure",
-        "key_figures[0].why_it_matters",
+        "insights_final[item=insight-temporal].metric.label",
+        "insights_final[item=insight-temporal].metric.value",
     ]
 
 

@@ -254,6 +254,80 @@ def test_identical_soft_copy_claims_share_one_semantic_result() -> None:
     )
 
 
+def test_final_package_reuses_one_semantic_result_for_duplicate_public_claims() -> None:
+    text = "Retailers increasingly support wallet checkout."
+    text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    artifacts = {
+        "summary": {"tldr": text, "executive_summary": text},
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="summary",
+                    claim_id=f"soft_copy:summary:{text_hash[:16]}",
+                    text_hash=text_hash,
+                    classification="factual",
+                    evidence_ids=("f1",),
+                    source_spans=(),
+                    producing_prompt_identity={"namespace": "test/summary"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            ]
+        ),
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {"id": "f1", "text": "Wallet use is becoming a common checkout method."}
+            ]
+        }
+    }
+    semantic_calls = 0
+
+    def ground(claims):
+        nonlocal semantic_calls
+        semantic_calls += 1
+        return [_semantic_result(claim, "entailed") for claim in claims]
+
+    candidate = claim_validation.attach_claim_validation_execution_identity(
+        validate_retained_claims(
+            artifacts,
+            evidence,
+            semantic_batch_validator=ground,
+            source_identity="source-1",
+        ),
+        report_id="report-1",
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    retained, failure_code = claim_validation.materialize_retained_claim_package(
+        candidate,
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence,
+        final_html=f"<html><body>{text}</body></html>",
+        source_id="source-1",
+        source_md5="source-md5",
+        configuration_hash="config-1",
+        policy_hash="policy-1",
+    )
+
+    assert failure_code == ""
+    assert retained is not None
+    assert semantic_calls == 1
+    assert len(candidate["results"]) == 2
+    assert retained["semantic_validation_count"] == 2
+    assert retained["unresolved_factual_count"] == 0
+    assert [result["status"] for result in retained["results"]] == [
+        "supported",
+        "supported",
+    ]
+
+
 def test_conflicting_claim_inputs_with_same_id_remain_blocked() -> None:
     text = "Wallet use is becoming a common checkout method across retailers."
     artifacts = {

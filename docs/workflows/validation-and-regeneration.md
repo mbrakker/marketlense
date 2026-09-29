@@ -102,6 +102,11 @@ reuse or enters the existing bounded structured-output recovery. The grounding
 validator identity changes when provider-facing identity mapping changes, so
 older semantic results cannot be carried into current packages. An invalid
 response cannot produce an accepted claim package.
+When finalization presents repeated byte-identical public claims, a prior
+semantic result is reused only when every occurrence has the same deterministic
+checks, protected facts, claim text, linked evidence, and source lineage. If any
+occurrence differs or retained semantic outcomes conflict, the result is not
+reused and the claim stays unresolved.
 
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and
@@ -371,6 +376,10 @@ validation checks it. Repeated byte-identical sentences resolve to one stable
 content identity. A final sentence without a retained binding fails with
 `regeneration_deterministic_projection_failed`; finalization does not invent a
 classification, evidence ID, or off-grid sentence fragment.
+Repair provenance is derived only from sentences that remain on the canonical
+final public grid. Text from a candidate that was later rolled back is pruned
+before binding validation; this does not forgive an unbound final sentence,
+which still fails exact coverage.
 For optional Expert Comment and LinkedIn copy, finalization may omit an
 unbound sentence only when the same output retains at least one sentence with
 an already declared semantic binding. It never infers a replacement binding;
@@ -401,6 +410,11 @@ sentence identity for a fragment absent from that canonical grid, including
 when text contains initialisms such as `U.S.`.
 Claim repair and numeric and grounding attribution use that same material
 sentence grid as retained provenance.
+Targeted Summary claim-map repair replaces only the named claim leaf and uses
+only its linked evidence. When that evidence establishes a reported fact but
+not a purpose, implication, or explanation attached to it, repair retains only
+the supported proposition. It cannot substitute a neighboring section's
+detail, and the replacement must remain a non-empty string.
 The grounding inventory carries the model's declared classification as an
 untrusted hint so self-authored advice is evaluated for its factual premises
 without being mistaken for a claim that the source issued that advice.

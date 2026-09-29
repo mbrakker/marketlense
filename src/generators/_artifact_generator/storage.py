@@ -591,17 +591,21 @@ def _soft_copy_claim_provenance_payload(
         for family, claim_ids in replaced_claim_ids.items()
         if isinstance(claim_ids, list)
     }
-    claims: List[SoftCopyClaimProvenance] = [
-        claim
-        for claim in (
-            soft_copy_claim_provenance_from_payload(existing_provenance)
-            if isinstance(existing_provenance, dict)
-            and isinstance(existing_provenance.get("claims"), list)
-            else []
-        )
-        if claim.artifact_family not in replaced
-        and claim.claim_id not in replaced_ids.get(claim.artifact_family, set())
-    ]
+    claims: List[SoftCopyClaimProvenance] = []
+    for claim in (
+        soft_copy_claim_provenance_from_payload(existing_provenance)
+        if isinstance(existing_provenance, dict)
+        and isinstance(existing_provenance.get("claims"), list)
+        else []
+    ):
+        if (
+            claim.artifact_family in replaced
+            or claim.claim_id in replaced_ids.get(claim.artifact_family, set())
+        ):
+            continue
+        if any(existing == claim for existing in claims):
+            continue
+        claims.append(claim)
     public_sentence_hashes = {
         family: {
             hashlib.sha256(sentence.encode("utf-8")).hexdigest()
@@ -621,21 +625,35 @@ def _soft_copy_claim_provenance_payload(
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
         if family in repair_texts:
+            final_sentences = set(soft_copy_material_sentences(text))
             retained_hashes = {
                 claim.text_hash for claim in claims if claim.artifact_family == family
             }
             for repaired_text in repair_texts[family]:
-                normalized_text = " ".join(str(repaired_text or "").split())
+                # A repair may later be rolled back by validation. Only carry
+                # provenance from the repair for sentences that still occur on
+                # the canonical final public sentence grid.
+                retained_repair_sentences = [
+                    sentence
+                    for sentence in soft_copy_material_sentences(
+                        str(repaired_text or "")
+                    )
+                    if sentence in final_sentences
+                ]
+                if not retained_repair_sentences:
+                    continue
+                repair_text = " ".join(retained_repair_sentences)
+                retained_repair_set = set(retained_repair_sentences)
                 repaired_bindings = [
                     binding
                     for binding in declared or []
                     if isinstance(binding, dict)
                     and " ".join(str(binding.get("claim") or "").split())
-                    == normalized_text
+                    in retained_repair_set
                 ]
                 repaired_claims = build_soft_copy_claim_provenance(
                     artifact_family=family,
-                    text=str(repaired_text),
+                    text=repair_text,
                     declared_claims=repaired_bindings,
                     evidence_span_index=span_index,
                     producing_prompt_identity=dict(prompt_identities.get(family) or {}),
@@ -700,6 +718,15 @@ def _soft_copy_claim_provenance_payload(
                         regeneration_attempt=regeneration_attempt,
                     )
                 )
+        # Repair state can outlive a candidate copy that was later rolled back.
+        # Retain provenance only for sentences in the canonical final public
+        # text; the exact coverage check below still blocks any unbound sentence.
+        claims = [
+            claim
+            for claim in claims
+            if claim.artifact_family != family
+            or claim.text_hash in public_sentence_hashes[family]
+        ]
         family_claims = [claim for claim in claims if claim.artifact_family == family]
         if not retained_soft_copy_claims_cover_text(text=text, claims=family_claims):
             raise AppError(
