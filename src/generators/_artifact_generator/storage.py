@@ -25,6 +25,7 @@ from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    align_soft_copy_claim_bindings_to_text,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
     soft_copy_material_sentences,
@@ -476,6 +477,25 @@ def assemble_artifacts_payload(
         "source_status": source_status,
         "family_status": family_status,
     }
+    completed_summary_bindings, recovered_summary_binding_count = (
+        _complete_summary_bindings_from_exact_direct_claims(
+            summary=summary,
+            bindings=soft_copy_claim_bindings.get("summary"),
+        )
+        if not summary_already_bound
+        else (soft_copy_claim_bindings.get("summary") or [], 0)
+    )
+    if recovered_summary_binding_count:
+        soft_copy_claim_bindings["summary"] = completed_summary_bindings
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event="artifact_summary_provenance_completed_from_direct_claim_map",
+                module=logger.name,
+                fields={"binding_count": recovered_summary_binding_count},
+            )
+        )
     artifacts_payload["soft_copy_claim_provenance"] = (
         _soft_copy_claim_provenance_payload(
             summary=summary,
@@ -736,6 +756,66 @@ def _soft_copy_claim_provenance_payload(
                 context={"artifact_family": family},
             )
     return soft_copy_claim_provenance_to_payload(claims)
+
+
+def _complete_summary_bindings_from_exact_direct_claims(
+    *,
+    summary: Dict[str, Any],
+    bindings: object,
+) -> tuple[List[Dict[str, Any]], int]:
+    """Recover only uncovered summary sentences with one exact direct source row."""
+
+    public_text = soft_copy_public_text("summary", summary)
+    sentences = soft_copy_material_sentences(public_text)
+    declared = (
+        [dict(binding) for binding in bindings if isinstance(binding, dict)]
+        if isinstance(bindings, list)
+        else []
+    )
+    if not sentences:
+        return declared, 0
+
+    aligned = align_soft_copy_claim_bindings_to_text(
+        artifact_family="summary",
+        text=public_text,
+        claim_bindings=declared,
+    )
+    covered_sentences = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    if all(sentence in covered_sentences for sentence in sentences):
+        return declared, 0
+
+    direct_by_sentence: Dict[str, Dict[tuple[str, ...], Dict[str, Any]]] = {}
+    for binding in source_backed_summary_claim_bindings(summary):
+        claim_sentences = soft_copy_material_sentences(binding.get("claim"))
+        if len(claim_sentences) != 1:
+            continue
+        sentence = claim_sentences[0]
+        evidence_ids = tuple(
+            dict.fromkeys(
+                str(value).strip()
+                for value in binding.get("evidence_ids", [])
+                if str(value).strip()
+            )
+        )
+        if not evidence_ids:
+            continue
+        direct_by_sentence.setdefault(sentence, {})[evidence_ids] = {
+            **binding,
+            "claim": sentence,
+        }
+
+    recovered: List[Dict[str, Any]] = []
+    for sentence in dict.fromkeys(sentences):
+        if sentence in covered_sentences:
+            continue
+        matches = list(direct_by_sentence.get(sentence, {}).values())
+        if len(matches) == 1:
+            recovered.append(matches[0])
+    return [*declared, *recovered], len(recovered)
 
 
 def build_universal_claim_ledger(

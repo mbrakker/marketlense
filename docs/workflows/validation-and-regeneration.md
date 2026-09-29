@@ -370,7 +370,11 @@ copy, or any final material sentence without one retained hash, fails closed.
 If otherwise-final Summary prose exceeds its declared bindings, the same
 source-backed fallback applies when direct retained claim-map rows exist; it
 does not synthesize a semantic binding. Without such direct rows, the existing
-strict provenance failure remains.
+strict provenance failure remains. After a Summary repair, artifact finalization
+can also complete an uncovered sentence binding from a uniquely matching direct
+`claim_evidence_map` row whose canonical evidence span is retained. The sentence
+must match the shared material-sentence grid exactly; paraphrases, unsupported
+rows, and multiple distinct evidence bindings remain blocking provenance errors.
 An unchanged Summary with complete retained provenance keeps its original
 copy and bindings during a sibling repair. Claim-scoped repairs keep the
 retained sibling bindings while they validate the replacement sentence; they

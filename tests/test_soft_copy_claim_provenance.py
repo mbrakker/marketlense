@@ -392,6 +392,144 @@ def test_artifact_assembly_allows_empty_soft_copy_without_claims() -> None:
     }
 
 
+def test_repaired_summary_recovers_only_exact_direct_claim_map_bindings() -> None:
+    sentences = [
+        "The report identifies digital media trends.",
+        "Advertisers report short video adoption.",
+        "Leaders track channel performance.",
+    ]
+    summary = {
+        "tldr": sentences[0],
+        "card_tldr_compact": sentences[1],
+        "executive_summary": sentences[2],
+        "claim_evidence_map": [
+            {
+                "claim": sentence,
+                "evidence_id": f"finding-{index}",
+                "evidence": sentence,
+            }
+            for index, sentence in enumerate(sentences, start=1)
+        ],
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": f"finding-{index}",
+                    "evidence": sentence,
+                    "pages": [index],
+                }
+                for index, sentence in enumerate(sentences, start=1)
+            ]
+        }
+    }
+
+    payload = _assemble_soft_copy(
+        summary=summary,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": sentences[0],
+                    "classification": "factual",
+                    "evidence_ids": ["finding-1"],
+                }
+            ]
+        },
+        soft_copy_repair_texts={"summary": [" ".join(sentences)]},
+    )
+
+    retained = [
+        claim
+        for claim in payload["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "summary"
+    ]
+    assert [claim["text_hash"] for claim in retained] == [
+        sha256(sentence.encode("utf-8")).hexdigest() for sentence in sentences
+    ]
+    assert [claim["evidence_ids"] for claim in retained] == [
+        [f"finding-{index}"] for index in range(1, 4)
+    ]
+    assert [claim["source_spans"][0]["page"] for claim in retained] == [1, 2, 3]
+
+
+def test_repaired_summary_does_not_infer_binding_from_paraphrased_direct_claim() -> None:
+    with pytest.raises(AppError) as captured:
+        _assemble_soft_copy(
+            summary={
+                "tldr": "The report identifies digital media trends.",
+                "card_tldr_compact": "The report identifies digital media trends.",
+                "executive_summary": "The report identifies digital media trends.",
+                "claim_evidence_map": [
+                    {
+                        "claim": "The report identifies media trends.",
+                        "evidence_id": "finding-1",
+                        "evidence": "The report identifies media trends.",
+                    }
+                ],
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "finding-1",
+                            "evidence": "The report identifies media trends.",
+                            "pages": [1],
+                        }
+                    ]
+                }
+            },
+            soft_copy_repair_texts={
+                "summary": ["The report identifies digital media trends."]
+            },
+        )
+
+    assert captured.value.code == "soft_copy_claim_provenance_bindings_incomplete"
+
+
+def test_repaired_summary_does_not_choose_between_direct_claim_evidence_rows() -> None:
+    sentence = "The report identifies digital media trends."
+    with pytest.raises(AppError) as captured:
+        _assemble_soft_copy(
+            summary={
+                "tldr": sentence,
+                "card_tldr_compact": sentence,
+                "executive_summary": sentence,
+                "claim_evidence_map": [
+                    {
+                        "claim": sentence,
+                        "evidence_id": "finding-1",
+                        "evidence": "Digital media trends appear in the report.",
+                    },
+                    {
+                        "claim": sentence,
+                        "evidence_id": "finding-2",
+                        "evidence": "The report also covers digital media trends.",
+                    },
+                ],
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "finding-1",
+                            "evidence": "Digital media trends appear in the report.",
+                            "pages": [1],
+                        },
+                        {
+                            "id": "finding-2",
+                            "evidence": "The report also covers digital media trends.",
+                            "pages": [2],
+                        },
+                    ]
+                }
+            },
+            soft_copy_repair_texts={"summary": [sentence]},
+        )
+
+    assert captured.value.code == "soft_copy_claim_provenance_bindings_incomplete"
+
+
 def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation() -> (
     None
 ):
