@@ -1176,12 +1176,20 @@ def _public_factual_items(
         if sentences and all(len(values) == 1 for values in matched):
             for sentence, values in zip(sentences, matched, strict=True):
                 claim = values[0]
+                provenance_evidence = [
+                    s(span.get("text"))
+                    for span in claim.source_spans
+                    if s(span.get("evidence_id")) in claim.evidence_ids
+                    and s(span.get("text"))
+                ]
                 add(
                     claim.claim_id,
                     section,
                     sentence,
                     claim.evidence_ids,
-                    "\n".join(
+                    "\n".join(provenance_evidence)
+                    if provenance_evidence
+                    else "\n".join(
                         evidence_by_id[evidence_id]
                         for evidence_id in claim.evidence_ids
                         if evidence_id in evidence_by_id

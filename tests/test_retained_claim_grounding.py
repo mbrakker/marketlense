@@ -146,6 +146,81 @@ def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -
     assert retained[0]["text"] == sentence
 
 
+def test_public_numeric_soft_copy_uses_its_retained_provenance_source_span() -> None:
+    sentence = (
+        "Generative AI tools drove a 693% increase in retail-site traffic "
+        "during the 2025 holiday season compared with a year earlier."
+    )
+    source_text = (
+        "The report cites a 693% year-over-year increase in retail-site traffic "
+        "from generative AI tools during the 2025 holiday season."
+    )
+    claim_id = "soft_copy:linkedin_post:generative-ai-traffic"
+    provenance = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id=claim_id,
+        text_hash=hashlib.sha256(sentence.encode("utf-8")).hexdigest(),
+        classification="factual",
+        evidence_ids=("trend-2",),
+        source_spans=(
+            {
+                "evidence_id": "trend-2",
+                "source_pack": "doc_map",
+                "page": 5,
+                "text": source_text,
+            },
+            {
+                "evidence_id": "neighboring-row",
+                "source_pack": "doc_map",
+                "page": 6,
+                "text": "A separate category grew by 99%.",
+            },
+        ),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "insights_final": [
+            {
+                "id": "insight-1",
+                "text": "A separate supported finding.",
+                "evidence_id": "f3",
+                "evidence": "A separate supported finding in another source section.",
+            }
+        ],
+        "linkedin_post": sentence,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [provenance]
+        ),
+    }
+    request = replace(
+        _retained_request(),
+        artifacts=artifacts,
+        evidence_packs={
+            "doc_map": {
+                "sections": [{"id": "trend-2", "text": source_text}]
+            }
+        },
+    )
+
+    payload = grounding_payload(request, artifacts)
+    public_item = next(
+        item
+        for item in payload["public_factual_items"]
+        if item["item_id"] == claim_id
+    )
+
+    assert public_item["evidence_ids"] == ["trend-2"]
+    assert public_item["retained_evidence"] == source_text
+    assert "neighboring-row" not in public_item["retained_evidence"]
+    assert "99%" not in public_item["retained_evidence"]
+    assert not any(
+        item["text"] == sentence for item in payload["retained_claims_to_ground"]
+    )
+
+
 def test_summary_claim_validation_uses_the_joined_canonical_sentence_grid() -> None:
     summary = {
         "tldr": "U.S. revenue reached $918 billion",

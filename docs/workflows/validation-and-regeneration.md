@@ -84,6 +84,13 @@ creation, preserving canonical claim lineage while giving each requested check
 one unambiguous provider ID. Missing, duplicated, or mismatched checks remain
 blocking and enter the existing bounded structured-output recovery.
 
+Public soft-copy items attach retained evidence from the matched sentence's
+canonical provenance source spans, limited to evidence IDs declared by that
+claim. The insight-evidence lookup remains a fallback when no matching source
+span text is present. This keeps numeric and other factual public checks bound
+to the source selected for that sentence and prevents evidence from a neighboring
+claim from being borrowed; it does not add another grounding call.
+
 The grounding policy uses medium reasoning effort with a 16,384-token output
 budget so the report-level response can return a complete structured check for
 every unique retained claim. A retained provider response at the prior high
