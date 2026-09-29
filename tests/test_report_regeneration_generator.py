@@ -28,6 +28,7 @@ from src.contracts.regeneration import (
 from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
     soft_copy_public_text,
     valid_soft_copy_evidence_selection,
@@ -4288,9 +4289,7 @@ def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path
         artifacts=artifacts,
         broad_retry_available=False,
     )
-    assert plan.targets[0].allowed_paths == [
-        "summary.claim_evidence_map[1].claim"
-    ]
+    assert plan.targets[0].allowed_paths == ["summary.claim_evidence_map[1].claim"]
 
     openai_client = _IdlessClaimMapOpenAIClient()
     response = regenerate_artifacts(
@@ -4320,6 +4319,43 @@ def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path
     assert response.repair_decisions[0].changed_paths == [
         "summary.claim_evidence_map[1].claim"
     ]
+
+
+def test_summary_claim_map_issue_uses_map_path_before_soft_copy_provenance_path():
+    artifacts = _current_artifacts()
+    artifacts["summary"]["executive_summary"] = (
+        "Summary sentence one. Summary sentence two. Summary sentence three. "
+        "Summary sentence four. Old summary"
+    )
+    artifacts["summary"]["claim_evidence_map"] = [
+        {"claim": f"Claim {index}.", "evidence_id": f"f{index}"}
+        for index in range(1, 6)
+    ]
+    soft_copy_claim_id = next(
+        claim.claim_id
+        for claim in soft_copy_claim_provenance_from_payload(
+            artifacts["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family == "summary"
+        and claim.text_hash == hashlib.sha256("Old summary".encode()).hexdigest()
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                rule_id="retained_claim.number_value_unit_match",
+                affected_section="summary.claim_evidence_map:5.claim",
+                message="[retained_claim.number_value_unit_match] repair claim",
+                severity="error",
+                entity_id=soft_copy_claim_id,
+                evidence_ids=["f5"],
+            )
+        ],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    assert plan.targets[0].allowed_paths == ["summary.claim_evidence_map[4].claim"]
 
 
 def test_summary_claim_map_repair_rejects_model_patches_to_public_copy_siblings(

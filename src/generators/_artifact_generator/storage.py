@@ -602,6 +602,21 @@ def _soft_copy_claim_provenance_payload(
         if claim.artifact_family not in replaced
         and claim.claim_id not in replaced_ids.get(claim.artifact_family, set())
     ]
+    public_sentence_hashes = {
+        family: {
+            hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+            for sentence in soft_copy_material_sentences(
+                soft_copy_public_text(family, public_output)
+            )
+        }
+        for family, public_output in public_output_by_family.items()
+    }
+    claims = [
+        claim
+        for claim in claims
+        if claim.artifact_family not in public_sentence_hashes
+        or claim.text_hash in public_sentence_hashes[claim.artifact_family]
+    ]
     for family, public_output in public_output_by_family.items():
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)

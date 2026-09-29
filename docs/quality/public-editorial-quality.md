@@ -170,7 +170,14 @@ word limit. The final direct-source summary fallback keeps `tldr` and
 direct claim within the 18-word limit for `card_tldr_compact`. It never
 truncates or invents a compact sentence; if no suitable direct claim exists,
 the summary family abstains with its public summary fields empty, and the
-artifact remains valid without summary claims. After three failed grounding
+artifact remains valid without summary claims. The summary prompt now requires
+the compact TLDR to match an explicitly evidence-bound `claim_evidence_map`
+claim, so deterministic fallback can retain the same direct source support. If
+the summary family abstains, card projection reuses an existing final insight
+that meets the compact sentence contract, preferring one outside the two
+featured card insights. It copies that exact grounded sentence into both card
+TLDR sizes and never rewrites the retained Summary or invents a replacement.
+If no retained insight qualifies, the card remains blocked. After three failed grounding
 repairs for Expert View, that optional family abstains rather than retaining
 speculative causal synthesis.
 

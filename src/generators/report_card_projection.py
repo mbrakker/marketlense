@@ -245,6 +245,37 @@ def build_report_card_manifest(
             message="Exactly two complete card insights are required",
             retryable=False,
         )
+    tldr_compact = " ".join(request.tldr_compact.split())
+    tldr_standard = " ".join(request.tldr_standard.split())
+    if request.summary_abstained:
+        ranked = list(request.insights_final)
+        # Prefer a retained insight that is not already one of the two card
+        # bullets, while preserving rank order within each group.
+        candidates = ranked[2:] + ranked[:2]
+        fallback = next(
+            (
+                text
+                for item in candidates
+                if isinstance(item, Mapping)
+                and (text := " ".join(str(item.get("text") or "").split()))
+                and 1 <= len(text.split()) <= 18
+                and not text.endswith(("...", "\u2026"))
+                and text[-1] in ".?!"
+            ),
+            "",
+        )
+        if not fallback:
+            raise AppError(
+                code="card_tldr_compact_invalid",
+                message=(
+                    "An abstained summary requires a retained final insight that "
+                    "meets the compact card sentence contract"
+                ),
+                retryable=False,
+                context={"field": "summary.card_tldr_compact"},
+            )
+        tldr_compact = fallback
+        tldr_standard = fallback
     geography_label, geography_scope = classify_geography(governed["region"])
     return ReportCardManifest.from_dict(
         {
@@ -256,8 +287,8 @@ def build_report_card_manifest(
             "geography_label": geography_label,
             "geography_scope": geography_scope,
             "covered_period": governed["covered_period"],
-            "tldr_compact": " ".join(request.tldr_compact.split()),
-            "tldr_standard": " ".join(request.tldr_standard.split()),
+            "tldr_compact": tldr_compact,
+            "tldr_standard": tldr_standard,
             "key_insights": insights,
             "fingerprint": asdict(request.fingerprint),
             "covers": asdict(request.covers),

@@ -202,6 +202,24 @@ def test_primary_generation_prompts_do_not_turn_missing_context_into_a_claim() -
         assert "explicitly states that absence" in normalised
 
 
+def test_summary_compact_tldr_must_match_a_direct_source_backed_claim() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    rendered = _render_primary_prompt(
+        "report_vs/artifacts/summary",
+        variables["report_vs/artifacts/summary"],
+    )
+    normalised = _normalise_whitespace(rendered)
+
+    assert (
+        "the compact tldr must be a complete direct source-backed claim of 18 words "
+        "or fewer and must also appear as a claim_evidence_map claim"
+    ) in normalised
+    assert (
+        "if the source does not support a short complete claim, do not shorten or "
+        "invent one; allow deterministic summary abstention"
+    ) in normalised
+
+
 def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references() -> (
     None
 ):

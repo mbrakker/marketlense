@@ -302,6 +302,10 @@ class ReportCardManifestRequest:
     covers: CardCoverAssetSet = field(
         metadata={"doc": "Completed three-size cover asset set."}
     )
+    summary_abstained: bool = field(
+        default=False,
+        metadata={"doc": "Whether the validated summary family explicitly abstained."},
+    )
     source_title: str = field(
         default="", metadata={"doc": "Public canonical source title, when available."}
     )

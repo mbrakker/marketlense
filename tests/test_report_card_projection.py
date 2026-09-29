@@ -207,6 +207,72 @@ def test_build_manifest_preserves_full_text_and_first_two_insights() -> None:
     assert manifest.covers == request.covers
 
 
+def test_abstained_summary_card_reuses_an_existing_supported_insight() -> None:
+    supported_insight = "Retail fraud signals are changing payment priorities."
+    manifest = build_report_card_manifest(
+        _manifest_request(
+            summary_abstained=True,
+            tldr_compact="",
+            tldr_standard="",
+            insights_final=(
+                {
+                    "text": (
+                        "The first ranked insight is intentionally far too long for "
+                        "the compact card sentence and cannot be used for this "
+                        "card projection."
+                    )
+                },
+                {
+                    "text": (
+                        "A second ranked insight is also intentionally far too long "
+                        "for the compact card sentence and cannot be used for this "
+                        "card projection."
+                    )
+                },
+                {"text": supported_insight},
+            ),
+        )
+    )
+
+    assert manifest.tldr_compact == supported_insight
+    assert manifest.tldr_standard == supported_insight
+
+
+def test_abstained_summary_card_stays_blocked_without_a_compact_insight(
+    assert_app_error,
+) -> None:
+    with pytest.raises(AppError) as captured:
+        build_report_card_manifest(
+            _manifest_request(
+                summary_abstained=True,
+                tldr_compact="",
+                tldr_standard="",
+                insights_final=(
+                    {
+                        "text": (
+                            "The first ranked insight is intentionally far too long "
+                            "for the compact card sentence and cannot be used for "
+                            "this card projection."
+                        )
+                    },
+                    {
+                        "text": (
+                            "A second ranked insight is also intentionally far too "
+                            "long for the compact card sentence and cannot be used "
+                            "for this card projection."
+                        )
+                    },
+                ),
+            )
+        )
+
+    assert_app_error(
+        captured.value,
+        code="card_tldr_compact_invalid",
+        retryable=False,
+    )
+
+
 @pytest.mark.parametrize(
     ("field_name", "value", "error_code"),
     (

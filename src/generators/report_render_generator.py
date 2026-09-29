@@ -57,6 +57,7 @@ from src.generators.report_generation_shared import (
     write_cache_json,
 )
 from src.generators.report_title_resolution_generator import is_generic_report_title
+from src.utils.analysis_family import family_is_abstained
 from src.utils.cache_utils import sha256_json
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
@@ -1114,6 +1115,9 @@ def render_report_output(
                     tldr_compact=str(summary.get("card_tldr_compact") or ""),
                     tldr_standard=str(summary.get("tldr") or ""),
                     insights_final=_artifact_insights(artifacts_payload),
+                    summary_abstained=family_is_abstained(
+                        artifacts_payload, "summary"
+                    ),
                     fingerprint=fingerprint,
                     covers=_relative_cover_assets(
                         cover_assets,

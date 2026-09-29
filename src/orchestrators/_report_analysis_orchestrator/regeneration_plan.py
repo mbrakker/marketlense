@@ -504,17 +504,6 @@ def _issue_allowed_path(
     if target_key == "report_identity":
         return ""
     if target_key == "summary":
-        soft_copy_path = _soft_copy_claim_path(
-            family="summary", entity_id=entity_id, artifacts=artifacts
-        )
-        if soft_copy_path:
-            return soft_copy_path
-        match = re.match(
-            r"^(?:summary\.)?(tldr|card_tldr_compact|executive_summary)(?:\.|$)",
-            affected,
-        )
-        if match:
-            return f"summary.{match.group(1)}"
         map_match = re.match(r"^summary\.claim_evidence_map:([^.:]+)", affected)
         if map_match:
             identity = map_match.group(1)
@@ -530,6 +519,18 @@ def _issue_allowed_path(
                         return f"summary.claim_evidence_map[item={identity}].claim"
                     if not stable_id and str(index + 1) == identity:
                         return f"summary.claim_evidence_map[{index}].claim"
+            return ""
+        soft_copy_path = _soft_copy_claim_path(
+            family="summary", entity_id=entity_id, artifacts=artifacts
+        )
+        if soft_copy_path:
+            return soft_copy_path
+        match = re.match(
+            r"^(?:summary\.)?(tldr|card_tldr_compact|executive_summary)(?:\.|$)",
+            affected,
+        )
+        if match:
+            return f"summary.{match.group(1)}"
         return ""
     if target_key == "insights_bundle":
         insight_paths = _issue_insight_allowed_paths(issue, artifacts)

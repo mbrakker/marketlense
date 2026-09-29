@@ -671,7 +671,15 @@ rendered identifiers; private Drive and local-location URLs remain blocked.
 
 The summary's public card TLDR sentence contract is also checked inside that
 same structured-output recovery path, rather than only after all artifact calls
-have completed. Generated artifact payloads retain the canonical selected
+have completed. A summary claim-map validation issue resolves to its exact
+claim-map leaf before any matching public soft-copy provenance identity, so a
+derived sentence identity cannot redirect a source-claim repair. During final
+artifact assembly, provenance is retained only for canonical material sentences
+still present in the final public text; removed sentences lose stale bindings,
+while any uncovered final sentence remains blocking. When Summary explicitly
+abstains, report-card projection may copy an existing final insight that meets
+the compact sentence contract; this does not change Summary artifacts or create
+new claim text. Generated artifact payloads retain the canonical selected
 category IDs separately from the human-readable category labels used to ground
 prompts, so the publish-readiness category-consistency gate can compare the
 same persisted assignment at analysis and render time. Public citation lines

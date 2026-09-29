@@ -639,6 +639,101 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
     ]
 
 
+def test_render_projects_card_tldr_from_final_insight_when_summary_abstains(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="source-md5")
+    runtime = replace(
+        runtime,
+        ctx=replace(
+            runtime.ctx,
+            source_identity_id="source:report-1",
+            configuration_hash="a" * 64,
+            policy_hash="b" * 64,
+        ),
+    )
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    baseline = _analysis(runtime, source, selection)
+    artifacts = {
+        **(baseline.artifacts_payload or {}),
+        "summary": {
+            "tldr": "",
+            "card_tldr_compact": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "family_status": {
+            "summary": {
+                "schema_version": "1.0",
+                "family": "summary",
+                "status": "abstained",
+                "policy_action": "abstain",
+                "reason": "summary_no_short_direct_claim",
+            }
+        },
+    }
+    analysis = replace(baseline, artifacts_payload=artifacts)
+    candidate = attach_claim_validation_execution_identity(
+        validate_retained_claims(
+            artifacts,
+            analysis.evidence_packs,
+            source_identity=runtime.ctx.source_identity_id,
+        ),
+        report_id=runtime.file.file_id,
+        source_id=runtime.ctx.source_identity_id,
+        source_md5=runtime.md5 or "",
+        configuration_hash=runtime.ctx.configuration_hash,
+        policy_hash=runtime.ctx.policy_hash,
+    )
+    store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name="validation_retained_claim_validation_candidate",
+            payload=candidate,
+            report_slug=runtime.report_name,
+        ),
+        runtime.ctx,
+    )
+    html_path = Path(runtime.settings.output_dir) / "final-report.html"
+    manifest_writes = []
+
+    def render_report(_request, _ctx):
+        html_path.parent.mkdir(parents=True, exist_ok=True)
+        html_path.write_text(
+            "<html><body>Rendered report</body></html>", encoding="utf-8"
+        )
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def write_manifest(request, _ctx):
+        manifest_writes.append(request)
+        return ReportCardManifestWriteResponse(
+            schema_version="1.0",
+            manifest_path=str(Path(request.output_dir) / "report-card-manifest.json"),
+            bytes_written=1,
+        )
+
+    dependencies = _deps(
+        render_report=render_report,
+        write_report_card_manifest=write_manifest,
+    )
+    render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        dependencies,
+        preview_resp=render_preview_asset(runtime, source, dependencies),
+    )
+
+    assert len(manifest_writes) == 1
+    expected = analysis.artifacts_payload["insights_final"][0]["text"]
+    assert manifest_writes[0].manifest.tldr_compact == expected
+    assert manifest_writes[0].manifest.tldr_standard == expected
+
+
 def test_render_materializes_final_package_when_validation_candidate_is_missing(
     tmp_path,
 ):

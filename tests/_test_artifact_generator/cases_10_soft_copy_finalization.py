@@ -1,10 +1,19 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 
 from src.contracts.prompt_family_materialization import (
     PromptFamilyMaterializationRequest,
+)
+from src.contracts.soft_copy_claim_provenance import (
+    SoftCopyClaimProvenance,
+    soft_copy_claim_provenance_from_payload,
+    soft_copy_claim_provenance_to_payload,
+)
+from src.generators._artifact_generator.storage import (
+    _soft_copy_claim_provenance_payload,
 )
 from src.services.prompt_family_materialization_service import materialize_prompt_family
 
@@ -130,4 +139,92 @@ def test_fresh_and_cached_soft_copy_share_source_display_finalization(tmp_path) 
     )
 
 
-__all__ = ["test_fresh_and_cached_soft_copy_share_source_display_finalization"]
+def test_final_provenance_drops_removed_optional_family_claims() -> None:
+    old_text = "Old Expert View sentence."
+    old_hash = hashlib.sha256(old_text.encode("utf-8")).hexdigest()
+    existing = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="expert_comment",
+                claim_id=f"soft_copy:expert_comment:{old_hash[:16]}",
+                text_hash=old_hash,
+                classification="interpretive",
+                evidence_ids=(),
+                source_spans=(),
+                producing_prompt_identity={
+                    "namespace": "report_vs/artifacts/expert_comment"
+                },
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
+
+    payload = _soft_copy_claim_provenance_payload(
+        summary={},
+        expert_comment="",
+        linkedin_post="",
+        doc_map={},
+        evidence_packs={},
+        bindings={},
+        prompt_identities={},
+        generation_attempts={},
+        existing_provenance=existing,
+        replaced_families=[],
+        replaced_claim_ids={},
+        repair_texts={},
+        repair_lineage={},
+        regeneration_attempt=0,
+    )
+
+    claims = soft_copy_claim_provenance_from_payload(payload)
+    assert all(claim.artifact_family != "expert_comment" for claim in claims)
+
+
+def test_final_provenance_still_blocks_an_unbound_final_sentence() -> None:
+    old_text = "Old Expert View sentence."
+    old_hash = hashlib.sha256(old_text.encode("utf-8")).hexdigest()
+    existing = soft_copy_claim_provenance_to_payload(
+        [
+            SoftCopyClaimProvenance(
+                schema_version="1.0",
+                artifact_family="expert_comment",
+                claim_id=f"soft_copy:expert_comment:{old_hash[:16]}",
+                text_hash=old_hash,
+                classification="interpretive",
+                evidence_ids=(),
+                source_spans=(),
+                producing_prompt_identity={
+                    "namespace": "report_vs/artifacts/expert_comment"
+                },
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        ]
+    )
+
+    with pytest.raises(AppError):
+        _soft_copy_claim_provenance_payload(
+            summary={},
+            expert_comment=f"{old_text} New unsupported sentence.",
+            linkedin_post="",
+            doc_map={},
+            evidence_packs={},
+            bindings={},
+            prompt_identities={},
+            generation_attempts={},
+            existing_provenance=existing,
+            replaced_families=[],
+            replaced_claim_ids={},
+            repair_texts={},
+            repair_lineage={},
+            regeneration_attempt=0,
+        )
+
+
+__all__ = [
+    "test_final_provenance_drops_removed_optional_family_claims",
+    "test_final_provenance_still_blocks_an_unbound_final_sentence",
+    "test_fresh_and_cached_soft_copy_share_source_display_finalization",
+]
