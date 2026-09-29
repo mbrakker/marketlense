@@ -1,0 +1,227 @@
+{
+  "schema_version": "1.0",
+  "measurement_date_utc": "2026-09-29",
+  "measurement": "public_grounding_provenance_evidence_binding",
+  "implementation_commit": "7494ec43f3cde19cf24e1e89c33234d47e523891",
+  "cohort": {
+    "name": "retained_claim_package_lifecycle_5",
+    "members": [
+      "DoubleVerify",
+      "Deloitte",
+      "Emplifi",
+      "StackAdapt",
+      "Merchant Risk Council"
+    ],
+    "size": 5,
+    "full_20_report_cohort_run": false,
+    "manifest_path": "docs/quality/reliability-cohort-20260927-grounding/final-package-lifecycle-5/frozen_cohort.json",
+    "manifest_sha256": "5a2b8bc4dd7c6d919f66770437c83439233e4671c2c673de9dbb30dc5086cc04"
+  },
+  "run": {
+    "command": "python scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20260927-grounding/final-package-lifecycle-5/frozen_cohort.json --runs-root tmp/public-ready-five-source-span-7494ec43-20260929 --max-duration 7200",
+    "isolated_fresh_state": true,
+    "publication_enabled": false,
+    "run_root": "tmp/public-ready-five-source-span-7494ec43-20260929/frozen-reliability-ku8zqtrj",
+    "member_state": "tmp/public-ready-five-source-span-7494ec43-20260929/frozen-reliability-ku8zqtrj/members/ias-first-attempt-nqchni35",
+    "cohort_result_sha256": "03fb9e76190cb43637f94afaf063bb7590b4044db102c7495c3245f7c283337e",
+    "duration_seconds": 3288.609,
+    "provider_calls": 184,
+    "input_tokens": 1450921,
+    "output_tokens": 448333,
+    "estimated_cost_usd": 0.356416,
+    "typed_terminal_rate": 1.0,
+    "missing_terminal_report_count": 0
+  },
+  "results": {
+    "final_package_eligible_reports": 2,
+    "final_packages_materialized": 2,
+    "unexplained_package_missing": 0,
+    "package_invalid": 0,
+    "report_level_not_publishable": 0,
+    "report_level_readiness_passes": 2,
+    "provider_calls_during_readiness": 0,
+    "legitimate_prepackage_failures": [
+      {
+        "publisher": "Merchant Risk Council",
+        "terminal_failure_code": "validation_failed",
+        "failure_diagnostic": {
+          "artifact_family": "linkedin_post",
+          "claim_or_entity_id": "soft_copy:linkedin_post:7cd9c70c11f94e21",
+          "error_context": {
+            "affected_section": "linkedin_post"
+          },
+          "inner_error_class": "",
+          "outer_code": "validation_failed",
+          "repair_attempt": 1,
+          "stage": "semantic_validation",
+          "validator_rule": "grounding"
+        }
+      },
+      {
+        "publisher": "Emplifi",
+        "terminal_failure_code": "regeneration_deterministic_projection_failed",
+        "failure_diagnostic": {
+          "artifact_family": "",
+          "claim_or_entity_id": "",
+          "error_context": {},
+          "inner_error_class": "",
+          "outer_code": "regeneration_deterministic_projection_failed",
+          "repair_attempt": 0,
+          "stage": "report_pipeline",
+          "validator_rule": ""
+        }
+      },
+      {
+        "publisher": "DoubleVerify",
+        "terminal_failure_code": "validation_failed",
+        "failure_diagnostic": {
+          "artifact_family": "summary.tldr",
+          "claim_or_entity_id": "soft_copy:summary:31c53127d5a230e6",
+          "error_context": {
+            "affected_section": "summary.tldr"
+          },
+          "inner_error_class": "",
+          "outer_code": "validation_failed",
+          "repair_attempt": 1,
+          "stage": "semantic_validation",
+          "validator_rule": "grounding"
+        }
+      }
+    ],
+    "postpackage_terminal_failures": [
+      {
+        "publisher": "Deloitte",
+        "terminal_failure_code": "report_card_manifest_write_failed",
+        "report_level_readiness": "pass"
+      },
+      {
+        "publisher": "StackAdapt Inc",
+        "terminal_failure_code": "report_card_manifest_write_failed",
+        "report_level_readiness": "pass"
+      }
+    ],
+    "runner_queued_publication_readiness_handoffs": 0,
+    "runner_publication_readiness_rate": 0.0,
+    "failure_code_pareto": {
+      "regeneration_deterministic_projection_failed": 1,
+      "report_card_manifest_write_failed": 2,
+      "validation_failed": 2
+    }
+  },
+  "final_packages": [
+    {
+      "publisher": "Deloitte",
+      "report_id": "cohort-b10ed6c82b76739a806a",
+      "source_id": "source:2bd805b867ad7b0401f2343e63a2787f",
+      "source_md5": "b10ed6c82b76739a806a9f10ec0b9723",
+      "final_artifact_hash": "1d4a033bf4c13f339268b6ff8be823aa9573f411ef639a7c4b33aa07024b8f35",
+      "package_hash": "934aa62776d8814cafdf909ee4fc515cb32ffa4a0675a02389ac5d9a664ae470",
+      "evidence_pack_hash": "2371095853fdd0a14d8af237a866b21c9bb79a026988219ba1023c5c2406ae3d",
+      "claim_validation_validator": "retained_claim_validation:v2",
+      "grounding_validator": "grounding_validation_output:1.4",
+      "configuration_hash": "784ee70797dfd15c1789dbbb428793427065d5ecc04a161ff3ad725e8767e5e5",
+      "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+      "semantic_execution_identities": [
+        "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+      ],
+      "package_readiness_status": "awaiting_review",
+      "report_level_readiness": "pass",
+      "unsupported_factual_count": 0,
+      "unresolved_factual_count": 0,
+      "deterministic_pass_count": 11,
+      "semantic_validation_count": 16,
+      "report_terminal_failure_code": "report_card_manifest_write_failed",
+      "identity_checks": {
+        "report_id_matches_readiness": true,
+        "package_artifact_matches_final_lineage": true,
+        "readiness_artifact_matches_package": true,
+        "readiness_package_matches_package": true
+      },
+      "retained_file_sha256": {
+        "final_artifacts": "af1cf556067c2b7c0469f4a4cb76badb37a116d9bc1d4ffda5e3099f02bf6de3",
+        "final_package": "b5a08ebf9c82233b5ce584203e4e7dea7826cdaa74ab4613fc8c9ac9a12e4c51",
+        "readiness": "eb5600569693dbcfe4a37d85d984a8ad937aa1834190b5c3fb51fd63cb00ad42"
+      }
+    },
+    {
+      "publisher": "StackAdapt Inc",
+      "report_id": "cohort-8ef1021c332aa85ba008",
+      "source_id": "source:038b017d7942e0bcce44627e5c9ff227",
+      "source_md5": "8ef1021c332aa85ba008da58ff8ec866",
+      "final_artifact_hash": "2dccabe3385ee2f405e4936850d36694baf0b48d1112151cf3c29463cd5a3664",
+      "package_hash": "e359dd0bffb69313dc8d893ff4893dde97b6ea24f621fc0a9c3388863baa2b9a",
+      "evidence_pack_hash": "ef31213155fd74905b40081129e2a63fa12cd97707e6fcc52a17944e856fcaf3",
+      "claim_validation_validator": "retained_claim_validation:v2",
+      "grounding_validator": "grounding_validation_output:1.4",
+      "configuration_hash": "784ee70797dfd15c1789dbbb428793427065d5ecc04a161ff3ad725e8767e5e5",
+      "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+      "semantic_execution_identities": [
+        "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+      ],
+      "package_readiness_status": "awaiting_review",
+      "report_level_readiness": "pass",
+      "unsupported_factual_count": 0,
+      "unresolved_factual_count": 0,
+      "deterministic_pass_count": 4,
+      "semantic_validation_count": 25,
+      "report_terminal_failure_code": "report_card_manifest_write_failed",
+      "identity_checks": {
+        "report_id_matches_readiness": true,
+        "package_artifact_matches_final_lineage": true,
+        "readiness_artifact_matches_package": true,
+        "readiness_package_matches_package": true
+      },
+      "retained_file_sha256": {
+        "final_artifacts": "e62da48a0ba3e70d733e4dcc47b1d6ca19a4ebd2a6819d7bfc518ed4103ae506",
+        "final_package": "73b8757176cd69efd1a6584931d7511006032dab2970ca24cdaa95ce6e95f1c3",
+        "readiness": "6d0782ca931e81a802016e7ec2c78749d22f6d26ac7e308ae18f949267aae3b4"
+      }
+    }
+  ],
+  "numeric_claim_observation": {
+    "report": "Deloitte",
+    "claim_value": "693%",
+    "claims_in_final_package": [
+      {
+        "claim_id": "summary_claim:3",
+        "surface": "summary",
+        "validation_status": "supported",
+        "deterministic_status": "supported",
+        "semantic_validator_used": false,
+        "evidence_reference_ids": [
+          "llm-retail-traffic",
+          "llm-retail-traffic"
+        ]
+      },
+      {
+        "claim_id": "soft_copy:summary:a577604c48b8c540",
+        "surface": "summary",
+        "validation_status": "supported",
+        "deterministic_status": "supported",
+        "semantic_validator_used": false,
+        "evidence_reference_ids": [
+          "llm-retail-traffic",
+          "llm-retail-traffic"
+        ]
+      },
+      {
+        "claim_id": "insight:generative-ai-retail-traffic-growth:text",
+        "surface": "insights_final",
+        "validation_status": "supported",
+        "deterministic_status": "supported",
+        "semantic_validator_used": false,
+        "evidence_reference_ids": [
+          "retail-ai-03",
+          "retail-ai-03"
+        ]
+      }
+    ],
+    "linkedin_post_contains_693_percent": false,
+    "interpretation": "The summary and summary soft-copy claims were supported deterministically; semantic validation was not invoked for those claims. This run did not reproduce the prior LinkedIn 693% claim because the generated LinkedIn text contains no 693% figure. It therefore does not estimate the causal effect of the provenance-span fix on that exact claim or justify an additional all-numeric model pass."
+  },
+  "limitations": [
+    "The two reports with final packages passed report-level readiness but later terminated with report_card_manifest_write_failed; no publication was attempted.",
+    "Per-report provider usage attribution was unavailable; provider counts, tokens, and cost are cohort totals.",
+    "The current Deloitte LinkedIn output did not contain the prior 693% claim, so the run does not reproduce that exact claim-level discrepancy."
+  ]
+}

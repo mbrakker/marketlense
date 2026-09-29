@@ -404,3 +404,52 @@ regeneration suite passed 117 tests. The E13 scorecard's A21 repair-only usage
 attribution was unavailable; the full-run totals above come from its isolated
 cost ledger. Provider outcomes and E13 denominators vary between runs and are
 reported as observations, not causal estimates.
+
+
+### 2026-09-29 public grounding evidence measurement at `7494ec43`
+
+The public soft-copy grounding fix was replayed against exactly the pinned five
+reports from fresh isolated state, with publication disabled. The full
+20-report cohort was not run. The run completed in 3,288.609 seconds with 184
+provider calls, 1,450,921 input tokens, 448,333 output tokens, and estimated
+cost `$0.356416`. All five reports received typed terminal outcomes; no terminal
+report was missing. Sanitized identities, hashes, exact package lineage, and
+terminal outcomes are retained in
+[`2026-09-29-7494ec43-public-grounding-measurement.json`](2026-09-29-7494ec43-public-grounding-measurement.json).
+The raw run remains under the ignored `tmp/` directory; its `cohort_result.json`
+SHA-256 is `03fb9e76190cb43637f94afaf063bb7590b4044db102c7495c3245f7c283337e`.
+
+| Measurement | Result |
+| --- | ---: |
+| Final-package eligible reports | 2 |
+| Final packages materialized and bound | 2 |
+| Unexplained `package_missing` | 0 |
+| `package_invalid` | 0 |
+| Report-level readiness `not_publishable` outcomes | 0 |
+| Report-level readiness passes | 2 |
+| Provider calls during readiness | 0 |
+| Typed pre-package failures | 3 |
+| Post-package terminal failures | 2 (`report_card_manifest_write_failed`) |
+| Provider calls / input tokens / output tokens / estimated cost | 184 / 1,450,921 / 448,333 / `$0.356416` |
+
+Deloitte and StackAdapt each materialized a final package. Package validation
+identity and lineage bind the report ID, final artifact hash, source ID/MD5,
+evidence-pack hash, validator versions, configuration hash, policy hash, and
+semantic execution identity. The readiness record references the matching final
+artifact and retained-package hashes. Both passed report-level readiness with
+zero unsupported and zero unresolved factual claims. Their overall workflows
+later stopped on `report_card_manifest_write_failed`; publication remained
+disabled. The other typed pre-package failures were Merchant Risk Council and
+DoubleVerify (`validation_failed`) and Emplifi
+(`regeneration_deterministic_projection_failed`). Candidate packages for those
+reports were not counted as final.
+
+For the numeric-claim question, the 693% claim was supported in Deloitte's
+summary and summary soft-copy by deterministic validation, without a semantic
+validator call. The current generated LinkedIn post does not contain 693%, so
+this run does not reproduce the prior LinkedIn claim discrepancy and cannot
+attribute a change on that exact claim to the provenance-span fix. The existing
+grounding call path was retained; no additional numeric-only model pass was
+added. Thus this measurement gives no evidence that calling an LLM again for
+already-supported numeric claims would improve readiness. The usage ledger had
+zero readiness-stage provider events.
