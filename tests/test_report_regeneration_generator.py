@@ -1662,6 +1662,201 @@ def test_summary_safe_removal_resolves_numeric_stable_claim_id() -> None:
     )
 
 
+def test_summary_safe_removal_replaces_only_the_target_with_retained_claim(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    current["summary"]["tldr"] = "Unsupported single sentence."
+    current["summary"]["card_tldr_compact"] = "Keep compact summary."
+    current["summary"]["executive_summary"] = (
+        "Supported retained claim. Keep executive summary."
+    )
+    current["summary"]["claim_evidence_map"] = [
+        {
+            "claim": "Supported retained claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        }
+    ]
+    evidence_packs = _evidence_packs()
+    evidence_packs["doc_map"]["sections"] = [
+        {
+            "id": "f1",
+            "title": "Retained evidence",
+            "summary": "Supported retained claim.",
+            "pages": [1],
+        }
+    ]
+    evidence_packs["findings"]["findings"] = [
+        {
+            "id": "f1",
+            "text": "Supported retained claim.",
+            "evidence": "Evidence text",
+            "pages": [1],
+        }
+    ]
+    summary_claims = build_soft_copy_claim_provenance(
+        artifact_family="summary",
+        text=soft_copy_public_text("summary", current["summary"]),
+        declared_claims=[
+            {
+                "claim": sentence,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+            for sentence in (
+                "Unsupported single sentence.",
+                "Keep compact summary.",
+                "Supported retained claim.",
+                "Keep executive summary.",
+            )
+        ],
+        evidence_span_index=artifact_evidence_span_index(
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+        ),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    non_summary_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            current["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family != "summary"
+    ]
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [*non_summary_claims, *summary_claims]
+    )
+    unsupported_claim_hash = hashlib.sha256(
+        b"Unsupported single sentence."
+    ).hexdigest()
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REMOVE_CLAIM",
+        repair_strategy="safe_removal",
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="summary.tldr",
+                message="The single sentence is unsupported.",
+                severity="error",
+                repair_target="summary",
+                entity_id=f"soft_copy:summary:{unsupported_claim_hash[:16]}",
+            )
+        ],
+        allowed_paths=["summary.tldr[claim_index=0]"],
+    )
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[target],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    summary = response.updated_artifacts["summary"]
+    assert summary["tldr"] == "Supported retained claim."
+    assert summary["card_tldr_compact"] == "Keep compact summary."
+    assert summary["executive_summary"] == (
+        "Supported retained claim. Keep executive summary."
+    )
+    assert summary["claim_evidence_map"][0]["claim"] == "Supported retained claim."
+    assert summary["claim_evidence_map"][0]["evidence_id"] == "f1"
+
+
+def test_summary_safe_removal_without_retained_replacement_fails_typed(tmp_path):
+    current = _current_artifacts()
+    current["summary"]["tldr"] = "Unsupported only sentence."
+    claim_hash = hashlib.sha256(b"Unsupported only sentence.").hexdigest()
+    old_claims = soft_copy_claim_provenance_from_payload(
+        current["soft_copy_claim_provenance"]
+    )
+    unsupported_claim = replace(
+        next(claim for claim in old_claims if claim.artifact_family == "summary"),
+        claim_id=f"soft_copy:summary:{claim_hash[:16]}",
+        text_hash=claim_hash,
+    )
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            claim
+            for claim in old_claims
+            if not (
+                claim.artifact_family == "summary"
+                and claim.text_hash
+                == hashlib.sha256(b"Old TLDR.").hexdigest()
+            )
+        ]
+        + [unsupported_claim]
+    )
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="summary",
+                repair_action="REMOVE_CLAIM",
+                repair_strategy="safe_removal",
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="summary.tldr",
+                        message="The only TLDR sentence is unsupported.",
+                        severity="error",
+                        entity_id=f"soft_copy:summary:{claim_hash[:16]}",
+                    )
+                ],
+                allowed_paths=["summary.tldr[claim_index=0]"],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+
+    with pytest.raises(AppError) as error:
+        _regenerate_artifacts(
+            ArtifactRegenerationRequest(
+                report_id="report-1",
+                report_name="report-1",
+                attempt_index=3,
+                plan=plan,
+                current_artifacts=current,
+                doc_map=_evidence_packs()["doc_map"],
+                evidence_packs=_evidence_packs(),
+                settings=_settings(tmp_path),
+                ctx=_ctx(),
+                source_status=current["source_status"],
+                categories=["Category"],
+                vector_store_id=None,
+                md5="md5",
+            ),
+            openai_client=_FakeOpenAIClient(),
+            prompt_client=_FakePromptClient(),
+        )
+
+    assert error.value.code == "summary_safe_removal_no_supported_replacement"
+
+
 @pytest.mark.parametrize("attempt_index", [2, 3])
 def test_later_no_prompt_repair_does_not_add_empty_prompt_requirements_to_cache(
     tmp_path,

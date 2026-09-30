@@ -42,6 +42,10 @@ from src.generators._artifact_generator.storage import (
     REGENERATION_PRIVATE_METADATA_ROOTS,
     regeneration_dependent_roots,
 )
+from src.generators.artifact_normalization import (
+    artifact_evidence_span_index,
+    bind_artifact_evidence_spans,
+)
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     merge_public_editorial_quality_validation,
@@ -662,6 +666,8 @@ def _scope_validation_report(
     plan,
     verified_derived_roots: frozenset[str] = frozenset(),
     deterministic_mutation_paths: Sequence[str] = (),
+    doc_map: Dict[str, Any] | None = None,
+    evidence_packs: Dict[str, Any] | None = None,
 ) -> ValidationReport:
     allowed_paths = {
         path.strip()
@@ -669,15 +675,28 @@ def _scope_validation_report(
         for path in target.allowed_paths
         if str(path).strip()
     }
+    verified_mutation_paths = _verified_deterministic_mutation_paths(
+        paths=deterministic_mutation_paths,
+        before=before,
+        after=after,
+        plan=plan,
+        doc_map=doc_map or {},
+        evidence_packs=evidence_packs or {},
+    )
+    allowed_paths.update(verified_mutation_paths)
+    changed_paths = _artifact_diff_paths(before, after)
     allowed_paths.update(
-        _verified_deterministic_mutation_paths(
-            paths=deterministic_mutation_paths,
-            before=before,
-            after=after,
-            plan=plan,
+        path
+        for path in changed_paths
+        if any(
+            verified_path.endswith((".evidence_spans", ".pages"))
+            and (
+                path.startswith(f"{verified_path}.")
+                or path.startswith(f"{verified_path}[")
+            )
+            for verified_path in verified_mutation_paths
         )
     )
-    changed_paths = _artifact_diff_paths(before, after)
     changed_source_roots = {_path_root(path) for path in changed_paths} & {
         _path_root(value) for value in allowed_paths
     }
@@ -723,12 +742,126 @@ def _verified_deterministic_mutation_paths(
     before: Dict[str, Any],
     after: Dict[str, Any],
     plan,
+    doc_map: Dict[str, Any] | None = None,
+    evidence_packs: Dict[str, Any] | None = None,
 ) -> set[str]:
-    """Allow only exact shared-list additions from a planned safe removal."""
+    """Allow only deterministic paths exactly rebuilt from retained state."""
 
     requested = {str(path).strip() for path in paths if str(path).strip()}
     if not requested:
         return set()
+    verified: set[str] = set()
+    rebind_targets = [
+        target
+        for target in plan.targets
+        if target.target_section == "insights_bundle"
+        and target.repair_action == "REBIND_EVIDENCE"
+    ]
+    if rebind_targets:
+        if not isinstance(doc_map, dict) or not isinstance(evidence_packs, dict):
+            return set()
+        span_index = artifact_evidence_span_index(
+            doc_map=doc_map, evidence_packs=evidence_packs
+        )
+        for target in rebind_targets:
+            identities_for_target = {
+                failed_insight_id(issue.entity_id, issue.affected_section)
+                for issue in target.issues
+            }
+            identities_for_target.discard("")
+            if len(identities_for_target) != 1:
+                continue
+            insight_id = next(iter(identities_for_target))
+            path_prefix = f"insights_final[item={insight_id}]"
+            target_paths = {
+                path
+                for path in requested
+                if path.startswith(f"{path_prefix}.")
+            }
+            valid_paths = {
+                f"{path_prefix}.evidence",
+                f"{path_prefix}.pages",
+                f"{path_prefix}.evidence_spans",
+            }
+            if not target_paths or not target_paths <= valid_paths:
+                continue
+            before_items = [
+                item
+                for item in before.get("insights_final", [])
+                if isinstance(item, dict)
+                and str(item.get("id") or "").strip() == insight_id
+            ]
+            after_items = [
+                item
+                for item in after.get("insights_final", [])
+                if isinstance(item, dict)
+                and str(item.get("id") or "").strip() == insight_id
+            ]
+            if len(before_items) != 1 or len(after_items) != 1:
+                continue
+            before_item = before_items[0]
+            after_item = after_items[0]
+            planned_source_fields = {
+                match.group(1)
+                for path in target.allowed_paths
+                if (
+                    match := re.fullmatch(
+                        rf"insights_final\[(?:item={re.escape(insight_id)}|\d+)\]\.([A-Za-z0-9_]+)",
+                        path,
+                    )
+                )
+            }
+            if not any(
+                before_item.get(field) != after_item.get(field)
+                for field in planned_source_fields
+            ):
+                continue
+            canonical = deepcopy(after_items[0])
+            evidence_id = str(canonical.get("evidence_id") or "").strip()
+            selected_evidence_ids = {
+                str(value).strip().casefold()
+                for value in target.selected_evidence_ids
+                if str(value).strip()
+            }
+            if (
+                not evidence_id
+                or not span_index.get(evidence_id.casefold())
+                or (
+                    selected_evidence_ids
+                    and evidence_id.casefold() not in selected_evidence_ids
+                )
+            ):
+                continue
+            bind_artifact_evidence_spans(
+                summary={},
+                insights_candidates=[],
+                insights_final=[canonical],
+                quotes_final=[],
+                doc_map=doc_map,
+                evidence_packs=evidence_packs,
+            )
+            if not canonical.get("evidence_spans"):
+                continue
+            changed_fields = {
+                field
+                for field in ("evidence", "pages", "evidence_spans")
+                if before_item.get(field) != after_item.get(field)
+            }
+            expected_paths = {
+                f"{path_prefix}.{field}" for field in changed_fields
+            }
+            if target_paths != expected_paths:
+                continue
+            if any(
+                after_item.get(field) != canonical.get(field)
+                for field in ("evidence", "pages", "evidence_spans")
+            ):
+                continue
+            verified.update(expected_paths)
+
+    remaining = requested - verified
+    if not remaining:
+        return verified
     removal_targets = [
         target
         for target in plan.targets
@@ -737,14 +870,14 @@ def _verified_deterministic_mutation_paths(
         and target.repair_strategy == "safe_removal"
     ]
     if len(removal_targets) != 1:
-        return set()
+        return verified
     removed_ids = {
         failed_insight_id(issue.entity_id, issue.affected_section)
         for issue in removal_targets[0].issues
     }
     removed_ids.discard("")
     if len(removed_ids) != 1:
-        return set()
+        return verified
 
     def identities(artifacts: Dict[str, Any], root: str) -> set[str]:
         values = artifacts.get(root)
@@ -765,7 +898,7 @@ def _verified_deterministic_mutation_paths(
     )
     shared_additions = candidate_additions & final_additions
     if len(shared_additions) > 1 or shared_additions.intersection(removed_ids):
-        return set()
+        return verified
     expected = {
         f"insights_candidates[item={identity}]" for identity in shared_additions
     } | {f"insights_final[item={identity}]" for identity in shared_additions}
@@ -773,15 +906,15 @@ def _verified_deterministic_mutation_paths(
     # an exact final-list insertion path.
     final_only_additions = final_additions - candidate_additions
     if len(final_only_additions) > 1 or final_only_additions.intersection(removed_ids):
-        return set()
+        return verified
     if len(shared_additions | final_only_additions) > 1:
-        return set()
+        return verified
     expected.update(
         f"insights_final[item={identity}]" for identity in final_only_additions
     )
-    if requested != expected:
-        return set()
-    return expected
+    if remaining == expected:
+        verified.update(expected)
+    return verified
 
 
 def _path_root(path: str) -> str:
@@ -1636,6 +1769,8 @@ def _run_validation_regeneration_loop(
             deterministic_mutation_paths=tuple(
                 getattr(regeneration_response, "deterministic_mutation_paths", []) or []
             ),
+            doc_map=evidence_packs.get("doc_map", {}),
+            evidence_packs=evidence_packs,
         )
         payload_completeness_issue = None
         try:

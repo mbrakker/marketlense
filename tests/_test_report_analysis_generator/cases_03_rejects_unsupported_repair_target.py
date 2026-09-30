@@ -743,6 +743,124 @@ def test_validation_loop_preflights_empty_summary_package_to_safe_removal(tmp_pa
     assert target.allowed_paths == ["summary.claim_evidence_map[0]"]
 
 
+def test_insight_repair_authorizes_same_claim_grounding_warning_fields():
+    insight_id = "insight-1"
+    artifacts = {
+        "insights_final": [
+            {
+                "id": insight_id,
+                "text": "A partly unsupported insight.",
+                "so_what": "A partly unsupported implication.",
+                "now_what": "A partly unsupported recommendation.",
+                "evidence_id": "f1",
+                "evidence": "Retained evidence.",
+            }
+        ],
+        "insights_candidates": [],
+    }
+    issues = [
+        ValidationIssue(
+            message="The recommendation is unsupported.",
+            severity="error",
+            affected_section=f"insights:{insight_id}.now_what",
+            rule_id="grounding",
+            repair_target="insights_bundle",
+            entity_id=f"insight:{insight_id}:now_what",
+            evidence_ids=["f1"],
+        ),
+        ValidationIssue(
+            message="The public insight contains an unsupported clause.",
+            severity="warning",
+            affected_section=f"insights:{insight_id}.text",
+            rule_id="grounding",
+            repair_target="insights_bundle",
+            entity_id=f"insight:{insight_id}:text",
+            evidence_ids=["f1"],
+        ),
+        ValidationIssue(
+            message="The implication contains an unsupported clause.",
+            severity="warning",
+            affected_section=f"insights:{insight_id}.so_what",
+            rule_id="grounding",
+            repair_target="insights_bundle",
+            entity_id=f"insight:{insight_id}:so_what",
+            evidence_ids=["f1"],
+        ),
+    ]
+
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    assert plan.targets[0].allowed_paths == [
+        f"insights_final[item={insight_id}].now_what",
+        f"insights_final[item={insight_id}].so_what",
+        f"insights_final[item={insight_id}].text",
+    ]
+    assert plan.targets[0].repair_action == "REGENERATE_ITEM"
+
+
+def test_summary_repair_keeps_same_claim_grounding_context_only():
+    claim_id = "soft_copy:summary:claim-hash"
+    claim = "The report covers gaming performance."
+    artifacts = {
+        "summary": {
+            "tldr": "A broad summary sentence.",
+            "executive_summary": claim,
+            "claim_evidence_map": [
+                {"id": "claim-one", "claim": claim, "evidence_id": "f1"}
+            ],
+        }
+    }
+    issues = [
+        ValidationIssue(
+            message="The linked source does not establish this claim.",
+            severity="error",
+            affected_section="summary.claim_evidence_map:claim-one.claim",
+            rule_id="grounding",
+            entity_id=claim_id,
+        ),
+        ValidationIssue(
+            message="The summary sentence is contradicted by its evidence.",
+            severity="error",
+            affected_section="summary.executive_summary",
+            rule_id="grounding",
+            entity_id=claim_id,
+        ),
+        ValidationIssue(
+            message="The source also leaves the claim unestablished.",
+            severity="warning",
+            affected_section="summary.executive_summary",
+            rule_id="grounding",
+            entity_id=claim_id,
+        ),
+        ValidationIssue(
+            message="The TLDR opening could be more concrete.",
+            severity="warning",
+            affected_section="summary.tldr",
+            rule_id="artifact_quality",
+            entity_id="summary.tldr",
+        ),
+    ]
+
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+
+    planned_issues = [issue for target in plan.targets for issue in target.issues]
+    assert any(
+        issue.severity == "warning" and issue.rule_id == "grounding"
+        for issue in planned_issues
+    )
+    assert all(issue.rule_id != "artifact_quality" for issue in planned_issues)
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -826,6 +944,7 @@ __all__ = [
     "test_multi_insight_retry_does_not_offer_single_item_safe_removal",
     "test_summary_claim_map_grounding_is_limited_to_the_failed_item",
     "test_validation_loop_preflights_empty_summary_package_to_safe_removal",
+    "test_insight_repair_authorizes_same_claim_grounding_warning_fields",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

@@ -185,6 +185,23 @@ removed together, their paths are applied from the highest sentence index to
 the lowest. This keeps each later mutation aligned with the original canonical
 sentence grid as earlier sentences disappear.
 
+For a blocking insight grounding failure, the planner also includes grounding
+warnings on other leaves of the same stable insight. Unrelated quality warnings
+do not expand the repair. An evidence rebind lets the planned repair select a
+retained evidence ID and update the failed insight text; canonical artifact
+binding then supplies its evidence text, pages, and source spans from the
+retained span index. Candidate scope validation recomputes that binding and
+accepts those derived paths only when they match exactly.
+
+Summary safe removal applies only to the exact claim-map or sentence paths in
+the plan. If removing a sentence would empty a required summary field, the
+generator may reuse a claim-map sentence only when retained summary provenance
+already binds the identical sentence and evidence ID to canonical source spans,
+and the sentence fits the field's existing length contract. Otherwise the
+attempt terminates with a typed `summary_safe_removal_no_supported_replacement`
+reason; it does not clear unrelated summary fields or let card validation fail
+later with an unexplained empty TLDR.
+
 When a LinkedIn post cannot be repaired at claim scope and the safe-removal
 strategy clears the whole post, its retained soft-copy claims are cleared with
 the public text. The provenance coverage check remains required before the

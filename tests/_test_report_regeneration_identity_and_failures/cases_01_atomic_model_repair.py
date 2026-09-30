@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -12,8 +13,13 @@ from src.contracts.regeneration import (
     RegenerationPlan,
     RegenerationTarget,
 )
+from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.report_regeneration_generator import (
     regenerate_artifacts,
+)
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _scope_validation_report,
+    _verified_deterministic_mutation_paths,
 )
 from src.utils.errors import AppError
 from tests._test_report_regeneration_generator._shared import (
@@ -143,6 +149,193 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
         "insights_final[item=insight-1].text"
     ]
     assert response.repair_decisions[0].diagnosed_failure_class == "grounding"
+
+
+def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> None:
+    current = _source_backed_artifacts()
+    item = current["insights_final"][0]
+    item.update(
+        {
+            "now_what": "Use the currently retained source.",
+            "evidence_id": "f1",
+            "evidence": "Old source text.",
+            "pages": [77],
+            "evidence_spans": [
+                {
+                    "evidence_id": "f1",
+                    "source_pack": "doc_map",
+                    "section_id": "f1",
+                    "page": 77,
+                    "text": "Old source text.",
+                }
+            ],
+        }
+    )
+    evidence_packs = _evidence_packs()
+    source_sections = [
+        {
+            "id": f"f{index}",
+            "title": f"Source {index}",
+            "summary": (
+                "The supported replacement evidence explains the recommendation."
+                if index == 2
+                else f"Canonical source text for f{index}."
+            ),
+            "pages": [index],
+        }
+        for index in range(1, 6)
+    ]
+    evidence_packs["doc_map"]["sections"] = source_sections
+    evidence_packs["findings"]["findings"] = [
+        {
+            "id": f"f{index}",
+            "text": (
+                "The supported replacement evidence explains the recommendation."
+                if index == 2
+                else f"Canonical source text for f{index}."
+            ),
+            "evidence": (
+                "The supported replacement evidence explains the recommendation."
+                if index == 2
+                else f"Canonical source text for f{index}."
+            ),
+            "pages": [index],
+        }
+        for index in range(1, 6)
+    ]
+    item_path = "insights_final[item=insight-1]"
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[
+            RegenerationTarget(
+                target_section="insights_bundle",
+                regenerate_steps=["insights_final"],
+                prompt_namespaces=["report_vs/artifacts/regenerate/insights_final"],
+                issues=[
+                    RegenerationIssue(
+                        rule_id="grounding",
+                        affected_section="insights:insight-1.now_what",
+                        message="The recommendation needs an alternative source.",
+                        severity="error",
+                        entity_id="insight:insight-1:now_what",
+                        evidence_ids=["f2"],
+                    )
+                ],
+                repair_action="REBIND_EVIDENCE",
+                repair_strategy="current_evidence",
+                allowed_paths=[
+                    f"{item_path}.evidence_id",
+                    f"{item_path}.now_what",
+                ],
+                selected_evidence_ids=["f2"],
+                quarantined_evidence_ids=[],
+            )
+        ],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    decision = {
+        "schema_version": "1.0",
+        "repair_action": "REBIND_EVIDENCE",
+        "repair_strategy": "current_evidence",
+        "evidence_ids_used": ["f2"],
+        "changed_paths": [f"{item_path}.evidence_id", f"{item_path}.now_what"],
+        "minimal_patch": [
+            {
+                "op": "replace",
+                "path": f"{item_path}.evidence_id",
+                "value": "f2",
+            },
+            {
+                "op": "replace",
+                "path": f"{item_path}.now_what",
+                "value": "Use the supported replacement evidence.",
+            },
+        ],
+    }
+    client = _RepairDecisionOpenAIClient(decision)
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    rebound = response.updated_artifacts["insights_final"][0]
+    assert rebound["evidence_id"] == "f2"
+    assert rebound["evidence"] == (
+        "The supported replacement evidence explains the recommendation."
+    )
+    assert rebound["pages"] == [2]
+    expected_spans = artifact_evidence_span_index(
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )["f2"]
+    assert rebound["evidence_spans"] == expected_spans
+    assert response.deterministic_mutation_paths == [
+        f"{item_path}.evidence",
+        f"{item_path}.evidence_spans",
+        f"{item_path}.pages",
+    ]
+    verified = _verified_deterministic_mutation_paths(
+        paths=response.deterministic_mutation_paths,
+        before=current,
+        after=response.updated_artifacts,
+        plan=plan,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    assert verified == set(response.deterministic_mutation_paths)
+
+    scoped_before = {"insights_final": [deepcopy(item)]}
+    scoped_after = {
+        "insights_final": [deepcopy(rebound)],
+    }
+    scope = _scope_validation_report(
+        before=scoped_before,
+        after=scoped_after,
+        plan=plan,
+        deterministic_mutation_paths=response.deterministic_mutation_paths,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    assert scope.status == "pass", [
+        (issue.affected_section, issue.rule_id) for issue in scope.issues
+    ]
+
+    tampered = deepcopy(response.updated_artifacts)
+    tampered["insights_final"][0]["pages"] = [77]
+    assert not _verified_deterministic_mutation_paths(
+        paths=response.deterministic_mutation_paths,
+        before=current,
+        after=tampered,
+        plan=plan,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    tampered_scope = _scope_validation_report(
+        before=scoped_before,
+        after={"insights_final": [tampered["insights_final"][0]]},
+        plan=plan,
+        deterministic_mutation_paths=response.deterministic_mutation_paths,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    assert tampered_scope.status == "fail"
 
 
 def test_model_repair_rejects_illegal_sibling_patch_before_candidate_write(

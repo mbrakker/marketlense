@@ -485,16 +485,30 @@ def _allowed_paths(
     if target_key == "topics":
         return sorted(set(family_roots))
 
-    path_issues = (
-        issues
-        if repair_action in {"REMOVE_CLAIM", "ABSTAIN"}
-        else [
+    if repair_action in {"REMOVE_CLAIM", "ABSTAIN"}:
+        path_issues = issues
+    else:
+        blocking_issues = [
             issue
             for issue in issues
             if str(issue.severity or "").strip().lower() == "error"
         ]
-        or issues
-    )
+        if target_key == "insights_bundle" and blocking_issues:
+            blocking_identities = {
+                identity
+                for issue in blocking_issues
+                if (identity := _issue_insight_identity(issue, artifacts))
+            }
+            grounding_context = [
+                issue
+                for issue in issues
+                if str(issue.severity or "").strip().lower() == "warning"
+                and str(issue.rule_id or "").strip().lower() == "grounding"
+                and _issue_insight_identity(issue, artifacts) in blocking_identities
+            ]
+            path_issues = [*blocking_issues, *grounding_context]
+        else:
+            path_issues = blocking_issues or issues
     resolved = [
         path
         for issue in path_issues
@@ -588,7 +602,7 @@ def _allowed_paths(
                 continue
             paths.update(
                 f"{item_path}.{field}"
-                for field in ("evidence_id", "evidence")
+                for field in ("evidence_id",)
                 if _has_scalar_leaf(item, field)
             )
     return sorted(paths)
@@ -1479,8 +1493,14 @@ def _build_regeneration_plan(
         # warning-only families. Retain warnings on the same target so its
         # repair still sees all local context, but keep claim recovery bounded.
         grouped = {
-            target_key: _keep_atomic_insight_context(
-                target_key, target_issues, artifacts
+            target_key: (
+                _keep_atomic_insight_context(target_key, target_issues, artifacts)
+                if target_key == "insights_bundle"
+                else (
+                    _keep_atomic_summary_context(target_issues)
+                    if target_key == "summary"
+                    else target_issues
+                )
             )
             for target_key, target_issues in grouped.items()
             if target_key in hard_target_keys
@@ -1605,6 +1625,32 @@ def _keep_atomic_insight_context(
         for issue in issues
         if str(issue.severity or "").lower() == "error"
         or _issue_insight_identity(issue, artifacts) in hard_ids
+    ]
+
+
+def _keep_atomic_summary_context(
+    issues: List[RegenerationIssue],
+) -> List[RegenerationIssue]:
+    """Keep grounding context for the same retained summary claim only."""
+
+    blocking_claim_ids = {
+        str(issue.entity_id or "").strip()
+        for issue in issues
+        if str(issue.severity or "").strip().lower() == "error"
+        and str(issue.rule_id or "").strip().lower() == "grounding"
+        and str(issue.entity_id or "").strip().startswith("soft_copy:summary:")
+    }
+    if not blocking_claim_ids:
+        return issues
+    return [
+        issue
+        for issue in issues
+        if str(issue.severity or "").strip().lower() == "error"
+        or (
+            str(issue.severity or "").strip().lower() == "warning"
+            and str(issue.rule_id or "").strip().lower() == "grounding"
+            and str(issue.entity_id or "").strip() in blocking_claim_ids
+        )
     ]
 
 

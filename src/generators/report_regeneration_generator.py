@@ -39,8 +39,10 @@ from src.generators.artifact_generator import (
 from src.generators.artifact_normalization import (
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
+    artifact_evidence_span_index,
     artifact_quote_candidates,
     artifact_vector_store_enabled,
+    bind_artifact_evidence_spans,
     build_expert_synthesis_context,
     discard_location_only_insights,
     discard_location_only_quotes,
@@ -3224,6 +3226,84 @@ def _summary_claim_repairs(
     return resolved
 
 
+def _retained_summary_claim_replacement(
+    execution: _RegenerationHandlerExecution,
+    *,
+    field: str,
+    excluded_claim_ids: set[str],
+) -> str | None:
+    """Reuse one already retained, source-bound summary claim for an empty card."""
+
+    claims = execution.state.summary.get("claim_evidence_map")
+    if not isinstance(claims, list):
+        return None
+    try:
+        provenance = soft_copy_claim_provenance_from_payload(
+            execution.state.existing_soft_copy_claim_provenance
+        )
+    except AppError:
+        return None
+    span_index = artifact_evidence_span_index(
+        doc_map=execution.runtime.safe_doc_map,
+        evidence_packs=execution.runtime.safe_evidence,
+    )
+    provenance_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for retained in provenance:
+        if retained.artifact_family == "summary":
+            provenance_by_hash.setdefault(retained.text_hash, []).append(retained)
+    word_limit = 18 if field == "card_tldr_compact" else 45
+    for mapped_claim in claims:
+        if not isinstance(mapped_claim, dict):
+            continue
+        sentence = _normalized_soft_copy_text(mapped_claim.get("claim"))
+        sentences = soft_copy_material_sentences(sentence)
+        evidence_id = _s(mapped_claim.get("evidence_id")).strip()
+        canonical_spans = span_index.get(evidence_id.casefold(), [])
+        if (
+            not sentence
+            or len(sentences) != 1
+            or sentences[0] != sentence
+            or len(sentence.split()) > word_limit
+            or not evidence_id
+            or not canonical_spans
+        ):
+            continue
+        text_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+        matching = [
+            retained
+            for retained in provenance_by_hash.get(text_hash, [])
+            if retained.claim_id not in excluded_claim_ids
+            and retained.classification == "factual"
+            and evidence_id in retained.evidence_ids
+        ]
+        if len(matching) != 1:
+            continue
+        retained = matching[0]
+        expected_spans = tuple(
+            dict(span)
+            for retained_evidence_id in retained.evidence_ids
+            for span in span_index.get(retained_evidence_id.casefold(), [])
+        )
+        if retained.source_spans != expected_spans:
+            continue
+        expected_pages = list(
+            dict.fromkeys(
+                int(span["page"])
+                for span in canonical_spans
+                if isinstance(span.get("page"), int) and span["page"] > 0
+            )
+        )
+        mapped_pages = [
+            int(page)
+            for page in mapped_claim.get("pages", [])
+            if isinstance(page, int) and page > 0
+        ]
+        if expected_pages and mapped_pages != expected_pages:
+            continue
+        return sentence
+    return None
+
+
 def _summary_claim_map_targets(
     execution: _RegenerationHandlerExecution,
 ) -> List[tuple[int, Dict[str, Any], List[RegenerationIssue]]] | None:
@@ -3454,19 +3534,54 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     repaired_text=repaired_text,
                 )
                 replacements[repair.claim.claim_id] = repaired_text
-            execution.state.summary[field] = _reconstruct_soft_copy_claims(
+            reconstructed = _reconstruct_soft_copy_claims(
                 _s(execution.state.summary.get(field)), repairs, replacements
             )
+            if not reconstructed.strip() and field in {
+                "tldr",
+                "card_tldr_compact",
+            }:
+                replacement = _retained_summary_claim_replacement(
+                    execution,
+                    field=field,
+                    excluded_claim_ids={
+                        repair.claim.claim_id for repair in repairs
+                    },
+                )
+                if replacement is None:
+                    raise AppError(
+                        code="summary_safe_removal_no_supported_replacement",
+                        message=(
+                            "Summary safe removal would empty a required field and "
+                            "no retained source-bound claim can replace it."
+                        ),
+                        retryable=False,
+                        context={
+                            "report_id": execution.runtime.request.report_id,
+                            "field": f"summary.{field}",
+                        },
+                    )
+                replacements[repairs[-1].claim.claim_id] = replacement
+                reconstructed = _reconstruct_soft_copy_claims(
+                    _s(execution.state.summary.get(field)), repairs, replacements
+                )
+            execution.state.summary[field] = reconstructed
         execution.state.regenerated_sections.append("summary")
         execution.state.prompt_namespaces.append(namespace)
         return
     if _uses_safe_removal(execution):
-        for field in ("tldr", "card_tldr_compact", "executive_summary"):
-            if field in execution.state.summary:
-                execution.state.summary[field] = ""
-        _mark_soft_copy_family_replaced(execution, "summary")
-        execution.state.regenerated_sections.append("summary")
-        return
+        raise AppError(
+            code="summary_safe_removal_target_unresolved",
+            message=(
+                "Summary safe removal could not resolve the exact retained claim "
+                "authorized by the regeneration plan."
+            ),
+            retryable=False,
+            context={
+                "report_id": execution.runtime.request.report_id,
+                "allowed_path_count": len(execution.target.allowed_paths),
+            },
+        )
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -3957,6 +4072,59 @@ def _regenerate_one_final_insight(
         if regenerated_value is not _MISSING_REPAIR_VALUE:
             _set_insight_path_value(repaired, field_path, deepcopy(regenerated_value))
     repaired["id"] = insight_id
+    if execution.target.repair_action == "REBIND_EVIDENCE":
+        rebound_evidence_id = _s(repaired.get("evidence_id")).strip()
+        canonical_span_index = artifact_evidence_span_index(
+            doc_map=execution.runtime.safe_doc_map,
+            evidence_packs=execution.runtime.safe_evidence,
+        )
+        canonical_spans = canonical_span_index.get(
+            rebound_evidence_id.casefold(), []
+        )
+        if not rebound_evidence_id or not canonical_spans:
+            raise AppError(
+                code="regeneration_evidence_rebind_unresolved",
+                message=(
+                    "The selected retained evidence has no canonical source span "
+                    "for insight rebinding."
+                ),
+                retryable=False,
+                context={
+                    "report_id": execution.runtime.request.report_id,
+                    "insight_id": insight_id,
+                    "evidence_id": rebound_evidence_id,
+                },
+            )
+        canonical_insight = deepcopy(repaired)
+        bind_artifact_evidence_spans(
+            summary={},
+            insights_candidates=[],
+            insights_final=[canonical_insight],
+            quotes_final=[],
+            doc_map=execution.runtime.safe_doc_map,
+            evidence_packs=execution.runtime.safe_evidence,
+        )
+        if not canonical_insight.get("evidence_spans"):
+            raise AppError(
+                code="regeneration_evidence_rebind_unresolved",
+                message=(
+                    "The selected retained evidence could not be bound to a "
+                    "canonical source span for insight rebinding."
+                ),
+                retryable=False,
+                context={
+                    "report_id": execution.runtime.request.report_id,
+                    "insight_id": insight_id,
+                    "evidence_id": rebound_evidence_id,
+                },
+            )
+        for field_name in ("evidence", "pages", "evidence_spans"):
+            if canonical_insight.get(field_name) == original.get(field_name):
+                continue
+            repaired[field_name] = deepcopy(canonical_insight.get(field_name))
+            execution.state.deterministic_mutation_paths.append(
+                f"insights_final[item={insight_id}].{field_name}"
+            )
     if not any(
         _insight_path_value(repaired, field_path)
         != _insight_path_value(original, field_path)
