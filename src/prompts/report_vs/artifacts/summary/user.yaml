@@ -16,7 +16,7 @@ text: |
   Task: Return a JSON object with the `summary` and private `claim_provenance` fields:
   {
     "summary": {
-      "tldr": "<one complete sentence, maximum 45 words>",
+      "tldr": "<one complete sentence, target 20-30 words, maximum 45 words>",
       "card_tldr_compact": "<one complete sentence, maximum 18 words>",
       "executive_summary": "<5-7 sentence executive summary grounded in evidence: lead with the answer, quantify the most important result or comparison when present, state an executive implication only when supported, then name the main caveat or limitation when present>",
       "claim_evidence_map": [
@@ -39,9 +39,11 @@ text: |
     forcing a decision or tradeoff.
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
+  - Target 20-30 words for `tldr` (hard limit: 45). Use one simple complete sentence and exactly one terminal punctuation mark; never use an ellipsis or attach a second topic to fill space.
   - The compact TLDR must be a complete direct source-backed claim of 18 words or fewer and must also appear as a claim_evidence_map claim. Include its direct supporting evidence in that map entry. If the source does not support a short complete claim, do not shorten or invent one; allow deterministic summary abstention.
   - End each TLDR with complete sentence punctuation. Never use an ellipsis.
   - Write direct public prose throughout the executive summary; do not emit labels such as "Answer:" or "Implication:".
   - evidence_id must be one ID only (no arrays or comma-separated values); if uncertain, use an empty string.
   - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct `findings` or `quote_candidates` ID. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.
+  - Keep each executive-summary sentence and each `claim_evidence_map` item to one proposition supported by its linked evidence ID. Do not combine unrelated sections or topics in one sentence or map item. Use a section summary only for a descriptive statement about that section, not to assert what is central to the full report.
   - Keep the claim_evidence_map brief (3-5 items).

@@ -28,6 +28,14 @@ text: |
     entailed by its linked retained evidence. When the evidence supports only a
     descriptive fact, make the sentence descriptive and place any action in
     conditional MarketLense-authored advice without adding a factual premise.
+  - Keep one evidence-supported proposition per public sentence; each clause
+    must follow from its linked evidence. Separate facts from different
+    sections or topics.
+  - A DocMap summary supports its section only, not report-wide thesis or
+    importance. Use rankings (central, major, early) and exhaustive-list claims
+    only when the linked source states them.
+  - Recommendations address only source-established problems tied to their
+    linked evidence.
 
   Market Lense editorial constitution:
   - Write for senior decision-makers with concise, evidence-led language.

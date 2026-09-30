@@ -329,6 +329,42 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     )
 
 
+def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> None:
+    prompt_namespaces = (
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/insights_final",
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/artifacts/regenerate/summary",
+    )
+    prompts = [
+        load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0",
+                namespace=namespace,
+                force_reload=True,
+            ),
+            _ctx(),
+        )
+        for namespace in prompt_namespaces
+    ]
+    shared_rules = (
+        "Keep one evidence-supported proposition per public sentence",
+        "Separate facts from different sections or topics",
+        "A DocMap summary supports its section only, not report-wide thesis or importance",
+        "Use rankings (central, major, early) and exhaustive-list claims only when the linked source states them",
+        "Recommendations address only source-established problems tied to their linked evidence",
+    )
+
+    for prompt in prompts:
+        normalized_text = " ".join(prompt.user.text.split())
+        for rule in shared_rules:
+            assert rule in normalized_text
+
+    summary_text = " ".join(prompts[0].user.text.split())
+    assert "Target 20-30 words for `tldr` (hard limit: 45)" in summary_text
+    assert "exactly one terminal punctuation mark" in summary_text
+
+
 def test_list_prompt_namespaces_returns_hashes() -> None:
     response = list_prompt_namespaces(
         PromptNamespaceListRequest(

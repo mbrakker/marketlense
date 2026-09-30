@@ -6,6 +6,15 @@
 
 Generated report artifacts are checked for contract completeness, schema validity, and configured semantic and grounding requirements. Validation results are persisted with the report artifacts.
 
+Public-copy generation keeps each sentence and summary-map entry to one
+source-supported proposition. Claims that depend on different sections or
+evidence items are separated and bound independently. A DocMap section summary
+supports that section's content only; report-wide thesis, importance, and list
+scope require explicit support in the linked source evidence. Recommendations
+remain tied to a source-established problem or constraint. Summary TLDR
+generation targets 20–30 words for the standard card sentence while retaining
+the existing 45-word hard contract limit, reducing avoidable format retries.
+
 `publish_readiness.json` consumes the final validation disposition rather than
 reclassifying informational diagnostics. An informational non-fatal
 interpretation therefore remains publish-compatible when the final validation
