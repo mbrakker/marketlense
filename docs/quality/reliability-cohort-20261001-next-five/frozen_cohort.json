@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.1",
+  "cohort_name": "frozen_representative_reliability_20_next_unrun_five",
+  "members": [
+    {
+      "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+      "source_domain": "www.capgemini.com",
+      "report_name": "Final Web Version Report Consumer Trends 2026",
+      "landing_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "source_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "publisher_name": "Capgemini Research Institute",
+      "downloaded_at_utc": "2026-07-17T20:26:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+      "source_domain": "cdn.sanity.io",
+      "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+      "landing_page_url": "https://cdn.sanity.io/files/bw8wgpyt/production/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+      "source_page_url": "https://www.activate.com/insights",
+      "publisher_name": "Activate",
+      "downloaded_at_utc": "2026-06-13T14:20:21.367702+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+      "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+      "source_domain": "kpmg.com",
+      "report_name": "2026 Global M&A Outlook",
+      "landing_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "source_page_url": "https://kpmg.com/xx/en/our-insights/value-creation/global-m-and-a-outlook.html",
+      "publisher_name": "KPMG",
+      "downloaded_at_utc": "2026-06-10T21:56:38.335410+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+      "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+      "source_domain": "reutersinstitute.politics.ox.ac.uk",
+      "report_name": "Trends and Predictions 2026",
+      "landing_page_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+      "source_page_url": "https://reutersinstitute.politics.ox.ac.uk/journalism-media-and-technology-trends-and-predictions",
+      "publisher_name": "Reuters Institute",
+      "downloaded_at_utc": "2026-07-17T20:25:39Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_domain": "www.adjust.com",
+      "report_name": "mobile-app-trends-2026-pdf",
+      "landing_page_url": "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+      "source_page_url": "https://www.adjust.com/resources/ebooks",
+      "publisher_name": "Adjust",
+      "downloaded_at_utc": "2026-07-24T06:25:52.296472+00:00"
+    }
+  ]
+}
