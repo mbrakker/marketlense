@@ -155,6 +155,29 @@ def test_independent_years_are_not_treated_as_a_continuous_range() -> None:
     assert comparison.dimension("timeframe").status == "incompatible"
 
 
+def test_compact_observation_year_range_matches_its_linked_evidence() -> None:
+    claim = "For 2024–2025, global finance-app installs fell 4%."
+    evidence = (
+        "Finance-app growth, YoY 2024–2025: global installs fell 4%; CPI fell "
+        "to $1.13 in 2025."
+    )
+    comparison = compare_protected_fact_texts(
+        claim,
+        evidence,
+    )
+
+    assert comparison.dimension("timeframe").status == "compatible"
+    package = validate_retained_claims(
+        {"summary": {"claim_evidence_map": [{"claim": claim, "evidence_ids": ["growth"]}]}},
+        {"findings": {"findings": [{"id": "growth", "text": evidence}]}},
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("deterministic grounding should support this claim")
+        ),
+    )
+
+    assert package.results[0].status == "supported"
+
+
 def test_independently_linked_metrics_can_use_distinct_units() -> None:
     package = validate_retained_claims(
         {

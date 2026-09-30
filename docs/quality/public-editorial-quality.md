@@ -115,6 +115,9 @@ listed for a different forecast in mixed evidence does not contradict an
 observed claim; when the linked evidence does not establish a comparable
 period, the dimension stays unknown. An explicit same-status period mismatch
 remains blocking, and a claim within a linked source date range is compatible.
+Compact hyphen and en-dash year ranges, such as `2024-2025` and `2024–2025`,
+are parsed as continuous intervals. Independent years joined by `and` remain
+separate observations and are not treated as a range.
 Attribution and population checks likewise stay unknown when their syntax only
 identifies a generic report/article/pronoun or a negated expectation clause,
 rather than a named source or population.

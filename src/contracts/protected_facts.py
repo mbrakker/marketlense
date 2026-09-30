@@ -103,8 +103,9 @@ _QUARTER_YEAR_RE = re.compile(
     re.IGNORECASE,
 )
 _OBSERVATION_RANGE_RE = re.compile(
-    rf"\b(?P<start>{_YEAR})(?:e)?(?:\s+[a-z]+)?\s+"
-    rf"(?:to|through|until|[-–])\s+(?:[a-z]+\s+)?(?P<end>{_YEAR})(?:e)?\b",
+    rf"\b(?P<start>{_YEAR})(?:e)?(?:\s+[a-z]+)?"
+    rf"(?:\s+(?:to|through|until)\s+|\s*[-–]\s*)"
+    rf"(?:[a-z]+\s+)?(?P<end>{_YEAR})(?:e)?\b",
     re.IGNORECASE,
 )
 _FORECAST_YEAR_CONTEXT_RE = re.compile(

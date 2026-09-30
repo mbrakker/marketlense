@@ -11,7 +11,11 @@ source-supported proposition. Claims that depend on different sections or
 evidence items are separated and bound independently. A DocMap section summary
 supports that section's content only; report-wide thesis, importance, and list
 scope require explicit support in the linked source evidence. Recommendations
-remain tied to a source-established problem or constraint. Summary TLDR
+remain tied to a source-established problem or constraint. When the linked
+source states a recommendation, public copy preserves its source attribution
+and complete action. Separate evidence for adjacent preferences or mechanisms
+does not establish a combined recommendation; MarketLense-authored advice must
+still preserve an evidence-bound problem and supported action. Summary TLDR
 generation targets 20–30 words for the standard card sentence while retaining
 the existing 45-word hard contract limit, reducing avoidable format retries.
 

@@ -1923,9 +1923,12 @@ def finalize_regeneration_candidate_artifacts(
         materialize_roots=candidate_materialized_roots,
     )
 
+    candidate_provenance_changed = candidate_artifacts.get(
+        "soft_copy_claim_provenance"
+    ) != promoted_baseline.get("soft_copy_claim_provenance")
     if changed_source_roots.intersection(
         {"summary", "expert_comment", "linkedin_post"}
-    ):
+    ) or candidate_provenance_changed:
         try:
             _rebuild_final_soft_copy_claim_provenance(
                 artifacts=candidate_artifacts,

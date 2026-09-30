@@ -36,6 +36,8 @@ text: |
     only when the linked source states them.
   - Recommendations address only source-established problems tied to their
     linked evidence.
+  - When the source states a recommendation, preserve its attribution and action;
+    do not join it with separate evidence or preferences.
 
   Market Lense editorial constitution:
   - Write for senior decision-makers with concise, evidence-led language.
