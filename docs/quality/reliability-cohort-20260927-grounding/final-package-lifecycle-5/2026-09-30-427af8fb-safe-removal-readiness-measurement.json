@@ -1,0 +1,317 @@
+{
+  "schema_version": "1.0",
+  "measurement_date_utc": "2026-09-30",
+  "measurement": "atomic_summary_safe_removal_five_report_readiness",
+  "implementation_commit": "427af8fb3810e2ece49d90b254dfaee2a93c95ee",
+  "scope": {
+    "reports": [
+      "DoubleVerify",
+      "Deloitte",
+      "Emplifi",
+      "StackAdapt",
+      "Merchant Risk Council"
+    ],
+    "cohort_size": 5,
+    "manifest_path": "docs/quality/reliability-cohort-20260927-grounding/final-package-lifecycle-5/frozen_cohort.json",
+    "manifest_sha256": "5a2b8bc4dd7c6d919f66770437c83439233e4671c2c673de9dbb30dc5086cc04",
+    "full_20_report_cohort_run": false,
+    "publication_enabled": false,
+    "fresh_isolated_state": true
+  },
+  "fix": {
+    "failure": "A safe summary-claim removal could be merged through a stale numeric list index after an earlier row was removed, assigning None to the promoted baseline row and failing schema validation.",
+    "change": "The planner declares the selected removal item; the merge removes that exact target from the promoted baseline and rejects ambiguous alignment.",
+    "commit": "427af8fb3810e2ece49d90b254dfaee2a93c95ee"
+  },
+  "before_after": {
+    "before": {
+      "implementation_commit": "b6636fdf917ac64cfd7c5680ba5a68ce39316e84",
+      "run": "tmp/p5-public-ready-20260930-fixb6636fdf/frozen-reliability-aaatyi0h",
+      "cohort_result_sha256": "6f93458067a7ab3ff0257a8d804f678bb64241cc71c7dde52c320ab6802a8968",
+      "eligible_final_reports": 4,
+      "final_packages_materialized": 4,
+      "readiness_passes": 4,
+      "typed_prepackage_failures": 1,
+      "failure_code": "schema_type_mismatch",
+      "provider_calls": 170,
+      "input_tokens": 1444779,
+      "output_tokens": 409196,
+      "estimated_cost_usd": 0.338271,
+      "duration_seconds": 2763.163
+    },
+    "after": {
+      "implementation_commit": "427af8fb3810e2ece49d90b254dfaee2a93c95ee",
+      "run": "tmp/p5-safe-removal-20260930/frozen-reliability-4j9wydax",
+      "cohort_result_sha256": "6c87fb7c7363164c5819bdec0e8939ae39820fb572c1e5c80b3631ceabea5828",
+      "eligible_final_reports": 5,
+      "final_packages_materialized": 5,
+      "readiness_passes": 5,
+      "legitimate_prepackage_failures": 0,
+      "unexplained_package_missing": 0,
+      "package_invalid": 0,
+      "not_publishable": 0,
+      "provider_calls_during_readiness": 0,
+      "provider_calls": 159,
+      "input_tokens": 1375923,
+      "output_tokens": 347519,
+      "estimated_cost_usd": 0.305623,
+      "duration_seconds": 2229.236
+    },
+    "delta": {
+      "readiness_passes": 1,
+      "provider_calls": -11,
+      "input_tokens": -68856,
+      "output_tokens": -61677,
+      "estimated_cost_usd": -0.032648,
+      "duration_seconds": -533.927
+    }
+  },
+  "current_run": {
+    "run": "tmp/p5-safe-removal-20260930/frozen-reliability-4j9wydax",
+    "production_run_id": "346ab465-7cfe-4b03-9bf3-9ce0f0ee5861",
+    "publication_enabled": false,
+    "terminal_outcomes_complete": true,
+    "operator_interventions": 0,
+    "usage": {
+      "provider_calls": 159,
+      "input_tokens": 1375923,
+      "output_tokens": 347519,
+      "estimated_cost_usd": 0.305623,
+      "provider_calls_during_readiness": 0
+    }
+  },
+  "readiness_and_packages": {
+    "eligible_final_reports": 5,
+    "final_packages_materialized_and_bound": 5,
+    "unexplained_package_missing": 0,
+    "package_invalid": 0,
+    "not_publishable": 0,
+    "readiness_passes": 5,
+    "readiness_provider_calls": 0,
+    "all_package_identity_checks_pass": true,
+    "reports": [
+      {
+        "publisher": "Merchant Risk Council",
+        "report_id": "cohort-11b0b55157f7d0636815",
+        "final_state": "awaiting_review",
+        "validation": "pass",
+        "readiness_status": "pass",
+        "readiness_artifact_hash": "a3ea7311e8543f2cd34036089e99b6c92f713b5a3aeb7c61d628dbe49a62a943",
+        "final_artifact_hash": "4283eb4a5259a304197efae006aef814eec75c1199ae33f3fc832894d6d7f678",
+        "publication_projection_hash": "136daf6f12f632745889515c286aba9e738f880c8b493344808a8a4810fb33bf",
+        "retained_package_hash": "51e36c6e0ab68a73135d09f7c8adce8624ad06bc48e8b801e761e0df25d4798b",
+        "source_id": "source:67f65e9e8a4ad7c658cc6d3a2c4631da",
+        "source_md5": "11b0b55157f7d0636815ad72435e1cf5",
+        "evidence_pack_hash": "9f0cfd09a61d56f649978a1d52b497a594eeb818e1d5ca952b5b5fe3115267d7",
+        "claim_validation_validator_version": "retained_claim_validation:v2",
+        "grounding_validator_version": "grounding_validation_output:1.4",
+        "configuration_hash": "6dcd23cf07d8cdb56a45e916cad782fbe7b6fb2589a4bea21bd96b4cf697c6f5",
+        "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+        "semantic_execution_identities": [
+          "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+        ],
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "binding_checks": {
+          "report_id": true,
+          "final_artifact_hash": true,
+          "retained_package_hash": true,
+          "publication_projection_hash": true,
+          "source_id": true,
+          "source_md5": true,
+          "configuration_hash": true,
+          "policy_hash": true,
+          "validator_identity": true,
+          "semantic_execution_identity": true,
+          "retained_claim_grounding_rule_pass": true
+        }
+      },
+      {
+        "publisher": "DoubleVerify",
+        "report_id": "cohort-e854b71d6fb10333b47f",
+        "final_state": "awaiting_review",
+        "validation": "pass",
+        "readiness_status": "pass",
+        "readiness_artifact_hash": "80c630f1de9793abad8a26dbcc34f26c762b67d3b57ca8775d61c00ebdc77120",
+        "final_artifact_hash": "2fa328b710993d30ced6d59cc822388d9959e00b827b3e0fe99acaf12db31414",
+        "publication_projection_hash": "fdf66afe6b227363ac666518cdaf6cadb8ee0c961a3ad40c1054e0b7b256ab66",
+        "retained_package_hash": "458b5a16d6b6920cac655b9e6f928ec5038c315676f03e5ec09db92496881a82",
+        "source_id": "source:6c7377bbcd7e21ffe4683dad478a3fad",
+        "source_md5": "e854b71d6fb10333b47fd518a6e51cf9",
+        "evidence_pack_hash": "fcbf6d044d693c417bbfdf555b83c3140578e55c5f688ae11105cd9c2671dc38",
+        "claim_validation_validator_version": "retained_claim_validation:v2",
+        "grounding_validator_version": "grounding_validation_output:1.4",
+        "configuration_hash": "6dcd23cf07d8cdb56a45e916cad782fbe7b6fb2589a4bea21bd96b4cf697c6f5",
+        "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+        "semantic_execution_identities": [
+          "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+        ],
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "binding_checks": {
+          "report_id": true,
+          "final_artifact_hash": true,
+          "retained_package_hash": true,
+          "publication_projection_hash": true,
+          "source_id": true,
+          "source_md5": true,
+          "configuration_hash": true,
+          "policy_hash": true,
+          "validator_identity": true,
+          "semantic_execution_identity": true,
+          "retained_claim_grounding_rule_pass": true
+        }
+      },
+      {
+        "publisher": "Emplifi",
+        "report_id": "cohort-f62048b469dd784e6e7c",
+        "final_state": "awaiting_review",
+        "validation": "pass",
+        "readiness_status": "pass",
+        "readiness_artifact_hash": "ac3e49a6768a10a28db8c7bf2a28edcf7cd2d1454f6b46a0853e194a98217074",
+        "final_artifact_hash": "641a9868d65f801b0fba226c31f7385a326d00caca8275a0cd4663a15fffd8c2",
+        "publication_projection_hash": "002ee00db1d94c8be9018a0b056b523d264be2b0ef76b48d8f125ca076d4b82d",
+        "retained_package_hash": "259129432b36cef56c3cc9528ee578df8ed823e70640943198a11e52d95cde5b",
+        "source_id": "source:dda03b3a0d65814672444674bb59908f",
+        "source_md5": "f62048b469dd784e6e7c0349c8b92f9b",
+        "evidence_pack_hash": "546c782a2a4bb0b70b89d0191bc4d1bcd356264a421b4eca4417f483620c4ca4",
+        "claim_validation_validator_version": "retained_claim_validation:v2",
+        "grounding_validator_version": "grounding_validation_output:1.4",
+        "configuration_hash": "6dcd23cf07d8cdb56a45e916cad782fbe7b6fb2589a4bea21bd96b4cf697c6f5",
+        "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+        "semantic_execution_identities": [
+          "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+        ],
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "binding_checks": {
+          "report_id": true,
+          "final_artifact_hash": true,
+          "retained_package_hash": true,
+          "publication_projection_hash": true,
+          "source_id": true,
+          "source_md5": true,
+          "configuration_hash": true,
+          "policy_hash": true,
+          "validator_identity": true,
+          "semantic_execution_identity": true,
+          "retained_claim_grounding_rule_pass": true
+        }
+      },
+      {
+        "publisher": "Deloitte",
+        "report_id": "cohort-b10ed6c82b76739a806a",
+        "final_state": "awaiting_review",
+        "validation": "pass",
+        "readiness_status": "pass",
+        "readiness_artifact_hash": "428a69c131a30bc214ef54ad5ab106d8c41cf871a5ce1708c81c02d32ead5441",
+        "final_artifact_hash": "f5bb61e75f61f1e58ed4153fa2b53c1164283f21fdf2accbc82fecb1a77ff1d0",
+        "publication_projection_hash": "1b90cbe418be877e4069edc4478b04482a6c440c4002ee3e8605b81162134039",
+        "retained_package_hash": "a1bb919e04cffdf8392a697d47fc7e49929fca9e0562bb83af9c23549448b03b",
+        "source_id": "source:2bd805b867ad7b0401f2343e63a2787f",
+        "source_md5": "b10ed6c82b76739a806a9f10ec0b9723",
+        "evidence_pack_hash": "a15ac1ada0e9c3992f5bdbe3c63ad74100b49ef106a65946406d7d832e119aff",
+        "claim_validation_validator_version": "retained_claim_validation:v2",
+        "grounding_validator_version": "grounding_validation_output:1.4",
+        "configuration_hash": "6dcd23cf07d8cdb56a45e916cad782fbe7b6fb2589a4bea21bd96b4cf697c6f5",
+        "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+        "semantic_execution_identities": [
+          "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+        ],
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "binding_checks": {
+          "report_id": true,
+          "final_artifact_hash": true,
+          "retained_package_hash": true,
+          "publication_projection_hash": true,
+          "source_id": true,
+          "source_md5": true,
+          "configuration_hash": true,
+          "policy_hash": true,
+          "validator_identity": true,
+          "semantic_execution_identity": true,
+          "retained_claim_grounding_rule_pass": true
+        }
+      },
+      {
+        "publisher": "StackAdapt Inc",
+        "report_id": "cohort-8ef1021c332aa85ba008",
+        "final_state": "awaiting_review",
+        "validation": "pass",
+        "readiness_status": "pass",
+        "readiness_artifact_hash": "d758bdeb8e0c594c1946ab6e17f03ad8446b35f2efc13c206ba24c246ae32bb4",
+        "final_artifact_hash": "bd19255623e9eedaba4f4f987dd16f88c990537fd83b32453ae635b253ce0177",
+        "publication_projection_hash": "074c9b74f17b4eed04e11817115f1c26a937d2ebee89a7484beddb4ecb2bdb1f",
+        "retained_package_hash": "5313090ea2cc4ccaa2becdabe7fd48779f00469ecaca7acb9182a738c7e31990",
+        "source_id": "source:038b017d7942e0bcce44627e5c9ff227",
+        "source_md5": "8ef1021c332aa85ba008da58ff8ec866",
+        "evidence_pack_hash": "0371ab9ca750fd77995502ee5ddcded16c83b272b18cff51a6f380d39d4677b4",
+        "claim_validation_validator_version": "retained_claim_validation:v2",
+        "grounding_validator_version": "grounding_validation_output:1.4",
+        "configuration_hash": "6dcd23cf07d8cdb56a45e916cad782fbe7b6fb2589a4bea21bd96b4cf697c6f5",
+        "policy_hash": "582cb3a6c5345277363e8f50e3e100c232c87f0b62456e498422c49d05f89a5d",
+        "semantic_execution_identities": [
+          "2b936ef38f32bc27608449ac1023093c0b1c15d619b4028e98731f09513b15da"
+        ],
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0,
+        "binding_checks": {
+          "report_id": true,
+          "final_artifact_hash": true,
+          "retained_package_hash": true,
+          "publication_projection_hash": true,
+          "source_id": true,
+          "source_md5": true,
+          "configuration_hash": true,
+          "policy_hash": true,
+          "validator_identity": true,
+          "semantic_execution_identity": true,
+          "retained_claim_grounding_rule_pass": true
+        }
+      }
+    ]
+  },
+  "isolated_ias_canary": {
+    "run": "tmp/ias-safe-removal-20260930/ias-first-attempt-c_z7eijf",
+    "publication_enabled": false,
+    "result": {
+      "report_id": "ias-fccf7f92dc7e14a27ee6",
+      "final_state": "awaiting_review",
+      "readiness_status": "pass",
+      "final_artifact_hash": "ea9a2f016b58170b528bfa7daedc4114dd8a41c1358ccbe0a26e2d786d371d41",
+      "retained_package_hash": "1c45a386463519d8df1a4d266763a27c579362c8f676e637e4e479f41d474dd0",
+      "unsupported_factual_count": 0,
+      "unresolved_factual_count": 0,
+      "binding_checks": {
+        "report_id": true,
+        "final_artifact_hash": true,
+        "retained_package_hash": true,
+        "publication_projection_hash": true,
+        "source_id": true,
+        "source_md5": true,
+        "configuration_hash": true,
+        "policy_hash": true,
+        "validator_identity": true,
+        "semantic_execution_identity": true,
+        "retained_claim_grounding_rule_pass": true
+      },
+      "usage": {
+        "provider_calls": 40,
+        "input_tokens": 282345,
+        "output_tokens": 67148,
+        "estimated_cost_usd": 0.060993,
+        "provider_calls_during_readiness": 0
+      }
+    }
+  },
+  "verification": {
+    "focused_tests": "177 passed, 1 deselected; deselected DoubleVerify historical replay test is a confirmed pre-existing baseline failure",
+    "ruff": "passed for five changed Python files",
+    "git_diff_check": "passed"
+  },
+  "limitations": [
+    "The workflow state remains awaiting_review. Readiness passed; no report was published.",
+    "The one historical A21 case and Mobile E13 repair attempts still fail strict E13 closure; these are frozen repair benchmark outcomes, not failures in the five current report readiness runs."
+  ]
+}

@@ -453,3 +453,47 @@ grounding call path was retained; no additional numeric-only model pass was
 added. Thus this measurement gives no evidence that calling an LLM again for
 already-supported numeric claims would improve readiness. The usage ledger had
 zero readiness-stage provider events.
+
+### 2026-09-30 five-report readiness after summary safe-removal fix
+
+The safe-removal merge failure reproduced in Emplifi was fixed at
+`427af8fb3810e2ece49d90b254dfaee2a93c95ee`. A removal planned against a summary
+claim-map row had previously been applied through a stale numeric index after
+an earlier row was deleted, writing `None` into the promoted row and causing a
+`schema_type_mismatch`. The planner now declares the selected item and the
+merge removes that exact target from the promoted baseline. Ambiguous alignment
+still fails closed.
+
+The exact pinned five-report manifest was run from fresh isolated state through
+normal report processing with publication disabled. The full 20-report cohort
+was not run. Sanitized package identities, lineage checks, result hashes,
+before/after measurements, and the IAS canary are retained in
+[`2026-09-30-427af8fb-safe-removal-readiness-measurement.json`](2026-09-30-427af8fb-safe-removal-readiness-measurement.json).
+
+| Measurement | Before (`b6636fdf`) | After (`427af8fb`) |
+| --- | ---: | ---: |
+| Eligible final reports | 4 | 5 |
+| Final packages materialized and bound | 4 | 5 |
+| Readiness passes | 4 | 5 |
+| Typed pre-package failures | 1 (`schema_type_mismatch`) | 0 |
+| Unexplained `package_missing` | 0 | 0 |
+| `package_invalid` | 0 | 0 |
+| `not_publishable` | 0 | 0 |
+| Provider calls / input tokens / output tokens / estimated cost | 170 / 1,444,779 / 409,196 / `$0.338271` | 159 / 1,375,923 / 347,519 / `$0.305623` |
+
+Every final package passes the retained report, artifact, publication
+projection, source ID/MD5, evidence-pack, validator, configuration, policy,
+and semantic-execution identity checks. All five have zero unsupported and
+zero unresolved factual claims. Merchant Risk Council now reproduces the
+previous source-backed-value/materialization scenario with a current final
+package bound to its exact canonical artifact; readiness passes. The cohort
+usage ledger contains zero readiness provider calls. An isolated IAS canary
+also materialized a bound package and passed readiness, with zero readiness
+provider calls.
+
+All five workflows ended in `awaiting_review`; no report was published. The
+unchanged E13 repair corpus remains a separate, non-passing benchmark: the
+latest replay has one candidate promotion but strict success remains 0/3. Its
+introductions stayed blocking and were rolled back; see the [E13 replay
+measurement](2026-09-30-427af8fb-e13-replay-measurement.json). This does not
+change the five current reports' readiness results.

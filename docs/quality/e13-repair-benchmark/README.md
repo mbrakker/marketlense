@@ -855,3 +855,27 @@ sidecar](results/2026-09-27-26be4e17.json.sha256) verifies the retained record.
 The broader affected suite had 270 passes and the same two known frozen
 queue-lineage failures recorded in the prior measurement. Focused tests,
 registry tests, scorecard/telemetry tests, lint, formatting, and typing passed.
+
+## Atomic summary safe-removal replay — 2026-09-30, `427af8fb`
+
+The unchanged A21, Mobile editorial, and DoubleVerify manifests were replayed
+at implementation `427af8fb3810e2ece49d90b254dfaee2a93c95ee`. The seven cases
+had three reproducible chains and four no longer reproducible cases. Four
+candidate validations produced one promotion; strict success@1 and success@3
+remain 0/3. Deterministic projection errors and deterministic-dependent scope
+violations were both zero. Three out-of-scope patch attempts were rejected;
+one unsupported-evidence introduction and one provenance/lineage introduction
+remained blocking and were rolled back. No removed insight was reintroduced.
+
+The replay used 82 provider calls, 779,201 input tokens, 363,158 output
+tokens, and estimated `$0.246059`. The previous retained replay at
+`0be495a9` had 35 calls, 799,767 input tokens, 159,178 output tokens, and
+estimated `$0.154546`; these are observed replay totals, not a controlled cost
+comparison because provider responses and candidate counts vary. The current
+strict closure rate did not improve. Full per-manifest counts, scorecard
+hashes, and the comparison are in the [retained E13 measurement](../reliability-cohort-20260927-grounding/final-package-lifecycle-5/2026-09-30-427af8fb-e13-replay-measurement.json).
+
+This repair fixes the separate Emplifi summary safe-removal merge defect in the
+five-report normal-processing cohort. E13 continues to serve as a historical
+repair benchmark; its residual candidate failures stayed blocked and were not
+used to waive current claim or scope validation.
