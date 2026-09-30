@@ -112,7 +112,9 @@ configuration, and policy identities still match. Results for changed claims
 are discarded. The final package combines only matching semantic results with
 deterministic checks rebuilt from the canonical artifacts, without a provider
 call. Unsupported and unresolved factual claims remain `not_publishable` and
-block readiness.
+block readiness. The evidence-fidelity rule matches rendered claims against
+untrusted findings by the typed source-pack and evidence-ID pair. Bare legacy
+evidence IDs without typed source references continue to match conservatively.
 
 The final package is written through the atomic report-analysis store before
 readiness is evaluated. A finalization rerun with unchanged inputs has the same

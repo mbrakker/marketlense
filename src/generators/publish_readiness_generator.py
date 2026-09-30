@@ -1058,7 +1058,19 @@ def _evidence_fidelity_result(
     if not untrusted_ids:
         return _pass("publish_readiness.evidence_fidelity", ["evidence_fidelity"])
     rendered_ids = _rendered_material_evidence_ids(artifacts, final_html)
-    rendered_untrusted_ids = sorted(untrusted_ids & rendered_ids)
+    rendered_untrusted_ids = sorted(
+        {
+            evidence_id
+            for untrusted_source_pack, evidence_id in untrusted_ids
+            for rendered_source_pack, rendered_evidence_id in rendered_ids
+            if evidence_id == rendered_evidence_id
+            and (
+                not untrusted_source_pack
+                or not rendered_source_pack
+                or untrusted_source_pack == rendered_source_pack
+            )
+        }
+    )
     if rendered_untrusted_ids:
         return _fail(
             "publish_readiness.evidence_fidelity",
@@ -1078,9 +1090,11 @@ def _evidence_fidelity_result(
     )
 
 
-def _untrusted_factual_evidence_ids(fidelity: dict[str, Any]) -> set[str]:
+def _untrusted_factual_evidence_ids(
+    fidelity: dict[str, Any],
+) -> set[tuple[str, str]]:
     """Return only audit candidates whose factual support was not established."""
-    identifiers: set[str] = set()
+    identifiers: set[tuple[str, str]] = set()
     for result in _dict_items(fidelity.get("results")):
         candidate = result.get("candidate")
         if not isinstance(candidate, dict) or candidate.get("factual") is not True:
@@ -1090,28 +1104,68 @@ def _untrusted_factual_evidence_ids(fidelity: dict[str, Any]) -> set[str]:
         claim_id = str(candidate.get("claim_id") or "").strip()
         parts = claim_id.split(":", 2)
         if len(parts) == 3 and parts[0] == "evidence" and parts[2].strip():
-            identifiers.add(parts[2].strip())
+            source_family = str(candidate.get("source_family") or "").strip()
+            source_pack = (
+                source_family.removeprefix("evidence_pack:").strip().casefold()
+                if source_family.startswith("evidence_pack:")
+                else ""
+            )
+            identifiers.add((source_pack, parts[2].strip()))
     return identifiers
 
 
 def _rendered_material_evidence_ids(
     artifacts: dict[str, Any], final_html: str
-) -> set[str]:
+) -> set[tuple[str, str]]:
     """Map retained material claims to evidence only when their text is public HTML."""
     rendered_text = _normalized_public_text(
         BeautifulSoup(final_html, "html.parser").get_text(" ", strip=True)
     )
     if not rendered_text:
         return set()
-    identifiers: set[str] = set()
+    identifiers: set[tuple[str, str]] = set()
     for family, item in _material_claim_items(artifacts):
         claim_text = _material_claim_text(family, item)
         if not claim_text or claim_text not in rendered_text:
             continue
-        evidence_ids = _claim_evidence_ids(item)
-        if evidence_ids:
-            identifiers.update(evidence_ids)
+        identities = _claim_evidence_identities(item)
+        if identities:
+            identifiers.update(identities)
     return identifiers
+
+
+def _claim_evidence_identities(
+    item: dict[str, Any],
+) -> set[tuple[str, str]] | None:
+    """Use typed source references when present, otherwise retain conservative IDs."""
+    typed_references: set[tuple[str, str]] = set()
+    saw_reference_field = False
+    malformed_reference = False
+    for field_name in ("evidence_references", "evidence_spans"):
+        references = item.get(field_name)
+        if references is None:
+            continue
+        saw_reference_field = True
+        if not isinstance(references, (list, tuple)):
+            malformed_reference = True
+            continue
+        for reference in references:
+            if not isinstance(reference, dict):
+                malformed_reference = True
+                continue
+            evidence_id = str(reference.get("evidence_id") or "").strip()
+            source_pack = str(reference.get("source_pack") or "").strip().casefold()
+            if not evidence_id or not source_pack:
+                malformed_reference = True
+                continue
+            typed_references.add((source_pack, evidence_id))
+    if saw_reference_field and typed_references and not malformed_reference:
+        return typed_references
+
+    evidence_ids = _claim_evidence_ids(item)
+    if evidence_ids is None:
+        return None
+    return {("", evidence_id) for evidence_id in evidence_ids}
 
 
 def _material_claim_text(family: str, item: dict[str, Any]) -> str:

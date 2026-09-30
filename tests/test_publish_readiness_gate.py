@@ -803,6 +803,82 @@ def test_publish_readiness_blocks_quarantined_evidence_rendered_in_final_html() 
     assert fidelity.surfaces == ["rendered_html:evidence:F2"]
 
 
+@pytest.mark.parametrize(
+    ("source_pack", "expected_status", "expected_rendered_untrusted"),
+    [("doc_map", "pass", 0), ("findings", "fail", 1)],
+)
+def test_publish_readiness_matches_untrusted_evidence_by_source_pack(
+    source_pack: str,
+    expected_status: str,
+    expected_rendered_untrusted: int,
+) -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    public_claim = "Revenue grew in the measured market."
+    artifacts["insights_final"][0].update(
+        {
+            "evidence_id": "F2",
+            "evidence_spans": [
+                {
+                    "evidence_id": "F2",
+                    "source_pack": source_pack,
+                    "page": 20,
+                    "text": public_claim,
+                }
+            ],
+        }
+    )
+    evidence_packs["findings"]["findings"].append(
+        {"id": "F2", "snippet": public_claim, "page": 4}
+    )
+    evidence_packs["doc_map"] = {
+        "sections": [{"id": "F2", "text": public_claim, "page": 20}]
+    }
+    evidence_packs["evidence_fidelity"] = {
+        "readiness_status": "blocked",
+        "unsupported_factual_count": 1,
+        "unresolved_factual_count": 0,
+        "results": [
+            {
+                "candidate": {
+                    "claim_id": "evidence:findings:F2",
+                    "source_family": "evidence_pack:findings",
+                    "factual": True,
+                },
+                "status": "unsupported",
+            }
+        ],
+    }
+
+    readiness = evaluate_publish_readiness(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    fidelity = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.evidence_fidelity"
+    )
+    assert fidelity.status == expected_status
+    assert f"rendered_untrusted={expected_rendered_untrusted}" in fidelity.detail
+    if source_pack == "doc_map":
+        assert readiness.status == "pass", [
+            (item.rule_id, item.status, item.detail)
+            for item in readiness.rule_results
+            if item.status != "pass"
+        ]
+    else:
+        assert readiness.status == "fail"
+    if expected_status == "fail":
+        assert fidelity.surfaces == ["rendered_html:evidence:F2"]
+
+
 def test_publish_readiness_payload_round_trips_and_rejects_malformed_surfaces() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     readiness = evaluate_publish_readiness(
