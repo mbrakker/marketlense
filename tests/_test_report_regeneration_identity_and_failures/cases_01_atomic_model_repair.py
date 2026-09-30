@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -227,7 +228,9 @@ def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> No
                     f"{item_path}.evidence_id",
                     f"{item_path}.now_what",
                 ],
-                selected_evidence_ids=["f2"],
+                # The planner carries the evidence attached to the failed
+                # claim; the model repair selects the canonical alternative.
+                selected_evidence_ids=["f1"],
                 quarantined_evidence_ids=[],
             )
         ],
@@ -298,6 +301,7 @@ def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> No
         plan=plan,
         doc_map=evidence_packs["doc_map"],
         evidence_packs=evidence_packs,
+        repair_decisions=response.repair_decisions,
     )
     assert verified == set(response.deterministic_mutation_paths)
 
@@ -312,10 +316,47 @@ def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> No
         deterministic_mutation_paths=response.deterministic_mutation_paths,
         doc_map=evidence_packs["doc_map"],
         evidence_packs=evidence_packs,
+        repair_decisions=response.repair_decisions,
     )
     assert scope.status == "pass", [
         (issue.affected_section, issue.rule_id) for issue in scope.issues
     ]
+
+    unselected_scope = _scope_validation_report(
+        before=scoped_before,
+        after=scoped_after,
+        plan=plan,
+        deterministic_mutation_paths=response.deterministic_mutation_paths,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    assert unselected_scope.status == "fail"
+
+    unrelated_selection = replace(
+        response.repair_decisions[0],
+        changed_paths=["insights_final[item=insight-2].text"],
+    )
+    assert not _verified_deterministic_mutation_paths(
+        paths=response.deterministic_mutation_paths,
+        before=current,
+        after=response.updated_artifacts,
+        plan=plan,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+        repair_decisions=[unrelated_selection],
+    )
+    mismatched_selection = replace(
+        response.repair_decisions[0], evidence_ids_used=["f3"]
+    )
+    assert not _verified_deterministic_mutation_paths(
+        paths=response.deterministic_mutation_paths,
+        before=current,
+        after=response.updated_artifacts,
+        plan=plan,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+        repair_decisions=[mismatched_selection],
+    )
 
     tampered = deepcopy(response.updated_artifacts)
     tampered["insights_final"][0]["pages"] = [77]
@@ -334,6 +375,7 @@ def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> No
         deterministic_mutation_paths=response.deterministic_mutation_paths,
         doc_map=evidence_packs["doc_map"],
         evidence_packs=evidence_packs,
+        repair_decisions=response.repair_decisions,
     )
     assert tampered_scope.status == "fail"
 
@@ -515,6 +557,7 @@ def test_invalid_repair_contract_does_not_trigger_a_second_provider_call(
 
 
 __all__ = [
+    "test_rebound_insight_uses_canonical_evidence_pages_and_spans",
     "test_model_repair_applies_one_validated_atomic_patch_in_one_call",
     "test_model_repair_rejects_illegal_sibling_patch_before_candidate_write",
     "test_model_repair_rejects_non_string_patch_value_before_candidate_write",

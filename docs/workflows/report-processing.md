@@ -190,8 +190,11 @@ warnings on other leaves of the same stable insight. Unrelated quality warnings
 do not expand the repair. An evidence rebind lets the planned repair select a
 retained evidence ID and update the failed insight text; canonical artifact
 binding then supplies its evidence text, pages, and source spans from the
-retained span index. Candidate scope validation recomputes that binding and
-accepts those derived paths only when they match exactly.
+retained span index. Candidate scope validation associates the evidence IDs
+reported by each validated repair decision with that decision's authorized
+changed paths, then recomputes the binding from retained source data. It accepts
+the rebind only when the same insight's decision selected that evidence and the
+evidence text, pages, and source spans match exactly.
 
 Summary safe removal applies only to the exact claim-map or sentence paths in
 the plan. If removing a sentence would empty a required summary field, the

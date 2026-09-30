@@ -21,6 +21,7 @@ from src.contracts.regeneration import (
     RegenerationCandidateAudit,
     RegenerationLoopState,
     RegenerationPlan,
+    RepairDecision,
     RepairDelta,
     RepairSeverityChange,
     candidate_rejection_fingerprint,
@@ -668,6 +669,7 @@ def _scope_validation_report(
     deterministic_mutation_paths: Sequence[str] = (),
     doc_map: Dict[str, Any] | None = None,
     evidence_packs: Dict[str, Any] | None = None,
+    repair_decisions: Sequence[RepairDecision] = (),
 ) -> ValidationReport:
     allowed_paths = {
         path.strip()
@@ -682,6 +684,7 @@ def _scope_validation_report(
         plan=plan,
         doc_map=doc_map or {},
         evidence_packs=evidence_packs or {},
+        repair_decisions=repair_decisions,
     )
     allowed_paths.update(verified_mutation_paths)
     changed_paths = _artifact_diff_paths(before, after)
@@ -744,6 +747,7 @@ def _verified_deterministic_mutation_paths(
     plan,
     doc_map: Dict[str, Any] | None = None,
     evidence_packs: Dict[str, Any] | None = None,
+    repair_decisions: Sequence[RepairDecision] = (),
 ) -> set[str]:
     """Allow only deterministic paths exactly rebuilt from retained state."""
 
@@ -818,18 +822,33 @@ def _verified_deterministic_mutation_paths(
                 continue
             canonical = deepcopy(after_items[0])
             evidence_id = str(canonical.get("evidence_id") or "").strip()
+            target_allowed_paths = set(target.allowed_paths)
+            target_decisions = [
+                decision
+                for decision in repair_decisions
+                if decision.repair_action == "REBIND_EVIDENCE"
+                and any(
+                    changed_path.startswith(f"{path_prefix}.")
+                    and changed_path in target_allowed_paths
+                    for changed_path in decision.changed_paths
+                )
+            ]
             selected_evidence_ids = {
                 str(value).strip().casefold()
-                for value in target.selected_evidence_ids
+                for decision in target_decisions
+                for value in decision.evidence_ids_used
                 if str(value).strip()
             }
+            if not target_decisions:
+                selected_evidence_ids = {
+                    str(value).strip().casefold()
+                    for value in target.selected_evidence_ids
+                    if str(value).strip()
+                }
             if (
                 not evidence_id
                 or not span_index.get(evidence_id.casefold())
-                or (
-                    selected_evidence_ids
-                    and evidence_id.casefold() not in selected_evidence_ids
-                )
+                or evidence_id.casefold() not in selected_evidence_ids
             ):
                 continue
             bind_artifact_evidence_spans(
@@ -1771,6 +1790,9 @@ def _run_validation_regeneration_loop(
             ),
             doc_map=evidence_packs.get("doc_map", {}),
             evidence_packs=evidence_packs,
+            repair_decisions=tuple(
+                getattr(regeneration_response, "repair_decisions", []) or []
+            ),
         )
         payload_completeness_issue = None
         try:
