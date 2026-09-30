@@ -1948,6 +1948,99 @@ def test_summary_safe_removal_combines_map_and_copy_issues_with_stale_provenance
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
 
+@pytest.mark.parametrize("has_claim_specific_issue", [True, False])
+def test_summary_safe_removal_requires_claim_identity_for_family_quality_issue(
+    tmp_path, has_claim_specific_issue: bool
+) -> None:
+    current = _current_artifacts()
+    evidence_packs = _evidence_packs()
+    claims = soft_copy_claim_provenance_from_payload(
+        current["soft_copy_claim_provenance"]
+    )
+    failed_claim = next(
+        claim
+        for claim in claims
+        if claim.artifact_family == "summary"
+        and claim.text_hash == hashlib.sha256(b"Old summary").hexdigest()
+    )
+    issues = [
+        RegenerationIssue(
+            rule_id="artifact_quality",
+            affected_section="summary.executive_summary",
+            message="The executive summary needs quality review.",
+            severity="warning",
+            entity_id="summary.executive_summary",
+        )
+    ]
+    if has_claim_specific_issue:
+        issues.append(
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="executive_summary",
+                message="A specific executive-summary claim is unsupported.",
+                severity="warning",
+                entity_id=failed_claim.claim_id,
+            )
+        )
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REMOVE_CLAIM",
+        repair_strategy="safe_removal",
+        issues=issues,
+        allowed_paths=["summary.executive_summary[claim_index=0]"],
+    )
+    openai_client = _FakeOpenAIClient()
+
+    request = ArtifactRegenerationRequest(
+        report_id="report-1",
+        report_name="report-1",
+        attempt_index=3,
+        plan=RegenerationPlan(
+            mode="targeted",
+            targets=[target],
+            unmappable_issues=[],
+            broad_retry_allowed=False,
+        ),
+        current_artifacts=current,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        source_status=current["source_status"],
+        categories=["Category"],
+        vector_store_id=None,
+        md5="md5",
+    )
+    if not has_claim_specific_issue:
+        with pytest.raises(AppError) as error:
+            _regenerate_artifacts(
+                request,
+                openai_client=openai_client,
+                prompt_client=_FakePromptClient(),
+            )
+        assert error.value.code == "summary_safe_removal_target_unresolved"
+        assert openai_client.calls == []
+        return
+
+    response = _regenerate_artifacts(
+        request,
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["summary"]["executive_summary"] == ""
+    assert response.updated_artifacts["summary"]["tldr"] == current["summary"]["tldr"]
+    assert response.updated_artifacts["summary"]["claim_evidence_map"] == current[
+        "summary"
+    ]["claim_evidence_map"]
+    assert not any(
+        claim["claim_id"] == failed_claim.claim_id
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    )
+    assert openai_client.calls == []
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+
+
 def test_summary_safe_removal_without_retained_replacement_fails_typed(tmp_path):
     current = _current_artifacts()
     current["summary"]["tldr"] = "Unsupported only sentence."

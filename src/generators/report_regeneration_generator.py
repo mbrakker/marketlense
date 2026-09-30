@@ -3246,13 +3246,41 @@ def _summary_claim_repairs(
         tuple[int, Dict[str, Any], List[RegenerationIssue]]
     ] | None = None,
 ) -> Dict[str, List[_SoftCopyClaimRepair]] | None:
-    """Resolve all named summary-field claims, or retain family repair semantics."""
+    """Resolve summary-field claims, requiring sentence identity for removal."""
 
     fields = ("tldr", "card_tldr_compact", "executive_summary")
     grouped: Dict[str, List[RegenerationIssue]] = {}
     target_issues = (
         _summary_repair_issues(execution.target) if issues is None else issues
     )
+    if _uses_safe_removal(execution) and target_issues:
+        # Family-level quality findings can share a field target with an exact
+        # copy finding. They cannot identify a sentence to delete; leave them
+        # for the candidate's full validation gate instead of guessing here.
+        try:
+            retained_claims = soft_copy_claim_provenance_from_payload(
+                execution.state.existing_soft_copy_claim_provenance
+            )
+        except AppError:
+            return None
+        retained_ids = {
+            claim.claim_id
+            for claim in retained_claims
+            if claim.artifact_family == "summary"
+        }
+        retained_hashes = {
+            claim.text_hash
+            for claim in retained_claims
+            if claim.artifact_family == "summary"
+        }
+        target_issues = [
+            issue
+            for issue in target_issues
+            if str(issue.entity_id or "").strip() in retained_ids
+            or str(issue.entity_id or "").strip() in retained_hashes
+        ]
+        if not target_issues:
+            return None
     for issue in target_issues:
         affected = str(issue.affected_section or "").casefold()
         field = next(

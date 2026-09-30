@@ -215,7 +215,10 @@ retained provenance hash is stale, the planner's matching claim-map issue may
 identify it only when both issues share the same retained claim identity and the
 map text exactly matches one canonical sentence in that field. Otherwise the
 attempt terminates with `summary_safe_removal_target_unresolved`; it does not
-guess from neighboring claims. Claim-map removals are applied by their original
+guess from neighboring claims. A family-level quality finding cannot identify
+a sentence, so safe removal uses only independently identified claim IDs or
+hashes for the deletion; the family-level finding remains subject to the full
+candidate validation gate. Claim-map removals are applied by their original
 item identity or index before the remaining authorized paths are copied, so
 removing one entry cannot overwrite or duplicate its sibling. If removing a
 sentence would empty a required summary field, the generator may reuse a
