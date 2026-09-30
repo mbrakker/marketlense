@@ -256,6 +256,7 @@ def test_builder_reports_uncovered_sentences_with_actionable_context() -> None:
         )
     assert exc_info.value.code == "soft_copy_claim_provenance_bindings_incomplete"
     assert exc_info.value.context["missing_claim_count"] == 2
+    assert "linkedin_post" in exc_info.value.message
 
 
 def test_builder_still_rejects_factual_claim_without_evidence() -> None:
@@ -355,16 +356,6 @@ def test_retained_ias_artifact_remains_immutable_before_state_evidence() -> None
     [
         (None, "Expert guidance relies on retained evidence.", ""),
         (None, "", "LinkedIn guidance relies on retained evidence."),
-        (
-            {
-                "tldr": "The retained evidence changes the planning outlook.",
-                "card_tldr_compact": "Evidence changes planning.",
-                "executive_summary": "Leaders should act on the retained evidence.",
-                "claim_evidence_map": [],
-            },
-            "",
-            "",
-        ),
     ],
 )
 def test_artifact_assembly_rejects_material_soft_copy_without_bindings(

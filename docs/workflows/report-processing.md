@@ -711,14 +711,18 @@ have completed. A summary claim-map validation issue resolves to its exact
 claim-map leaf before any matching public soft-copy provenance identity, so a
 derived sentence identity cannot redirect a source-claim repair. During final
 artifact assembly, provenance is retained only for canonical material sentences
-still present in the final public text; removed sentences lose stale bindings,
-while any uncovered final sentence remains blocking. When Summary explicitly
-abstains, report-card projection may copy an existing final insight that meets
-the compact sentence contract; this does not change Summary artifacts or create
-new claim text. Generated artifact payloads retain the canonical selected
-category IDs separately from the human-readable category labels used to ground
-prompts, so the publish-readiness category-consistency gate can compare the
-same persisted assignment at analysis and render time. Public citation lines
+still present in the final public text; removed sentences lose stale bindings.
+If an unbound Summary has no direct claim-map evidence from which to rebuild,
+the Summary family is explicitly abstained and its copy is removed. Any
+remaining non-empty sentence with incomplete provenance stays blocking. An
+incomplete-provenance error names its artifact family. When Summary explicitly
+abstains, report-card projection may copy an existing final
+insight that meets the compact sentence contract; this does not change Summary
+artifacts or create new claim text. Generated artifact payloads retain the
+canonical selected category IDs separately from the human-readable category
+labels used to ground prompts, so the publish-readiness category-consistency
+gate can compare the same persisted assignment at analysis and render time.
+Public citation lines
 may show report title and page references, but never internal evidence tokens
 such as `quote_02`; those identifiers remain in private artifact lineage.
 

@@ -428,6 +428,51 @@ def test_finalization_uses_direct_summary_fallback_for_unbound_copy() -> None:
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_finalization_abstains_when_unbound_summary_has_no_direct_claims() -> None:
+    """Unsupported Summary copy is removed when no direct claim can replace it."""
+    payload = _assemble_soft_copy(
+        summary={
+            "tldr": "Mobile app trends vary by industry.",
+            "card_tldr_compact": "Mobile app trends vary by industry.",
+            "executive_summary": (
+                "Mobile app trends vary by industry. The report covers three sectors."
+            ),
+            "claim_evidence_map": [
+                {
+                    "claim": "Mobile app trends vary by industry.",
+                    "evidence_id": "overview-1",
+                    "evidence": "The report covers three sectors.",
+                    "evidence_spans": [
+                        {"evidence_id": "overview-1", "source_pack": "doc_map"}
+                    ],
+                }
+            ],
+        },
+        doc_map={
+            "sections": [
+                {
+                    "id": "overview-1",
+                    "summary": "The report covers three sectors.",
+                    "pages": [1],
+                }
+            ]
+        },
+    )
+
+    assert payload["summary"] == {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    assert payload["family_status"]["summary"]["status"] == "abstained"
+    assert payload["family_status"]["summary"]["policy_action"] == "abstain"
+    assert payload["family_status"]["summary"]["reason"] == (
+        "summary_no_short_direct_claim"
+    )
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_finalization_invariant_rejects_public_copy_mutated_after_provenance() -> None:
     payload = _assemble_soft_copy(
         expert_comment="Revenue grew by 12%.",

@@ -80,7 +80,8 @@ def build_soft_copy_claim_provenance(
         raise AppError(
             code="soft_copy_claim_provenance_bindings_incomplete",
             message=(
-                "Soft-copy provenance must declare every material sentence; "
+                f"Soft-copy provenance for {family} must declare every material "
+                "sentence; "
                 f"uncovered sentences: {len(missing_sentences)}; first uncovered "
                 f"sentence starts: {first_excerpt}"
             ),

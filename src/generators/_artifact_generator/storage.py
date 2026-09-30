@@ -402,6 +402,12 @@ def assemble_artifacts_payload(
                 insights_final=insights_final,
                 soft_copy_claim_bindings=soft_copy_claim_bindings,
             )
+        else:
+            _abstain_summary_without_short_direct_claim(
+                summary=summary,
+                family_status=family_status,
+            )
+            soft_copy_claim_bindings["summary"] = []
     if "expert_comment" not in (soft_copy_repair_texts or {}):
         expert_comment = retain_bound_optional_soft_copy_sentences(
             artifact_family="expert_comment",
