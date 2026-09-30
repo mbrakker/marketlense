@@ -209,13 +209,22 @@ the rebind only when the same insight's decision selected that evidence and the
 evidence text, pages, and source spans match exactly.
 
 Summary safe removal applies only to the exact claim-map or sentence paths in
-the plan. If removing a sentence would empty a required summary field, the
-generator may reuse a claim-map sentence only when retained summary provenance
-already binds the identical sentence and evidence ID to canonical source spans,
-and the sentence fits the field's existing length contract. Otherwise the
-attempt terminates with a typed `summary_safe_removal_no_supported_replacement`
-reason; it does not clear unrelated summary fields or let card validation fail
-later with an unexplained empty TLDR.
+the plan. When one target contains both public-copy and claim-map issues, the
+generator resolves and removes each exact item together. If a public sentence's
+retained provenance hash is stale, the planner's matching claim-map issue may
+identify it only when both issues share the same retained claim identity and the
+map text exactly matches one canonical sentence in that field. Otherwise the
+attempt terminates with `summary_safe_removal_target_unresolved`; it does not
+guess from neighboring claims. Claim-map removals are applied by their original
+item identity or index before the remaining authorized paths are copied, so
+removing one entry cannot overwrite or duplicate its sibling. If removing a
+sentence would empty a required summary field, the generator may reuse a
+claim-map sentence only when retained summary provenance already binds the
+identical sentence and evidence ID to canonical source spans, and the sentence
+fits the field's existing length contract. Otherwise the attempt terminates
+with a typed `summary_safe_removal_no_supported_replacement` reason; it does
+not clear unrelated summary fields or let card validation fail later with an
+unexplained empty TLDR.
 
 When a LinkedIn post cannot be repaired at claim scope and the safe-removal
 strategy clears the whole post, its retained soft-copy claims are cleared with

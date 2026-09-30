@@ -1313,7 +1313,7 @@ def _preserve_atomic_target_families(
         and target.repair_action == "REMOVE_CLAIM"
         for path in target.allowed_paths
         if re.fullmatch(
-            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\]",
+            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\](?:\.claim)?",
             str(path or ""),
         )
     }
@@ -1349,7 +1349,9 @@ def _preserve_atomic_target_families(
         merged_family = deepcopy(original_artifacts[root])
         if root == "summary":
             claim_map_removals = [
-                path for path in paths if path in summary_claim_removal_paths
+                path.removesuffix(".claim")
+                for path in paths
+                if path in summary_claim_removal_paths
             ]
             claim_map_removals.sort(
                 key=lambda path: _summary_claim_map_item_index(
@@ -1391,7 +1393,8 @@ def _preserve_atomic_target_families(
 
 def _summary_claim_map_item_index(*, original_family: Any, full_path: str) -> int:
     match = re.fullmatch(
-        r"summary\.claim_evidence_map\[(?:(item=)([^\]]+)|(\d+))\]", full_path
+        r"summary\.claim_evidence_map\[(?:(item=)([^\]]+)|(\d+))\](?:\.claim)?",
+        full_path,
     )
     claims = (
         original_family.get("claim_evidence_map")
@@ -2992,6 +2995,9 @@ def _soft_copy_claim_repairs(
     artifact_family: str,
     text: str,
     issues: List[RegenerationIssue] | None = None,
+    summary_claim_map_targets: List[
+        tuple[int, Dict[str, Any], List[RegenerationIssue]]
+    ] | None = None,
 ) -> List[_SoftCopyClaimRepair] | None:
     """Resolve every distinct, unambiguous failed sentence in one soft family."""
 
@@ -3005,18 +3011,23 @@ def _soft_copy_claim_repairs(
     except AppError:
         return None
     claims_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    claims_by_id: Dict[str, List[SoftCopyClaimProvenance]] = {}
     for claim in claims:
         if claim.artifact_family == artifact_family:
             claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+            claims_by_id.setdefault(claim.claim_id, []).append(claim)
     candidates: List[_SoftCopyClaimRepair] = []
-    for start, end, sentence in _soft_copy_sentence_spans(text):
+    sentence_spans = _soft_copy_sentence_spans(text)
+    for start, end, sentence in sentence_spans:
         matched_claims = claims_by_hash.get(
             hashlib.sha256(
                 _normalized_soft_copy_text(sentence).encode("utf-8")
             ).hexdigest()
         )
         if matched_claims is None or len(matched_claims) != 1:
-            return None
+            if artifact_family != "summary" or not summary_claim_map_targets:
+                return None
+            continue
         candidates.append(
             _SoftCopyClaimRepair(
                 artifact_family=artifact_family,
@@ -3027,7 +3038,7 @@ def _soft_copy_claim_repairs(
                 issue=target_issues[0],
             )
         )
-    if not candidates:
+    if not candidates and not summary_claim_map_targets:
         return None
 
     def uniquely_matched(
@@ -3094,6 +3105,45 @@ def _soft_copy_claim_repairs(
                     )
                 ]
             )
+        if (
+            matched is None
+            and artifact_family == "summary"
+            and summary_claim_map_targets
+            and entity_id
+        ):
+            linked_targets = [
+                (claim, map_issues)
+                for _index, claim, map_issues in summary_claim_map_targets
+                if any(
+                    _s(map_issue.entity_id).strip() == entity_id
+                    for map_issue in map_issues
+                )
+            ]
+            stale_claims = claims_by_id.get(entity_id, [])
+            if len(linked_targets) == 1 and len(stale_claims) == 1:
+                mapped_text = _normalized_soft_copy_text(
+                    linked_targets[0][0].get("claim")
+                )
+                matching_spans = [
+                    span
+                    for span in sentence_spans
+                    if _normalized_soft_copy_text(span[2]) == mapped_text
+                ]
+                if mapped_text and len(matching_spans) == 1:
+                    start, end, sentence = matching_spans[0]
+                    current_hash = hashlib.sha256(
+                        _normalized_soft_copy_text(sentence).encode("utf-8")
+                    ).hexdigest()
+                    if stale_claims[0].text_hash != current_hash:
+                        matched = _SoftCopyClaimRepair(
+                            artifact_family=artifact_family,
+                            claim=stale_claims[0],
+                            text=sentence,
+                            start=start,
+                            end=end,
+                            issue=issue,
+                            issues=(issue,),
+                        )
         if matched is None:
             return None
         prior_index = next(
@@ -3190,12 +3240,20 @@ def _reconstruct_soft_copy_claims(
 
 def _summary_claim_repairs(
     execution: _RegenerationHandlerExecution,
+    *,
+    issues: List[RegenerationIssue] | None = None,
+    summary_claim_map_targets: List[
+        tuple[int, Dict[str, Any], List[RegenerationIssue]]
+    ] | None = None,
 ) -> Dict[str, List[_SoftCopyClaimRepair]] | None:
     """Resolve all named summary-field claims, or retain family repair semantics."""
 
     fields = ("tldr", "card_tldr_compact", "executive_summary")
     grouped: Dict[str, List[RegenerationIssue]] = {}
-    for issue in _summary_repair_issues(execution.target):
+    target_issues = (
+        _summary_repair_issues(execution.target) if issues is None else issues
+    )
+    for issue in target_issues:
         affected = str(issue.affected_section or "").casefold()
         field = next(
             (
@@ -3216,6 +3274,7 @@ def _summary_claim_repairs(
             artifact_family="summary",
             text=_s(execution.state.summary.get(field)),
             issues=issues,
+            summary_claim_map_targets=summary_claim_map_targets,
         )
         if repairs is None or any(
             repair.claim.claim_id in claim_ids for repair in repairs
@@ -3306,11 +3365,15 @@ def _retained_summary_claim_replacement(
 
 def _summary_claim_map_targets(
     execution: _RegenerationHandlerExecution,
+    *,
+    issues: List[RegenerationIssue] | None = None,
 ) -> List[tuple[int, Dict[str, Any], List[RegenerationIssue]]] | None:
     """Resolve every failed claim-map issue to one stable summary item."""
 
     claims = execution.state.summary.get("claim_evidence_map")
-    target_issues = _summary_repair_issues(execution.target)
+    target_issues = (
+        _summary_repair_issues(execution.target) if issues is None else issues
+    )
     if not isinstance(claims, list) or not target_issues:
         return None
     grouped: Dict[int, List[RegenerationIssue]] = {}
@@ -3368,10 +3431,7 @@ def _regenerate_summary_claim_map_items(
 ) -> None:
     claims = execution.state.summary.get("claim_evidence_map") or []
     if _uses_safe_removal(execution):
-        removed = {index for index, _claim, _issues in targets}
-        execution.state.summary["claim_evidence_map"] = [
-            claim for index, claim in enumerate(claims) if index not in removed
-        ]
+        _remove_summary_claim_map_targets(execution.state.summary, targets)
         execution.state.regenerated_sections.append("summary")
         return
     for index, claim, issues in targets:
@@ -3460,13 +3520,63 @@ def _regenerate_summary_claim_map_items(
     execution.state.prompt_namespaces.append(namespace)
 
 
+def _remove_summary_claim_map_targets(
+    summary: Dict[str, Any],
+    targets: List[tuple[int, Dict[str, Any], List[RegenerationIssue]]],
+) -> None:
+    claims = summary.get("claim_evidence_map")
+    if not isinstance(claims, list):
+        return
+    removed = {index for index, _claim, _issues in targets}
+    summary["claim_evidence_map"] = [
+        claim for index, claim in enumerate(claims) if index not in removed
+    ]
+
+
 def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
-    claim_map_targets = _summary_claim_map_targets(execution)
-    if claim_map_targets is not None:
-        _regenerate_summary_claim_map_items(execution, claim_map_targets, namespace)
-        return
-    scoped_repairs = _summary_claim_repairs(execution)
+    if _uses_safe_removal(execution):
+        repair_issues = _summary_repair_issues(execution.target)
+        claim_map_issues = [
+            issue
+            for issue in repair_issues
+            if re.match(
+                r"^summary\.claim_evidence_map(?:[:\[])",
+                _s(issue.affected_section).strip(),
+            )
+        ]
+        copy_issues = [
+            issue for issue in repair_issues if issue not in claim_map_issues
+        ]
+        if not repair_issues:
+            _raise_summary_safe_removal_target_unresolved(execution)
+        claim_map_targets = (
+            _summary_claim_map_targets(execution, issues=claim_map_issues)
+            if claim_map_issues
+            else []
+        )
+        scoped_repairs = _summary_claim_repairs(
+            execution,
+            issues=copy_issues,
+            summary_claim_map_targets=claim_map_targets or [],
+        )
+        if claim_map_targets is None or scoped_repairs is None:
+            _raise_summary_safe_removal_target_unresolved(execution)
+        if claim_map_targets:
+            _remove_summary_claim_map_targets(
+                execution.state.summary, claim_map_targets
+            )
+        if not scoped_repairs:
+            execution.state.regenerated_sections.append("summary")
+            return
+    else:
+        claim_map_targets = _summary_claim_map_targets(execution)
+        if claim_map_targets is not None:
+            _regenerate_summary_claim_map_items(
+                execution, claim_map_targets, namespace
+            )
+            return
+        scoped_repairs = _summary_claim_repairs(execution)
     if scoped_repairs is not None:
         for field, repairs in scoped_repairs.items():
             replacements: Dict[str, str | None] = {}
@@ -3570,18 +3680,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         execution.state.prompt_namespaces.append(namespace)
         return
     if _uses_safe_removal(execution):
-        raise AppError(
-            code="summary_safe_removal_target_unresolved",
-            message=(
-                "Summary safe removal could not resolve the exact retained claim "
-                "authorized by the regeneration plan."
-            ),
-            retryable=False,
-            context={
-                "report_id": execution.runtime.request.report_id,
-                "allowed_path_count": len(execution.target.allowed_paths),
-            },
-        )
+        _raise_summary_safe_removal_target_unresolved(execution)
     result = _render_regeneration_model(
         execution=execution,
         namespace=namespace,
@@ -3619,6 +3718,23 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
     execution.state.summary = normalize_artifact_summary(result.get("summary"))
     execution.state.regenerated_sections.append("summary")
     execution.state.prompt_namespaces.append(namespace)
+
+
+def _raise_summary_safe_removal_target_unresolved(
+    execution: _RegenerationHandlerExecution,
+) -> None:
+    raise AppError(
+        code="summary_safe_removal_target_unresolved",
+        message=(
+            "Summary safe removal could not resolve the exact retained claim "
+            "authorized by the regeneration plan."
+        ),
+        retryable=False,
+        context={
+            "report_id": execution.runtime.request.report_id,
+            "allowed_path_count": len(execution.target.allowed_paths),
+        },
+    )
 
 
 def _record_atomic_summary_claim_bindings(

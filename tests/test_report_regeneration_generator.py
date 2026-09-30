@@ -1786,6 +1786,168 @@ def test_summary_safe_removal_replaces_only_the_target_with_retained_claim(
     assert summary["claim_evidence_map"][0]["evidence_id"] == "f1"
 
 
+@pytest.mark.parametrize("map_text_matches_copy", [True, False])
+@pytest.mark.parametrize("copy_has_sibling", [True, False])
+def test_summary_safe_removal_combines_map_and_copy_issues_with_stale_provenance(
+    tmp_path, map_text_matches_copy: bool, copy_has_sibling: bool
+) -> None:
+    current = _current_artifacts()
+    current["summary"]["executive_summary"] = "Unsupported ledger-linked copy."
+    if copy_has_sibling:
+        current["summary"]["executive_summary"] += " Keep executive copy."
+    current["summary"]["claim_evidence_map"] = [
+        {
+            "claim": (
+                "Unsupported ledger-linked copy."
+                if map_text_matches_copy
+                else "Different claim text."
+            ),
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        }
+    ]
+    if copy_has_sibling:
+        current["summary"]["claim_evidence_map"].append(
+            {
+                "claim": "Keep executive copy.",
+                "evidence_id": "f2",
+                "evidence": "Evidence text 2",
+                "pages": [2],
+            }
+        )
+    evidence_packs = _evidence_packs()
+    evidence_span_index = artifact_evidence_span_index(
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+    )
+    summary_text = soft_copy_public_text("summary", current["summary"])
+    summary_sentences = soft_copy_material_sentences(summary_text)
+    summary_claims = build_soft_copy_claim_provenance(
+        artifact_family="summary",
+        text=summary_text,
+        declared_claims=[
+            {
+                "claim": sentence,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+            for sentence in summary_sentences
+        ],
+        evidence_span_index=evidence_span_index,
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    target_text = "Unsupported ledger-linked copy."
+    target_hash = hashlib.sha256(target_text.encode("utf-8")).hexdigest()
+    stale_text_hash = hashlib.sha256(b"Stale prior summary sentence.").hexdigest()
+    target_claim = next(
+        claim for claim in summary_claims if claim.text_hash == target_hash
+    )
+    stale_claim = replace(
+        target_claim,
+        claim_id=f"soft_copy:summary:{stale_text_hash[:16]}",
+        text_hash=stale_text_hash,
+    )
+    other_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            current["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family != "summary"
+    ]
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [
+            *other_claims,
+            *[
+                stale_claim if claim.claim_id == target_claim.claim_id else claim
+                for claim in summary_claims
+            ],
+        ]
+    )
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REMOVE_CLAIM",
+        repair_strategy="safe_removal",
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="summary.executive_summary",
+                message=f"Unsupported copy: {target_text}",
+                severity="error",
+                entity_id=stale_claim.claim_id,
+            ),
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="summary.claim_evidence_map:1.claim",
+                message=f"Unsupported map claim: {target_text}",
+                severity="error",
+                entity_id=stale_claim.claim_id,
+            ),
+        ],
+        allowed_paths=[
+            "summary.executive_summary[claim_index=0]",
+            "summary.claim_evidence_map[0].claim",
+        ],
+    )
+    openai_client = _FakeOpenAIClient()
+
+    request = ArtifactRegenerationRequest(
+        report_id="report-1",
+        report_name="report-1",
+        attempt_index=3,
+        plan=RegenerationPlan(
+            mode="targeted",
+            targets=[target],
+            unmappable_issues=[],
+            broad_retry_allowed=False,
+        ),
+        current_artifacts=current,
+        doc_map=evidence_packs["doc_map"],
+        evidence_packs=evidence_packs,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        source_status=current["source_status"],
+        categories=["Category"],
+        vector_store_id=None,
+        md5="md5",
+    )
+    if not map_text_matches_copy:
+        with pytest.raises(AppError) as error:
+            _regenerate_artifacts(
+                request,
+                openai_client=openai_client,
+                prompt_client=_FakePromptClient(),
+            )
+        assert error.value.code == "summary_safe_removal_target_unresolved"
+        assert openai_client.calls == []
+        return
+
+    response = _regenerate_artifacts(
+        request,
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    summary = response.updated_artifacts["summary"]
+    assert summary["tldr"] == current["summary"]["tldr"]
+    assert summary["executive_summary"] == (
+        "Keep executive copy." if copy_has_sibling else ""
+    )
+    assert summary["claim_evidence_map"] == (
+        [current["summary"]["claim_evidence_map"][1]]
+        if copy_has_sibling
+        else []
+    )
+    assert openai_client.calls == []
+    assert not any(
+        claim["claim_id"] == stale_claim.claim_id
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    )
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+
+
 def test_summary_safe_removal_without_retained_replacement_fails_typed(tmp_path):
     current = _current_artifacts()
     current["summary"]["tldr"] = "Unsupported only sentence."
