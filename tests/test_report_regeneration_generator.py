@@ -56,6 +56,7 @@ from src.generators.report_regeneration_generator import (
     _repair_decision_protected_fields_are_complete,
     _restore_final_insight_evidence_bindings,
     _restore_missing_final_insight_roster,
+    _summary_claim_map_item_index,
 )
 from src.generators.report_regeneration_generator import (
     regenerate_artifacts as _regenerate_artifacts,
@@ -1450,6 +1451,119 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
     )
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
     assert Path(response.candidate_artifacts_path).is_file()
+
+
+def test_safe_removal_of_idless_summary_claim_preserves_exact_siblings(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    original_claims = [
+        {
+            "claim": "First retained map claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        },
+        {
+            "claim": "Second retained map claim.",
+            "evidence_id": "f2",
+            "evidence": "Evidence text 2",
+            "pages": [2],
+        },
+        {
+            "claim": "Unsupported final map claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        },
+    ]
+    current["summary"]["claim_evidence_map"] = deepcopy(original_claims)
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="summary.claim_evidence_map:3.claim",
+        message="The claim is not supported by its retained evidence.",
+        severity="error",
+        entity_id="summary_claim:3",
+        evidence_ids=["f1"],
+    )
+    allowed_paths = _allowed_paths("summary", [issue], current, "REMOVE_CLAIM")
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REMOVE_CLAIM",
+        repair_strategy="safe_removal",
+        issues=[issue],
+        allowed_paths=allowed_paths,
+    )
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[target],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    evidence_packs = _evidence_packs()
+    openai_client = _FakeOpenAIClient()
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["summary"]["claim_evidence_map"] == (
+        original_claims[:2]
+    )
+    assert all(
+        isinstance(item.get("claim"), str)
+        for item in response.updated_artifacts["summary"]["claim_evidence_map"]
+    )
+    assert openai_client.calls == []
+    integrity = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=response.updated_artifacts,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+    scope = _scope_validation_report(
+        before=current,
+        after=response.updated_artifacts,
+        plan=plan,
+        verified_derived_roots=integrity.verified_derived_roots,
+    )
+    assert scope.status == "pass", [
+        (item.rule_id, item.affected_section) for item in scope.issues
+    ]
+    assert Path(response.candidate_artifacts_path).is_file()
+
+
+def test_summary_safe_removal_resolves_numeric_stable_claim_id() -> None:
+    summary = {
+        "claim_evidence_map": [
+            {"id": "123", "claim": "Selected claim."},
+            {"id": "456", "claim": "Sibling claim."},
+        ]
+    }
+
+    assert (
+        _summary_claim_map_item_index(
+            original_family=summary,
+            full_path="summary.claim_evidence_map[item=123]",
+        )
+        == 0
+    )
 
 
 @pytest.mark.parametrize("attempt_index", [2, 3])

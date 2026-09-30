@@ -1278,6 +1278,17 @@ def _preserve_atomic_target_families(
         for target in plan.targets
         for path in target.allowed_paths
     }
+    summary_claim_removal_paths = {
+        str(path)
+        for target in plan.targets
+        if target.target_section == "summary"
+        and target.repair_action == "REMOVE_CLAIM"
+        for path in target.allowed_paths
+        if re.fullmatch(
+            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\]",
+            str(path or ""),
+        )
+    }
     paths_by_root: Dict[str, List[str]] = {}
     for target in plan.targets:
         for allowed_path in target.allowed_paths:
@@ -1308,7 +1319,23 @@ def _preserve_atomic_target_families(
             )
             continue
         merged_family = deepcopy(original_artifacts[root])
+        if root == "summary":
+            claim_map_removals = [
+                path for path in paths if path in summary_claim_removal_paths
+            ]
+            claim_map_removals.sort(
+                key=lambda path: _summary_claim_map_item_index(
+                    original_family=original_artifacts[root], full_path=path
+                ),
+                reverse=True,
+            )
+            for removal_path in claim_map_removals:
+                merged_family = _remove_summary_claim_map_item(
+                    summary=merged_family, full_path=removal_path
+                )
         for allowed_path in paths:
+            if allowed_path in summary_claim_removal_paths:
+                continue
             merged_family = _copy_allowed_mutation_path(
                 original_family=merged_family,
                 target_family=(
@@ -1323,6 +1350,51 @@ def _preserve_atomic_target_families(
     for root, value in family_state.items():
         if root not in allowed_roots:
             updated_artifacts[root] = deepcopy(original_artifacts.get(root, value))
+
+
+def _summary_claim_map_item_index(*, original_family: Any, full_path: str) -> int:
+    match = re.fullmatch(
+        r"summary\.claim_evidence_map\[(?:(item=)([^\]]+)|(\d+))\]", full_path
+    )
+    claims = (
+        original_family.get("claim_evidence_map")
+        if isinstance(original_family, dict)
+        else None
+    )
+    index = None
+    if match is not None and isinstance(claims, list):
+        if match.group(1):
+            identity = match.group(2)
+            matches = [
+                position
+                for position, claim in enumerate(claims)
+                if isinstance(claim, dict)
+                and identity
+                in {
+                    _s(claim.get("id")).strip(),
+                    _s(claim.get("claim_id")).strip(),
+                }
+            ]
+            index = matches[0] if len(matches) == 1 else None
+        else:
+            requested_index = int(match.group(3))
+            index = requested_index if requested_index < len(claims) else None
+    if index is None:
+        raise AppError(
+            code="regeneration_target_item_unresolved",
+            message="A planned summary safe-removal item no longer resolves.",
+            retryable=False,
+            context={"path": full_path, "reason": "summary_removal_item_unresolved"},
+        )
+    return index
+
+
+def _remove_summary_claim_map_item(*, summary: Any, full_path: str) -> Any:
+    index = _summary_claim_map_item_index(
+        original_family=summary, full_path=full_path
+    )
+    summary["claim_evidence_map"].pop(index)
+    return summary
 
 
 def _copy_allowed_mutation_path(

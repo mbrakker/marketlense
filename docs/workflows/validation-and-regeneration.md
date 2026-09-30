@@ -179,19 +179,24 @@ figure, quote, Expert View claim, or LinkedIn claim. When identity cannot be
 resolved unambiguously, the planner uses the existing family-level repair.
 
 Summary issues are separated into independent planned targets by claim-map leaf
-or public-copy field. A claim-map repair request contains the selected item and
-its exact writable claim path; failures in `executive_summary`, TLDRs, or other
-claim-map entries remain separate targets. The request names that exact path and
-the existing patch validator rejects any additional path before a candidate is
-created. Candidate assembly merges only declared summary leaves back onto the
-last promoted summary, so normalization or source-display helpers cannot alter
-untargeted sibling claims. A repair that truly needs synchronized leaves must
-declare each exact leaf in its target before the provider call; whole-summary
-replacement is never accepted for an atomic target. Claim-map entries with an
-explicit ID resolve by that ID; schema-valid idless entries resolve by their
-stable one-based list identity and the exact planned array index. The repaired
-map must retain the same cardinality so the targeted row cannot shift or become
-ambiguous during reconstruction.
+or public-copy field. A `REGENERATE_ITEM` claim-map request contains the selected
+item and its exact writable claim path; failures in `executive_summary`, TLDRs,
+or other claim-map entries remain separate targets. The request names that exact
+path and the existing patch validator rejects any additional path before a
+candidate is created. Candidate assembly merges only declared summary leaves
+back onto the last promoted summary, so normalization or source-display helpers
+cannot alter untargeted sibling claims. A repair that truly needs synchronized
+leaves must declare each exact leaf in its target before the provider call;
+whole-summary replacement is never accepted for an atomic target. Claim-map
+entries with an explicit ID resolve by that ID; schema-valid idless entries
+resolve by their stable one-based list identity and the exact planned array
+index. A `REMOVE_CLAIM/safe_removal` target instead declares the selected
+claim-map item and removes that item from the promoted map; it never copies a
+shifted candidate row into the old numeric index. Scope diffing reports an
+idless one-row deletion as that exact item only when the before/after alignment
+is unique. Duplicate or otherwise ambiguous rows remain a scope failure. The
+same-cardinality requirement applies to claim text repair, where the targeted
+row must not shift or become ambiguous during reconstruction.
 
 Each model-assisted repair call returns one private `repair_decision` with the
 diagnosed failure class, selected action and strategy, retained evidence IDs actually

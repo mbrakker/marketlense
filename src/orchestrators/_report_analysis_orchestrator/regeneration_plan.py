@@ -515,6 +515,14 @@ def _allowed_paths(
             else:
                 paths.add(path)
             continue
+        if repair_action == "REMOVE_CLAIM" and target_key == "summary":
+            item_match = re.match(
+                r"^(summary\.claim_evidence_map\[(?:item=)?[^\]]+\])\.claim$",
+                path,
+            )
+            if item_match:
+                paths.add(item_match.group(1))
+                continue
         paths.add(path)
     if target_key == "insights_bundle" and repair_action == "REBIND_EVIDENCE":
         for path in tuple(paths):

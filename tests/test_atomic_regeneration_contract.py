@@ -30,6 +30,7 @@ from src.orchestrators._report_analysis_orchestrator.validation import (
     _scope_validation_report,
 )
 from src.services.schema_validator_service import validate_schema
+from src.utils.artifact_diff import artifact_diff_paths
 from src.utils.errors import AppError
 
 
@@ -590,6 +591,83 @@ def test_summary_claim_map_and_public_copy_failures_plan_as_separate_targets() -
         "summary.executive_summary[claim_index=0]",
         "summary.executive_summary[claim_index=1]",
     ]
+
+
+def test_summary_safe_removal_declares_the_claim_map_item_root() -> None:
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {"claim": "First retained claim."},
+                {"claim": "Unsupported middle claim."},
+                {"claim": "Last retained claim."},
+            ]
+        }
+    }
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="summary.claim_evidence_map:2.claim",
+        message="The claim is not supported by retained evidence.",
+        severity="error",
+        entity_id="summary_claim:2",
+    )
+
+    assert _allowed_paths("summary", [issue], artifacts, "REMOVE_CLAIM") == [
+        "summary.claim_evidence_map[1]"
+    ]
+
+
+def test_artifact_diff_identifies_one_removed_idless_claim_map_item() -> None:
+    before = {
+        "summary": {
+            "claim_evidence_map": [
+                {"claim": "First claim.", "evidence_id": "e1"},
+                {"claim": "Removed claim.", "evidence_id": "e2"},
+                {"claim": "Last claim.", "evidence_id": "e1"},
+            ]
+        }
+    }
+    after = {
+        "summary": {
+            "claim_evidence_map": [
+                before["summary"]["claim_evidence_map"][0],
+                before["summary"]["claim_evidence_map"][2],
+            ]
+        }
+    }
+
+    assert artifact_diff_paths(before, after) == {"summary.claim_evidence_map[1]"}
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=SimpleNamespace(
+            targets=[
+                SimpleNamespace(
+                    allowed_paths=["summary.claim_evidence_map[1]"]
+                )
+            ]
+        ),
+    )
+    assert scope.status == "pass"
+
+
+def test_artifact_diff_keeps_ambiguous_duplicate_removal_blocked() -> None:
+    duplicate = {"claim": "Repeated claim.", "evidence_id": "e1"}
+    before = {"summary": {"claim_evidence_map": [duplicate, duplicate]}}
+    after = {"summary": {"claim_evidence_map": [duplicate]}}
+
+    assert artifact_diff_paths(before, after) != {"summary.claim_evidence_map[0]"}
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=SimpleNamespace(
+            targets=[
+                SimpleNamespace(
+                    allowed_paths=["summary.claim_evidence_map[0]"]
+                )
+            ]
+        ),
+    )
+    assert scope.status == "fail"
 
 
 def test_explicit_summary_leaf_set_accepts_all_declared_paths_only() -> None:
