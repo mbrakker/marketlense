@@ -155,7 +155,10 @@ def text_cache_key(md5: str, settings: IngestSettings) -> str:
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
     path = cache_root / f"{prefix}_{cache_key}.json"
     if (
-        file_service.atomic_write_temp_path_length(path)
+        max(
+            len(str(path.resolve())),
+            file_service.atomic_write_temp_path_length(path),
+        )
         <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     ):
         return path

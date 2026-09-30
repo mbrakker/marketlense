@@ -50,6 +50,11 @@ compacted with a slug-derived suffix. Every producer and downstream reader
 resolves that one canonical path through the analysis-pack service, including
 the crop-refinement cache; a genuine directory, permission, serialization, or
 atomic-write failure remains a typed persistence failure.
+
+PDF cache paths use the same safety budget for both the final destination and
+the unique atomic-write temporary file. Deep isolated runs compact the cache
+directory and key filename together, so neither `os.replace` target exceeds
+the supported Windows path length.
 Pipeline checkpoints apply that rule at their own canonical path boundary. If
 the normal pipeline, file, and stage hierarchy would exceed the same atomic
 write budget, both writer and reader deterministically use a compact,

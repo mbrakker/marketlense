@@ -64,11 +64,25 @@ def test_template_sha256_propagates_retryable_read_error(assert_app_error):
     )
 
 
-def test_cache_path_compacts_deep_pdf_cache_for_atomic_write(tmp_path: Path) -> None:
+def test_cache_path_compacts_destination_and_temp_paths_for_atomic_write() -> None:
+    cache_root = (
+        Path(Path.cwd().anchor)
+        / ("isolated-cohort-" + "x" * 110)
+        / "pdf_cache"
+        / ("a" * 32)
+    )
+    uncompact_path = cache_root / f"pdf_info_{'b' * 64}.json"
+    assert atomic_write_temp_path_length(uncompact_path) <= (
+        WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    )
+    assert len(str(uncompact_path.resolve())) > WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+
     path = cache_path(
-        tmp_path / ("isolated-cohort-" + "x" * 30) / "pdf_cache" / ("a" * 32),
+        cache_root,
         "pdf_info",
         "b" * 64,
     )
 
+    assert path != uncompact_path
     assert atomic_write_temp_path_length(path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    assert len(str(path.resolve())) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
