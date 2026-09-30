@@ -169,6 +169,22 @@ distinct ladder before any model call:
    support.
 4. Removal/abstention of the unsupported atomic item.
 
+Before a strategy in steps 2 or 3 reaches a provider for a quarantined Summary
+claim-map target, the orchestrator checks the same canonical grounding package
+used by regeneration. If it has no retained evidence, that strategy is skipped
+and the existing ladder advances to safe removal, which remains available only
+when the planner has an exact removal path. Summary claim-map failures resolve
+evidence from the failed map entry alone, so sibling entries cannot lend their
+evidence IDs or pages.
+Repair action and strategy are planner-owned contract fields; provider echoes
+are ignored while the returned patch remains constrained to the planned paths,
+evidence, and candidate validation.
+
+When several sentence-indexed claims in one public text family are repaired or
+removed together, their paths are applied from the highest sentence index to
+the lowest. This keeps each later mutation aligned with the original canonical
+sentence grid as earlier sentences disappear.
+
 When a LinkedIn post cannot be repaired at claim scope and the safe-removal
 strategy clears the whole post, its retained soft-copy claims are cleared with
 the public text. The provenance coverage check remains required before the

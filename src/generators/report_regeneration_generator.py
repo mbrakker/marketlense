@@ -677,6 +677,32 @@ def _build_grounding_package(
     }
 
 
+def retained_grounding_evidence_ids_for_target(
+    *,
+    target: RegenerationTarget,
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    doc_map: Dict[str, Any],
+) -> List[str]:
+    """Return evidence IDs selected by the canonical package for quarantined targets.
+
+    The orchestrator uses this deterministic preflight to avoid model calls for
+    repair strategies that have no retained evidence to work with. The actual
+    regeneration still builds its package through the same canonical builder.
+    """
+
+    if not target.quarantined_evidence_ids:
+        return []
+    package = _build_grounding_package(
+        target=target,
+        prepared=None,
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        doc_map=doc_map,
+    )
+    return _unique_strings(package.get("evidence_ids") or [])
+
+
 MAX_SOFT_COPY_CLAIM_EVIDENCE_ENTRIES = 4
 
 
@@ -1333,7 +1359,16 @@ def _preserve_atomic_target_families(
                 merged_family = _remove_summary_claim_map_item(
                     summary=merged_family, full_path=removal_path
                 )
-        for allowed_path in paths:
+        def claim_path_order(path: str) -> tuple[int, int, str]:
+            match = re.search(r"\[claim_index=(\d+)\]$", path)
+            if match is None:
+                return (1, 0, path)
+            return (0, -int(match.group(1)), path)
+
+        # A deletion or replacement can change the sentence indexes in the
+        # merged copy. Apply sentence-scoped mutations from right to left so
+        # each remaining planner path still refers to its original sentence.
+        for allowed_path in sorted(paths, key=claim_path_order):
             if allowed_path in summary_claim_removal_paths:
                 continue
             merged_family = _copy_allowed_mutation_path(
@@ -2247,8 +2282,12 @@ def _validated_repair_decision(
         decision = RepairDecision(
             schema_version=str(payload["schema_version"]),
             diagnosed_failure_class=planned_failure_class,
-            repair_action=str(payload["repair_action"]).strip(),
-            repair_strategy=str(payload["repair_strategy"]).strip(),
+            # Action and strategy are selected by the deterministic planner.
+            # The provider echoes them in the response contract, but cannot
+            # change or invalidate the planner's choice through duplicate
+            # metadata.
+            repair_action=target.repair_action,
+            repair_strategy=target.repair_strategy,
             evidence_ids_used=[
                 str(value).strip() for value in payload["evidence_ids_used"]
             ],
@@ -2265,11 +2304,6 @@ def _validated_repair_decision(
     failure_classes = {issue.rule_id for issue in target.issues if issue.rule_id}
     if decision.diagnosed_failure_class not in failure_classes:
         raise _repair_decision_error(execution, "failure_class_not_in_plan")
-    if (
-        decision.repair_action != target.repair_action
-        or decision.repair_strategy != target.repair_strategy
-    ):
-        raise _repair_decision_error(execution, "strategy_not_in_plan")
     if not target.allowed_paths:
         raise _repair_decision_error(execution, "allowed_paths_missing")
     if not decision.minimal_patch or any(

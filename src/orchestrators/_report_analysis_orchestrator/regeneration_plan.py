@@ -199,6 +199,55 @@ def _issue_grounding(
     ):
         topic_index = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_topic_grounding(topic_index, artifacts)
+    summary_claim_match = re.match(
+        r"^summary\.claim_evidence_map:([^.:]+)(?:\.|$)", section, re.IGNORECASE
+    )
+    if summary_claim_match:
+        identity = summary_claim_match.group(1).strip()
+        summary_value = artifacts.get("summary")
+        summary = summary_value if isinstance(summary_value, dict) else {}
+        claims = summary.get("claim_evidence_map") or []
+        matching_claims = [
+            (index, claim)
+            for index, claim in enumerate(claims)
+            if isinstance(claim, dict)
+            and (
+                identity
+                in {
+                    str(claim.get("id") or "").strip(),
+                    str(claim.get("claim_id") or "").strip(),
+                }
+                or (
+                    not str(claim.get("id") or claim.get("claim_id") or "").strip()
+                    and identity.isdigit()
+                    and int(identity) == index + 1
+                )
+            )
+        ]
+        if len(matching_claims) != 1:
+            return [], []
+        claim = matching_claims[0][1]
+        raw_evidence_ids = claim.get("evidence_ids")
+        evidence_ids = (
+            [
+                str(value).strip()
+                for value in raw_evidence_ids
+                if str(value).strip()
+            ]
+            if isinstance(raw_evidence_ids, list)
+            else []
+        )
+        evidence_id = str(claim.get("evidence_id") or "").strip()
+        if evidence_id and evidence_id not in evidence_ids:
+            evidence_ids.append(evidence_id)
+        pages = list(
+            dict.fromkeys(
+                page
+                for page in claim.get("pages") or []
+                if isinstance(page, int)
+            )
+        )
+        return evidence_ids, pages
     if lower_section in {
         "tldr",
         "executive_summary",

@@ -14,6 +14,9 @@ from src.contracts.regeneration import (
 )
 from src.contracts.validation import ValidationIssue
 from src.generators.report_regeneration_generator import regenerate_artifacts
+from src.orchestrators._report_analysis_orchestrator.validation import (
+    _preflight_empty_grounding_strategies,
+)
 from src.utils.errors import AppError
 from tests.test_report_regeneration_generator import (
     METRIC,
@@ -25,6 +28,7 @@ from tests.test_report_regeneration_generator import (
     _FakePromptClient,
     _settings,
 )
+
 from ._test_report_regeneration_identity_and_failures._shared import (
     _source_backed_artifacts,
 )
@@ -781,6 +785,79 @@ def test_strategy_ladder_skips_rejected_and_stays_distinct() -> None:
     assert third_plan.targets[0].repair_strategy == "safe_removal"
     assert third_plan.targets[0].repair_action == "REMOVE_CLAIM"
     assert third_plan.targets[0].selected_evidence_ids == []
+
+
+def test_empty_quarantined_grounding_skips_provider_strategies_before_regeneration(
+    tmp_path,
+):
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "claim": "The unsupported claim has no retained backing.",
+            "evidence_id": "rejected-source",
+            "pages": [27],
+        }
+    ]
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The claim is not established by its cited source.",
+        severity="error",
+        affected_section="summary.claim_evidence_map:1.claim",
+        rule_id="grounding",
+    )
+    evidence_packs = {
+        "findings": {"findings": []},
+        "doc_map": {"sections": []},
+    }
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    rejected_strategy_keys = set()
+
+    plan, skipped = _preflight_empty_grounding_strategies(
+        plan=plan,
+        issues=[issue],
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        rejected_strategy_keys=rejected_strategy_keys,
+        broad_retry_available=False,
+    )
+
+    assert skipped == [
+        ("summary", "current_evidence"),
+        ("summary", "alternative_evidence"),
+    ]
+    assert plan.targets[0].repair_action == "REMOVE_CLAIM"
+    assert plan.targets[0].repair_strategy == "safe_removal"
+    assert plan.targets[0].allowed_paths == ["summary.claim_evidence_map[0]"]
+    assert plan.targets[0].selected_evidence_ids == []
+
+    openai_client = _FakeOpenAIClient()
+    prompt_client = _FakePromptClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=prompt_client,
+    )
+    assert response.updated_artifacts["summary"]["claim_evidence_map"] == []
+    assert openai_client.calls == []
+    assert prompt_client.render_calls == []
 
 
 def test_quotes_ladder_rejects_failed_restore_before_rewrite() -> None:

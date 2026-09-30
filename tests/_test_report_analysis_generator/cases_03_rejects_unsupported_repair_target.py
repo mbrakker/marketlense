@@ -7,12 +7,14 @@ from src.contracts.regeneration import (
     RepairSeverityChange,
     repair_strategy_fingerprint,
 )
+from src.contracts.validation import ValidationReport
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
     _normalize_regeneration_issue,
 )
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _load_candidate_claim_validation_for_promotion,
+    _run_validation_regeneration_loop,
     _store_promoted_candidate_claim_validation,
 )
 from src.utils.cache_utils import sha256_json
@@ -656,6 +658,91 @@ def test_duplicate_insight_issue_is_planned_as_its_own_repair_target():
     ]
 
 
+def test_summary_claim_map_grounding_is_limited_to_the_failed_item():
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {"claim": "Supported sibling claim.", "evidence_id": "evidence-a", "pages": [4]},
+                {"claim": "Failed claim.", "evidence_id": "evidence-b", "pages": [27]},
+                {"claim": "Another supported sibling.", "evidence_id": "evidence-c", "pages": [42]},
+            ]
+        }
+    }
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The failed summary claim is not established by its evidence.",
+        severity="error",
+        affected_section="summary.claim_evidence_map:2.claim",
+        rule_id="grounding",
+    )
+
+    normalized = _normalize_regeneration_issue(issue, artifacts)
+
+    assert normalized.evidence_ids == ["evidence-b"]
+    assert normalized.pages == [27]
+    assert normalized.excluded_evidence_ids == ["evidence-b"]
+
+
+def test_validation_loop_preflights_empty_summary_package_to_safe_removal(tmp_path):
+    class _StopAtRegeneration(Exception):
+        pass
+
+    artifacts = _artifacts_without_retained_claims(
+        summary={
+            "tldr": "",
+            "executive_summary": "",
+            "claim_evidence_map": [
+                {
+                    "claim": "The unsupported claim has no retained backing.",
+                    "evidence_id": "rejected-source",
+                    "pages": [27],
+                }
+            ],
+        }
+    )
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The claim is not established by its cited source.",
+        severity="error",
+        affected_section="summary.claim_evidence_map:1.claim",
+        rule_id="grounding",
+    )
+    runtime = _runtime(tmp_path)
+    regeneration_requests = []
+
+    def _stop_at_regeneration(request):
+        regeneration_requests.append(request)
+        raise _StopAtRegeneration
+
+    with pytest.raises(_StopAtRegeneration):
+        _run_validation_regeneration_loop(
+            runtime=runtime,
+            mode_ctx=runtime.ctx,
+            base_payload=_payload(),
+            current_artifacts=artifacts,
+            current_validation_report=ValidationReport(
+                schema_version="1.1",
+                status="fail",
+                severity="error",
+                issues=[issue],
+            ),
+            evidence_packs={
+                "findings": {"findings": []},
+                "doc_map": {"sections": []},
+            },
+            source_status=artifacts["source_status"],
+            category_labels=["Category"],
+            vector_store_id=None,
+            dependencies=_deps(regenerate_artifacts=_stop_at_regeneration),
+        )
+
+    assert len(regeneration_requests) == 1
+    target = regeneration_requests[0].plan.targets[0]
+    assert target.repair_action == "REMOVE_CLAIM"
+    assert target.repair_strategy == "safe_removal"
+    assert target.allowed_paths == ["summary.claim_evidence_map[0]"]
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -737,6 +824,8 @@ __all__ = [
     "test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy",
     "test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error",
     "test_multi_insight_retry_does_not_offer_single_item_safe_removal",
+    "test_summary_claim_map_grounding_is_limited_to_the_failed_item",
+    "test_validation_loop_preflights_empty_summary_package_to_safe_removal",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

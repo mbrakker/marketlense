@@ -30,6 +30,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_from_payload,
     soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
     soft_copy_public_text,
     valid_soft_copy_evidence_selection,
 )
@@ -63,6 +64,7 @@ from src.generators.report_regeneration_generator import (
 )
 from src.generators.soft_copy_claim_provenance import (
     assert_retained_soft_copy_claims_match_public_copy,
+    build_soft_copy_claim_provenance,
     retained_soft_copy_claims_cover_text,
 )
 from src.generators.validation.regeneration_candidate import (
@@ -1451,6 +1453,100 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
     )
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
     assert Path(response.candidate_artifacts_path).is_file()
+
+
+def test_safe_removal_of_multiple_linkedin_claims_keeps_sentence_paths_stable(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    linkedin_text = (
+        "Unsupported claim 74%. Retained context stays first. "
+        "Unsupported claim 71%. Retained context stays last."
+    )
+    current["linkedin_post"] = linkedin_text
+    current_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            current["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family != "linkedin_post"
+    ]
+    linkedin_claims = build_soft_copy_claim_provenance(
+        artifact_family="linkedin_post",
+        text=linkedin_text,
+        declared_claims=[
+            {
+                "claim": sentence,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+            for sentence in soft_copy_material_sentences(linkedin_text)
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [*current_claims, *linkedin_claims]
+    )
+    failed_claim_ids = {
+        claim.text_hash: claim.claim_id for claim in linkedin_claims
+    }
+    issues = [
+        RegenerationIssue(
+            rule_id="grounding",
+            affected_section="linkedin_post",
+            message="This numeric claim has no retained support.",
+            severity="error",
+            entity_id=failed_claim_ids[
+                hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+            ],
+            evidence_ids=["f1"],
+        )
+        for sentence in ("Unsupported claim 74%.", "Unsupported claim 71%.")
+    ]
+    allowed_paths = _allowed_paths(
+        "linkedin_post", issues, current, "REMOVE_CLAIM"
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="linkedin_post",
+                        repair_action="REMOVE_CLAIM",
+                        repair_strategy="safe_removal",
+                        allowed_paths=allowed_paths,
+                        issues=issues,
+                    )
+                ],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_FakeOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["linkedin_post"] == (
+        "Retained context stays first. Retained context stays last."
+    )
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
 
 
 def test_safe_removal_of_idless_summary_claim_preserves_exact_siblings(
@@ -3091,6 +3187,83 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
     )
     assert candidate_integrity.passed, [
         (issue.affected_section, issue.message) for issue in candidate_integrity.issues
+    ]
+
+
+def test_provider_strategy_echo_cannot_override_the_planner_owned_repair(
+    tmp_path,
+) -> None:
+    class _MismatchedPlannerEchoClient(_ClaimScopedSoftCopyOpenAIClient):
+        def openai_chat_json(self, req, ctx):
+            result = super().openai_chat_json(req, ctx)
+            if "regeneration_repair_decision" not in (
+                req.structured_output_schema_identity or ""
+            ):
+                return result
+            payload = deepcopy(result.parsed_json)
+            payload["repair_decision"]["repair_action"] = "REMOVE_CLAIM"
+            payload["repair_decision"]["repair_strategy"] = "safe_removal"
+            return OpenAIResponseResult(
+                schema_version=result.schema_version,
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-mismatched-planner-echo",
+            )
+
+    current = _current_artifacts()
+    linkedin_claim = next(
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "linkedin_post"
+    )
+    linkedin_claim["evidence_ids"] = ["f2"]
+    target = RegenerationTarget(
+        target_section="linkedin_post",
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["linkedin_post[claim_index=0]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="linkedin_post",
+                message="Repair this retained claim using its current evidence.",
+                severity="error",
+                entity_id=linkedin_claim["claim_id"],
+                evidence_ids=["f2"],
+            )
+        ],
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_MismatchedPlannerEchoClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["linkedin_post"] == "Repaired LinkedIn claim."
+    assert response.repair_decisions[0].repair_action == "REGENERATE_ITEM"
+    assert response.repair_decisions[0].repair_strategy == "current_evidence"
+    assert response.repair_decisions[0].changed_paths == [
+        "linkedin_post[claim_index=0]"
     ]
 
 

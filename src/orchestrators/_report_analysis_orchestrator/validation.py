@@ -20,6 +20,7 @@ from src.contracts.regeneration import (
     RegenerationAttemptResult,
     RegenerationCandidateAudit,
     RegenerationLoopState,
+    RegenerationPlan,
     RepairDelta,
     RepairSeverityChange,
     candidate_rejection_fingerprint,
@@ -48,6 +49,9 @@ from src.generators.public_editorial_quality_generator import (
 )
 from src.generators.report_generation_dependencies import ReportAnalysisDependencies
 from src.generators.report_generation_shared import merge_artifacts_into_payload
+from src.generators.report_regeneration_generator import (
+    retained_grounding_evidence_ids_for_target,
+)
 from src.generators.validation.regeneration_candidate import (
     CandidateIntegrityResult,
     retained_claim_repair_issues,
@@ -1239,6 +1243,72 @@ def _validate_regeneration_baseline(
     )
 
 
+def _preflight_empty_grounding_strategies(
+    *,
+    plan: RegenerationPlan,
+    issues: List[ValidationIssue],
+    artifacts: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+    rejected_strategy_keys: set[str],
+    broad_retry_available: bool,
+    repair_memory: Sequence[RepairDelta] = (),
+) -> tuple[RegenerationPlan, list[tuple[str, str]]]:
+    """Advance past model strategies whose canonical grounding package is empty."""
+
+    skipped: list[tuple[str, str]] = []
+    current_plan = plan
+    while current_plan.mode == "targeted":
+        newly_rejected = False
+        for target in current_plan.targets:
+            is_summary_claim_map_target = (
+                target.target_section == "summary"
+                and bool(target.issues)
+                and all(
+                    issue.affected_section.startswith(
+                        "summary.claim_evidence_map:"
+                    )
+                    for issue in target.issues
+                )
+            )
+            if (
+                not is_summary_claim_map_target
+                or target.repair_strategy not in {
+                    "current_evidence",
+                    "alternative_evidence",
+                }
+                or not target.quarantined_evidence_ids
+            ):
+                continue
+            evidence_ids = retained_grounding_evidence_ids_for_target(
+                target=target,
+                artifacts=artifacts,
+                evidence_packs=evidence_packs,
+                doc_map=evidence_packs.get("doc_map", {}),
+            )
+            if evidence_ids:
+                continue
+            strategy_key = repair_strategy_fingerprint(
+                [issue.failure_fingerprint for issue in target.issues],
+                target.repair_strategy,
+                target.selected_evidence_ids,
+            )
+            if strategy_key in rejected_strategy_keys:
+                continue
+            rejected_strategy_keys.add(strategy_key)
+            skipped.append((target.target_section, target.repair_strategy))
+            newly_rejected = True
+        if not newly_rejected:
+            break
+        current_plan = _build_regeneration_plan(
+            issues=issues,
+            artifacts=artifacts,
+            broad_retry_available=broad_retry_available,
+            rejected_strategy_keys=rejected_strategy_keys,
+            repair_memory=repair_memory,
+        )
+    return current_plan, skipped
+
+
 def _run_validation_regeneration_loop(
     *,
     runtime: ReportRuntimeState,
@@ -1313,6 +1383,35 @@ def _run_validation_regeneration_loop(
             rejected_strategy_keys=rejected_strategy_keys,
             repair_memory=repair_memory,
         )
+        plan, empty_grounding_strategies = _preflight_empty_grounding_strategies(
+            plan=plan,
+            issues=current_validation_report.issues,
+            artifacts=working_artifacts,
+            evidence_packs=evidence_packs,
+            rejected_strategy_keys=rejected_strategy_keys,
+            broad_retry_available=not broad_retry_used,
+            repair_memory=repair_memory,
+        )
+        if empty_grounding_strategies:
+            logger.info(
+                log_event(
+                    mode_ctx,
+                    role="orchestrator",
+                    event="validation_regen_empty_grounding_strategy_skipped",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "attempt_index": attempt_index,
+                        "strategies": [
+                            {"target": target, "strategy": strategy}
+                            for target, strategy in empty_grounding_strategies
+                        ],
+                        "next_targets": [
+                            target.target_section for target in plan.targets
+                        ],
+                    },
+                )
+            )
         public_issues = [
             issue
             for issue in current_validation_report.issues
