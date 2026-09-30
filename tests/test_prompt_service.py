@@ -224,6 +224,29 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
     assert "explicitly named publisher or organization" in doc_map_prompt.user.text
 
 
+def test_doc_map_prompt_carries_chart_periods_and_one_based_page_coverage() -> None:
+    doc_map_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    normalized_prompt = " ".join(doc_map_prompt.user.text.split())
+
+    assert (
+        "each numeric chart/table key point, include its displayed title/axis period"
+        in normalized_prompt
+    )
+    assert (
+        "list every supporting one-based printed page in the section's pages"
+        in normalized_prompt
+    )
+    assert "Do not infer periods or use PDF page indices" in normalized_prompt
+
+
 def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> None:
     summary_prompt = load_prompt_set(
         PromptLoadRequest(

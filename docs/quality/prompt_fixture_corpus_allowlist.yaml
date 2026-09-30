@@ -1,33 +1,5 @@
 schema_version: "1.0"
 allowlist:
-  - pattern: "totals.total_tokens"
-    owner: "MarketLense engineering"
-    reason: "DocMap-guided findings adds the compact section projection to the existing findings prompt."
-    expires_on: "2026-09-30"
-    max_delta_absolute: 230
-    max_delta_percent: 0.01
-  - pattern: "families.report.total_tokens"
-    owner: "MarketLense engineering"
-    reason: "DocMap-guided findings adds the compact section projection to the existing findings prompt."
-    expires_on: "2026-09-30"
-    max_delta_absolute: 230
-    max_delta_percent: 0.01
-  - pattern: "families.publishing.total_tokens"
-    owner: "MarketLense engineering"
-    reason: "DocMap-guided final-insight prompts add bounded section-coverage instructions."
-    expires_on: "2026-09-30"
-    max_delta_absolute: 80
-  - pattern: "totals.total_tokens"
-    owner: "MarketLense engineering"
-    reason: "Expert View now receives bounded plan-linked evidence, implications, limitations, and counter-signals instead of summary prose."
-    expires_on: "2026-09-30"
-    max_delta_absolute: 320
-  - pattern: "families.publishing.total_tokens"
-    owner: "MarketLense engineering"
-    reason: "Expert View now receives bounded plan-linked evidence, implications, limitations, and counter-signals instead of summary prose."
-    expires_on: "2026-09-30"
-    max_delta_absolute: 320
-
   - pattern: "families.validation.total_tokens"
     owner: "MarketLense engineering"
     reason: "The existing grounding prompt now maps retained claims to exact linked evidence in one stable-ID batch."

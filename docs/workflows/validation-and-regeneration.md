@@ -742,6 +742,9 @@ Its canonical span retains both the section summary and its source key points,
 so a numeric summary claim can pass claim-support only when every asserted
 quantity matches that exact retained span. This does not upgrade unrelated
 claims linked to the same section, and absolutist wording remains fail-closed.
+DocMap generation carries chart or table periods inside each numeric key point
+and records every supporting one-based printed page, so later evidence binding
+does not lose the metric's timeframe or continuation page.
 Before this strict reference check, the shared evidence-ID canonicalisation
 boundary resolves valid aliases across summary, insight, quote, editorial-plan,
 and soft-copy provenance references (including retained spans). The editorial

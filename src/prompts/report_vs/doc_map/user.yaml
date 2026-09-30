@@ -34,4 +34,7 @@ text: |
     `Region A: Measure 1 10%; Measure 2 20%`). Do not emit bare ordered value
     lists that require later stages to infer a label from column order. If the
     source layout does not establish a pair, omit that numeric pair.
+  - For each numeric chart/table key point, include its displayed title/axis
+    period; list every supporting one-based printed page in the section's pages.
+    Do not infer periods or use PDF page indices.
   - Output JSON only (no markdown, no commentary).
