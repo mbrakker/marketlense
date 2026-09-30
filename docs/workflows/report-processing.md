@@ -12,6 +12,13 @@ The pipeline delegates stage sequencing to `src/orchestrators/report_generation_
 
 `resume_from_stage` supports `source_prepared`, `selection_complete`, `analysis_complete`, `render_complete`, and `latest_safe` when the applicable retained checkpoint passes validation.
 
+Final insight selection removes duplicate claim text even when provisional
+evidence IDs differ. When several final insights carry the same claim, the
+selector reuses distinct wording and factual bindings from retained candidates
+with the same stable insight IDs, then applies the normal candidate validators
+to the resulting artifact. Evidence IDs do not make repeated public claims
+distinct, and candidate content cannot bypass grounding or semantic validation.
+
 Regeneration-attempt lineage is part of the retained analysis checkpoint. A
 resume preserves each candidate artifact location, candidate audit location,
 and promotion outcome, so render/readiness evaluates the artifact that the

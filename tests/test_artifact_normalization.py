@@ -1086,6 +1086,76 @@ def test_select_artifact_insights_fills_required_report_slots_after_theme_covera
     assert [item["evidence_id"] for item in selected] == ["e1", "e2", "e3", "e4", "e5"]
 
 
+def test_select_artifact_insights_deduplicates_claims_across_evidence_bindings():
+    """Canonical evidence rebinding must not preserve duplicate public claims."""
+    plan = {
+        "report_thesis": "The report supports five distinct grounded decisions.",
+        "themes": [
+            {
+                "theme": f"Theme {index}",
+                "priority": index,
+                "evidence_ids": [f"e{index}"],
+            }
+            for index in range(1, 5)
+        ],
+    }
+    repeated_claim = "Consumers want clearer digital assistant controls."
+    final_insights = [
+        {
+            "id": "final-1",
+            "text": "First distinct insight.",
+            "evidence_id": "e1",
+        },
+        {
+            "id": "final-2",
+            "text": "Second distinct insight.",
+            "evidence_id": "e2",
+        },
+        {
+            "id": "final-3",
+            "text": "Third distinct insight.",
+            "evidence_id": "e3",
+        },
+        {"id": "final-4", "text": repeated_claim, "evidence_id": "e4"},
+        {"id": "final-5", "text": repeated_claim, "evidence_id": "e5"},
+    ]
+    candidate_insights = [
+        {
+            "id": "final-1",
+            "text": "An alternate rewrite of the first insight.",
+            "evidence_id": "e1",
+        },
+        {
+            "id": "final-4",
+            "text": "The retained candidate explains assistant boundaries.",
+            "evidence_id": "e4",
+            "metric": {"value": "76%"},
+        },
+        {
+            "id": "final-5",
+            "text": "The retained candidate explains weekly assistant use.",
+            "evidence_id": "e5",
+            "metric": {"value": "52%"},
+        },
+    ]
+
+    selected = select_artifact_insights(
+        final_insights=final_insights,
+        candidate_insights=candidate_insights,
+        editorial_plan=plan,
+    )
+
+    assert len(selected) == 5
+    assert len({item["id"] for item in selected}) == 5
+    assert sum(item["text"] == repeated_claim for item in selected) == 0
+    selected_by_id = {item["id"]: item for item in selected}
+    assert selected_by_id["final-1"]["text"] == "First distinct insight."
+    assert selected_by_id["final-4"]["text"] == candidate_insights[1]["text"]
+    assert selected_by_id["final-5"]["text"] == candidate_insights[2]["text"]
+    assert selected_by_id["final-4"]["metric"]["value"] == "76%"
+    assert selected_by_id["final-5"]["metric"]["value"] == "52%"
+
+
 def test_normalize_artifact_insights_omits_composite_public_metric_fields() -> None:
     insight = normalize_artifact_insights(
         [

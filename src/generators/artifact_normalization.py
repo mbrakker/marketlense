@@ -1036,7 +1036,7 @@ def select_artifact_insights(
     ranked = _ranked_unique_insights(anchored_finals, candidate_insights)
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
-    selected_keys: set[tuple[str, str]] = set()
+    selected_keys: set[str] = set()
     for theme in plan["themes"]:
         evidence_ids = {
             normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
@@ -1265,11 +1265,48 @@ def _append_expert_context_item(
 def _ranked_unique_insights(
     final_insights: List[Dict[str, Any]], candidate_insights: List[Dict[str, Any]]
 ) -> List[tuple[int, Dict[str, Any]]]:
+    # Final copy can repeat a claim under several provisional evidence IDs.
+    # Reuse each colliding stable ID's distinct retained candidate wording
+    # before source normalization collapses those IDs to canonical bindings.
+    candidate_by_id = {
+        _s(item.get("id")).strip(): item
+        for item in candidate_insights
+        if isinstance(item, dict) and _s(item.get("id")).strip()
+    }
+    final_claim_counts: dict[str, int] = {}
+    for item in final_insights:
+        if not isinstance(item, dict):
+            continue
+        key = _insight_duplicate_key(item)
+        if key:
+            final_claim_counts[key] = final_claim_counts.get(key, 0) + 1
+
     ranked: List[tuple[int, Dict[str, Any]]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     for source_order, insight in enumerate([*final_insights, *candidate_insights]):
         if not isinstance(insight, dict) or not _s(insight.get("text")).strip():
             continue
+        insight = dict(insight)
+        insight_id = _s(insight.get("id")).strip()
+        duplicate_key = _insight_duplicate_key(insight)
+        if duplicate_key and final_claim_counts.get(duplicate_key, 0) > 1:
+            candidate = candidate_by_id.get(insight_id)
+            candidate_key = (
+                _insight_duplicate_key(candidate)
+                if isinstance(candidate, dict)
+                else None
+            )
+            if candidate_key and candidate_key != duplicate_key:
+                for field_name in (
+                    "text",
+                    "metric",
+                    "evidence_id",
+                    "evidence",
+                    "pages",
+                    "evidence_spans",
+                ):
+                    if field_name in candidate:
+                        insight[field_name] = deepcopy(candidate[field_name])
         duplicate_key = _insight_duplicate_key(insight)
         if duplicate_key and duplicate_key in seen:
             continue
@@ -1294,7 +1331,7 @@ def _insight_rank_key(item: tuple[int, Dict[str, Any]]) -> tuple[float, int]:
 
 def _append_distinct_insight(
     selected: List[Dict[str, Any]],
-    selected_keys: set[tuple[str, str]],
+    selected_keys: set[str],
     insight: Dict[str, Any],
 ) -> None:
     duplicate_key = _insight_duplicate_key(insight)
@@ -1401,11 +1438,9 @@ def fallback_artifact_insights_from_evidence(
     return normalize_artifact_insights(candidates, prefix="evidence")
 
 
-def _insight_duplicate_key(item: Dict[str, Any]) -> tuple[str, str] | None:
+def _insight_duplicate_key(item: Dict[str, Any]) -> str | None:
     text = normalize_text(_s(item.get("text")))
-    if not text:
-        return None
-    return (text, normalize_text(_s(item.get("evidence_id"))))
+    return text or None
 
 
 def canonical_artifact_quote_id(item: Any, *, occurrence_index: int = 0) -> str:
