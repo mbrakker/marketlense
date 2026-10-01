@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 PUBLISH_READINESS_SCHEMA_VERSION = "1.0"
-PUBLISH_READINESS_VALIDATOR_VERSION = "publish-readiness:v1"
+PUBLISH_READINESS_VALIDATOR_VERSION = "publish-readiness:v2"
 PUBLISH_READINESS_REFRESH_PLAN_SCHEMA_VERSION = "1.0"
 
 

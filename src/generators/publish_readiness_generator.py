@@ -79,6 +79,7 @@ _ANALYSIS_RULES = {
     "publish_readiness.category_consistency",
     "publish_readiness.editorial_quality",
     "publish_readiness.material_claim_evidence",
+    "publish_readiness.report_card_manifest",
     "publish_readiness.regeneration",
     "publish_readiness.semantic_grounding",
 }
@@ -418,6 +419,7 @@ def evaluate_publish_readiness(
     created_at: datetime | None = None,
     retained_claim_package: ClaimValidationPackage | Mapping[str, Any] | None = None,
     retained_claim_required: bool = False,
+    report_card_manifest_path: str = "",
     source_id: str = "",
     source_md5: str = "",
 ) -> PublishReadinessArtifact:
@@ -427,6 +429,7 @@ def evaluate_publish_readiness(
     now = created_at or datetime.now(UTC)
     results: list[PublishReadinessRuleResult] = []
     results.append(_validation_result(validation_report))
+    results.append(_report_card_manifest_result(report_card_manifest_path))
     results.append(
         _retained_claim_grounding_result(
             retained_claim_package=retained_claim_package,
@@ -647,6 +650,16 @@ def _validation_result(
             "semantic or grounding validation did not pass",
         )
     return _pass("publish_readiness.semantic_grounding", ["validation"])
+
+
+def _report_card_manifest_result(path: str) -> PublishReadinessRuleResult:
+    if not str(path or "").strip():
+        return _fail(
+            "publish_readiness.report_card_manifest",
+            ["report_card_manifest"],
+            "report card manifest missing",
+        )
+    return _pass("publish_readiness.report_card_manifest", ["report_card_manifest"])
 
 
 def _retained_claim_grounding_result(

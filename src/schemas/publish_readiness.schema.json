@@ -55,7 +55,7 @@
       "additionalProperties": {"type": "string"}
     },
     "artifact_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-    "validator_version": {"type": "string", "const": "publish-readiness:v1"},
+    "validator_version": {"type": "string", "const": "publish-readiness:v2"},
     "schema_version": {"type": "string", "const": "1.0"}
   },
   "additionalProperties": false

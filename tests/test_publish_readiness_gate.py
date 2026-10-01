@@ -9,13 +9,18 @@ import pytest
 
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
-    evaluate_publish_readiness,
+    evaluate_publish_readiness as _evaluate_readiness_core,
     parse_publish_readiness_payload,
     publish_readiness_payload,
     verify_publish_readiness,
 )
 from src.utils.cache_utils import sha256_json
 from src.utils.publication_projection import publication_projection_hash
+
+
+def _evaluate_readiness_for_test(**kwargs):
+    kwargs.setdefault("report_card_manifest_path", "report-card-manifest.json")
+    return _evaluate_readiness_core(**kwargs)
 
 
 def _ready_inputs() -> tuple[dict, dict, str, dict]:
@@ -245,7 +250,7 @@ def _readiness_with_package(
     policy_hash: str = "policy-current",
 ) -> object:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
-    return evaluate_publish_readiness(
+    return _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -273,7 +278,7 @@ def _retained_grounding_rule(readiness):
 
 def test_publish_readiness_binds_rendered_html_and_publication_projection() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -302,6 +307,29 @@ def test_publish_readiness_binds_rendered_html_and_publication_projection() -> N
     ]
 
 
+def test_publish_readiness_fails_without_a_report_card_manifest() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifact = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        report_card_manifest_path="",
+    )
+
+    rule = next(
+        item
+        for item in artifact.rule_results
+        if item.rule_id == "publish_readiness.report_card_manifest"
+    )
+    assert rule.status == "fail"
+    assert artifact.status == "fail"
+
+
 def test_current_supported_retained_claim_package_passes_readiness() -> None:
     artifacts, evidence_packs, html, _ = _ready_inputs()
     package = _retained_claim_package(artifacts, evidence_packs, html)
@@ -319,7 +347,7 @@ def test_current_supported_retained_claim_package_passes_readiness() -> None:
 def test_missing_required_retained_claim_package_blocks_readiness() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -501,7 +529,7 @@ def test_publish_readiness_rejects_html_without_build_traceability() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     html = re.sub(r"<!--.*?-->\s*", "", html, count=1, flags=re.DOTALL)
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -524,7 +552,7 @@ def test_publish_readiness_rejects_html_without_build_traceability() -> None:
 def test_publish_readiness_allows_non_fatal_grounding_interpretation() -> None:
     """Informational grounding feedback must agree with a passing validation report."""
     artifacts, evidence_packs, html, provenance = _ready_inputs()
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -556,7 +584,7 @@ def test_publish_readiness_rejects_public_identifier_and_private_source_leaks() 
         "</head>",
         '<meta name="drive-file-id" content="F1"><meta property="og:url" content="https://drive.google.com/file/d/F1"></head>',
     )
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -582,7 +610,7 @@ def test_publish_readiness_allows_public_evidence_quality_language() -> None:
         ),
     )
 
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -608,7 +636,7 @@ def test_publish_readiness_allows_public_source_url_path_segments() -> None:
         "https://web-assets.publisher.example/a3/f0/report.pdf",
     )
 
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -662,7 +690,7 @@ def test_publish_readiness_requires_an_accepted_crop_for_each_rendered_chart_car
         ),
     )
 
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -692,7 +720,7 @@ def test_publish_readiness_ignores_absent_scalar_evidence_id_in_claim_ledger() -
         }
     ]
 
-    artifact = evaluate_publish_readiness(
+    artifact = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -731,7 +759,7 @@ def test_publish_readiness_ignores_quarantined_evidence_absent_from_final_html()
         ],
     }
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -782,7 +810,7 @@ def test_publish_readiness_blocks_quarantined_evidence_rendered_in_final_html() 
     }
     html = html.replace("</body>", f"<p>{quarantined_claim}</p></body>")
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -849,7 +877,7 @@ def test_publish_readiness_matches_untrusted_evidence_by_source_pack(
         ],
     }
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -881,7 +909,7 @@ def test_publish_readiness_matches_untrusted_evidence_by_source_pack(
 
 def test_publish_readiness_payload_round_trips_and_rejects_malformed_surfaces() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -911,7 +939,7 @@ def test_publish_readiness_category_consistency_fails_for_missing_side() -> None
     cases = [([], ["markets"]), (["markets"], []), ([], []), (["other"], ["markets"])]
     for retained, canonical in cases:
         artifacts["categories"] = retained
-        readiness = evaluate_publish_readiness(
+        readiness = _evaluate_readiness_for_test(
             report_id="report-1",
             artifacts=artifacts,
             evidence_packs=evidence_packs,
@@ -944,7 +972,7 @@ def test_publish_readiness_accepts_an_explicit_uncategorized_abstention() -> Non
         ],
     }
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -969,7 +997,7 @@ def test_publish_readiness_rejects_malformed_plural_evidence_references() -> Non
         artifacts["claim_ledgers"] = [
             {"claim_text": "Revenue grew.", "evidence_ids": invalid}
         ]
-        readiness = evaluate_publish_readiness(
+        readiness = _evaluate_readiness_for_test(
             report_id="report-1",
             artifacts=artifacts,
             evidence_packs=evidence_packs,
@@ -999,7 +1027,7 @@ def test_publish_readiness_hard_blocks_unresolved_public_source_fidelity() -> No
         }
     )
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="activate-2021",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -1034,7 +1062,7 @@ def test_publish_readiness_blocks_generic_title_and_wrong_publisher_identity() -
         ),
     )
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -1074,7 +1102,7 @@ def test_mintel_rendered_heading_passes_all_three_original_readiness_rules() -> 
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     html = html.replace("</body>", fixture["rendered_html"] + "</body>")
 
-    readiness = evaluate_publish_readiness(
+    readiness = _evaluate_readiness_for_test(
         report_id=fixture["report_id"],
         artifacts=artifacts,
         evidence_packs=evidence_packs,
@@ -1096,7 +1124,7 @@ def test_mintel_rendered_heading_passes_all_three_original_readiness_rules() -> 
 def test_rendered_scaffolding_projects_canonical_html_issues() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     for bad_html in ("<p>Demand rose...</p>", "<p>Observation: demand rose.</p>"):
-        readiness = evaluate_publish_readiness(
+        readiness = _evaluate_readiness_for_test(
             report_id="report-1",
             artifacts=artifacts,
             evidence_packs=evidence_packs,

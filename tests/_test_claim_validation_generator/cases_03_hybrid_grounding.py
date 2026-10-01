@@ -984,6 +984,7 @@ def test_publish_readiness_reuses_retained_semantic_result_without_provider_call
         validation_report=ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path="",
+        report_card_manifest_path="report-card-manifest.json",
         retained_claim_package=final_package,
         retained_claim_required=True,
         source_id="source-1",

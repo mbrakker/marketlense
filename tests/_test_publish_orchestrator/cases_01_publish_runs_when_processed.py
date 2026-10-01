@@ -899,6 +899,7 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
         validation_report=ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path=str(html_path),
+        report_card_manifest_path=str(html_path.parent / "report-card-manifest.json"),
         category_ids=["markets"],
         provenance={
             "publisher_landing_page_url": "https://publisher.example/reports/report",

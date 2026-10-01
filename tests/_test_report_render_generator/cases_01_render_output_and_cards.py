@@ -1643,3 +1643,13 @@ def test_render_report_output_fails_closed_for_invalid_card_content(tmp_path):
     assert outcome.status == "error"
     assert outcome.error.startswith("card_tldr_compact_invalid:")
     assert outcome.report_card_manifest_path is None
+    assert outcome.publish_readiness_status == "fail"
+    readiness = json.loads(
+        Path(outcome.evidence_packs["publish_readiness"]).read_text(encoding="utf-8")
+    )
+    card_rule = next(
+        item
+        for item in readiness["rule_results"]
+        if item["rule_id"] == "publish_readiness.report_card_manifest"
+    )
+    assert card_rule["status"] == "fail"

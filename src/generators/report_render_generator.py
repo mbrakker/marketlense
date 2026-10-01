@@ -1428,7 +1428,7 @@ def _persist_publish_readiness(
     }
     if report_card_manifest_path:
         artifact_hashes["report_card_manifest_path"] = sha256_json(
-            {"path": Path(report_card_manifest_path).name}
+            {"path": report_card_manifest_path}
         )
     readiness = evaluate_publish_readiness(
         report_id=runtime.file.file_id,
@@ -1453,6 +1453,7 @@ def _persist_publish_readiness(
         metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
         retained_claim_package=retained_claim_payload,
         retained_claim_required=True,
+        report_card_manifest_path=report_card_manifest_path or "",
         source_id=source_id,
         source_md5=source_md5,
     )

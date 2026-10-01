@@ -30836,6 +30836,12 @@
         "candidate_artifacts_path": {
           "type": "string"
         },
+        "deterministic_mutation_paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "payload_overrides": {
           "additionalProperties": {},
           "type": "object"
@@ -34291,6 +34297,9 @@
         },
         "source_url": {
           "type": "string"
+        },
+        "summary_abstained": {
+          "type": "boolean"
         },
         "title": {
           "type": "string"

@@ -91,6 +91,9 @@ growth rates and retail share. `report_vs` defaults to medium;
 registered production namespaces resolve to a deliberate low, medium, or high
 effort. Non-`none` effort suppresses sampling controls, and execution/cache
 identities, audit records, and usage metadata retain the effective effort.
+The summary route uses medium effort with its 8,192-token output cap; retained
+usage showed high effort could consume that full budget on reasoning before a
+complete structured summary was emitted.
 The document-map, insight-candidate, and final-insight routes allow 16,384
 output tokens because live GPT-6 responses exhausted the previous 8,192-token
 cap on reasoning alone.

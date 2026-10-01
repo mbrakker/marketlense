@@ -106,6 +106,7 @@ def _readiness(
         validation_report=ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path="out/report-1.html",
+        report_card_manifest_path="report-card-manifest.json",
         category_ids=["markets"],
         configuration_hash="configuration-hash",
         policy_hash="policy-hash",

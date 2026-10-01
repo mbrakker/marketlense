@@ -46,4 +46,5 @@ text: |
   - evidence_id must be one ID only (no arrays or comma-separated values); if uncertain, use an empty string.
   - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct `findings` or `quote_candidates` ID. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.
   - Keep each executive-summary sentence and each `claim_evidence_map` item to one proposition supported by its linked evidence ID. Do not combine unrelated sections or topics in one sentence or map item. Use a section summary only for a descriptive statement about that section, not to assert what is central to the full report.
+  - Preserve per-group versus across-group scope exactly as stated in linked evidence.
   - Keep the claim_evidence_map brief (3-5 items).

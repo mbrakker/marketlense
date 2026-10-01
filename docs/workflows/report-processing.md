@@ -30,6 +30,12 @@ report-card manifest is also retained. If that manifest is missing, the renderer
 regenerates the deterministic cover set and manifest before the package can
 reach the blocking publication boundary; it never reports a package as ready
 with orphaned card assets.
+The manifest must be written successfully before readiness can pass. When the
+summary abstains, final insights must retain at least one complete, directly
+supported sentence of 18 words or fewer for the compact card. If no such insight
+is available, card rendering fails with `card_tldr_compact_invalid` and readiness
+remains blocked. Insight generation and repair preserve exact population and
+denominator scope; a per-group value cannot be restated as an across-group value.
 The manifest is persisted with a unique bounded temporary filename and atomic
 replacement, so long report output paths do not push the temporary file beyond
 the supported Windows path limit.
@@ -98,6 +104,9 @@ A completed render checkpoint is reusable only with an explicit passing
 `publish_readiness` decision. A legacy, absent, or failed readiness decision
 rejects that checkpoint and makes `latest_safe` fall back to an earlier validated
 checkpoint; HTML existence never supplies readiness by inference.
+The readiness artifact records a failed `publish_readiness.report_card_manifest`
+rule when rendering did not produce the current card manifest, even if partial
+HTML was written.
 
 Once promotion or rollback has selected the canonical artifacts and the final
 HTML is rendered, report finalization materializes exactly one
