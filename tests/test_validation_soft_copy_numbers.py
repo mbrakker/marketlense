@@ -44,6 +44,40 @@ def test_number_validation_does_not_treat_uk_initialism_as_a_magnitude():
     assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
+def test_number_validation_matches_only_the_supported_hyphenated_duration() -> None:
+    evidence = (
+        "The next 12 months are expected to bring higher programmatic video ad spend."
+    )
+    supported = validate_new_numbers(
+        artifacts={
+            "expert_comment": (
+                "Over the next-12-month period, video ad spend is expected to rise."
+            )
+        },
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=[],
+    )
+    unsupported = validate_new_numbers(
+        artifacts={
+            "expert_comment": (
+                "Over the next-13-month period, video ad spend is expected to rise."
+            )
+        },
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=[],
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in supported)
+    assert any(
+        issue.rule_id == "numbers" and "Number 13.0 not present" in issue.message
+        for issue in unsupported
+    )
+
+
 def test_number_issue_identifies_full_soft_copy_claim_with_us_initialism() -> None:
     sentence = "U.S. revenue reached $918 billion."
     claim = SoftCopyClaimProvenance(

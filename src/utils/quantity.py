@@ -72,6 +72,33 @@ _TIMEFRAME_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_TEMPORAL_DURATION_COMPOUND_MODIFIERS = {
+    "coming",
+    "following",
+    "last",
+    "next",
+    "past",
+    "preceding",
+    "previous",
+    "prior",
+    "rolling",
+    "trailing",
+    "upcoming",
+}
+_DURATION_UNITS = {
+    "day",
+    "days",
+    "hour",
+    "hours",
+    "minute",
+    "minutes",
+    "month",
+    "months",
+    "week",
+    "weeks",
+    "year",
+    "years",
+}
 
 _CURRENCY_CODES = {"usd", "eur", "gbp", "jpy"}
 _CURRENCY_SYMBOL_TO_CODE = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
@@ -309,13 +336,18 @@ def canonicalize_quantity(quantity: Quantity) -> CanonicalQuantity:
     raw_value = quantity.value / scale
     raw_low = quantity.low / scale if quantity.low is not None else None
     raw_high = quantity.high / scale if quantity.high is not None else None
+    unit = (
+        quantity.unit.removesuffix("s")
+        if quantity.unit_family == "time"
+        else quantity.unit
+    )
     return CanonicalQuantity(
         value=abs(_round_canonical(raw_value)),
         sign=_sign(raw_value),
         scale=scale,
         comparator="eq" if quantity.comparator == "approx" else quantity.comparator,
         unit_family=quantity.unit_family,
-        unit=quantity.unit,
+        unit=unit,
         currency=quantity.unit if quantity.unit_family == "currency" else "",
         low=_round_canonical(raw_low) if raw_low is not None else None,
         high=_round_canonical(raw_high) if raw_high is not None else None,
@@ -565,9 +597,15 @@ def _extract_main(text: str) -> List[Quantity]:
             and text[match.start("number") - 1] == "-"
             and text[match.start("number") - 2].isalpha()
         ):
-            # Compounds such as "first-90-day" are prose labels, not an
-            # explicit duration like "90-day window".
-            unit_raw = ""
+            # Temporal modifiers preserve an explicit duration in compounds
+            # such as "next-12-month". Ordinal compounds such as
+            # "first-90-day" keep the existing prose-label treatment.
+            prefix = text[: match.start("number") - 1].rsplit(None, 1)[-1]
+            if not (
+                unit_raw in _DURATION_UNITS
+                and prefix in _TEMPORAL_DURATION_COMPOUND_MODIFIERS
+            ):
+                unit_raw = ""
         currency = _s(match.group("currency"))
         raw_number = match.group("number").strip()
         if re.fullmatch(r"-\s*20\d{2}", raw_number):

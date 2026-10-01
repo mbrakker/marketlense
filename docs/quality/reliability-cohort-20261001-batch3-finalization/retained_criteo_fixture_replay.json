@@ -1,0 +1,30 @@
+{
+  "fallback_claim_introduced": false,
+  "fixture_run_identity": "frozen-reliability-ueq7j3cu",
+  "fixture_type": "retained_production_report_artifacts",
+  "input_sha256": {
+    "artifacts_json": "b8a7d185724058d77ee0cae6c609531c4c8315761c2234ac3516354d3cd0f86e",
+    "validation_json": "82f18e1182db0c722445bd6d349639f99e678ab44a85dcdf17843e0b1c0873ee"
+  },
+  "issue_paths": [
+    "insights_final[item=channel-choice-planning-factor-01].so_what",
+    "insights_final[item=channel-choice-planning-factor-01].now_what"
+  ],
+  "preserved_fields": [
+    "text",
+    "evidence_id",
+    "evidence_spans",
+    "so_what"
+  ],
+  "prior_terminal_outcome": "validation_failed",
+  "provider_calls": 0,
+  "publisher_id": "Criteo",
+  "replay_method": "in-memory call of the production safe-abstention operation with retained artifacts and typed grounding issues; no provider calls and no fixture writes",
+  "report_id": "cohort-979a63a1633a7f2ccc51",
+  "schema_version": "1.0",
+  "source_identity_id": "source:81027fd399837b2cbd3cefa2abca222b",
+  "verified_mutation_paths": [
+    "insights_final[item=channel-choice-planning-factor-01].now_what"
+  ],
+  "whole_insight_removed": false
+}

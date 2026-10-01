@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.1",
+  "cohort_name": "frozen_representative_reliability_20_next_unrun_five_batch_3",
+  "members": [
+    {
+      "source_path": "out/browser_downloads/www.algolia.com/2ef62190c537/2026%20B2C%20ecommerce%20AI%20trends_eBook_EN_2.pdf",
+      "content_md5": "86858bdcb370266f26c29b40316a4db0",
+      "source_domain": "www.algolia.com",
+      "report_name": "2026%20B2C%20ecommerce%20AI%20trends eBook EN 2",
+      "landing_page_url": "https://www.algolia.com/resources/asset/ebook-2026-b2c-ecommerce-ai-trends",
+      "source_page_url": "https://www.algolia.com/resources?reports=",
+      "publisher_name": "Algolia",
+      "downloaded_at_utc": "2026-07-06T08:00:41Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf",
+      "content_md5": "77bc67b2bc98187d9d589a4e69fd85f7",
+      "source_domain": "www.bain.com",
+      "report_name": "How to win with tech",
+      "landing_page_url": "https://www.bain.com/globalassets/noindex/2021/tech-tonic-shifts.pdf",
+      "source_page_url": "https://www.bain.com/insights/technology-isnt-just-an-industry-anymore-its-everything-infographic",
+      "publisher_name": "Bain & Company",
+      "downloaded_at_utc": "2026-06-23T21:33:58.009298+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf",
+      "content_md5": "0a019f840c3f89ad0a9672e058d1ff83",
+      "source_domain": "www.bigcommerce.com",
+      "report_name": "ebook 0225 future commerce new modes guide en us",
+      "landing_page_url": "https://www.bigcommerce.com/resources/reports/future-commerce-report-cdl-report",
+      "source_page_url": "https://www.bigcommerce.com/resources/reports",
+      "publisher_name": "Bigcommerce",
+      "downloaded_at_utc": "2026-07-06T18:26:45Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.criteo.com/1fd90493947a/Agency-Guide-Report-Criteo.pdf",
+      "content_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "source_domain": "www.criteo.com",
+      "report_name": "The Advertiser Guide to New and Emerging Channels for 2023",
+      "landing_page_url": "https://www.criteo.com/wp-content/uploads/2023/01/Agency-Guide-Report-Criteo.pdf",
+      "source_page_url": "https://www.criteo.com/resources?format=Data+Report%2CGuide%2CIndustry+Report",
+      "publisher_name": "Criteo",
+      "downloaded_at_utc": "2026-06-10T22:22:21.988580+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.dhl.com/21a23a924cea/g0-ec-trends-report-2026.pdf",
+      "content_md5": "9b97626fc83c086961a7416d65e05faa",
+      "source_domain": "www.dhl.com",
+      "report_name": "g0 ec trends report 2026",
+      "landing_page_url": "https://www.dhl.com/content/dam/dhl/local/global/dhl-ecommerce/documents/pdf/g0-ec-trends-report-2026.pdf",
+      "source_page_url": "https://www.dhl.com/content/dam/dhl/local/global/dhl-ecommerce/documents/pdf/g0-ec-trends-report-2026.pdf",
+      "publisher_name": "DHL eCommerce",
+      "downloaded_at_utc": "2026-07-17T20:24:51Z"
+    }
+  ]
+}

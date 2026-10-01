@@ -199,6 +199,19 @@ def test_quantity_match_normalizes_hyphenated_user_count_noun() -> None:
     )
 
 
+def test_hyphenated_forecast_duration_matches_the_same_spaced_duration() -> None:
+    """Temporal compounds keep their explicit duration unit for grounding."""
+
+    assert _numeric_grounding_match(
+        "the next-12-month findings",
+        "the next 12 months",
+    )
+    assert not _numeric_grounding_match(
+        "the next-13-month findings",
+        "the next 12 months",
+    )
+
+
 def test_extract_quantities_ignores_year_range_endpoint_and_b2b_token() -> None:
     """Date spans and B2B labels must not become public numeric claims."""
 

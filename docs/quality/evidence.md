@@ -56,6 +56,20 @@ source-grounded package may be materialized while unsupported or unresolved
 claims correctly remain blocked. Also retain the count of readiness-stage
 provider calls, which must be zero.
 
+The distinct 2026-10-01 batch-3 subset—Algolia, Bain & Company, Bigcommerce,
+Criteo, and DHL eCommerce—is retained in
+[`reliability-cohort-20261001-batch3-finalization/`](reliability-cohort-20261001-batch3-finalization/).
+This fresh-state production run improved from four to five report-level
+readiness passes. All five eligible reports have final packages bound to their
+final artifact, report, source, evidence, validator, configuration, policy,
+publication-projection, and semantic-execution identities. It recorded zero
+unexplained `package_missing`, zero `package_invalid`, zero `not_publishable`,
+and zero readiness-stage provider calls. Publication was disabled. The pack
+retains exact manifest/result hashes, per-report package hashes and lineage
+checks, typed outcomes, and aggregate calls, tokens, cost, and duration; full
+workflow state and model payloads remain in ignored run storage. The before
+and after runs are stochastic observations, not a controlled causal estimate.
+
 ## Repair-effectiveness evidence
 
 The validation reliability artifact retains a cohort-compatible, content-free
