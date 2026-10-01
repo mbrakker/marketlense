@@ -4017,6 +4017,8 @@ def _handle_insights_bundle_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     if _uses_safe_removal(execution):
+        if _abstain_failed_insight_implications(execution):
+            return
         _remove_failed_insight_with_retained_replacement(execution)
         return
     if _restore_failed_insight_metrics_deterministically(execution):
@@ -4113,6 +4115,87 @@ def _handle_insights_bundle_regeneration(
         ["insights_candidates", "insights_final"]
     )
     execution.state.prompt_namespaces.extend([candidates_namespace, final_namespace])
+
+
+def _abstain_failed_insight_implications(
+    execution: _RegenerationHandlerExecution,
+) -> bool:
+    """Clear only validator-rejected implication leaves after repair exhaustion."""
+
+    issues = list(execution.target.issues)
+    blocking = [
+        issue
+        for issue in issues
+        if str(issue.severity or "").strip().lower() == "error"
+    ]
+    if not blocking or any(
+        str(issue.rule_id or "").strip().lower() != "grounding"
+        or _insight_issue_field(issue.entity_id, issue.affected_section)
+        not in {"so_what", "now_what"}
+        for issue in issues
+    ):
+        return False
+
+    allowed_paths = set(execution.target.allowed_paths)
+    planned_mutations: dict[str, tuple[Dict[str, Any], str]] = {}
+    for issue in blocking:
+        insight_id = failed_insight_id(issue.entity_id, issue.affected_section)
+        field = _insight_issue_field(issue.entity_id, issue.affected_section)
+        if not insight_id or field not in {"so_what", "now_what"}:
+            return False
+        path_matches = [
+            path
+            for path in allowed_paths
+            if re.fullmatch(
+                rf"insights_(?:final|candidates)\[item={re.escape(insight_id)}\]\."
+                rf"{re.escape(field)}",
+                path,
+            )
+        ]
+        if len(path_matches) != 1:
+            return False
+        root = path_matches[0].split("[", 1)[0]
+        items = getattr(execution.state, root)
+        matches = [
+            item
+            for item in items
+            if isinstance(item, dict) and _s(item.get("id")).strip() == insight_id
+        ]
+        if len(matches) != 1 or not _s(matches[0].get(field)).strip():
+            return False
+        planned_mutations[path_matches[0]] = (matches[0], field)
+
+    for path, (insight, field) in planned_mutations.items():
+        insight[field] = ""
+        execution.state.deterministic_mutation_paths.append(path)
+    execution.state.deterministic_repairs.append("safe_removal")
+    execution.state.regenerated_sections.extend(
+        root
+        for root in ("insights_candidates", "insights_final")
+        if any(path.startswith(f"{root}[") for path in planned_mutations)
+    )
+    logger.info(
+        log_event(
+            execution.target_ctx,
+            role="generator",
+            event="artifact_regeneration_implication_abstained",
+            module=logger.name,
+            fields={
+                "report_id": execution.runtime.request.report_id,
+                "field_count": len(planned_mutations),
+                "model_calls": 0,
+            },
+        )
+    )
+    return True
+
+
+def _insight_issue_field(entity_id: str, affected_section: str) -> str:
+    entity_parts = str(entity_id or "").split(":")
+    if len(entity_parts) >= 3 and entity_parts[0] == "insight":
+        return ":".join(entity_parts[2:]).strip()
+    match = re.match(r"^insights:[^.:]+\.(.+)$", str(affected_section or ""))
+    return match.group(1).strip() if match else ""
 
 
 def _regenerate_one_final_insight(

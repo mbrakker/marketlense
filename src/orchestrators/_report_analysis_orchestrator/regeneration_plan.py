@@ -558,6 +558,15 @@ def _allowed_paths(
                 paths.add(path)
             continue
         if repair_action == "REMOVE_CLAIM" and target_key == "insights_bundle":
+            implication_only_removal = bool(path_issues) and all(
+                str(issue.rule_id or "").strip().lower() == "grounding"
+                and _insight_issue_fields(issue)
+                and set(_insight_issue_fields(issue)) <= {"so_what", "now_what"}
+                for issue in path_issues
+            )
+            if implication_only_removal:
+                paths.add(path)
+                continue
             item_match = re.match(
                 r"^(insights_(?:final|candidates))\[item=([^\]]+)\]\.", path
             )

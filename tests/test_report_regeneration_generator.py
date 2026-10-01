@@ -1455,6 +1455,73 @@ def test_safe_removal_abstains_linkedin_family_with_unmatched_quality_warning(
     assert Path(response.candidate_artifacts_path).is_file()
 
 
+def test_safe_removal_abstains_only_unsupported_insight_implication(tmp_path) -> None:
+    current = _current_artifacts()
+    target = current["insights_final"][0]
+    target["so_what"] = "The evidence changes planning."
+    target["now_what"] = "Make an unsupported recommendation."
+    original_text = target["text"]
+    original_evidence_id = target["evidence_id"]
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="insights:insight-1.now_what",
+        message=(
+            "[prescriptive_recommendation|unsupported_factual_claim] "
+            "The recommendation is not traceable to linked evidence."
+        ),
+        severity="error",
+        entity_id="insight:insight-1:now_what",
+        evidence_ids=["f1"],
+    )
+    allowed_paths = _allowed_paths(
+        "insights_bundle", [issue], current, "REMOVE_CLAIM"
+    )
+    assert allowed_paths == ["insights_final[item=insight-1].now_what"]
+
+    client = _FakeOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[
+                    RegenerationTarget(
+                        target_section="insights_bundle",
+                        repair_action="REMOVE_CLAIM",
+                        repair_strategy="safe_removal",
+                        allowed_paths=allowed_paths,
+                        issues=[issue],
+                    )
+                ],
+            ),
+            current_artifacts=current,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired = next(
+        item
+        for item in response.updated_artifacts["insights_final"]
+        if item["id"] == "insight-1"
+    )
+    assert client.calls == []
+    assert repaired["now_what"] == ""
+    assert repaired["so_what"] == "The evidence changes planning."
+    assert repaired["text"] == original_text
+    assert repaired["evidence_id"] == original_evidence_id
+
+
 def test_safe_removal_of_multiple_linkedin_claims_keeps_sentence_paths_stable(
     tmp_path,
 ) -> None:

@@ -88,6 +88,65 @@ def test_finalization_preserves_unrelated_derived_roots_byte_for_byte() -> None:
     assert repeated_paths == verified_paths
 
 
+def test_finalization_preserves_unchanged_intentional_summary_abstention() -> None:
+    summary_status = {
+        "schema_version": "1.0",
+        "family": "summary",
+        "source": "artifact",
+        "status": "abstained",
+        "confidence_score": 1.0,
+        "policy_action": "abstain",
+        "reason": "summary_no_short_direct_claim",
+    }
+    baseline = {
+        "summary": {
+            "tldr": "",
+            "card_tldr_compact": "",
+            "executive_summary": "",
+            "claim_evidence_map": [],
+        },
+        "insights_candidates": [],
+        "insights_final": [
+            {
+                "id": "insight-one",
+                "text": "The report retains this supported finding.",
+                "evidence_id": "finding-one",
+                "evidence": "The report retains this supported finding.",
+                "so_what": "The finding changes planning.",
+                "now_what": "Review the finding during planning.",
+            }
+        ],
+        "quotes_final": [],
+        "expert_comment": "",
+        "linkedin_post": "",
+        "family_status": {
+            "summary": summary_status,
+            "insights_bundle": {
+                "schema_version": "1.0",
+                "family": "insights_bundle",
+                "source": "artifact",
+                "status": "generated",
+                "confidence_score": 1.0,
+                "policy_action": "keep",
+                "reason": "",
+            },
+        },
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload([]),
+    }
+    candidate = deepcopy(baseline)
+    candidate["insights_final"][0]["now_what"] = ""
+
+    finalize_regeneration_candidate_artifacts(
+        promoted_baseline=baseline,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+        atomic_source_patch={"insights_final": deepcopy(candidate["insights_final"])},
+    )
+
+    assert candidate["family_status"]["summary"] == summary_status
+    assert candidate["summary"] == baseline["summary"]
+
+
 def test_finalization_rebuilds_metric_dependents_from_promoted_patch() -> None:
     evidence_text = "Retail media adoption reached 55% among merchants."
     removed_insight = {

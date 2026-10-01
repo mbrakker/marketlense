@@ -183,6 +183,14 @@ distinct ladder before any model call:
    support.
 4. Removal/abstention of the unsupported atomic item.
 
+When the exhausted grounding target is an insight's `so_what` or `now_what`,
+safe removal clears only that exact implication field and retains the insight's
+supported text and evidence binding. The planner authorizes that leaf directly;
+errors in the insight's factual text still use the whole-item removal path and
+must pass the normal candidate gate. Deterministic dependent rebuilding keeps
+an accepted summary abstention when the Summary source root is byte-identical;
+a changed Summary is rebuilt and validated normally.
+
 Before a strategy in steps 2 or 3 reaches a provider for a quarantined Summary
 claim-map target, the orchestrator checks the same canonical grounding package
 used by regeneration. If it has no retained evidence, that strategy is skipped

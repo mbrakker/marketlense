@@ -1922,6 +1922,12 @@ def finalize_regeneration_candidate_artifacts(
         writable_roots=changed_source_roots,
         materialize_roots=candidate_materialized_roots,
     )
+    if "family_status" in rebuilt_roots:
+        candidate_artifacts["family_status"] = _preserve_unchanged_summary_status(
+            rebuilt=candidate_artifacts.get("family_status"),
+            promoted_baseline=promoted_baseline,
+            candidate_artifacts=candidate_artifacts,
+        )
 
     candidate_provenance_changed = candidate_artifacts.get(
         "soft_copy_claim_provenance"
@@ -1970,6 +1976,49 @@ def finalize_regeneration_candidate_artifacts(
         for path in changed_paths
         if path.split(".", 1)[0].split("[", 1)[0] in verified_roots
     )
+
+
+def _preserve_unchanged_summary_status(
+    *,
+    rebuilt: Any,
+    promoted_baseline: Dict[str, Any],
+    candidate_artifacts: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Reuse the accepted summary outcome when its source root is unchanged."""
+
+    result = deepcopy(rebuilt) if isinstance(rebuilt, dict) else {}
+    prior = promoted_baseline.get("family_status")
+    if (
+        not isinstance(prior, dict)
+        or "summary" not in promoted_baseline
+        or "summary" not in candidate_artifacts
+        or promoted_baseline.get("summary") != candidate_artifacts.get("summary")
+    ):
+        return result
+    status = prior.get("summary")
+    if _is_reusable_summary_status(status):
+        result["summary"] = deepcopy(status)
+    return result
+
+
+def _is_reusable_summary_status(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    if (
+        value.get("schema_version") != "1.0"
+        or value.get("family") != "summary"
+        or value.get("source") != "artifact"
+    ):
+        return False
+    status = str(value.get("status") or "").strip().lower()
+    action = str(value.get("policy_action") or "").strip().lower()
+    confidence = value.get("confidence_score")
+    return (
+        (status == "generated" and action == "keep")
+        or (status == "abstained" and action == "abstain")
+    ) and isinstance(confidence, (int, float)) and not isinstance(
+        confidence, bool
+    ) and 0.0 <= confidence <= 1.0
 
 
 def _rebuild_final_soft_copy_claim_provenance(

@@ -49,6 +49,10 @@ identity metadata, and judges source fidelity only—not writing quality.
 Deterministic numeric, temporal, tuple-relationship, malformed-fragment, and
 metadata checks run first. Supported failures use the item's atomic target;
 unmappable or exhausted failures remain non-publishable with diagnostics.
+If bounded rewrite and evidence-rebind attempts cannot support an insight's
+`so_what` or `now_what`, safe removal clears only the failed implication leaf.
+The supported insight text and source binding remain subject to the same full
+candidate validation; unsupported factual insight text remains blocking.
 
 Standalone key-figure displays retain their numeric-grounding checks, while
 their linked label and explanation carry the temporal-integrity requirement;
