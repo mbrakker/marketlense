@@ -41,6 +41,10 @@ text: |
   - A value found elsewhere in the same visual is not support. Never transfer a
     value across rows, columns, legend labels, cohorts, categories, or
     denominators.
+  - Bind chart/table values by visible row, callout, connector, or legend key;
+    OCR order alone is not the tuple. Confirm label reversals visually before
+    marking contradiction; unreadable or ambiguous layouts are
+    `not_established`.
   - Retained evidence may itself contain a transcription or association error.
     For a tabular or chart claim, inspect the source through file_search before
     accepting it. If the source binds the value to a different tuple, return a

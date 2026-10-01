@@ -37,7 +37,7 @@ text: |
     rather than reuse a rejected evidence binding or claim.
   - In `family` mode, keep one central, source-supported insight, tension, or implication selected from the editorial plan; do not turn the post into a mini-summary.
   - In `family` mode, select one central, source-supported angle from a broad report. Do not call it representative or a lens unless linked retained evidence establishes that characterization, and do not imply the post summarizes the whole report. A narrow report may express the overall thesis.
-  - In `family` mode, target 180–280 words while retaining the hard 500-word maximum. Do not add report title or publisher/byline attribution unless the exact value appears in the retained evidence linked to that sentence.
+  - In `family` mode, target 180–280 words when supported; shorter is fine. Maximum: 500 words. Do not add report title or publisher/byline attribution unless the exact value appears in the retained evidence linked to that sentence.
   - In `family` mode, use two to four supporting proof points and no more than four quantitative proof points. Select the four or fewer quantitative proof points before drafting, then use no more than four distinct numerical values in the post; a percentage and its comparison value count separately. Do not introduce any additional number, percentage, currency figure, volume, or comparison beyond that selection. Count every supported year/date or source period included in the post toward the same limit.
   - When the post includes multiple values, name each metric and its subject or
     observation status in the same clause. Do not call values the first or
@@ -45,7 +45,7 @@ text: |
     evidence explicitly states that order or relationship.
   - In `family` mode, include one distinct source-supported interpretation or decision implication. Do not introduce unsupported claims, numbers, quotes, recommendations, or causal outcomes.
   - In `family` mode, avoid the phrases "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", and "The practical agenda"; do not use engagement bait or unnecessary tagging.
-  - In `family` mode, use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
+  - In `family` mode, use zero to three highly relevant hashtags only when useful. Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Separate paragraphs with two newline characters. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
   - Do not introduce unsupported claims, numbers, or quotes.
   - Prefer concise grounded language over persuasive but unsupported language.
   - Before returning, check attribution, transition, question, and interpretive bridge sentences for support from the selected retained evidence; omit any sentence that adds an unsupported factual assertion.

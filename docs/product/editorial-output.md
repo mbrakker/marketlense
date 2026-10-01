@@ -58,6 +58,13 @@ retained evidence ID that states each factual detail. A broad coverage finding
 supports only its broad scope, while a DocMap section ID may support a specific
 list when that section contains it. Public paraphrases preserve the source's
 proposition, scope, modality, and certainty rather than strengthening them.
+They also preserve material frequency and likelihood qualifiers such as
+`often` and `may`; compact copy cannot drop them for brevity. Nearby or
+co-located findings do not establish a relationship, contrast, importance, or
+implication unless the linked evidence states that connection. Different
+measures and respondent populations remain separate claims. When evidence
+cannot establish a relationship, the copy may describe the facts separately
+without adding a significance bridge.
 Entity identities and relationships retain their source scope: for example, a
 third-party provider is not recast as a cross-brand comparison. A LinkedIn post
 for a broad report selects and discusses one supported theme directly; it does
@@ -197,8 +204,11 @@ When evidence supports a Decision Brief, it serves a distinct role from the Exec
 
 LinkedIn output uses the persisted editorial plan as its primary thematic frame,
 then final representative insights and the metric spine as evidence. It targets
-180–280 words (with the retained 500-word hard maximum), opens on one concrete,
-source-backed angle, and limits normal posts to four quantitative proof points.
+180–280 words when the retained evidence supports that length, with a hard
+maximum of 500 words and no minimum. A shorter, complete post is preferred to
+repetition or unsupported transitions when the selected evidence is narrow. It
+opens on one concrete, source-backed angle and limits normal posts to four
+quantitative proof points.
 Publisher names, report titles, and dates may be included only when the exact
 linked retained evidence establishes the detail; report identity metadata alone
 is not evidence for an editorial claim. Selected themes are not described as a

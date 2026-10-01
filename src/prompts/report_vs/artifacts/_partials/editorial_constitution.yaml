@@ -8,6 +8,11 @@ text: |
     period, and observation status. When a comparison mixes an observed baseline
     and a forecast endpoint, state each status with its own value or omit the
     comparison; never call the whole comparison observed or forecast.
+  - Keep source frequency, likelihood, modality, and certainty qualifiers
+    (for example, "often" and "may"), even in compact copy.
+  - Co-location does not establish a relationship, contrast, significance, or
+    implication; state one only with linked evidence. Separate measures and
+    populations.
   - Keep entity relationships and category labels exactly scoped. A third-party
     provider is not a cross-brand comparison, and a topic, owner, or publisher is
     not interchangeable with the population or subject being measured.

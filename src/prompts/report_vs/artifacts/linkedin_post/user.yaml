@@ -12,7 +12,7 @@ text: |
   `linkedin_post` and `claim_provenance`.
 
   Writing requirements:
-  - Target 180–280 words. The hard maximum is 500 words.
+  - Target 180–280 words when supported; shorter is fine. Maximum: 500 words.
   - Use the editorial plan to select one central, source-supported insight or tension, and use an implication only when supported. Do not turn the post into a mini-summary.
   - For a broad report, select one source-supported theme and express that theme directly. Do not describe the post or selected theme as representative or as a lens on the report unless retained evidence explicitly establishes representativeness. Do not imply that the post summarizes the whole report. For a narrow report, the post may express the overall report thesis.
   - Open with a concrete insight, tension, or material metric. Use an implication only when supported, not as generic framing.
@@ -33,7 +33,7 @@ text: |
   - Do not use these recurring formulations: "The evidence points to", "The market signals are clear", "For senior leaders", "The strategic question is not simply", or "The practical agenda".
   - Do not use engagement bait such as "Like if you agree", "Comment below", or unnecessary tagging. Use zero to three highly relevant hashtags only when they add professional context.
   - Do not use emojis, clichés, em dashes, or the character "—".
-  - Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Write at least three paragraphs and separate each with two newline characters. Do not return fewer than 180 words or more than 280 words. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
+  - Use only plain-text short paragraphs separated by blank lines so every supporting point remains native LinkedIn prose. Separate paragraphs with two newline characters. Do not use bullets or Markdown formatting, including *title*, **bold**, headings, code fences, or Markdown links.
 
   Content constraints (strict):
   - Every statement must be directly supported by the provided JSON artifacts

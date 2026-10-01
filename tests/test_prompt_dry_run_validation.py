@@ -96,9 +96,7 @@ def test_grounding_prompt_accepts_materially_entailed_paraphrases() -> None:
         _ctx(),
     )
 
-    prompt_text = " ".join(
-        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
-    )
+    prompt_text = " ".join(f"{prompt_set.system.text}\n{prompt_set.user.text}".split())
 
     for allowed_transformation in (
         "synonyms",
@@ -303,7 +301,8 @@ def test_linkedin_prompts_require_plain_text_paragraphs_without_markdown_or_bull
     assert "Markdown formatting" in prompt_text
     assert "plain-text short paragraphs separated by blank lines" in prompt_text
     assert "two newline characters" in prompt_text
-    assert "Do not return fewer than 180 words" in prompt_text
+    assert "shorter is fine" in prompt_text
+    assert "Do not return fewer than 180 words" not in prompt_text
     assert "optional bullets" not in prompt_text
 
 

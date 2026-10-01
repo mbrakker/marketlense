@@ -98,7 +98,9 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
     assert "Market Lense editorial constitution" in prompt_set.user.text
-    assert "do not join it with separate evidence or preferences." in prompt_set.user.text
+    assert (
+        "do not join it with separate evidence or preferences." in prompt_set.user.text
+    )
     assert any(
         path.replace("\\", "/").endswith(
             "report_vs/artifacts/_partials/editorial_constitution.yaml"
@@ -295,8 +297,8 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     )
     assert "Preserve the source's modality and certainty" in linkedin_prompt.user.text
     assert (
-        "Keep entity relationships and category labels exactly scoped" in
-        summary_prompt.user.text
+        "Keep entity relationships and category labels exactly scoped"
+        in summary_prompt.user.text
     )
     assert (
         "Do not describe the post or selected theme as representative or as a lens"
@@ -328,6 +330,68 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
         "Do not call it representative or a lens unless linked retained evidence"
         in normalized_regeneration_linkedin
     )
+
+
+def test_findings_prompt_keeps_each_proposition_bound_to_direct_evidence() -> None:
+    prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = f"{prompt.system.text}\n{prompt.user.text}"
+    prompt_text = " ".join(prompt_text.lower().split())
+
+    assert (
+        "one finding states one independently verifiable proposition; split distinct measures"
+        in prompt_text
+    )
+    assert "must directly establish all material details in `text`" in prompt_text
+
+
+def test_grounding_prompt_uses_chart_layout_not_extraction_order_for_bindings() -> None:
+    prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/validate/grounding",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = f"{prompt.system.text}\n{prompt.user.text}"
+    prompt_text = " ".join(prompt_text.lower().split())
+
+    assert "bind chart/table values by visible row" in prompt_text
+    assert "ocr order alone is not the tuple" in prompt_text
+    assert "confirm label reversals visually" in prompt_text
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/artifacts/insights_candidates",
+    ],
+)
+def test_editorial_prompts_preserve_qualifiers_and_separate_facts(
+    namespace: str,
+) -> None:
+    prompt = load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+    prompt_text = f"{prompt.system.text}\n{prompt.user.text}"
+    prompt_text = " ".join(prompt_text.lower().split())
+
+    assert (
+        "keep source frequency, likelihood, modality, and certainty qualifiers"
+        in prompt_text
+    )
+    assert "co-location does not establish a relationship" in prompt_text
+    assert "separate measures and populations" in prompt_text
 
 
 def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> None:

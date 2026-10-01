@@ -21,6 +21,12 @@ text: |
 
   Rules:
   - Every finding must be decision-relevant and evidence-grounded.
+  - One finding states one independently verifiable proposition; split
+    distinct measures, populations, and actions even when co-located.
+  - Its `evidence` must directly establish all material details in `text`,
+    especially value/category, subject/population, period, qualifiers, and
+    named actions. Narrow unsupported details; a generic recommendation-list
+    reference cannot support a named action.
   - When a finding compares periods, retain the source's distinct temporal qualifiers exactly, including quarter, half, month/year, fiscal year, and forecast marker. Do not collapse distinct periods to a shared year or infer a period not present in the evidence.
   - For an ordered metric series, preserve every source label/value tuple. A value may not be moved to another year, forecast period, quarter, category, or row even when that value appears elsewhere in the retrieved evidence.
   - "id" must be stable and unique within this output.

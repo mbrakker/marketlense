@@ -49,6 +49,13 @@ identity metadata, and judges source fidelity only—not writing quality.
 Deterministic numeric, temporal, tuple-relationship, malformed-fragment, and
 metadata checks run first. Supported failures use the item's atomic target;
 unmappable or exhausted failures remain non-publishable with diagnostics.
+Evidence-pack findings each represent one independently verifiable
+proposition, and the linked evidence text itself must establish every material
+detail carried into public copy, including population, measure, period, and
+source qualifiers. For a chart or table, source visual layout determines a
+label/value association; OCR or extraction order alone cannot establish a
+reversed tuple. An ambiguous layout remains unresolved, while a clearly
+supported conflicting tuple remains blocking.
 If bounded rewrite and evidence-rebind attempts cannot support an insight's
 `so_what` or `now_what`, safe removal clears only the failed implication leaf.
 The supported insight text and source binding remain subject to the same full

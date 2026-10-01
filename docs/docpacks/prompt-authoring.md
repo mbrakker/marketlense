@@ -26,6 +26,16 @@ Each pack prompt must explicitly define:
   copy only its exact section IDs/titles, and keep file-search evidence as the
   sole grounding source. Do not require one finding per section or trigger
   additional calls for sparse reports.
+- Each finding is one independently verifiable proposition. Split separate
+  measures, populations, and actions into separate findings even when they
+  appear together in one source paragraph or visual. Its `evidence` field must
+  directly establish every material detail in `text`, including the exact
+  source qualifier and named action when present. A generic statement that a
+  source lists recommendations cannot support one named recommendation.
+- When a chart or table uses spatial layout to associate labels and values,
+  bind them using the visible row, callout, connector, or legend key. OCR order
+  alone does not establish the tuple; leave an ambiguous association
+  unresolved instead of guessing a reversed value.
 
 ## Logging and Reproducibility
 
