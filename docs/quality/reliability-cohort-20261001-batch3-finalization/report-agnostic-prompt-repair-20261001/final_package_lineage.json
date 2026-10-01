@@ -1,0 +1,418 @@
+{
+  "cohort_result_sha256": "a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4",
+  "cohort_run_directory": "frozen-reliability-awmepi77",
+  "implementation_git_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+  "measurement_kind": "frozen_cohort_final_package_lineage",
+  "metrics": {
+    "binding_check_failures": 0,
+    "duration_seconds": 2537.774,
+    "eligible_final_reports": 5,
+    "estimated_cost_usd": 0.295323,
+    "final_packages_materialized_and_bound": 5,
+    "input_tokens": 1379126,
+    "operator_interventions": 0,
+    "output_tokens": 333098,
+    "provider_calls_total": 173,
+    "public_editorial_disabled_waivers": 0,
+    "public_editorial_hard_failures": 0,
+    "public_editorial_issues": 0,
+    "public_editorial_quality_passes": 5,
+    "publication_attempts": 0,
+    "readiness_passes": 5,
+    "readiness_provider_calls": 0,
+    "unresolved_factual_claims": 0,
+    "unsupported_factual_claims": 0,
+    "validation_passes": 5
+  },
+  "production_run_directory": "ias-first-attempt-ii2fq93k",
+  "publication_disabled": true,
+  "reports": [
+    {
+      "binding_checks": {
+        "configuration_policy": true,
+        "evidence_pack": true,
+        "final_artifact": true,
+        "readiness": true,
+        "report_identity": true,
+        "retained_package": true,
+        "semantic_execution": true,
+        "source_checksum": true,
+        "source_identity": true,
+        "validators": true
+      },
+      "claim_identity_set_sha256": "0c63c4edc9e3873bf6e14c34ce52d3656cfd37b4a004ce2f6641b7f8d4b79c12",
+      "claim_result_count": 24,
+      "claim_result_status_counts": {
+        "supported": 21,
+        "unresolved": 3
+      },
+      "claim_validation_validator_version": "retained_claim_validation:v2",
+      "configuration_sha256": "67fee2f3e48786a72b919056f53c30acc0ab21f33f7a27cbe150b8289c0a0659",
+      "deterministic_pass_count": 6,
+      "evidence_pack_sha256": "f6a63179753c56db636fa2370d5da0689bad101889eeb8d7a1bc466196d4b4ea",
+      "final_artifact_sha256": "6db5c4ad47f663592f43c23f8d4e7e59f15b79956c16f09155c06cec607b125c",
+      "grounding_validator_version": "grounding_validation_output:1.4",
+      "linkedin_public_copy": {
+        "character_count": 335,
+        "word_count": 48
+      },
+      "package_file_sha256": "43deed28d22c9f58b59acb1402d08ed4ed1d13940bc30aca4a457949d8abf927",
+      "package_hash": "587629a077728815f58182c75693be8712b60ced1b1a192b4e7099e046a42f6d",
+      "policy_sha256": "c3e1683c1c959c45d56a009de8c088793d17c8dd69c504a6d715ece71183fd05",
+      "public_editorial_quality": {
+        "disabled_rule_waivers": 0,
+        "hard_failures": 0,
+        "issues": 0,
+        "publishable": true,
+        "status": "pass"
+      },
+      "publication_projection_sha256": "afd4893599082102f26bf08e619a27ae843e40f3f4e8201e3cd6ae87c91b6d61",
+      "publisher_id": "Algolia",
+      "readiness": "pass",
+      "readiness_artifact_hashes": {
+        "artifacts": "6db5c4ad47f663592f43c23f8d4e7e59f15b79956c16f09155c06cec607b125c",
+        "evidence:context_category_fit": "371586e74665e4d235254934b3a6ef8b0fd22f28c1cd9533536b473158859d15",
+        "evidence:doc_map": "032dff8f3f3617b96d99c62fd7f467f70279b74012e655332cb8b2ade23ac2c9",
+        "evidence:evidence_fidelity": "9eaeedc6116dd27b2c217fd5ec4ed77bf0cdb18ee2348dab07f2784a63b0024e",
+        "evidence:findings": "69dbe066a60e582f7bd7e896887fae342956ea1032be8b7531d45c14a5c8b69f",
+        "evidence:limitations": "dde677e4974a625b1be4232cfdbe5345a066fa756ae721d93eb905456eee640b",
+        "evidence:methods": "068040b0516d07510f437143bcc3080bdcd34651dc3ef2fc82c5f6df1ad9602b",
+        "evidence:quote_candidates": "7f21d4c99b7fff3266eee0a4e61edb7787f2a337655670d4c9da54fd1cacefdc",
+        "evidence:report_context": "cd70cabd0871451505819059c067a03e5a4748ed728d207807a9341b4b57c040",
+        "evidence:scope": "4759382f84e247dc8f9d1a704c9ecab415dfc5fc168b7500172ea727e988a911",
+        "report_card_manifest_path": "50c5dfdc0096fae827c11fa575e7961e30cf26b1fd2baf89fd227747b2b0afa3",
+        "retained_claim_validation": "587629a077728815f58182c75693be8712b60ced1b1a192b4e7099e046a42f6d",
+        "validation": "8a52f0b9f1bdafa75a243d3126c43291753f2e59ca6b17a8e054c512e07c9ba7"
+      },
+      "readiness_record_sha256": "68b8ac2abec0ff22f9b977e032223c21727e12443b750a38b3fe049da1cb6d16",
+      "report_id": "cohort-86858bdcb370266f26c2",
+      "semantic_execution_identities": [
+        "bcedd2913e09ea6ddf5434af29900fc3db2ba2b26d25c5fb9e234f54ce7c9d79"
+      ],
+      "semantic_model_identities": [
+        "openai/gpt-6-luna"
+      ],
+      "semantic_prompt_content_hashes": [
+        "4ac392a83972b96fbde1c81979c51387bebf9faab6e4c7e6bba710c1eff46e1c"
+      ],
+      "semantic_validation_count": 15,
+      "source_id": "source:4ea9ae5709898e763efb0945d8d4fa1e",
+      "source_md5": "86858bdcb370266f26c29b40316a4db0",
+      "terminal_state": "awaiting_review",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass",
+      "validation_warnings": 0
+    },
+    {
+      "binding_checks": {
+        "configuration_policy": true,
+        "evidence_pack": true,
+        "final_artifact": true,
+        "readiness": true,
+        "report_identity": true,
+        "retained_package": true,
+        "semantic_execution": true,
+        "source_checksum": true,
+        "source_identity": true,
+        "validators": true
+      },
+      "claim_identity_set_sha256": "6070441987706d1b69de2044f4c20b5c3bfe048d4448a8d9aa8b70ce2adfdb87",
+      "claim_result_count": 25,
+      "claim_result_status_counts": {
+        "supported": 23,
+        "unresolved": 2
+      },
+      "claim_validation_validator_version": "retained_claim_validation:v2",
+      "configuration_sha256": "67fee2f3e48786a72b919056f53c30acc0ab21f33f7a27cbe150b8289c0a0659",
+      "deterministic_pass_count": 13,
+      "evidence_pack_sha256": "d482130742619e89f00a75d06e2f61deee285b4e2d2db1380e5a94691fc4582f",
+      "final_artifact_sha256": "45457025175f72cce95453ea0e712a6a5b5211585a2d779a45298efe5af2e75a",
+      "grounding_validator_version": "grounding_validation_output:1.4",
+      "linkedin_public_copy": {
+        "character_count": 329,
+        "word_count": 46
+      },
+      "package_file_sha256": "667f0dd795c4a4f7987e5011d8e7de3aa4622f955eb2db940bc6b644d0cf38eb",
+      "package_hash": "bf699c131cc72fc2347369f403d96f17e4f9c2f1b02fac526e20347e16f67ae4",
+      "policy_sha256": "c3e1683c1c959c45d56a009de8c088793d17c8dd69c504a6d715ece71183fd05",
+      "public_editorial_quality": {
+        "disabled_rule_waivers": 0,
+        "hard_failures": 0,
+        "issues": 0,
+        "publishable": true,
+        "status": "pass"
+      },
+      "publication_projection_sha256": "039bc50c4d0deba7985159580ce750d3e8de6a9c618207a49c9169882adceb2e",
+      "publisher_id": "Bain & Company",
+      "readiness": "pass",
+      "readiness_artifact_hashes": {
+        "artifacts": "45457025175f72cce95453ea0e712a6a5b5211585a2d779a45298efe5af2e75a",
+        "evidence:context_category_fit": "268cdd8bdb8b8bd2368654469c5025979067569dc473f6c90730dabc74131f7d",
+        "evidence:doc_map": "3933e006e423c4f61bf3907b4c34d4f57b38fec3f1baff108da71a1920d9988d",
+        "evidence:evidence_fidelity": "3212b43f6c155fe38824e202865f64bc1670e4ca9eb7b210e76a38a3c3702a77",
+        "evidence:findings": "523eaaf33b773fb101b9df9b52b4b520a8cc703f22b9b0f759f4f5c024e86a98",
+        "evidence:limitations": "762d0fb89ce0114081cf3ada0c9bfcef6ef61e34cf00c74b8d0dfdec74e70363",
+        "evidence:methods": "56d881ce425ad23875f71c124896b818302cd0dc1824d15eeb55b8adc9a99d82",
+        "evidence:quote_candidates": "342fc2e1e5b241710721fb4b3da2141de88c4a87c2a53c668ea1defb710adb7b",
+        "evidence:report_context": "491fa673dbcac18db1ef1a458853d5c2e0276f6aa9f44dd51ca368e7a4aaaab1",
+        "evidence:scope": "bc3cb09307e0696f4cdbf8239c136637077fb85598a1fd07199a94347f5b4034",
+        "report_card_manifest_path": "619759136b844805ccf5b3c06270466a06f2a700fd9fcf6fcdcdd7cf450b5598",
+        "retained_claim_validation": "bf699c131cc72fc2347369f403d96f17e4f9c2f1b02fac526e20347e16f67ae4",
+        "validation": "53e8bcc8c2e8c11a3f886328f25462b89f6995406f57faaeec24a7fd6460eff3"
+      },
+      "readiness_record_sha256": "ad1bc5a7c6f1da7b35d646cb8ade20ab7fc4e0226204d3ef495a74389a71af13",
+      "report_id": "cohort-77bc67b2bc98187d9d58",
+      "semantic_execution_identities": [
+        "bcedd2913e09ea6ddf5434af29900fc3db2ba2b26d25c5fb9e234f54ce7c9d79"
+      ],
+      "semantic_model_identities": [
+        "openai/gpt-6-luna"
+      ],
+      "semantic_prompt_content_hashes": [
+        "4ac392a83972b96fbde1c81979c51387bebf9faab6e4c7e6bba710c1eff46e1c"
+      ],
+      "semantic_validation_count": 10,
+      "source_id": "source:6416ece4ac85fe49d209541676aeab97",
+      "source_md5": "77bc67b2bc98187d9d589a4e69fd85f7",
+      "terminal_state": "awaiting_review",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass",
+      "validation_warnings": 0
+    },
+    {
+      "binding_checks": {
+        "configuration_policy": true,
+        "evidence_pack": true,
+        "final_artifact": true,
+        "readiness": true,
+        "report_identity": true,
+        "retained_package": true,
+        "semantic_execution": true,
+        "source_checksum": true,
+        "source_identity": true,
+        "validators": true
+      },
+      "claim_identity_set_sha256": "65ce14bd460f4dd7f890a6323fb9b4624574afea226c5984ee04eb0eb46ecb72",
+      "claim_result_count": 29,
+      "claim_result_status_counts": {
+        "supported": 25,
+        "unresolved": 4
+      },
+      "claim_validation_validator_version": "retained_claim_validation:v2",
+      "configuration_sha256": "67fee2f3e48786a72b919056f53c30acc0ab21f33f7a27cbe150b8289c0a0659",
+      "deterministic_pass_count": 11,
+      "evidence_pack_sha256": "d170bee1f88daa75eda1d09d25ba072833d9929e6c39ca8ea05fa377e0c12f27",
+      "final_artifact_sha256": "77d36e17ebcee38cc98ffef46f754acd5df9d7422b20bf933e3a2beb5becb81f",
+      "grounding_validator_version": "grounding_validation_output:1.4",
+      "linkedin_public_copy": {
+        "character_count": 619,
+        "word_count": 95
+      },
+      "package_file_sha256": "bd76e4a5fed458094416cc3b68e5187374a7a446c84f3ab08df83f21384692f5",
+      "package_hash": "46341f47c4b74f9eb22e2b45d3e90b6cbeba15ee6330126087a392cd97c69580",
+      "policy_sha256": "c3e1683c1c959c45d56a009de8c088793d17c8dd69c504a6d715ece71183fd05",
+      "public_editorial_quality": {
+        "disabled_rule_waivers": 0,
+        "hard_failures": 0,
+        "issues": 0,
+        "publishable": true,
+        "status": "pass"
+      },
+      "publication_projection_sha256": "521643474ac5aeefba8b183e2cea5812b72d04fd18b078ebbf18b7a3f9f11e01",
+      "publisher_id": "Bigcommerce",
+      "readiness": "pass",
+      "readiness_artifact_hashes": {
+        "artifacts": "77d36e17ebcee38cc98ffef46f754acd5df9d7422b20bf933e3a2beb5becb81f",
+        "evidence:context_category_fit": "f2f87578dc04fa3fde24605bedf69b2a07fa29e9d8484583234ff69070e10cdf",
+        "evidence:doc_map": "c667969d3ceb6211126e62e4c1ee3c5804e57567b11ae7d3c9582b8cbd0c2fb1",
+        "evidence:evidence_fidelity": "3e106b4e4525ac5ab7314a536644aec2c68f9217b0fb29c00363228ce6796f1c",
+        "evidence:findings": "26c1307da17c63532cc59072a4dc9b94f350a654b603b55a16b50e0ac593c293",
+        "evidence:limitations": "d59e75bffee2dce1957306f03b62836b8643731f9cd18664b88bdb8e672ef236",
+        "evidence:methods": "dcd5fde21ff55afea154c87d4171a3eae044dfa2aec47248834338853c645588",
+        "evidence:quote_candidates": "16de52e23aff97a26619bcd170cf66ff20ea8aaff017691cd625200f07433777",
+        "evidence:report_context": "bb30fc6adf6d705481b42986f6ece106e711deb52669500e4b283fd46163c0aa",
+        "evidence:scope": "ba0dad0615e23897536bd5d82f0d3db32221b36b36ba08f892eff1468a105bbc",
+        "report_card_manifest_path": "1b3bbce9fd51908c2a3638c2169f6fd7280e326b6929b337b2cd5dacf0432fb9",
+        "retained_claim_validation": "46341f47c4b74f9eb22e2b45d3e90b6cbeba15ee6330126087a392cd97c69580",
+        "validation": "820447329d0d0a41ec7ef0bb02342246c866a20237b76cbcf8e829067fef59ef"
+      },
+      "readiness_record_sha256": "1375d2a4cba6f4aaa36f98444b0bbc587f2dfb2ce92682b8f2114ba481d822eb",
+      "report_id": "cohort-0a019f840c3f89ad0a96",
+      "semantic_execution_identities": [
+        "bcedd2913e09ea6ddf5434af29900fc3db2ba2b26d25c5fb9e234f54ce7c9d79"
+      ],
+      "semantic_model_identities": [
+        "openai/gpt-6-luna"
+      ],
+      "semantic_prompt_content_hashes": [
+        "4ac392a83972b96fbde1c81979c51387bebf9faab6e4c7e6bba710c1eff46e1c"
+      ],
+      "semantic_validation_count": 14,
+      "source_id": "source:5c922bfa405c19d9cbc9a0a00ea70d1b",
+      "source_md5": "0a019f840c3f89ad0a9672e058d1ff83",
+      "terminal_state": "awaiting_review",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass",
+      "validation_warnings": 0
+    },
+    {
+      "binding_checks": {
+        "configuration_policy": true,
+        "evidence_pack": true,
+        "final_artifact": true,
+        "readiness": true,
+        "report_identity": true,
+        "retained_package": true,
+        "semantic_execution": true,
+        "source_checksum": true,
+        "source_identity": true,
+        "validators": true
+      },
+      "claim_identity_set_sha256": "c27d8ab431353af46a2a83785bf36019afc0d00c006e9f0693a5fc5da2aa0334",
+      "claim_result_count": 28,
+      "claim_result_status_counts": {
+        "supported": 26,
+        "unresolved": 2
+      },
+      "claim_validation_validator_version": "retained_claim_validation:v2",
+      "configuration_sha256": "67fee2f3e48786a72b919056f53c30acc0ab21f33f7a27cbe150b8289c0a0659",
+      "deterministic_pass_count": 20,
+      "evidence_pack_sha256": "f32f4480b231b7b658238b01e32e3cb479a97d349c279278312581f068042e7f",
+      "final_artifact_sha256": "f29202425e7a9b183f09e5e4898c5e35e4ff825875e980b541c2f1140fa8a038",
+      "grounding_validator_version": "grounding_validation_output:1.4",
+      "linkedin_public_copy": {
+        "character_count": 301,
+        "word_count": 47
+      },
+      "package_file_sha256": "b72ef31c95d96a2828b13856e86d357ed71de5d8065d7929504d033536738e15",
+      "package_hash": "a24f2237ece132dcf6fae83610076e97604f6313b6cd60cf4976c9b06f30c463",
+      "policy_sha256": "c3e1683c1c959c45d56a009de8c088793d17c8dd69c504a6d715ece71183fd05",
+      "public_editorial_quality": {
+        "disabled_rule_waivers": 0,
+        "hard_failures": 0,
+        "issues": 0,
+        "publishable": true,
+        "status": "pass"
+      },
+      "publication_projection_sha256": "2250a3e099e9c1373171b4d22c0eb75faf4faf60befbc3f7c8c2dc424d97020e",
+      "publisher_id": "Criteo",
+      "readiness": "pass",
+      "readiness_artifact_hashes": {
+        "artifacts": "f29202425e7a9b183f09e5e4898c5e35e4ff825875e980b541c2f1140fa8a038",
+        "evidence:context_category_fit": "e3393cc10a69f2980a074361d076d5512b6ca73096f3a950a58fde4b69f5dc0f",
+        "evidence:doc_map": "51d2de966c736d65637e9c522f8fca98aeeca47e9f74d15357f9fe8a86132eb9",
+        "evidence:evidence_fidelity": "a5543bd4c1402196a656f87fc499c577ec63102fb4849748bfd20f13c8b0e264",
+        "evidence:findings": "be6d7c4f0d09697be2cafc191e239084f05aaaddf8d27755d9fcc198ddac9af0",
+        "evidence:limitations": "78c713a374108f36cd87844db07bfdfcd7c32b29ecd331a2d824e986ce1fa382",
+        "evidence:methods": "bc481562b42bb53151b162a9a25ff1d289f6b5686fdbe9605c352bea2b8d3474",
+        "evidence:quote_candidates": "8bd6d8c76485aea244ffc9c0645eeed8d3528b0ccd112dae932f33754f0cbf8e",
+        "evidence:report_context": "2ec7c84401ba2e6c9b593cc5cb0027f6bda6b5426e15d65691623716632eeef2",
+        "evidence:scope": "3036a475e95dfc7b036e6919debffc24ab452cd52a782e7bf85e70daeb4b630e",
+        "report_card_manifest_path": "af4e8b572ce1f8f11604b1effd538ee840a0a901072ef7ff302d2fd6bb4f4ee4",
+        "retained_claim_validation": "a24f2237ece132dcf6fae83610076e97604f6313b6cd60cf4976c9b06f30c463",
+        "validation": "0d3106d4d9f34994a0829cc9a0877194d558dbc1437fefa14b2c17f50dcab4b7"
+      },
+      "readiness_record_sha256": "940c4e31830af6df731583af8e90342f068c6f8aa2bda515135c74d480e71201",
+      "report_id": "cohort-979a63a1633a7f2ccc51",
+      "semantic_execution_identities": [
+        "bcedd2913e09ea6ddf5434af29900fc3db2ba2b26d25c5fb9e234f54ce7c9d79"
+      ],
+      "semantic_model_identities": [
+        "openai/gpt-6-luna"
+      ],
+      "semantic_prompt_content_hashes": [
+        "4ac392a83972b96fbde1c81979c51387bebf9faab6e4c7e6bba710c1eff46e1c"
+      ],
+      "semantic_validation_count": 6,
+      "source_id": "source:81027fd399837b2cbd3cefa2abca222b",
+      "source_md5": "979a63a1633a7f2ccc5123540a079d79",
+      "terminal_state": "awaiting_review",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass",
+      "validation_warnings": 0
+    },
+    {
+      "binding_checks": {
+        "configuration_policy": true,
+        "evidence_pack": true,
+        "final_artifact": true,
+        "readiness": true,
+        "report_identity": true,
+        "retained_package": true,
+        "semantic_execution": true,
+        "source_checksum": true,
+        "source_identity": true,
+        "validators": true
+      },
+      "claim_identity_set_sha256": "5f20895ec61f1310ba8bdf48d97f572d0b085533047622699016be76eb5da110",
+      "claim_result_count": 30,
+      "claim_result_status_counts": {
+        "supported": 28,
+        "unresolved": 2
+      },
+      "claim_validation_validator_version": "retained_claim_validation:v2",
+      "configuration_sha256": "67fee2f3e48786a72b919056f53c30acc0ab21f33f7a27cbe150b8289c0a0659",
+      "deterministic_pass_count": 11,
+      "evidence_pack_sha256": "cc1777fb1dae9cb3debdf17b483ec3a97ae941077114e3f0a921d8d917ca052a",
+      "final_artifact_sha256": "2223e91963bc3ef62e4331d07bf836d71e5baff0b1484d17f233f377041cc1d3",
+      "grounding_validator_version": "grounding_validation_output:1.4",
+      "linkedin_public_copy": {
+        "character_count": 469,
+        "word_count": 62
+      },
+      "package_file_sha256": "51b94616e52505f3d621bf031ee38e01d0832bdaf4e0af5e632e76abca833518",
+      "package_hash": "2bdcbea2071e5eac45893f7da3d43ccc36d6321bceb7c0792c1aacd2a813865d",
+      "policy_sha256": "c3e1683c1c959c45d56a009de8c088793d17c8dd69c504a6d715ece71183fd05",
+      "public_editorial_quality": {
+        "disabled_rule_waivers": 0,
+        "hard_failures": 0,
+        "issues": 0,
+        "publishable": true,
+        "status": "pass"
+      },
+      "publication_projection_sha256": "b4d12e45b8705c7692674c230ef1028ac10428001d7cbb0c62e658f6c60c0de8",
+      "publisher_id": "DHL eCommerce",
+      "readiness": "pass",
+      "readiness_artifact_hashes": {
+        "artifacts": "2223e91963bc3ef62e4331d07bf836d71e5baff0b1484d17f233f377041cc1d3",
+        "evidence:context_category_fit": "b72334348d75ba2c3d0cdde355611589a7059f77b2ca1fe7323f5173a17a8abc",
+        "evidence:doc_map": "e42eb540add302022be75891b78de26890947ca4ca5e1b4afdd15ed9b77e55b4",
+        "evidence:evidence_fidelity": "dbf98805f479ae9dff9ef2faf10eb21ba07f02d5e0b56aa56fb68f1cc7ffc98e",
+        "evidence:findings": "bc6b023e552a8d224c2978f85c0b7e2f88c252b4f13b7abaa7fe99cea4eac950",
+        "evidence:limitations": "15c90c205b7d398ff0649d969acfa0d443a6942b39176835d9ffe7a49b95cbb5",
+        "evidence:methods": "83d2fd53810087c84027f0c9f57b1825f75268563eb00f8be22ff774a874cf0a",
+        "evidence:quote_candidates": "7f21d4c99b7fff3266eee0a4e61edb7787f2a337655670d4c9da54fd1cacefdc",
+        "evidence:report_context": "46b96b7dbc8c4b9f05f419eeca441e4d92849e82813b67ad24b0b7f45cefe354",
+        "evidence:scope": "f6925f904f4b5a962d566679098a2d88235147c51c5ba882ad2e6b8ca1dceeb1",
+        "report_card_manifest_path": "169cb5eccfa359b19692a8e680bfb099c9ee36ed52636a7c34731f352f23523b",
+        "retained_claim_validation": "2bdcbea2071e5eac45893f7da3d43ccc36d6321bceb7c0792c1aacd2a813865d",
+        "validation": "71e9ffccb0045607d065af598d279bf222205878a95188627d6b68c61b36e100"
+      },
+      "readiness_record_sha256": "ecd866829a38a778b112b2ef9f284d4593c0e422d449993f06281e87cfc94e15",
+      "report_id": "cohort-9b97626fc83c086961a7",
+      "semantic_execution_identities": [
+        "bcedd2913e09ea6ddf5434af29900fc3db2ba2b26d25c5fb9e234f54ce7c9d79"
+      ],
+      "semantic_model_identities": [
+        "openai/gpt-6-luna"
+      ],
+      "semantic_prompt_content_hashes": [
+        "4ac392a83972b96fbde1c81979c51387bebf9faab6e4c7e6bba710c1eff46e1c"
+      ],
+      "semantic_validation_count": 17,
+      "source_id": "source:51ecf17fd1dd14390636cdf033f41edf",
+      "source_md5": "9b97626fc83c086961a7416d65e05faa",
+      "terminal_state": "awaiting_review",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass",
+      "validation_warnings": 0
+    }
+  ],
+  "schema_version": "1.0",
+  "source_manifest_sha256": "fccce9143558f20b3f277f03e79c1b3cd78699fb3237f0336e1364a4cc1cda6d"
+}

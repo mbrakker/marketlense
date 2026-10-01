@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "measurement_date": "2026-10-01",
+  "implementation_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+  "commands": [
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-a21-five.json --output-dir tmp/e13-systematic-report-copy-eae746de-20261001/baseline-a21-five --implementation-sha eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-mobile-editorial.json --output-dir tmp/e13-systematic-report-copy-eae746de-20261001/baseline-mobile-editorial --implementation-sha eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+    "python scripts/quality/replay_validation_repair_benchmark.py --manifest docs/quality/e13-repair-benchmark/baseline-doubleverify-linkedin-public-editorial.json --output-dir tmp/e13-systematic-report-copy-eae746de-20261001/baseline-doubleverify-linkedin-public-editorial --implementation-sha eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+    "python scripts/quality/run_ias_first_attempt_canary.py --runs-root tmp/ias-systematic-report-copy-eae746de-20261001 --max-duration-seconds 7200"
+  ],
+  "frozen_manifests": [
+    {
+      "manifest": "baseline-a21-five.json",
+      "manifest_sha256": "b50d752a35a37774fe8446df10ab9dd3f163fb28f4692df3ccf3236ff21b3740",
+      "case_count": 5,
+      "cases": [
+        {"case_id": "2026-global-co-8970fc13f012", "reproducibility": "no_longer_reproducible", "attempt_count": 0},
+        {"case_id": "attachment-the-6dddc246d289", "reproducibility": "reproducible", "attempt_count": 2, "final_validation_status": "fail"},
+        {"case_id": "ebook-0225-fut-997cc1cccd6a", "reproducibility": "no_longer_reproducible", "attempt_count": 0},
+        {"case_id": "final-web-vers-1d9e64dd7425", "reproducibility": "no_longer_reproducible", "attempt_count": 0},
+        {"case_id": "g0-ec-trends-r-41f8ffd78145", "reproducibility": "reproducible", "attempt_count": 2, "final_validation_status": "fail"}
+      ],
+      "strict_scorecard": {
+        "reproducible_denominator": 2,
+        "success_at_1": "0/2",
+        "success_at_3": "0/2",
+        "repair_attempts": 4,
+        "rolled_back_attempts": 4,
+        "out_of_scope_attempts": 4,
+        "unsupported_evidence_introduction_attempts": 4,
+        "hard_failure_introduction_attempts": 4,
+        "hard_failure_introductions": 11,
+        "provenance_or_lineage_introduction_attempts": 0,
+        "comparison_status": "incompatible"
+      },
+      "whole_replay_usage": {
+        "provider_calls": 114,
+        "input_tokens": 832158,
+        "output_tokens": 379489,
+        "estimated_cost_usd": 0.261241
+      },
+      "repair_attributable_usage": {
+        "provider_calls": 40,
+        "input_tokens": 255625,
+        "output_tokens": 27804,
+        "estimated_cost_usd": 0.039465
+      }
+    },
+    {
+      "manifest": "baseline-mobile-editorial.json",
+      "manifest_sha256": "70f8d46d00f36eeb849547aa99c873beca21f778168451f8bc76887be8e961b9",
+      "case_count": 1,
+      "cases": [
+        {"case_id": "public-editorial-linkedin-mobile-app", "reproducibility": "reproducible", "attempt_count": 3, "final_validation_status": "fail", "max_attempts_reached": true}
+      ],
+      "strict_scorecard": {
+        "reproducible_denominator": 1,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "repair_attempts": 3,
+        "rolled_back_attempts": 3,
+        "out_of_scope_attempts": 0,
+        "unsupported_evidence_introduction_attempts": 2,
+        "hard_failure_introduction_attempts": 3,
+        "hard_failure_introductions": 6,
+        "provenance_or_lineage_introduction_attempts": 1,
+        "comparison_status": "incompatible"
+      },
+      "repair_attributable_usage": "unavailable",
+      "whole_replay_usage": {
+        "provider_calls": 25,
+        "input_tokens": 338252,
+        "output_tokens": 108106,
+        "estimated_cost_usd": 0.082479
+      }
+    },
+    {
+      "manifest": "baseline-doubleverify-linkedin-public-editorial.json",
+      "manifest_sha256": "a0efdd1a80a30137ce3c213edc83ab2c16b27a4b91868bccd95f2dda51fda71a",
+      "case_count": 1,
+      "cases": [
+        {"case_id": "doubleverify-linkedin-public-editorial-hard-failure", "reproducibility": "reproducible", "attempt_count": 2, "final_validation_status": "pass", "max_attempts_reached": false, "promoted_candidate_count": 1, "strict_repair_success": false}
+      ],
+      "strict_scorecard": {
+        "reproducible_denominator": 1,
+        "success_at_1": "0/1",
+        "success_at_3": "0/1",
+        "repair_attempts": 2,
+        "rolled_back_attempts": 1,
+        "promoted_attempts": 1,
+        "out_of_scope_attempts": 2,
+        "unsupported_evidence_introduction_attempts": 1,
+        "hard_failure_introduction_attempts": 1,
+        "hard_failure_introductions": 1,
+        "provenance_or_lineage_introduction_attempts": 0,
+        "repair_attributable_usage": {
+          "provider_calls": 6,
+          "input_tokens": 33407,
+          "output_tokens": 3638,
+          "estimated_cost_usd": 0.00516
+        },
+        "comparison_status": "incompatible"
+      },
+      "scope_note": "The terminal validation passed and the second candidate was promoted. The frozen-manifest scorecard still marked both attempts outside its expected legal mutation scope, so neither counts as strict repair success.",
+      "whole_replay_usage": {
+        "provider_calls": 26,
+        "input_tokens": 212857,
+        "output_tokens": 108831,
+        "estimated_cost_usd": 0.071321
+      }
+    }
+  ],
+  "aggregate": {
+    "frozen_case_count": 7,
+    "currently_reproducible_case_count": 4,
+    "no_longer_reproducible_case_count": 3,
+    "reproducible_strict_scorecard_denominator": 4,
+    "strict_success_at_1": "0/4",
+    "strict_success_at_3": "0/4",
+    "strict_comparison_status": "incompatible; no paired historical improvement claim",
+    "repair_attempts": 9,
+    "rolled_back_attempts": 8,
+    "promoted_attempts": 1,
+    "out_of_scope_attempts": 6,
+    "unsupported_evidence_introduction_attempts": 7,
+    "hard_failure_introduction_attempts": 8,
+    "hard_failure_introductions": 18,
+    "provenance_or_lineage_introduction_attempts": 1,
+    "whole_replay_usage": {
+      "provider_calls": 165,
+      "input_tokens": 1383267,
+      "output_tokens": 596426,
+      "estimated_cost_usd": 0.415041
+    }
+  },
+  "ias_first_attempt_canary": {
+    "publisher": "Integral Ad Science",
+    "isolated_fresh_state": true,
+    "workflow_attempt_count": 1,
+    "validation": "pass",
+    "publication_readiness": "pass",
+    "final_state": "awaiting_review",
+    "operator_intervention": false,
+    "publication_enabled": false,
+    "readiness_jobs": 1,
+    "readiness_provider_calls": 0,
+    "readiness_external_effects": 0,
+    "published_records": 0,
+    "approval_records": 0,
+    "provider_calls": 46,
+    "input_tokens": 380377,
+    "output_tokens": 94421,
+    "estimated_cost_usd": 0.079769,
+    "duration_seconds": 707.233,
+    "nonfatal_pdf_parser_diagnostic": "malformed numeric token; parser substituted 0.0"
+  },
+  "verification": {
+    "focused_pytest_command": "python -m pytest tests/test_prompt_service.py tests/test_prompt_dry_run_validation.py tests/test_prompt_fixture_corpus_regression.py tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py tests/test_render_service_public_advisory.py tests/test_render_service_public_prose.py -q",
+    "focused_pytest_result": "158 passed",
+    "public_report_quality_gate": "passed",
+    "prompt_fixture_regression_gate": {
+      "result": "passed",
+      "total_tokens": 99671,
+      "baseline_total_tokens": 99671,
+      "estimated_cost_usd": 0.022696,
+      "baseline_estimated_cost_usd": 0.022696
+    }
+  }
+}

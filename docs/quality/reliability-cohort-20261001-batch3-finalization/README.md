@@ -5,6 +5,15 @@ corpus: Algolia, Bain & Company, Bigcommerce, Criteo, and DHL eCommerce. The
 source manifest is retained in [`frozen_cohort.json`](frozen_cohort.json).
 The full 20-report cohort was not run.
 
+The latest follow-up for this same manifest is retained in
+[`report-agnostic-prompt-repair-20261001/`](report-agnostic-prompt-repair-20261001/README.md).
+At implementation `eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6`, it restored
+both validation and readiness to 5/5 after the immediate predecessor at
+`9db7f2e19b697517485926c0611e1126e5382343` regressed to 2/5 readiness passes.
+The follow-up retains new final-package lineage hashes and current usage
+metrics; the original package-materialization result below remains a separate
+historical measurement.
+
 The runner used fresh isolated state and the normal production report workflow.
 Publication was disabled; every report stopped at the human review boundary.
 The full workflow database, generated report text, prompts, and provider
@@ -12,10 +21,11 @@ responses remain under the ignored `tmp/` run directory. This pack retains the
 manifest, typed cohort outcomes, hashes, package-lineage checks, and scalar
 usage metrics only.
 
-## Result
+## Original package-materialization result
 
-The same pinned sources were run once immediately before this fix and once
-after it. The first run passed readiness for four reports; Criteo ended with
+The following two runs bracket the original package-materialization fix;
+later report-copy changes are recorded in the follow-up linked above. The
+first run passed readiness for four reports; Criteo ended with
 `validation_failed`. In the fresh run at `11ca2ce3e73cfc56741a140da52eba82b1882068`,
 all five passed validation and report-level publication readiness. Each has a
 current final `retained_claim_validation` package referenced by its readiness

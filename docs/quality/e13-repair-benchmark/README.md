@@ -467,6 +467,8 @@ Full private audits and run data remain in isolated local storage. The result
 contains no rendered prompt, source extract, model response, or replacement
 copy.
 
+
+
 E13 remains **Active**. This change removes the three observed atomic
 repair-decision guard failures, but it does not yet establish atomic scope
 safety across candidate artifacts: the scorecard still records 8/12
@@ -879,3 +881,57 @@ This repair fixes the separate Emplifi summary safe-removal merge defect in the
 five-report normal-processing cohort. E13 continues to serve as a historical
 repair benchmark; its residual candidate failures stayed blocked and were not
 used to waive current claim or scope validation.
+
+## Current measurement disposition — 2026-10-01, implementation SHA `eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6`
+
+The unchanged seven frozen cases were replayed from fresh isolated state. Three
+of the five A21 cases no longer reproduced; the other two failed validation
+after two candidate attempts each. The Mobile case remained reproducible and
+failed after its third bounded candidate. The DoubleVerify case passed final
+validation after two candidates, with the second candidate promoted. The strict
+scorecard nevertheless rejects that repair as a success: both candidates
+exceeded the frozen manifest's expected legal mutation scope. This leaves
+strict success@1 and success@3 at 0/4 among the four currently reproducible
+cases. All three manifest comparisons remain identity-incompatible, so no
+paired improvement or residual-odds reduction is claimed.
+
+| Measure | Result |
+| --- | ---: |
+| Frozen cases | 7 |
+| Currently reproducible / no longer reproducible | 4 / 3 |
+| Strict success@1 / success@3 among reproducible cases | 0/4 / 0/4 |
+| Candidate attempts / rolled back / promoted | 9 / 8 / 1 |
+| Frozen-scope out-of-scope attempts | 6 |
+| Unsupported-evidence introduction attempts | 7 |
+| New hard failures introduced | 18 across 8 attempts |
+| Provenance or lineage introduction attempts | 1 |
+| Whole-replay usage | 165 calls; 1,383,267 input + 596,426 output tokens; USD 0.415041 |
+| Historical comparison | Incompatible for all three manifests |
+
+The DoubleVerify distinction matters: its final validator passed, but the
+candidate's declared mutation paths did not fit the frozen expected scope, so
+the strict E13 repair scorecard does not count it as a successful repair. The
+runtime recorded its own mutation-scope check as passing; the frozen comparison
+is stricter for this historical case. The scorecard rule and manifest were not
+changed for this replay.
+
+The isolated IAS first-attempt canary passed validation and publication
+readiness in one workflow attempt and ended at `awaiting_review`. Publication
+was disabled; the readiness job made zero provider calls and had zero external
+effects. The workflow logged one nonfatal malformed PDF numeric-token
+diagnostic and substituted `0.0`; it did not block the report. The canary used
+46 calls, 380,377 input and 94,421 output tokens, estimated USD 0.079769, in
+707.233 seconds, with no operator intervention.
+
+The focused prompt, public-editorial, and rendering suite passed 158 tests. The
+public-report-quality and prompt-fixture regression gates passed; the latter
+retained 99,671 tokens and estimated USD 0.022696, equal to its configured
+baseline. The full 20-report cohort was not run. Sanitized results and detailed
+usage are in [the 2026-10-01 measurement](results/2026-10-01-eae746de.json)
+(see its SHA-256 sidecar).
+
+E13 remains **Active**. The five-report production cohort reached 5/5
+publication-readiness passes, but the frozen repair corpus still has no strict
+success@1/@3, six frozen-scope violations, and seven unsupported-evidence
+introduction attempts. These repair findings are not substituted for the
+separate production readiness result.

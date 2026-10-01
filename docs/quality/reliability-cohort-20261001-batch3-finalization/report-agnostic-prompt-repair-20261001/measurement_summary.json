@@ -1,0 +1,156 @@
+{
+  "cohort": {
+    "members": [
+      {
+        "publisher_id": "Algolia",
+        "source_md5": "86858bdcb370266f26c29b40316a4db0"
+      },
+      {
+        "publisher_id": "Bain & Company",
+        "source_md5": "77bc67b2bc98187d9d589a4e69fd85f7"
+      },
+      {
+        "publisher_id": "Bigcommerce",
+        "source_md5": "0a019f840c3f89ad0a9672e058d1ff83"
+      },
+      {
+        "publisher_id": "Criteo",
+        "source_md5": "979a63a1633a7f2ccc5123540a079d79"
+      },
+      {
+        "publisher_id": "DHL eCommerce",
+        "source_md5": "9b97626fc83c086961a7416d65e05faa"
+      }
+    ],
+    "name": "frozen_representative_reliability_20_next_unrun_five_batch_3",
+    "size": 5,
+    "source_manifest_sha256": "fccce9143558f20b3f277f03e79c1b3cd78699fb3237f0336e1364a4cc1cda6d"
+  },
+  "comparison_to_immediate_predecessor": {
+    "baseline": {
+      "bounded_automatic_repair": true,
+      "cohort_result_sha256": "358af099e4c36b3d1fc0e41ae02a5673f664f8a665811d2957b5432f9c545223",
+      "cost_usd": 0.446381,
+      "duration_seconds": 4455.113,
+      "implementation_git_sha": "9db7f2e19b697517485926c0611e1126e5382343",
+      "input_tokens": 1688871,
+      "model_provider_calls": 220,
+      "operator_intervention_count": 0,
+      "output_tokens": 596703,
+      "readiness_passes": 2,
+      "terminal_failure_codes": {
+        "validation_failed": 3
+      },
+      "validation_passes": 0
+    },
+    "causal_claim": "not established; provider outputs are stochastic",
+    "current": {
+      "bounded_automatic_repair": true,
+      "cohort_result_sha256": "a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4",
+      "cost_usd": 0.295323,
+      "duration_seconds": 2537.774,
+      "implementation_git_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+      "input_tokens": 1379126,
+      "model_provider_calls": 173,
+      "operator_intervention_count": 0,
+      "output_tokens": 333098,
+      "readiness_passes": 5,
+      "terminal_failure_codes": {},
+      "validation_passes": 5
+    },
+    "delta": {
+      "cost_usd": {
+        "absolute": -0.151058,
+        "percent": -33.84
+      },
+      "duration_seconds": {
+        "absolute": -1917.339,
+        "percent": -43.04
+      },
+      "input_tokens": {
+        "absolute": -309745,
+        "percent": -18.34
+      },
+      "model_provider_calls": {
+        "absolute": -47,
+        "percent": -21.36
+      },
+      "output_tokens": {
+        "absolute": -263605,
+        "percent": -44.18
+      }
+    }
+  },
+  "measurement_kind": "five_report_frozen_cohort_report_agnostic_prompt_repair",
+  "outcomes": {
+    "awaiting_review": 5,
+    "eligible_final_reports": 5,
+    "final_packages_materialized_and_bound": 5,
+    "linkedin_word_counts": {
+      "Algolia": {
+        "character_count": 335,
+        "word_count": 48
+      },
+      "Bain & Company": {
+        "character_count": 329,
+        "word_count": 46
+      },
+      "Bigcommerce": {
+        "character_count": 619,
+        "word_count": 95
+      },
+      "Criteo": {
+        "character_count": 301,
+        "word_count": 47
+      },
+      "DHL eCommerce": {
+        "character_count": 469,
+        "word_count": 62
+      }
+    },
+    "public_editorial_disabled_rule_waivers": 0,
+    "public_editorial_hard_failures": 0,
+    "public_editorial_issues": 0,
+    "public_editorial_quality_passes": 5,
+    "readiness_passes": 5,
+    "terminal_failures": 0,
+    "unresolved_factual_claims": 0,
+    "unsupported_factual_claims": 0,
+    "validation_passes": 5,
+    "validation_warnings": 0
+  },
+  "readiness_and_publication": {
+    "approval_records": 0,
+    "external_effects_empty": true,
+    "provider_usage_payloads_empty": true,
+    "publication_attempts": 0,
+    "published_records": 0,
+    "readiness_jobs_succeeded": 5,
+    "readiness_provider_calls": 0
+  },
+  "retained_evidence": {
+    "cohort_result": "cohort_result.json",
+    "contains_generated_report_text": false,
+    "final_package_lineage": "final_package_lineage.json",
+    "source_manifest_reference": "../frozen_cohort.json"
+  },
+  "run": {
+    "cohort_result_sha256": "a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4",
+    "cohort_run_directory": "frozen-reliability-awmepi77",
+    "duration_seconds": 2537.774,
+    "implementation_git_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+    "isolated_fresh_state": true,
+    "production_run_directory": "ias-first-attempt-ii2fq93k",
+    "publication_disabled": true
+  },
+  "schema_version": "1.0",
+  "usage": {
+    "bounded_automatic_repair": true,
+    "cost_usd": 0.295323,
+    "duration_seconds": 2537.774,
+    "input_tokens": 1379126,
+    "model_provider_calls": 173,
+    "operator_intervention_count": 0,
+    "output_tokens": 333098
+  }
+}

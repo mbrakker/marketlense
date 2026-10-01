@@ -59,16 +59,22 @@ provider calls, which must be zero.
 The distinct 2026-10-01 batch-3 subset—Algolia, Bain & Company, Bigcommerce,
 Criteo, and DHL eCommerce—is retained in
 [`reliability-cohort-20261001-batch3-finalization/`](reliability-cohort-20261001-batch3-finalization/).
-This fresh-state production run improved from four to five report-level
-readiness passes. All five eligible reports have final packages bound to their
-final artifact, report, source, evidence, validator, configuration, policy,
-publication-projection, and semantic-execution identities. It recorded zero
-unexplained `package_missing`, zero `package_invalid`, zero `not_publishable`,
-and zero readiness-stage provider calls. Publication was disabled. The pack
-retains exact manifest/result hashes, per-report package hashes and lineage
+The original package-materialization measurement at `11ca2ce3` recorded 5/5
+readiness passes after its four-pass predecessor. The later report-copy
+regression and report-agnostic prompt repair are retained in the
+[follow-up measurement](reliability-cohort-20261001-batch3-finalization/report-agnostic-prompt-repair-20261001/README.md):
+readiness recovered from 2/5 at `9db7f2e1` to 5/5 at
+`eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6`, and validation recovered from 0/5
+to 5/5. All five current final packages bind to their final artifact, report,
+source, evidence, validator, configuration, policy, publication-projection,
+and semantic-execution identities, with zero unsupported or unresolved
+factual claims. The run recorded zero validation warnings, public-editorial
+issues, hard failures, or disabled-rule waivers, and zero readiness-stage
+provider calls. Publication was disabled. The retained follow-up includes the
+unchanged cohort result, manifest/result hashes, per-report package-lineage
 checks, typed outcomes, and aggregate calls, tokens, cost, and duration; full
-workflow state and model payloads remain in ignored run storage. The before
-and after runs are stochastic observations, not a controlled causal estimate.
+workflow state and model payloads remain in ignored run storage. These
+comparisons are stochastic observations, not controlled causal estimates.
 
 ## Repair-effectiveness evidence
 
@@ -581,3 +587,17 @@ reconciliation status, and persisted actual-use counts in the evidence notes.
 Do not include source HTML, report paragraphs, prompts, provider responses, or
 credentials. The strict collector remains the exact-head authority for the
 resulting snapshots and log-content assessment.
+
+### Report readiness and frozen repair measurements — 2026-10-01
+
+The report-agnostic repair follow-up for the pinned Algolia, Bain & Company,
+Bigcommerce, Criteo, and DHL eCommerce cohort records 5/5 validation and
+publication-readiness passes, bound final grounding packages, zero readiness
+provider calls, and no publication. Its retained lineage and cohort evidence
+are in
+[`reliability-cohort-20261001-batch3-finalization/report-agnostic-prompt-repair-20261001/README.md`](reliability-cohort-20261001-batch3-finalization/report-agnostic-prompt-repair-20261001/README.md).
+The unchanged seven-case E13 repair replay and isolated IAS canary are retained
+in the [2026-10-01 E13 measurement](e13-repair-benchmark/results/2026-10-01-eae746de.json)
+and [E13 benchmark notes](e13-repair-benchmark/README.md). The repair corpus
+remains active: strict candidate success@1/@3 is 0/4 among currently
+reproducible cases, and historical scorecard comparisons remain incompatible.
