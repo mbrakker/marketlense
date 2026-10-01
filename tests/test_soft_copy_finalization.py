@@ -556,6 +556,95 @@ def test_finalization_drops_provenance_for_rolled_back_repair_text() -> None:
     assert_retained_soft_copy_claims_match_public_copy(finalized)
 
 
+def test_targeted_summary_removal_preserves_unrelated_claim_text() -> None:
+    retained_tldr = "The report describes a focused market shift."
+    retained_card = "The market response continues to evolve."
+    retained_summary_claim = "The report documents the strategic shift."
+    removed_claim = "An unsupported adjacent claim was removed."
+    original_summary = {
+        "tldr": retained_tldr,
+        "card_tldr_compact": retained_card,
+        "executive_summary": f"{retained_summary_claim} {removed_claim}",
+        "claim_evidence_map": [],
+    }
+    original = _assemble_soft_copy(
+        summary=original_summary,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": retained_tldr,
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": retained_card,
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": retained_summary_claim,
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+                {
+                    "claim": removed_claim,
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                },
+            ]
+        },
+    )
+    candidate_summary = {
+        **original_summary,
+        "executive_summary": retained_summary_claim,
+        "claim_evidence_map": [
+            {
+                "claim": "The strategic segment recorded 52% growth.",
+                "evidence_id": "section-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "section-1",
+                        "source_pack": "doc_map",
+                        "page": 1,
+                        "text": "A strategic segment was discussed.",
+                    }
+                ],
+            },
+            {
+                "claim": "The report identifies data adoption.",
+                "evidence_id": "finding-1",
+                "evidence": "The report identifies data adoption.",
+            },
+        ],
+    }
+    removed_claim_hash = sha256(removed_claim.encode()).hexdigest()
+    removed_claim_id = f"soft_copy:summary:{removed_claim_hash[:16]}"
+
+    finalized = _assemble_soft_copy(
+        summary=candidate_summary,
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "evidence": "The report identifies data adoption.",
+                        "pages": [1],
+                    }
+                ]
+            }
+        },
+        existing_soft_copy_claim_provenance=original[
+            "soft_copy_claim_provenance"
+        ],
+        replaced_soft_copy_claim_ids={"summary": [removed_claim_id]},
+    )
+
+    assert finalized["summary"]["tldr"] == retained_tldr
+    assert finalized["summary"]["card_tldr_compact"] == retained_card
+    assert finalized["summary"]["executive_summary"] == retained_summary_claim
+    assert_retained_soft_copy_claims_match_public_copy(finalized)
+
+
 def test_merchant_risk_council_summary_discards_rolled_back_repair_provenance() -> None:
     final_claim = "The report summarizes merchant payment operations."
     rolled_back_claim = "The report says digital wallet use rose 31% in 2026."

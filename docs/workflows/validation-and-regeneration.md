@@ -295,6 +295,14 @@ each producing identity matches its retained prompt identity and regeneration
 requirement, and rejects unrelated cache changes. Targeted patches merge onto
 the last promoted artifact, keeping untargeted sibling fields and items
 unchanged even when a model response includes extra changes.
+When a targeted Summary repair leaves all required copy fields populated and
+the remaining sentences exactly covered by retained provenance after the
+replaced claim IDs are removed, assembly preserves that copy instead of running
+the source-backed whole-Summary fallback. If a required field is empty or that
+lineage is incomplete, the fallback and provenance checks still run; the atomic
+merge and scope gate continue to constrain promotion to planned paths. An
+unsupported sibling remains blocking rather than being silently rewritten as
+part of a targeted mutation.
 For an atomic failed final insight, `REMOVE_CLAIM/safe_removal` resolves its
 stable ID from the validation issue, excludes that ID from both final and
 candidate pools, and leaves sibling insights and their shared evidence intact.

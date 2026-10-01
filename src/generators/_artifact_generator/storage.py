@@ -301,8 +301,50 @@ def assemble_artifacts_payload(
         doc_map=doc_map,
         evidence_packs=evidence_packs,
     )
+    replaced_summary_claim_ids = set(
+        (replaced_soft_copy_claim_ids or {}).get("summary") or []
+    )
+    retained_summary_claims = (
+        [
+            claim
+            for claim in soft_copy_claim_provenance_from_payload(
+                existing_soft_copy_claim_provenance
+            )
+            if claim.artifact_family == "summary"
+        ]
+        if isinstance(existing_soft_copy_claim_provenance, dict)
+        and isinstance(existing_soft_copy_claim_provenance.get("claims"), list)
+        else []
+    )
+    retained_summary_after_replacements = [
+        claim
+        for claim in retained_summary_claims
+        if claim.claim_id not in replaced_summary_claim_ids
+    ]
+    summary_current_text_has_exact_retained_lineage = bool(
+        replaced_summary_claim_ids
+        and retained_soft_copy_claims_cover_text(
+            text=soft_copy_public_text("summary", summary),
+            claims=retained_summary_after_replacements,
+        )
+    )
+    summary_has_required_copy_fields = all(
+        _s(summary.get(field)).strip()
+        for field in ("tldr", "card_tldr_compact", "executive_summary")
+    )
+    summary_repair_in_progress = bool(
+        summary_has_required_copy_fields
+        and (
+            (soft_copy_repair_texts or {}).get("summary")
+            or summary_current_text_has_exact_retained_lineage
+        )
+    )
     try:
-        summary_fallback_applied = constrain_summary_to_source_backed_claims(summary)
+        summary_fallback_applied = (
+            False
+            if summary_repair_in_progress
+            else constrain_summary_to_source_backed_claims(summary)
+        )
     except AppError as exc:
         if exc.code != "card_tldr_compact_invalid":
             raise
@@ -346,27 +388,15 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         soft_copy_claim_bindings=soft_copy_claim_bindings,
     )
-    retained_summary_claims = (
-        [
-            claim
-            for claim in soft_copy_claim_provenance_from_payload(
-                existing_soft_copy_claim_provenance
-            )
-            if claim.artifact_family == "summary"
-        ]
-        if isinstance(existing_soft_copy_claim_provenance, dict)
-        and isinstance(existing_soft_copy_claim_provenance.get("claims"), list)
-        else []
-    )
-    summary_already_bound = not soft_copy_claim_bindings.get(
-        "summary"
+    summary_already_bound = summary_has_required_copy_fields and not (
+        soft_copy_claim_bindings.get("summary")
     ) and retained_soft_copy_claims_cover_text(
         text=soft_copy_public_text("summary", summary),
-        claims=retained_summary_claims,
+        claims=retained_summary_after_replacements,
     )
     if (
         not summary_fallback_applied
-        and "summary" not in (soft_copy_repair_texts or {})
+        and not summary_repair_in_progress
         and not summary_already_bound
         and summary_has_unbound_material_sentences(
             summary=summary,

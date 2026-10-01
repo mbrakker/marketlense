@@ -240,7 +240,7 @@ def _normalize_for_quantity_extraction(text: str) -> str:
             ch.isalnum()
             or ch.isspace()
             or ch in _PRESERVED_NUMERIC_PUNCT
-            or ch in {"-", "/", ":", ">", "<", "=", "~", "≈"}
+            or ch in {"-", "/", ":", ";", ">", "<", "=", "~", "≈"}
         ):
             cleaned.append(ch)
         else:

@@ -114,6 +114,26 @@ def test_month_unit_is_not_parsed_as_million_magnitude() -> None:
     assert not any(q.value == 12_000_000 for q in parsed)
 
 
+def test_semicolon_does_not_join_a_year_to_the_following_count_noun() -> None:
+    parsed = extract_quantities(
+        "The survey was published in 2024; respondents described their priorities."
+    )
+    explicitly_counted = extract_quantities(
+        "The survey included 2024 respondents who described their priorities."
+    )
+
+    assert not any(
+        quantity.unit_family == "count" and quantity.unit == "respondent"
+        for quantity in parsed
+    )
+    assert any(
+        quantity.value == 2024
+        and quantity.unit_family == "count"
+        and quantity.unit == "respondent"
+        for quantity in explicitly_counted
+    )
+
+
 def test_duration_is_one_time_quantity_and_preserves_its_timeframe() -> None:
     parsed = extract_quantities("Average daily viewing is 0:52 in 2024E.")
 

@@ -84,6 +84,9 @@ after neutral descriptive words following a magnitude. It also treats `H:MM`
 viewing durations as one minute-valued time quantity (rather than independent
 hour and minute numbers), recognizes financial source shorthand `mil` and `bil`
 as million and billion, and recognizes compact forecast labels such as `2024E`.
+Semicolons remain quantity boundaries, so a year followed by `; respondents`
+does not become a respondent count; an explicitly connected phrase such as
+`2024 respondents` remains a count.
 The `k` thousand abbreviation must be attached to a value or an explicit
 currency-scale form; punctuation in `U.K.` does not supply a numeric magnitude.
 An `index` or `indices` header can identify a following unadorned index value.
