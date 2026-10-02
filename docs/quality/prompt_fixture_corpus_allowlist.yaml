@@ -6,3 +6,18 @@ allowlist:
     expires_on: "2026-12-31"
     max_delta_absolute: 54
     max_delta_percent: 0.0138
+  - pattern: "totals.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Table periods must travel with numeric evidence, and compact public copy must retain restrictive source modifiers."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 352
+  - pattern: "families.publishing.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Shared public-copy prompts preserve restrictive source modifiers and cannot infer metric periods from report context."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 305
+  - pattern: "families.report.total_tokens"
+    owner: "MarketLense engineering"
+    reason: "Findings prompts retain table/chart titles and periods with their numeric evidence."
+    expires_on: "2026-12-31"
+    max_delta_absolute: 47

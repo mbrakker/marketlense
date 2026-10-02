@@ -62,6 +62,11 @@ retained evidence ID that states each factual detail. A broad coverage finding
 supports only its broad scope, while a DocMap section ID may support a specific
 list when that section contains it. Public paraphrases preserve the source's
 proposition, scope, modality, and certainty rather than strengthening them.
+Numeric table and chart findings retain their displayed title and period in
+the linked evidence when those details establish the metric's identity or
+scope. A report title or filename cannot fill a missing period. Public copy
+keeps each metric bound to that evidence and preserves restrictive modifiers
+that limit its subject, including in shortened headlines and posts.
 They also preserve material frequency and likelihood qualifiers such as
 `often` and `may`; compact copy cannot drop them for brevity. Nearby or
 co-located findings do not establish a relationship, contrast, importance, or

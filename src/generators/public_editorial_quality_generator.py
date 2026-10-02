@@ -1689,14 +1689,29 @@ def _values_near_label(text: str, label: str) -> set[str]:
         for label_match in label_pattern.finditer(fragment):
             if _is_compound_category_header(fragment, label_match.start()):
                 continue
-            window = fragment[label_match.end() : label_match.end() + 80]
-            value_match = re.search(
-                rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])", window, re.IGNORECASE
+            prefix = fragment[: label_match.start()]
+            preceding_value = re.search(
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+$",
+                prefix,
+                re.IGNORECASE,
             )
-            if value_match:
-                value = _normalized_relationship_value(value_match.group(0))
+            if preceding_value:
+                value = _normalized_relationship_value(
+                    preceding_value.group("value")
+                )
                 if value and not _is_year_value(value):
                     values.add(value)
+            else:
+                window = fragment[label_match.end() : label_match.end() + 80]
+                value_match = re.search(
+                    rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])",
+                    window,
+                    re.IGNORECASE,
+                )
+                if value_match:
+                    value = _normalized_relationship_value(value_match.group(0))
+                    if value and not _is_year_value(value):
+                        values.add(value)
     return values
 
 

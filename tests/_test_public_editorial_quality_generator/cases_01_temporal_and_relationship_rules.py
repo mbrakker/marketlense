@@ -92,6 +92,36 @@ def test_ordered_category_value_series_rejects_swapped_values_and_categories() -
     )
 
 
+def test_region_metric_values_allow_value_before_region_without_losing_binding() -> None:
+    evidence = (
+        "The Global Quality Benchmarks table lists Q1 2026 Brand Suitability "
+        "Violation Rates of APAC 8.0%, EMEA 6.3%, LATAM 6.0%, and North America 3.7%."
+    )
+    valid = evaluate_public_editorial_quality(
+        report_id="regional-brand-suitability",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Q1 2026 Brand Suitability Violation Rates were 8.0% in APAC, "
+                "6.3% in EMEA, 6.0% in LATAM, and 3.7% in North America."
+            ),
+            evidence=evidence,
+        ),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="regional-brand-suitability",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Q1 2026 Brand Suitability Violation Rates were 6.3% in APAC, "
+                "8.0% in EMEA, 6.0% in LATAM, and 3.7% in North America."
+            ),
+            evidence=evidence,
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+
+
 def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:
     fixture = _relationship_fixture("doubleverify_emea_engagement.json")
     evidence = fixture["evidence"]

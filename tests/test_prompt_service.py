@@ -185,6 +185,10 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
         _ctx(),
     )
 
+    normalized_findings_system = " ".join(findings_prompt.system.text.split())
+    assert "include the displayed title and period/timeframe from the same page in `evidence`" in (
+        normalized_findings_system
+    )
     prompt_text = findings_prompt.user.text.casefold()
 
     assert "materially central" in prompt_text
@@ -299,6 +303,13 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     assert (
         "Keep entity relationships and category labels exactly scoped"
         in summary_prompt.user.text
+    )
+    normalized_summary = " ".join(summary_prompt.user.text.split())
+    assert "A report title or context cannot supply a metric's period" in (
+        normalized_summary
+    )
+    assert "Preserve modifiers that limit the source's subject or claim" in (
+        normalized_summary
     )
     assert (
         "Do not describe the post or selected theme as representative or as a lens"

@@ -27,6 +27,9 @@ text: |
     especially value/category, subject/population, period, qualifiers, and
     named actions. Narrow unsupported details; a generic recommendation-list
     reference cannot support a named action.
+  - For table/chart numbers, include the displayed title and period/timeframe
+    from the same page in `evidence`; do not infer it from report metadata or
+    DocMap. Omit unsupported bindings.
   - When a finding compares periods, retain the source's distinct temporal qualifiers exactly, including quarter, half, month/year, fiscal year, and forecast marker. Do not collapse distinct periods to a shared year or infer a period not present in the evidence.
   - For an ordered metric series, preserve every source label/value tuple. A value may not be moved to another year, forecast period, quarter, category, or row even when that value appears elsewhere in the retrieved evidence.
   - "id" must be stable and unique within this output.
