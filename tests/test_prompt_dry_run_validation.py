@@ -178,9 +178,27 @@ def test_regeneration_prompts_require_exact_retained_evidence_bindings(
         _ctx(),
     )
 
-    assert "exact page" in prompt_set.user.text
+    if namespace == "report_vs/artifacts/regenerate/insights_final":
+        assert "exact canonical source page(s)" in prompt_set.user.text
+    else:
+        assert "exact page" in prompt_set.user.text
     assert "empty" in prompt_set.user.text
     assert "numeric value" in prompt_set.user.text
+
+
+def test_insight_rebinding_prompt_requires_direct_source_evidence() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "grounding_package.relevant_evidence" in prompt_set.user.text
+    assert "direct finding or quote ID" in prompt_set.user.text
+    assert "Never use a DocMap section ID" in prompt_set.user.text
 
 
 @pytest.mark.parametrize(

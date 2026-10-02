@@ -75,6 +75,17 @@ def test_percent_decimal_and_ratio_forms_match() -> None:
     assert _any_match("0.5% churn", "0.005 churn rate")
 
 
+def test_spelled_ratio_matches_source_using_numeric_of_form() -> None:
+    assert _numeric_grounding_match(
+        "Four in five consumers shop online weekly.",
+        "4 of 5 consumers shop online weekly.",
+    )
+    assert not _numeric_grounding_match(
+        "Three in five consumers shop online weekly.",
+        "4 of 5 consumers shop online weekly.",
+    )
+
+
 def test_hyphenated_percentage_point_matches_spelled_out_points() -> None:
     """A hyphenated "percentage-point" is pp, not a percent value.
 

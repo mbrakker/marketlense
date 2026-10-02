@@ -627,7 +627,12 @@ def test_temporal_integrity_blocks_malformed_between_comparison() -> None:
 
 @pytest.mark.parametrize(
     ("claim_value", "source_value"),
-    [("50.0%", "50%"), ("$3 trillion", "$3T"), ("3T", "3000B")],
+    [
+        ("50.0%", "50%"),
+        ("$3 trillion", "$3T"),
+        ("3T", "3000B"),
+        ("four in five", "4 of 5"),
+    ],
 )
 def test_public_numeric_validation_uses_quantity_equivalence(
     claim_value: str, source_value: str
@@ -637,6 +642,24 @@ def test_public_numeric_validation_uses_quantity_equivalence(
         artifacts=_temporal_artifacts(
             text=f"Revenue reached {claim_value} in 2025.",
             evidence=f"Revenue reached {source_value} in 2025.",
+        ),
+    )
+
+    assert "public_editorial_quality.unsupported_numeric_claim" not in _rule_ids(report)
+
+
+def test_public_numeric_validation_accepts_spelled_vs_numeric_ratio() -> None:
+    report = evaluate_public_editorial_quality(
+        report_id="ratio-wording-equivalence",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Four in five consumers said they could not go a week without "
+                "shopping online."
+            ),
+            evidence=(
+                "The report states 4 of 5 consumers could not go a week without "
+                "shopping online."
+            ),
         ),
     )
 

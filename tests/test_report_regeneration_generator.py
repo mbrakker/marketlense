@@ -1025,6 +1025,31 @@ class _MobileSoWhatOpenAIClient(_FakeOpenAIClient):
         return super()._legacy_chat_json(req, ctx)
 
 
+class _EvidenceRebindOpenAIClient(_FakeOpenAIClient):
+    def __init__(self, evidence_id: str) -> None:
+        super().__init__()
+        self.evidence_id = evidence_id
+
+    def _legacy_chat_json(self, req, ctx):
+        if "system::report_vs/artifacts/regenerate/insights_final" in req.system_prompt:
+            self.calls.append(req)
+            repaired = {
+                "id": "insight-1",
+                "text": "The repaired insight follows retained source evidence.",
+                "evidence_id": self.evidence_id,
+                "evidence": "Model supplied evidence text.",
+                "metric": dict(METRIC),
+                "pages": [1],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps({"insights_final": [repaired]}),
+                parsed_json={"insights_final": [repaired]},
+                request_id="req-evidence-rebind",
+            )
+        return super()._legacy_chat_json(req, ctx)
+
+
 class _ClaimScopedExpertOpenAIClient(_FakeOpenAIClient):
     def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/expert_comment" in req.system_prompt:
@@ -2587,6 +2612,117 @@ def test_insight_so_what_repair_changes_only_declared_leaf(tmp_path):
         key: value for key, value in original.items() if key != "so_what"
     }
     assert len(openai_client.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("selected_evidence_id", "expect_rejection"),
+    [("sec-1", True), ("repair-finding", False)],
+)
+def test_insight_evidence_rebind_requires_relevant_direct_source_with_page(
+    tmp_path, selected_evidence_id: str, expect_rejection: bool
+):
+    current = _current_artifacts()
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "f1",
+                    "text": "Failed source finding.",
+                    "evidence": "Failed source finding.",
+                    "pages": [1],
+                },
+                {
+                    "id": "repair-finding",
+                    "text": "A separately retained direct source finding.",
+                    "evidence": "A separately retained direct source finding.",
+                    "pages": [7],
+                },
+            ]
+        }
+    }
+    doc_map = {
+        "doc_id": "doc-1",
+        "sections": [
+            {
+                "id": "sec-1",
+                "title": "Source section",
+                "summary": "A section-level summary.",
+                "pages": [1],
+            }
+        ],
+    }
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        regenerate_steps=["insights_candidates", "insights_final"],
+        prompt_namespaces=[
+            "report_vs/artifacts/regenerate/insights_candidates",
+            "report_vs/artifacts/regenerate/insights_final",
+        ],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="insights:insight-1.text",
+                message="Rebind the insight to retained alternative source evidence.",
+                severity="error",
+                evidence_ids=["f1"],
+                excluded_evidence_ids=["f1"],
+                pages=[1],
+            )
+        ],
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+        allowed_paths=["insights_final[item=insight-1].evidence_id"],
+    )
+    request = ArtifactRegenerationRequest(
+        report_id="report-1",
+        report_name="report-1",
+        attempt_index=1,
+        plan=RegenerationPlan(
+            mode="targeted",
+            targets=[target],
+            unmappable_issues=[],
+            broad_retry_allowed=False,
+        ),
+        current_artifacts=current,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        source_status=current["source_status"],
+        categories=["Category"],
+        vector_store_id=None,
+        md5="md5",
+    )
+    openai_client = _EvidenceRebindOpenAIClient(selected_evidence_id)
+
+    if expect_rejection:
+        with pytest.raises(AppError) as error:
+            regenerate_artifacts(
+                request,
+                openai_client=openai_client,
+                prompt_client=_FakePromptClient(),
+            )
+        assert error.value.code == "regeneration_evidence_rebind_unresolved"
+        return
+
+    response = regenerate_artifacts(
+        request,
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired = response.updated_artifacts["insights_final"][0]
+    assert repaired["evidence_id"] == "repair-finding"
+    assert repaired["pages"] == [7]
+    assert repaired["evidence"] == "A separately retained direct source finding."
+    assert repaired["evidence_spans"] == [
+        {
+            "evidence_id": "repair-finding",
+            "source_pack": "findings",
+            "page": 7,
+            "text": "A separately retained direct source finding.",
+        }
+    ]
 
 
 def test_canonical_metric_copy_changes_only_declared_metric_leaf(tmp_path):

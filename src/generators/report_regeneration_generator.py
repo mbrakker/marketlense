@@ -4301,19 +4301,53 @@ def _regenerate_one_final_insight(
     repaired["id"] = insight_id
     if execution.target.repair_action == "REBIND_EVIDENCE":
         rebound_evidence_id = _s(repaired.get("evidence_id")).strip()
+        package_evidence_ids = {
+            _s(value).strip().casefold()
+            for value in execution.grounding_package.get("evidence_ids", [])
+            if _s(value).strip()
+        }
+        quarantined_evidence_ids = {
+            _s(value).strip().casefold()
+            for value in (
+                list(execution.target.quarantined_evidence_ids)
+                + list(
+                    execution.grounding_package.get(
+                        "quarantined_evidence_ids", []
+                    )
+                )
+            )
+            if _s(value).strip()
+        }
+        direct_evidence_packs = {
+            pack_name: execution.runtime.safe_evidence[pack_name]
+            for pack_name in ("findings", "quote_candidates")
+            if pack_name in execution.runtime.safe_evidence
+        }
         canonical_span_index = artifact_evidence_span_index(
-            doc_map=execution.runtime.safe_doc_map,
-            evidence_packs=execution.runtime.safe_evidence,
+            doc_map={},
+            evidence_packs=direct_evidence_packs,
         )
-        canonical_spans = canonical_span_index.get(
-            rebound_evidence_id.casefold(), []
-        )
-        if not rebound_evidence_id or not canonical_spans:
+        canonical_spans = [
+            span
+            for span in canonical_span_index.get(
+                rebound_evidence_id.casefold(), []
+            )
+            if span.get("source_pack") in {"findings", "quote_candidates"}
+            and isinstance(span.get("page"), int)
+            and span["page"] > 0
+            and _s(span.get("text")).strip()
+        ]
+        if (
+            not rebound_evidence_id
+            or rebound_evidence_id.casefold() not in package_evidence_ids
+            or rebound_evidence_id.casefold() in quarantined_evidence_ids
+            or not canonical_spans
+        ):
             raise AppError(
                 code="regeneration_evidence_rebind_unresolved",
                 message=(
-                    "The selected retained evidence has no canonical source span "
-                    "for insight rebinding."
+                    "The selected evidence is not an eligible retained direct source "
+                    "finding with a canonical page for insight rebinding."
                 ),
                 retryable=False,
                 context={
@@ -4328,15 +4362,23 @@ def _regenerate_one_final_insight(
             insights_candidates=[],
             insights_final=[canonical_insight],
             quotes_final=[],
-            doc_map=execution.runtime.safe_doc_map,
-            evidence_packs=execution.runtime.safe_evidence,
+            doc_map={},
+            evidence_packs=direct_evidence_packs,
         )
-        if not canonical_insight.get("evidence_spans"):
+        rebound_spans = canonical_insight.get("evidence_spans")
+        if not any(
+            isinstance(span, dict)
+            and span.get("source_pack") in {"findings", "quote_candidates"}
+            and isinstance(span.get("page"), int)
+            and span["page"] > 0
+            and _s(span.get("text")).strip()
+            for span in rebound_spans or []
+        ):
             raise AppError(
                 code="regeneration_evidence_rebind_unresolved",
                 message=(
-                    "The selected retained evidence could not be bound to a "
-                    "canonical source span for insight rebinding."
+                    "The selected direct evidence could not be bound to a canonical "
+                    "source page for insight rebinding."
                 ),
                 retryable=False,
                 context={

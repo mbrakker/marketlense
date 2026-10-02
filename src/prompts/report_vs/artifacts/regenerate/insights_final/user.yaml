@@ -31,7 +31,7 @@ text: |
     Never change or remove sibling insight IDs or array members unless their
     exact paths are authorized.
   - Follow editorial-plan priority order and choose one supported representative for each theme. If the target count exceeds the number of themes, fill the remaining slots with distinct supported candidates from the supplied candidate set; do not use near-duplicates.
-  - For every retained insight, preserve a stable `id` and copy one existing `evidence_id` with its exact page number(s) from the supplied candidate or grounding package. Remove an insight rather than output an empty, invented, or unverifiable evidence binding.
+  - For every retained insight, preserve its stable `id` and bind only to a direct finding or quote ID in `grounding_package.relevant_evidence`, with that entry's exact canonical source page(s). Never use a DocMap section ID as an insight evidence ID. Remove an insight rather than output an empty, unsupported, or unverifiable binding.
   - Use each stable `id` at most once. Do not let a duplicate ID displace another retained insight; retain that insight's original stable ID and its evidence binding.
   - If the summary abstains, keep one complete, source-backed insight at 18
     words or fewer for the compact card; preserve scope and never clip it.

@@ -67,6 +67,11 @@ the linked evidence when those details establish the metric's identity or
 scope. A report title or filename cannot fill a missing period. Public copy
 keeps each metric bound to that evidence and preserves restrictive modifiers
 that limit its subject, including in shortened headlines and posts.
+When a repaired insight changes its evidence binding, the replacement must be
+one of the selected retained direct findings or quotes and resolve to that
+entry's canonical source page. A DocMap section ID cannot substitute for an
+insight evidence ID; its section summary may guide report coverage but does not
+provide a direct claim binding.
 They also preserve material frequency and likelihood qualifiers such as
 `often` and `may`; compact copy cannot drop them for brevity. Nearby or
 co-located findings do not establish a relationship, contrast, importance, or
