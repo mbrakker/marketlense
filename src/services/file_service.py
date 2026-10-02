@@ -81,9 +81,10 @@ _PIPELINE_CHECKPOINT_DIR = ".checkpoints"
 _COMPACT_PIPELINE_CHECKPOINT_DIR = ".cp"
 _COMPACT_PIPELINE_CHECKPOINT_TOKEN_LENGTH = 12
 _ATOMIC_WRITE_STALE_SECONDS = 3600.0
-_ATOMIC_WRITE_TEMP_TAG = ".tmp-"
+_ATOMIC_WRITE_TEMP_TAG = "."
 _LEGACY_ATOMIC_WRITE_TEMP_TAG = ".tmp-write-"
 _ATOMIC_WRITE_TARGET_HASH_LENGTH = 16
+_ATOMIC_WRITE_TEMP_TOKEN_LENGTH = 16
 _ATOMIC_REPLACE_MAX_ATTEMPTS = 3
 _ATOMIC_REPLACE_RETRY_DELAY_SECONDS = 0.01
 _WINDOWS_REPLACE_RETRYABLE_ERRORS = {5, 32}
@@ -92,9 +93,7 @@ _ATOMIC_TEMP_NAME_LENGTH = (
     1  # leading dot
     + _ATOMIC_WRITE_TARGET_HASH_LENGTH  # stable target-name hash
     + len(_ATOMIC_WRITE_TEMP_TAG)
-    + 10  # maximum Windows process identifier length
-    + 1  # process identifier separator
-    + 24  # 96-bit UUID token
+    + _ATOMIC_WRITE_TEMP_TOKEN_LENGTH  # 64-bit UUID token
 )
 _WRITE_LOCKS_GUARD = threading.Lock()
 _WRITE_LOCKS: dict[str, threading.Lock] = {}
@@ -1151,7 +1150,7 @@ def _is_retryable_windows_replace_error(error: OSError) -> bool:
 
 
 def _atomic_temp_path(path: Path) -> Path:
-    token = f"{os.getpid()}-{uuid.uuid4().hex[:24]}"
+    token = uuid.uuid4().hex[:_ATOMIC_WRITE_TEMP_TOKEN_LENGTH]
     name_hash = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[
         :_ATOMIC_WRITE_TARGET_HASH_LENGTH
     ]

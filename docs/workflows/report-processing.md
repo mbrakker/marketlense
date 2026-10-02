@@ -36,9 +36,10 @@ supported sentence of 18 words or fewer for the compact card. If no such insight
 is available, card rendering fails with `card_tldr_compact_invalid` and readiness
 remains blocked. Insight generation and repair preserve exact population and
 denominator scope; a per-group value cannot be restated as an across-group value.
-The manifest is persisted with a unique bounded temporary filename and atomic
-replacement, so long report output paths do not push the temporary file beyond
-the supported Windows path limit.
+The manifest is persisted with a compact target-hash and random-token temporary
+filename and atomic replacement. The shorter name keeps deeply nested isolated
+output paths within the supported Windows path limit while retaining per-target
+write serialization and stale temporary-file cleanup.
 
 PDF previews, refinements, and crop regions keep fingerprint sidecars beside
 their rendered artifacts. Crop artifact filenames and, when a deep workspace

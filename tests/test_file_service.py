@@ -256,9 +256,13 @@ def test_append_bytes_appends_under_the_file_service_lock(tmp_path: Path) -> Non
 def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -> None:
     target = tmp_path / "atomic.bin"
     stale_temp = tmp_path / "atomic.bin.tmp-write-stale"
+    current_temp_hash = hashlib.sha256(target.name.encode("utf-8")).hexdigest()[:16]
+    current_stale_temp = tmp_path / f".{current_temp_hash}.{'a' * 16}"
     stale_temp.write_bytes(b"stale")
+    current_stale_temp.write_bytes(b"stale")
     stale_time = stale_temp.stat().st_mtime - 7200.0
     os.utime(stale_temp, (stale_time, stale_time))
+    os.utime(current_stale_temp, (stale_time, stale_time))
 
     response = write_bytes(
         WriteBytesRequest(
@@ -272,6 +276,7 @@ def test_write_bytes_uses_atomic_replace_and_cleans_stale_temp(tmp_path: Path) -
     assert response.bytes_written == len(b"fresh-bytes")
     assert target.read_bytes() == b"fresh-bytes"
     assert not stale_temp.exists()
+    assert not current_stale_temp.exists()
     assert list(tmp_path.glob("atomic.bin.tmp-write-*")) == []
 
 
@@ -633,7 +638,7 @@ def test_pipeline_checkpoint_compacts_a_deep_atomic_write_path(tmp_path: Path) -
         source_run_id="run-1",
         source_task_id="task-1",
     )
-    checkpoint_root = tmp_path / ("isolated-cohort-" + "x" * 25)
+    checkpoint_root = tmp_path / ("isolated-cohort-" + "x" * 45)
 
     response = write_pipeline_checkpoint(
         PipelineCheckpointWriteRequest(
@@ -716,7 +721,7 @@ def test_write_report_card_manifest_persists_validated_payload_and_logs(
 def test_write_report_card_manifest_uses_a_windows_safe_temp_path_near_limit(
     tmp_path: Path,
 ) -> None:
-    target_parent_length = 195
+    target_parent_length = 219
     padding_length = target_parent_length - len(str(tmp_path.resolve())) - 1
     assert 0 < padding_length < 255
     output_dir = tmp_path / ("p" * padding_length)
