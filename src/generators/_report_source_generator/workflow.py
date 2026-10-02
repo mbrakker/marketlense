@@ -397,6 +397,7 @@ def prepare_report_source(
         )
     title_resolution = resolve_report_title(
         file_name=runtime.file_name,
+        source_report_name=runtime.source_report_name,
         pdf_metadata=info_resp.metadata,
         pages=[(page.page_number, page.text) for page in text_resp.pages],
         publisher_name=runtime.publisher_name,

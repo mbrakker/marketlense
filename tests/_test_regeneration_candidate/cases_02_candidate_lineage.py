@@ -663,6 +663,71 @@ def test_candidate_blocks_lost_and_hallucinated_evidence_ids() -> None:
     )
 
 
+def test_candidate_allows_only_planned_summary_claim_removal() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    removed_claim = {
+        "id": "safe-remove-target",
+        "claim": "An unsupported claim slated for removal.",
+        "evidence_id": "finding-1",
+        "pages": [99],
+    }
+    current["summary"]["claim_evidence_map"].append(removed_claim)
+    candidate = deepcopy(current)
+    candidate["summary"]["claim_evidence_map"].pop()
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        removed_summary_claim_paths=("summary.claim_evidence_map[5]",),
+    )
+
+    assert not any(
+        issue.entity_id == "safe-remove-target"
+        and "lost the original material evidence" in issue.message
+        for issue in result.issues
+    )
+
+
+def test_candidate_still_blocks_unplanned_or_reintroduced_summary_claims() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    removed_claim = {
+        "id": "safe-remove-target",
+        "claim": "An unsupported claim slated for removal.",
+        "evidence_id": "finding-1",
+        "pages": [99],
+    }
+    current["summary"]["claim_evidence_map"].append(removed_claim)
+    candidate = deepcopy(current)
+    candidate["summary"]["claim_evidence_map"].pop()
+
+    unplanned = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+    )
+    reintroduced = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=current,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        removed_summary_claim_paths=("summary.claim_evidence_map[5]",),
+    )
+
+    assert any(
+        issue.entity_id == "safe-remove-target"
+        and "lost the original material evidence" in issue.message
+        for issue in unplanned.issues
+    )
+    assert any(
+        issue.rule_id == "regeneration_removed_summary_claim_reintroduced"
+        and issue.entity_id == "safe-remove-target"
+        for issue in reintroduced.issues
+    )
+
+
 def test_candidate_allows_known_evidence_remapping_and_abstention() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     remapped = deepcopy(current)

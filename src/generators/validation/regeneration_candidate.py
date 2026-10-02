@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -68,6 +69,7 @@ def validate_regeneration_candidate(
     evidence_packs: dict[str, Any],
     ctx: RunContext,
     removed_insight_ids: Sequence[str] = (),
+    removed_summary_claim_paths: Sequence[str] = (),
     planned_prompt_namespaces: Sequence[str] = (),
     actual_prompt_namespaces: Sequence[str] = (),
     baseline_retained_claim_severities: Mapping[str, str] | None = None,
@@ -153,6 +155,9 @@ def validate_regeneration_candidate(
     authorized_removals = {
         value.strip() for value in removed_insight_ids if value.strip()
     }
+    authorized_summary_claim_removals = _summary_claim_removal_ids(
+        current_artifacts, removed_summary_claim_paths
+    )
 
     for insight_id in sorted(authorized_removals):
         for section in ("insights_candidates", "insights_final"):
@@ -167,6 +172,19 @@ def validate_regeneration_candidate(
                         entity_id=insight_id,
                     )
                 )
+
+    for claim_id in sorted(authorized_summary_claim_removals):
+        if ("summary_claim", claim_id) in candidate_by_key:
+            issues.append(
+                issue(
+                    rule_id="regeneration_removed_summary_claim_reintroduced",
+                    message="A deliberately removed summary claim reappeared in the candidate.",
+                    severity="error",
+                    section=f"summary.claim_evidence_map:{claim_id}",
+                    repair_target="summary",
+                    entity_id=claim_id,
+                )
+            )
 
     for record in candidate_records:
         if not record.material:
@@ -212,6 +230,12 @@ def validate_regeneration_candidate(
             candidate is None
             and original.entity_kind in {"insights_candidates", "insights_final"}
             and original.entity_id in authorized_removals
+        ):
+            continue
+        if (
+            candidate is None
+            and original.entity_kind == "summary_claim"
+            and original.entity_id in authorized_summary_claim_removals
         ):
             continue
         if _has_unique_evidence_continuity_match(original, candidate_records):
@@ -1018,6 +1042,41 @@ def _record(
 def _record_id(item: dict[str, Any], index: int, prefix: str) -> str:
     value = s(item.get("id")).strip()
     return value or f"{prefix}_{index}"
+
+
+def _summary_claim_removal_ids(
+    artifacts: dict[str, Any], paths: Sequence[str]
+) -> set[str]:
+    summary_value = artifacts.get("summary")
+    summary = summary_value if isinstance(summary_value, dict) else {}
+    claims_value = summary.get("claim_evidence_map")
+    claims = claims_value if isinstance(claims_value, list) else []
+    removed: set[str] = set()
+    for path in paths:
+        match = re.fullmatch(
+            r"summary\.claim_evidence_map\[(?:(item=)([^\]]+)|(\d+))\](?:\.claim)?",
+            str(path or "").strip(),
+        )
+        if match is None:
+            continue
+        if match.group(1):
+            selector = match.group(2).strip()
+            matches = [
+                (index, item)
+                for index, item in enumerate(claims)
+                if isinstance(item, dict)
+                and _record_id(item, index + 1, "claim") == selector
+            ]
+            if len(matches) != 1:
+                continue
+            index, claim = matches[0]
+        else:
+            index = int(match.group(3))
+            if index >= len(claims) or not isinstance(claims[index], dict):
+                continue
+            claim = claims[index]
+        removed.add(_record_id(claim, index + 1, "claim"))
+    return removed
 
 
 def _evidence_source_pages(evidence_packs: dict[str, Any]) -> dict[str, set[int]]:

@@ -14,6 +14,10 @@ missing DocMap identity, and public values that differ from the canonical value
 remain subject to the existing identity and publication-readiness checks. This
 prevents unrelated artifact regeneration from changing title or publisher
 grounding outcomes; it does not relax metadata fidelity requirements.
+During source preparation, a canonical source report name is also eligible as a
+title candidate when it exactly matches a standalone line in extracted PDF
+text. This page-backed candidate takes precedence over a filename-derived
+fallback and retains its source-page locator for identity auditing.
 
 Report-local output can include summaries, insights, quotes, figure selections, topics, key figures, and other approved public modules when supported by the retained artifact contract. Internal evidence identifiers and machine-only publication data are not public output.
 
@@ -141,6 +145,9 @@ prose. Claim-scoped removal retires only the named claim, preserving every
 untouched sibling claim and its provenance. Candidate assembly then verifies
 that each remaining family has an exact claim cover, including an empty cover
 for an abstained family.
+For Summary safe removal, candidate lineage accepts a missing material claim
+only when the active plan names that exact `claim_evidence_map` item with
+`REMOVE_CLAIM`. An unplanned deletion or a reintroduced item remains blocking.
 
 Prompt-family materialization retains a private soft-copy envelope alongside
 the family’s unchanged public value: declared claim bindings, the producing

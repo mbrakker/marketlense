@@ -1731,6 +1731,14 @@ def _run_validation_regeneration_loop(
                     and target.repair_action == "REMOVE_CLAIM"
                     for issue in target.issues
                 ),
+                removed_summary_claim_paths=tuple(
+                    str(path)
+                    for target in plan.targets
+                    if target.target_section == "summary"
+                    and target.repair_action == "REMOVE_CLAIM"
+                    for path in target.allowed_paths
+                    if str(path).startswith("summary.claim_evidence_map[")
+                ),
             )
             if candidate_enforced
             else CandidateIntegrityResult(issues=[], evidence_lineage=[])

@@ -51,6 +51,37 @@ def test_missing_metadata_uses_clean_filename_title():
     assert resolution.confidence == "medium"
 
 
+def test_visible_source_report_name_beats_a_filename_slug() -> None:
+    resolution = _resolve(
+        file_name="tech-tonic-shifts.pdf",
+        source_report_name="How to win with tech",
+        pages=[
+            (
+                1,
+                "Take a cue from companies capitalizing on technology.\n"
+                "How to win with tech\n"
+                "Born-tech companies created 52% of total market-value growth.",
+            )
+        ],
+        publisher_name="Bain",
+    )
+
+    assert resolution.title == "How to win with tech"
+    assert resolution.candidate_source == "source_content"
+    assert resolution.evidence == ("page:1",)
+
+
+def test_source_report_name_not_visible_as_a_standalone_line_is_not_used() -> None:
+    resolution = _resolve(
+        file_name="tech-tonic-shifts.pdf",
+        source_report_name="How to win with tech",
+        pages=[(1, "Welcome to How to win with tech, a Bain publication.")],
+    )
+
+    assert resolution.title == "tech tonic shifts"
+    assert resolution.candidate_source == "filename"
+
+
 def test_filename_fallback_strips_acquisition_month_year_suffix() -> None:
     resolution = _resolve(
         file_name="IAB_Europes_Guide_to_AI_in_Retail_Commerce_Media_June_26.pdf"

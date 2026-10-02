@@ -49,6 +49,62 @@ def test_prepare_report_source_writes_caches_and_marks_low_density(
     assert any("text_" in path for path in writes)
 
 
+def test_prepare_report_source_uses_page_visible_canonical_title(
+    ingest_settings, run_context, tmp_path
+):
+    source_text = (
+        "Take a cue from companies capitalizing on technology.\n"
+        "How to win with tech\n"
+        "Born-tech companies created 52% of total market-value growth."
+    )
+    runtime = _runtime(ingest_settings, run_context, tmp_path)
+    runtime = replace(
+        runtime,
+        file=replace(runtime.file, name="tech-tonic-shifts.pdf"),
+        file_name="tech-tonic-shifts.pdf",
+        report_name="tech-tonic-shifts",
+        report_title="Tech Tonic Shifts",
+        source_report_name="How to win with tech",
+    )
+    deps = _deps(
+        extract_pdf_info=lambda req, ctx: PdfInfoResponse(
+            schema_version="1.0",
+            path=req.path,
+            page_count=1,
+            metadata={},
+        ),
+        extract_pdf_text=lambda req, ctx: PdfTextExtractResponse(
+            schema_version="1.0",
+            text=source_text,
+            pages_extracted=1,
+            char_count=len(source_text),
+            text_density=float(len(source_text)),
+            pages=[PdfTextPage(page_number=1, text=source_text)],
+        ),
+        sample_pdf_text=lambda req, ctx: PdfTextSampleResponse(
+            schema_version="1.0",
+            samples=[
+                PdfTextSample(
+                    page_index=0,
+                    page_number=1,
+                    char_count=len(source_text),
+                    has_text=True,
+                    word_count=len(source_text.split()),
+                    confidence_score=1.0,
+                )
+            ],
+            any_text=True,
+            document_confidence_score=1.0,
+        ),
+        write_json_object_cache=lambda req, ctx: None,
+    )
+
+    state = prepare_report_source(runtime, deps, ocr_openai_client=_ocr_client(deps))
+
+    assert state.payload.title == "How to win with tech"
+    assert state.title_resolution.candidate_source == "source_content"
+
+
 def test_prepare_report_source_uses_cached_source_phase_payloads(
     ingest_settings, run_context, tmp_path
 ):
@@ -619,6 +675,7 @@ def test_prepare_report_source_uses_ocr_fallback_and_keeps_original_preview_sour
 
 __all__ = [
     "test_prepare_report_source_writes_caches_and_marks_low_density",
+    "test_prepare_report_source_uses_page_visible_canonical_title",
     "test_prepare_report_source_uses_cached_source_phase_payloads",
     "test_prepare_report_source_ignores_stale_source_cache_keys",
     "test_prepare_report_source_halts_when_no_pages_to_sample",

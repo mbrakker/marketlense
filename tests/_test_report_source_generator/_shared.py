@@ -24,6 +24,7 @@ from src.contracts.drive import DriveFile
 from src.contracts.pdf_ocr import PdfOcrChunk, PdfOcrSplitResponse
 
 from src.contracts.pdf_text import (
+    PdfTextPage,
     PdfTextExtractResponse,
     PdfTextSample,
     PdfTextSampleResponse,

@@ -104,6 +104,7 @@ def is_generic_report_title(value: object) -> bool:
 def resolve_report_title(
     *,
     file_name: str,
+    source_report_name: str = "",
     pdf_metadata: Mapping[str, object] | None,
     pages: Iterable[tuple[int, str]],
     publisher_name: str = "",
@@ -122,6 +123,7 @@ def resolve_report_title(
     ]
     candidates = _candidates(
         file_name=file_name,
+        source_report_name=source_report_name,
         pdf_metadata=pdf_metadata or {},
         pages=page_items,
         publisher_name=publisher,
@@ -217,6 +219,7 @@ def _identity_evidence_items(response: object) -> list[object]:
 def _candidates(
     *,
     file_name: str,
+    source_report_name: str,
     pdf_metadata: Mapping[str, object],
     pages: list[tuple[int, str]],
     publisher_name: str,
@@ -252,6 +255,26 @@ def _candidates(
                             line, "repeated_header_title", page_number, publisher_name
                         )
                     )
+    source_title = _clean(source_report_name)
+    if source_title and not is_generic_report_title(source_title):
+        normalized_source_title = _normalized(source_title)
+        visible_page = next(
+            (
+                page_number
+                for page_number, page_text in pages
+                if any(
+                    _normalized(line) == normalized_source_title
+                    for line in page_text.splitlines()
+                )
+            ),
+            0,
+        )
+        if visible_page:
+            candidates.append(
+                _candidate(
+                    source_title, "source_content", visible_page, publisher_name
+                )
+            )
     filename_title = _filename_title(file_name)
     if filename_title:
         candidates.append(_candidate(filename_title, "filename", 0, publisher_name))

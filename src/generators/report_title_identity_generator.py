@@ -112,6 +112,7 @@ def resolve_ambiguous_report_title(
 
     result = resolve_report_title(
         file_name=runtime.file_name,
+        source_report_name=runtime.source_report_name,
         pdf_metadata=pdf_metadata,
         pages=pages,
         publisher_name=runtime.publisher_name,
