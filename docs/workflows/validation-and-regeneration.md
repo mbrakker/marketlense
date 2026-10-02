@@ -904,6 +904,15 @@ only the binding fields from a same-stable-ID current candidate or prior final
 insight. Its rewritten prose is never copied or repaired by this step, and an
 unknown or conflicting ID is left for the normal grounding gate to reject.
 
+For a numeric summary claim linked to a broad DocMap section, normalization
+may bind the claim to one more precise retained finding when exactly one
+page-backed finding contains every meaningful claim term and supports every
+claimed quantity. The finding ID and its canonical source page become the
+claim's reference. If no finding or more than one finding qualifies, the
+existing reference is preserved and the regular grounding checks remain
+blocking. This deterministic binding makes no provider call and does not edit
+the public claim.
+
 Each normalized final quote also receives a deterministic `id` derived from
 its evidence ID, page, and position among quotes with that same binding.
 Evidence IDs identify retained source records and may be shared by multiple

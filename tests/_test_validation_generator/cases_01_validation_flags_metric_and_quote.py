@@ -121,6 +121,25 @@ def test_number_validation_preserves_ordered_source_period_value_pairs() -> None
     assert "linkedin_post" not in failed_sections
 
 
+def test_number_validation_does_not_treat_decimal_year_pairs_as_ratios() -> None:
+    sentence = (
+        "Global finance app day 0 sessions per user declined from 1.52 in 2024 "
+        "to 1.48 in 2025."
+    )
+    evidence = "Global finance app day 0 sessions per user declined from 1.52 to 1.48."
+
+    issues = validate_new_numbers(
+        artifacts={"expert_comment": sentence},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=[],
+        source_text=evidence,
+    )
+
+    assert not issues
+
+
 def test_validation_uses_retained_source_text_for_ordered_period_value_pairs(
     tmp_path,
 ) -> None:

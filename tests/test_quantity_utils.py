@@ -86,6 +86,16 @@ def test_spelled_ratio_matches_source_using_numeric_of_form() -> None:
     )
 
 
+def test_decimal_values_followed_by_years_are_not_parsed_as_ratios() -> None:
+    parsed = extract_quantities(
+        "Global finance app day 0 sessions per user declined from 1.52 in 2024 "
+        "to 1.48 in 2025."
+    )
+
+    assert not any(quantity.unit_family == "ratio" for quantity in parsed)
+    assert any(quantity.value == 1.52 for quantity in parsed)
+
+
 def test_hyphenated_percentage_point_matches_spelled_out_points() -> None:
     """A hyphenated "percentage-point" is pp, not a percent value.
 

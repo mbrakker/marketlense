@@ -17,7 +17,8 @@ from src.utils.errors import AppError
 from src.utils.json_utils import dump_json_object as _dump_json
 from src.utils.numeric_display import preserve_unique_source_displays
 from src.utils.public_metric_display import normalize_public_metric_display
-from src.utils.text_normalization import normalize_text
+from src.utils.quantity import Quantity, extract_quantities, quantities_match
+from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
 METRIC_FIELDS = (
     "label",
@@ -1831,6 +1832,11 @@ def bind_artifact_evidence_spans(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, int]:
+    _rebind_numeric_summary_claims_to_unique_findings(
+        summary=summary,
+        doc_map=doc_map,
+        evidence_packs=evidence_packs,
+    )
     span_index = _build_evidence_span_index(
         doc_map=doc_map, evidence_packs=evidence_packs
     )
@@ -1978,6 +1984,121 @@ def bind_artifact_evidence_spans(
         "pruned_claim_count": pruned_claim_count,
         "indexed_reference_count": len(span_index),
     }
+
+
+_SUMMARY_CLAIM_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "was",
+    "were",
+    "while",
+    "with",
+    "year",
+    "yoy",
+}
+
+
+def _rebind_numeric_summary_claims_to_unique_findings(
+    *,
+    summary: Dict[str, Any],
+    doc_map: Dict[str, Any],
+    evidence_packs: Dict[str, Any],
+) -> None:
+    """Replace broad section references only when one direct finding fits.
+
+    The check is deliberately exacting: the source must be a page-backed
+    retained finding, every claimed quantity must match, and every meaningful
+    claim token must occur in its text. Ambiguous matches keep their current
+    reference for the regular grounding gate to assess.
+    """
+
+    sections = doc_map.get("sections") if isinstance(doc_map, dict) else None
+    doc_map_ids = {
+        _s(section.get("id")).strip()
+        for section in sections or []
+        if isinstance(section, dict) and _s(section.get("id")).strip()
+    }
+    claims = summary.get("claim_evidence_map")
+    pack = evidence_packs.get("findings") if isinstance(evidence_packs, dict) else None
+    findings = pack.get("findings") if isinstance(pack, dict) else None
+    if (
+        not doc_map_ids
+        or not isinstance(claims, list)
+        or not isinstance(findings, list)
+    ):
+        return
+
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        if _s(claim.get("evidence_id")).strip() not in doc_map_ids:
+            continue
+        claim_text = _s(claim.get("claim")).strip()
+        claim_quantities = extract_quantities(claim_text)
+        claim_tokens = _summary_claim_content_tokens(claim_text)
+        if not claim_quantities or not claim_tokens:
+            continue
+
+        matching_ids: set[str] = set()
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+            finding_id = _s(finding.get("id") or finding.get("evidence_id")).strip()
+            finding_pages = _coerce_span_pages(finding)
+            finding_text = " ".join(
+                _s(finding.get(field_name)).strip()
+                for field_name in ("text", "evidence", "statement")
+                if _s(finding.get(field_name)).strip()
+            )
+            if not finding_id or not finding_pages or not finding_text:
+                continue
+            if not claim_tokens.issubset(_summary_claim_content_tokens(finding_text)):
+                continue
+            if not _summary_claim_quantities_match(claim_quantities, finding_text):
+                continue
+            matching_ids.add(finding_id)
+
+        if len(matching_ids) == 1:
+            claim["evidence_id"] = next(iter(matching_ids))
+
+
+def _summary_claim_content_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z]+", normalize_for_lookup(text))
+        if token not in _SUMMARY_CLAIM_STOP_WORDS
+    }
+
+
+def _summary_claim_quantities_match(
+    claim_quantities: list[Quantity], evidence_text: str
+) -> bool:
+    evidence_quantities = extract_quantities(evidence_text)
+    return all(
+        any(
+            not (
+                claim.comparator in {"eq", "approx"}
+                and evidence.comparator in {"gt", "gte", "lt", "lte"}
+            )
+            and quantities_match(claim, evidence)
+            for evidence in evidence_quantities
+        )
+        for claim in claim_quantities
+    )
 
 
 def artifact_evidence_span_index(

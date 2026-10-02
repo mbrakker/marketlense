@@ -32,7 +32,7 @@ _COMPACT_YEAR_RANGE_RE = re.compile(
     r"(?P<end>\d{2})(?!\d)"
 )
 _RATIO_RE = re.compile(
-    r"\b(?P<a>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
+    r"(?<![\w.,])(?P<a>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
     r"(?:in|out of|of)\s+"
     r"(?P<b>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b",
     re.IGNORECASE,
