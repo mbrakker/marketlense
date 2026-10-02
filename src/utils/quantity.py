@@ -27,6 +27,10 @@ _RANGE_RE = re.compile(
     r"k|m|mm|mn|mil|b|bn|bil|t|tn|tril|thousand|million|billion|trillion)?(?!\w)",
     re.IGNORECASE,
 )
+_COMPACT_YEAR_RANGE_RE = re.compile(
+    r"(?<!\d)(?P<start>19\d{2}|20\d{2})\s*[\-\u2013\u2014]\s*"
+    r"(?P<end>\d{2})(?!\d)"
+)
 _RATIO_RE = re.compile(
     r"\b(?P<a>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
     r"(?:(?:in)|(?:out of))\s+"
@@ -234,8 +238,15 @@ def _normalize_for_quantity_extraction(text: str) -> str:
     neighbours.
     """
 
+    raw_text = str(text or "")
+    # Keep the dash inside compact year ranges as one ASCII character so that
+    # the abbreviated endpoint can be excluded from numeric claim extraction.
+    raw_text = _COMPACT_YEAR_RANGE_RE.sub(
+        lambda match: match.group(0).replace("\u2013", "-").replace("\u2014", "-"),
+        raw_text,
+    )
     cleaned = []
-    for ch in str(text or ""):
+    for ch in raw_text:
         if (
             ch.isalnum()
             or ch.isspace()
@@ -252,13 +263,18 @@ def extract_quantities(text: str) -> List[Quantity]:
     normalized = _normalize_for_quantity_extraction(text)
     if not normalized:
         return []
+    compact_year_end_spans = tuple(
+        match.span("end") for match in _COMPACT_YEAR_RANGE_RE.finditer(normalized)
+    )
     quantities: List[Quantity] = []
     quantities.extend(_extract_ranges(normalized))
     quantities.extend(_extract_ratios(normalized))
     quantities.extend(_extract_spelled_percentages(normalized))
     quantities.extend(_extract_n_equals(normalized))
     quantities.extend(_extract_durations(normalized))
-    quantities.extend(_extract_main(normalized))
+    quantities.extend(
+        _extract_main(normalized, ignored_number_spans=compact_year_end_spans)
+    )
     quantities.extend(_extract_multipliers(normalized))
     return _dedupe_quantities(quantities)
 
@@ -440,6 +456,14 @@ def _extract_ranges(text: str) -> List[Quantity]:
         ):
             # A pair of calendar years is a timeframe, not a numeric range.
             continue
+        if (
+            not unit
+            and re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip())
+            and re.fullmatch(r"\d{2}", match.group("high").strip())
+        ):
+            # A compact year range such as 2015–20 is temporal context; its
+            # abbreviated endpoint is not an independently groundable value.
+            continue
         if unit in {
             "%",
             "percent",
@@ -582,10 +606,31 @@ def _extract_multipliers(text: str) -> List[Quantity]:
     return output
 
 
-def _extract_main(text: str) -> List[Quantity]:
+def _extract_main(
+    text: str,
+    *,
+    ignored_number_spans: Sequence[tuple[int, int]] = (),
+) -> List[Quantity]:
     output: List[Quantity] = []
+    sample_size_spans = tuple(
+        match.span("n") for match in _N_EQUALS_RE.finditer(text)
+    )
     for match in _MAIN_RE.finditer(text):
         if _is_duration_component(text, match.start("number"), match.end("number")):
+            continue
+        number_start, number_end = match.span("number")
+        if any(
+            sample_start <= number_start and number_end <= sample_end
+            for sample_start, sample_end in sample_size_spans
+        ):
+            # The n= parser already records sample sizes with count semantics.
+            # Re-parsing that token from nearby percentages can assign it a
+            # false unit and create an unsupported numeric claim.
+            continue
+        if any(
+            year_start <= number_start and number_end <= year_end
+            for year_start, year_end in ignored_number_spans
+        ):
             continue
         number = _to_float(match.group("number"))
         if number is None:

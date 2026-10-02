@@ -129,7 +129,8 @@ def validate_new_numbers(
                 if _rank_group_label_in_linked_evidence(
                     quantity=quantity,
                     sentence=sentence,
-                    evidence=linked_insight_evidence.get(section, ""),
+                    evidence=linked_insight_evidence.get(section)
+                    or "\n".join(window.text for window in retrieved),
                 ):
                     continue
                 severity = unsupported_quantity_severity(

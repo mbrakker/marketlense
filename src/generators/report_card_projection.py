@@ -10,6 +10,7 @@ from src.contracts.report_cards import (
     ReportCardManifest,
     ReportCardManifestRequest,
 )
+from src.services.render_service import _sanitize_public_prose
 from src.utils.errors import AppError
 
 _PLACEHOLDER_METADATA = {
@@ -236,7 +237,7 @@ def build_report_card_manifest(
         }
     )
     insights = tuple(
-        " ".join(str(item.get("text") or "").split())
+        " ".join(_sanitize_public_prose(item.get("text")).split())
         for item in request.insights_final[:2]
     )
     if len(insights) != 2 or any(not insight for insight in insights):
@@ -245,8 +246,8 @@ def build_report_card_manifest(
             message="Exactly two complete card insights are required",
             retryable=False,
         )
-    tldr_compact = " ".join(request.tldr_compact.split())
-    tldr_standard = " ".join(request.tldr_standard.split())
+    tldr_compact = " ".join(_sanitize_public_prose(request.tldr_compact).split())
+    tldr_standard = " ".join(_sanitize_public_prose(request.tldr_standard).split())
     if request.summary_abstained:
         ranked = list(request.insights_final)
         # Prefer a retained insight that is not already one of the two card
@@ -257,7 +258,9 @@ def build_report_card_manifest(
                 text
                 for item in candidates
                 if isinstance(item, Mapping)
-                and (text := " ".join(str(item.get("text") or "").split()))
+                and (
+                    text := " ".join(_sanitize_public_prose(item.get("text")).split())
+                )
                 and 1 <= len(text.split()) <= 18
                 and not text.endswith(("...", "\u2026"))
                 and text[-1] in ".?!"

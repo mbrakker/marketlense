@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.1",
+  "cohort_name": "targeted_report_agnostic_regression_five_20261002",
+  "members": [
+    {
+      "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+      "source_domain": "www.capgemini.com",
+      "report_name": "Final Web Version Report Consumer Trends 2026",
+      "landing_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "source_page_url": "https://www.capgemini.com/us-en/insights/research-library/what-matters-to-todays-consumer-2026/",
+      "publisher_name": "Capgemini Research Institute",
+      "downloaded_at_utc": "2026-07-17T20:26:08Z"
+    },
+    {
+      "source_path": "out/browser_downloads/doubleverify.com/2710ece9fc61/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "content_md5": "e854b71d6fb10333b47fd518a6e51cf9",
+      "source_domain": "doubleverify.com",
+      "report_name": "DV QualityandAttentionBenchmark Q1 2026",
+      "landing_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "source_page_url": "https://doubleverify.com/hubfs/content/DV_QualityandAttentionBenchmark_Q1_2026.pdf",
+      "publisher_name": "DoubleVerify",
+      "downloaded_at_utc": "2026-07-11T11:45:37Z"
+    },
+    {
+      "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+      "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+      "source_domain": "www.adjust.com",
+      "report_name": "mobile-app-trends-2026-pdf",
+      "landing_page_url": "https://www.adjust.com/resources/ebooks/mobile-app-trends-2026",
+      "source_page_url": "https://www.adjust.com/resources/ebooks",
+      "publisher_name": "Adjust",
+      "downloaded_at_utc": "2026-07-24T06:25:52.296472+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bain.com/9e6d7f717c38/tech-tonic-shifts.pdf",
+      "content_md5": "77bc67b2bc98187d9d589a4e69fd85f7",
+      "source_domain": "www.bain.com",
+      "report_name": "How to win with tech",
+      "landing_page_url": "https://www.bain.com/globalassets/noindex/2021/tech-tonic-shifts.pdf",
+      "source_page_url": "https://www.bain.com/insights/technology-isnt-just-an-industry-anymore-its-everything-infographic",
+      "publisher_name": "Bain & Company",
+      "downloaded_at_utc": "2026-06-23T21:33:58.009298+00:00"
+    },
+    {
+      "source_path": "out/browser_downloads/www.bigcommerce.com/e72f39fe19e5/ebook_0225_future_commerce_new_modes_guide_en_us.pdf",
+      "content_md5": "0a019f840c3f89ad0a9672e058d1ff83",
+      "source_domain": "www.bigcommerce.com",
+      "report_name": "ebook 0225 future commerce new modes guide en us",
+      "landing_page_url": "https://www.bigcommerce.com/resources/reports/future-commerce-report-cdl-report",
+      "source_page_url": "https://www.bigcommerce.com/resources/reports",
+      "publisher_name": "Bigcommerce",
+      "downloaded_at_utc": "2026-07-06T18:26:45Z"
+    }
+  ]
+}

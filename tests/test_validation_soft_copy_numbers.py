@@ -6,6 +6,7 @@ from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
     soft_copy_claim_provenance_to_payload,
 )
+from src.generators.validation.evidence import build_evidence_windows
 from src.generators.validation.numbers import validate_new_numbers
 from tests._test_validation_generator._shared import _report
 
@@ -39,6 +40,51 @@ def test_number_validation_does_not_treat_uk_initialism_as_a_magnitude():
         report=_report(),
         evidence_texts=[evidence],
         evidence_windows=[],
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
+def test_number_validation_accepts_supported_bigcommerce_sample_size() -> None:
+    claim = (
+        "Among respondents in the report's total n=220 sample, 58% wanted more "
+        "emails offering a significant discount after cart abandonment."
+    )
+    evidence = (
+        "The personalization chart lists the discount email with Want More 58%, "
+        "No Opinion 28%, and Want Less 14%; Total n=220."
+    )
+
+    issues = validate_new_numbers(
+        artifacts={"linkedin_post": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=build_evidence_windows([evidence]),
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
+def test_bain_compact_year_range_keeps_supported_shares() -> None:
+    claim = (
+        "In 2015–20, born-tech companies accounted for 52% of market-value growth "
+        "among the top 20 gainers across sectors; tech-led strategy accounted for "
+        "20%, and other companies for 28%."
+    )
+    evidence = (
+        "The chart labels Share of market value growth, 2015–20 and shows Born "
+        "tech 52%, Tech-led strategy 20%, Other 28%, and 100%. It also states "
+        "that born-tech companies created 52% of total market-value growth for "
+        "the top 20 gainers across sectors since 2015."
+    )
+
+    issues = validate_new_numbers(
+        artifacts={"expert_comment": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=build_evidence_windows([evidence]),
     )
 
     assert not any(issue.rule_id == "numbers" for issue in issues)

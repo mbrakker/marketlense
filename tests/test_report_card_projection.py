@@ -207,6 +207,27 @@ def test_build_manifest_preserves_full_text_and_first_two_insights() -> None:
     assert manifest.covers == request.covers
 
 
+def test_build_manifest_removes_provider_citation_tokens_from_public_copy() -> None:
+    marker = "\ue200filecite\ue202turn0file2\ue202turnfile4\ue201"
+    request = _manifest_request(
+        tldr_compact=f"Rates reshape investment decisions. {marker}",
+        tldr_standard=f"Rates reshape investment decisions across sectors. {marker}",
+        insights_final=(
+            {"text": f"Investment remains concentrated in service sectors. {marker}"},
+            {"text": f"Trade pressure is widening regional differences. {marker}"},
+        ),
+    )
+
+    manifest = build_report_card_manifest(request)
+
+    public_copy = " ".join(
+        (manifest.tldr_compact, manifest.tldr_standard, *manifest.key_insights)
+    )
+    assert "filecite" not in public_copy
+    assert "turn0file2" not in public_copy
+    assert "turnfile4" not in public_copy
+
+
 def test_abstained_summary_card_reuses_an_existing_supported_insight() -> None:
     supported_insight = "Retail fraud signals are changing payment priorities."
     manifest = build_report_card_manifest(

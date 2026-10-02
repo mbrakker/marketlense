@@ -102,6 +102,10 @@ inheriting a nearby percentage unit. Hyphenated measurement units such as
 `28-day` remain time quantities; temporal compounds such as `next-12-month`
 match the same duration written as `next 12 months`, while ordinal compounds
 such as `first-90-day` retain the number without inferring a duration.
+An explicit sample-size token such as `n=220` remains a count and is not
+reclassified from nearby percentage values. Compact year spans such as
+`2015–20` are temporal context; the abbreviated ending year is not separately
+treated as a numeric claim.
 Singular and plural time-unit spellings normalize to the same unit. Each
 quantity is associated with its nearest explicit temporal expression in the
 sentence, so an edition year and distinct comparison years do not all attach
@@ -134,6 +138,9 @@ remains blocking, and a claim within a linked source date range is compatible.
 Compact hyphen and en-dash year ranges, such as `2024-2025` and `2024–2025`,
 are parsed as continuous intervals. Independent years joined by `and` remain
 separate observations and are not treated as a range.
+The same temporal handling applies to abbreviated ending years such as
+`2015–20`: the range is retained as timeframe context and its suffix is not
+treated as an independent metric value.
 Attribution and population checks likewise stay unknown when their syntax only
 identifies a generic report/article/pronoun or a negated expectation clause,
 rather than a named source or population.

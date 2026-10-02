@@ -46,7 +46,7 @@ _INLINE_INTERNAL_REFERENCE = re.compile(
     re.IGNORECASE,
 )
 _PROVIDER_FILE_CITATION = re.compile(
-    r"\ue200filecite(?:\ue202turn\d+file\d+)+\ue201", re.IGNORECASE
+    r"\ue200filecite(?:\ue202turn\d*file\d+)+\ue201", re.IGNORECASE
 )
 _PUBLIC_TRUNCATION_MARKER = re.compile(r"(?:\.\.\.|…)")
 _LINKEDIN_MARKDOWN_LINK = re.compile(r"\[([^\]\n]+)\]\([^\)\n]+\)")
@@ -816,8 +816,11 @@ def _coerce_public_chart_insight_cards(
         evidence_id = _s(item.get("evidence_id"))
         source_page = _s(item.get("source_page"))
         insight_id = _s(item.get("insight_id"))
-        caption = _pick_first_text(item.get("caption"), item.get("retained_caption"))
-        takeaway = _s(item.get("public_takeaway"))
+        caption = _pick_first_text(
+            _sanitize_public_prose(item.get("caption")),
+            _sanitize_public_prose(item.get("retained_caption")),
+        )
+        takeaway = _sanitize_public_prose(item.get("public_takeaway"))
         if not (
             item.get("crop_qa_accepted") is True
             and candidate_id
@@ -829,16 +832,16 @@ def _coerce_public_chart_insight_cards(
         ):
             continue
         title = _pick_first_text(
-            item.get("title"),
-            item.get("chart_title"),
+            _sanitize_public_prose(item.get("title")),
+            _sanitize_public_prose(item.get("chart_title")),
             caption,
             takeaway,
         )
         limitation = _pick_first_text(
-            item.get("limitation"),
-            item.get("avoid_reason"),
-            item.get("avoid_reason_if_weak"),
-            item.get("diagnostic"),
+            _sanitize_public_prose(item.get("limitation")),
+            _sanitize_public_prose(item.get("avoid_reason")),
+            _sanitize_public_prose(item.get("avoid_reason_if_weak")),
+            _sanitize_public_prose(item.get("diagnostic")),
         )
         if not title:
             continue
@@ -846,8 +849,8 @@ def _coerce_public_chart_insight_cards(
             {
                 "title": title,
                 "insight": takeaway,
-                "so_what": _s(item.get("so_what")),
-                "now_what": _s(item.get("now_what")),
+                "so_what": _sanitize_public_prose(item.get("so_what")),
+                "now_what": _sanitize_public_prose(item.get("now_what")),
                 "status_label": "Chart-backed",
                 "limitation": limitation,
             }

@@ -34,6 +34,7 @@ from src.generators.claim_validation_generator import (
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
 )
+from src.services.render_service import _sanitize_public_prose
 from src.utils.cache_utils import sha256_json
 from src.utils.publication_projection import publication_projection_hash
 
@@ -1240,8 +1241,10 @@ def _figure_linkage_result(
         source_page = str(card.get("source_page") or "").strip()
         evidence_id = str(card.get("evidence_id") or "").strip()
         insight_id = str(card.get("insight_id") or "").strip()
-        caption = str(card.get("caption") or card.get("retained_caption") or "").strip()
-        takeaway = str(card.get("public_takeaway") or "").strip()
+        caption = _sanitize_public_prose(
+            card.get("caption") or card.get("retained_caption") or ""
+        )
+        takeaway = _sanitize_public_prose(card.get("public_takeaway"))
         candidate_page = (
             str(candidate.get("source_page") or candidate.get("page") or "").strip()
             if candidate
@@ -1264,7 +1267,7 @@ def _figure_linkage_result(
             incomplete += 1
     rendered_cards = _rendered_chart_cards(html)
     expected_takeaways = {
-        str(card.get("public_takeaway") or "").strip() for card in public_cards
+        _sanitize_public_prose(card.get("public_takeaway")) for card in public_cards
     }
     rendered_takeaways = {
         takeaway

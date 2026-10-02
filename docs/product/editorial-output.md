@@ -119,8 +119,12 @@ in its original order.
 Summary generation uses high reasoning effort after repeated medium-effort
 Omnisend canaries omitted the priority automation contrast despite a direct
 retained finding. Summary regeneration retains its separately configured effort.
-The final public HTML render removes provider file citation markers from all
-display fields while retaining the source statements and page attribution.
+The canonical public-prose sanitizer removes provider file citation markers,
+including compact token variants, from rendered display fields, chart-card
+copy, and report-card metadata while retaining source statements and page
+attribution. Rendering, report-card projection, and readiness use the same
+sanitized public text so a marker cannot leak through a structured card field
+or produce a false projection mismatch.
 All deterministic public-copy corrections precede retained-provenance
 derivation. If source-display preservation changes a sentence, its validated
 classification and evidence IDs remain attached while its mechanical claim ID,

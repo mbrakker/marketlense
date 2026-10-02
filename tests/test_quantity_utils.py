@@ -46,6 +46,29 @@ def test_calendar_year_pair_near_percentage_is_not_a_percentage_range() -> None:
     assert [(q.value, q.unit_family) for q in parsed] == [(54.0, "percent")]
 
 
+def test_compact_year_range_end_is_not_parsed_as_a_metric_number() -> None:
+    parsed = extract_quantities(
+        "In 2015–20, born-tech companies accounted for 52% of growth, "
+        "while a tech-led strategy accounted for 20%."
+    )
+
+    assert [(quantity.value, quantity.unit_family) for quantity in parsed] == [
+        (52.0, "percent"),
+        (20.0, "percent"),
+    ]
+
+
+def test_n_equals_sample_size_is_not_reclassified_by_nearby_percentages() -> None:
+    parsed = extract_quantities(
+        "Among respondents in the total n=220 sample, 58% wanted more offers."
+    )
+
+    assert [(quantity.value, quantity.unit_family) for quantity in parsed] == [
+        (220.0, "count"),
+        (58.0, "percent"),
+    ]
+
+
 def test_percent_decimal_and_ratio_forms_match() -> None:
     assert _any_match("1 in 10 respondents converted.", "Conversion reached 10%.")
     assert _any_match("Conversion rate was 0.1.", "Conversion reached 10%.")

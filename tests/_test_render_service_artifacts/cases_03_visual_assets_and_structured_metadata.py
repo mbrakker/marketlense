@@ -452,6 +452,54 @@ def test_render_uses_per_asset_figure_captions(tmp_path):
     )
 
 
+def test_render_sanitizes_provider_citations_from_public_chart_cards(
+    tmp_path: Path,
+) -> None:
+    marker = "\ue200filecite\ue202turn0file2\ue202turnfile4\ue201"
+    data = {
+        "title": "Public Chart Card Report",
+        "publisher": "Publisher",
+        "artifacts": {
+            "chart_insight_cards": [
+                {
+                    "status": "generated",
+                    "candidate_id": "chart-1",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "finding-1",
+                    "insight_id": "insight-1",
+                    "source_page": 2,
+                    "caption": f"Regional rates {marker}",
+                    "public_takeaway": (
+                        f"Regional rates are measured consistently. {marker}"
+                    ),
+                    "so_what": f"The comparison uses the same measure. {marker}",
+                    "now_what": f"Compare like with like. {marker}",
+                    "limitation": f"Coverage varies by region. {marker}",
+                }
+            ]
+        },
+    }
+
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data=data,
+            doc_name="public-chart-card.pdf",
+            file_id="public-chart-card",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "Regional rates are measured consistently." in html
+    assert "Compare like with like." in html
+    assert "filecite" not in html
+    assert "turn0file2" not in html
+    assert "turnfile4" not in html
+
+
 def test_render_keeps_legacy_figure_captions_without_figure_assets(tmp_path):
     data = {
         "title": "Legacy Figure Caption Report",

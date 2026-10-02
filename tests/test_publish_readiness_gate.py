@@ -710,6 +710,66 @@ def test_publish_readiness_requires_an_accepted_crop_for_each_rendered_chart_car
     assert figure_rule.status == "pass"
 
 
+def test_publish_readiness_matches_sanitized_chart_card_projection() -> None:
+    marker = "\ue200filecite\ue202turn0file2\ue202turnfile4\ue201"
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    takeaway = "Revenue growth is concentrated in the measured market."
+    artifacts["chart_insight_cards"] = [
+        {
+            "status": "generated",
+            "candidate_id": "chart-1",
+            "crop_qa_accepted": True,
+            "source_page": 1,
+            "evidence_id": "F1",
+            "insight_id": "I1",
+            "caption": f"Measured revenue growth by market. {marker}",
+            "public_takeaway": f"{takeaway} {marker}",
+        }
+    ]
+    evidence_packs["visuals"] = {
+        "chart_candidates": [
+            {
+                "candidate_id": "chart-1",
+                "crop_qa_accepted": True,
+                "source_page": 1,
+                "evidence_id": "F1",
+            }
+        ]
+    }
+    html = html.replace(
+        "</body>",
+        (
+            '<div class="chart-insight-grid"><article><p>'
+            f"{takeaway}</p></article></div></body>"
+        ),
+    )
+
+    artifact = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    figure_rule = next(
+        item
+        for item in artifact.rule_results
+        if item.rule_id == "publish_readiness.figure_linkage"
+    )
+    identifier_rule = next(
+        item
+        for item in artifact.rule_results
+        if item.rule_id == "publish_readiness.public_identifier_leak"
+    )
+    assert artifact.status == "pass"
+    assert figure_rule.status == "pass"
+    assert identifier_rule.status == "pass"
+
+
 def test_publish_readiness_ignores_absent_scalar_evidence_id_in_claim_ledger() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     artifacts["claim_ledgers"] = [
