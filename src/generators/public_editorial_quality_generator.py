@@ -1418,11 +1418,40 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
 
     evidence_category_pairs = _structured_category_value_pairs(evidence_text)
     ordered_table_relationships = _ordered_category_row_value_pairs(evidence_text)
+    related_labels = tuple(
+        sorted(
+            {
+                *(label for label, _value in evidence_category_pairs),
+                *(
+                    label
+                    for region, category, _value in ordered_table_relationships
+                    for label in (region, category)
+                ),
+            },
+            key=lambda value: (-len(value), value.casefold()),
+        )
+    )
     validated_table_claims = {
         (region, category)
         for region, category, value in ordered_table_relationships
-        if _has_relationship_value(value, _values_near_label(text, region))
-        and _has_relationship_value(value, _values_near_label(text, category))
+        if _has_relationship_value(
+            value,
+            _values_near_label(
+                text,
+                region,
+                related_labels=related_labels,
+                permitted_neighbor_labels=(category,),
+            ),
+        )
+        and _has_relationship_value(
+            value,
+            _values_near_label(
+                text,
+                category,
+                related_labels=related_labels,
+                permitted_neighbor_labels=(region,),
+            ),
+        )
     }
     evidence_values_by_category: dict[str, set[str]] = {}
     if len(evidence_category_pairs) >= 2:
@@ -1434,7 +1463,9 @@ def _metric_label_relationship_explanation(text: str, evidence_text: str) -> str
                 for region, column in validated_table_claims
             ):
                 continue
-            for value in _values_near_label(text, category):
+            for value in _values_near_label(
+                text, category, related_labels=related_labels
+            ):
                 comparisons = [
                     _relationship_values_match(value, source_value)
                     for source_value in values
@@ -1678,11 +1709,47 @@ def _account_subject(prefix: str) -> str:
     ].strip()
 
 
-def _values_near_label(text: str, label: str) -> set[str]:
+def _values_near_label(
+    text: str,
+    label: str,
+    *,
+    related_labels: Iterable[str] = (),
+    permitted_neighbor_labels: Iterable[str] = (),
+) -> set[str]:
     values: set[str] = set()
     normalized_text = _normalized_relationship_search_text(text)
     label_pattern = re.compile(
         rf"(?<![A-Za-z0-9]){re.escape(label)}(?![A-Za-z0-9])", re.IGNORECASE
+    )
+    other_labels = sorted(
+        {
+            value.strip()
+            for value in related_labels
+            if value.strip() and value.casefold() != label.casefold()
+        },
+        key=lambda value: (-len(value), value.casefold()),
+    )
+    other_label_patterns = [
+        (
+            related_label,
+            re.compile(
+                rf"(?<![A-Za-z0-9]){re.escape(related_label)}(?![A-Za-z0-9])",
+                re.IGNORECASE,
+            ),
+        )
+        for related_label in other_labels
+    ]
+    permitted_neighbors = {
+        value.strip().casefold()
+        for value in permitted_neighbor_labels
+        if value.strip()
+    }
+    shared_value_prefix = re.compile(
+        rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+",
+        re.IGNORECASE,
+    )
+    category_list_separators = re.compile(
+        r"[\s,&]*(?:(?:and|or)\b[\s,&]*)*", re.IGNORECASE
     )
     fragments = re.split(r";|\n|(?<=[.!?])\s+", normalized_text)
     for fragment in fragments:
@@ -1701,17 +1768,50 @@ def _values_near_label(text: str, label: str) -> set[str]:
                 )
                 if value and not _is_year_value(value):
                     values.add(value)
-            else:
-                window = fragment[label_match.end() : label_match.end() + 80]
-                value_match = re.search(
-                    rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])",
-                    window,
-                    re.IGNORECASE,
-                )
-                if value_match:
-                    value = _normalized_relationship_value(value_match.group(0))
+                continue
+
+            shared_value_found = False
+            for prefix in reversed(
+                list(shared_value_prefix.finditer(fragment[: label_match.start()]))
+            ):
+                intervening_text = fragment[prefix.end() : label_match.start()]
+                matched_related_label = False
+                for _related_label, pattern in other_label_patterns:
+                    if pattern.search(intervening_text):
+                        matched_related_label = True
+                        intervening_text = pattern.sub(" ", intervening_text)
+                if (
+                    matched_related_label
+                    and category_list_separators.fullmatch(intervening_text)
+                ):
+                    value = _normalized_relationship_value(prefix.group("value"))
                     if value and not _is_year_value(value):
                         values.add(value)
+                        shared_value_found = True
+                        break
+            if shared_value_found:
+                continue
+
+            next_category_start = min(
+                (
+                    match.start()
+                    for related_label, pattern in other_label_patterns
+                    if related_label.casefold() not in permitted_neighbors
+                    if (match := pattern.search(fragment, label_match.end()))
+                ),
+                default=len(fragment),
+            )
+            window_end = min(label_match.end() + 80, next_category_start)
+            window = fragment[label_match.end() : window_end]
+            value_match = re.search(
+                rf"{_RELATIONSHIP_VALUE}(?![A-Za-z0-9%])",
+                window,
+                re.IGNORECASE,
+            )
+            if value_match:
+                value = _normalized_relationship_value(value_match.group(0))
+                if value and not _is_year_value(value):
+                    values.add(value)
     return values
 
 

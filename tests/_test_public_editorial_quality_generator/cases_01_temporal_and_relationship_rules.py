@@ -122,6 +122,40 @@ def test_region_metric_values_allow_value_before_region_without_losing_binding()
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
+def test_grouped_regions_keep_the_preceding_value_binding() -> None:
+    evidence = (
+        "The Q1 2026 Global Quality Benchmarks table lists Video Viewable Rate "
+        "by region: APAC 84%; EMEA 84%; LATAM 84%; North America 88%."
+    )
+    valid = evaluate_public_editorial_quality(
+        report_id="regional-video-viewability",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Q1 2026 video viewability was 84% in APAC, EMEA, and LATAM and "
+                "88% in North America."
+            ),
+            evidence=evidence,
+        ),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="regional-video-viewability",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Q1 2026 video viewability was 88% in APAC, EMEA, and LATAM and "
+                "84% in North America."
+            ),
+            evidence=evidence,
+        ),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
+        valid
+    )
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
+        swapped
+    )
+
+
 def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:
     fixture = _relationship_fixture("doubleverify_emea_engagement.json")
     evidence = fixture["evidence"]

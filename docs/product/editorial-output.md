@@ -210,6 +210,9 @@ value and label both occur elsewhere in retained evidence. This applies to the
 summary, findings and their rendered Core Signal, Key Figures, Expert View,
 and LinkedIn. The existing targeted regeneration path receives the
 evidence-linked blocker; no separate model call or artifact family is added.
+Value-first regional phrasing may group categories under one value only when
+the retained source confirms that value for every named category. A later
+value cannot be carried across another category mention.
 
 Each public metric-spine item represents exactly one primary human-readable
 value, or one coherent comparison/range. Semicolon-packed values or units and
