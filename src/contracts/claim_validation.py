@@ -9,7 +9,7 @@ from src.contracts.protected_facts import ProtectedFactComparison
 
 CLAIM_VALIDATION_SCHEMA_VERSION = "1.3"
 CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v2"
-CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.4"
+CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.5"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
 ClaimSemanticOutcome = Literal["entailed", "contradicted", "not_established"]
 ClaimValidationStatus = Literal[
@@ -158,9 +158,7 @@ class ClaimValidationExecutionIdentity:
     schema_version: str = field(
         metadata={"doc": "Claim validation execution identity schema."}
     )
-    report_id: str = field(
-        metadata={"doc": "Report whose claims were validated."}
-    )
+    report_id: str = field(metadata={"doc": "Report whose claims were validated."})
     source_id: str = field(metadata={"doc": "Source identity validated."})
     source_md5: str = field(metadata={"doc": "Source MD5 validated, if available."})
     claim_validation_validator_version: str = field(

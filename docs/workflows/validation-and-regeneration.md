@@ -107,6 +107,16 @@ span text is present. This keeps numeric and other factual public checks bound
 to the source selected for that sentence and prevents evidence from a neighboring
 claim from being borrowed; it does not add another grounding call.
 
+Key figures are grounded as the complete retained metric tuple, including the
+label, value, unit, population, denominator, geography, timeframe, and status
+where present. Their evidence text comes from the canonical evidence-span index,
+preferring the linked direct finding and falling back to its DocMap section or
+the matching insight evidence. This matches the fact shown by the public key
+figure card instead of asking grounding to judge a bare label or value. The
+rendered card preserves its retained cohort and denominator context alongside
+the metric, so a percentage remains attached to the population and base the
+source actually measured.
+
 The grounding policy uses medium reasoning effort with a 16,384-token output
 budget so the report-level response can return a complete structured check for
 every unique retained claim. A retained provider response at the prior high

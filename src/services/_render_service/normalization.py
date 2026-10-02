@@ -774,14 +774,18 @@ def _coerce_public_key_figures(
                 "value": display_value,
                 "label": label,
                 "context": ", ".join(
-                    part
-                    for part in (
-                        _s(item.get("context")),
-                        _s(item.get("segment")),
-                        _s(item.get("geography")),
-                        _s(item.get("timeframe")),
+                    dict.fromkeys(
+                        part
+                        for part in (
+                            _s(item.get("context")),
+                            _s(item.get("cohort")),
+                            _s(item.get("denominator")),
+                            _s(item.get("segment")),
+                            _s(item.get("geography")),
+                            _s(item.get("timeframe")),
+                        )
+                        if part
                     )
-                    if part
                 ),
                 "confidence_label": _public_label_from_token(item.get("confidence"))
                 or "Source-backed",

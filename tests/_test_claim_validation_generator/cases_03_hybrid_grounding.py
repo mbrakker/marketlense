@@ -7,6 +7,7 @@ import pytest
 
 import src.generators.claim_validation_generator as claim_validation
 from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
     ClaimSemanticGroundingResult,
     ClaimSemanticValidationIdentity,
 )
@@ -54,7 +55,7 @@ def _semantic_result(claim_input, outcome: str) -> ClaimSemanticGroundingResult:
         prompt_family="report_vs/validate/grounding",
         prompt_content_hash="prompt-content-1",
         execution_identity="execution-1",
-        validator_version="grounding_validation_output:1.4",
+        validator_version=CLAIM_GROUNDING_VALIDATOR_VERSION,
         model_provider="openai",
         model_name="test-model",
         configuration_policy_identity="policy-1",
@@ -362,9 +363,9 @@ def test_conflicting_claim_inputs_with_same_id_remain_blocked() -> None:
     assert len(calls) == 1
     assert len(calls[0]) == 2
     assert [result.status for result in package.results] == ["unresolved", "unresolved"]
-    assert {
-        result.semantic_disagreement for result in package.results
-    } == {"ambiguous_semantic_input_identity"}
+    assert {result.semantic_disagreement for result in package.results} == {
+        "ambiguous_semantic_input_identity"
+    }
 
 
 def test_retained_claim_deterministic_support_and_contradiction_bypass_semantics() -> (
@@ -462,6 +463,31 @@ def test_stale_retained_claim_grounding_identity_is_ignored() -> None:
     assert result.semantic_disagreement == "semantic_result_identity_mismatch"
 
 
+def test_prior_grounding_validator_version_is_ignored() -> None:
+    artifacts, evidence = _ambiguous_claim()
+
+    def ground_batch(claims):
+        result = _semantic_result(claims[0], "entailed")
+        return [
+            replace(
+                result,
+                identity=replace(
+                    result.identity,
+                    validator_version="grounding_validation_output:1.4",
+                ),
+            )
+        ]
+
+    package = validate_retained_claims(
+        artifacts, evidence, semantic_batch_validator=ground_batch
+    )
+
+    result = package.results[0]
+    assert result.status == "unresolved"
+    assert result.semantic_validator_used is False
+    assert result.semantic_disagreement == "semantic_result_identity_mismatch"
+
+
 def test_missing_semantic_batch_result_is_explicitly_diagnostic() -> None:
     artifacts, evidence = _ambiguous_claim()
 
@@ -503,9 +529,7 @@ def test_final_claim_package_binds_current_artifact_evidence_and_source_lineage(
         configuration_hash="config-1",
         policy_hash="policy-1",
     )
-    materialize = getattr(
-        claim_validation, "materialize_retained_claim_package", None
-    )
+    materialize = getattr(claim_validation, "materialize_retained_claim_package", None)
     assert callable(materialize)
 
     final_html = "<html><body>Current report.</body></html>"
@@ -525,8 +549,7 @@ def test_final_claim_package_binds_current_artifact_evidence_and_source_lineage(
     assert failure_code == ""
     assert semantic_calls == 1
     assert (
-        retained["lineage"]["final_artifact_hash"]
-        == validation_package.artifact_hash
+        retained["lineage"]["final_artifact_hash"] == validation_package.artifact_hash
     )
     assert retained["lineage"]["publication_projection_hash"]
     assert retained["lineage"]["evidence_pack_hash"]
@@ -537,12 +560,8 @@ def test_final_claim_package_binds_current_artifact_evidence_and_source_lineage(
     assert retained["lineage"]["policy_hash"] == "policy-1"
     assert retained["lineage"]["claim_validation_validator_version"]
     assert retained["lineage"]["grounding_validator_version"]
-    assert retained["lineage"]["semantic_execution_identities"] == [
-        "execution-1"
-    ]
-    assert retained["lineage"]["semantic_prompt_content_hashes"] == [
-        "prompt-content-1"
-    ]
+    assert retained["lineage"]["semantic_execution_identities"] == ["execution-1"]
+    assert retained["lineage"]["semantic_prompt_content_hashes"] == ["prompt-content-1"]
     assert retained["lineage"]["semantic_model_identities"]
 
 
@@ -559,9 +578,7 @@ def test_final_claim_package_materialization_rejects_stale_evidence() -> None:
         policy_hash="policy-1",
     )
     evidence["findings"]["findings"][0]["text"] = "A different source fact."
-    materialize = getattr(
-        claim_validation, "materialize_retained_claim_package", None
-    )
+    materialize = getattr(claim_validation, "materialize_retained_claim_package", None)
     assert callable(materialize)
 
     retained, failure_code = materialize(
@@ -642,7 +659,7 @@ def test_final_claim_package_rejects_stale_validation_identity(
         "source_id": "source-1",
         "source_md5": "source-md5",
         "claim_validation_validator_version": "retained_claim_validation:v2",
-        "grounding_validator_version": "grounding_validation_output:1.4",
+        "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
         "configuration_hash": "config-1",
         "policy_hash": "policy-1",
     }
@@ -694,7 +711,9 @@ def test_missing_validation_candidate_materializes_deterministic_final_package()
 
 
 def test_promoted_repair_candidate_materializes_against_promoted_artifact() -> None:
-    unchanged_claim = "Wallet use is becoming a common checkout method across retailers."
+    unchanged_claim = (
+        "Wallet use is becoming a common checkout method across retailers."
+    )
     candidate_artifacts = {
         "summary": {
             "claim_evidence_map": [
@@ -707,14 +726,17 @@ def test_promoted_repair_candidate_materializes_against_promoted_artifact() -> N
                     "id": "claim-2",
                     "claim": "Wallet adoption reached 45% in 2026.",
                     "evidence_id": "f2",
-                }
+                },
             ]
         }
     }
     evidence = {
         "findings": {
             "findings": [
-                {"id": "f1", "text": "Wallet use is becoming a common checkout method."},
+                {
+                    "id": "f1",
+                    "text": "Wallet use is becoming a common checkout method.",
+                },
                 {"id": "f2", "text": "Wallet adoption reached 42% in 2026."},
             ]
         }
@@ -751,7 +773,7 @@ def test_promoted_repair_candidate_materializes_against_promoted_artifact() -> N
                     "id": "claim-2",
                     "claim": "Wallet adoption reached 42% in 2026.",
                     "evidence_id": "f2",
-                }
+                },
             ]
         }
     }
@@ -802,11 +824,7 @@ def test_rolled_back_candidate_cannot_become_the_final_package() -> None:
             ]
         }
     }
-    evidence = {
-        "findings": {
-            "findings": [{"id": "f1", "text": final_claim}]
-        }
-    }
+    evidence = {"findings": {"findings": [{"id": "f1", "text": final_claim}]}}
     rolled_back_candidate = claim_validation.attach_claim_validation_execution_identity(
         validate_retained_claims(
             repair_candidate_artifacts, evidence, source_identity="source-1"
@@ -904,9 +922,7 @@ def test_merchant_risk_council_final_figures_survive_candidate_projection_drift(
 
 
 def test_final_package_materialization_is_idempotent() -> None:
-    artifacts, evidence = _ambiguous_claim(
-        "Wallet adoption reached 42% in 2026."
-    )
+    artifacts, evidence = _ambiguous_claim("Wallet adoption reached 42% in 2026.")
     candidate = claim_validation.attach_claim_validation_execution_identity(
         validate_retained_claims(artifacts, evidence, source_identity="source-1"),
         report_id="report-1",

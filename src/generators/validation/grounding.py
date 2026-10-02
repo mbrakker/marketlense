@@ -26,8 +26,10 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.structured_output import StructuredOutputExecutionRequest
 from src.contracts.validation import ValidationIssue, ValidationRequest
+from src.generators.artifact_normalization import artifact_evidence_span_index
 from src.generators.claim_validation_generator import (
     apply_retained_claim_semantic_results,
+    metric_claim_text,
     retained_claim_semantic_inputs,
     validate_retained_claims,
 )
@@ -254,7 +256,9 @@ def run_grounding_check(
             user_variables=variables,
         )
 
-    prompt_bundles = [prepare_batch_bundle(variables) for variables in batch_prompt_vars]
+    prompt_bundles = [
+        prepare_batch_bundle(variables) for variables in batch_prompt_vars
+    ]
     prompt_bundle = prompt_bundles[0]
     logger.info(
         log_event(
@@ -445,6 +449,7 @@ def run_grounding_check(
                 start=1,
             ):
                 _batch_payload, batch_semantic_inputs = batch_spec
+
                 def call_model(
                     mode: str,
                     original_response: str,
@@ -490,9 +495,7 @@ def run_grounding_check(
                         ),
                         report_id=str(request.report_id),
                         artifact_family="validation_grounding",
-                        stage=(
-                            f"validation_grounding_batch_{call_index:02d}_{mode}"
-                        ),
+                        stage=(f"validation_grounding_batch_{call_index:02d}_{mode}"),
                         publisher_name=request.publisher_name,
                         report_name=request.report_name,
                         source_url=request.source_url,
@@ -532,9 +535,7 @@ def run_grounding_check(
                 response_payload["unsupported"].extend(
                     recovery.payload.get("unsupported") or []
                 )
-                response_payload["checks"].extend(
-                    recovery.payload.get("checks") or []
-                )
+                response_payload["checks"].extend(recovery.payload.get("checks") or [])
             validate_grounding_payload(response_payload)
         else:
             response_payload = reused_payload
@@ -656,8 +657,7 @@ def run_grounding_check(
                 )
                 reason = s(entry.get("reason") or "Unsupported factual claim")
                 retained_claim_not_established = (
-                    unresolved
-                    and s(entry.get("item_id")) in retained_claim_item_ids
+                    unresolved and s(entry.get("item_id")) in retained_claim_item_ids
                 )
                 issues.append(
                     issue(
@@ -1031,6 +1031,7 @@ def grounding_payload(
         payload["publisher"] = request.report.publisher
     payload["public_factual_items"] = _public_factual_items(
         artifacts=artifacts,
+        evidence_packs=request.evidence_packs,
         report_title=("" if title_is_canonical else request.report.title),
         publisher=("" if publisher_is_canonical else request.report.publisher),
         insights=insights,
@@ -1162,6 +1163,7 @@ def _identity_match_key(value: object) -> str:
 def _public_factual_items(
     *,
     artifacts: dict,
+    evidence_packs: dict,
     report_title: str,
     publisher: str,
     insights: Sequence[dict],
@@ -1278,6 +1280,25 @@ def _public_factual_items(
         s(insight.get("evidence_id")): s(insight.get("evidence"))
         for insight in insights
     }
+    evidence_spans = artifact_evidence_span_index(
+        doc_map=ensure_dict(evidence_packs.get("doc_map")),
+        evidence_packs=evidence_packs,
+    )
+
+    def evidence_text_for_id(evidence_id: str) -> str:
+        spans = evidence_spans.get(evidence_id.casefold(), [])
+        for source_pack in ("findings", "doc_map"):
+            texts = list(
+                dict.fromkeys(
+                    s(span.get("text"))
+                    for span in spans
+                    if s(span.get("source_pack")) == source_pack and s(span.get("text"))
+                )
+            )
+            if texts:
+                return "\n".join(texts)
+        return insight_evidence.get(evidence_id, "")
+
     for insight in insights:
         insight_id = insight_entity_id(insight)
         evidence_id = s(insight.get("evidence_id"))
@@ -1293,14 +1314,20 @@ def _public_factual_items(
         if not isinstance(figure, dict):
             continue
         evidence_id = s(figure.get("evidence_id"))
-        for field_name in ("label", "figure", "why_it_matters"):
-            add(
-                f"key_figure:{index}:{field_name}",
-                f"key_figures:{index}.{field_name}",
-                figure.get(field_name),
-                [evidence_id],
-                insight_evidence.get(evidence_id, ""),
-            )
+        add(
+            f"key_figure:{index}:figure",
+            f"key_figures:{index}.figure",
+            metric_claim_text(figure),
+            [evidence_id],
+            evidence_text_for_id(evidence_id),
+        )
+        add(
+            f"key_figure:{index}:why_it_matters",
+            f"key_figures:{index}.why_it_matters",
+            figure.get("why_it_matters"),
+            [evidence_id],
+            evidence_text_for_id(evidence_id),
+        )
     for family in ("expert_comment", "linkedin_post"):
         add_soft_copy_sentences(
             family,

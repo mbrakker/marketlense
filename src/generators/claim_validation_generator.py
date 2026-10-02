@@ -406,7 +406,7 @@ def _candidates(
                     entity_id=entity,
                 )
                 if family == "insights_final" and isinstance(raw.get("metric"), dict):
-                    metric_text = _metric_claim_text(raw["metric"])
+                    metric_text = metric_claim_text(raw["metric"])
                     if metric_text:
                         add(
                             family,
@@ -428,7 +428,7 @@ def _candidates(
         stable_id = str(
             raw.get("id") or raw.get("figure_id") or raw.get("key_figure_id") or index
         ).strip()
-        figure_text = _metric_claim_text(raw)
+        figure_text = metric_claim_text(raw)
         if figure_text:
             add(
                 "key_figures",
@@ -451,8 +451,8 @@ def _candidates(
     return output
 
 
-def _metric_claim_text(metric: dict) -> str:
-    """Create a stable factual display from retained metric fields."""
+def metric_claim_text(metric: dict) -> str:
+    """Create the canonical factual display from retained metric fields."""
 
     display_value = metric.get("value") or metric.get("figure")
     values = [
@@ -572,8 +572,7 @@ def _checks(
         ]
         if normalized_quotes:
             quote_matched = all(
-                quote
-                and any(quote in source for source in normalized_sources)
+                quote and any(quote in source for source in normalized_sources)
                 for quote in normalized_quotes
             )
         else:
@@ -848,7 +847,7 @@ def _apply_semantic_results(
             and bool(identity.prompt_family)
             and bool(identity.prompt_content_hash)
             and bool(identity.execution_identity)
-            and bool(identity.validator_version)
+            and identity.validator_version == CLAIM_GROUNDING_VALIDATOR_VERSION
             and bool(identity.model_provider)
             and bool(identity.model_name)
             and bool(identity.configuration_policy_identity)
@@ -1042,8 +1041,7 @@ def materialize_retained_claim_package(
         if any(
             current_result.get("deterministic_status")
             != stored_result.get("deterministic_status")
-            or _hash(current_result.get("checks"))
-            != _hash(stored_result.get("checks"))
+            or _hash(current_result.get("checks")) != _hash(stored_result.get("checks"))
             or _hash(current_result.get("protected_facts"))
             != _hash(stored_result.get("protected_facts"))
             for current_result in matching_current
@@ -1051,10 +1049,7 @@ def materialize_retained_claim_package(
             continue
         for current_result in matching_current:
             current_result.update(
-                {
-                    field: stored_result.get(field)
-                    for field in semantic_result_fields
-                }
+                {field: stored_result.get(field) for field in semantic_result_fields}
             )
     semantic_results = [
         result
@@ -1068,7 +1063,9 @@ def materialize_retained_claim_package(
         and isinstance(result.get("candidate"), dict)
         and result["candidate"].get("factual") is True
     ]
-    unsupported = sum(result.get("status") == "unsupported" for result in factual_results)
+    unsupported = sum(
+        result.get("status") == "unsupported" for result in factual_results
+    )
     unresolved = sum(result.get("status") == "unresolved" for result in factual_results)
     deterministic_passes = sum(
         result.get("status") == "supported"
@@ -1146,9 +1143,10 @@ def _claim_validation_semantic_results_for_final_inputs(
     policy_hash: str,
 ) -> dict[str, dict]:
     """Return only semantic claim results whose exact inputs survive finalization."""
-    if (
-        raw.get("schema_version") != CLAIM_VALIDATION_SCHEMA_VERSION
-        or not claim_validation_package_hash_valid(raw)
+    if raw.get(
+        "schema_version"
+    ) != CLAIM_VALIDATION_SCHEMA_VERSION or not claim_validation_package_hash_valid(
+        raw
     ):
         return {}
     artifact_hash = str(raw.get("artifact_hash") or "")
@@ -1190,9 +1188,7 @@ def _claim_validation_semantic_results_for_final_inputs(
         result for result in raw_results if result["semantic_validator_used"] is True
     ]
     factual_results = [
-        result
-        for result in raw_results
-        if result["candidate"]["factual"] is True
+        result for result in raw_results if result["candidate"]["factual"] is True
     ]
     unsupported = sum(result["status"] == "unsupported" for result in factual_results)
     unresolved = sum(result["status"] == "unresolved" for result in factual_results)
@@ -1305,16 +1301,13 @@ def _claim_validation_semantic_results_for_final_inputs(
             "semantic_execution_identity",
         )
         if any(
-            existing.get(field) != result.get(field)
-            for field in semantic_result_fields
+            existing.get(field) != result.get(field) for field in semantic_result_fields
         ):
             ambiguous.add(candidate_hash)
 
-    if (
-        not isinstance(raw.get("semantic_execution_identities"), list)
-        or sorted(str(item) for item in raw["semantic_execution_identities"])
-        != sorted(semantic_execution_ids)
-    ):
+    if not isinstance(raw.get("semantic_execution_identities"), list) or sorted(
+        str(item) for item in raw["semantic_execution_identities"]
+    ) != sorted(semantic_execution_ids):
         return {}
     return {
         candidate_hash: result
@@ -1542,8 +1535,7 @@ def _numeric_evidence_status(
         ):
             continue
         if any(
-            claim.unit_family != "unknown"
-            and claim.unit_family == evidence.unit_family
+            claim.unit_family != "unknown" and claim.unit_family == evidence.unit_family
             for evidence in evidence_quantities
         ):
             return "failed", "quantity_not_entailed"

@@ -445,3 +445,40 @@ def test_render_removes_mechanical_scaffolding_from_commentary(tmp_path):
 
     assert "Answer:" not in html
     assert "The supported finding informs the next decision." in html
+
+
+def test_render_preserves_key_figure_population_and_denominator_context(tmp_path):
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Population Scoped Metric",
+                "publisher": "Bain & Company",
+                "artifacts": {
+                    "key_figures": [
+                        {
+                            "label": (
+                                "Share of total market-value growth attributed "
+                                "to born-tech companies"
+                            ),
+                            "figure": "52% of total market-value growth",
+                            "cohort": "Top 20 gainers across sectors",
+                            "denominator": "Total market-value growth",
+                            "timeframe": "since 2015",
+                        }
+                    ]
+                },
+            },
+            doc_name="population-scoped-metric.pdf",
+            file_id="population-scoped-metric",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert (
+        "Top 20 gainers across sectors, Total market-value growth, since 2015" in html
+    )

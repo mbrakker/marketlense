@@ -18,7 +18,7 @@ from tests._test_validation_generator._shared import (
     ("outcome", "expected_violation", "expected_severity", "expected_status"),
     [
         ("contradicted", "contradicted", "error", "fail"),
-        ("not_established", "not_established", "warning", "pass"),
+        ("not_established", "not_established", "warning", "fail"),
     ],
 )
 def test_grounding_semantic_outcome_preserves_distinct_disposition(

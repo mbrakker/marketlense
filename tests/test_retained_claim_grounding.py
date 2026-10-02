@@ -4,7 +4,10 @@ import hashlib
 from dataclasses import replace
 from types import SimpleNamespace
 
-from src.contracts.claim_validation import ClaimValidationPackage
+from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
+    ClaimValidationPackage,
+)
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.soft_copy_claim_provenance import (
     SoftCopyClaimProvenance,
@@ -95,11 +98,7 @@ def test_deterministic_retained_claim_failure_enters_candidate_repair_plan() -> 
     }
     package = validate_retained_claims(
         artifacts,
-        {
-            "findings": {
-                "findings": [{"id": "f1", "text": source}]
-            }
-        },
+        {"findings": {"findings": [{"id": "f1", "text": source}]}},
     )
 
     assert package.unsupported_factual_count == 1
@@ -172,9 +171,7 @@ def test_grounding_rule_blocks_deterministic_quote_failure_before_promotion(
             ]
         ),
     }
-    evidence_packs = {
-        "findings": {"findings": [{"id": "f1", "text": source}]}
-    }
+    evidence_packs = {"findings": {"findings": [{"id": "f1", "text": source}]}}
     request = ValidationRequest(
         schema_version="1.0",
         report_id="retained-claim-deterministic-failure",
@@ -278,9 +275,7 @@ def test_public_soft_copy_and_retained_claim_use_distinct_grounding_item_ids() -
 
     payload = grounding_payload(request, artifacts)
 
-    public_ids = {
-        item["item_id"] for item in payload["public_factual_items"]
-    }
+    public_ids = {item["item_id"] for item in payload["public_factual_items"]}
     retained = payload["retained_claims_to_ground"]
     assert len(retained) == 1
     assert claim_id in public_ids
@@ -341,17 +336,13 @@ def test_public_numeric_soft_copy_uses_its_retained_provenance_source_span() -> 
         _retained_request(),
         artifacts=artifacts,
         evidence_packs={
-            "doc_map": {
-                "sections": [{"id": "trend-2", "text": source_text}]
-            }
+            "doc_map": {"sections": [{"id": "trend-2", "text": source_text}]}
         },
     )
 
     payload = grounding_payload(request, artifacts)
     public_item = next(
-        item
-        for item in payload["public_factual_items"]
-        if item["item_id"] == claim_id
+        item for item in payload["public_factual_items"] if item["item_id"] == claim_id
     )
 
     assert public_item["evidence_ids"] == ["trend-2"]
@@ -900,8 +891,7 @@ def test_stale_report_grounding_is_not_reused_for_current_retained_claim(
     assert len(reuse_requests) == 1
     assert len(model_client.requests) == 1
     assert any(
-        issue.severity == "error"
-        and "[factual_claim|not_established]" in issue.message
+        issue.severity == "error" and "[factual_claim|not_established]" in issue.message
         for issue in issues
     )
     assert captured_packages[0].results[0].status == "unresolved"
@@ -967,9 +957,7 @@ def test_unresolved_retained_soft_copy_claim_blocks_report_validation(tmp_path) 
     )
 
     unresolved = [
-        issue
-        for issue in issues
-        if "[factual_claim|not_established]" in issue.message
+        issue for issue in issues if "[factual_claim|not_established]" in issue.message
     ]
     assert len(unresolved) == 1
     assert unresolved[0].severity == "error"
@@ -1102,7 +1090,7 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert package["unresolved_factual_count"] == 1
     assert package["readiness_status"] == "not_publishable"
     assert package["validation_identity"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.4"
+        CLAIM_GROUNDING_VALIDATOR_VERSION
     )
     result = package["results"][0]
     assert result["status"] == "unresolved"
@@ -1116,8 +1104,99 @@ def test_unresolved_claim_candidate_is_persisted_for_final_readiness_materializa
     assert identity["prompt_family"] == "report_vs/validate/grounding"
     assert identity["prompt_content_hash"]
     assert identity["execution_identity"]
-    assert identity["validator_version"] == "grounding_validation_output:1.4"
+    assert identity["validator_version"] == CLAIM_GROUNDING_VALIDATOR_VERSION
     assert identity["model_provider"]
     assert identity["model_name"]
     assert identity["configuration_policy_identity"]
     assert identity["relevant_input_hash"]
+
+
+def test_key_figure_grounding_uses_the_full_public_metric_and_direct_evidence() -> None:
+    evidence_id = "quality-brand-suitability-rate"
+    evidence_text = (
+        "In the Q1 2026 Global Quality Benchmarks, Brand Suitability Violation "
+        "Rate was APAC 8.0%, EMEA 6.3%, LATAM 6.0%, and North America 3.7%."
+    )
+    figure = {
+        "figure_id": "quality-brand-suitability-rate",
+        "label": "Brand Suitability Violation Rate",
+        "subject": "Brand Suitability Violation Rate",
+        "figure": "8.0%",
+        "geography": "APAC",
+        "timeframe": "Q1 2026",
+        "observation_status": "observed",
+        "evidence_id": evidence_id,
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="key-figure-grounding",
+        report=_report(),
+        artifacts={"key_figures": [figure]},
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": evidence_id,
+                        "text": evidence_text,
+                        "pages": [3],
+                    }
+                ]
+            }
+        },
+        source_id="source-key-figure-grounding",
+    )
+
+    items = grounding_payload(request, request.artifacts)["public_factual_items"]
+    key_figure_items = [
+        item for item in items if item["item_id"].startswith("key_figure:1:")
+    ]
+    metric_item = next(
+        item for item in key_figure_items if item["item_id"] == "key_figure:1:figure"
+    )
+
+    assert len(key_figure_items) == 1
+    assert metric_item["section"] == "key_figures:1.figure"
+    assert metric_item["text"] == (
+        "Brand Suitability Violation Rate Brand Suitability Violation Rate "
+        "8.0% APAC Q1 2026 observed"
+    )
+    assert metric_item["evidence_ids"] == [evidence_id]
+    assert metric_item["retained_evidence"] == evidence_text
+
+
+def test_key_figure_grounding_retains_cohort_and_denominator_scope() -> None:
+    evidence_id = "f1"
+    evidence_text = (
+        "Born-tech companies created 52% of total market-value growth for the "
+        "top 20 gainers across sectors since 2015."
+    )
+    figure = {
+        "figure_id": "technology-market-growth-born-tech",
+        "label": "Share of total market-value growth attributed to born-tech companies",
+        "subject": "Born-tech companies",
+        "figure": "52% of total market-value growth",
+        "cohort": "Top 20 gainers across sectors",
+        "denominator": "Total market-value growth",
+        "timeframe": "since 2015",
+        "observation_status": "observed",
+        "evidence_id": evidence_id,
+    }
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="key-figure-population-grounding",
+        report=_report(),
+        artifacts={"key_figures": [figure]},
+        evidence_packs={
+            "findings": {"findings": [{"id": evidence_id, "text": evidence_text}]}
+        },
+        source_id="source-key-figure-population-grounding",
+    )
+
+    items = grounding_payload(request, request.artifacts)["public_factual_items"]
+    metric_item = next(
+        item for item in items if item["item_id"] == "key_figure:1:figure"
+    )
+
+    assert "Top 20 gainers across sectors" in metric_item["text"]
+    assert "Total market-value growth" in metric_item["text"]
+    assert evidence_text in metric_item["retained_evidence"]

@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.contracts.claim_validation import CLAIM_GROUNDING_VALIDATOR_VERSION
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse
@@ -479,10 +480,10 @@ def test_resolved_report_title_prefers_source_grounded_citation_over_filename_id
         artifacts_payload={
             "claim_ledger": [
                 {
-                        "citation": (
-                            "IAB Europe's Guide to AI in Retail & Commerce Media, "
-                            "Introduction"
-                        )
+                    "citation": (
+                        "IAB Europe's Guide to AI in Retail & Commerce Media, "
+                        "Introduction"
+                    )
                 }
             ]
         },
@@ -605,13 +606,14 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
         "retained_claim_validation:v2"
     )
     assert retained["lineage"]["grounding_validator_version"] == (
-        "grounding_validation_output:1.4"
+        CLAIM_GROUNDING_VALIDATOR_VERSION
     )
     assert retained["validation_identity"]["source_md5"] == "source-md5"
     assert claim_validation_package_hash_valid(retained)
-    assert readiness["artifact_hashes"]["retained_claim_validation"] == retained[
-        "package_hash"
-    ]
+    assert (
+        readiness["artifact_hashes"]["retained_claim_validation"]
+        == retained["package_hash"]
+    )
     assert any(
         item["rule_id"] == "publish_readiness.retained_claim_grounding"
         for item in readiness["rule_results"]
@@ -631,12 +633,14 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
     )
     assert retained["unsupported_factual_count"] == actual_unsupported_count
     assert retained["unresolved_factual_count"] == actual_unresolved_count
-    assert f"unsupported_factual_count={actual_unsupported_count}" in grounding_rule[
-        "detail"
-    ]
-    assert f"unresolved_factual_count={actual_unresolved_count}" in grounding_rule[
-        "detail"
-    ]
+    assert (
+        f"unsupported_factual_count={actual_unsupported_count}"
+        in grounding_rule["detail"]
+    )
+    assert (
+        f"unresolved_factual_count={actual_unresolved_count}"
+        in grounding_rule["detail"]
+    )
 
 
 def test_render_projects_card_tldr_from_final_insight_when_summary_abstains(
@@ -1135,7 +1139,7 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
         sha256_json(cached_data),
         "preview.png",
         runtime.file_name,
-            render_contract_version="2.2",
+        render_contract_version="2.2",
     )
 
     def _read_text(req, ctx):

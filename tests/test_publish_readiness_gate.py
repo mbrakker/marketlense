@@ -10,6 +10,8 @@ import pytest
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness as _evaluate_readiness_core,
+)
+from src.generators.publish_readiness_generator import (
     parse_publish_readiness_payload,
     publish_readiness_payload,
     verify_publish_readiness,
@@ -108,9 +110,9 @@ def _retained_claim_package(
     unresolved: int = 0,
     semantic: bool = False,
 ) -> dict:
-    statuses = ["supported"] + ["unsupported"] * unsupported + [
-        "unresolved"
-    ] * unresolved
+    statuses = (
+        ["supported"] + ["unsupported"] * unsupported + ["unresolved"] * unresolved
+    )
     results = []
     for index, status in enumerate(statuses, start=1):
         evidence_references = (
@@ -120,9 +122,7 @@ def _retained_claim_package(
                     "evidence_id": "F1",
                     "source_pack": "findings",
                     "page": 1,
-                    "text_hash": sha256_json(
-                        "Revenue grew in the measured market."
-                    ),
+                    "text_hash": sha256_json("Revenue grew in the measured market."),
                 }
             ]
             if semantic and index == 1
@@ -180,7 +180,7 @@ def _retained_claim_package(
                     "prompt_family": "report_vs/validate/grounding",
                     "prompt_content_hash": "prompt-content-hash",
                     "execution_identity": "grounding-execution-1",
-                    "validator_version": "grounding_validation_output:1.4",
+                    "validator_version": "grounding_validation_output:1.5",
                     "model_provider": "openai",
                     "model_name": "gpt-4.1-mini",
                     "configuration_policy_identity": "grounding-policy-hash",
@@ -215,7 +215,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": "retained_claim_validation:v2",
-            "grounding_validator_version": "grounding_validation_output:1.4",
+            "grounding_validator_version": "grounding_validation_output:1.5",
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
         },
@@ -228,7 +228,7 @@ def _retained_claim_package(
             "source_id": source_id,
             "source_md5": source_md5,
             "claim_validation_validator_version": "retained_claim_validation:v2",
-            "grounding_validator_version": "grounding_validation_output:1.4",
+            "grounding_validator_version": "grounding_validation_output:1.5",
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []
             ),
@@ -368,9 +368,7 @@ def test_missing_required_retained_claim_package_blocks_readiness() -> None:
 
 def test_unsupported_retained_claim_blocks_readiness_with_separate_count() -> None:
     artifacts, evidence_packs, html, _ = _ready_inputs()
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, unsupported=1
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, unsupported=1)
 
     readiness = _readiness_with_package(package)
     rule = _retained_grounding_rule(readiness)
@@ -449,9 +447,7 @@ def test_stale_validator_and_configuration_identity_block_readiness() -> None:
 
 def test_missing_semantic_grounding_identity_blocks_readiness() -> None:
     artifacts, evidence_packs, html, _ = _ready_inputs()
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, semantic=True
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
     package["results"][0]["semantic_identity"] = None
 
     readiness = _readiness_with_package(_seal_claim_package(package))
@@ -514,9 +510,7 @@ def test_final_package_from_another_report_is_rejected() -> None:
 
 def test_semantically_grounded_package_is_consumed_without_regrounding() -> None:
     artifacts, evidence_packs, html, _ = _ready_inputs()
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, semantic=True
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
 
     readiness = _readiness_with_package(package)
 
