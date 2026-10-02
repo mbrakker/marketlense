@@ -520,18 +520,22 @@ def test_frozen_manifest_rejects_missing_provenance_before_file_access(
         raise AssertionError("missing provenance was accepted")
 
 
-def test_frozen_cohort_submits_all_members_through_one_production_run(
+def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     tmp_path: Path,
 ) -> None:
     members = []
-    for index in range(20):
+    report_ids = []
+    for index in range(5):
         source_path = tmp_path / f"source-{index}.pdf"
         content = f"frozen-cohort-fixture-{index}".encode("utf-8")
         source_path.write_bytes(content)
+        content_md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+        if index in {1, 3}:
+            report_ids.append(f"cohort-{content_md5[:20]}")
         members.append(
             {
                 "source_path": str(source_path.resolve()),
-                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "content_md5": content_md5,
                 "source_domain": "publisher.example",
                 "report_name": f"Frozen fixture {index}",
                 "landing_page_url": f"https://publisher.example/reports/{index}",
@@ -546,37 +550,66 @@ def test_frozen_cohort_submits_all_members_through_one_production_run(
 
     def run_once(**kwargs):
         captured.append(kwargs)
+        source = kwargs["sources"][0]
+        report_id = f"cohort-{source['content_md5'][:20]}"
+        index = int(source["report_name"].rsplit(" ", maxsplit=1)[1])
         return {
             "git_sha": "a" * 40,
-            "run_directory": str(tmp_path / "single-production-run"),
+            "run_directory": str(kwargs["runs_root"] / "production-run"),
             "reports": [
                 {
-                    "report_id": f"report-{index}",
+                    "report_id": report_id,
                     "admission_outcome": "admitted",
-                    "final_state": "failed",
-                    "terminal_failure_code": "typed_failure",
+                    "final_state": "awaiting_review",
+                    "terminal_failure_code": "",
+                    "awaiting_review": True,
+                    "publication_readiness": "pass",
+                    "bounded_automatic_repair": False,
+                    "operator_intervention": False,
                 }
-                for index in range(20)
             ],
+            "cohort_metrics": {
+                "model_provider_calls": index + 1,
+                "input_tokens": 100 * (index + 1),
+                "output_tokens": 10 * (index + 1),
+                "cost_usd": 0.1 * (index + 1),
+                "duration_seconds": 12.0 * (index + 1),
+                "bounded_automatic_repair": False,
+                "operator_intervention_count": 0,
+            },
         }
 
     result = run_frozen_reliability_cohort(
         sources_manifest=manifest,
         runs_root=tmp_path,
+        report_ids=tuple(report_ids),
+        max_duration_seconds=984,
         run_cohort_once=run_once,
     )
 
-    assert len(captured) == 1
-    assert len(captured[0]["sources"]) == 20
-    assert result["cohort_size"] == 20
-    assert len(result["reports"]) == 20
+    assert len(captured) == 2
+    assert all(len(call["sources"]) == 1 for call in captured)
+    assert all(call["max_duration_seconds"] == 984 for call in captured)
+    assert len({str(call["runs_root"]) for call in captured}) == 2
+    assert [report["report_id"] for report in result["reports"]] == report_ids
+    assert all(
+        report["metric_attribution"] == "per_report_isolated_workflow"
+        for report in result["reports"]
+    )
+    assert result["cohort_size"] == 2
     assert result["git_sha"] == "a" * 40
+    assert result["cohort_metrics"]["model_provider_calls"] == sum(
+        range(2, 5, 2)
+    )
+    assert result["cohort_metrics"]["cost_usd"] == 0.6
+    assert result["summary"]["mean_cost"] == 0.3
     retained = json.loads(
         Path(result["cohort_directory"])
         .joinpath("cohort_result.json")
         .read_text(encoding="utf-8")
     )
     assert retained["git_sha"] == "a" * 40
+    assert retained["cohort_size"] == 2
 
 
 def test_cohort_summary_retains_batch_metrics_only_at_cohort_scope() -> None:

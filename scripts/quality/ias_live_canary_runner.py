@@ -1245,8 +1245,14 @@ def summarize_frozen_cohort_results(
         if item.get("admission_outcome", "admitted") == "admitted"
     ]
     workflow_denominator = max(1, len(admitted))
-    costs = [float(item.get("cost") or 0.0) for item in results]
-    durations = [float(item.get("total_duration_seconds") or 0.0) for item in results]
+    costs = [
+        float(item["cost"]) for item in results if item.get("cost") is not None
+    ]
+    durations = [
+        float(item["total_duration_seconds"])
+        for item in results
+        if item.get("total_duration_seconds") is not None
+    ]
     failures = [
         str(item.get("terminal_failure_code") or "")
         for item in results
@@ -1294,12 +1300,28 @@ def summarize_frozen_cohort_results(
             bool(item.get("operator_intervention")) for item in results
         ),
         "failure_code_pareto": pareto,
-        "mean_cost": round(sum(costs) / denominator, 6),
-        "median_cost": round(median(costs), 6) if costs else 0.0,
-        "mean_duration_seconds": round(sum(durations) / denominator, 3),
-        "median_duration_seconds": round(median(durations), 3) if durations else 0.0,
+        "mean_cost": (
+            round(sum(costs) / denominator, 6)
+            if len(costs) == count
+            else "unavailable"
+        ),
+        "median_cost": (
+            round(median(costs), 6) if len(costs) == count else "unavailable"
+        ),
+        "mean_duration_seconds": (
+            round(sum(durations) / denominator, 3)
+            if len(durations) == count
+            else "unavailable"
+        ),
+        "median_duration_seconds": (
+            round(median(durations), 3) if len(durations) == count else "unavailable"
+        ),
     }
     if cohort_metrics is not None:
+        per_report_attribution = bool(results) and all(
+            item.get("metric_attribution") == "per_report_isolated_workflow"
+            for item in results
+        )
         summary.update(
             {
                 "cohort_cost_usd": cohort_metrics.get("cost_usd"),
@@ -1312,14 +1334,34 @@ def summarize_frozen_cohort_results(
                 ),
                 "cohort_input_tokens": cohort_metrics.get("input_tokens"),
                 "cohort_output_tokens": cohort_metrics.get("output_tokens"),
-                "bounded_repair_rate": "unavailable",
+                "bounded_repair_rate": (
+                    summary["bounded_repair_rate"]
+                    if per_report_attribution
+                    else "unavailable"
+                ),
                 "operator_intervention_count": cohort_metrics.get(
                     "operator_intervention_count", "unavailable"
                 ),
-                "mean_cost": "unavailable",
-                "median_cost": "unavailable",
-                "mean_duration_seconds": "unavailable",
-                "median_duration_seconds": "unavailable",
+                "mean_cost": (
+                    summary["mean_cost"]
+                    if per_report_attribution
+                    else "unavailable"
+                ),
+                "median_cost": (
+                    summary["median_cost"]
+                    if per_report_attribution
+                    else "unavailable"
+                ),
+                "mean_duration_seconds": (
+                    summary["mean_duration_seconds"]
+                    if per_report_attribution
+                    else "unavailable"
+                ),
+                "median_duration_seconds": (
+                    summary["median_duration_seconds"]
+                    if per_report_attribution
+                    else "unavailable"
+                ),
             }
         )
     return summary
