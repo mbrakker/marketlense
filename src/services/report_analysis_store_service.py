@@ -45,13 +45,13 @@ def _report_base_dir(output_dir: str, report_slug: str) -> Path:
 
 
 def _bounded_report_slug(output_dir: str, report_slug: str, pack_name: str) -> str:
-    """Keep each report-analysis pack and its atomic temp file path-safe."""
+    """Keep each report-analysis destination and temp file path-safe."""
 
     artifact_name = f"{pack_name}.json"
+    destination_path = _report_base_dir(output_dir, report_slug) / artifact_name
     if (
-        file_service.atomic_write_temp_path_length(
-            _report_base_dir(output_dir, report_slug) / artifact_name
-        )
+        len(str(destination_path.resolve())) < file_service.WINDOWS_MAX_PATH_LENGTH
+        and file_service.atomic_write_temp_path_length(destination_path)
         <= file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     ):
         return report_slug
@@ -59,12 +59,39 @@ def _bounded_report_slug(output_dir: str, report_slug: str, pack_name: str) -> s
     compact_path = _report_base_dir(output_dir, digest) / artifact_name
     prefix_budget = max(
         0,
-        file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
-        - file_service.atomic_write_temp_path_length(compact_path)
-        - 1,
+        min(
+            file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+            - file_service.atomic_write_temp_path_length(compact_path)
+            - 1,
+            file_service.WINDOWS_MAX_PATH_LENGTH
+            - len(str(compact_path.resolve()))
+            - 2,
+        ),
     )
     prefix = report_slug[:prefix_budget].rstrip(" .-_")
-    return f"{prefix}-{digest}" if prefix else digest
+    bounded_slug = f"{prefix}-{digest}" if prefix else digest
+    bounded_path = _report_base_dir(output_dir, bounded_slug) / artifact_name
+    if (
+        len(str(bounded_path.resolve())) >= file_service.WINDOWS_MAX_PATH_LENGTH
+        or file_service.atomic_write_temp_path_length(bounded_path)
+        > file_service.WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    ):
+        raise AppError(
+            code="analysis_pack_path_too_long",
+            message=(
+                "Report-analysis pack destination exceeds the supported Windows "
+                "path length after slug compaction"
+            ),
+            retryable=False,
+            context={
+                "pack_name": pack_name,
+                "destination_path_length": len(str(bounded_path.resolve())),
+                "atomic_temp_path_length": file_service.atomic_write_temp_path_length(
+                    bounded_path
+                ),
+            },
+        )
+    return bounded_slug
 
 
 def _resolve_report_slug(report_slug: str | None, report_id: str) -> str:
@@ -229,7 +256,10 @@ def store_pack(
     except Exception as exc:
         raise AppError(
             code="analysis_store_failed",
-            message=f"Failed to store analysis pack '{request.pack_name}' for report '{request.report_id}'",
+            message=(
+                f"Failed to store analysis pack '{request.pack_name}' for report "
+                f"'{request.report_id}'"
+            ),
             cause=exc,
             retryable=False,
             context={

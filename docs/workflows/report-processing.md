@@ -51,12 +51,13 @@ transient Windows replacement contention. This makes the cache race-safe
 without treating a missing sidecar as a valid cache hit; an interrupted write
 is simply regenerated.
 Report-analysis packs use the same bounded-path rule at their canonical store
-boundary: when a report slug plus the shared atomic-write temporary filename
-would exceed the Windows-safe budget, the report directory is deterministically
-compacted with a slug-derived suffix. Every producer and downstream reader
-resolves that one canonical path through the analysis-pack service, including
-the crop-refinement cache; a genuine directory, permission, serialization, or
-atomic-write failure remains a typed persistence failure.
+boundary: both the final pack destination and its atomic-write temporary path
+are checked. When either exceeds its Windows path budget, the report directory
+is deterministically compacted with a slug-derived suffix. Every producer and
+downstream reader resolves that one canonical path through the analysis-pack
+service, including the crop-refinement cache; a directory that still cannot fit
+fails with `analysis_pack_path_too_long` instead of a later generic write
+failure.
 
 PDF cache paths use the same safety budget for both the final destination and
 the unique atomic-write temporary file. Deep isolated runs compact the cache

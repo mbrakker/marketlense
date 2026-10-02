@@ -5,12 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from src.contracts.report_analysis import AnalysisStorePackRequest
+from src.contracts.report_analysis import (
+    AnalysisPackPathRequest,
+    AnalysisStorePackRequest,
+)
 from src.services.file_service import (
     WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
     atomic_write_temp_path_length,
 )
-from src.services.report_analysis_store_service import store_pack
+from src.services.report_analysis_store_service import pack_path, store_pack
 from src.utils.errors import AppError
 
 
@@ -338,3 +341,59 @@ def test_store_pack_bounds_stackadapt_crop_refine_path_for_atomic_write(
     assert stored_path.parent.name == "report_analysis"
     assert atomic_write_temp_path_length(stored_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     assert json.loads(stored_path.read_text(encoding="utf-8")) == payload
+
+
+def test_pack_path_bounds_long_destination_and_atomic_temp_paths(
+    run_context, tmp_path: Path
+) -> None:
+    report_slug = "2026-global-payments-and-fraud-report-pdf"
+    pack_name = "prompt_family_report_vs_evidence_packs_limitations"
+    output_dir = tmp_path / "isolated-cohort"
+    unbounded_path = (
+        output_dir / report_slug / "report_analysis" / f"{pack_name}.json"
+    )
+    padding_length = 280 - len(str(unbounded_path.resolve()))
+    assert 0 < padding_length < 255
+    output_dir = output_dir / ("x" * padding_length)
+
+    response = pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id="cohort-11b0b55157f7d0636815",
+            pack_name=pack_name,
+            report_slug=report_slug,
+        ),
+        run_context,
+    )
+
+    stored_path = Path(response.output_path)
+    assert len(str(stored_path.resolve())) <= 259
+    assert atomic_write_temp_path_length(stored_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+
+
+def test_pack_path_rejects_destination_that_cannot_fit_after_compaction(
+    run_context, tmp_path: Path
+) -> None:
+    pack_name = "prompt_family_report_vs_evidence_packs_limitations"
+    output_dir = tmp_path / "isolated-cohort"
+    minimum_path = (
+        output_dir / ("a" * 12) / "report_analysis" / f"{pack_name}.json"
+    )
+    padding_length = 280 - len(str(minimum_path.resolve()))
+    assert 0 < padding_length < 255
+    output_dir = output_dir / ("x" * padding_length)
+
+    with pytest.raises(AppError) as exc_info:
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id="cohort-11b0b55157f7d0636815",
+                pack_name=pack_name,
+                report_slug="2026-global-payments-and-fraud-report-pdf",
+            ),
+            run_context,
+        )
+
+    assert exc_info.value.code == "analysis_pack_path_too_long"
