@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from types import SimpleNamespace
 
 import pytest
@@ -91,6 +92,105 @@ def test_openai_response_with_vector_store_finalizes_compatibility_export(
     assert fake_openai.calls["responses.create"][0]["temperature"] == 0.1
     assert "seed" not in fake_openai.calls["responses.create"][0]
     assert fake_openai.client_kwargs[0]["max_retries"] == 0
+
+
+def test_openai_response_file_search_calls_reach_cost_and_usage_attribution(
+    tmp_path, fake_openai
+) -> None:
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text='{"result":"ok"}',
+            output=[
+                {"type": "file_search_call", "id": "fs_1"},
+                {"type": "file_search_call", "id": "fs_2"},
+                {"type": "message", "content": []},
+            ],
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+            id="resp_file_search_accounting",
+        ),
+    )
+    request = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_report_123",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        usage_db_path=str(tmp_path / "usage.sqlite"),
+        model_pricing={
+            "gpt-4.1-mini": {
+                "input_tokens_per_1k_usd": 0.0,
+                "output_tokens_per_1k_usd": 0.0,
+                "tool_call_usd": 0.25,
+            }
+        },
+        report_id="report-123",
+        workflow="report_analysis",
+        stage="scope",
+        artifact_family="scope",
+        prompt_namespace="report_vs/scope",
+        repair_attempt=1,
+    )
+
+    result = svc.openai_respond_with_vector_store(request, _ctx())
+
+    assert result.tool_calls == 2
+    with sqlite3.connect(request.usage_db_path) as connection:
+        row = connection.execute(
+            "SELECT report_id, workflow, stage, artifact_family, prompt_namespace, "
+            "repair_attempt, tool_calls, estimated_cost_usd, metadata_json "
+            "FROM llm_usage_events"
+        ).fetchone()
+    assert row is not None
+    assert row[:8] == (
+        "report-123",
+        "report_analysis",
+        "scope",
+        "scope",
+        "report_vs/scope",
+        1,
+        2,
+        0.5,
+    )
+    metadata = json.loads(row[8])
+    assert metadata["file_search_call_count"] == 2
+    assert metadata["vector_store_id"] == "vs_report_123"
+
+
+def test_cached_file_search_response_does_not_issue_another_provider_search(
+    tmp_path, fake_openai
+) -> None:
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text='{"result":"cached"}',
+            output=[{"type": "file_search_call", "id": "fs_cached"}],
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+            id="resp_cached_file_search",
+        ),
+    )
+    request = OpenAIResponseRequest(
+        schema_version="1.0",
+        system_prompt="system",
+        user_prompt="user",
+        vector_store_id="vs_cached",
+        model="gpt-4.1-mini",
+        temperature=0.1,
+        api_key="key",
+        response_cache_enabled=True,
+        response_cache_dir=str(tmp_path / "cache"),
+    )
+
+    first = svc.openai_respond_with_vector_store(request, _ctx())
+    second = svc.openai_respond_with_vector_store(request, _ctx())
+
+    assert first.tool_calls == 1
+    assert second.tool_calls == 1
+    assert len(fake_openai.calls["responses.create"]) == 1
 
 
 def test_openai_response_with_vector_store_requires_vector_store_id(

@@ -49,6 +49,8 @@ def record_usage_accounting(
     request_id: str | None,
     cached_input_tokens: int | None = None,
     reasoning_tokens: int | None = None,
+    file_search_call_count: int | None = None,
+    vector_store_id: str = "",
     provider: str = "openai",
     action: str | None = None,
     reservation_operation: str = "",
@@ -226,6 +228,16 @@ def record_usage_accounting(
                 "cohort_id": str(getattr(source, "cohort_id", "") or ""),
                 "workflow_run_id": str(
                     getattr(source, "workflow_run_id", "") or ctx.run_id
+                ),
+                **(
+                    {
+                        "file_search_call_count": max(
+                            0, int(file_search_call_count)
+                        ),
+                        "vector_store_id": str(vector_store_id or "").strip(),
+                    }
+                    if file_search_call_count is not None
+                    else {}
                 ),
             },
         ),

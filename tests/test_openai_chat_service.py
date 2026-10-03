@@ -866,3 +866,35 @@ def test_openai_shared_adapts_responses_and_ocr_payload_boundaries() -> None:
             schema_version="1.0", page_number=2, text="second"
         ),
     ]
+
+
+@pytest.mark.parametrize(
+    ("output", "expected_file_search_calls"),
+    [
+        ([], 0),
+        ([{"type": "file_search_call", "id": "fs_1"}], 1),
+        (
+            [
+                SimpleNamespace(type="file_search_call", id="fs_1"),
+                {"type": "file_search_call", "id": "fs_2"},
+                {"type": "message", "content": [{"type": "output_text", "text": "ok"}]},
+            ],
+            2,
+        ),
+    ],
+)
+def test_responses_metadata_counts_file_search_output_items(
+    output, expected_file_search_calls
+) -> None:
+    response = SimpleNamespace(
+        id="resp_searches",
+        output=output,
+        usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+    )
+
+    metadata = openai_shared._adapt_responses_metadata(
+        response, recover_json_object=False
+    )
+
+    assert metadata.file_search_call_count == expected_file_search_calls
+    assert metadata.tool_calls == expected_file_search_calls

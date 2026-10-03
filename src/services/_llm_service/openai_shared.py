@@ -786,6 +786,22 @@ def _extract_responses_usage(
     return input_tokens, output_tokens, int(tool_calls or 0), total_tokens
 
 
+def _extract_responses_file_search_call_count(resp: Any) -> int:
+    """Count completed File Search output items returned by Responses."""
+
+    output = getattr(resp, "output", None)
+    if not isinstance(output, list):
+        return 0
+    return sum(
+        1
+        for item in output
+        if (
+            item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
+        )
+        == "file_search_call"
+    )
+
+
 @dataclass(frozen=True)
 class _OpenAIResponseMetadata:
     text: str
@@ -798,6 +814,7 @@ class _OpenAIResponseMetadata:
     parsed_json: dict | None
     parse_strategy: str
     reasoning_tokens: int | None = None
+    file_search_call_count: int = 0
 
 
 def _parse_response_json(
@@ -827,6 +844,7 @@ def _build_response_metadata(
     cached_input_tokens: int | None,
     recover_json_object: bool,
     reasoning_tokens: int | None = None,
+    file_search_call_count: int = 0,
 ) -> _OpenAIResponseMetadata:
     parsed_json, parse_strategy = _parse_response_json(
         text,
@@ -848,6 +866,7 @@ def _build_response_metadata(
         parsed_json=parsed_json,
         parse_strategy=parse_strategy,
         reasoning_tokens=reasoning_tokens,
+        file_search_call_count=max(0, int(file_search_call_count or 0)),
     )
 
 
@@ -868,9 +887,10 @@ def _adapt_chat_completion_metadata(run: Any) -> _OpenAIResponseMetadata:
 def _adapt_responses_metadata(
     resp: Any, *, recover_json_object: bool
 ) -> _OpenAIResponseMetadata:
-    input_tokens, output_tokens, tool_calls, total_tokens = _extract_responses_usage(
-        resp
+    input_tokens, output_tokens, reported_tool_calls, total_tokens = (
+        _extract_responses_usage(resp)
     )
+    file_search_call_count = _extract_responses_file_search_call_count(resp)
     usage = getattr(resp, "usage", None)
     details = (
         usage.get("output_tokens_details")
@@ -887,11 +907,12 @@ def _adapt_responses_metadata(
         request_id=getattr(resp, "id", None),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
-        tool_calls=tool_calls,
+        tool_calls=max(reported_tool_calls, file_search_call_count),
         total_tokens=total_tokens,
         cached_input_tokens=None,
         recover_json_object=recover_json_object,
         reasoning_tokens=reasoning_tokens,
+        file_search_call_count=file_search_call_count,
     )
 
 
