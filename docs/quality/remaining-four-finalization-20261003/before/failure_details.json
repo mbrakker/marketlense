@@ -1,0 +1,20 @@
+{
+  "terminal_failures": [
+    {
+      "artifact_family": "summary.claim_evidence_map:1.claim",
+      "claim_or_entity_id": "soft_copy:summary:82f73e42809d63bd",
+      "error_context": {
+        "affected_section": "summary.claim_evidence_map:1.claim"
+      },
+      "failure_code": "validation_failed",
+      "inner_error_class": "",
+      "outer_code": "validation_failed",
+      "repair_attempt": 1,
+      "report_id": "cohort-2acb4a56e14add5d7717",
+      "stage": "semantic_validation",
+      "terminal_outcome": "failed",
+      "terminal_stage": "",
+      "validator_rule": "grounding"
+    }
+  ]
+}

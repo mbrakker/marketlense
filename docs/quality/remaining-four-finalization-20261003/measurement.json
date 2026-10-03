@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "cohort": {
+    "manifest": "docs/quality/reliability-cohort-20260927-grounding/frozen_cohort.json",
+    "report_ids": [
+      "cohort-2acb4a56e14add5d7717",
+      "cohort-9b97626fc83c086961a7",
+      "cohort-4b763ae2286ca69fe8ac",
+      "cohort-5ceb3b4498de7288ce5a"
+    ],
+    "report_names": [
+      "KPMG",
+      "DHL eCommerce",
+      "Reuters Institute",
+      "Robeco"
+    ],
+    "scope": "The same four previously failing reports; not the full 20-report cohort."
+  },
+  "runs": {
+    "before": {
+      "git_sha": "e462c285cfbecafce6eb78887a96e11ca74c8421",
+      "cohort_size": 4,
+      "publication_enabled": false,
+      "metrics": {
+        "bounded_automatic_repair": true,
+        "cost_usd": 0.280942,
+        "duration_seconds": 2373.748,
+        "input_tokens": 1456857,
+        "metric_attribution": "per_report_isolated_workflow",
+        "model_provider_calls": 142,
+        "operator_intervention_count": 0,
+        "output_tokens": 295812
+      },
+      "reports": [
+        {
+          "publisher_id": "KPMG",
+          "report_id": "cohort-2acb4a56e14add5d7717",
+          "final_state": "failed",
+          "publication_readiness": "fail",
+          "validation": "fail",
+          "terminal_failure_code": "validation_failed",
+          "model_provider_calls": 50,
+          "input_tokens": 462961,
+          "output_tokens": 116551,
+          "cost": 0.095391,
+          "total_duration_seconds": 829.254,
+          "awaiting_review": false
+        },
+        {
+          "publisher_id": "DHL eCommerce",
+          "report_id": "cohort-9b97626fc83c086961a7",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 36,
+          "input_tokens": 259517,
+          "output_tokens": 52693,
+          "cost": 0.051197,
+          "total_duration_seconds": 535.202,
+          "awaiting_review": true
+        },
+        {
+          "publisher_id": "Reuters Institute",
+          "report_id": "cohort-4b763ae2286ca69fe8ac",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 29,
+          "input_tokens": 369920,
+          "output_tokens": 59247,
+          "cost": 0.065516,
+          "total_duration_seconds": 492.448,
+          "awaiting_review": true
+        },
+        {
+          "publisher_id": "Robeco",
+          "report_id": "cohort-5ceb3b4498de7288ce5a",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 27,
+          "input_tokens": 364459,
+          "output_tokens": 67321,
+          "cost": 0.068838,
+          "total_duration_seconds": 516.844,
+          "awaiting_review": true
+        }
+      ],
+      "readiness_provider_calls": 0,
+      "readiness_provider_call_evidence": "The three reports that reached readiness recorded provider_usage_json={}; KPMG failed validation before readiness."
+    },
+    "after": {
+      "git_sha": "9466f4c0b718c691817a820793b4fa97ac5d8040",
+      "cohort_size": 4,
+      "publication_enabled": false,
+      "metrics": {
+        "bounded_automatic_repair": true,
+        "cost_usd": 0.26245,
+        "duration_seconds": 2084.567,
+        "input_tokens": 1374991,
+        "metric_attribution": "per_report_isolated_workflow",
+        "model_provider_calls": 134,
+        "operator_intervention_count": 0,
+        "output_tokens": 263131
+      },
+      "reports": [
+        {
+          "publisher_id": "KPMG",
+          "report_id": "cohort-2acb4a56e14add5d7717",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 37,
+          "input_tokens": 345745,
+          "output_tokens": 62462,
+          "cost": 0.064872,
+          "total_duration_seconds": 448.855,
+          "awaiting_review": true
+        },
+        {
+          "publisher_id": "DHL eCommerce",
+          "report_id": "cohort-9b97626fc83c086961a7",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 40,
+          "input_tokens": 316848,
+          "output_tokens": 77307,
+          "cost": 0.066691,
+          "total_duration_seconds": 696.189,
+          "awaiting_review": true
+        },
+        {
+          "publisher_id": "Reuters Institute",
+          "report_id": "cohort-4b763ae2286ca69fe8ac",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 30,
+          "input_tokens": 341935,
+          "output_tokens": 57613,
+          "cost": 0.062068,
+          "total_duration_seconds": 431.527,
+          "awaiting_review": true
+        },
+        {
+          "publisher_id": "Robeco",
+          "report_id": "cohort-5ceb3b4498de7288ce5a",
+          "final_state": "awaiting_review",
+          "publication_readiness": "pass",
+          "validation": "pass",
+          "terminal_failure_code": "",
+          "model_provider_calls": 27,
+          "input_tokens": 370463,
+          "output_tokens": 65749,
+          "cost": 0.068819,
+          "total_duration_seconds": 507.996,
+          "awaiting_review": true
+        }
+      ],
+      "readiness_provider_calls": 0,
+      "readiness_provider_call_evidence": "All four publication_readiness.v1 attempts have provider_usage_json={}."
+    }
+  },
+  "delta_after_minus_before": {
+    "model_provider_calls": -8,
+    "input_tokens": -81866,
+    "output_tokens": -32681,
+    "cost_usd": -0.018492,
+    "duration_seconds": -289.181,
+    "publication_readiness_passes": 1
+  },
+  "measurement_sources": {
+    "runner": "scripts/quality/run_frozen_reliability_cohort.py",
+    "evidence_exporter": "scripts/quality/export_reliability_run_evidence.py",
+    "source_results_retained_as": "Sanitized before/after exports in this directory."
+  }
+}
