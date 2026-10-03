@@ -226,47 +226,43 @@ def _issue_grounding(
         ]
         if len(matching_claims) != 1:
             return [], []
-        claim = matching_claims[0][1]
-        raw_evidence_ids = claim.get("evidence_ids")
-        evidence_ids = (
-            [
-                str(value).strip()
-                for value in raw_evidence_ids
-                if str(value).strip()
-            ]
+        summary_claim = matching_claims[0][1]
+        raw_evidence_ids = summary_claim.get("evidence_ids")
+        summary_claim_evidence_ids = (
+            [str(value).strip() for value in raw_evidence_ids if str(value).strip()]
             if isinstance(raw_evidence_ids, list)
             else []
         )
-        evidence_id = str(claim.get("evidence_id") or "").strip()
-        if evidence_id and evidence_id not in evidence_ids:
-            evidence_ids.append(evidence_id)
-        pages = list(
+        evidence_id = str(summary_claim.get("evidence_id") or "").strip()
+        if evidence_id and evidence_id not in summary_claim_evidence_ids:
+            summary_claim_evidence_ids.append(evidence_id)
+        summary_claim_pages = list(
             dict.fromkeys(
                 page
-                for page in claim.get("pages") or []
+                for page in summary_claim.get("pages") or []
                 if isinstance(page, int)
             )
         )
-        return evidence_ids, pages
+        return summary_claim_evidence_ids, summary_claim_pages
     if lower_section in {
         "tldr",
         "executive_summary",
         "claim_evidence_map",
     } or lower_section.startswith("summary"):
-        evidence_ids: List[str] = []
-        pages: List[int] = []
+        summary_evidence_ids: List[str] = []
+        summary_pages: List[int] = []
         summary_value = artifacts.get("summary")
         summary = summary_value if isinstance(summary_value, dict) else {}
         for claim in summary.get("claim_evidence_map") or []:
             if not isinstance(claim, dict):
                 continue
             evidence_id = str(claim.get("evidence_id") or "").strip()
-            if evidence_id and evidence_id not in evidence_ids:
-                evidence_ids.append(evidence_id)
+            if evidence_id and evidence_id not in summary_evidence_ids:
+                summary_evidence_ids.append(evidence_id)
             for page in claim.get("pages") or []:
-                if isinstance(page, int) and page not in pages:
-                    pages.append(page)
-        return evidence_ids, pages
+                if isinstance(page, int) and page not in summary_pages:
+                    summary_pages.append(page)
+        return summary_evidence_ids, summary_pages
     if lower_section.startswith("insights"):
         insight_id = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_insight_grounding(insight_id, artifacts)
@@ -781,13 +777,13 @@ def _issue_insight_allowed_paths(
         items = candidates
     if not root:
         return []
-    item = _item_at_identity_path(items, item_path)
-    if not isinstance(item, dict):
+    resolved_item = _item_at_identity_path(items, item_path)
+    if not isinstance(resolved_item, dict):
         return []
     return [
         f"{root}{item_path}.{field}"
         for field in _insight_issue_fields(issue)
-        if _has_scalar_leaf(item, field)
+        if _has_scalar_leaf(resolved_item, field)
     ]
 
 

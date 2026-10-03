@@ -16,6 +16,7 @@ from src.contracts.claim_validation import (
     ClaimCandidate,
     ClaimEvidenceReference,
     ClaimKind,
+    ClaimSemanticOutcome,
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
     ClaimValidationCheck,
@@ -657,7 +658,7 @@ def _validate_claims_against_sources(
         deterministic_status = status
         semantic_used = False
         execution_identity = ""
-        semantic_outcome = None
+        semantic_outcome: ClaimSemanticOutcome | None = None
         semantic_reason = ""
         if status == "unresolved" and semantic_validator is not None:
             sources = [

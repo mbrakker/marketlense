@@ -519,6 +519,18 @@ def test_semantically_grounded_package_is_consumed_without_regrounding() -> None
     assert package["semantic_execution_identities"] == ["grounding-execution-1"]
 
 
+def test_invalid_semantic_outcome_type_blocks_readiness_without_crashing() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
+    package["results"][0]["semantic_outcome"] = []
+
+    readiness = _readiness_with_package(_seal_claim_package(package))
+    rule = _retained_grounding_rule(readiness)
+
+    assert readiness.status == "fail"
+    assert "semantic_disposition_mismatch" in rule.detail
+
+
 def test_publish_readiness_rejects_html_without_build_traceability() -> None:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     html = re.sub(r"<!--.*?-->\s*", "", html, count=1, flags=re.DOTALL)

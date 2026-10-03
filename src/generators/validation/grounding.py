@@ -438,7 +438,7 @@ def run_grounding_check(
                     )
         recovery_attempted = False
         if reused_payload is None:
-            response_payload = {"unsupported": [], "checks": []}
+            response_payload: dict[str, Any] = {"unsupported": [], "checks": []}
             for batch_index, (batch_spec, batch_vars, batch_bundle) in enumerate(
                 zip(
                     grounding_batches,
@@ -508,6 +508,9 @@ def run_grounding_check(
                         }[mode],
                     )
 
+                def validate_recovery_payload(payload: Any) -> None:
+                    validate_grounding_payload(payload, batch_semantic_inputs)
+
                 recovery = execute_structured_output(
                     StructuredOutputExecutionRequest(
                         schema_version="1.0",
@@ -524,9 +527,7 @@ def run_grounding_check(
                     normalize_payload=lambda payload: (
                         dict(payload) if isinstance(payload, dict) else payload
                     ),
-                    validate_payload=lambda payload, inputs=batch_semantic_inputs: (
-                        validate_grounding_payload(payload, inputs)
-                    ),
+                    validate_payload=validate_recovery_payload,
                     is_substantive=lambda payload: (
                         isinstance(payload, dict) and "unsupported" in payload
                     ),
@@ -1029,7 +1030,7 @@ def grounding_payload(
         payload["title"] = request.report.title
     if not publisher_is_canonical and request.report.publisher:
         payload["publisher"] = request.report.publisher
-    payload["public_factual_items"] = _public_factual_items(
+    public_factual_items = _public_factual_items(
         artifacts=artifacts,
         evidence_packs=request.evidence_packs,
         report_title=("" if title_is_canonical else request.report.title),
@@ -1037,9 +1038,10 @@ def grounding_payload(
         insights=insights,
         summary=summary_clean,
     )
+    payload["public_factual_items"] = public_factual_items
     public_item_ids = {
         s(item.get("item_id"))
-        for item in payload["public_factual_items"]
+        for item in public_factual_items
         if isinstance(item, dict) and s(item.get("item_id"))
     }
     retained_item_ids = _retained_claim_grounding_item_ids(

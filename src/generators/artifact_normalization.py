@@ -1292,22 +1292,19 @@ def _ranked_unique_insights(
         duplicate_key = _insight_duplicate_key(insight)
         if duplicate_key and final_claim_counts.get(duplicate_key, 0) > 1:
             candidate = candidate_by_id.get(insight_id)
-            candidate_key = (
-                _insight_duplicate_key(candidate)
-                if isinstance(candidate, dict)
-                else None
-            )
-            if candidate_key and candidate_key != duplicate_key:
-                for field_name in (
-                    "text",
-                    "metric",
-                    "evidence_id",
-                    "evidence",
-                    "pages",
-                    "evidence_spans",
-                ):
-                    if field_name in candidate:
-                        insight[field_name] = deepcopy(candidate[field_name])
+            if isinstance(candidate, dict):
+                candidate_key = _insight_duplicate_key(candidate)
+                if candidate_key and candidate_key != duplicate_key:
+                    for field_name in (
+                        "text",
+                        "metric",
+                        "evidence_id",
+                        "evidence",
+                        "pages",
+                        "evidence_spans",
+                    ):
+                        if field_name in candidate:
+                            insight[field_name] = deepcopy(candidate[field_name])
         duplicate_key = _insight_duplicate_key(insight)
         if duplicate_key and duplicate_key in seen:
             continue
@@ -1481,9 +1478,7 @@ def normalize_artifact_quotes(items: Any) -> List[Dict[str, Any]]:
         occurrence_index = occurrence_counts.get(occurrence_key, 0)
         occurrence_counts[occurrence_key] = occurrence_index + 1
         quote = {
-            "id": canonical_artifact_quote_id(
-                item, occurrence_index=occurrence_index
-            ),
+            "id": canonical_artifact_quote_id(item, occurrence_index=occurrence_index),
             "text": text,
             "speaker": _s(item.get("speaker") or "Unknown"),
             "citation": _s(item.get("citation")),

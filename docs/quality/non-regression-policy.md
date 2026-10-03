@@ -87,6 +87,11 @@ The CI workflow enforces:
 - non-regression comparator: `python scripts/ci/check_quality_regression.py`
 - prompt fixture comparator: `python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3`
 
+The type gate compares full-repository mypy output with
+[`mypy_baseline.json`](mypy_baseline.json). Correct newly introduced errors in
+source; retain only reviewed, owned, expiring legacy errors in the baseline.
+Do not refresh the baseline just to clear a new CI failure.
+
 ## Coverage Floors
 
 - global >= baseline and configured floor

@@ -748,9 +748,8 @@ def _retained_claim_grounding_result(
         or recorded_unresolved != unresolved
     ):
         problems.add("unresolved_factual_count_mismatch")
-    if (
-        not _is_nonnegative_int(recorded_semantic)
-        or recorded_semantic != len(semantic_rows)
+    if not _is_nonnegative_int(recorded_semantic) or recorded_semantic != len(
+        semantic_rows
     ):
         problems.add("semantic_validation_count_mismatch")
     expected_package_status = (
@@ -883,15 +882,19 @@ def _retained_claim_grounding_result(
             problems.add("semantic_claim_evidence_identity_mismatch")
         if identity.get("source_identity") != source_id:
             problems.add("semantic_source_identity_stale")
-        expected_status = {
-            "entailed": "supported",
-            "contradicted": "unsupported",
-            "not_established": "unresolved",
-        }.get(result.get("semantic_outcome"))
-        if (
-            result.get("deterministic_status") != "unresolved"
-            or expected_status != result.get("status")
-        ):
+        semantic_outcome = result.get("semantic_outcome")
+        expected_status = (
+            {
+                "entailed": "supported",
+                "contradicted": "unsupported",
+                "not_established": "unresolved",
+            }.get(semantic_outcome)
+            if isinstance(semantic_outcome, str)
+            else None
+        )
+        if result.get(
+            "deterministic_status"
+        ) != "unresolved" or expected_status != result.get("status"):
             problems.add("semantic_disposition_mismatch")
         execution_identity = str(identity.get("execution_identity") or "")
         prompt_hash = str(identity.get("prompt_content_hash") or "")
