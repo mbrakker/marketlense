@@ -63,6 +63,68 @@ def test_grounding_package_quarantines_failed_evidence_and_uses_replacements() -
     assert "failed-evidence" not in json.dumps(package["relevant_evidence"])
 
 
+def test_insight_rebind_grounding_uses_only_page_bound_direct_evidence() -> None:
+    target = RegenerationTarget(
+        target_section="insights_bundle",
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="insights:insight-1.text",
+                message="The insight needs a retained direct source alternative.",
+                severity="error",
+                evidence_ids=["quarantined-finding"],
+                excluded_evidence_ids=["quarantined-finding"],
+                pages=[7],
+            )
+        ],
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+    )
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "direct-finding",
+                    "text": "Regional outlook pipeline readiness is documented.",
+                    "evidence": "Regional outlook pipeline readiness is documented.",
+                    "pages": [7],
+                },
+                {
+                    "id": "unpaged-finding",
+                    "text": "Regional outlook pipeline readiness is documented.",
+                    "evidence": "Regional outlook pipeline readiness is documented.",
+                },
+            ]
+        },
+        "doc_map": {
+            "sections": [
+                {
+                    "id": "executive-summary",
+                    "summary": "Regional outlook pipeline readiness is documented.",
+                    "pages": [7],
+                }
+            ]
+        },
+    }
+
+    package = _build_grounding_package(
+        target=target,
+        prepared=SimpleNamespace(evidence_windows=[]),
+        artifacts={
+            "insights_final": [
+                {
+                    "id": "insight-1",
+                    "text": "Regional outlook pipeline readiness.",
+                }
+            ]
+        },
+        evidence_packs=evidence_packs,
+        doc_map=evidence_packs["doc_map"],
+    )
+
+    assert package["evidence_ids"] == ["direct-finding"]
+
+
 def test_grounding_package_selects_retained_evidence_for_soft_copy_without_issue_ids() -> (
     None
 ):

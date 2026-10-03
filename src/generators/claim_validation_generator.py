@@ -7,7 +7,7 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import asdict, dataclass, replace
-from typing import Callable, Literal, Sequence
+from typing import Callable, Literal, Mapping, Sequence
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
@@ -730,36 +730,11 @@ def _semantic_inputs(
         refs = candidate.evidence_references
         if not refs or any(ref.evidence_id not in source_evidence for ref in refs):
             continue
-        evidence_texts: list[str] = []
-        evidence_identities: list[dict[str, object]] = []
-        for ref in refs:
-            source_pack, retained_text, indexed_page = source_evidence[ref.evidence_id]
-            referenced_page = ref.page if ref.page is not None else indexed_page
-            source_page = _source_page_for_reference(
-                source_pack=source_pack,
-                referenced_page=referenced_page,
-                source_pages=source_pages,
-            )
-            page_text = source_page.text.strip() if source_page is not None else ""
-            evidence_text = page_text or retained_text
-            evidence_texts.append(evidence_text)
-            identity = {
-                "evidence_id": ref.evidence_id,
-                "source_pack": ref.source_pack,
-                "page": ref.page,
-                "text_hash": ref.text_hash,
-            }
-            if page_text:
-                identity.update(
-                    {
-                        "source_page_id": (
-                            f"source:page:{source_page.page_number}"
-                        ),
-                        "source_page_printed_number": referenced_page,
-                        "source_page_text_hash": _hash(page_text),
-                    }
-                )
-            evidence_identities.append(identity)
+        evidence_texts, evidence_identities = _semantic_evidence_bindings(
+            refs=refs,
+            source_evidence=source_evidence,
+            source_pages=source_pages,
+        )
         evidence_hash = _hash(evidence_identities)
         semantic_identity = (
             candidate.claim_id,
@@ -786,6 +761,78 @@ def _semantic_inputs(
             )
         )
     return inputs
+
+
+def retained_claim_semantic_evidence_hash(
+    candidate: ClaimCandidate | Mapping[str, object],
+    evidence_packs: dict,
+    source_pages: Sequence[PdfTextPage] = (),
+) -> str:
+    """Hash the exact linked evidence identity used by semantic grounding."""
+
+    payload = asdict(candidate) if isinstance(candidate, ClaimCandidate) else candidate
+    references = payload.get("evidence_references")
+    if not isinstance(references, list):
+        return _hash([])
+    _, identities = _semantic_evidence_bindings(
+        refs=references,
+        source_evidence=_evidence_index(evidence_packs),
+        source_pages=source_pages,
+    )
+    return _hash(identities)
+
+
+def _semantic_evidence_bindings(
+    *,
+    refs: Sequence[ClaimEvidenceReference | Mapping[str, object]],
+    source_evidence: dict[str, tuple[str, str, int | None]],
+    source_pages: Sequence[PdfTextPage],
+) -> tuple[list[str], list[dict[str, object]]]:
+    evidence_texts: list[str] = []
+    identities: list[dict[str, object]] = []
+    for ref in refs:
+        evidence_id = str(_reference_value(ref, "evidence_id") or "")
+        evidence_entry = source_evidence.get(evidence_id)
+        source_pack, retained_text, indexed_page = evidence_entry or ("", "", None)
+        page_value = _reference_value(ref, "page")
+        referenced_page = (
+            page_value if isinstance(page_value, int) else indexed_page
+        )
+        source_page = (
+            _source_page_for_reference(
+                source_pack=source_pack,
+                referenced_page=referenced_page,
+                source_pages=source_pages,
+            )
+            if evidence_entry is not None
+            else None
+        )
+        page_text = source_page.text.strip() if source_page is not None else ""
+        evidence_texts.append(page_text or retained_text)
+        identity: dict[str, object] = {
+            "evidence_id": evidence_id,
+            "source_pack": str(_reference_value(ref, "source_pack") or ""),
+            "page": page_value,
+            "text_hash": str(_reference_value(ref, "text_hash") or ""),
+        }
+        if page_text:
+            identity.update(
+                {
+                    "source_page_id": f"source:page:{source_page.page_number}",
+                    "source_page_printed_number": referenced_page,
+                    "source_page_text_hash": _hash(page_text),
+                }
+            )
+        identities.append(identity)
+    return evidence_texts, identities
+
+
+def _reference_value(
+    reference: ClaimEvidenceReference | Mapping[str, object], field_name: str
+) -> object:
+    if isinstance(reference, Mapping):
+        return reference.get(field_name)
+    return getattr(reference, field_name, None)
 
 
 def _source_page_for_reference(

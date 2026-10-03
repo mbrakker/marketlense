@@ -614,6 +614,12 @@ def _build_grounding_package(
         )
         if part
     )
+    if (
+        target.target_section == "insights_bundle"
+        and target.repair_action == "REBIND_EVIDENCE"
+    ):
+        evidence_packs = _page_bound_direct_evidence_packs(evidence_packs)
+        doc_map = {}
     rebind_to_alternative = target.repair_strategy == "alternative_evidence"
     if rebind_to_alternative:
         relevant_evidence = _replacement_evidence_entries(
@@ -677,6 +683,49 @@ def _build_grounding_package(
         "quarantined_evidence_ids": quarantined_ids,
         "pages": issue_pages,
     }
+
+
+def _page_bound_direct_evidence_packs(
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Keep only findings and quotes with canonical direct source pages."""
+
+    direct_packs = {
+        name: evidence_packs[name]
+        for name in ("findings", "quote_candidates")
+        if name in evidence_packs
+    }
+    span_index = artifact_evidence_span_index(doc_map={}, evidence_packs=direct_packs)
+    eligible_ids = {
+        evidence_id
+        for evidence_id, spans in span_index.items()
+        if any(
+            span.get("source_pack") in {"findings", "quote_candidates"}
+            and isinstance(span.get("page"), int)
+            and span["page"] > 0
+            and _s(span.get("text")).strip()
+            for span in spans
+        )
+    }
+    filtered: Dict[str, Any] = {}
+    for name, root_key in (
+        ("findings", "findings"),
+        ("quote_candidates", "quote_candidates"),
+    ):
+        payload = direct_packs.get(name)
+        entries = payload.get(root_key) if isinstance(payload, dict) else None
+        if isinstance(payload, dict) and isinstance(entries, list):
+            filtered[name] = {
+                **payload,
+                root_key: [
+                    entry
+                    for entry in entries
+                    if isinstance(entry, dict)
+                    and _normalized_evidence_id(_entry_evidence_id(entry))
+                    in eligible_ids
+                ],
+            }
+    return filtered
 
 
 def retained_grounding_evidence_ids_for_target(
@@ -4351,11 +4400,9 @@ def _regenerate_one_final_insight(
             )
             if _s(value).strip()
         }
-        direct_evidence_packs = {
-            pack_name: execution.runtime.safe_evidence[pack_name]
-            for pack_name in ("findings", "quote_candidates")
-            if pack_name in execution.runtime.safe_evidence
-        }
+        direct_evidence_packs = _page_bound_direct_evidence_packs(
+            execution.runtime.safe_evidence
+        )
         canonical_span_index = artifact_evidence_span_index(
             doc_map={},
             evidence_packs=direct_evidence_packs,

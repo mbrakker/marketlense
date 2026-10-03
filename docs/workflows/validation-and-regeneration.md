@@ -149,7 +149,16 @@ canonical final artifacts and retained evidence packs. It reuses a semantic
 result only when the exact claim, linked evidence, cited extracted-page text
 hash, source, validator, configuration, and policy identities still match.
 Changed or missing page text therefore leaves the claim unresolved; this final
-materialization step makes no semantic provider call.
+materialization step makes no semantic provider call. Publication readiness
+recomputes that same page-aware evidence identity from the current extracted
+source pages, so a stale or changed page remains blocking without making a
+provider call.
+
+Insight evidence rebinding selects only retained findings and quotes that have
+a canonical direct source page. DocMap section summaries and unpaged evidence
+cannot satisfy this repair contract. If no eligible direct alternative exists,
+the deterministic preflight advances to the existing safe-removal strategy or
+leaves the claim blocked before invoking a model.
 
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and

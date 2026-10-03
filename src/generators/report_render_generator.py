@@ -1454,6 +1454,7 @@ def _persist_publish_readiness(
         metadata_evidence=_source_fidelity_metadata(runtime, source, analysis),
         retained_claim_package=retained_claim_payload,
         retained_claim_required=True,
+        source_pages=source.text_response.pages,
         report_card_manifest_path=report_card_manifest_path or "",
         source_id=source_id,
         source_md5=source_md5,

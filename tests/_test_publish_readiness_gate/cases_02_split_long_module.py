@@ -7,6 +7,160 @@ __file__ = str(
 )
 
 from ._split_support_test_publish_readiness_gate import *  # noqa: F401,F403
+from src.contracts.pdf_text import PdfTextPage
+
+
+def test_readiness_accepts_the_canonical_page_bound_semantic_identity() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    evidence_packs["findings"]["findings"][0]["text"] = (
+        "Revenue grew in the measured market."
+    )
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, semantic=True
+    )
+    page_text = "Revenue grew in the measured market.\n1"
+    reference = package["results"][0]["candidate"]["evidence_references"][0]
+    evidence_identity = {
+        key: reference.get(key)
+        for key in ("evidence_id", "source_pack", "page", "text_hash")
+    }
+    evidence_identity.update(
+        {
+            "source_page_id": "source:page:1",
+            "source_page_printed_number": 1,
+            "source_page_text_hash": sha256_json(page_text),
+        }
+    )
+    package["results"][0]["semantic_identity"]["evidence_hash"] = sha256_json(
+        [evidence_identity]
+    )
+    package = _seal_claim_package(package)
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        retained_claim_package=package,
+        retained_claim_required=True,
+        source_id="source:example",
+        source_md5="b" * 32,
+        configuration_hash="config-current",
+        policy_hash="policy-current",
+        source_pages=[PdfTextPage(page_number=1, text=page_text)],
+    )
+
+    rule = _retained_grounding_rule(readiness)
+    assert rule.status == "pass", rule.detail
+
+
+def test_readiness_rejects_a_changed_page_for_semantic_identity() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    evidence_packs["findings"]["findings"][0]["text"] = (
+        "Revenue grew in the measured market."
+    )
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, semantic=True
+    )
+    original_page = "Revenue grew in the measured market.\n1"
+    reference = package["results"][0]["candidate"]["evidence_references"][0]
+    evidence_identity = {
+        key: reference.get(key)
+        for key in ("evidence_id", "source_pack", "page", "text_hash")
+    }
+    evidence_identity.update(
+        {
+            "source_page_id": "source:page:1",
+            "source_page_printed_number": 1,
+            "source_page_text_hash": sha256_json(original_page),
+        }
+    )
+    package["results"][0]["semantic_identity"]["evidence_hash"] = sha256_json(
+        [evidence_identity]
+    )
+    package = _seal_claim_package(package)
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        retained_claim_package=package,
+        retained_claim_required=True,
+        source_id="source:example",
+        source_md5="b" * 32,
+        configuration_hash="config-current",
+        policy_hash="policy-current",
+        source_pages=[
+            PdfTextPage(
+                page_number=1,
+                text="A changed page that no longer contains the cited statement.\n1",
+            )
+        ],
+    )
+
+    rule = _retained_grounding_rule(readiness)
+    assert rule.status == "fail"
+    assert "semantic_claim_evidence_identity_mismatch" in rule.detail
+
+
+def test_readiness_does_not_bind_a_page_when_linked_evidence_is_missing() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    evidence_packs["findings"]["findings"][0]["text"] = (
+        "Revenue grew in the measured market."
+    )
+    package = _retained_claim_package(
+        artifacts, evidence_packs, html, semantic=True
+    )
+    page_text = "Revenue grew in the measured market.\n1"
+    reference = package["results"][0]["candidate"]["evidence_references"][0]
+    evidence_identity = {
+        key: reference.get(key)
+        for key in ("evidence_id", "source_pack", "page", "text_hash")
+    }
+    evidence_identity.update(
+        {
+            "source_page_id": "source:page:1",
+            "source_page_printed_number": 1,
+            "source_page_text_hash": sha256_json(page_text),
+        }
+    )
+    package["results"][0]["semantic_identity"]["evidence_hash"] = sha256_json(
+        [evidence_identity]
+    )
+    evidence_packs["findings"]["findings"] = []
+    package["lineage"]["evidence_pack_hash"] = sha256_json(evidence_packs)
+    package = _seal_claim_package(package)
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+        retained_claim_package=package,
+        retained_claim_required=True,
+        source_id="source:example",
+        source_md5="b" * 32,
+        configuration_hash="config-current",
+        policy_hash="policy-current",
+        source_pages=[PdfTextPage(page_number=1, text=page_text)],
+    )
+
+    rule = _retained_grounding_rule(readiness)
+    assert rule.status == "fail"
+    assert "semantic_claim_evidence_identity_mismatch" in rule.detail
 
 
 def test_publish_readiness_category_consistency_fails_for_missing_side() -> None:

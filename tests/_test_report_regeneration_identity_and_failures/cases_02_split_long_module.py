@@ -83,6 +83,75 @@ def test_empty_quarantined_grounding_skips_provider_strategies_before_regenerati
     assert prompt_client.render_calls == []
 
 
+def test_insight_rebind_without_direct_alternative_advances_to_safe_removal():
+    artifacts = _current_artifacts()
+    artifacts["insights_final"][0]["evidence_id"] = "quarantined-finding"
+    artifacts["insights_final"][0]["pages"] = [7]
+    issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message="The insight is unsupported by its quarantined source.",
+        severity="error",
+        affected_section="insights:insight-1.text",
+        entity_id="insight-1",
+        evidence_ids=["quarantined-finding"],
+    )
+    first_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    rejected_strategies = {
+        repair_strategy_fingerprint(
+            [first_plan.targets[0].issues[0].failure_fingerprint],
+            first_plan.targets[0].repair_strategy,
+            first_plan.targets[0].selected_evidence_ids,
+        )
+    }
+    alternative_plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        rejected_strategy_keys=rejected_strategies,
+    )
+    assert alternative_plan.targets[0].repair_action == "REBIND_EVIDENCE"
+    assert alternative_plan.targets[0].repair_strategy == "alternative_evidence"
+
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "quarantined-finding",
+                    "text": "The rejected insight source.",
+                    "evidence": "The rejected insight source.",
+                    "pages": [7],
+                }
+            ]
+        },
+        "doc_map": {
+            "sections": [
+                {
+                    "id": "executive-summary",
+                    "summary": "A section summary is not direct source evidence.",
+                    "pages": [7],
+                }
+            ]
+        },
+    }
+    plan, skipped = _preflight_empty_grounding_strategies(
+        plan=alternative_plan,
+        issues=[issue],
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        rejected_strategy_keys=rejected_strategies,
+        broad_retry_available=False,
+    )
+
+    assert skipped == [("insights_bundle", "alternative_evidence")]
+    assert plan.targets[0].repair_action == "REMOVE_CLAIM"
+    assert plan.targets[0].repair_strategy == "safe_removal"
+
+
 def test_quotes_ladder_rejects_failed_restore_before_rewrite() -> None:
     issue = ValidationIssue(
         schema_version="1.1",

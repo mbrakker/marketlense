@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Iterable
@@ -19,6 +19,7 @@ from src.contracts.claim_validation import (
     CLAIM_VALIDATION_VALIDATOR_VERSION,
     ClaimValidationPackage,
 )
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.public_editorial_quality import PublicEditorialQualityReport
 from src.contracts.publish_readiness import (
     PUBLISH_READINESS_SCHEMA_VERSION,
@@ -30,6 +31,7 @@ from src.contracts.publish_readiness import (
 from src.contracts.validation import ValidationReport
 from src.generators.claim_validation_generator import (
     claim_validation_package_hash_valid,
+    retained_claim_semantic_evidence_hash,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -420,6 +422,7 @@ def evaluate_publish_readiness(
     created_at: datetime | None = None,
     retained_claim_package: ClaimValidationPackage | Mapping[str, Any] | None = None,
     retained_claim_required: bool = False,
+    source_pages: Sequence[PdfTextPage] = (),
     report_card_manifest_path: str = "",
     source_id: str = "",
     source_md5: str = "",
@@ -443,6 +446,7 @@ def evaluate_publish_readiness(
             source_md5=source_md5,
             configuration_hash=configuration_hash,
             policy_hash=policy_hash,
+            source_pages=source_pages,
         )
     )
     results.append(_category_result(safe_artifacts, category_ids, safe_packs))
@@ -675,6 +679,7 @@ def _retained_claim_grounding_result(
     source_md5: str,
     configuration_hash: str,
     policy_hash: str,
+    source_pages: Sequence[PdfTextPage],
 ) -> PublishReadinessRuleResult:
     if retained_claim_package is None:
         if not required:
@@ -858,26 +863,20 @@ def _retained_claim_grounding_result(
             problems.add("semantic_claim_not_factual")
         references = candidate.get("evidence_references")
         references = references if isinstance(references, list) else []
-        reference_identity: list[dict[str, Any]] = []
         reference_ids: list[str] = []
         for reference in references:
             if not isinstance(reference, Mapping):
                 problems.add("semantic_evidence_reference_invalid")
                 continue
             reference_ids.append(str(reference.get("evidence_id") or ""))
-            reference_identity.append(
-                {
-                    "evidence_id": reference.get("evidence_id"),
-                    "source_pack": reference.get("source_pack", ""),
-                    "page": reference.get("page"),
-                    "text_hash": reference.get("text_hash", ""),
-                }
-            )
         if (
             identity.get("claim_id") != candidate.get("claim_id")
             or identity.get("claim_text_hash") != candidate.get("text_hash")
             or identity.get("evidence_ids") != reference_ids
-            or identity.get("evidence_hash") != sha256_json(reference_identity)
+            or identity.get("evidence_hash")
+            != retained_claim_semantic_evidence_hash(
+                candidate, evidence_packs, source_pages
+            )
         ):
             problems.add("semantic_claim_evidence_identity_mismatch")
         if identity.get("source_identity") != source_id:
