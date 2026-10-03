@@ -128,6 +128,15 @@ architecture_review_triggers:
   - new queue worker process or deployable
   - duplicated orchestration path for one workflow
   - second entrypoint for one external interaction
+new_deployable_requirements:
+  minimum_material_needs: 2
+  qualifying_material_needs:
+    - independent scaling
+    - independent deployment cadence
+    - hard failure isolation
+    - genuinely separate ownership
+    - materially different runtime or compliance requirements
+  future_readiness_is_evidence: false
 decomposition_evidence_requirements:
   required_fields:
     - original_file

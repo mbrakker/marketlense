@@ -30,7 +30,7 @@ Use the narrowest applicable skill. Skills provide workflow guidance, not ceremo
 - WordPress service, theme, plugin, or published UI: wordpress-regression
 - Dependency changes: dependency-upgrade
 - Performance or cost optimization: speedup-proof
-- Security-focused review: codex-security-audit-skill
+- Security-focused review: use the available security-audit skill when present.
 
 ## 4. Architecture boundaries
 
@@ -43,7 +43,7 @@ The canonical role map, import directions, I/O rules, and external-system entryp
 - **Utilities:** Prefer deterministic code without external I/O; utils is not a catch-all.
 - **CLI and UI:** May parse and present input/output and call approved boundaries; MUST NOT duplicate domain logic or integrations.
 - **Prompts and models:** Prompt resources MUST remain under src/prompts; prompt loading, rendering, composition, hashing, and validation belong to the prompt service. Code supplies structured dynamic values, not substantial prompt prose. Put genuinely tunable model parameters and routing in canonical operator configuration; keep schemas and security invariants code-owned.
-- **Deployables:** Default to one modular monolith with explicit internal boundaries. Architecture review MUST follow only the triggers in architecture_policy.yaml; “future readiness” alone is not justification.
+- **Deployables:** Keep the modular-monolith default. New deployables MUST meet the evidence threshold in docs/quality/architecture-policy.md; review triggers are listed in architecture_policy.yaml.
 
 ## 5. Change discipline
 

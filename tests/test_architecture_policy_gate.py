@@ -36,12 +36,23 @@ def test_architecture_policy_encodes_required_enforcement_sections() -> None:
         "policy_validation",
         "waivers",
         "architecture_review_triggers",
+        "new_deployable_requirements",
         "decomposition_evidence_requirements",
     ):
         assert section in policy
 
     assert policy["test_patching_rules"]["monkeypatch"] == "forbidden"
     assert policy["policy_validation"]["agents_max_lines"] == 1000
+    deployable_requirements = policy["new_deployable_requirements"]
+    assert deployable_requirements["minimum_material_needs"] == 2
+    assert set(deployable_requirements["qualifying_material_needs"]) == {
+        "independent scaling",
+        "independent deployment cadence",
+        "hard failure isolation",
+        "genuinely separate ownership",
+        "materially different runtime or compliance requirements",
+    }
+    assert deployable_requirements["future_readiness_is_evidence"] is False
 
 
 def test_architecture_import_gate_reads_role_rules_from_policy(tmp_path: Path) -> None:
