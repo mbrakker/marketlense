@@ -1,10 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
-
-from src.generators.validation.claim_support import _has_unscoped_strong_language
-from src.generators.validation.semantic import run_semantic_validation
-
-from ._shared import *  # noqa: F401,F403
+from ._split_support_cases_01_validation_flags_metric_and_quote import *  # noqa: F401,F403
 
 
 def test_validation_flags_metric_and_quote_mismatches(tmp_path):
@@ -228,12 +224,31 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
         "quotes_final": [
             {
                 "id": "q1",
-                "text": "Revenue grew ten percent YoY",
+                "text": "The CEO noted a year-over-year increase of ten percent.",
                 "speaker": "CEO",
                 "citation": "The CEO noted a year-over-year increase of ten pct.",
                 "is_paraphrase": True,
+                "evidence_id": "quote-source",
             },
         ],
+    }
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "e1",
+                    "evidence": "The company reported ten percent year-over-year revenue growth.",
+                }
+            ]
+        },
+        "quote_candidates": {
+            "quote_candidates": [
+                {
+                    "id": "quote-source",
+                    "text": "The CEO noted a year-over-year increase of ten pct.",
+                }
+            ]
+        },
     }
     semantic_payload = {
         "metrics": [
@@ -253,7 +268,28 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
             }
         ],
     }
-    grounding_payload = {"unsupported": []}
+    grounding_payload = {
+        "unsupported": [],
+        "checks": [
+            {
+                "item_id": "retained_claim:7cabb7fe2be9624f33ad15d82e0598f56a5dc508fe84fa8ec68423a3f83364c6",
+                "section": "insights:i1.text",
+                "text": "Revenue grew year over year",
+                "classification": "factual_claim",
+                "entailment_outcome": "entailed",
+                "proposition_status": "compatible",
+                "protected_facts": {
+                    dimension: {
+                        "claim_value": None,
+                        "evidence_value": None,
+                        "status": "unknown",
+                    }
+                    for dimension in PROTECTED_FACT_DIMENSIONS
+                },
+                "reason": "Grounding comparison completed.",
+            }
+        ],
+    }
     fake_openai = FakeOpenAI(
         semantic_payload=semantic_payload, grounding_payload=grounding_payload
     )
@@ -264,7 +300,7 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
             report_id="r1",
             report=_report(),
             artifacts=artifacts,
-            evidence_packs={},
+            evidence_packs=evidence_packs,
             vector_store_id=None,
         ),
         settings,
@@ -673,325 +709,4 @@ def test_artifact_quality_keeps_us_abbreviation_with_its_opening_sentence(tmp_pa
     )
 
 
-def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "summary": {
-            "tldr": "TLDR",
-            "executive_summary": "Exec 42%",
-            "claim_evidence_map": [],
-        },
-        "insights_final": [],
-        "quotes_final": [
-            {
-                "text": "Revenue grew 42% year over year",
-                "speaker": "CEO",
-                "citation": "Revenue grew 42% year over year",
-                "evidence_id": "f1",
-            }
-        ],
-        "expert_comment": "We expect revenue to stay around 42% growth.",
-        "linkedin_post": "Analysts noted 42% expansion.",
-    }
-    evidence_packs = {
-        "pack": {
-            "findings": [{"id": "f1", "evidence": "Revenue grew 42% year over year"}]
-        }
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={"unsupported": []},
-    )
-    analysis_store = FakeAnalysisStore()
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r3",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs=evidence_packs,
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=analysis_store,
-    )
-    assert result.status == "pass"
-    assert not any("Number" in issue.message for issue in result.issues)
-
-
-def test_validation_allows_interpretation_and_recommendation_in_allowed_sections(
-    tmp_path,
-):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "insights_final": [
-            {
-                "id": "i1",
-                "text": "Evidence baseline 42%",
-                "evidence_id": "e1",
-                "evidence": "Baseline metric is 42%",
-            }
-        ],
-        "quotes_final": [
-            {
-                "id": "q1",
-                "text": "Baseline metric is 42%",
-                "speaker": "Analyst",
-                "citation": "Baseline metric is 42%",
-                "evidence_id": "e1",
-            }
-        ],
-        "expert_comment": "This likely indicates teams should prioritize cross-platform governance.",
-        "linkedin_post": "Recommendation: focus on governance and phased rollout.",
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={
-            "unsupported": [
-                {
-                    "section": "expert_comment",
-                    "text": "This likely indicates teams should prioritize cross-platform governance.",
-                    "classification": "prescriptive_recommendation",
-                    "violation_type": "non_fatal_interpretation",
-                    "reason": "Recommendation extends beyond evidence details.",
-                }
-            ]
-        },
-    )
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r-interpret",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert result.status == "pass"
-    assert not any(issue.severity == "error" for issue in result.issues)
-    assert any(issue.affected_section == "expert_comment" for issue in result.issues)
-
-
-def test_validation_fails_on_report_directive_misattribution(tmp_path):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "insights_final": [
-            {
-                "id": "i1",
-                "text": "Evidence baseline 42%",
-                "evidence_id": "e1",
-                "evidence": "Baseline metric is 42%",
-            }
-        ],
-        "expert_comment": "The report instructs brands to double investment immediately.",
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={
-            "unsupported": [
-                {
-                    "section": "expert_comment",
-                    "text": "The report instructs brands to double investment immediately.",
-                    "reason": "No directive exists in source report.",
-                }
-            ]
-        },
-    )
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r-directive",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert result.status == "fail"
-    assert any(
-        "report_directive_misattribution" in issue.message for issue in result.issues
-    )
-    assert any(issue.severity == "error" for issue in result.issues)
-
-
-def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "insights_final": [
-            {
-                "id": "i1",
-                "text": "Context says revenue is more than $10B and conversion is 37%.",
-                "evidence_id": "e1",
-                "evidence": "Revenue is more than $10B while conversion reached 37%.",
-            }
-        ],
-        "quotes_final": [
-            {
-                "id": "q1",
-                "text": "Revenue is more than $10B while conversion reached 37%.",
-                "speaker": "Analyst",
-                "citation": "Revenue is more than $10B while conversion reached 37%.",
-                "evidence_id": "e1",
-            }
-        ],
-        "expert_comment": "Market size is >10 in annual USD billions and conversion reached 37.0.",
-        "linkedin_post": "Leaders should plan around >10 USD bn scale and a 37.0 conversion baseline.",
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={"unsupported": []},
-    )
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r-numbers",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert result.status == "pass"
-    assert not any("Number" in issue.message for issue in result.issues)
-
-
-def test_validation_number_check_rejects_changed_explicit_units(tmp_path):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "insights_final": [
-            {
-                "id": "i1",
-                "text": "Conversion reached 37%.",
-                "evidence_id": "e1",
-                "evidence": "Conversion reached 37%.",
-            }
-        ],
-        "quotes_final": [
-            {
-                "id": "q1",
-                "text": "Conversion reached 37%.",
-                "speaker": "Analyst",
-                "citation": "Conversion reached 37%.",
-                "evidence_id": "e1",
-            }
-        ],
-        "expert_comment": "The figure remains 37 USD in planning discussions.",
-        "linkedin_post": "Leaders can use 37 EUR as a simple shorthand figure.",
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={"unsupported": []},
-    )
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r-units-ignore",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert result.status == "fail"
-    assert any("Number" in issue.message for issue in result.issues)
-
-
-def test_grounding_unsupported_number_with_unit_mismatch_is_blocking(
-    tmp_path,
-):
-    settings = _settings(tmp_path)
-    artifacts = {
-        "insights_final": [
-            {
-                "id": "i1",
-                "text": "Adoption reached 37%.",
-                "evidence_id": "e1",
-                "evidence": "Adoption reached 37%.",
-            }
-        ],
-        "quotes_final": [
-            {
-                "id": "q1",
-                "text": "Adoption reached 37%.",
-                "speaker": "Analyst",
-                "citation": "Adoption reached 37%.",
-                "evidence_id": "e1",
-            }
-        ],
-        "expert_comment": "Adoption reached 37 USD by segment.",
-    }
-    fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
-        grounding_payload={
-            "unsupported": [
-                {
-                    "section": "expert_comment",
-                    "text": "Adoption reached 37 USD by segment.",
-                    "classification": "factual_claim",
-                    "violation_type": "unsupported_number",
-                    "reason": "No matching metric in evidence.",
-                }
-            ]
-        },
-    )
-    result = validate_report(
-        ValidationRequest(
-            schema_version="1.0",
-            report_id="r-grounding-units-ignore",
-            report=_report(),
-            artifacts=artifacts,
-            evidence_packs={},
-            vector_store_id=None,
-        ),
-        settings,
-        _ctx(),
-        prompt_client=FakePromptClient(),
-        openai_client=fake_openai,
-        analysis_store=FakeAnalysisStore(),
-    )
-    assert result.status == "fail"
-    assert any("unsupported_number" in issue.message for issue in result.issues)
-    assert any(issue.severity == "error" for issue in result.issues)
-
-
-__all__ = [
-    "test_validation_flags_metric_and_quote_mismatches",
-    "test_number_validation_preserves_ordered_source_period_value_pairs",
-    "test_validation_uses_retained_source_text_for_ordered_period_value_pairs",
-    "test_validation_cache_changes_when_retained_source_text_changes",
-    "test_validation_accepts_paraphrased_metrics_and_quotes",
-    "test_validation_detects_new_numbers_and_grounding",
-    "test_claim_support_rejects_strong_claims_backed_only_by_weak_evidence",
-    "test_artifact_quality_uses_a_source_topic_heading_as_public_category",
-    "test_artifact_quality_keeps_us_abbreviation_with_its_opening_sentence",
-    "test_commentary_numbers_allowed_when_in_report_or_evidence",
-    "test_validation_allows_interpretation_and_recommendation_in_allowed_sections",
-    "test_validation_fails_on_report_directive_misattribution",
-    "test_validation_number_matching_normalizes_percent_and_billions",
-    "test_validation_number_check_rejects_changed_explicit_units",
-    "test_grounding_unsupported_number_with_unit_mismatch_is_blocking",
-]
+from .cases_01_split_long_module import *  # noqa: F401,F403

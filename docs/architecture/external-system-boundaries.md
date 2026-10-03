@@ -18,5 +18,10 @@ Each external system has one canonical service boundary. Callers use the public 
 
 Prompt loading and rendering belongs to `src/services/prompt_service.py`. WordPress receives validated publication payloads; it is not an intelligence-generation boundary. The enforced source of truth is [`docs/quality/architecture_policy.yaml`](../quality/architecture_policy.yaml).
 
+The report-store service serializes WAL setup and schema migrations while a
+connection is first opened. Concurrent first writers therefore finish database
+initialization before applying their report-scoped changes; normal SQLite lock
+timeouts still govern subsequent write contention.
+
 Within the LLM service, Responses-specific OCR page normalization belongs to
 `_llm_service/openai_responses.py`; callers still use `llm_service.py`.

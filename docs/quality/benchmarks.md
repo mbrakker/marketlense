@@ -118,6 +118,9 @@ setting unless an eligible profile has the same outcome digest, passes quality,
 and has no higher cost. It selects the lowest measured median; exact ties use
 the lower-concurrency profile. This is a scheduler benchmark; browser and
 live-provider saturation require a separate controlled canary.
+Elapsed samples are recorded in integer milliseconds with a one-millisecond
+minimum, so sub-millisecond runs remain valid measurements instead of
+producing zero-duration recommendations.
 
 ## Evidence-pack worker matrix
 

@@ -245,6 +245,12 @@ the model. Topics, Key Figures, and report identity continue through their exist
 deterministic repair routes. Malformed decisions and invalid or broad patches fail
 closed before candidate creation.
 
+An atomic quote repair selects the unique returned quote with the failed quote's
+retained evidence identity, even if the model also returns sibling quotes. It copies
+only the replacement text into the retained quote record, preserving the original
+speaker, citation, page, and evidence binding. Duplicate matches remain ambiguous
+and fail closed.
+
 For an atomic Expert View or LinkedIn claim repair, the model supplies replacement
 public text and selected retained evidence IDs only. The generator resolves the
 repaired sentence after patch application, carries forward the matched retained
@@ -504,6 +510,10 @@ The Key Figure ladder offers no separate `REMOVE_CLAIM/safe_removal` strategy:
 the fidelity-filtered rebuild already excludes invalid projections, so a
 removal-labeled rebuild would have the same transformation. When no valid
 retained metric remains, the projection can contain fewer than five figures.
+Public-editorial failures attributed to a Key Figure are planned against its
+linked source insight, then the deterministic finalization rebuilds the figure.
+Direct numeric validation failures can use the deterministic Key Figure rebuild
+when the source insight itself does not need repair.
 
 Run `python -m pytest -q tests/test_validation_queue_lineage.py -k "a21_full_chain"`
 before any live A21 canary; it is the required deterministic queue-to-A21 gate

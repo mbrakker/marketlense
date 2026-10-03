@@ -190,8 +190,10 @@ handling, but a legacy Key Figure is omitted when no single metric-specific
 label can be established. Labels never stop at a geographic initialism such as
 `U.S.` or `U.K.`.
 
-Key Figures are a separate reader-facing projection of that spine. They select
-at most five source-backed, non-redundant metrics and do not impose a minimum:
+Key Figures are a separate reader-facing projection of that spine. Candidate
+discovery considers every canonical metric embedded in finalized insights, even
+when the bounded metric spine omits lower-ranked rows. The projection selects
+at most five source-backed, non-redundant metrics and does not impose a minimum:
 a qualitative report may legitimately show none or one. Selection favours
 editorial-plan centrality, executive-summary linkage, commercial relevance,
 specific source context, confidence, and report-specific evidence over generic

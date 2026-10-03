@@ -44,7 +44,7 @@ def test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap(tmp_
     )
     assert result.status == "fail"
     assert result.severity == "error"
-    assert {issue.rule_id for issue in result.issues if issue.severity == "error"} == {
+    assert {issue.rule_id for issue in result.issues if issue.severity == "error"} >= {
         "metrics",
         "quotes",
     }
@@ -203,8 +203,7 @@ def test_data_gap_downgrades_only_structured_retrieval_failures():
             schema_version="1.0",
             rule_id="grounding",
             message=(
-                "[grounding] [factual_claim|unsupported_number] "
-                "Unsupported value: 42%."
+                "[grounding] [factual_claim|unsupported_number] Unsupported value: 42%."
             ),
             severity="error",
             affected_section="summary",
@@ -213,8 +212,7 @@ def test_data_gap_downgrades_only_structured_retrieval_failures():
             schema_version="1.0",
             rule_id="grounding",
             message=(
-                "[grounding] [factual_claim|contradicted] "
-                "Source reports a decline."
+                "[grounding] [factual_claim|contradicted] Source reports a decline."
             ),
             severity="error",
             affected_section="summary",

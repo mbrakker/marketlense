@@ -4,7 +4,7 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
-def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets(
+def test_global_semantic_pack_failure_does_not_trigger_unscoped_regeneration(
     tmp_path,
     caplog,
     assert_logs_have_required_fields,
@@ -120,52 +120,13 @@ def test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets
         deps,
     )
 
-    assert len(requests) == 1
-    assert requests[0].plan.mode == "targeted"
-    assert [target.target_section for target in requests[0].plan.targets] == [
-        "insights_bundle",
-        "quotes",
-    ]
-    assert len(requests[0].plan.targets) < 5
+    assert requests == []
+    assert validation_calls["count"] == 1
     assert state.validation_report is not None
-    assert state.validation_report.status == "pass"
-
-    events = _orchestrator_events(caplog)
-    plan_events = [
-        event for event in events if event["event"] == "validation_regen_plan_built"
-    ]
-    complete_events = [
-        event
-        for event in events
-        if event["event"] == "validation_regen_attempt_complete"
-    ]
-    assert plan_events[-1]["fields"]["target_details"] == [
-        {
-            "target_section": "insights_bundle",
-            "regenerate_steps": ["insights_candidates", "insights_final"],
-            "prompt_namespaces": [
-                "report_vs/artifacts/regenerate/insights_candidates",
-                "report_vs/artifacts/regenerate/insights_final",
-            ],
-            "rule_ids": ["semantic"],
-        },
-        {
-            "target_section": "quotes",
-            "regenerate_steps": ["quotes"],
-            "prompt_namespaces": ["report_vs/artifacts/regenerate/quotes"],
-            "rule_ids": ["semantic"],
-        },
-    ]
-    assert set(complete_events[-1]["fields"]["artifact_diff"]["changed_keys"]) >= {
-        "insights_final",
-        "quotes_final",
-    }
-    assert complete_events[-1]["fields"]["artifacts_snapshot_path"].endswith(
-        "artifacts_regen_attempt_1.json"
-    )
-    assert_logs_have_required_fields(plan_events + complete_events)
+    assert state.validation_report.status == "fail"
+    assert state.regeneration_loop_state is not None
+    assert state.regeneration_loop_state.attempt_count == 0
+    assert state.regeneration_loop_state.final_status == "skipped"
 
 
-__all__ = [
-    "test_run_report_analysis_maps_semantic_pack_failure_to_rule_specific_targets"
-]
+__all__ = ["test_global_semantic_pack_failure_does_not_trigger_unscoped_regeneration"]

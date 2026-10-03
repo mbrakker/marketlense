@@ -47,6 +47,11 @@ from src.contracts.report_store import (
     SourceIdentityResolution,
 )
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
+    soft_copy_public_text,
+)
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateBatch,
@@ -69,6 +74,7 @@ from src.generators.report_generation_dependencies import (
     ReportSourceScoringDependencies,
 )
 from src.generators.report_generation_shared import derive_title, report_slug
+from src.generators.soft_copy_claim_provenance import build_soft_copy_claim_provenance
 from src.orchestrators import ingest_orchestrator as orch
 from src.orchestrators import report_generation_orchestrator as rgo
 from src.orchestrators.ingest_file_orchestrator import (
@@ -135,20 +141,63 @@ def _pdf_bytes() -> bytes:
 
 
 def _analysis_artifacts(**overrides) -> dict:
+    evidence = {
+        "f1": ("Revenue rose 12% in 2025.", 1),
+        "f2": ("Costs fell 3% in 2025.", 2),
+        "f3": ("Retention rose 8% in 2025.", 3),
+        "f4": ("Regional demand rose 5% in 2025.", 4),
+        "f5": ("Satisfaction reached 91% in 2025.", 5),
+    }
+    span_index = {
+        evidence_id: [
+            {
+                "evidence_id": evidence_id,
+                "source_pack": "findings",
+                "page": page,
+                "text": text,
+            }
+        ]
+        for evidence_id, (text, page) in evidence.items()
+    }
+    summary = {
+        "tldr": "Revenue rose 12% in 2025.",
+        "card_tldr_compact": "Revenue rose 12%.",
+        "executive_summary": "Revenue grew 12% in 2025.",
+        "claim_evidence_map": [],
+    }
+    soft_copy = {
+        "summary": summary,
+        "expert_comment": "Review the 12% revenue increase before planning.",
+        "linkedin_post": "Check the 12% revenue increase against its source.",
+    }
+    provenance = []
+    for family, value in soft_copy.items():
+        text = soft_copy_public_text(family, value)
+        bindings = [
+            {
+                "claim": sentence,
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            }
+            for sentence in soft_copy_material_sentences(text)
+        ]
+        provenance.extend(
+            build_soft_copy_claim_provenance(
+                artifact_family=family,
+                text=text,
+                declared_claims=bindings,
+                evidence_span_index=span_index,
+                producing_prompt_identity={"namespace": f"test/{family}"},
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        )
     payload = {
         "schema_version": "1.0",
         "publication_date": "2026-06-09",
         "categories": ["cat"],
         "toc_topics": ["Topic"],
-        "summary": {
-            "tldr": "Complete standard TLDR.",
-            "card_tldr_compact": "Complete compact TLDR.",
-            "executive_summary": (
-                "The report identifies a sustained market shift that warrants "
-                "commercial planning attention."
-            ),
-            "claim_evidence_map": [],
-        },
+        "summary": summary,
         "cover_semantics": {
             "evidence_shape": "trend",
             "direction": "rising",
@@ -160,9 +209,9 @@ def _analysis_artifacts(**overrides) -> dict:
         "insights_candidates": [
             {
                 "id": "candidate-1",
-                "text": "Candidate 1",
+                "text": evidence["f1"][0],
                 "evidence_id": "f1",
-                "evidence": "Evidence 1",
+                "evidence": evidence["f1"][0],
                 "metric": {},
                 "pages": [1],
                 "score": 0.9,
@@ -170,63 +219,29 @@ def _analysis_artifacts(**overrides) -> dict:
         ],
         "insights_final": [
             {
-                "id": "insight-1",
-                "text": "Revenue growth is concentrating in the highest-value customer segments.",
-                "evidence_id": "f1",
-                "evidence": "Revenue growth is concentrating in the highest-value customer segments.",
+                "id": f"insight-{index}",
+                "text": text,
+                "evidence_id": evidence_id,
+                "evidence": text,
                 "metric": {},
-                "pages": [1],
-            },
-            {
-                "id": "insight-2",
-                "text": "Operating teams are prioritizing efficiency in established acquisition channels.",
-                "evidence_id": "f2",
-                "evidence": "Operating teams are prioritizing efficiency in established acquisition channels.",
-                "metric": {},
-                "pages": [2],
-            },
-            {
-                "id": "insight-3",
-                "text": "Decision-makers are reallocating investment toward measurable retention outcomes.",
-                "evidence_id": "f3",
-                "evidence": "Decision-makers are reallocating investment toward measurable retention outcomes.",
-                "metric": {},
-                "pages": [3],
-            },
-            {
-                "id": "insight-4",
-                "text": "Regional demand patterns require differentiated commercial planning.",
-                "evidence_id": "f4",
-                "evidence": "Regional demand patterns require differentiated commercial planning.",
-                "metric": {},
-                "pages": [4],
-            },
-            {
-                "id": "insight-5",
-                "text": "Leadership teams should sequence implementation around verified customer signals.",
-                "evidence_id": "f5",
-                "evidence": "Leadership teams should sequence implementation around verified customer signals.",
-                "metric": {},
-                "pages": [5],
-            },
+                "pages": [page],
+            }
+            for index, (evidence_id, (text, page)) in enumerate(
+                evidence.items(), start=1
+            )
         ],
         "quotes_final": [
             {
-                "text": "Quote",
+                "text": '"Retention rose 8% in 2025."',
                 "speaker": "Author",
-                "citation": "p. 1",
-                "page": 1,
+                "citation": "p. 3",
+                "page": 3,
                 "evidence_id": "q1",
             }
         ],
-        "expert_comment": (
-            "Leaders should validate the observed customer signals before "
-            "committing the next investment cycle."
-        ),
-        "linkedin_post": (
-            "The report highlights why commercial teams should align retention "
-            "investment with verified customer demand."
-        ),
+        "expert_comment": soft_copy["expert_comment"],
+        "linkedin_post": soft_copy["linkedin_post"],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(provenance),
         "source_status": {
             "schema_version": "1.0",
             "not_available": False,
@@ -294,48 +309,43 @@ def _report_dependencies(**overrides) -> ReportGenerationDependencies:
             evidence_packs = generate_evidence_packs(*args, **kwargs)
             if not isinstance(evidence_packs, dict):
                 return evidence_packs
+            fixture_findings = [
+                {
+                    "id": evidence_id,
+                    "evidence": text,
+                    "page": page,
+                }
+                for evidence_id, text, page in (
+                    ("f1", "Revenue rose 12% in 2025.", 1),
+                    ("f2", "Costs fell 3% in 2025.", 2),
+                    ("f3", "Retention rose 8% in 2025.", 3),
+                    ("f4", "Regional demand rose 5% in 2025.", 4),
+                    ("f5", "Satisfaction reached 91% in 2025.", 5),
+                )
+            ]
+            findings_pack = evidence_packs.get("findings")
+            findings_pack = findings_pack if isinstance(findings_pack, dict) else {}
+            quote_pack = evidence_packs.get("quote_candidates")
+            quote_pack = quote_pack if isinstance(quote_pack, dict) else {}
             return {
                 **evidence_packs,
-                "readiness_fixture_evidence": {
+                "findings": {
+                    **findings_pack,
                     "findings": [
+                        *(findings_pack.get("findings") or []),
+                        *fixture_findings,
+                    ],
+                },
+                "quote_candidates": {
+                    **quote_pack,
+                    "quote_candidates": [
+                        *(quote_pack.get("quote_candidates") or []),
                         {
-                            "id": evidence_id,
-                            "snippet": evidence,
-                            "page": page,
-                        }
-                        for evidence_id, evidence, page in (
-                            (
-                                "f1",
-                                "Revenue growth is concentrating in the highest-value customer segments.",
-                                1,
-                            ),
-                            (
-                                "f2",
-                                "Operating teams are prioritizing efficiency in established acquisition channels.",
-                                2,
-                            ),
-                            (
-                                "f3",
-                                "Decision-makers are reallocating investment toward measurable retention outcomes.",
-                                3,
-                            ),
-                            (
-                                "f4",
-                                "Regional demand patterns require differentiated commercial planning.",
-                                4,
-                            ),
-                            (
-                                "f5",
-                                "Leadership teams should sequence implementation around verified customer signals.",
-                                5,
-                            ),
-                            (
-                                "q1",
-                                "Author statement on measured market conditions.",
-                                1,
-                            ),
-                        )
-                    ]
+                            "id": "q1",
+                            "text": "Retention rose 8% in 2025.",
+                            "page": 3,
+                        },
+                    ],
                 },
             }
 
@@ -607,7 +617,6 @@ def _base_vector_report_dependencies(
                 "  generated_at_utc: 2026-01-01T00:00:00Z\n"
                 "--><html><head><title>Market conditions outlook</title>"
                 "</head><body><h1>Market conditions outlook</h1>"
-                "<p>Revenue growth is concentrating in the highest-value customer segments.</p>"
                 '<section id="source">Source URL: Not available</section>'
                 "</body></html>"
             ),

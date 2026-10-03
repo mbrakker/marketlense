@@ -34,6 +34,8 @@ def test_generate_report_ocr_fallback_uses_ocr_pdf_for_vector_and_original_for_v
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     ocr_pdf_path = str(tmp_path / "ocr.pdf")
     preview_paths: list[str] = []
@@ -204,6 +206,8 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     execution_trace: list[str] = []
     analysis_store: list[tuple[str, object]] = []

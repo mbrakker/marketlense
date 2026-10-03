@@ -334,7 +334,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "claim": "Use the retained evidence as a planning input.",
                     "classification": "recommendation",
-                    "evidence_ids": [],
+                    "evidence_ids": ["market-demand"],
                 }
             ],
         },
@@ -344,7 +344,7 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
                 {
                     "claim": "Read the report as an input to planning.",
                     "classification": "recommendation",
-                    "evidence_ids": [],
+                    "evidence_ids": ["market-demand"],
                 }
             ],
         },
@@ -466,6 +466,28 @@ def _full_chain_grounding_response(
         )
         if unsupported_match:
             _configured_section, code = unsupported_by_text[unsupported_match]
+            reason = "The retained source does not establish this claim" + (
+                f" ({code})." if code else "."
+            )
+            checks.append(
+                {
+                    "item_id": item_id,
+                    "section": section,
+                    "text": text,
+                    "classification": "factual_claim",
+                    "entailment_outcome": "not_established",
+                    "proposition_status": "unknown",
+                    "protected_facts": {
+                        name: {
+                            "claim_value": None,
+                            "evidence_value": None,
+                            "status": "unknown",
+                        }
+                        for name in protected_fact_dimensions
+                    },
+                    "reason": reason,
+                }
+            )
             unsupported.append(
                 {
                     "item_id": item_id,
@@ -474,10 +496,7 @@ def _full_chain_grounding_response(
                     "classification": "factual_claim",
                     "entailment_outcome": "not_established",
                     "violation_type": "unsupported_factual_claim",
-                    "reason": (
-                        "The retained source does not establish this claim"
-                        + (f" ({code})." if code else ".")
-                    ),
+                    "reason": reason,
                 }
             )
             continue
@@ -523,16 +542,17 @@ def _report_json_from_responses_call(call: dict) -> dict[str, object]:
             )
         if not isinstance(content, str):
             continue
-        marker = "Artifacts to validate (JSON):"
-        marker_offset = content.find(marker)
-        if marker_offset < 0:
-            continue
-        value_offset = marker_offset + len(marker)
-        try:
-            payload, _end = decoder.raw_decode(content[value_offset:].lstrip())
-        except ValueError:
-            continue
-        return payload if isinstance(payload, dict) else {}
+        for marker in ("Artifacts to validate (JSON):", "listed here:"):
+            marker_offset = content.find(marker)
+            if marker_offset < 0:
+                continue
+            value_offset = marker_offset + len(marker)
+            try:
+                payload, _end = decoder.raw_decode(content[value_offset:].lstrip())
+            except ValueError:
+                continue
+            if isinstance(payload, dict) and "retained_claims_to_ground" in payload:
+                return payload
     return {}
 
 

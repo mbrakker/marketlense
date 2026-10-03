@@ -491,7 +491,7 @@ def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() 
         "final-package-lifecycle-5/frozen_cohort.json"
     )
 
-    loaded = _load_members(manifest)
+    loaded = json.loads(manifest.read_text(encoding="utf-8"))["members"]
 
     assert [item["publisher_name"] for item in loaded] == [
         "Merchant Risk Council",
@@ -503,7 +503,8 @@ def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() 
 
 
 def test_default_frozen_manifest_contains_ten_reports() -> None:
-    assert len(_load_members(DEFAULT_SOURCES_MANIFEST)) == 10
+    manifest = json.loads(DEFAULT_SOURCES_MANIFEST.read_text(encoding="utf-8"))
+    assert len(manifest["members"]) == 10
 
 
 def test_frozen_manifest_rejects_missing_provenance_before_file_access(
@@ -598,9 +599,7 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     )
     assert result["cohort_size"] == 2
     assert result["git_sha"] == "a" * 40
-    assert result["cohort_metrics"]["model_provider_calls"] == sum(
-        range(2, 5, 2)
-    )
+    assert result["cohort_metrics"]["model_provider_calls"] == sum(range(2, 5, 2))
     assert result["cohort_metrics"]["cost_usd"] == 0.6
     assert result["summary"]["mean_cost"] == 0.3
     retained = json.loads(

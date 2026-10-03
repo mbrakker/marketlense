@@ -38,12 +38,12 @@ def _metadata_conn(path: str, ctx: RunContext):
             context={"db_path": path},
         ) from exc
     try:
-        _configure_sqlite_connection(
-            conn,
-            busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
-        )
         conn.row_factory = sqlite3.Row
         with _REPORT_CONN_LOCK:
+            _configure_sqlite_connection(
+                conn,
+                busy_timeout_seconds=DEFAULT_BUSY_TIMEOUT_SECONDS,
+            )
             apply_reports_db_migrations(
                 SqliteMigrationApplyRequest(
                     schema_version="1.0",

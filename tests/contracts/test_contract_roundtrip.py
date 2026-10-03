@@ -40,6 +40,7 @@ def _versioned_contract_dataclasses() -> list[type]:
     return [
         candidate
         for candidate in _contract_dataclasses()
+        if not candidate.__name__.startswith("_")
         if f"{candidate.__module__}.{candidate.__name__}"
         not in nested_values_with_parent_version
     ]

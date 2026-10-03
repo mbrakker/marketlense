@@ -399,11 +399,15 @@ def test_runtime_limit_stops_before_provider_call(ingest_settings, run_context) 
             total_tokens=2,
         )
 
+    clock_values = iter((100.0, 100.001))
     result = run_claim_embedding_workflow(
         _workflow_request(
             ingest_settings.reports_db, run_context, max_runtime_seconds=0.0000001
         ),
-        dependencies=ClaimEmbeddingDependencies(create_embeddings=_embed),
+        dependencies=ClaimEmbeddingDependencies(
+            create_embeddings=_embed,
+            monotonic_fn=lambda: next(clock_values),
+        ),
     )
 
     assert result.embedded_count == 0

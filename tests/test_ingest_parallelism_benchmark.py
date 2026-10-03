@@ -12,8 +12,9 @@ from scripts.quality.benchmark_ingest_parallelism import (
 )
 
 
-def test_select_optimal_profiles_rejects_regressions_and_selects_fastest_profile(
-) -> None:
+def test_select_optimal_profiles_rejects_regressions_and_selects_fastest_profile() -> (
+    None
+):
     baseline = IngestWorkerBenchmarkResult(
         report_count=10,
         profile=IngestWorkerProfile(outer_workers=5, inner_workers=5),
@@ -70,7 +71,7 @@ def test_worker_matrix_retains_processed_outcomes_for_an_isolated_ingest() -> No
     assert len(results) == 1
     result = results[0]
     assert result.report_count == 1
-    assert result.samples_ms[0] >= 0
+    assert result.samples_ms[0] >= 1
     assert result.quality_passed is True
     assert result.estimated_cost_usd == "0"
     assert result.outcome_digest

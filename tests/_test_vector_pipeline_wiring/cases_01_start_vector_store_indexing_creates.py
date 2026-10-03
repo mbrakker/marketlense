@@ -212,6 +212,8 @@ def test_generate_report_vector_store_with_validation(
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
 
     def _create_vector_store(req, ctx):
@@ -517,9 +519,11 @@ def test_generate_report_vector_store_with_validation(
         payload for pack_name, payload in analysis_store if pack_name == "artifacts"
     ]
     assert len(artifacts_entries) == 1
-    assert artifacts_entries[0]["summary"]["tldr"] == "Complete standard TLDR."
+    assert artifacts_entries[0]["summary"]["tldr"] == "Revenue rose 12% in 2025."
     assert len(artifacts_entries[0]["insights_final"]) == 5
-    assert artifacts_entries[0]["quotes_final"][0]["text"] == "Quote"
+    assert artifacts_entries[0]["quotes_final"][0]["text"] == (
+        '"Retention rose 8% in 2025."'
+    )
 
 
 def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) -> None:
@@ -541,6 +545,8 @@ def test_generate_report_adds_signal_artifact_pack_after_projection(tmp_path) ->
         run_id="run-signal",
         task_id="task-signal",
         span_id="span-signal",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     execution_trace: list[str] = []
     signal_requests = []

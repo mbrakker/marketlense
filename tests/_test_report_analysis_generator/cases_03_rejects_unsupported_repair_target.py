@@ -7,7 +7,11 @@ from src.contracts.regeneration import (
     RepairSeverityChange,
     repair_strategy_fingerprint,
 )
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_to_payload,
+)
 from src.contracts.validation import ValidationReport
+from src.generators.soft_copy_claim_provenance import build_soft_copy_claim_provenance
 from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
     _normalize_regeneration_issue,
@@ -119,25 +123,25 @@ def test_build_regeneration_plan_skips_info_and_orders_errors_first():
                 schema_version="1.0",
                 message="[summary_warning] Warning issue",
                 severity="warning",
-                affected_section="summary",
+                affected_section="summary.tldr",
                 rule_id="summary_warning",
             ),
             ValidationIssue(
                 schema_version="1.0",
                 message="[summary_info] Informational issue",
                 severity="info",
-                affected_section="summary",
+                affected_section="summary.tldr",
                 rule_id="summary_info",
             ),
             ValidationIssue(
                 schema_version="1.0",
                 message="[summary_error] Error issue",
                 severity="error",
-                affected_section="summary",
+                affected_section="summary.tldr",
                 rule_id="summary_error",
             ),
         ],
-        artifacts={},
+        artifacts={"summary": {"tldr": "Existing summary."}},
         broad_retry_available=True,
     )
 
@@ -214,20 +218,57 @@ def test_build_regeneration_plan_maps_public_artifact_copy_to_its_family():
                 schema_version="1.0",
                 message="Public copy needs a grounded repair",
                 severity="error",
-                affected_section="key_figures:0.takeaway",
+                affected_section="key_figures:figure-1.why_it_matters",
                 rule_id="public_editorial_quality.generic_copy",
                 repair_target="artifact_copy",
+                entity_id="key_figure:figure-1:why_it_matters",
             )
         ],
-        artifacts={},
+        artifacts={
+            "key_figures": [
+                {
+                    "figure_id": "figure-1",
+                    "insight_id": "insight-1",
+                    "why_it_matters": "Existing implication.",
+                }
+            ],
+            "insights_final": [
+                {
+                    "id": "insight-1",
+                    "text": "Evidence-backed insight.",
+                    "evidence_id": "f1",
+                }
+            ],
+            "insights_candidates": [],
+        },
         broad_retry_available=True,
     )
 
     assert plan.mode == "targeted"
-    assert [target.target_section for target in plan.targets] == ["key_figures"]
+    assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
 def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
+    public_text = "Unsupported factual claim."
+    provenance = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment",
+        text=public_text,
+        declared_claims=[
+            {
+                "claim": public_text,
+                "classification": "factual",
+                "evidence_ids": ["e1"],
+            }
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={"namespace": "test/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "expert_comment": public_text,
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(provenance),
+    }
     plan = _build_regeneration_plan(
         issues=[
             ValidationIssue(
@@ -237,7 +278,7 @@ def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
                 affected_section="expert_comment",
                 rule_id="grounding",
                 repair_target="expert_comment",
-                entity_id="soft_copy:expert_comment:failed",
+                entity_id=provenance[0].claim_id,
             ),
             ValidationIssue(
                 schema_version="1.0",
@@ -256,7 +297,7 @@ def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
                 repair_target="artifact_copy",
             ),
         ],
-        artifacts={},
+        artifacts=artifacts,
         broad_retry_available=True,
     )
 
@@ -662,9 +703,17 @@ def test_summary_claim_map_grounding_is_limited_to_the_failed_item():
     artifacts = {
         "summary": {
             "claim_evidence_map": [
-                {"claim": "Supported sibling claim.", "evidence_id": "evidence-a", "pages": [4]},
+                {
+                    "claim": "Supported sibling claim.",
+                    "evidence_id": "evidence-a",
+                    "pages": [4],
+                },
                 {"claim": "Failed claim.", "evidence_id": "evidence-b", "pages": [27]},
-                {"claim": "Another supported sibling.", "evidence_id": "evidence-c", "pages": [42]},
+                {
+                    "claim": "Another supported sibling.",
+                    "evidence_id": "evidence-c",
+                    "pages": [42],
+                },
             ]
         }
     }

@@ -388,11 +388,13 @@ def assemble_artifacts_payload(
         insights_final=insights_final,
         soft_copy_claim_bindings=soft_copy_claim_bindings,
     )
-    summary_already_bound = summary_has_required_copy_fields and not (
-        soft_copy_claim_bindings.get("summary")
-    ) and retained_soft_copy_claims_cover_text(
-        text=soft_copy_public_text("summary", summary),
-        claims=retained_summary_after_replacements,
+    summary_already_bound = (
+        summary_has_required_copy_fields
+        and not (soft_copy_claim_bindings.get("summary"))
+        and retained_soft_copy_claims_cover_text(
+            text=soft_copy_public_text("summary", summary),
+            claims=retained_summary_after_replacements,
+        )
     )
     if (
         not summary_fallback_applied
@@ -654,9 +656,8 @@ def _soft_copy_claim_provenance_payload(
         and isinstance(existing_provenance.get("claims"), list)
         else []
     ):
-        if (
-            claim.artifact_family in replaced
-            or claim.claim_id in replaced_ids.get(claim.artifact_family, set())
+        if claim.artifact_family in replaced or claim.claim_id in replaced_ids.get(
+            claim.artifact_family, set()
         ):
             continue
         if any(existing == claim for existing in claims):
@@ -1333,6 +1334,22 @@ def build_key_figures(
     insights_final: List[Dict[str, Any]] | None = None,
     editorial_plan: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
+    candidate_metrics = list(metric_spine)
+    retained_metric_ids = {
+        _s(metric.get("metric_id")).strip()
+        for metric in candidate_metrics
+        if isinstance(metric, dict) and _s(metric.get("metric_id")).strip()
+    }
+    if insights_final:
+        for metric in _derive_metric_spine_from_insights(
+            insights_final,
+            editorial_plan=editorial_plan,
+            limit=None,
+        ):
+            metric_id = _s(metric.get("metric_id")).strip()
+            if metric_id and metric_id not in retained_metric_ids:
+                candidate_metrics.append(metric)
+                retained_metric_ids.add(metric_id)
     evidence_pages = _evidence_pages(evidence_packs)
     artifact_pages = _artifact_pages_by_evidence_id(
         summary=summary or {},
@@ -1346,7 +1363,7 @@ def build_key_figures(
         and _s(insight.get("text")).strip()
     }
     selected_metrics = _select_key_figure_metrics(
-        metric_spine=metric_spine,
+        metric_spine=candidate_metrics,
         evidence_packs=evidence_packs,
         summary=summary or {},
         insights_final=insights_final or [],
@@ -1962,9 +1979,12 @@ def finalize_regeneration_candidate_artifacts(
     candidate_provenance_changed = candidate_artifacts.get(
         "soft_copy_claim_provenance"
     ) != promoted_baseline.get("soft_copy_claim_provenance")
-    if changed_source_roots.intersection(
-        {"summary", "expert_comment", "linkedin_post"}
-    ) or candidate_provenance_changed:
+    if (
+        changed_source_roots.intersection(
+            {"summary", "expert_comment", "linkedin_post"}
+        )
+        or candidate_provenance_changed
+    ):
         try:
             _rebuild_final_soft_copy_claim_provenance(
                 artifacts=candidate_artifacts,
@@ -2044,11 +2064,14 @@ def _is_reusable_summary_status(value: Any) -> bool:
     action = str(value.get("policy_action") or "").strip().lower()
     confidence = value.get("confidence_score")
     return (
-        (status == "generated" and action == "keep")
-        or (status == "abstained" and action == "abstain")
-    ) and isinstance(confidence, (int, float)) and not isinstance(
-        confidence, bool
-    ) and 0.0 <= confidence <= 1.0
+        (
+            (status == "generated" and action == "keep")
+            or (status == "abstained" and action == "abstain")
+        )
+        and isinstance(confidence, (int, float))
+        and not isinstance(confidence, bool)
+        and 0.0 <= confidence <= 1.0
+    )
 
 
 def _rebuild_final_soft_copy_claim_provenance(

@@ -142,6 +142,12 @@ def test_render_report_output_uses_resolved_identity_for_generated_metadata(
     base_runtime = _runtime(tmp_path, md5="md5")
     runtime = replace(
         base_runtime,
+        ctx=replace(
+            base_runtime.ctx,
+            source_identity_id="source:exact-md5",
+            configuration_hash="a" * 64,
+            policy_hash="b" * 64,
+        ),
         report_title=f"{base_runtime.file.file_id}-pdf",
         source_identity=SourceIdentityResolution(
             schema_version="1.0",

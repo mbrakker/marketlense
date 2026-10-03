@@ -108,9 +108,8 @@ def run_ingest_worker_matrix(
                         report_count=report_count,
                         profile=profile,
                         samples_ms=tuple(samples),
-                        quality_passed=outcomes == tuple(
-                            "processed" for _ in range(report_count)
-                        ),
+                        quality_passed=outcomes
+                        == tuple("processed" for _ in range(report_count)),
                         estimated_cost_usd="0",
                         outcome_digest=_outcome_digest(outcomes),
                     )
@@ -292,7 +291,7 @@ def _run_ingest_sample(
         root_ctx=new_run_context(task_id="ingest-worker-matrix"),
         force_report_cards=False,
     )
-    elapsed_ms = round((time.monotonic_ns() - started_ns) / 1_000_000)
+    elapsed_ms = max(1, round((time.monotonic_ns() - started_ns) / 1_000_000))
     return elapsed_ms, tuple(str(result.outcome.status) for result in results)
 
 
@@ -347,8 +346,7 @@ def _validate_matrix_inputs(
     if _BASELINE_PROFILE not in profiles:
         raise ValueError("profiles must include the current 5x5 baseline")
     if any(
-        profile.outer_workers < 1 or profile.inner_workers < 1
-        for profile in profiles
+        profile.outer_workers < 1 or profile.inner_workers < 1 for profile in profiles
     ):
         raise ValueError("worker counts must be positive")
     if warmups < 0 or runs < 1 or work_unit_ms < 1:

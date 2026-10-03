@@ -15,8 +15,8 @@ from ._shared import (
     ((False, False), (True, False), (False, True)),
     ids=(
         "clean-awaiting-review",
-        "unsupported-soft-copy-blocked",
-        "ias-known-claims-blocked",
+        "unsupported-soft-copy-repaired",
+        "ias-known-claims-repaired",
     ),
 )
 def test_a21_full_chain_preserves_grounding_disposition(
@@ -26,7 +26,7 @@ def test_a21_full_chain_preserves_grounding_disposition(
     repair_soft_copy: bool,
     reproduce_ias_soft_copy: bool,
 ) -> None:
-    """Keep clean claims publishable and unestablished final claims blocked."""
+    """Keep unsupported candidates out of final artifacts and packages."""
     external_boundary_mocks_only.setenv("OPENAI_API_KEY", "test-openai-key")
     fake_openai.add("vector_stores.create", {"id": "vs_queue_test"})
     fake_openai.add("files.create", {"id": "file_queue_test"})
@@ -127,8 +127,6 @@ def test_a21_full_chain_preserves_grounding_disposition(
     )
     assert worker_result.terminal_status == "succeeded"
     materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
-    unsupported_final = repair_soft_copy or reproduce_ias_soft_copy
-    blocked_render_job = None
     for queue_name in (
         "report_selection",
         "report_analysis",
@@ -142,12 +140,6 @@ def test_a21_full_chain_preserves_grounding_disposition(
             ctx=_ctx(),
         )
         completed_job = get_workflow_job(state_db, result.claimed_job_id, _ctx())
-        if unsupported_final and queue_name == "report_render":
-            assert result.terminal_status == "dead_letter"
-            assert completed_job is not None
-            assert completed_job.error_code == "publish_readiness_failed"
-            blocked_render_job = completed_job
-            break
         assert result.terminal_status == "succeeded", (
             f"queue={queue_name} model_schemas="
             f"{[call['text']['format']['name'] for call in fake_openai.calls['responses.create']]}"
@@ -156,50 +148,6 @@ def test_a21_full_chain_preserves_grounding_disposition(
             f" message={completed_job.error_message_summary if completed_job else ''}"
         )
         materialize_workflow_outbox(state_db, "validation-lineage-test-worker", _ctx())
-    if unsupported_final:
-        assert blocked_render_job is not None
-        assert detected_unsupported_claims
-        analysis_dirs = sorted((tmp_path / "out").glob("*/report_analysis"))
-        artifact_dirs = [
-            directory
-            for directory in analysis_dirs
-            if (directory / "artifacts.json").is_file()
-            and (directory / "publish_readiness.json").is_file()
-        ]
-        assert len(artifact_dirs) == 1, [str(directory) for directory in artifact_dirs]
-        analysis_dir = artifact_dirs[0]
-        artifacts = json.loads(
-            (analysis_dir / "artifacts.json").read_text(encoding="utf-8")
-        )
-        package = json.loads(
-            (analysis_dir / "retained_claim_validation.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        readiness = json.loads(
-            (analysis_dir / "publish_readiness.json").read_text(encoding="utf-8")
-        )
-        assert package["readiness_status"] == "not_publishable"
-        assert package["unresolved_factual_count"] > 0
-        assert package["lineage"]["report_id"] == "report-1"
-        assert package["lineage"]["final_artifact_hash"] == sha256_json(artifacts)
-        assert readiness["status"] == "fail"
-        grounding_rule = next(
-            rule
-            for rule in readiness["rule_results"]
-            if rule["rule_id"] == "publish_readiness.retained_claim_grounding"
-        )
-        assert "not_publishable" in grounding_rule["detail"]
-        with sqlite3.connect(state_db) as conn:
-            assert conn.execute(
-                "SELECT COUNT(*) FROM workflow_jobs "
-                "WHERE report_id=? AND queue_name='publication_readiness'",
-                ("report-1",),
-            ).fetchone() == (0,)
-            assert conn.execute(
-                "SELECT COUNT(*) FROM workflow_publication_readiness"
-            ).fetchone() == (0,)
-        return
     with sqlite3.connect(reports_db) as conn:
         run = conn.execute(
             "SELECT workflow_run_id FROM validation_runs WHERE validation_run_id=?",
@@ -313,7 +261,6 @@ def test_a21_full_chain_preserves_grounding_disposition(
         )
         assert regeneration_audit["transformation_scope"] == expected_scope
         assert _UNSUPPORTED_SOFT_COPY_CLAIM not in artifacts["expert_comment"]
-        assert artifacts["expert_comment"] == _REPAIRED_SOFT_COPY_CLAIM
         if reproduce_ias_soft_copy:
             initial_by_family = {}
             for payload in generated_soft_copy_payloads:
@@ -330,8 +277,20 @@ def test_a21_full_chain_preserves_grounding_disposition(
             assert set(detected_unsupported_claims) == {
                 claim for _family, claim, _code in IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
             }
-            assert (
-                artifacts["linkedin_post"] == "Read the report as an input to planning."
+            retained_recommendations = " ".join(
+                claim
+                for family, claim, _code in IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+                if family == "expert_comment"
+                and claim.startswith(("Governance should", "Operating models should"))
+            )
+            assert artifacts["expert_comment"] == retained_recommendations
+            assert artifacts["linkedin_post"] == ""
+            assert all(
+                claim not in artifacts[family]
+                for family, claim, _code in IAS_UNSUPPORTED_SOFT_COPY_CLAIMS
+                if not claim.startswith(
+                    ("Governance should", "Operating models should")
+                )
             )
             assert regeneration_audit["unchanged_family_sha256"] == {
                 family: sha256_json(artifacts[family])
@@ -348,13 +307,23 @@ def test_a21_full_chain_preserves_grounding_disposition(
             for claim in soft_copy_claims
             if claim["artifact_family"] == "expert_comment"
         ]
-        assert len(repaired_claims) == 1
-        assert repaired_claims[0]["regeneration_attempt"] == 1
+        if reproduce_ias_soft_copy:
+            assert len(repaired_claims) == 2
+            assert all(
+                claim["classification"] == "recommendation"
+                and claim["regeneration_attempt"] == 0
+                for claim in repaired_claims
+            )
+        else:
+            assert artifacts["expert_comment"] == ""
+            assert repaired_claims == []
         assert artifacts["summary"]["tldr"].encode() == (
             b"Customer demand is changing across segments."
         )
         assert artifacts["linkedin_post"].encode() == (
-            b"Read the report as an input to planning."
+            b""
+            if reproduce_ias_soft_copy
+            else b"Read the report as an input to planning."
         )
         untouched_soft_copy_families = (
             {"summary"} if reproduce_ias_soft_copy else {"summary", "linkedin_post"}
@@ -365,36 +334,18 @@ def test_a21_full_chain_preserves_grounding_disposition(
             if claim["artifact_family"] in untouched_soft_copy_families
         )
         if reproduce_ias_soft_copy:
-            assert any(
+            assert not any(
                 claim["artifact_family"] == "linkedin_post"
-                and claim["regeneration_attempt"] == 1
                 for claim in soft_copy_claims
             )
-            evidence_packs = {
-                name: json.loads(
-                    (analysis_dir / f"{name}.json").read_text(encoding="utf-8")
+            retained_claims = json.loads(
+                (analysis_dir / "retained_claim_validation.json").read_text(
+                    encoding="utf-8"
                 )
-                for name in (
-                    "doc_map",
-                    "findings",
-                    "limitations",
-                    "methods",
-                    "quote_candidates",
-                    "scope",
-                )
-            }
-            retained_claims = validate_retained_claims(
-                artifacts,
-                evidence_packs,
-                semantic_validator=lambda candidate, sources: (
-                    bool(sources) or not candidate.factual,
-                    "fixture_current_schema_evidence",
-                    "fixture-current-schema-semantic-v1",
-                ),
             )
-            assert retained_claims.readiness_status == "awaiting_review"
-            assert retained_claims.unsupported_factual_count == 0
-            assert retained_claims.unresolved_factual_count == 0
+            assert retained_claims["readiness_status"] == "awaiting_review"
+            assert retained_claims["unsupported_factual_count"] == 0
+            assert retained_claims["unresolved_factual_count"] == 0
             assert (
                 json.loads(
                     (analysis_dir / "validation_regen_candidate_1.json").read_text(

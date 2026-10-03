@@ -590,13 +590,12 @@ def test_run_report_analysis_falls_back_when_validation_raises(tmp_path):
     assert state.payload.publisher == "Doc Publisher"
     assert state.validation_report is not None
     assert state.validation_report.status == "fail"
-    assert len(regeneration_requests) == 1
-    assert regeneration_requests[0].plan.mode == "broad"
+    assert regeneration_requests == []
     assert state.regeneration_loop_state is not None
-    assert state.regeneration_loop_state.attempt_count == 1
+    assert state.regeneration_loop_state.attempt_count == 0
     assert state.regeneration_loop_state.final_status == "skipped"
     assert "validation" in state.evidence_paths
-    assert "validation_regen_attempt_1" in state.evidence_paths
+    assert "validation_regen_attempt_1" not in state.evidence_paths
     assert "analysis_vector_store" in stored
 
 

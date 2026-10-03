@@ -627,10 +627,10 @@ def test_pipeline_checkpoint_compacts_a_deep_atomic_write_path(tmp_path: Path) -
 
     checkpoint = PipelineStageCheckpoint(
         schema_version="1.0",
-        pipeline_name="report_generation",
-        file_id="cohort-cbb6e7df67412186b8bc",
+        pipeline_name="report_generation-" + "p" * 72,
+        file_id="cohort-" + "x" * 86,
         report_slug="market-report",
-        stage_name="source_prepared",
+        stage_name="source_prepared-" + "s" * 82,
         stage_status="completed",
         artifact_refs={},
         payload={"schema_version": "1.0"},

@@ -807,9 +807,15 @@ def _identified_item_path(root: str, items: object, identity: str) -> tuple[str,
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             continue
+        if root == "key_figures" and identity in {
+            str(item.get(field) or "").strip()
+            for field in ("id", "figure_id", "insight_id", "key_figure_id")
+        }:
+            return root, f"[item={identity}]"
         stable_id = str(
             item.get("id")
             or item.get("insight_id")
+            or item.get("figure_id")
             or item.get("key_figure_id")
             or item.get("claim_id")
             or ""
@@ -1028,7 +1034,13 @@ def _item_at_identity_path(items: object, item_path: str) -> Dict[str, Any] | No
         and identity
         in {
             str(item.get(field) or "").strip()
-            for field in ("id", "insight_id", "key_figure_id", "claim_id")
+            for field in (
+                "id",
+                "insight_id",
+                "key_figure_id",
+                "figure_id",
+                "claim_id",
+            )
         }
     ]
     return matches[0] if len(matches) == 1 else None
@@ -1662,7 +1674,15 @@ def _keep_atomic_summary_context(
 def _target_keys_for_issue(issue: RegenerationIssue) -> List[str]:
     explicit_target = str(issue.repair_target or "").strip()
     if explicit_target == "key_figures":
-        return ["insights_bundle"]
+        if (
+            str(issue.rule_id or "")
+            .strip()
+            .lower()
+            .startswith("public_editorial_quality.")
+        ):
+            derived_target = _target_section(issue.affected_section)
+            return [derived_target] if derived_target else []
+        return ["key_figures"]
     if explicit_target:
         if explicit_target == "artifact_copy":
             # Public-editorial quality deliberately reports the semantic copy

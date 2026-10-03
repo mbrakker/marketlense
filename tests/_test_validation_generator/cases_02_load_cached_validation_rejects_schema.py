@@ -27,6 +27,7 @@ def test_load_cached_validation_rejects_schema_invalid_payload(tmp_path):
 
     assert cached is None
 
+
 def test_validation_parallel_branch_with_auto_context_logs_parallel_event(
     tmp_path, caplog
 ):
@@ -62,6 +63,7 @@ def test_validation_parallel_branch_with_auto_context_logs_parallel_event(
             events.append(event)
     assert "validation_parallel_start" in events
 
+
 def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
     settings = _settings(tmp_path, validation_data_gap_policy="warn")
     artifacts = {
@@ -93,6 +95,7 @@ def test_validation_warn_policy_keeps_errors_without_data_gap(tmp_path):
     )
     assert result.status == "fail"
     assert any(issue.severity == "error" for issue in result.issues)
+
 
 def test_validation_fails_on_toc_integrity_breakage(tmp_path):
     settings = _settings(tmp_path)
@@ -220,6 +223,7 @@ def test_validation_fails_on_toc_integrity_breakage(tmp_path):
     assert any(issue.repair_target == "topics" for issue in result.issues)
     assert any(issue.message.startswith("[toc_integrity]") for issue in result.issues)
 
+
 def test_validation_fails_when_deterministic_toc_entries_are_missing(tmp_path):
     settings = _settings(tmp_path)
     artifacts = {
@@ -278,6 +282,7 @@ def test_validation_fails_when_deterministic_toc_entries_are_missing(tmp_path):
     assert any(issue.rule_id == "toc_integrity" for issue in result.issues)
     assert any(issue.repair_target == "topics" for issue in result.issues)
 
+
 def test_validation_rule_registry_is_deterministic():
     registry = build_validation_rule_registry()
     assert [rule.rule_id for rule in registry] == [
@@ -302,6 +307,7 @@ def test_validation_rule_registry_is_deterministic():
         "independent",
         "independent",
     ]
+
 
 def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
     settings = _settings(tmp_path)
@@ -346,6 +352,7 @@ def test_validation_fails_on_regenerable_abstained_artifact_family(tmp_path):
         "abstained at confidence=0.41" in issue.message for issue in result.issues
     )
 
+
 def test_validation_warns_on_abstained_quote_family_without_failing(tmp_path):
     settings = _settings(tmp_path)
     report = _report()
@@ -370,6 +377,7 @@ def test_validation_warns_on_abstained_quote_family_without_failing(tmp_path):
             }
         },
     }
+    _set_test_soft_copy_provenance(artifacts, {"summary": ("interpretive", [])})
     result = validate_report(
         ValidationRequest(
             schema_version="1.0",
@@ -394,6 +402,7 @@ def test_validation_warns_on_abstained_quote_family_without_failing(tmp_path):
         and issue.severity == "warning"
         for issue in result.issues
     )
+
 
 def test_validation_fails_when_summary_claim_is_missing_span_support(tmp_path):
     settings = _settings(tmp_path)
@@ -436,6 +445,7 @@ def test_validation_fails_when_summary_claim_is_missing_span_support(tmp_path):
     assert any(issue.rule_id == "claim_support" for issue in result.issues)
     assert any(issue.repair_target == "summary" for issue in result.issues)
 
+
 def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abstention(
     tmp_path,
 ):
@@ -471,6 +481,7 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
                 "text": "Quoted text",
                 "speaker": "Analyst",
                 "citation": "Quoted text",
+                "evidence_id": "q1",
                 "evidence_spans": [
                     {
                         "evidence_id": "q1",
@@ -509,6 +520,11 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
             },
         }
     }
+    evidence_packs["quote_candidates"] = {
+        "schema_version": "1.0",
+        "quote_candidates": [{"id": "q1", "text": "Quoted text", "speaker": "Analyst"}],
+    }
+    _set_test_soft_copy_provenance(artifacts, {"summary": ("interpretive", [])})
     result = validate_report(
         ValidationRequest(
             schema_version="1.0",
@@ -534,45 +550,45 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
                     }
                 ],
             },
-                grounding_payload={
-                    "unsupported": [],
-                    "checks": [
-                        {
-                            "item_id": "summary_claim:1",
-                            "section": "summary.claim_evidence_map:1.claim",
-                            "text": "Claim",
-                            "classification": "factual_claim",
-                            "entailment_outcome": "entailed",
-                            "proposition_status": "compatible",
-                            "protected_facts": {
-                                dimension: {
-                                    "claim_value": None,
-                                    "evidence_value": None,
-                                    "status": "unknown",
-                                }
-                                for dimension in PROTECTED_FACT_DIMENSIONS
-                            },
-                            "reason": "Grounding comparison completed.",
+            grounding_payload={
+                "unsupported": [],
+                "checks": [
+                    {
+                        "item_id": "summary_claim:1",
+                        "section": "summary.claim_evidence_map:1.claim",
+                        "text": "Claim",
+                        "classification": "factual_claim",
+                        "entailment_outcome": "entailed",
+                        "proposition_status": "compatible",
+                        "protected_facts": {
+                            dimension: {
+                                "claim_value": None,
+                                "evidence_value": None,
+                                "status": "unknown",
+                            }
+                            for dimension in PROTECTED_FACT_DIMENSIONS
                         },
-                        {
-                            "item_id": "quote:q1:text",
-                            "section": "quotes:q1.text",
-                            "text": "Quoted text",
-                            "classification": "factual_claim",
-                            "entailment_outcome": "entailed",
-                            "proposition_status": "compatible",
-                            "protected_facts": {
-                                dimension: {
-                                    "claim_value": None,
-                                    "evidence_value": None,
-                                    "status": "unknown",
-                                }
-                                for dimension in PROTECTED_FACT_DIMENSIONS
-                            },
-                            "reason": "Grounding comparison completed.",
+                        "reason": "Grounding comparison completed.",
+                    },
+                    {
+                        "item_id": "quote:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4:text",
+                        "section": "quotes:q1.text",
+                        "text": "Quoted text",
+                        "classification": "factual_claim",
+                        "entailment_outcome": "entailed",
+                        "proposition_status": "compatible",
+                        "protected_facts": {
+                            dimension: {
+                                "claim_value": None,
+                                "evidence_value": None,
+                                "status": "unknown",
+                            }
+                            for dimension in PROTECTED_FACT_DIMENSIONS
                         },
-                    ],
-                },
+                        "reason": "Grounding comparison completed.",
+                    },
+                ],
+            },
         ),
         analysis_store=FakeAnalysisStore(),
     )
@@ -588,6 +604,7 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
         for issue in result.issues
     )
     assert any("intentionally omitted" in issue.message for issue in result.issues)
+
 
 def test_validation_failures_include_rule_identity_prefix(tmp_path):
     settings = _settings(tmp_path)
@@ -637,6 +654,7 @@ def test_validation_failures_include_rule_identity_prefix(tmp_path):
     assert any(issue.message.startswith("[numbers]") for issue in result.issues)
     assert any(issue.message.startswith("[grounding]") for issue in result.issues)
 
+
 def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_error):
     settings = _settings(tmp_path, report_worker_limit=1)
     artifacts = {
@@ -680,6 +698,7 @@ def test_validation_propagates_retryable_semantic_error(tmp_path, assert_app_err
         retryable=True,
         severity="error",
     )
+
 
 def test_validation_propagates_retryable_grounding_error(tmp_path, assert_app_error):
     settings = _settings(
@@ -757,7 +776,18 @@ def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp
             report_id="r-grounding-blocked",
             report=report,
             artifacts=artifacts,
-            evidence_packs={},
+            evidence_packs={
+                "findings": {
+                    "schema_version": "1.0",
+                    "findings": [
+                        {
+                            "id": "e1",
+                            "text": "Revenue grew 5% in 2024.",
+                            "evidence": "Revenue grew 5% in 2024.",
+                        }
+                    ],
+                }
+            },
         ),
         settings,
         _ctx(),
@@ -771,7 +801,18 @@ def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp
             report_id="r-grounding-deterministic",
             report=report,
             artifacts=artifacts,
-            evidence_packs={},
+            evidence_packs={
+                "findings": {
+                    "schema_version": "1.0",
+                    "findings": [
+                        {
+                            "id": "e1",
+                            "text": "Revenue grew 5% in 2024.",
+                            "evidence": "Revenue grew 5% in 2024.",
+                        }
+                    ],
+                }
+            },
             deterministic_grounding_passed=True,
         ),
         settings,
@@ -842,6 +883,7 @@ def test_material_grounding_classifications_always_block_publish_readiness(
         issue.rule_id == "grounding" and issue.severity == "error"
         for issue in result.issues
     )
+
 
 __all__ = [
     "test_load_cached_validation_rejects_schema_invalid_payload",

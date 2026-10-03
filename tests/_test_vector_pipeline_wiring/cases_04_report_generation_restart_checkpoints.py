@@ -26,6 +26,8 @@ def test_generate_report_resumes_from_all_semantic_checkpoints_with_validated_ar
         run_id="run-restart",
         task_id="task-restart",
         span_id="span-restart",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     stage_calls = {
         "source": 0,
@@ -310,6 +312,8 @@ def test_generate_report_latest_safe_restart_skips_corrupt_newer_checkpoint(
         run_id="run-latest",
         task_id="task-latest",
         span_id="span-latest",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     render_calls = {"count": 0}
 
@@ -423,6 +427,8 @@ def test_generate_report_restart_rejects_checkpoint_artifact_hash_mismatch(
         run_id="run-hash",
         task_id="task-hash",
         span_id="span-hash",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
 
     def _store_pack(request: AnalysisStorePackRequest, ctx):

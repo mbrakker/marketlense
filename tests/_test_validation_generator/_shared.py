@@ -25,7 +25,13 @@ from src.contracts.prompts import (
 )
 from src.contracts.report_models import Figure, Quote, ReportPayload
 from src.contracts.run_context import RunContext
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_to_payload,
+    soft_copy_material_sentences,
+    soft_copy_public_text,
+)
 from src.contracts.validation import ValidationRequest
+from src.generators.soft_copy_claim_provenance import build_soft_copy_claim_provenance
 from src.generators.validation.cache import load_cached_validation
 from src.generators.validation.numbers import validate_new_numbers
 from src.generators.validation.registry import build_validation_rule_registry
@@ -246,6 +252,41 @@ def _report():
 def _low_text_status():
     path = Path(__file__).parent / "fixtures" / "low_text_status.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _set_test_soft_copy_provenance(
+    artifacts: dict,
+    declarations: dict[str, tuple[str, list[str]]],
+) -> None:
+    """Attach explicit test declarations through the production provenance builder."""
+
+    claims = []
+    for family, (classification, evidence_ids) in declarations.items():
+        text = soft_copy_public_text(family, artifacts.get(family))
+        sentences = soft_copy_material_sentences(text)
+        if not sentences:
+            continue
+        claims.extend(
+            build_soft_copy_claim_provenance(
+                artifact_family=family,
+                text=text,
+                declared_claims=[
+                    {
+                        "claim": sentence,
+                        "classification": classification,
+                        "evidence_ids": list(evidence_ids),
+                    }
+                    for sentence in sentences
+                ],
+                evidence_span_index={},
+                producing_prompt_identity={"namespace": f"test/{family}"},
+                generation_attempt=1,
+                regeneration_attempt=0,
+            )
+        )
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        claims
+    )
 
 
 __all__ = [

@@ -60,6 +60,7 @@ class ClaimEmbeddingDependencies:
         analytics_store_service.acquire_claim_embedding_execution_lease
     )
     utc_now: Callable[[], str] = lambda: ""
+    monotonic_fn: Callable[[], float] = time.monotonic
 
 
 def _timestamp(deps: ClaimEmbeddingDependencies) -> str:
@@ -296,6 +297,7 @@ def _run_claim_embedding_workflow(
     root_ctx = child_context(
         request.ctx, task_id=f"{request.ctx.task_id}:claim_embeddings"
     )
+    started = deps.monotonic_fn()
     logger.info(
         log_event(
             root_ctx,
@@ -356,7 +358,6 @@ def _run_claim_embedding_workflow(
             queue_age_before_seconds=queue_age_before_seconds,
             queue_age_after_seconds=queue_age_before_seconds,
         )
-    started = time.monotonic()
     run_id = str(request.ctx.run_id)
     processed: list[EntityUid] = []
     embedded_count = 0
@@ -374,7 +375,7 @@ def _run_claim_embedding_workflow(
         for item in selected[offset : offset + batch_size]:
             if (
                 request.max_runtime_seconds > 0
-                and time.monotonic() - started >= request.max_runtime_seconds
+                and deps.monotonic_fn() - started >= request.max_runtime_seconds
             ):
                 skipped_count += 1
                 avoided += 1

@@ -1309,8 +1309,7 @@ def _preserve_atomic_target_families(
     summary_claim_removal_paths = {
         str(path)
         for target in plan.targets
-        if target.target_section == "summary"
-        and target.repair_action == "REMOVE_CLAIM"
+        if target.target_section == "summary" and target.repair_action == "REMOVE_CLAIM"
         for path in target.allowed_paths
         if re.fullmatch(
             r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\](?:\.claim)?",
@@ -1363,6 +1362,7 @@ def _preserve_atomic_target_families(
                 merged_family = _remove_summary_claim_map_item(
                     summary=merged_family, full_path=removal_path
                 )
+
         def claim_path_order(path: str) -> tuple[int, int, str]:
             match = re.search(r"\[claim_index=(\d+)\]$", path)
             if match is None:
@@ -1430,9 +1430,7 @@ def _summary_claim_map_item_index(*, original_family: Any, full_path: str) -> in
 
 
 def _remove_summary_claim_map_item(*, summary: Any, full_path: str) -> Any:
-    index = _summary_claim_map_item_index(
-        original_family=summary, full_path=full_path
-    )
+    index = _summary_claim_map_item_index(original_family=summary, full_path=full_path)
     summary["claim_evidence_map"].pop(index)
     return summary
 
@@ -2995,9 +2993,8 @@ def _soft_copy_claim_repairs(
     artifact_family: str,
     text: str,
     issues: List[RegenerationIssue] | None = None,
-    summary_claim_map_targets: List[
-        tuple[int, Dict[str, Any], List[RegenerationIssue]]
-    ] | None = None,
+    summary_claim_map_targets: List[tuple[int, Dict[str, Any], List[RegenerationIssue]]]
+    | None = None,
 ) -> List[_SoftCopyClaimRepair] | None:
     """Resolve every distinct, unambiguous failed sentence in one soft family."""
 
@@ -3242,9 +3239,8 @@ def _summary_claim_repairs(
     execution: _RegenerationHandlerExecution,
     *,
     issues: List[RegenerationIssue] | None = None,
-    summary_claim_map_targets: List[
-        tuple[int, Dict[str, Any], List[RegenerationIssue]]
-    ] | None = None,
+    summary_claim_map_targets: List[tuple[int, Dict[str, Any], List[RegenerationIssue]]]
+    | None = None,
 ) -> Dict[str, List[_SoftCopyClaimRepair]] | None:
     """Resolve summary-field claims, requiring sentence identity for removal."""
 
@@ -3600,9 +3596,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
     else:
         claim_map_targets = _summary_claim_map_targets(execution)
         if claim_map_targets is not None:
-            _regenerate_summary_claim_map_items(
-                execution, claim_map_targets, namespace
-            )
+            _regenerate_summary_claim_map_items(execution, claim_map_targets, namespace)
             return
         scoped_repairs = _summary_claim_repairs(execution)
     if scoped_repairs is not None:
@@ -3682,9 +3676,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                 replacement = _retained_summary_claim_replacement(
                     execution,
                     field=field,
-                    excluded_claim_ids={
-                        repair.claim.claim_id for repair in repairs
-                    },
+                    excluded_claim_ids={repair.claim.claim_id for repair in repairs},
                 )
                 if replacement is None:
                     raise AppError(
@@ -4310,11 +4302,7 @@ def _regenerate_one_final_insight(
             _s(value).strip().casefold()
             for value in (
                 list(execution.target.quarantined_evidence_ids)
-                + list(
-                    execution.grounding_package.get(
-                        "quarantined_evidence_ids", []
-                    )
-                )
+                + list(execution.grounding_package.get("quarantined_evidence_ids", []))
             )
             if _s(value).strip()
         }
@@ -4329,9 +4317,7 @@ def _regenerate_one_final_insight(
         )
         canonical_spans = [
             span
-            for span in canonical_span_index.get(
-                rebound_evidence_id.casefold(), []
-            )
+            for span in canonical_span_index.get(rebound_evidence_id.casefold(), [])
             if span.get("source_pack") in {"findings", "quote_candidates"}
             and isinstance(span.get("page"), int)
             and span["page"] > 0
@@ -4925,8 +4911,20 @@ def _regenerate_one_quote(execution: _RegenerationHandlerExecution) -> bool:
             if stable_id
             and _s(quote.get("id") or quote.get("evidence_id")).strip() == stable_id
         ),
-        regenerated[0] if len(regenerated) == 1 else None,
+        None,
     )
+    if replacement is None:
+        target_evidence_id = _s(failed_entry.get("evidence_id")).strip().casefold()
+        evidence_matches = [
+            quote
+            for quote in regenerated
+            if target_evidence_id
+            and _s(quote.get("evidence_id")).strip().casefold() == target_evidence_id
+        ]
+        if len(evidence_matches) == 1:
+            replacement = evidence_matches[0]
+    if replacement is None and len(regenerated) == 1:
+        replacement = regenerated[0]
     if replacement is None:
         raise AppError(
             code="regeneration_target_item_unresolved",

@@ -17,6 +17,7 @@ from src.contracts.validation import ValidationIssue, ValidationRequest
 from src.generators._artifact_generator.storage import (
     finalize_regeneration_candidate_artifacts,
 )
+from src.generators.claim_validation_generator import validate_retained_claims
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
     validation_issues_from_public_editorial_quality,
@@ -181,11 +182,20 @@ def test_doubleverify_duplicate_replay_preserves_sibling_and_grounding() -> None
         "text"
     ] = retained_candidate["text"]
     copied_candidate = _candidate_check(case, copied)
-    assert not copied_candidate.passed
+    assert copied_candidate.passed
+    copied_package = validate_retained_claims(copied, case["evidence_packs"])
+    copied_claim = next(
+        item
+        for item in copied_package.results
+        if item.candidate.claim_id == f"insight:{duplicate_id}:text"
+    )
+    assert copied_claim.status == "unresolved"
+    assert copied_package.readiness_status == "not_publishable"
     assert any(
-        item.rule_id == "retained_claim.number_value_unit_match"
-        and "quantity_not_entailed" in item.message
-        for item in copied_candidate.issues
+        check.name == "number_value_unit_match"
+        and check.status == "not_applicable"
+        and check.reason == "quantity_not_established"
+        for check in copied_claim.checks
     )
     copied_quality = evaluate_public_editorial_quality(
         report_id=case["report_id"], artifacts=copied

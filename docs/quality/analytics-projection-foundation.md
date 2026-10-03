@@ -87,7 +87,7 @@ The reports migration `reports_db_016_add_claim_embedding_queue_controls` adds r
 
 Reconciliation is provider-free. It marks a durable match as embedded, records stale content for deterministic reprojection, terminalizes obsolete versions, and terminalizes orphaned reports. Each state transition records the previous and new status, typed reason, actor, run ID, timestamp, content hash, version, provider/model, and compact details.
 
-The bounded execution path is intentionally sequential (`max_concurrent_provider_calls=1`) and supports row/report/token/spend/runtime/retry/fairness limits plus optional report/publisher filters. It checks current text/hash state, looks for a successful durable identity, and acquires a SQLite execution lease before each provider call. Retryable failures receive exponential-backoff metadata; terminal, invalid, stale, obsolete, orphaned, and already-satisfied rows do not call the provider. The canonical LLM usage ledger remains the source of provider accounting.
+The bounded execution path is intentionally sequential (`max_concurrent_provider_calls=1`) and supports row/report/token/spend/runtime/retry/fairness limits plus optional report/publisher filters. The runtime clock starts before queue-health reads and item selection, so the limit covers orchestration overhead as well as provider work. It checks current text/hash state, looks for a successful durable identity, and acquires a SQLite execution lease before each provider call. Retryable failures receive exponential-backoff metadata; terminal, invalid, stale, obsolete, orphaned, and already-satisfied rows do not call the provider. The canonical LLM usage ledger remains the source of provider accounting.
 
 Operator commands (all defaults are conservative):
 

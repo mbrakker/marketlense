@@ -30,6 +30,8 @@ def test_report_generation_scores_two_ingested_reports_for_same_publisher(
         run_id="run-seed",
         task_id="seed-report-sources",
         span_id="span-seed",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     for _file_id, title, url in source_rows:
         record_discovered_report_source(
@@ -395,6 +397,8 @@ def test_generate_report_doc_map_empty_halts(
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
 
     def _fake_evidence(*args, **kwargs):
@@ -459,6 +463,8 @@ def test_generate_report_resumes_from_analysis_checkpoint_without_upstream_rerun
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     upstream_calls = {"evidence": 0, "artifacts": 0, "validation": 0}
     rendered_payloads: list[dict] = []
@@ -601,6 +607,8 @@ def test_generate_report_deletes_vector_store_when_retention_disabled(
         run_id="run-vs",
         task_id="task-vs",
         span_id="span-vs",
+        configuration_hash="a" * 64,
+        policy_hash="b" * 64,
     )
     delete_calls = []
 
