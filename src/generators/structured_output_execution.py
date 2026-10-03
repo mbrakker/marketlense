@@ -20,7 +20,7 @@ from src.generators.prompt_preparation import (
     prepare_prompt_bundle,
 )
 
-_MAX_SHARED_RETRIEVAL_CONTEXT_CHARS = 24_000
+_MAX_SHARED_RETRIEVAL_CONTEXT_CHARS = 72_000
 
 
 def shared_retrieval_context_json(

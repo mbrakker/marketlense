@@ -860,15 +860,19 @@ def _extract_responses_file_search_results(resp: Any) -> list[OpenAIFileSearchRe
         if not isinstance(raw_results, list):
             continue
         for raw_result in raw_results:
-            content = _read_response_value(raw_result, "content", [])
             text_parts: list[str] = []
-            if isinstance(content, list):
-                for block in content:
-                    if _read_response_value(block, "type") != "text":
-                        continue
-                    text = _read_response_value(block, "text")
-                    if isinstance(text, str) and text.strip():
-                        text_parts.append(text.strip())
+            direct_text = _read_response_value(raw_result, "text")
+            if isinstance(direct_text, str) and direct_text.strip():
+                text_parts.append(direct_text.strip())
+            else:
+                content = _read_response_value(raw_result, "content", [])
+                if isinstance(content, list):
+                    for block in content:
+                        if _read_response_value(block, "type") != "text":
+                            continue
+                        text = _read_response_value(block, "text")
+                        if isinstance(text, str) and text.strip():
+                            text_parts.append(text.strip())
             try:
                 score = (
                     float(_read_response_value(raw_result, "score"))
@@ -882,7 +886,11 @@ def _extract_responses_file_search_results(resp: Any) -> list[OpenAIFileSearchRe
                     schema_version="1.0",
                     queries=queries,
                     file_id=str(_read_response_value(raw_result, "file_id") or ""),
-                    filename=str(_read_response_value(raw_result, "filename") or ""),
+                    filename=str(
+                        _read_response_value(raw_result, "filename")
+                        or _read_response_value(raw_result, "file_name")
+                        or ""
+                    ),
                     score=score,
                     text="\n".join(text_parts),
                 )

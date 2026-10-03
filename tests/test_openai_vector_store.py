@@ -220,12 +220,7 @@ def test_doc_map_search_results_are_cached_with_the_vector_content_identity(
                             file_id="file_report",
                             filename="report.pdf",
                             score=0.84,
-                            content=[
-                                SimpleNamespace(
-                                    type="text",
-                                    text="Fieldwork took place in May 2025.",
-                                )
-                            ],
+                            text="Fieldwork took place in May 2025.",
                         ),
                     ],
                 ),
