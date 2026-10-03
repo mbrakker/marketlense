@@ -26,22 +26,39 @@ _MAX_SHARED_RETRIEVAL_CONTEXT_CHARS = 72_000
 def shared_retrieval_context_json(
     results: Sequence[OpenAIFileSearchResult],
 ) -> str:
-    """Serialize a bounded retrieved-source bundle, or abstain if it is too large."""
+    """Serialize bounded retrieved evidence, grouping repeated search queries."""
 
-    excerpts = [
-        {
-            "queries": list(result.queries),
-            "file_id": result.file_id,
-            "filename": result.filename,
-            "score": result.score,
-            "text": result.text,
-        }
-        for result in results
-        if str(result.text or "").strip()
-    ]
-    if not excerpts:
+    searches: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for result in results:
+        if not str(result.text or "").strip():
+            continue
+        queries = tuple(
+            dict.fromkeys(
+                str(query).strip()
+                for query in result.queries
+                if str(query).strip()
+            )
+        )
+        searches.setdefault(queries, []).append(
+            {
+                "file_id": result.file_id,
+                "filename": result.filename,
+                "score": result.score,
+                "text": result.text,
+            }
+        )
+    if not searches:
         return ""
-    serialized = json.dumps(excerpts, ensure_ascii=False, separators=(",", ":"))
+    serialized = json.dumps(
+        {
+            "searches": [
+                {"queries": list(queries), "results": excerpts}
+                for queries, excerpts in searches.items()
+            ]
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
     return (
         serialized
         if len(serialized) <= _MAX_SHARED_RETRIEVAL_CONTEXT_CHARS
