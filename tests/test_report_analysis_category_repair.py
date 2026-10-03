@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from src.contracts.context_category_fit import ContextCategoryFitResponse
-from src.contracts.context_category_fit import CategoryFitCandidate
+from src.contracts.context_category_fit import (
+    CategoryFitCandidate,
+    ContextCategoryFitResponse,
+)
 from src.contracts.semantic_ids import ReportId
 from src.orchestrators.report_analysis_orchestrator import (
     _abstain_unresolved_category_fits,
     _category_fit_ambiguity_ids,
     _category_fit_reclassification_candidates,
     _category_fit_repair_code,
+    _mark_all_rejected_category_fits_as_abstention,
 )
 
 
@@ -121,6 +124,64 @@ def test_all_rejected_category_fit_is_an_explicit_uncategorized_outcome() -> Non
     )
 
     assert _category_fit_repair_code(state) == ""
+
+
+def test_all_rejected_category_fit_gets_auditable_abstention_marker() -> None:
+    response = ContextCategoryFitResponse(
+        schema_version="1.0",
+        report_id=ReportId("report-1"),
+        categories=[],
+        category_labels=[],
+        fits=[
+            CategoryFitCandidate(
+                schema_version="1.0",
+                category_id="payments",
+                label="Payments",
+                fit_score=0.1,
+                decision="reject",
+                why_fit="",
+                why_not_fit="The report does not cover payments.",
+                evidence_sections=["Overview"],
+                semantic_rule_status="rejected",
+            )
+        ],
+    )
+
+    resolved = _mark_all_rejected_category_fits_as_abstention(response)
+
+    assert resolved.categories == []
+    assert resolved.fits[0].decision == "reject"
+    assert resolved.fits[0].semantic_rule_status == "rejected"
+    assert (
+        resolved.fits[0].remediation_signal
+        == "topic_semantics_all_rejected_abstained"
+    )
+
+
+def test_all_rejected_category_fit_without_rejection_reason_is_not_audited() -> None:
+    response = ContextCategoryFitResponse(
+        schema_version="1.0",
+        report_id=ReportId("report-1"),
+        categories=[],
+        category_labels=[],
+        fits=[
+            CategoryFitCandidate(
+                schema_version="1.0",
+                category_id="payments",
+                label="Payments",
+                fit_score=0.1,
+                decision="reject",
+                why_fit="",
+                why_not_fit="",
+                evidence_sections=["Overview"],
+                semantic_rule_status="rejected",
+            )
+        ],
+    )
+
+    resolved = _mark_all_rejected_category_fits_as_abstention(response)
+
+    assert resolved.fits[0].remediation_signal == ""
 
 
 def test_unresolved_category_repair_abstains_without_inventing_a_category() -> None:

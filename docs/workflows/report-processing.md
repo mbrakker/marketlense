@@ -76,11 +76,13 @@ a persistent missing source or artifact remains a typed terminal failure.
 Category selection is evidence-first. After the normal structured-output
 recovery and one targeted category repair, a candidate that still has no
 configured central support is explicitly recorded as an uncategorized
-abstention. The report is not blocked and no portal category is invented;
-the rejected candidate and its remediation status remain in the retained
-category-fit audit payload. Publication readiness accepts only that exact
-audited all-rejected outcome; an absent or malformed category assignment still
-blocks publication.
+abstention. A complete fit response that rejects every configured category
+with an explanation is recorded the same way even when no ambiguity repair was
+needed. The report is not blocked and no portal category is invented; each
+rejected candidate and its remediation status remain in the retained
+category-fit audit payload. Publication readiness accepts only a non-empty,
+fully rejected and explained fit set with the matching abstention marker; an
+absent, ambiguous, or malformed category assignment still blocks publication.
 
 Card titles retain the complete canonical title. The approved `xlong` scale
 supports readable, normally spaced titles through 140 characters; only an
@@ -171,6 +173,11 @@ canonical `artifacts.json`. When a numbers issue has an unambiguous retained
 soft-copy claim, it carries that claim's evidence IDs for the repair planner.
 Candidate audits also retain original and selected evidence IDs and source
 pages for each soft-copy claim, including a rejected numeric repair.
+For a claim-scoped `REBIND_EVIDENCE` repair, the retained evidence package uses
+direct `findings` and `quote_candidates` only. Generated DocMap section
+summaries cannot serve as direct source evidence for a factual rebind. If no
+eligible direct alternative remains, the repair abstains from the claim rather
+than preserving a section-summary binding.
 
 Inside the analysis validation loop, each targeted repair attempt plans the
 smallest mutable unit and resolves its strategy from an ordered, materially

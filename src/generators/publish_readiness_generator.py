@@ -1024,8 +1024,12 @@ def _has_explicit_uncategorized_abstention(
     return bool(fits) and all(
         str(item.get("decision") or "").casefold() == "reject"
         and str(item.get("semantic_rule_status") or "").casefold() == "rejected"
+        and bool(str(item.get("why_not_fit") or "").strip())
         and str(item.get("remediation_signal") or "")
-        == "topic_semantics_unresolved_abstained"
+        in {
+            "topic_semantics_unresolved_abstained",
+            "topic_semantics_all_rejected_abstained",
+        }
         for item in fits
     )
 

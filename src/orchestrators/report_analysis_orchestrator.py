@@ -241,6 +241,32 @@ def _abstain_unresolved_category_fits(
     return replace(fit_response, categories=[], category_labels=[], fits=fits)
 
 
+def _mark_all_rejected_category_fits_as_abstention(
+    fit_response: ContextCategoryFitResponse,
+) -> ContextCategoryFitResponse:
+    """Retain a complete, explained no-category decision for readiness."""
+
+    if fit_response.categories or not fit_response.fits:
+        return fit_response
+    if not all(
+        fit.decision == "reject"
+        and fit.semantic_rule_status == "rejected"
+        and str(fit.why_not_fit or "").strip()
+        for fit in fit_response.fits
+    ):
+        return fit_response
+    return replace(
+        fit_response,
+        fits=[
+            replace(
+                fit,
+                remediation_signal="topic_semantics_all_rejected_abstained",
+            )
+            for fit in fit_response.fits
+        ],
+    )
+
+
 def _resolve_taxonomy_with_repair(
     runtime: ReportRuntimeState,
     mode_ctx: Any,
@@ -768,6 +794,15 @@ def run_report_analysis(
                 },
             ) from exc
     category_assignment = context_category_state.category_assignment
+    if not category_assignment.categories:
+        abstained_fit_response = _mark_all_rejected_category_fits_as_abstention(
+            context_category_state.fit_response
+        )
+        if abstained_fit_response != context_category_state.fit_response:
+            context_category_state = replace(
+                context_category_state,
+                fit_response=abstained_fit_response,
+            )
     data.categories = category_assignment.categories
     for pack_name, payload in (
         ("report_context", asdict(context_category_state.report_context)),

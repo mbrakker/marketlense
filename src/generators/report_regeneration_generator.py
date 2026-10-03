@@ -786,11 +786,56 @@ def _claim_scoped_grounding_package(
     """Replace target-wide evidence with the failed claim's retained support."""
 
     package = dict(execution.grounding_package)
+    is_evidence_rebind = execution.target.repair_action == "REBIND_EVIDENCE"
+    evidence_packs = execution.runtime.safe_evidence
+    doc_map = execution.runtime.safe_doc_map
+    if is_evidence_rebind:
+        # A section summary is generated metadata, not direct source evidence
+        # for rebinding a factual public claim. Keep this path on the retained
+        # source findings and quotes that can be bound to source spans.
+        direct_packs = {
+            name: evidence_packs[name]
+            for name in ("findings", "quote_candidates")
+            if isinstance(evidence_packs.get(name), dict)
+        }
+        direct_spans = artifact_evidence_span_index(
+            doc_map={}, evidence_packs=direct_packs
+        )
+        page_bound_ids = {
+            evidence_id
+            for evidence_id, spans in direct_spans.items()
+            if any(
+                span.get("source_pack") in {"findings", "quote_candidates"}
+                and isinstance(span.get("page"), int)
+                and span["page"] > 0
+                and _s(span.get("text")).strip()
+                for span in spans
+            )
+        }
+        evidence_packs = {}
+        for name, root_key in (
+            ("findings", "findings"),
+            ("quote_candidates", "quote_candidates"),
+        ):
+            payload = direct_packs.get(name)
+            entries = payload.get(root_key) if isinstance(payload, dict) else None
+            if isinstance(payload, dict) and isinstance(entries, list):
+                evidence_packs[name] = {
+                    **payload,
+                    root_key: [
+                        entry
+                        for entry in entries
+                        if isinstance(entry, dict)
+                        and _normalized_evidence_id(_entry_evidence_id(entry))
+                        in page_bound_ids
+                    ],
+                }
+        doc_map = {}
     selected = _build_soft_copy_claim_evidence_package(
         claim=repair.claim,
         issue=repair.issue,
         artifacts=_artifact_state_from_state(execution.state),
-        evidence_packs=execution.runtime.safe_evidence,
+        evidence_packs=evidence_packs,
         quarantined_evidence_ids=tuple(
             dict.fromkeys(
                 evidence_id
@@ -798,7 +843,7 @@ def _claim_scoped_grounding_package(
                 for evidence_id in issue.excluded_evidence_ids
             )
         ),
-        doc_map=execution.runtime.safe_doc_map,
+        doc_map=doc_map,
         claim_text=repair.text,
     )
     selection = selected["evidence_selection"]

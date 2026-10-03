@@ -43,6 +43,7 @@ def test_publish_readiness_accepts_an_explicit_uncategorized_abstention() -> Non
                 "decision": "reject",
                 "semantic_rule_status": "rejected",
                 "remediation_signal": "topic_semantics_unresolved_abstained",
+                "why_not_fit": "The report does not support this category.",
             }
         ],
     }
@@ -64,6 +65,76 @@ def test_publish_readiness_accepts_an_explicit_uncategorized_abstention() -> Non
         if item.rule_id == "publish_readiness.category_consistency"
     )
     assert category_rule.status == "pass"
+
+
+def test_publish_readiness_accepts_all_rejected_category_abstention() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifacts["categories"] = []
+    evidence_packs["context_category_fit"] = {
+        "selected_category_ids": [],
+        "category_fits": [
+            {
+                "category_id": "payments",
+                "decision": "reject",
+                "semantic_rule_status": "rejected",
+                "remediation_signal": "topic_semantics_all_rejected_abstained",
+                "why_not_fit": "No retained evidence supports this category.",
+            }
+        ],
+    }
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=[],
+        provenance=provenance,
+    )
+
+    category_rule = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.category_consistency"
+    )
+    assert category_rule.status == "pass"
+
+
+def test_publish_readiness_rejects_uncategorized_fit_without_explanation() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifacts["categories"] = []
+    evidence_packs["context_category_fit"] = {
+        "selected_category_ids": [],
+        "category_fits": [
+            {
+                "category_id": "payments",
+                "decision": "reject",
+                "semantic_rule_status": "rejected",
+                "remediation_signal": "topic_semantics_all_rejected_abstained",
+                "why_not_fit": "",
+            }
+        ],
+    }
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=[],
+        provenance=provenance,
+    )
+
+    category_rule = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.category_consistency"
+    )
+    assert category_rule.status == "fail"
 
 
 def test_publish_readiness_rejects_malformed_plural_evidence_references() -> None:

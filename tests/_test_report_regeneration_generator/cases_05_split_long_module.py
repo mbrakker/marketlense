@@ -238,6 +238,106 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
     ]
 
 
+def test_linkedin_evidence_rebind_uses_direct_source_not_doc_map_summary(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    original_text = "The source-supported LinkedIn statement needs a new binding."
+    original_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="linkedin_post",
+        claim_id="soft_copy:linkedin_post:doc-map-rebind",
+        text_hash=hashlib.sha256(original_text.encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("sec-1",),
+        source_spans=({"evidence_id": "sec-1", "page": 1},),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/linkedin_post"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current["linkedin_post"] = original_text
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "linkedin_post"
+    ] + soft_copy_claim_provenance_to_payload([original_claim])["claims"]
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"] = [
+        {
+            "id": "a-no-page",
+            "text": "The source-supported LinkedIn statement needs a new binding.",
+            "evidence": "The source-supported LinkedIn statement needs a new binding.",
+        },
+        {
+            "id": "f2",
+            "text": "The source-supported LinkedIn statement needs a new binding.",
+            "evidence": "The source-supported LinkedIn statement needs a new binding.",
+            "page": 7,
+            "pages": [7],
+        }
+    ]
+    target = RegenerationTarget(
+        target_section="linkedin_post",
+        regenerate_steps=["linkedin_post"],
+        repair_action="REBIND_EVIDENCE",
+        repair_strategy="alternative_evidence",
+        allowed_paths=["linkedin_post[claim_index=0]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="linkedin_post",
+                message="Rebind the factual claim to retained direct evidence.",
+                severity="error",
+                entity_id=original_claim.claim_id,
+                evidence_ids=["f1"],
+            )
+        ],
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=_ClaimScopedSoftCopyOpenAIClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    selection = response.updated_artifacts["_repair_evidence_selection"][
+        f"linkedin_post:{original_claim.claim_id}"
+    ]
+    repaired = next(
+        claim
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim.get("repaired_from_claim_id") == original_claim.claim_id
+    )
+    assert selection["selected_evidence_ids"] == ["f2"]
+    assert selection["selected_evidence_entries"][0]["pack_name"] == "findings"
+    assert repaired["evidence_ids"] == ["f2"]
+    assert repaired["source_spans"] == [
+        {
+            "evidence_id": "f2",
+            "source_pack": "findings",
+            "page": 7,
+            "text": "The source-supported LinkedIn statement needs a new binding.",
+        }
+    ]
+
+
 def test_provider_strategy_echo_cannot_override_the_planner_owned_repair(
     tmp_path,
 ) -> None:
