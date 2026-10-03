@@ -56,6 +56,20 @@ source-grounded package may be materialized while unsupported or unresolved
 claims correctly remain blocked. Also retain the count of readiness-stage
 provider calls, which must be zero.
 
+The subsequent full frozen 20-report measurement is retained in
+[`reliability-cohort-20260927-grounding/full20-grounding-readiness-20261002/`](reliability-cohort-20260927-grounding/full20-grounding-readiness-20261002/).
+It completed all 20 reports from fresh isolated state with publication
+disabled. Eighteen reports passed final validation and each materialized one
+lineage-bound final package; all 18 passed package/readiness binding checks,
+with zero eligible `package_missing`, zero `package_invalid`, zero readiness
+provider calls, and 16 report-level readiness passes. The four remaining
+reports have typed blocking outcomes, including unresolved factual claims and
+a missing canonical category assignment. The retained record includes the
+manifest/result hashes and sanitized per-report usage, cost, duration, package,
+and readiness identities. The strict CTO bundle was regenerated at the exact
+measured revision; isolated-run log content/freshness is explicitly unavailable
+and is not substituted from repository-wide logs.
+
 The distinct 2026-10-01 batch-3 subset—Algolia, Bain & Company, Bigcommerce,
 Criteo, and DHL eCommerce—is retained in
 [`reliability-cohort-20261001-batch3-finalization/`](reliability-cohort-20261001-batch3-finalization/).

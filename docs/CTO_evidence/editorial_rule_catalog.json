@@ -28,6 +28,12 @@
     },
     {
       "kind": "blocking",
+      "rule_id": "public_editorial_quality.incomplete_numeric_expression",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
       "rule_id": "public_editorial_quality.internal_identifier",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
@@ -53,6 +59,12 @@
     {
       "kind": "blocking",
       "rule_id": "public_editorial_quality.mechanical_editorial_scaffold",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
     },
@@ -95,6 +107,12 @@
     {
       "kind": "blocking",
       "rule_id": "public_editorial_quality.sentence_fragment",
+      "severity": "error",
+      "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
+    },
+    {
+      "kind": "blocking",
+      "rule_id": "public_editorial_quality.temporal_integrity",
       "severity": "error",
       "waivable_via": "ingest.validation.public_editorial_quality.disabled_rule_waivers"
     },
@@ -154,5 +172,5 @@
     }
   ],
   "schema_version": "1.0",
-  "validator_version": "public-editorial-quality:v1"
+  "validator_version": "public-editorial-quality:v8"
 }

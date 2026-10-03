@@ -85,7 +85,7 @@
       ]
     }
   },
-  "repository_commit_sha": "1a22157c7d39208fa00a1a3d71b612089f8143f9",
+  "repository_commit_sha": "23fec7388553041aabcc3e1e0775abb559c6695d",
   "roles": {
     "cli": "src/_cli",
     "contracts": "src/contracts",

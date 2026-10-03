@@ -39,6 +39,12 @@
         "type": "str"
       },
       {
+        "description": "Separate source-visible publication provenance roles.",
+        "name": "provenance_roles",
+        "required": false,
+        "type": "SourceProvenanceRoles"
+      },
+      {
         "description": "Canonical publisher landing-page URL.",
         "name": "canonical_landing_page_url",
         "required": false,
@@ -168,6 +174,12 @@
         "name": "publisher_name",
         "required": false,
         "type": "str"
+      },
+      {
+        "description": "Resolved separate source-visible publication roles.",
+        "name": "provenance_roles",
+        "required": false,
+        "type": "SourceProvenanceRoles"
       },
       {
         "description": "Resolved canonical landing-page URL.",

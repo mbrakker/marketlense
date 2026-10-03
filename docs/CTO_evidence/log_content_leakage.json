@@ -3,311 +3,482 @@
     {
       "canary_class": "source_report",
       "field_family": "doc_map.json:sections[0].summary[0]",
-      "normalized_character_count": 297,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "5c0f1b5c06da870da16ec759507ab7c26d888a2e005965a32b6d0ecd02e4ba45",
-      "token_count": 41
+      "normalized_character_count": 214,
+      "relative_artifact_path": "adjust-regeneration-fix-canary-20260925/ias-first-attempt-rwfdc33z/output/mobile-app-trends-2026-pdf/report_analysis/doc_map.json",
+      "report_identity": "adjust-regeneration-fix-canary-20260925",
+      "sha256": "ece7b4e6bd5cb7464101a773ff6022d66159d5c7d260d3630f30aa7a4f968350",
+      "token_count": 30
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 271,
+      "relative_artifact_path": "adjust-regeneration-fix-canary-committed-20260925/ias-first-attempt-g3llgnz7/output/mobile-app-trends-2026-pdf/report_analysis/doc_map.json",
+      "report_identity": "adjust-regeneration-fix-canary-committed-20260925",
+      "sha256": "2f5b33235cac4312117ab841fe6db5350792fdd8101e520d34c684c0917df68d",
+      "token_count": 38
     },
     {
       "canary_class": "source_report",
       "field_family": "doc_map.json:sections[10].summary[0]",
-      "normalized_character_count": 186,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "0d4fda79ef93553d801c4f4be309dcc04704ef15ec396a13b23a5c301e991485",
+      "normalized_character_count": 250,
+      "relative_artifact_path": "b/pipeline/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/doc_map.json",
+      "report_identity": "b",
+      "sha256": "5b866f5b792dea2378cf0c9a5c65e39012b038444fe39e39feaa94216301cf3c",
+      "token_count": 28
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 185,
+      "relative_artifact_path": "browser_route_automatic_execution_validation_20260816/tei-of-algolia-search-2022-04-20-2-pdf/report_analysis/doc_map.json",
+      "report_identity": "browser_route_automatic_execution_validation_20260816",
+      "sha256": "abf78cd85101f1abc806edd97bd94fbb435c0519eeebeeb53832bbdc00d510fd",
       "token_count": 25
     },
     {
       "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[11].summary[0]",
-      "normalized_character_count": 208,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "ccbf54a36cb6ce88e334a46858af8b4763310c655cda2180961b093bdc9551df",
-      "token_count": 27
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 196,
+      "relative_artifact_path": "browser_route_promotion_validation_20260816/tei-of-algolia-search-2022-04-20-2-pdf/report_analysis/doc_map.json",
+      "report_identity": "browser_route_promotion_validation_20260816",
+      "sha256": "6c67c2c057a62bd4fdd62528b1cd0ff21eb0c41353703c02fd729b627865a90d",
+      "token_count": 25
     },
     {
       "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[12].summary[0]",
-      "normalized_character_count": 203,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "5f852395b06f04f1b79c833aa680af7982e6f21cd28eb16d92028b10a9c07b0e",
-      "token_count": 24
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[1].summary[0]",
-      "normalized_character_count": 188,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "3badf5272162f7adbc598e9d6ba0cd57788ecd266b25b514bd26f6dd2f8cf85c",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 205,
+      "relative_artifact_path": "c/pipeline/uk-attitudes-to-ai-in-media-report-2025-pdf/report_analysis/doc_map.json",
+      "report_identity": "c",
+      "sha256": "1ff3dca50d5c0d0a80a7ba72965445fd79cac7703a9fdf591f3e1a0f88b5892b",
       "token_count": 31
     },
     {
       "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[2].summary[0]",
-      "normalized_character_count": 257,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "dd17aa9c0c2893f687f9a1a1e16f0d0a5291598dfd3431810861a9b6ee89287c",
+      "field_family": "findings.json:findings[0].text[0]",
+      "normalized_character_count": 177,
+      "relative_artifact_path": "category_fit_task7_20260726/1rrwlwzrwnwm2frl8prb4zoeqhzo0ezg7-pdf/report_analysis/findings.json",
+      "report_identity": "category_fit_task7_20260726",
+      "sha256": "ff03c8d4624e9074e0ee2f3f3fd3f674f70623386864bc0edf0a3c0a56fe4a56",
+      "token_count": 31
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[1].summary[0]",
+      "normalized_character_count": 334,
+      "relative_artifact_path": "cohort_remediation_live_20260811/gwi-20brand-20tracking-20guide-pdf/report_analysis/doc_map.json",
+      "report_identity": "cohort_remediation_live_20260811",
+      "sha256": "e1522c8f9b752cac685272322c2a7182c7f3fa18ce6a86d07c34521a9ee2e6ec",
       "token_count": 35
     },
     {
       "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[6].summary[0]",
-      "normalized_character_count": 183,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "a50be0432ab7b4b2f68886fe7a47270ffb5aa81ecea1d6cb672d280093e7430c",
-      "token_count": 26
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[8].summary[0]",
-      "normalized_character_count": 207,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "e29342e1125e516799747bb309fc40f34af65ded06619f2d7250af3d8c431a94",
-      "token_count": 29
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "doc_map.json:sections[9].summary[0]",
-      "normalized_character_count": 195,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/doc_map.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "013eb40124b659f5d5ddd38265d400aee457e46cea67aa8eb83c3929a338e34a",
-      "token_count": 25
-    },
-    {
-      "canary_class": "source_report",
       "field_family": "findings.json:findings[0].evidence[0]",
-      "normalized_character_count": 165,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "70c110584fcef85080e1afbc11da9fa4b56e5efb5b75943ddc497afd96a277a7",
-      "token_count": 27
+      "normalized_character_count": 402,
+      "relative_artifact_path": "cohort_remediation_live_20260811_gwi_origin/gwi-20brand-20tracking-20guide-pdf/report_analysis/findings.json",
+      "report_identity": "cohort_remediation_live_20260811_gwi_origin",
+      "sha256": "0c9240dbd89108e8e425b91833409bb8c002f5f379985d84cb9fd3d6d75fa1db",
+      "token_count": 68
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[0].text[0]",
-      "normalized_character_count": 191,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "74a44b870e2e50047c619f12b1a9db5ae7dadad9666a4410f6ff155784792be3",
-      "token_count": 30
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 221,
+      "relative_artifact_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/doc_map.json",
+      "report_identity": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf",
+      "sha256": "6717670db9d7becbdf9392cb5d9b64aec941aa17308085e709f5a740bee5d556",
+      "token_count": 28
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[1].evidence[0]",
-      "normalized_character_count": 197,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "0c672c6fc8d4571f7be8ec88c04ee3c8858e40e397a4c369db291654fe127c20",
-      "token_count": 32
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 234,
+      "relative_artifact_path": "docmap_findings_live_validation_20260829/2023-email-sms-and-push-report-pdf/report_analysis/doc_map.json",
+      "report_identity": "docmap_findings_live_validation_20260829",
+      "sha256": "c28180bd670fe32a91b11121a7fa05fa62bff3a59675cb086c6aa324f6309481",
+      "token_count": 34
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[1].text[0]",
-      "normalized_character_count": 200,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "6cae7cc8ddb7dbd71bcab81873aef251858e918e385ad34e17282f203ee6e8dc",
-      "token_count": 32
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "findings.json:findings[2].text[0]",
-      "normalized_character_count": 162,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "616eecb202df56b79a1900651b2bf43b39236809b938a0088126f2fbae751b0b",
-      "token_count": 29
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "findings.json:findings[3].evidence[0]",
+      "field_family": "doc_map.json:sections[1].summary[0]",
       "normalized_character_count": 172,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "2542821d3a62832a52d46f42c34679e23d00629d58dddb2f3279abb87da7147f",
-      "token_count": 26
+      "relative_artifact_path": "docmap_live_20260811_7d3e9c4a/1cv8ypeywpjevvnkaolx9n-s79az36idc-pdf/report_analysis/doc_map.json",
+      "report_identity": "docmap_live_20260811_7d3e9c4a",
+      "sha256": "c646c6618cd52c52f08c73d3fdfff8cd63210b8bb1aa7e2e07ebdb45bfd0392e",
+      "token_count": 24
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[3].text[0]",
-      "normalized_character_count": 169,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "bc1abc1a46aff1403b29d481a7dc6027a09194ea3245a187bc410a4a148d5288",
-      "token_count": 29
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 306,
+      "relative_artifact_path": "drive_admission_live_20260905/stackadapt-retail-marketing-trends-report-2026-pdf/report_analysis/doc_map.json",
+      "report_identity": "drive_admission_live_20260905",
+      "sha256": "a06b786225b230076f8a25f719dbf7d36c1103210c9c2f2d45607edc924295f6",
+      "token_count": 41
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[4].evidence[0]",
-      "normalized_character_count": 193,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "b88dd9cba8910c0110af0c8d3679b4c70a90f834ba71d88e131692511c1c2f2f",
-      "token_count": 43
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 306,
+      "relative_artifact_path": "drive_admission_live_20260905_retry/stackadapt-retail-marketing-trends-report-2026-pdf/report_analysis/doc_map.json",
+      "report_identity": "drive_admission_live_20260905_retry",
+      "sha256": "a7e839ff24c39cfe8832c7e1741e22c41557b36eaafe0c391c4b944741cf1a3b",
+      "token_count": 40
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[4].text[0]",
-      "normalized_character_count": 162,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "54ca4659bf9e8619061ae228573d0bdd24f03e5e0c542074c6a6e03962590d7a",
-      "token_count": 26
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 271,
+      "relative_artifact_path": "e11_live_recovery_20260829/output/2025-iab-annual-report-pdf/report_analysis/doc_map.json",
+      "report_identity": "e11_live_recovery_20260829",
+      "sha256": "6a139ba5e58cba963596f65ddaaeefab173bc590b9a2d2dc71fdbeb4cdaf0cf6",
+      "token_count": 35
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[5].evidence[0]",
-      "normalized_character_count": 166,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "374db18bf3c63caed1e7f2139ed497f659cf57acda17f447afcb5948fde7319d",
-      "token_count": 25
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 250,
+      "relative_artifact_path": "e13-items-7-9-live/ias-first-attempt-erc8wfbe/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/doc_map.json",
+      "report_identity": "e13-items-7-9-live",
+      "sha256": "f554dc5366bcc79556e67373a4c5766afa9039ae0b2fbe37c905833de72d769d",
+      "token_count": 34
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[5].text[0]",
-      "normalized_character_count": 169,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "3b655dce9f65ab39eaaa7f4d4e7d225d57c410126b351c10a618022cfcd93b90",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 212,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_clean/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260907_clean",
+      "sha256": "499348def0c78a59f7ccb20558d6b6ecfdc2353766cc0f90eff6fe8635f7a189",
       "token_count": 27
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[6].text[0]",
-      "normalized_character_count": 165,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "de3228d79f3accd2f107e17f35fc25659a893bdcea813e5084907d0758710f9f",
-      "token_count": 33
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 337,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r2/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r2",
+      "sha256": "6ed904d35c690aea0e85fb43c885739c609a640d8fc0aa4f27260a2fb016b578",
+      "token_count": 48
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[7].evidence[0]",
-      "normalized_character_count": 202,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "03cee043232c738a95f2989df1ea795dd29f4aaf5b1b47cf7ac1fb11c8513249",
-      "token_count": 30
-    },
-    {
-      "canary_class": "source_report",
-      "field_family": "findings.json:findings[7].text[0]",
-      "normalized_character_count": 254,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "ea352cbc43946cf7316ac10de6150c7001624f2a5475e6cc4224a89ef4218409",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 282,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r3/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r3",
+      "sha256": "0e0a4bdb4fb96da77d170bda30014203676dc2dc38fee71942c84f76cf9cd9ac",
       "token_count": 36
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[8].evidence[0]",
-      "normalized_character_count": 182,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "af2922e6f6071a2657dd9b5e9c40d3aaac9b351b7d1b64c5dfb3e149245e5389",
-      "token_count": 26
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 252,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r4/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r4",
+      "sha256": "d39284a9d909799246e4dc30c7630203bb09fc0446a75eb75f1f947d7a591a40",
+      "token_count": 32
     },
     {
       "canary_class": "source_report",
-      "field_family": "findings.json:findings[8].text[0]",
-      "normalized_character_count": 186,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/findings.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "b570a8a18cc6e4a5547b146c35288ed549c3bdb2b00c8637d86ba69938d7f9ba",
-      "token_count": 25
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 304,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r5/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r5",
+      "sha256": "a7a1fc1fbf44cbc9bda73e5a2914a70e206240a8c9025f7615fb3b69f7262cbc",
+      "token_count": 42
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 315,
+      "relative_artifact_path": "evidence_fidelity_iab_20260908_r6/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/doc_map.json",
+      "report_identity": "evidence_fidelity_iab_20260908_r6",
+      "sha256": "b54d141c8d914c8ad88fff278d5382c5bdc4c46663b6a76074dac81f36aff591",
+      "token_count": 42
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 374,
+      "relative_artifact_path": "fact_relationship_replay/batch_03/pipeline_output/a028687a439772baede39db7cc390ad48e8652dc-pdf/report_analysis/doc_map.json",
+      "report_identity": "fact_relationship_replay",
+      "sha256": "888d94d69c639da327fbfe6ff002af1ff1b04bf54d3d74a92708fc9be75bc062",
+      "token_count": 47
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 212,
+      "relative_artifact_path": "gpt6_compare/baseline/ias-first-attempt-b77bve6s/output/1-7x4dqjm4r52fo3qyzniw1v0l11k0wro-pdf/report_analysis/doc_map.json",
+      "report_identity": "gpt6_compare",
+      "sha256": "b5deb6b74f5a6299f26e805ea69f5c9df370e03ea0baecb8e5f00b30461a856e",
+      "token_count": 31
+    },
+    {
+      "canary_class": "source_report",
+      "field_family": "doc_map.json:sections[0].summary[0]",
+      "normalized_character_count": 297,
+      "relative_artifact_path": "gpt_5_6_luna_live_validation_20260825/japan-app-trends-2026-pdf/report_analysis/doc_map.json",
+      "report_identity": "gpt_5_6_luna_live_validation_20260825",
+      "sha256": "5c0f1b5c06da870da16ec759507ab7c26d888a2e005965a32b6d0ecd02e4ba45",
+      "token_count": 41
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 578,
+      "relative_artifact_path": "adjust-regeneration-fix-canary-20260925/ias-first-attempt-rwfdc33z/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json",
+      "report_identity": "adjust-regeneration-fix-canary-20260925",
+      "sha256": "2eb05f41a59c12c73bf0b21f596b2232a1c4dae4f19a73e43cfc2455157aee39",
+      "token_count": 80
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 844,
+      "relative_artifact_path": "adjust-regeneration-fix-canary-committed-20260925/ias-first-attempt-g3llgnz7/output/mobile-app-trends-2026-pdf/report_analysis/artifacts.json",
+      "report_identity": "adjust-regeneration-fix-canary-committed-20260925",
+      "sha256": "6ed672fb28d29775bc1acb2675220a3a5cfd0a87cdb68ec8dcbf017f0a30346a",
+      "token_count": 112
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 669,
+      "relative_artifact_path": "b/pipeline/2412-activate-technology-and-media-outlook-2025-ecommerce-pdf/report_analysis/artifacts.json",
+      "report_identity": "b",
+      "sha256": "899103ff3f6ac9971cb43368d391a9293f38c09777d78fe7001bf8a83125f9f3",
+      "token_count": 91
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 569,
+      "relative_artifact_path": "browser_route_automatic_execution_validation_20260816/tei-of-algolia-search-2022-04-20-2-pdf/report_analysis/artifacts.json",
+      "report_identity": "browser_route_automatic_execution_validation_20260816",
+      "sha256": "5d0616b5b59a3d2a7f38c81d8b0eb54c49bcc22b022c2aa5006282e2e145bd31",
+      "token_count": 83
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 561,
+      "relative_artifact_path": "browser_route_promotion_validation_20260816/tei-of-algolia-search-2022-04-20-2-pdf/report_analysis/artifacts.json",
+      "report_identity": "browser_route_promotion_validation_20260816",
+      "sha256": "075f9b6c71afd2dec7aaadf966aa226518a6bcd081e57e8975e085c0af6f8186",
+      "token_count": 79
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 502,
+      "relative_artifact_path": "c/pipeline/uk-attitudes-to-ai-in-media-report-2025-pdf/report_analysis/artifacts.json",
+      "report_identity": "c",
+      "sha256": "b0e8ca9023cdf221d366d9b30857134f2e2ebbc3d92c4574ea8fcc634c58e07a",
+      "token_count": 70
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 534,
+      "relative_artifact_path": "category_fit_task7_20260726/d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/artifacts.json",
+      "report_identity": "category_fit_task7_20260726",
+      "sha256": "9f542dc49b1af8b0c011402072e30ee78afed5bc47c2d5925e9c946896373dd3",
+      "token_count": 75
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 604,
+      "relative_artifact_path": "cohort_remediation_live_20260811/nielsen-podcasting-today-aug2025-pdf/report_analysis/artifacts.json",
+      "report_identity": "cohort_remediation_live_20260811",
+      "sha256": "1ce833621727a7f9218495e9b0d81123df2ebce05e4028b8a22381e030f7e842",
+      "token_count": 87
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 485,
+      "relative_artifact_path": "cohort_remediation_live_20260811_gwi_origin/gwi-20brand-20tracking-20guide-pdf/report_analysis/artifacts.json",
+      "report_identity": "cohort_remediation_live_20260811_gwi_origin",
+      "sha256": "fdfdb0320d43e55f28aaf37301b0551f2efee1d3f06e3091995af530c4d7644d",
+      "token_count": 60
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 593,
+      "relative_artifact_path": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf/report_analysis/artifacts.json",
+      "report_identity": "d01c72af1b10260d54ec45e891bfc7af40a041ce-pdf",
+      "sha256": "ba2da5900913675077d180ff44c1257833b387e8dbe71d2bd8c0af48777ab4f1",
+      "token_count": 83
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 574,
+      "relative_artifact_path": "docmap_live_20260811_7d3e9c4a/1cv8ypeywpjevvnkaolx9n-s79az36idc-pdf/report_analysis/artifacts.json",
+      "report_identity": "docmap_live_20260811_7d3e9c4a",
+      "sha256": "5b75416d4bea81048a52e1a2a1d7cb1b14e20923475f271358c25198568da315",
+      "token_count": 82
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 733,
+      "relative_artifact_path": "drive_admission_live_20260905/stackadapt-retail-marketing-trends-report-2026-pdf/report_analysis/artifacts.json",
+      "report_identity": "drive_admission_live_20260905",
+      "sha256": "1f6604315623c0036bc81d64e0cde86803f9b5cbfbcad55e8681816b12bfbc2c",
+      "token_count": 100
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 458,
+      "relative_artifact_path": "drive_admission_live_20260905_retry/stackadapt-retail-marketing-trends-report-2026-pdf/report_analysis/artifacts.json",
+      "report_identity": "drive_admission_live_20260905_retry",
+      "sha256": "8bbd0bdd3c9cf1fac7ad585ce0faca0a69e9b2f9fa57ca5a711070ef255107f6",
+      "token_count": 63
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 402,
+      "relative_artifact_path": "e11_live_recovery_20260829/output/2025-iab-annual-report-pdf/report_analysis/artifacts.json",
+      "report_identity": "e11_live_recovery_20260829",
+      "sha256": "8b31128c05acc708ad269edfd95cf40fb49c1e3b06d529b8c7b94e7562ad7ced",
+      "token_count": 59
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 330,
+      "relative_artifact_path": "e13-items-7-9-live/ias-first-attempt-erc8wfbe/output/ias-industry-pulse-report-2026-acig-pdf/report_analysis/artifacts.json",
+      "report_identity": "e13-items-7-9-live",
+      "sha256": "682665d2d2fbe684d91e918e6cba899e92a9564c3deb7106e951e5e6a6406424",
+      "token_count": 53
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 515,
+      "relative_artifact_path": "editorial_plan_live_20260829/activate-technology-media-outlook-2026/report_analysis/artifacts.json",
+      "report_identity": "editorial_plan_live_20260829",
+      "sha256": "be7738bea8e0d256c78b8c4c9901c13d4dbb982a3e3bcab6ad4e564c571e79e6",
+      "token_count": 77
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 523,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_clean/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/artifacts.json",
+      "report_identity": "evidence_fidelity_iab_20260907_clean",
+      "sha256": "3de2b0a7ec9a4ab3c4e518a4ba7b5c1d113ee36fbae6390570c6ddf2ef201824",
+      "token_count": 76
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 515,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r2/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/artifacts.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r2",
+      "sha256": "523303903e8fb3314033b9f37a0da8e8d59bea7fd70a914f0f80caab1caa79c6",
+      "token_count": 77
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 421,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r3/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/artifacts.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r3",
+      "sha256": "258a36b912ddb04581677d25049d3f0d0eb478a736db643135c573245d86bcc7",
+      "token_count": 65
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 445,
+      "relative_artifact_path": "evidence_fidelity_iab_20260907_r5/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/artifacts.json",
+      "report_identity": "evidence_fidelity_iab_20260907_r5",
+      "sha256": "c79bc6d34df367e3ddf8ef4537ca3dfc32ac9a60db1e7e0bae0962f3bea3b353",
+      "token_count": 64
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 502,
+      "relative_artifact_path": "evidence_fidelity_iab_20260908_r6/pipeline_output/iab-europe-adex-benchmark-2025-updated-pdf/report_analysis/artifacts.json",
+      "report_identity": "evidence_fidelity_iab_20260908_r6",
+      "sha256": "e9c432f7651e8894d1cc7608b965f96855cd98e9cd42c0f0c221866cfa49428b",
+      "token_count": 76
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 679,
+      "relative_artifact_path": "fact_relationship_replay/batch_03/pipeline_output/a028687a439772baede39db7cc390ad48e8652dc-pdf/report_analysis/artifacts.json",
+      "report_identity": "fact_relationship_replay",
+      "sha256": "d5f3e78b6514663ccb742142ecdeda4db231e64480968700ff56391e1c050cad",
+      "token_count": 101
+    },
+    {
+      "canary_class": "generated_editorial",
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 713,
+      "relative_artifact_path": "gpt6_compare/baseline/ias-first-attempt-b77bve6s/output/1-7x4dqjm4r52fo3qyzniw1v0l11k0wro-pdf/report_analysis/artifacts.json",
+      "report_identity": "gpt6_compare",
+      "sha256": "5ed9dd546130b7f064ea562b9fe0266cdcc815781991121cebccd35541d4535d",
+      "token_count": 108
     },
     {
       "canary_class": "generated_editorial",
       "field_family": "expert_comment[0]",
       "normalized_character_count": 419,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
+      "relative_artifact_path": "gpt_5_6_luna_live_validation_20260825/japan-app-trends-2026-pdf/report_analysis/artifacts.json",
+      "report_identity": "gpt_5_6_luna_live_validation_20260825",
       "sha256": "3b0d09d4dd6d11528066a91da59fcbbb212d66c693f247cfca5b57e906a837ad",
       "token_count": 63
     },
     {
       "canary_class": "generated_editorial",
-      "field_family": "expert_comment[1]",
-      "normalized_character_count": 641,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "73b1fc02c3af48a28cffc8781e896743e00b5e6cb9fc5def615ba57b1b693a94",
-      "token_count": 94
-    },
-    {
-      "canary_class": "generated_editorial",
-      "field_family": "expert_comment[2]",
-      "normalized_character_count": 479,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "d5f9c2b444fe2878eb262dd42f226bcae2b62bd4061b417a89125ecfc40edf7f",
-      "token_count": 66
-    },
-    {
-      "canary_class": "generated_editorial",
-      "field_family": "linkedin_post[0]",
-      "normalized_character_count": 1555,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "a40f80831ca610d289b16450dd58e1288a26210e92ed0efdea3b891a77a204ab",
-      "token_count": 236
-    },
-    {
-      "canary_class": "generated_editorial",
-      "field_family": "summary.executive_summary[0]",
-      "normalized_character_count": 819,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "06935c0462953222e6beaddf4ea632e4c243c6bd8122d47f2f2fe294cad0bee7",
-      "token_count": 118
-    },
-    {
-      "canary_class": "generated_editorial",
-      "field_family": "summary.tldr[0]",
-      "normalized_character_count": 181,
-      "relative_artifact_path": "japan-app-trends-2026-pdf/report_analysis/artifacts.json",
-      "report_identity": "japan-app-trends-2026-pdf",
-      "sha256": "07b11aef138df11454be727d2ad4da4ac775368ee8cb06435c1605a768c45fac",
-      "token_count": 25
+      "field_family": "expert_comment[0]",
+      "normalized_character_count": 624,
+      "relative_artifact_path": "gwi_first_run_validation_20260811/gwi-20brand-20tracking-20guide-pdf/report_analysis/artifacts.json",
+      "report_identity": "gwi_first_run_validation_20260811",
+      "sha256": "5df5d792e10a25158222a310067735e768536300e8887af955645f170c213d05",
+      "token_count": 83
     }
   ],
   "coverage": {
-    "artifact_files_examined": 8,
-    "editorial_canary_count": 6,
-    "log_bytes_scanned": 46542,
-    "log_files_scanned": 1,
-    "log_lines_scanned": 58,
-    "reports_sampled": 1,
+    "artifact_files_examined": 3388,
+    "editorial_canary_count": 25,
+    "log_bytes_scanned": 0,
+    "log_files_scanned": 0,
+    "log_lines_scanned": 0,
+    "reports_sampled": 27,
     "source_canary_count": 25,
     "structured_event_metadata_mode": "full",
-    "structured_events_parsed": 57,
-    "unparsed_lines": 1
+    "structured_events_parsed": 0,
+    "unparsed_lines": 0
   },
-  "evidence_run_id": "152ea9ba72cc42ec89cf24fc2e53d338",
-  "fresh_after": "2026-08-26T11:43:56+00:00",
-  "fresh_log_seen": true,
-  "freshness_state": "passed",
-  "generated_at": "2026-08-26T11:45:01.670251+00:00",
+  "evidence_run_id": "6d9982163d8348f9b4ec19193f43b4b2",
+  "fresh_after": "2026-10-02T21:27:02+00:00",
+  "fresh_log_seen": false,
+  "freshness_state": "failed",
+  "generated_at": "2026-10-03T00:43:26.731906+00:00",
   "limitations": [
-    "post_remediation_smoke_only_no_representative_report_processing"
+    "run_owned_logs_unavailable"
   ],
   "log_corpus": {
-    "operator_declared_scope": "post_remediation_smoke_only",
+    "operator_declared_scope": "representative_report_processing",
     "repository_provenance": "The repository commit identifies the evidence collector revision; it does not attest to the producer revision of historical log records.",
     "scope_attestation": "The collector verifies the snapshotted corpus and content coverage, not whether the declared workflow scope was actually executed."
   },
   "matches": [],
-  "passed": true,
-  "repository_commit_sha": "1a22157c7d39208fa00a1a3d71b612089f8143f9",
+  "passed": false,
+  "repository_commit_sha": "23fec7388553041aabcc3e1e0775abb559c6695d",
   "schema_version": "1.0",
-  "status": "passed"
+  "status": "unavailable"
 }
