@@ -795,9 +795,7 @@ def _semantic_evidence_bindings(
         evidence_entry = source_evidence.get(evidence_id)
         source_pack, retained_text, indexed_page = evidence_entry or ("", "", None)
         page_value = _reference_value(ref, "page")
-        referenced_page = (
-            page_value if isinstance(page_value, int) else indexed_page
-        )
+        referenced_page = page_value if isinstance(page_value, int) else indexed_page
         source_page = (
             _source_page_for_reference(
                 source_pack=source_pack,
@@ -815,7 +813,7 @@ def _semantic_evidence_bindings(
             "page": page_value,
             "text_hash": str(_reference_value(ref, "text_hash") or ""),
         }
-        if page_text:
+        if source_page is not None and page_text:
             identity.update(
                 {
                     "source_page_id": f"source:page:{source_page.page_number}",
@@ -856,8 +854,7 @@ def _source_page_for_reference(
     matches = [
         page
         for page in source_pages
-        if page.text.strip()
-        and _has_printed_page_label(page.text, referenced_page)
+        if page.text.strip() and _has_printed_page_label(page.text, referenced_page)
     ]
     return matches[0] if len(matches) == 1 else None
 
@@ -1365,9 +1362,7 @@ def _claim_validation_semantic_results_for_final_inputs(
         expected_evidence_ids = [
             str(reference.get("evidence_id") or "") for reference in references
         ]
-        expected_evidence_hash = current_evidence_hash_by_candidate.get(
-            candidate_hash
-        )
+        expected_evidence_hash = current_evidence_hash_by_candidate.get(candidate_hash)
         execution_identity = str(identity.get("execution_identity") or "")
         if (
             identity.get("schema_version") != "1.0"

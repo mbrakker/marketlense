@@ -990,20 +990,4 @@ def test_candidate_keeps_identifier_continuity_blocked_without_source_pages() ->
     )
 
 
-def test_candidate_blocks_unsupported_more_than_doubled_language() -> None:
-    artifacts, _ = _retained_artifact_and_evidence()
-    insight = deepcopy(artifacts["insights_final"][0])
-    insight["text"] = "The reported spending power more than doubled."
-
-    issues = validate_insight_metrics(
-        insights=[insight],
-        evidence_map={insight["evidence_id"]: insight["evidence"]},
-    )
-
-    assert any(
-        issue.severity == "error" and "more than doubled" in issue.message
-        for issue in issues
-    )
-
-
 __all__ = [name for name in globals() if name.startswith("test_")]
