@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import fitz
+
 from ._shared import *  # noqa: F401,F403
 from ._shared import (
     _ctx,
@@ -63,9 +65,30 @@ def test_a21_full_chain_preserves_grounding_disposition(
         ),
         _ctx(),
     )
-    source_path = Path(
-        "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
-    ).resolve()
+    source_path = tmp_path / "source.pdf"
+    source_pdf = fitz.open()
+    source_sentences = [
+        "Industry Analytics Summit publishes the Industry Pulse Report 2026.",
+        "Customer demand is changing across segments.",
+        "The report covers media planning and advertising strategy.",
+        "Media teams review audience research before setting campaign priorities.",
+        "Planning decisions consider the needs of different customer segments.",
+        "Evidence helps teams compare audience needs with campaign objectives.",
+        "Organizations should review planning assumptions when market conditions change.",
+        "The report describes practical considerations for media planning teams.",
+    ]
+    source_text = "\n".join(source_sentences * 4)
+    for page_number in range(4):
+        source_page = source_pdf.new_page()
+        source_page.insert_textbox(
+            fitz.Rect(48, 48, 564, 744),
+            "\n".join(
+                source_text.splitlines()[page_number * 8 : (page_number + 1) * 8]
+            ),
+            fontsize=11,
+        )
+    source_pdf.save(source_path)
+    source_pdf.close()
     source_hash = md5(source_path.read_bytes(), usedforsecurity=False).hexdigest()
     cohort_manifest = tmp_path / "frozen-cohort.json"
     prepared = submit_preselected_frozen_validation_cohort(

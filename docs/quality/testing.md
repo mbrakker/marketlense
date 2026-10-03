@@ -20,6 +20,8 @@ Shared builders and fixtures used by other test modules belong in `_test_<suite>
 
 Validation runs MUST reuse the canonical production workflow and production orchestration by default. Validation-specific code may isolate inputs, state, outputs, external side effects and evidence collection, but MUST NOT reproduce workflow sequencing or business logic. A divergent/component validation is permitted only when explicitly required by the validation objective and must identify that limitation in its evidence.
 
+Queue-to-grounding lifecycle tests use generated source PDFs whose retained text matches their structured evidence fixtures. This keeps full production orchestration coverage independent of host-specific extraction details; PDF extraction itself remains covered by the fixed corpus tests.
+
 CLI unit tests must inject the canonical configuration service whenever the command needs application settings. The default suite must not depend on developer credentials or a local `.env` file.
 
 When diagnosing an apparently stalled run, use verbose progress, `--durations`, and (where needed) `-o faulthandler_timeout=<seconds>` before interrupting it. Quiet output alone is not evidence of a deadlock; the diagnostic command must identify the active test and stack before a timeout remediation is made.
