@@ -690,6 +690,72 @@ def test_candidate_allows_only_planned_summary_claim_removal() -> None:
     )
 
 
+def test_candidate_summary_removal_ignores_shifted_idless_sibling() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    current["summary"]["claim_evidence_map"] = [
+        {
+            "claim": "An unsupported first claim slated for removal.",
+            "evidence_id": "finding-1",
+            "pages": [99],
+        },
+        {
+            "claim": "A distinct retained claim shifted into the first slot.",
+            "evidence_id": "finding-1",
+            "pages": [10],
+        },
+    ]
+    candidate = deepcopy(current)
+    candidate["summary"]["claim_evidence_map"].pop(0)
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        removed_summary_claim_paths=("summary.claim_evidence_map[0]",),
+    )
+
+    assert not any(
+        issue.rule_id == "regeneration_removed_summary_claim_reintroduced"
+        for issue in result.issues
+    )
+
+
+def test_candidate_summary_removal_blocks_idless_claim_reintroduced_elsewhere() -> None:
+    current, evidence_packs = _retained_artifact_and_evidence()
+    removed_claim = {
+        "claim": "The removed idless claim must not reappear.",
+        "evidence_id": "finding-1",
+        "pages": [99],
+    }
+    unrelated_claim = {
+        "id": "unrelated-explicit-claim",
+        "claim": "A distinct claim with an explicit identity.",
+        "evidence_id": "finding-1",
+        "pages": [10],
+    }
+    current["summary"]["claim_evidence_map"] = [removed_claim, unrelated_claim]
+    candidate = deepcopy(current)
+    candidate["summary"]["claim_evidence_map"] = [
+        unrelated_claim,
+        removed_claim,
+    ]
+
+    result = validate_regeneration_candidate(
+        current_artifacts=current,
+        candidate_artifacts=candidate,
+        evidence_packs=evidence_packs,
+        ctx=_ctx(),
+        removed_summary_claim_paths=("summary.claim_evidence_map[0]",),
+    )
+
+    assert any(
+        issue.rule_id == "regeneration_removed_summary_claim_reintroduced"
+        and issue.entity_id == "claim_1"
+        for issue in result.issues
+    )
+
+
 def test_candidate_still_blocks_unplanned_or_reintroduced_summary_claims() -> None:
     current, evidence_packs = _retained_artifact_and_evidence()
     removed_claim = {

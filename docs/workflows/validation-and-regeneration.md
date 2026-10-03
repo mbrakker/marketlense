@@ -246,6 +246,11 @@ idless one-row deletion as that exact item only when the before/after alignment
 is unique. Duplicate or otherwise ambiguous rows remain a scope failure. The
 same-cardinality requirement applies to claim text repair, where the targeted
 row must not shift or become ambiguous during reconstruction.
+For an idless item selected for safe removal, candidate validation follows its
+normalized claim text across array compaction when checking for reintroduction.
+A different sibling shifted into the removed row's numeric index is not treated
+as the deleted claim, while the same claim remaining or appearing at another
+index stays blocking.
 
 Each model-assisted repair call returns one private `repair_decision` with the
 diagnosed failure class, selected action and strategy, retained evidence IDs actually

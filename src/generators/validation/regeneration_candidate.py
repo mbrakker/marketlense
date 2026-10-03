@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
@@ -158,6 +159,10 @@ def validate_regeneration_candidate(
     authorized_summary_claim_removals = _summary_claim_removal_ids(
         current_artifacts, removed_summary_claim_paths
     )
+    authorized_summary_claim_ids = set(authorized_summary_claim_removals.values())
+    candidate_summary_claim_identities = _summary_claim_identities(
+        candidate_artifacts
+    )
 
     for insight_id in sorted(authorized_removals):
         for section in ("insights_candidates", "insights_final"):
@@ -173,8 +178,8 @@ def validate_regeneration_candidate(
                     )
                 )
 
-    for claim_id in sorted(authorized_summary_claim_removals):
-        if ("summary_claim", claim_id) in candidate_by_key:
+    for identity, claim_id in sorted(authorized_summary_claim_removals.items()):
+        if identity in candidate_summary_claim_identities:
             issues.append(
                 issue(
                     rule_id="regeneration_removed_summary_claim_reintroduced",
@@ -235,7 +240,7 @@ def validate_regeneration_candidate(
         if (
             candidate is None
             and original.entity_kind == "summary_claim"
-            and original.entity_id in authorized_summary_claim_removals
+            and original.entity_id in authorized_summary_claim_ids
         ):
             continue
         if _has_unique_evidence_continuity_match(original, candidate_records):
@@ -1046,12 +1051,12 @@ def _record_id(item: dict[str, Any], index: int, prefix: str) -> str:
 
 def _summary_claim_removal_ids(
     artifacts: dict[str, Any], paths: Sequence[str]
-) -> set[str]:
+) -> dict[tuple[str, str], str]:
     summary_value = artifacts.get("summary")
     summary = summary_value if isinstance(summary_value, dict) else {}
     claims_value = summary.get("claim_evidence_map")
     claims = claims_value if isinstance(claims_value, list) else []
-    removed: set[str] = set()
+    removed: dict[tuple[str, str], str] = {}
     for path in paths:
         match = re.fullmatch(
             r"summary\.claim_evidence_map\[(?:(item=)([^\]]+)|(\d+))\](?:\.claim)?",
@@ -1075,8 +1080,36 @@ def _summary_claim_removal_ids(
             if index >= len(claims) or not isinstance(claims[index], dict):
                 continue
             claim = claims[index]
-        removed.add(_record_id(claim, index + 1, "claim"))
+        identity = _summary_claim_validation_identity(claim)
+        if identity is not None:
+            removed.setdefault(identity, _record_id(claim, index + 1, "claim"))
     return removed
+
+
+def _summary_claim_identities(artifacts: dict[str, Any]) -> set[tuple[str, str]]:
+    summary_value = artifacts.get("summary")
+    summary = summary_value if isinstance(summary_value, dict) else {}
+    claims_value = summary.get("claim_evidence_map")
+    claims = claims_value if isinstance(claims_value, list) else []
+    return {
+        identity
+        for claim in claims
+        if isinstance(claim, dict)
+        if (identity := _summary_claim_validation_identity(claim)) is not None
+    }
+
+
+def _summary_claim_validation_identity(claim: dict[str, Any]) -> tuple[str, str] | None:
+    """Track a removed claim across array compaction without reusing row indexes."""
+
+    stable_id = s(claim.get("id") or claim.get("claim_id")).strip()
+    if stable_id:
+        return "id", stable_id
+    claim_text = " ".join(s(claim.get("claim")).split()).casefold()
+    if not claim_text:
+        return None
+    fingerprint = hashlib.sha256(claim_text.encode("utf-8")).hexdigest()
+    return "claim_text", fingerprint
 
 
 def _evidence_source_pages(evidence_packs: dict[str, Any]) -> dict[str, set[int]]:
