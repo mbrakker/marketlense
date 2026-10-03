@@ -131,15 +131,25 @@ response cannot produce an accepted claim package.
 When a retained evidence reference names a source page and the canonical PDF
 extractor retained that page, semantic grounding uses the exact extracted page
 text for that reference alongside any separately linked evidence references.
-The page identity and text hash are part of the semantic evidence hash, so a
-different or changed page cannot reuse the prior result. Page text is taken
-only from the typed source-PDF extraction result; a DocMap page number is never
-treated as page content by itself.
+DocMap page numbers are one-based printed page labels, while
+PdfTextPage.page_number is the one-based physical PDF position. The validator
+resolves a DocMap label only when exactly one extracted page carries that label
+in its header or footer; it does not assume the two numbers are equal. If the
+label is absent or ambiguous, it keeps the linked retained evidence text
+without attaching an unrelated PDF page. The resolved physical page identity,
+printed label, and text hash are part of the semantic evidence hash, so a
+different or changed page cannot reuse the prior result.
 When finalization presents repeated byte-identical public claims, a prior
 semantic result is reused only when every occurrence has the same deterministic
 checks, protected facts, claim text, linked evidence, and source lineage. If any
 occurrence differs or retained semantic outcomes conflict, the result is not
 reused and the claim stays unresolved.
+Final package materialization rebuilds the deterministic claim inputs from the
+canonical final artifacts and retained evidence packs. It reuses a semantic
+result only when the exact claim, linked evidence, cited extracted-page text
+hash, source, validator, configuration, and policy identities still match.
+Changed or missing page text therefore leaves the claim unresolved; this final
+materialization step makes no semantic provider call.
 
 The signed `publish_readiness.json` consumes that retained package through
 `publish_readiness.retained_claim_grounding`. Unsupported factual claims and

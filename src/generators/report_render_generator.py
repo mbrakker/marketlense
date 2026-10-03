@@ -1382,6 +1382,7 @@ def _persist_publish_readiness(
             evidence_packs=analysis.evidence_packs,
             final_html=final_html,
             source_id=source_id,
+            source_pages=source.text_response.pages,
             source_md5=source_md5,
             configuration_hash=runtime.ctx.configuration_hash,
             policy_hash=runtime.ctx.policy_hash,

@@ -717,11 +717,6 @@ def _semantic_inputs(
     source_identity: str,
     source_pages: Sequence[PdfTextPage] = (),
 ) -> list[ClaimSemanticInput]:
-    text_by_source_page = {
-        page.page_number: page.text.strip()
-        for page in source_pages
-        if page.page_number > 0 and page.text.strip()
-    }
     inputs: list[ClaimSemanticInput] = []
     seen_semantic_identities: set[tuple[object, ...]] = set()
     for result in results:
@@ -739,8 +734,13 @@ def _semantic_inputs(
         evidence_identities: list[dict[str, object]] = []
         for ref in refs:
             source_pack, retained_text, indexed_page = source_evidence[ref.evidence_id]
-            page_number = ref.page if ref.page is not None else indexed_page
-            page_text = text_by_source_page.get(page_number or 0, "")
+            referenced_page = ref.page if ref.page is not None else indexed_page
+            source_page = _source_page_for_reference(
+                source_pack=source_pack,
+                referenced_page=referenced_page,
+                source_pages=source_pages,
+            )
+            page_text = source_page.text.strip() if source_page is not None else ""
             evidence_text = page_text or retained_text
             evidence_texts.append(evidence_text)
             identity = {
@@ -752,7 +752,10 @@ def _semantic_inputs(
             if page_text:
                 identity.update(
                     {
-                        "source_page_id": f"source:page:{page_number}",
+                        "source_page_id": (
+                            f"source:page:{source_page.page_number}"
+                        ),
+                        "source_page_printed_number": referenced_page,
                         "source_page_text_hash": _hash(page_text),
                     }
                 )
@@ -783,6 +786,53 @@ def _semantic_inputs(
             )
         )
     return inputs
+
+
+def _source_page_for_reference(
+    *,
+    source_pack: str,
+    referenced_page: int | None,
+    source_pages: Sequence[PdfTextPage],
+) -> PdfTextPage | None:
+    if referenced_page is None or referenced_page <= 0:
+        return None
+    if source_pack != "doc_map":
+        return next(
+            (
+                page
+                for page in source_pages
+                if page.page_number == referenced_page and page.text.strip()
+            ),
+            None,
+        )
+
+    matches = [
+        page
+        for page in source_pages
+        if page.text.strip()
+        and _has_printed_page_label(page.text, referenced_page)
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _has_printed_page_label(page_text: str, page_number: int) -> bool:
+    """Match a DocMap's printed page only in likely header/footer lines."""
+
+    lines = [
+        re.sub(r"\s+", " ", line).strip()
+        for line in str(page_text or "").splitlines()
+        if line.strip()
+    ]
+    edge_lines = lines[:8] + lines[-8:]
+    number = re.escape(str(page_number))
+    for line in edge_lines:
+        if line == str(page_number):
+            return True
+        if re.fullmatch(rf"(?i)(?:page|p\.?)\s*{number}(?:\s+of\s+\d+)?", line):
+            return True
+        if len(line) <= 120 and re.search(rf"(?:^|[\s\-–—]){number}$", line):
+            return True
+    return False
 
 
 def _apply_semantic_results(
@@ -982,6 +1032,7 @@ def materialize_retained_claim_package(
     evidence_packs: dict,
     final_html: str,
     source_id: str = "",
+    source_pages: Sequence[PdfTextPage] = (),
     source_md5: str = "",
     configuration_hash: str = "",
     policy_hash: str = "",
@@ -1032,6 +1083,8 @@ def materialize_retained_claim_package(
         current=current,
         report_id=report_id,
         source_id=source_id,
+        evidence_packs=evidence_packs,
+        source_pages=source_pages,
         source_md5=source_md5,
         configuration_hash=configuration_hash,
         policy_hash=policy_hash,
@@ -1158,6 +1211,8 @@ def _claim_validation_semantic_results_for_final_inputs(
     current: ClaimValidationPackage,
     report_id: str,
     source_id: str,
+    evidence_packs: dict,
+    source_pages: Sequence[PdfTextPage],
     source_md5: str,
     configuration_hash: str,
     policy_hash: str,
@@ -1231,6 +1286,16 @@ def _claim_validation_semantic_results_for_final_inputs(
     ):
         return {}
 
+    current_semantic_inputs = _semantic_inputs(
+        current.results,
+        _evidence_index(evidence_packs),
+        source_id,
+        source_pages,
+    )
+    current_evidence_hash_by_candidate = {
+        _hash(asdict(semantic_input.candidate)): semantic_input.evidence_hash
+        for semantic_input in current_semantic_inputs
+    }
     current_by_candidate: dict[str, list[dict]] = {}
     for result in current.results:
         current_by_candidate.setdefault(_hash(asdict(result.candidate)), []).append(
@@ -1253,15 +1318,9 @@ def _claim_validation_semantic_results_for_final_inputs(
         expected_evidence_ids = [
             str(reference.get("evidence_id") or "") for reference in references
         ]
-        expected_evidence_identity = [
-            {
-                "evidence_id": reference.get("evidence_id"),
-                "source_pack": reference.get("source_pack", ""),
-                "page": reference.get("page"),
-                "text_hash": reference.get("text_hash", ""),
-            }
-            for reference in references
-        ]
+        expected_evidence_hash = current_evidence_hash_by_candidate.get(
+            candidate_hash
+        )
         execution_identity = str(identity.get("execution_identity") or "")
         if (
             identity.get("schema_version") != "1.0"
@@ -1280,7 +1339,8 @@ def _claim_validation_semantic_results_for_final_inputs(
             or identity.get("claim_id") != candidate.get("claim_id")
             or identity.get("claim_text_hash") != candidate.get("text_hash")
             or identity.get("evidence_ids") != expected_evidence_ids
-            or identity.get("evidence_hash") != _hash(expected_evidence_identity)
+            or not expected_evidence_hash
+            or identity.get("evidence_hash") != expected_evidence_hash
             or result.get("deterministic_status") != "unresolved"
             or {
                 "entailed": "supported",
