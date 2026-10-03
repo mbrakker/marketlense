@@ -28,8 +28,8 @@ def shared_retrieval_context_json(
 ) -> str:
     """Serialize bounded retrieved evidence, grouping repeated search queries."""
 
-    searches: dict[tuple[str, ...], list[dict[str, Any]]] = {}
-    for result in results:
+    grouped_results: dict[tuple[str, ...], list[tuple[int, OpenAIFileSearchResult]]] = {}
+    for index, result in enumerate(results):
         if not str(result.text or "").strip():
             continue
         queries = tuple(
@@ -39,31 +39,57 @@ def shared_retrieval_context_json(
                 if str(query).strip()
             )
         )
-        searches.setdefault(queries, []).append(
-            {
-                "file_id": result.file_id,
-                "filename": result.filename,
-                "score": result.score,
-                "text": result.text,
-            }
-        )
-    if not searches:
+        grouped_results.setdefault(queries, []).append((index, result))
+    if not grouped_results:
         return ""
-    serialized = json.dumps(
-        {
-            "searches": [
-                {"queries": list(queries), "results": excerpts}
-                for queries, excerpts in searches.items()
-            ]
-        },
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    return (
-        serialized
-        if len(serialized) <= _MAX_SHARED_RETRIEVAL_CONTEXT_CHARS
-        else ""
-    )
+
+    def score_key(item: tuple[int, OpenAIFileSearchResult]) -> tuple[bool, float, int]:
+        index, result = item
+        return (result.score is None, -(result.score or 0.0), index)
+
+    ordered_groups = {
+        queries: sorted(group, key=score_key)
+        for queries, group in grouped_results.items()
+    }
+    selected: dict[tuple[str, ...], list[OpenAIFileSearchResult]] = {
+        queries: [] for queries in ordered_groups
+    }
+
+    def serialize_selected() -> str:
+        searches = [
+            {
+                "queries": list(queries),
+                "results": [
+                    {
+                        "file_id": result.file_id,
+                        "filename": result.filename,
+                        "score": result.score,
+                        "text": result.text,
+                    }
+                    for result in excerpts
+                ],
+            }
+            for queries, excerpts in selected.items()
+            if excerpts
+        ]
+        return json.dumps(
+            {"searches": searches}, ensure_ascii=False, separators=(",", ":")
+        )
+
+    serialized = ""
+    max_group_size = max(len(group) for group in ordered_groups.values())
+    for rank in range(max_group_size):
+        for queries, group in ordered_groups.items():
+            if rank >= len(group):
+                continue
+            _index, result = group[rank]
+            selected[queries].append(result)
+            candidate = serialize_selected()
+            if len(candidate) <= _MAX_SHARED_RETRIEVAL_CONTEXT_CHARS:
+                serialized = candidate
+            else:
+                selected[queries].pop()
+    return serialized
 
 
 def recovery_prompt_bundle(

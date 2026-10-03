@@ -29,3 +29,28 @@ def test_shared_retrieval_context_deduplicates_queries_across_results() -> None:
         for result in payload["searches"][0]["results"]
     )
     assert len(serialized) <= 72_000
+
+
+def test_oversized_shared_retrieval_keeps_high_score_results_from_each_search() -> None:
+    results = [
+        OpenAIFileSearchResult(
+            schema_version="1.0",
+            queries=[f"search group {group}"],
+            file_id=f"file_{group}",
+            filename="report.pdf",
+            score=1.0 - rank / 100,
+            text=f"group {group} rank {rank}. " + ("Evidence detail. " * 65),
+        )
+        for group in range(4)
+        for rank in range(20)
+    ]
+
+    serialized = shared_retrieval_context_json(results)
+    payload = json.loads(serialized)
+
+    assert len(serialized) <= 72_000
+    assert len(payload["searches"]) == 4
+    assert 0 < sum(len(search["results"]) for search in payload["searches"]) < 80
+    for group, search in enumerate(payload["searches"]):
+        assert search["queries"] == [f"search group {group}"]
+        assert search["results"][0]["text"].startswith(f"group {group} rank 0.")
