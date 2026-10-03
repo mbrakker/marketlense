@@ -1406,6 +1406,7 @@ def _resume_prompt_family_repair(
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
             source_text=source.text_response.text,
+            source_pages=source.text_response.pages,
         ),
         pack_name=validation_pack_name,
         openai_client=validation_openai_client,

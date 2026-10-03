@@ -128,6 +128,13 @@ reuse or enters the existing bounded structured-output recovery. The grounding
 validator identity changes when provider-facing identity mapping changes, so
 older semantic results cannot be carried into current packages. An invalid
 response cannot produce an accepted claim package.
+When a retained evidence reference names a source page and the canonical PDF
+extractor retained that page, semantic grounding uses the exact extracted page
+text for that reference alongside any separately linked evidence references.
+The page identity and text hash are part of the semantic evidence hash, so a
+different or changed page cannot reuse the prior result. Page text is taken
+only from the typed source-PDF extraction result; a DocMap page number is never
+treated as page content by itself.
 When finalization presents repeated byte-identical public claims, a prior
 semantic result is reused only when every occurrence has the same deterministic
 checks, protected facts, claim text, linked evidence, and source lineage. If any

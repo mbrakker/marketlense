@@ -462,6 +462,29 @@ def test_extract_best_figure_compacts_filename_for_long_report_slug(tmp_path) ->
     assert len(artifact_path.name) <= 96
 
 
+def test_extract_best_figure_bounds_asset_path_in_deep_isolated_output(
+    tmp_path,
+) -> None:
+    pdf_path = tmp_path / "deep-path-figure.pdf"
+    out_dir = tmp_path / ("isolated-report-run-" * 5)
+    _build_candidates_pdf(pdf_path)
+
+    response = extract_best_figure(
+        FigureExtractRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="docu-202601-active-ownership-report-q4-en.pdf",
+        ),
+        _ctx(),
+    )
+
+    assert response.image_path is not None
+    artifact_path = (out_dir / response.image_path).resolve()
+    assert artifact_path.is_file()
+    assert len(str(artifact_path)) <= 240
+
+
 def test_extract_best_figure_sanitizes_report_name_segment(tmp_path) -> None:
     pdf_path = tmp_path / "figure_escape.pdf"
     out_dir = tmp_path / "out"

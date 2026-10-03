@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -137,6 +138,42 @@ def _figure_distance(a: fitz.Rect, b: fitz.Rect) -> float:
     return (ac - bc).magnitude
 
 
+def _bounded_figure_asset_parts(
+    out_root: Path,
+    report_name: str,
+    filename: str,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Keep extracted figure paths below the Windows-safe artifact budget."""
+
+    safe_report_name = safe_path_segment(report_name, fallback="report")
+    asset_directory = out_root / safe_report_name / "assets"
+    if len(str((asset_directory / filename).resolve())) <= 240:
+        return safe_report_name, filename
+
+    digest = hashlib.sha256(safe_report_name.encode("utf-8")).hexdigest()[:12]
+    compact_report_name = f"{safe_report_name[:12].rstrip(' .-_')}-{digest}"
+    compact_asset_directory = out_root / compact_report_name / "assets"
+    filename_budget = 240 - len(str(compact_asset_directory.resolve())) - 1
+    if filename_budget < 18:
+        compact_report_name = digest
+        compact_asset_directory = out_root / compact_report_name / "assets"
+        filename_budget = 240 - len(str(compact_asset_directory.resolve())) - 1
+    if filename_budget < 18:
+        return None, None
+
+    compact_filename = bounded_artifact_filename(
+        safe_report_name,
+        compact_stem="figure",
+        extension=".png",
+        max_length=min(96, filename_budget),
+    )
+    if (
+        len(str((compact_asset_directory / compact_filename).resolve())) > 240
+    ):
+        return None, None
+    return compact_report_name, compact_filename
+
+
 def _extract_best_figure_png(
     pdf_path: str,
     out_dir: str,
@@ -147,8 +184,6 @@ def _extract_best_figure_png(
     try:
         out_root = Path(out_dir)
         safe_report_name = safe_path_segment(report_name, fallback="report")
-        img_dir = out_root / safe_report_name / "assets"
-        img_dir.mkdir(parents=True, exist_ok=True)
         best = (None, 0.0, "", -1)
 
         local_doc = doc or fitz.open(pdf_path)
@@ -207,11 +242,21 @@ def _extract_best_figure_png(
         if best[0] is None:
             return None, None, -1
 
-        out_path = img_dir / bounded_artifact_filename(
+        filename = bounded_artifact_filename(
             safe_report_name,
             compact_stem="figure",
             extension=".png",
         )
+        safe_report_name, filename = _bounded_figure_asset_parts(
+            out_root,
+            safe_report_name,
+            filename,
+        )
+        if not safe_report_name or not filename:
+            return None, None, -1
+        img_dir = out_root / safe_report_name / "assets"
+        img_dir.mkdir(parents=True, exist_ok=True)
+        out_path = img_dir / filename
         best[0].save(out_path.as_posix())
         rel = Path(safe_report_name) / "assets" / out_path.name
         return rel.as_posix(), best[2], int(best[3])

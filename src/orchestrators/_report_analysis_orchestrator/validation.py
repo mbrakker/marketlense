@@ -14,6 +14,7 @@ from time import perf_counter
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.contracts.files import ReadJsonRequest
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     FailureFingerprint,
@@ -1335,6 +1336,7 @@ def _validate_regeneration_baseline(
     vector_store_id: Optional[str],
     dependencies: ReportAnalysisDependencies,
     source_text: str = "",
+    source_pages: Sequence[PdfTextPage] = (),
     validation_openai_client=None,
 ) -> ValidationReport:
     """Run the current production validation stack on unchanged artifacts."""
@@ -1375,6 +1377,7 @@ def _validate_regeneration_baseline(
             report_name=runtime.source_report_name or runtime.report_title,
             source_url=runtime.source_url,
             source_text=source_text,
+            source_pages=list(source_pages),
         ),
         pack_name="validation_regen_baseline",
         openai_client=validation_openai_client,
@@ -1474,6 +1477,7 @@ def _run_validation_regeneration_loop(
     vector_store_id: Optional[str],
     dependencies: ReportAnalysisDependencies,
     source_text: str = "",
+    source_pages: Sequence[PdfTextPage] = (),
     validation_openai_client=None,
     regeneration_openai_client=None,
 ) -> tuple[
@@ -1861,6 +1865,7 @@ def _run_validation_regeneration_loop(
                 report_name=runtime.source_report_name or runtime.report_title,
                 source_url=runtime.source_url,
                 source_text=source_text,
+                source_pages=list(source_pages),
             ),
             pack_name=validation_pack_name,
             openai_client=(

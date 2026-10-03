@@ -16,15 +16,16 @@ from src.contracts.claim_validation import (
     ClaimCandidate,
     ClaimEvidenceReference,
     ClaimKind,
-    ClaimSemanticOutcome,
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
+    ClaimSemanticOutcome,
     ClaimValidationCheck,
     ClaimValidationExecutionIdentity,
     ClaimValidationLineage,
     ClaimValidationPackage,
     ClaimValidationResult,
 )
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import (
     ProtectedFactComparison,
     compare_protected_fact_texts,
@@ -714,7 +715,13 @@ def _semantic_inputs(
     results: list[ClaimValidationResult],
     source_evidence: dict[str, tuple[str, str, int | None]],
     source_identity: str,
+    source_pages: Sequence[PdfTextPage] = (),
 ) -> list[ClaimSemanticInput]:
+    text_by_source_page = {
+        page.page_number: page.text.strip()
+        for page in source_pages
+        if page.page_number > 0 and page.text.strip()
+    }
     inputs: list[ClaimSemanticInput] = []
     seen_semantic_identities: set[tuple[object, ...]] = set()
     for result in results:
@@ -728,17 +735,29 @@ def _semantic_inputs(
         refs = candidate.evidence_references
         if not refs or any(ref.evidence_id not in source_evidence for ref in refs):
             continue
-        evidence_ids_and_hashes = [
-            {
+        evidence_texts: list[str] = []
+        evidence_identities: list[dict[str, object]] = []
+        for ref in refs:
+            source_pack, retained_text, indexed_page = source_evidence[ref.evidence_id]
+            page_number = ref.page if ref.page is not None else indexed_page
+            page_text = text_by_source_page.get(page_number or 0, "")
+            evidence_text = page_text or retained_text
+            evidence_texts.append(evidence_text)
+            identity = {
                 "evidence_id": ref.evidence_id,
                 "source_pack": ref.source_pack,
                 "page": ref.page,
                 "text_hash": ref.text_hash,
             }
-            for ref in refs
-        ]
-        evidence_texts = [source_evidence[ref.evidence_id][1] for ref in refs]
-        evidence_hash = _hash(evidence_ids_and_hashes)
+            if page_text:
+                identity.update(
+                    {
+                        "source_page_id": f"source:page:{page_number}",
+                        "source_page_text_hash": _hash(page_text),
+                    }
+                )
+            evidence_identities.append(identity)
+        evidence_hash = _hash(evidence_identities)
         semantic_identity = (
             candidate.claim_id,
             candidate.source_family,
@@ -1322,6 +1341,7 @@ def retained_claim_semantic_inputs(
     evidence_packs: dict,
     *,
     source_identity: str = "",
+    source_pages: Sequence[PdfTextPage] = (),
 ) -> list[ClaimSemanticInput]:
     """Return only unresolved factual claims with all exact linked source text."""
 
@@ -1329,6 +1349,7 @@ def retained_claim_semantic_inputs(
         package.results,
         _evidence_index(evidence_packs),
         source_identity,
+        source_pages,
     )
 
 

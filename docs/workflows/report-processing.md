@@ -50,6 +50,12 @@ unique temporary file followed by an atomic replace. A bounded retry absorbs
 transient Windows replacement contention. This makes the cache race-safe
 without treating a missing sidecar as a valid cache hit; an interrupted write
 is simply regenerated.
+Primary figure extraction applies the same 240-character absolute-path budget
+before asking PyMuPDF to write its image. Deep isolated runs deterministically
+compact the report asset directory and, when needed, the image filename with a
+slug-derived suffix. If the output root itself leaves no safe path, figure
+extraction returns its existing no-image result instead of surfacing a native
+file-write exception through the report-selection queue.
 Report-analysis packs use the same bounded-path rule at their canonical store
 boundary: both the final pack destination and its atomic-write temporary path
 are checked. When either exceeds its Windows path budget, the report directory

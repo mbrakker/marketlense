@@ -125,6 +125,7 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         package,
         runtime.request.evidence_packs,
         source_identity=runtime.source_id,
+        source_pages=runtime.request.source_pages,
     )
     runtime.retained_claim_validation = package
 

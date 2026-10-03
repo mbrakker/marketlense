@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from src.contracts.docpacks import DocPackPayloadMap
+from src.contracts.pdf_text import PdfTextPage
 from src.contracts.report_models import ReportPayload
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
@@ -176,6 +177,15 @@ class ValidationRequest(SemanticIdContract):
             "doc": (
                 "Retained extracted source text used only for deterministic "
                 "factual-relationship validation."
+            )
+        },
+    )
+    source_pages: List[PdfTextPage] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Canonical extracted source-PDF pages with one-based page identity, "
+                "used only when a retained evidence reference names that page."
             )
         },
     )

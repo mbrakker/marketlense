@@ -42600,6 +42600,12 @@
         "source_id": {
           "type": "string"
         },
+        "source_pages": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pdf_text.PdfTextPage"
+          },
+          "type": "array"
+        },
         "source_text": {
           "type": "string"
         },
