@@ -193,6 +193,126 @@ def test_cached_file_search_response_does_not_issue_another_provider_search(
     assert len(fake_openai.calls["responses.create"]) == 1
 
 
+def test_doc_map_search_results_are_cached_with_the_vector_content_identity(
+    tmp_path, fake_openai
+) -> None:
+    fake_openai.add(
+        "responses.create",
+        SimpleNamespace(
+            output_text='{"title":"Report"}',
+            output=[
+                SimpleNamespace(
+                    type="file_search_call",
+                    queries=["Find the report methodology"],
+                    results=[
+                        SimpleNamespace(
+                            file_id="file_report",
+                            filename="report.pdf",
+                            score=0.91,
+                            content=[
+                                SimpleNamespace(
+                                    type="text",
+                                    text="The study surveyed 1,200 consumers.",
+                                )
+                            ],
+                        ),
+                        SimpleNamespace(
+                            file_id="file_report",
+                            filename="report.pdf",
+                            score=0.84,
+                            content=[
+                                SimpleNamespace(
+                                    type="text",
+                                    text="Fieldwork took place in May 2025.",
+                                )
+                            ],
+                        ),
+                    ],
+                ),
+                {"type": "message", "content": []},
+            ],
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+            id="resp_doc_map_results",
+        ),
+        SimpleNamespace(
+            output_text='{"title":"Updated report"}',
+            output=[
+                SimpleNamespace(
+                    type="file_search_call",
+                    queries=["Find updated report methodology"],
+                    results=[
+                        SimpleNamespace(
+                            file_id="file_report_v2",
+                            filename="report-v2.pdf",
+                            score=0.95,
+                            content=[
+                                SimpleNamespace(
+                                    type="text",
+                                    text="The updated study surveyed 1,500 consumers.",
+                                )
+                            ],
+                        )
+                    ],
+                )
+            ],
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5, total_tokens=15),
+            id="resp_doc_map_results_v2",
+        ),
+    )
+    cache_dir = tmp_path / "cache"
+    request_values = {
+        "schema_version": "1.0",
+        "system_prompt": "map the report",
+        "user_prompt": "report content",
+        "vector_store_id": "vs_report",
+        "vector_store_content_hash": "sha256:report-content-v1",
+        "model": "gpt-4.1-mini",
+        "temperature": 0.1,
+        "api_key": "key",
+        "include_file_search_results": True,
+        "response_cache_enabled": True,
+        "response_cache_dir": str(cache_dir),
+    }
+
+    first = svc.openai_respond_with_vector_store(
+        OpenAIResponseRequest(**request_values), _ctx()
+    )
+    # Model a workflow restart: reconstruct the request and context while using
+    # the same report/vector-store identity and persistent semantic cache.
+    second = svc.openai_respond_with_vector_store(
+        OpenAIResponseRequest(**dict(request_values)), _ctx()
+    )
+
+    assert fake_openai.calls["responses.create"][0]["include"] == [
+        "file_search_call.results"
+    ]
+    assert len(fake_openai.calls["responses.create"]) == 1
+    assert len(first.file_search_results) == 2
+    assert second.file_search_results == first.file_search_results
+    assert second.file_search_results[0].queries == [
+        "Find the report methodology"
+    ]
+    assert second.file_search_results[0].filename == "report.pdf"
+    assert second.file_search_results[1].text == "Fieldwork took place in May 2025."
+
+    changed_source_request = OpenAIResponseRequest(
+        **{
+            **request_values,
+            "vector_store_content_hash": "sha256:report-content-v2",
+        }
+    )
+    changed_source = svc.openai_respond_with_vector_store(
+        changed_source_request, _ctx()
+    )
+
+    assert len(fake_openai.calls["responses.create"]) == 2
+    assert changed_source.file_search_results[0].filename == "report-v2.pdf"
+    assert "1,500 consumers" in changed_source.file_search_results[0].text
+    assert second.file_search_results[0].text == (
+        "The study surveyed 1,200 consumers."
+    )
+
+
 def test_openai_response_with_vector_store_requires_vector_store_id(
     assert_app_error,
 ) -> None:

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.contracts.config import AppSettings
-from src.contracts.openai import OpenAIResponseResult
+from src.contracts.openai import OpenAIFileSearchResult, OpenAIResponseResult
 from src.contracts.prompts import (
     PromptDependency,
     PromptDependencyManifest,
@@ -106,6 +106,40 @@ class InvalidJsonOpenAI:
             tool_calls=0,
             model=req.model,
         )
+
+
+class SharedContextOpenAI:
+    def __init__(self, payload, *, invalid_first=False):
+        self.payload = payload
+        self.invalid_first = invalid_first
+        self.chat_requests = []
+        self.file_search_calls = 0
+
+    def openai_chat_json(self, req, ctx):
+        self.chat_requests.append(req)
+        if self.invalid_first and len(self.chat_requests) == 1:
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text='{"taxonomy":',
+                parsed_json=None,
+                input_tokens=10,
+                output_tokens=5,
+                tool_calls=0,
+                model=req.model,
+            )
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text=json.dumps(self.payload),
+            parsed_json=self.payload,
+            input_tokens=10,
+            output_tokens=5,
+            tool_calls=0,
+            model=req.model,
+        )
+
+    def openai_respond_with_vector_store(self, req, ctx):
+        self.file_search_calls += 1
+        raise AssertionError("shared retrieval context should avoid new File Search")
 
 
 def _ctx() -> RunContext:
@@ -269,6 +303,94 @@ def test_taxonomy_invalid_json_is_a_typed_failure_not_empty_success(tmp_path):
     assert exc_info.value.retryable is False
     assert exc_info.value.context["artifact_family"] == "taxonomy"
     assert exc_info.value.context["response_chars"] > 0
+
+
+def test_taxonomy_reuses_shared_search_results_without_file_search(tmp_path):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+    prompt_client = FakePromptClient()
+    rendered_variables = []
+
+    def render_prompt(request, ctx):
+        rendered_variables.append(dict(request.variables))
+        return SimpleNamespace(text=request.template.text)
+
+    prompt_client.render_prompt = render_prompt
+    evidence = OpenAIFileSearchResult(
+        schema_version="1.0",
+        queries=["Find the report's central themes and market coverage"],
+        file_id="file-report",
+        filename="report.pdf",
+        score=0.9,
+        text="The report studies consumer payment behavior in Germany in 2025.",
+    )
+    settings = _settings(tmp_path, mapping_path)
+    request = replace(_request(settings), retrieval_context=[evidence])
+    client = SharedContextOpenAI(
+        {
+            "schema_version": "1.0",
+            "taxonomy": ["Digital Payments"],
+            "primary_tags": ["Digital Payments"],
+            "secondary_tags": [],
+            "tag_evidence": [],
+            "region": "Germany",
+            "time_period": "2025",
+        }
+    )
+
+    response = extract_taxonomy(
+        request,
+        _ctx(),
+        openai_client=client,
+        prompt_client=prompt_client,
+    )
+
+    assert response.region == "Germany"
+    assert client.file_search_calls == 0
+    assert len(client.chat_requests) == 1
+    assert "consumer payment behavior" in rendered_variables[1][
+        "shared_retrieval_context_json"
+    ]
+
+
+def test_taxonomy_repair_reuses_shared_search_results_without_file_search(tmp_path):
+    mapping_path = tmp_path / "category-mappings.yaml"
+    _write_mapping(mapping_path)
+    evidence = OpenAIFileSearchResult(
+        schema_version="1.0",
+        queries=["Find report focus and coverage"],
+        file_id="file-report",
+        filename="report.pdf",
+        score=0.9,
+        text="The report studies consumer payments in Germany in 2025.",
+    )
+    request = replace(
+        _request(_settings(tmp_path, mapping_path)),
+        retrieval_context=[evidence],
+    )
+    client = SharedContextOpenAI(
+        {
+            "schema_version": "1.0",
+            "taxonomy": ["Digital Payments"],
+            "primary_tags": ["Digital Payments"],
+            "secondary_tags": [],
+            "tag_evidence": [],
+            "region": "Germany",
+            "time_period": "2025",
+        },
+        invalid_first=True,
+    )
+
+    response = extract_taxonomy(
+        request,
+        _ctx(),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+    )
+
+    assert response.region == "Germany"
+    assert len(client.chat_requests) == 2
+    assert client.file_search_calls == 0
 
 
 def test_taxonomy_materializes_primary_output_with_provenance(tmp_path):

@@ -291,8 +291,18 @@ def openai_respond_with_vector_store(
             "seed": request.seed,
             "max_output_tokens": request.max_output_tokens,
             "tools": ["file_search"],
+            "include_file_search_results": request.include_file_search_results,
+            "structured_output_schema_identity": (
+                request.structured_output_schema_identity
+            ),
+            "structured_output_schema_hash": _sha256_payload(
+                request.structured_output_schema
+            ),
         },
-        context={"vector_store_id": request.vector_store_id},
+        context={
+            "vector_store_id": request.vector_store_id,
+            "vector_store_content_hash": request.vector_store_content_hash,
+        },
     )
     if cache_spec is not None:
         cached_payload = _read_semantic_response_cache(cache_spec, ctx)
@@ -309,6 +319,8 @@ def openai_respond_with_vector_store(
             {"type": "file_search", "vector_store_ids": [request.vector_store_id]}
         ],
     }
+    if request.include_file_search_results:
+        payload_args["include"] = ["file_search_call.results"]
     if request.structured_output_schema and request.structured_output_schema_identity:
         payload_args["text"] = {
             "format": {
@@ -467,6 +479,7 @@ def openai_respond_with_vector_store(
         model=request.model,
         total_tokens=metadata.total_tokens,
         request_id=metadata.request_id,
+        file_search_results=list(metadata.file_search_results or []),
     )
     _write_semantic_response_cache(
         cache_spec,

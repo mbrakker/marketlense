@@ -57,6 +57,9 @@ from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
 )
+from src.generators.structured_output_execution import (
+    shared_retrieval_context_json as serialize_shared_retrieval_context,
+)
 from src.generators.validation.relationships import period_time_pairs
 from src.generators.validation.semantic import run_semantic_validation
 from src.services import file_service, prompt_service, report_analysis_store_service
@@ -299,6 +302,7 @@ def generate_evidence_packs(
     analysis_store=report_analysis_store_service,
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
+    retrieval_results_observer=None,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
     # Missing identity disables retained-family reuse; it must not borrow MD5.
@@ -337,23 +341,43 @@ def generate_evidence_packs(
     doc_strategy = strategies[0]
     step_name = doc_strategy.pack_name
     step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
-    results[step_name] = _generate_pack(
-        report_id=report_id,
-        report_name=report_name,
-        vector_store_id=vector_store_id,
-        settings=settings,
-        ctx=step_ctx,
-        md5=md5,
-        vector_store_content_hash=vector_store_content_hash,
-        publisher_name=publisher_name,
-        source_url=source_url,
-        openai_client=openai_client,
-        prompt_client=prompt_client,
-        analysis_store=analysis_store,
-        prompt_family_reuse_reader=prompt_family_reuse_reader,
-        prompt_family_materializer=prompt_family_materializer,
-        strategy=doc_strategy,
+    retrieval_results: list = []
+    retrieval_observed = False
+
+    def observe_doc_map_results(found_results) -> None:
+        nonlocal retrieval_observed, retrieval_results
+        retrieval_observed = True
+        retrieval_results = list(found_results or [])
+        if retrieval_results_observer is not None:
+            retrieval_results_observer(retrieval_results)
+
+    shares_retrieval = any(
+        strategy.pack_name in {"scope", "methods", "limitations"}
+        for strategy in strategies[1:]
     )
+    try:
+        results[step_name] = _generate_pack(
+            report_id=report_id,
+            report_name=report_name,
+            vector_store_id=vector_store_id,
+            settings=settings,
+            ctx=step_ctx,
+            md5=md5,
+            vector_store_content_hash=vector_store_content_hash,
+            publisher_name=publisher_name,
+            source_url=source_url,
+            openai_client=openai_client,
+            prompt_client=prompt_client,
+            analysis_store=analysis_store,
+            prompt_family_reuse_reader=prompt_family_reuse_reader,
+            prompt_family_materializer=prompt_family_materializer,
+            strategy=doc_strategy,
+            retrieval_results_observer=observe_doc_map_results,
+            require_retrieval_results=shares_retrieval,
+        )
+    finally:
+        if not retrieval_observed:
+            observe_doc_map_results([])
     completeness = _summarize_doc_map_completeness(results[step_name])
     if completeness["warn"]:
         logger.warning(
@@ -458,6 +482,11 @@ def generate_evidence_packs(
                     prompt_family_reuse_reader=prompt_family_reuse_reader,
                     prompt_family_materializer=prompt_family_materializer,
                     strategy=strategy,
+                    shared_retrieval_context_json=(
+                        serialize_shared_retrieval_context(retrieval_results)
+                        if strategy.pack_name in {"scope", "methods", "limitations"}
+                        else ""
+                    ),
                     prompt_user_variables=(
                         findings_prompt_user_variables
                         if strategy.pack_name == "findings"
@@ -519,6 +548,11 @@ def generate_evidence_packs(
                 prompt_family_reuse_reader=prompt_family_reuse_reader,
                 prompt_family_materializer=prompt_family_materializer,
                 strategy=strategy,
+                shared_retrieval_context_json=(
+                    serialize_shared_retrieval_context(retrieval_results)
+                    if strategy.pack_name in {"scope", "methods", "limitations"}
+                    else ""
+                ),
                 prompt_user_variables=(
                     findings_prompt_user_variables
                     if strategy.pack_name == "findings"
@@ -620,6 +654,9 @@ def _generate_pack(
     prompt_family_materializer,
     strategy: EvidencePackStrategy,
     prompt_user_variables: Optional[Dict[str, str]] = None,
+    shared_retrieval_context_json: str = "",
+    retrieval_results_observer=None,
+    require_retrieval_results: bool = False,
 ) -> dict:
     source_identity_id = str(ctx.source_identity_id or "").strip()
     pack_name = strategy.pack_name
@@ -638,15 +675,31 @@ def _generate_pack(
             },
         )
     )
-    prompt_bundle = prepare_prompt_bundle(
-        namespace=prompt_namespace,
-        settings=settings,
-        ctx=ctx,
-        prompt_client=prompt_client,
-        system_variables={},
-        user_variables=prompt_user_variables or {},
-        default_model=settings.openai_model,
-    )
+    def prepare_pack_prompt(retrieval_context_json: str):
+        user_variables = dict(prompt_user_variables or {})
+        if pack_name in {"scope", "methods", "limitations"}:
+            user_variables["shared_retrieval_context_json"] = retrieval_context_json
+        return prepare_prompt_bundle(
+            namespace=prompt_namespace,
+            settings=settings,
+            ctx=ctx,
+            prompt_client=prompt_client,
+            system_variables={},
+            user_variables=user_variables,
+            default_model=settings.openai_model,
+            retrieval_mode=(
+                "chat_json" if retrieval_context_json else "vector_store"
+            ),
+        )
+
+    prompt_bundle = prepare_pack_prompt(shared_retrieval_context_json)
+    if (
+        shared_retrieval_context_json
+        and prompt_bundle.execution_policy.policy.retrieval_mode == "file_search"
+    ):
+        # An explicit operator File Search policy remains authoritative.
+        shared_retrieval_context_json = ""
+        prompt_bundle = prepare_pack_prompt(shared_retrieval_context_json)
     logger.info(
         log_event(
             ctx,
@@ -677,6 +730,7 @@ def _generate_pack(
                 "vector_store_id": vector_store_id,
                 "vector_store_content_hash": vector_store_content_hash,
                 "prompt_user_variables": prompt_user_variables or {},
+                "shared_retrieval_context_json": shared_retrieval_context_json,
             }
         )
         if vector_provenance_verified
@@ -700,7 +754,11 @@ def _generate_pack(
         )
         return _attach_pack_family_status(pack_name, normalized)
 
-    if source_identity_id and vector_provenance_verified:
+    if (
+        source_identity_id
+        and vector_provenance_verified
+        and not (pack_name == "doc_map" and require_retrieval_results)
+    ):
         reuse = prompt_family_reuse_reader(
             PromptFamilyReuseRequest(
                 schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -770,11 +828,26 @@ def _generate_pack(
     output_schema = provider_output_schema(schema_name)
 
     recovery_attempted = False
+    doc_map_retrieval_results = []
 
     def call_model(mode: str, original_response: str, schema_errors: str):
-        nonlocal recovery_attempted
+        nonlocal recovery_attempted, doc_map_retrieval_results
         if mode != "primary":
             recovery_attempted = True
+        doc_map_context_json = (
+            serialize_shared_retrieval_context(doc_map_retrieval_results)
+            if pack_name == "doc_map"
+            else ""
+        )
+        effective_retrieval_context = (
+            shared_retrieval_context_json or doc_map_context_json
+        )
+        request_vector_store_id = vector_store_id
+        if effective_retrieval_context and (
+            pack_name in {"scope", "methods", "limitations"}
+            or (pack_name == "doc_map" and mode != "primary")
+        ):
+            request_vector_store_id = None
         bundle = prompt_bundle
         if mode != "primary":
             bundle = recovery_prompt_bundle(
@@ -788,18 +861,23 @@ def _generate_pack(
                     "vector_store_id": vector_store_id,
                     "pack_name": pack_name,
                     **(prompt_user_variables or {}),
+                    **(
+                        {"shared_retrieval_context_json": effective_retrieval_context}
+                        if effective_retrieval_context
+                        else {}
+                    ),
                 },
                 settings=settings,
                 ctx=ctx,
                 prompt_client=prompt_client,
-                vector_store_id=vector_store_id,
+                vector_store_id=request_vector_store_id,
             )
         resp = invoke_structured_output_model(
             openai_client=openai_client,
             prompt_bundle=bundle,
             settings=settings,
             ctx=ctx,
-            vector_store_id=vector_store_id,
+            vector_store_id=request_vector_store_id,
             report_id=report_id,
             artifact_family=pack_name,
             stage=f"evidence_pack_{mode}",
@@ -809,7 +887,16 @@ def _generate_pack(
             output_schema=output_schema,
             output_schema_identity=f"{pack_name}_v1",
             repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
+            include_file_search_results=(pack_name == "doc_map" and mode == "primary"),
+            vector_store_content_hash=(vector_store_content_hash or ""),
+            cache_file_search_results=(pack_name == "doc_map" and mode == "primary"),
         )
+        if pack_name == "doc_map" and mode == "primary":
+            doc_map_retrieval_results = list(
+                getattr(resp, "file_search_results", None) or []
+            )
+            if retrieval_results_observer is not None:
+                retrieval_results_observer(doc_map_retrieval_results)
         logger.info(
             log_event(
                 ctx,

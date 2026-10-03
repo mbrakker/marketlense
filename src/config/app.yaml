@@ -429,7 +429,7 @@ llm_execution_policies:
     reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 8192
-    retrieval_mode: file_search
+    retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
     structured_output_mode: json_object
@@ -442,7 +442,7 @@ llm_execution_policies:
     reasoning_effort: low
     seed_policy: inherit
     max_output_tokens: 8192
-    retrieval_mode: file_search
+    retrieval_mode: inherit
     timeout_seconds: 600
     provider_retry_count: 0
     structured_output_mode: json_object

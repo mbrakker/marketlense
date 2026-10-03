@@ -39,6 +39,7 @@ from src.generators.prompt_preparation import prepare_prompt_bundle
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
+    shared_retrieval_context_json,
 )
 from src.services import (
     file_service,
@@ -107,6 +108,9 @@ def extract_taxonomy(
         ctx,
     )
     allowed_tags = _collect_allowed_tags(mappings_resp)
+    retrieval_context_json = shared_retrieval_context_json(
+        request.retrieval_context
+    )
     logger.info(
         log_event(
             ctx,
@@ -119,25 +123,37 @@ def extract_taxonomy(
             },
         )
     )
-    prompt_bundle = prepare_prompt_bundle(
-        namespace=request.prompt_namespace,
-        settings=request.settings,
-        ctx=ctx,
-        prompt_client=prompt_client,
-        system_variables={},
-        user_variables={
-            "report_title": request.report_title,
-            "allowed_tags_json": json.dumps(allowed_tags, ensure_ascii=True),
-            "repair_error": request.repair_error,
-            "repair_attempt": request.repair_attempt,
-            "repair_response": request.repair_response,
-        },
-        reload_if_changed=True,
-        default_model=request.settings.openai_model,
-        temperature=taxonomy_temperature,
-        seed=request.settings.openai_seed,
-        timeout_seconds=request.settings.openai_timeout_seconds,
-    )
+    def prepare_taxonomy_prompt(retrieval_json: str):
+        return prepare_prompt_bundle(
+            namespace=request.prompt_namespace,
+            settings=request.settings,
+            ctx=ctx,
+            prompt_client=prompt_client,
+            system_variables={},
+            user_variables={
+                "report_title": request.report_title,
+                "allowed_tags_json": json.dumps(allowed_tags, ensure_ascii=True),
+                "repair_error": request.repair_error,
+                "repair_attempt": request.repair_attempt,
+                "repair_response": request.repair_response,
+                "shared_retrieval_context_json": retrieval_json,
+            },
+            reload_if_changed=True,
+            default_model=request.settings.openai_model,
+            temperature=taxonomy_temperature,
+            seed=request.settings.openai_seed,
+            timeout_seconds=request.settings.openai_timeout_seconds,
+            retrieval_mode=("chat_json" if retrieval_json else "vector_store"),
+        )
+
+    prompt_bundle = prepare_taxonomy_prompt(retrieval_context_json)
+    if (
+        retrieval_context_json
+        and prompt_bundle.execution_policy.policy.retrieval_mode == "file_search"
+    ):
+        # An explicit operator File Search policy remains authoritative.
+        retrieval_context_json = ""
+        prompt_bundle = prepare_taxonomy_prompt(retrieval_context_json)
     logger.info(
         log_event(
             ctx,
@@ -192,6 +208,7 @@ def extract_taxonomy(
                 "allowed_tags": allowed_tags,
                 "vector_store_id": request.vector_store_id,
                 "vector_store_content_hash": request.vector_store_content_hash,
+                "shared_retrieval_context_json": retrieval_context_json,
             }
         )
         if vector_provenance_verified
@@ -310,6 +327,9 @@ def extract_taxonomy(
         if mode != "primary":
             recovery_attempted = True
         bundle = prompt_bundle
+        retrieval_vector_store_id = (
+            None if retrieval_context_json else request.vector_store_id
+        )
         if mode != "primary":
             bundle = recovery_prompt_bundle(
                 mode=mode,
@@ -321,18 +341,19 @@ def extract_taxonomy(
                     "report_title": request.report_title,
                     "allowed_tags": allowed_tags,
                     "vector_store_id": request.vector_store_id,
+                    "shared_retrieval_context_json": retrieval_context_json,
                 },
                 settings=request.settings,
                 ctx=ctx,
                 prompt_client=prompt_client,
-                vector_store_id=request.vector_store_id,
+                vector_store_id=retrieval_vector_store_id,
             )
         return invoke_structured_output_model(
             openai_client=openai_client,
             prompt_bundle=bundle,
             settings=request.settings,
             ctx=ctx,
-            vector_store_id=request.vector_store_id,
+            vector_store_id=retrieval_vector_store_id,
             report_id=str(request.report_id),
             artifact_family="taxonomy",
             stage=f"taxonomy_{mode}",

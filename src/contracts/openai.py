@@ -537,6 +537,24 @@ class OpenAIResponseRequest:
             "doc": "Semantic response cache TTL in seconds; None disables expiry."
         },
     )
+    vector_store_content_hash: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Verified vector-store content identity used to scope "
+                "retrieval-result caching."
+            )
+        },
+    )
+    include_file_search_results: bool = field(
+        default=False,
+        metadata={
+            "doc": (
+                "Whether to include completed File Search result excerpts in the "
+                "response contract."
+            )
+        },
+    )
     context_compaction_policy: LLMContextCompactionPolicy = field(
         default_factory=lambda: LLMContextCompactionPolicy(schema_version="1.0"),
         metadata={"doc": "Optional deterministic pre-call context compaction policy."},
@@ -624,6 +642,30 @@ class OpenAIResponseRequest:
 
 
 @dataclass(frozen=True)
+class OpenAIFileSearchResult:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI File Search result schema version."}
+    )
+    queries: List[str] = field(
+        default_factory=list,
+        metadata={"doc": "Queries used by the Responses File Search call."},
+    )
+    file_id: str = field(
+        default="", metadata={"doc": "OpenAI file identifier for the excerpt."}
+    )
+    filename: str = field(
+        default="", metadata={"doc": "Source filename for the excerpt."}
+    )
+    score: Optional[float] = field(
+        default=None, metadata={"doc": "Provider retrieval score, if available."}
+    )
+    text: str = field(
+        default="",
+        metadata={"doc": "Retrieved source excerpt text."},
+    )
+
+
+@dataclass(frozen=True)
 class OpenAIResponseResult:
     schema_version: str = field(
         metadata={"doc": "OpenAI responses result schema version."}
@@ -648,6 +690,12 @@ class OpenAIResponseResult:
     )
     request_id: Optional[str] = field(
         default=None, metadata={"doc": "Provider request ID, if available."}
+    )
+    file_search_results: List[OpenAIFileSearchResult] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Source excerpts returned by completed File Search output items."
+        },
     )
 
 

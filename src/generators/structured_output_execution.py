@@ -4,17 +4,49 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Sequence
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
 from src.contracts.llm import LLMContextCompactionPolicy
-from src.contracts.openai import OpenAIJSONPromptRequest, OpenAIResponseRequest
+from src.contracts.openai import (
+    OpenAIFileSearchResult,
+    OpenAIJSONPromptRequest,
+    OpenAIResponseRequest,
+)
 from src.contracts.run_context import RunContext
 from src.generators.prompt_preparation import (
     model_request_identity_fields,
     prepare_prompt_bundle,
 )
+
+_MAX_SHARED_RETRIEVAL_CONTEXT_CHARS = 24_000
+
+
+def shared_retrieval_context_json(
+    results: Sequence[OpenAIFileSearchResult],
+) -> str:
+    """Serialize a bounded retrieved-source bundle, or abstain if it is too large."""
+
+    excerpts = [
+        {
+            "queries": list(result.queries),
+            "file_id": result.file_id,
+            "filename": result.filename,
+            "score": result.score,
+            "text": result.text,
+        }
+        for result in results
+        if str(result.text or "").strip()
+    ]
+    if not excerpts:
+        return ""
+    serialized = json.dumps(excerpts, ensure_ascii=False, separators=(",", ":"))
+    return (
+        serialized
+        if len(serialized) <= _MAX_SHARED_RETRIEVAL_CONTEXT_CHARS
+        else ""
+    )
 
 
 def recovery_prompt_bundle(
@@ -75,6 +107,9 @@ def invoke_structured_output_model(
     output_schema_identity: str,
     repair_attempt: int,
     response_observer=None,
+    include_file_search_results: bool = False,
+    vector_store_content_hash: str = "",
+    cache_file_search_results: bool = False,
 ) -> Any:
     common = {
         "schema_version": "1.0",
@@ -117,7 +152,18 @@ def invoke_structured_output_model(
     started = time.perf_counter()
     if vector_store_id:
         response = openai_client.openai_respond_with_vector_store(
-            OpenAIResponseRequest(vector_store_id=vector_store_id, **common), ctx
+            OpenAIResponseRequest(
+                vector_store_id=vector_store_id,
+                include_file_search_results=include_file_search_results,
+                vector_store_content_hash=vector_store_content_hash,
+                response_cache_enabled=bool(
+                    cache_file_search_results and vector_store_content_hash
+                ),
+                response_cache_dir=settings.cache_dir,
+                response_cache_ttl_seconds=604800.0,
+                **common,
+            ),
+            ctx,
         )
     else:
         response = openai_client.openai_chat_json(

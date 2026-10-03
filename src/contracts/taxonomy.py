@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from src.contracts.config import AppSettings
 from src.contracts.ingest import IngestSettings
+from src.contracts.openai import OpenAIFileSearchResult
 from src.contracts.semantic_ids import ReportId, SemanticIdContract
 
 
@@ -43,6 +44,15 @@ class TaxonomyExtractRequest(SemanticIdContract):
         default=None,
         metadata={
             "doc": "Verified vector-store content identity required for retained model reuse."
+        },
+    )
+    retrieval_context: List[OpenAIFileSearchResult] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Source excerpts retrieved for this report and shared with "
+                "taxonomy extraction."
+            )
         },
     )
     report_slug: Optional[str] = field(

@@ -25474,6 +25474,43 @@
       ],
       "type": "object"
     },
+    "src.contracts.openai.OpenAIFileSearchResult": {
+      "additionalProperties": false,
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "queries": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.openai.OpenAIJSONImagePromptRequest": {
       "additionalProperties": false,
       "properties": {
@@ -26012,6 +26049,9 @@
         "execution_policy_source": {
           "type": "string"
         },
+        "include_file_search_results": {
+          "type": "boolean"
+        },
         "max_output_tokens": {
           "anyOf": [
             {
@@ -26142,6 +26182,9 @@
         "validation_run_id": {
           "type": "string"
         },
+        "vector_store_content_hash": {
+          "type": "string"
+        },
         "vector_store_id": {
           "type": "string"
         },
@@ -26163,6 +26206,12 @@
     "src.contracts.openai.OpenAIResponseResult": {
       "additionalProperties": false,
       "properties": {
+        "file_search_results": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.openai.OpenAIFileSearchResult"
+          },
+          "type": "array"
+        },
         "input_tokens": {
           "anyOf": [
             {
@@ -39746,6 +39795,12 @@
         },
         "report_title": {
           "type": "string"
+        },
+        "retrieval_context": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.openai.OpenAIFileSearchResult"
+          },
+          "type": "array"
         },
         "schema_version": {
           "type": "string"

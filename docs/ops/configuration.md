@@ -79,6 +79,19 @@ not be reused.
 
 The important operator sections are `paths`, `ingest`, `publish`, `browser_download`, `mailbox_acquisition`, `publisher_discovery`, and `workflow_control`. The committed base leaves both recovery reapers and the supervisor disabled. The reviewed `MARKET_LENSE_CONFIG_PROFILE=autonomous_mvp` overlay enables the lease-protected supervisor plus remediation and deferred-work reapers with a two-record limit each; normal queue-worker batches remain disabled so the existing durable workers retain execution ownership. `workflow_control.remediation_reaper.execution_enabled` and `workflow_control.deferred_work_reaper.execution_enabled` remain independent rollback gates, while their record limits, lease duration, and retry delay bound each invocation. `openai_models`, `llm_routing`, `llm_execution_policies`, and `cost` govern model routing and accounting. `llm_execution_policies` is the versioned namespace policy for provider/model, sampling, output limits, timeout, structured-output mode, compaction, pricing key, and same-provider fallback. Settings startup resolves the complete finite production namespace inventory before any provider client can be used; an unknown or uncovered reachable namespace rejects configuration. The workflow preflight then retains the exact resolved namespace/provider/model/full-policy matrix and policy hashes with the run-owned artifacts. Provider-owned retries remain forbidden and workflow retry policy remains orchestrator-owned. The compatibility adapter preserves historical non-report namespaces until they are explicitly migrated. An external host owns recurrence for `workflow_control.supervisor`; the command itself is one-shot.
 
+Report-analysis `doc_map` uses the Responses semantic cache to retain its typed
+File Search result excerpts when the vector-store content identity is known.
+The cache lives under the configured `paths.cache_dir`, is keyed by the exact
+vector-store ID/content identity and retrieval prompt contract, and expires after
+seven days. Keep that directory under the same filesystem access controls as
+source PDFs and report-analysis artifacts; deleting its entry only causes the
+next request to retrieve again. Scope, methods, limitations, and taxonomy can
+reuse those excerpts in memory for the same report run. If results are absent,
+too large for the bounded prompt context, or unavailable from a compatible
+cache entry, those tasks retain their existing File Search path. Taxonomy and
+taxonomy repair use `retrieval_mode: inherit` so the workflow may choose JSON
+generation when shared excerpts are present and File Search when they are not.
+
 Evidence-constrained first-pass artifact families use exact execution-policy
 overrides rather than inheriting the broad `report_vs` policy. GPT-6 Luna uses
 explicit `reasoning_effort` by task: low for narrow extraction, routing, quotes,

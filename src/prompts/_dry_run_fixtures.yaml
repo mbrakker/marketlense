@@ -505,6 +505,8 @@ fixtures:
       repair_error: "schema_validation_failed"
       repair_attempt: 1
       repair_response: "{}"
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The report studies payment adoption."}]
       candidate_category_ids: []
   - namespace: "report_vs/doc_map"
     family: "report"
@@ -530,14 +532,18 @@ fixtures:
     temperature: 0.0
     benchmark: *benchmark_report_extract
     system_variables: {}
-    user_variables: {}
+    user_variables:
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The study uses a consumer survey."}]
   - namespace: "report_vs/evidence_packs/methods"
     family: "report"
     model: "openai/gpt-5-mini"
     temperature: 0.0
     benchmark: *benchmark_report_extract
     system_variables: {}
-    user_variables: {}
+    user_variables:
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The study uses a consumer survey."}]
   - namespace: "report_vs/evidence_packs/quote_candidates"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -551,7 +557,9 @@ fixtures:
     temperature: 0.0
     benchmark: *benchmark_report_extract
     system_variables: {}
-    user_variables: {}
+    user_variables:
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The study covers Europe in 2025."}]
   - namespace: "report_vs/figure_caption"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -572,6 +580,8 @@ fixtures:
       report_title: "Enterprise Payments Outlook 2026"
       allowed_tags_json: >-
         [{"slug":"digital-payments","label":"Digital Payments"},{"slug":"wallets","label":"Wallets"},{"slug":"merchant-infrastructure","label":"Merchant Infrastructure"}]
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The report studies payment adoption."}]
   - namespace: "report_vs/taxonomy_repair"
     family: "report"
     model: "openai/gpt-5-mini"
@@ -585,6 +595,8 @@ fixtures:
       repair_error: "schema_validation_failed"
       repair_attempt: 1
       repair_response: "{}"
+      shared_retrieval_context_json: >-
+        [{"filename":"report.pdf","text":"The report studies payment adoption."}]
   - namespace: "report_vs/structured_output/repair"
     family: "report"
     model: "openai/gpt-5-mini"

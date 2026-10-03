@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import inspect
 import json
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import asdict, replace
+from threading import Event
 from typing import Any, List, Optional
 
 from src.contracts.categories import CategoryAssignment
@@ -275,6 +277,7 @@ def _resolve_taxonomy_with_repair(
     dependencies: ReportAnalysisDependencies,
     *,
     openai_client=None,
+    retrieval_context=None,
 ):
     """Run taxonomy once, then use its one prompt-specific output repair if needed."""
 
@@ -287,6 +290,7 @@ def _resolve_taxonomy_with_repair(
                 vector_store_content_hash,
                 dependencies,
                 openai_client=openai_client,
+                retrieval_context=retrieval_context,
             ),
             False,
         )
@@ -324,6 +328,7 @@ def _resolve_taxonomy_with_repair(
                 repair_attempt=1,
                 repair_error=exc.code,
                 repair_response=repair_response,
+                retrieval_context=retrieval_context,
             ),
             True,
         )
@@ -495,6 +500,42 @@ def run_report_analysis(
         artifact_kwargs["openai_client"] = artifact_openai_client
 
     if runtime.parallel_within_file:
+        try:
+            retrieval_observer_supported = (
+                "retrieval_results_observer"
+                in inspect.signature(
+                    dependencies.generate_evidence_packs
+                ).parameters
+            )
+        except (TypeError, ValueError):
+            retrieval_observer_supported = False
+        retrieval_ready = Event()
+        shared_retrieval_results: list = []
+
+        def observe_shared_retrieval(results) -> None:
+            shared_retrieval_results[:] = list(results or [])
+            retrieval_ready.set()
+
+        if retrieval_observer_supported:
+            evidence_kwargs["retrieval_results_observer"] = observe_shared_retrieval
+
+        def resolve_taxonomy_after_doc_map():
+            if retrieval_observer_supported:
+                retrieval_ready.wait()
+            return _resolve_taxonomy_with_repair(
+                runtime,
+                mode_ctx,
+                vector_state.vector_store_id,
+                vector_store_content_hash,
+                dependencies,
+                openai_client=taxonomy_openai_client,
+                retrieval_context=(
+                    list(shared_retrieval_results)
+                    if retrieval_observer_supported
+                    else None
+                ),
+            )
+
         logger.info(
             log_event(
                 mode_ctx,
@@ -512,13 +553,7 @@ def run_report_analysis(
             max_workers=min(runtime.report_worker_limit, 2)
         ) as executor:
             taxonomy_future = executor.submit(
-                _resolve_taxonomy_with_repair,
-                runtime,
-                mode_ctx,
-                vector_state.vector_store_id,
-                vector_store_content_hash,
-                dependencies,
-                openai_client=taxonomy_openai_client,
+                resolve_taxonomy_after_doc_map,
             )
             evidence_future = executor.submit(
                 dependencies.generate_evidence_packs,

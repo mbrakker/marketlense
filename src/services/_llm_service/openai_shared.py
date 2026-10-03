@@ -14,12 +14,12 @@ from typing import Any, Callable
 import openai as openai_legacy
 
 from src.contracts.files import WriteBytesRequest
-from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.openai import (
     OpenAIAnalyzeRequest,
     OpenAIAnalyzeResponse,
     OpenAIEmbeddingRequest,
     OpenAIEmbeddingResponse,
+    OpenAIFileSearchResult,
     OpenAIJSONImagePromptRequest,
     OpenAIJSONPromptRequest,
     OpenAIPdfOcrRequest,
@@ -44,6 +44,7 @@ from src.contracts.openai import (
 )
 from src.contracts.pdf_ocr import PdfOcrPageText
 from src.contracts.report_models import Figure, Quote, ReportPayload
+from src.contracts.run_budget import BudgetRequest, RunBudget
 from src.contracts.run_context import RunContext
 from src.services import file_service, openai_accounting_service
 from src.services._llm_service.openai_usage_accounting import (
@@ -56,8 +57,8 @@ from src.services._llm_service.policy import spend_reservation_key
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
 )
-from src.utils.errors import AppError
 from src.utils.costing import resolve_model_pricing
+from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import log_event
 from src.utils.model_resolver import effective_sampling_controls
@@ -578,7 +579,40 @@ def _openai_response_result_from_cache(payload: dict[str, Any]) -> OpenAIRespons
         request_id=str(payload.get("request_id"))
         if payload.get("request_id")
         else None,
+        file_search_results=_coerce_file_search_results(
+            payload.get("file_search_results")
+        ),
     )
+
+
+def _coerce_file_search_results(value: Any) -> list[OpenAIFileSearchResult]:
+    if not isinstance(value, list):
+        return []
+    results: list[OpenAIFileSearchResult] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        raw_queries = item.get("queries")
+        queries = (
+            [str(query) for query in raw_queries if str(query).strip()]
+            if isinstance(raw_queries, list)
+            else []
+        )
+        try:
+            score = float(item["score"]) if item.get("score") is not None else None
+        except (TypeError, ValueError):
+            score = None
+        results.append(
+            OpenAIFileSearchResult(
+                schema_version=str(item.get("schema_version") or "1.0"),
+                queries=queries,
+                file_id=str(item.get("file_id") or ""),
+                filename=str(item.get("filename") or ""),
+                score=score,
+                text=str(item.get("text") or ""),
+            )
+        )
+    return results
 
 
 def _ocr_response_from_cache(payload: dict[str, Any]) -> OpenAIPdfOcrResponse:
@@ -802,6 +836,60 @@ def _extract_responses_file_search_call_count(resp: Any) -> int:
     )
 
 
+def _read_response_value(value: Any, key: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(key, default)
+    return getattr(value, key, default)
+
+
+def _extract_responses_file_search_results(resp: Any) -> list[OpenAIFileSearchResult]:
+    output = getattr(resp, "output", None)
+    if not isinstance(output, list):
+        return []
+    results: list[OpenAIFileSearchResult] = []
+    for output_item in output:
+        if _read_response_value(output_item, "type") != "file_search_call":
+            continue
+        raw_queries = _read_response_value(output_item, "queries", [])
+        queries = (
+            [str(query) for query in raw_queries if str(query).strip()]
+            if isinstance(raw_queries, list)
+            else []
+        )
+        raw_results = _read_response_value(output_item, "results", [])
+        if not isinstance(raw_results, list):
+            continue
+        for raw_result in raw_results:
+            content = _read_response_value(raw_result, "content", [])
+            text_parts: list[str] = []
+            if isinstance(content, list):
+                for block in content:
+                    if _read_response_value(block, "type") != "text":
+                        continue
+                    text = _read_response_value(block, "text")
+                    if isinstance(text, str) and text.strip():
+                        text_parts.append(text.strip())
+            try:
+                score = (
+                    float(_read_response_value(raw_result, "score"))
+                    if _read_response_value(raw_result, "score") is not None
+                    else None
+                )
+            except (TypeError, ValueError):
+                score = None
+            results.append(
+                OpenAIFileSearchResult(
+                    schema_version="1.0",
+                    queries=queries,
+                    file_id=str(_read_response_value(raw_result, "file_id") or ""),
+                    filename=str(_read_response_value(raw_result, "filename") or ""),
+                    score=score,
+                    text="\n".join(text_parts),
+                )
+            )
+    return results
+
+
 @dataclass(frozen=True)
 class _OpenAIResponseMetadata:
     text: str
@@ -815,6 +903,7 @@ class _OpenAIResponseMetadata:
     parse_strategy: str
     reasoning_tokens: int | None = None
     file_search_call_count: int = 0
+    file_search_results: list[OpenAIFileSearchResult] | None = None
 
 
 def _parse_response_json(
@@ -845,6 +934,7 @@ def _build_response_metadata(
     recover_json_object: bool,
     reasoning_tokens: int | None = None,
     file_search_call_count: int = 0,
+    file_search_results: list[OpenAIFileSearchResult] | None = None,
 ) -> _OpenAIResponseMetadata:
     parsed_json, parse_strategy = _parse_response_json(
         text,
@@ -867,6 +957,7 @@ def _build_response_metadata(
         parse_strategy=parse_strategy,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=max(0, int(file_search_call_count or 0)),
+        file_search_results=file_search_results or [],
     )
 
 
@@ -913,6 +1004,7 @@ def _adapt_responses_metadata(
         recover_json_object=recover_json_object,
         reasoning_tokens=reasoning_tokens,
         file_search_call_count=file_search_call_count,
+        file_search_results=_extract_responses_file_search_results(resp),
     )
 
 

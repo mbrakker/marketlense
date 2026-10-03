@@ -271,6 +271,7 @@ def _resolve_taxonomy(
     repair_attempt: int = 0,
     repair_error: str = "",
     repair_response: str = "",
+    retrieval_context: list | None = None,
 ) -> _TaxonomyState:
     taxonomy_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:taxonomy")
     kwargs = {}
@@ -298,6 +299,7 @@ def _resolve_taxonomy(
             repair_attempt=repair_attempt,
             repair_error=repair_error,
             repair_response=repair_response,
+            retrieval_context=list(retrieval_context or []),
         ),
         taxonomy_ctx,
         **kwargs,
