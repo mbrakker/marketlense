@@ -26,7 +26,7 @@ The stack is Python 3.12, with SQLite-backed services, a Streamlit UI, and a Wor
 
 5. **Prompt logging guidance conflicts with the repository’s data policy.**
 
-   [`role-boundaries.md`](docs/architecture/role-boundaries.md#prompt-boundary) says to log prompt text and rendered output per model call. [`AGENTS.md`](AGENTS.md#7-logging-audit-and-data-safety) prohibits logging complete rendered prompts and prescribes prompt identity and bounded metadata instead. The evidence guide also says retained artifacts must not contain rendered prompts ([`evidence.md`](docs/quality/evidence.md#evidence-process)). Update the architecture guidance to match the current policy; no code change is needed to address the documentation conflict.
+   [`role-boundaries.md`](docs/architecture/role-boundaries.md#prompt-boundary) says to log prompt text and rendered output per model call. [`AGENTS.md`](AGENTS.md#8-logging-audit-and-data-safety) prohibits logging complete rendered prompts and prescribes prompt identity and bounded metadata instead. The evidence guide also says retained artifacts must not contain rendered prompts ([`evidence.md`](docs/quality/evidence.md#evidence-process)). Update the architecture guidance to match the current policy; no code change is needed to address the documentation conflict.
 
 ## Complexity signals
 
