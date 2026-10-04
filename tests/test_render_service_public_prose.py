@@ -5,11 +5,49 @@ from pathlib import Path
 
 from src.services._render_service.normalization import (
     _build_core_signal,
+    _build_signal_cards,
     _coerce_insights,
     _core_signal_heading,
     _sanitize_linkedin_post,
     _sanitize_public_prose,
 )
+
+
+def test_signal_cards_use_retained_insights_and_editorial_implications() -> None:
+    cards = _build_signal_cards(
+        topics=["Value redefined"],
+        topic_briefs=[
+            {
+                "title": "Value redefined",
+                "section_id": "value-redefined",
+                "summary": "Generic chapter description.",
+                "key_points": ["Generic section point."],
+            }
+        ],
+        tags=[],
+        insights=[
+            {
+                "text": "Consumers weigh price against trust and convenience.",
+                "so_what": "Pricing decisions should account for perceived value.",
+                "now_what": (
+                    "Review value messages across routine and complex purchases."
+                ),
+                "evidence_id": "finding-1",
+                "section_ids": ["value-redefined"],
+                "citation_line": "Sample Report, page 8",
+            }
+        ],
+    )
+
+    assert cards[0]["title"] == "Value redefined"
+    assert cards[0]["signal"] == "Consumers weigh price against trust and convenience."
+    assert cards[0]["so_what"] == (
+        "Pricing decisions should account for perceived value."
+    )
+    assert cards[0]["now_what"] == (
+        "Review value messages across routine and complex purchases."
+    )
+    assert cards[0]["source_label"] == "Sample Report, page 8"
 
 
 def test_core_signal_uses_complete_sentence_if_no_short_heading() -> None:

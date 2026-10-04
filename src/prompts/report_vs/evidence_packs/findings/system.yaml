@@ -27,6 +27,9 @@ text: |
     especially value/category, subject/population, period, qualifiers, and
     named actions. Narrow unsupported details; a generic recommendation-list
     reference cannot support a named action.
+  - Each number in `text` must appear in its direct `evidence` excerpt with its
+    subject and any stated denominator/category/period. The paraphrase or a
+    nearby unrelated value is insufficient; otherwise omit or narrow it.
   - For table/chart numbers, include the displayed title and period/timeframe
     from the same page in `evidence`; do not infer it from report metadata or
     DocMap. Omit unsupported bindings.

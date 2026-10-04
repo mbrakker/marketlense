@@ -91,6 +91,61 @@ def test_summary_constraint_replaces_weakly_bound_summary_copy_with_direct_claim
     ]
 
 
+def test_summary_fallback_keeps_descriptive_doc_map_claims() -> None:
+    direct_claim = "The report identifies three retention measures."
+    descriptive_claim = "The section distinguishes acquisition from retention."
+    strong_doc_map_claim = "The forecast guarantees $375B in growth."
+    summary = {
+        "tldr": "Unsupported fallback headline.",
+        "card_tldr_compact": direct_claim,
+        "executive_summary": "Unsupported executive summary.",
+        "claim_evidence_map": [
+            {
+                "claim": direct_claim,
+                "evidence_id": "finding-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "finding-1",
+                        "source_pack": "findings",
+                        "text": direct_claim,
+                    }
+                ],
+            },
+            {
+                "claim": descriptive_claim,
+                "evidence_id": "section-1",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "section-1",
+                        "source_pack": "doc_map",
+                        "text": descriptive_claim,
+                    }
+                ],
+            },
+            {
+                "claim": strong_doc_map_claim,
+                "evidence_id": "section-2",
+                "evidence_spans": [
+                    {
+                        "evidence_id": "section-2",
+                        "source_pack": "doc_map",
+                        "text": strong_doc_map_claim,
+                    }
+                ],
+            },
+        ],
+    }
+
+    changed = constrain_summary_to_source_backed_claims(summary)
+
+    assert changed is True
+    assert summary["tldr"] == direct_claim
+    assert [claim["claim"] for claim in summary["claim_evidence_map"]] == [
+        direct_claim,
+        descriptive_claim,
+    ]
+
+
 def test_summary_constraint_fails_before_mutation_without_short_direct_sentence() -> (
     None
 ):

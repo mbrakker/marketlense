@@ -9,7 +9,12 @@ from src.contracts.soft_copy_claim_provenance import (
     soft_copy_claim_provenance_to_payload,
 )
 from src.contracts.validation import ValidationRequest
-from src.generators.validation.grounding import grounding_payload, run_grounding_check
+from src.generators.validation.grounding import (
+    grounding_issue_severity,
+    grounding_payload,
+    run_grounding_check,
+)
+from src.generators.validation.shared import section_policy
 from tests._test_validation_generator._shared import (
     FakeOpenAI,
     FakePromptClient,
@@ -104,6 +109,42 @@ def test_grounding_payload_retains_final_insight_implications() -> None:
         "linkedin_post",
         "metadata:title",
     } <= audited_ids
+    public_items = {
+        item["section"]: item
+        for item in payload["public_factual_items"]
+        if item["section"].startswith("insights:")
+    }
+    assert public_items["insights:insight-1.so_what"]["declared_classification"] == (
+        "analyst_interpretation"
+    )
+    assert public_items["insights:insight-1.now_what"]["declared_classification"] == (
+        "prescriptive_recommendation"
+    )
+
+
+def test_noncontradictory_insight_editorial_copy_is_not_a_grounding_blocker() -> None:
+    section = "insights:insight-1.so_what"
+    policy = section_policy(section)
+
+    assert policy == "soft"
+    assert (
+        grounding_issue_severity(
+            section_policy_value=policy,
+            classification="analyst_interpretation",
+            violation_type="not_established",
+            text="This could change how teams frame wallet coverage.",
+        )
+        == "info"
+    )
+    assert (
+        grounding_issue_severity(
+            section_policy_value=policy,
+            classification="analyst_interpretation",
+            violation_type="contradicted",
+            text="Wallet adoption declined.",
+        )
+        == "error"
+    )
 
 
 def test_grounding_payload_uses_retained_soft_claim_ids_for_exact_sentences() -> None:
@@ -234,36 +275,41 @@ def test_grounding_accepts_evidence_traceable_editorial_interpretation(
 
 
 @pytest.mark.parametrize(
-    ("section", "classification", "violation_type", "text"),
+    ("section", "classification", "violation_type", "text", "expected_severity"),
     (
         (
             "expert_comment",
             "analyst_interpretation",
             "unsupported_causal_outcome",
             "Wallet coverage will cause conversion to rise.",
+            "info",
         ),
         (
             "linkedin_post",
             "prescriptive_recommendation",
             "unsupported_operational_or_financial_benefit",
             "Prioritising wallets will reduce CAC by 20%.",
+            "info",
         ),
         (
             "insights_final[0].so_what",
             "analyst_interpretation",
             "unsupported_certainty",
             "Wallet coverage will certainly determine conversion.",
+            "info",
         ),
         (
             "insights_final[0].now_what",
             "prescriptive_recommendation",
             "report_directive_misattribution",
             "The report recommends prioritising wallet coverage.",
+            "error",
         ),
     ),
 )
-def test_grounding_blocks_unsupported_editorial_outcomes(
-    tmp_path, section: str, classification: str, violation_type: str, text: str
+def test_grounding_advises_on_noncontradictory_editorial_outcomes(
+    tmp_path, section: str, classification: str, violation_type: str, text: str,
+    expected_severity: str,
 ) -> None:
     issues = _issues(
         tmp_path,
@@ -278,7 +324,7 @@ def test_grounding_blocks_unsupported_editorial_outcomes(
     )
 
     assert len(issues) == 1
-    assert issues[0].severity == "error"
+    assert issues[0].severity == expected_severity
     assert f"[{classification}|{violation_type}]" in issues[0].message
 
 

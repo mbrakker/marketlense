@@ -559,7 +559,7 @@ def test_generate_artifacts_prunes_unbound_summary_claims(tmp_path):
     )
 
 
-def test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration(
+def test_generate_artifacts_recovers_quotes_from_retained_candidates_after_abstention(
     tmp_path,
 ):
     responses = {
@@ -593,13 +593,23 @@ def test_generate_artifacts_abstains_low_confidence_families_and_marks_regenerat
     assert payload["summary"]["executive_summary"] == ""
     assert len(payload["insights_candidates"]) == 5
     assert len(payload["insights_final"]) == 5
-    assert payload["quotes_final"] == []
+    assert len(payload["quotes_final"]) == 1
+    assert payload["quotes_final"][0]["text"] == "We are expanding rapidly"
+    assert payload["quotes_final"][0]["evidence_id"] == "q1"
+    assert payload["quotes_final"][0]["evidence_spans"] == [
+        {
+            "evidence_id": "q1",
+            "source_pack": "quote_candidates",
+            "page": 3,
+            "text": "We are expanding rapidly",
+        }
+    ]
     assert payload["family_status"]["summary"]["status"] == "abstained"
     assert payload["family_status"]["summary"]["policy_action"] == "regenerate"
     assert payload["family_status"]["insights_bundle"]["status"] == "generated"
     assert payload["family_status"]["insights_bundle"]["policy_action"] == "keep"
-    assert payload["family_status"]["quotes"]["status"] == "abstained"
-    assert payload["family_status"]["quotes"]["policy_action"] == "regenerate"
+    assert payload["family_status"]["quotes"]["status"] == "generated"
+    assert payload["family_status"]["quotes"]["policy_action"] == "keep"
     assert payload["family_status"]["expert_comment"]["status"] == "generated"
     assert payload["family_status"]["expert_comment"]["policy_action"] == "keep"
     assert payload["family_status"]["linkedin_post"]["status"] == "generated"
@@ -924,7 +934,7 @@ __all__ = [
     "test_cover_semantics_normalizes_provider_enum_formatting",
     "test_generate_artifacts_validates_schema_and_evidence_ids",
     "test_generate_artifacts_prunes_unbound_summary_claims",
-    "test_generate_artifacts_abstains_low_confidence_families_and_marks_regeneration",
+    "test_generate_artifacts_recovers_quotes_from_retained_candidates_after_abstention",
     "test_summary_family_status_accepts_claim_evidence_ids_without_spans",
     "test_quote_family_abstains_doc_map_only_nonverbatim_quotes",
     "test_normalize_artifact_quotes_preserves_paraphrase_marker",

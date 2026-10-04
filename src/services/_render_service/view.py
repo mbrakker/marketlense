@@ -300,6 +300,7 @@ def _build_render_view(
         topics=topics,
         topic_briefs=topic_briefs,
         tags=snapshot_tags,
+        insights=insights,
         prefer_key_points=bool(topics_covered),
     )
     core_signal = _build_core_signal(

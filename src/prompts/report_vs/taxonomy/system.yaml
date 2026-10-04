@@ -8,6 +8,7 @@ text: |
   - primary_tags is a list of the report's most central subject tags (2-5 items).
   - secondary_tags is a list of material but non-dominant subject tags (0-3 items).
   - taxonomy is the combined de-duplicated union of primary_tags and secondary_tags (3-8 items total when possible).
+  - Cover distinct central domains and facets across major sections. Prefer specific tags; include channel or technology only when central, and avoid redundant umbrellas.
   - when possible, choose tags from the provided allowed list and use exact strings.
   - prefer tags that describe the report's primary subject, industry, domain, or decision lens.
   - include platform, channel, or tactic tags only when they are central to the whole report, not just mentioned in examples.

@@ -866,8 +866,8 @@ def _coerce_public_chart_insight_cards(
 
 def _coerce_insights(
     raw_insights: object, *, report_title: str
-) -> list[dict[str, str]]:
-    insights: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    insights: list[dict[str, Any]] = []
     for raw_item in _coerce_list(raw_insights):
         item = _coerce_dict(raw_item)
         text = (
@@ -877,6 +877,17 @@ def _coerce_insights(
         )
         if not text:
             continue
+        spans = _coerce_evidence_spans(item.get("evidence_spans"))
+        section_ids = list(
+            dict.fromkeys(
+                value
+                for value in (
+                    _s(item.get("section_id")),
+                    *[_s(span.get("section_id")) for span in spans],
+                )
+                if value
+            )
+        )
         insights.append(
             {
                 "id": _s(item.get("id")),
@@ -884,6 +895,9 @@ def _coerce_insights(
                 "so_what": _sanitize_public_prose(item.get("so_what")),
                 "now_what": _sanitize_public_prose(item.get("now_what")),
                 "evidence_id": _s(item.get("evidence_id")),
+                "section_ids": section_ids,
+                "coverage_role": _s(item.get("coverage_role")),
+                "report_type_lens": _s(item.get("report_type_lens")),
                 "citation_line": _build_citation_micro_line(
                     report_title=report_title,
                     evidence_id=_s(item.get("evidence_id")),
@@ -1083,6 +1097,7 @@ def _coerce_topic_briefs(artifacts: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         briefs.append(
             {
+                "section_id": _s(item.get("section_id") or item.get("id")),
                 "title": title,
                 "summary": _s(item.get("summary")),
                 "key_points": [
@@ -1146,14 +1161,73 @@ def _build_signal_cards(
     topics: list[str],
     topic_briefs: list[dict[str, Any]],
     tags: list[Any],
+    insights: list[dict[str, Any]] | None = None,
     prefer_key_points: bool = False,
-) -> list[dict[str, str]]:
-    cards: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
     briefs_by_title = {
         _s(item.get("title")).casefold(): item
         for item in topic_briefs
         if _s(item.get("title"))
     }
+    briefs_by_section = {
+        _s(item.get("section_id")).casefold(): item
+        for item in topic_briefs
+        if _s(item.get("section_id"))
+    }
+    has_structured_insights = any(
+        _s(item.get("evidence_id"))
+        or _s(item.get("so_what"))
+        or _s(item.get("now_what"))
+        or _coerce_list(item.get("section_ids"))
+        for item in insights or []
+    )
+    if insights and has_structured_insights:
+        role_labels = {
+            "market_context": "Market context",
+            "behavior_shift": "Behavior shift",
+            "strategic_risk": "Strategic risk",
+            "operating_implication": "Operating implication",
+            "investment_signal": "Investment signal",
+            "proof_point": "Proof point",
+            "counter_signal": "Counter-signal",
+        }
+        cards: list[dict[str, Any]] = []
+        for insight in insights:
+            signal = _sanitize_public_prose(insight.get("text"))
+            if not signal:
+                continue
+            brief = next(
+                (
+                    briefs_by_section.get(_s(section_id).casefold())
+                    for section_id in _coerce_list(insight.get("section_ids"))
+                    if briefs_by_section.get(_s(section_id).casefold())
+                ),
+                {},
+            )
+            role = _s(insight.get("coverage_role"))
+            title = _pick_first_text(
+                brief.get("title"),
+                role_labels.get(role, ""),
+                _core_signal_heading(signal),
+                signal,
+            )
+            cards.append(
+                {
+                    "title": title,
+                    "signal": signal,
+                    "so_what": _sanitize_public_prose(insight.get("so_what")),
+                    "now_what": _sanitize_public_prose(insight.get("now_what")),
+                    "source_label": _sanitize_public_prose(
+                        insight.get("citation_line")
+                    ),
+                }
+            )
+            if len(cards) >= 6:
+                break
+        if cards:
+            return cards
+
+    cards = []
     source_labels = topics or [_s(tag) for tag in tags if _s(tag)]
     for label in source_labels[:6]:
         brief = briefs_by_title.get(_s(label).casefold(), {})

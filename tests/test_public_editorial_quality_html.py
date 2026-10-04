@@ -252,12 +252,6 @@ def test_public_html_source_section_requires_a_public_original_source_link() -> 
                 }
             ),
         ),
-        (
-            "public_editorial_quality.nonspecific_decision_implication",
-            lambda payload: payload["insights_final"][0].update(
-                {"now_what": "Review the finding."}
-            ),
-        ),
     ],
 )
 def test_public_editorial_blockers_detect_mutations_of_retained_artifact(
@@ -272,6 +266,24 @@ def test_public_editorial_blockers_detect_mutations_of_retained_artifact(
 
     assert report.status == "fail"
     assert rule_id in _rule_ids(report)
+
+
+def test_nonspecific_editorial_action_is_advisory_not_a_release_blocker() -> None:
+    artifacts = deepcopy(_retained_artifacts())
+    artifacts["insights_final"][0]["now_what"] = "Review the finding."
+
+    report = evaluate_public_editorial_quality(
+        report_id="retained-report", artifacts=artifacts
+    )
+
+    issue = next(
+        item
+        for item in report.issues
+        if item.rule_id == "public_editorial_quality.nonspecific_decision_implication"
+    )
+    assert issue.severity == "warning"
+    assert not issue.hard_fail_class
+    assert report.status == "pass"
 
 
 def test_public_editorial_html_missing_asset_is_a_blocker(tmp_path: Path) -> None:

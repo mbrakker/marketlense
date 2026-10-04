@@ -44,15 +44,18 @@ identity. Report-specific interpretation belongs exclusively to the generated
 Expert View body; an unsupported synthesis renders the existing explicit
 abstention notice instead of generic theme claims.
 
-Primary summary/TLDR, Expert View, and LinkedIn prompts preserve descriptive
-source evidence as descriptive factual prose. They add interpretation only when
-it follows without a new factual premise. Any recommendation is explicitly
-MarketLense-authored, conditional, and traceable to supplied evidence; it is
-never presented as a source claim. These prompts do not infer predictions,
-causality, business impact, budget movement, performance effects, operational
-benefits, or mandatory actions. Where evidence cannot support a distinct
-implication or action, the public copy remains descriptive or omits it; the
-existing validators continue to enforce grounding independently.
+Public facts remain bound to evidence, including its scope, modality, numbers,
+and attribution. Editorial fields such as `so_what`, `now_what`, and Expert
+View may explain why a supported finding matters or offer conditional
+MarketLense advice, even when the report is silent on that interpretation or
+recommendation. Keep this copy non-contradictory, add no unsupported factual
+premise or number, promise no unestablished outcome, and never attribute
+MarketLense advice to the source. Grounding validation treats these fields as
+interpretation or recommendation rather than source facts; source silence alone
+does not block them. Contradictions, unsupported facts or numbers, and false
+attribution remain blockers. Weak or vague implications can be reported as
+editorial-quality advice, and copy may stay descriptive when no useful
+implication is available.
 
 Public factual wording keeps a dataset's subject population separate from its
 topic and data owner. A population is named only when retained evidence
@@ -279,8 +282,10 @@ editorial labels are deterministically removed at render time to preserve direct
 prose, and literal truncation is omitted. The exact rendered HTML then blocks
 any remaining label or truncation marker. This applies to summaries, expert
 views, and LinkedIn posts. Source links are emitted only for public, credential-free
-HTTP(S) URLs. When no verified publisher link is available, the report keeps a
-plain disclosure and never exposes a local cache or operational path.
+HTTP(S) URLs. When both a retained source preview and verified publisher link
+are available, the preview links to that source. When no verified publisher
+link is available, the report keeps a plain disclosure and never exposes a
+local cache or operational path.
 
 Comparative claims preserve source-proven temporal context from findings through
 candidate and final insights, summaries, Expert View, LinkedIn, and the rendered
@@ -309,6 +314,11 @@ sentence is available, the signal panel is omitted. It never uses a clipped
 fragment, literal ellipsis, pending-data fallback, or `Source-backed market
 signal` as reader-facing copy.
 
-Context-first category assignment uses category definitions, inclusion conditions, and exclusion conditions to assign public Topics. A non-rejected primary or secondary candidate that is semantically ambiguous is repaired once or fails closed; it cannot silently leave a report without its identified category. Taxonomy tags remain supporting metadata and prompt vocabulary; they are not a competing weighted category scorer.
+The Signals cards use retained selected insights when their structured finding
+and implication fields are available. They show each insight's signal, `so_what`,
+and `now_what` together; DocMap topic briefs remain a fallback when structured
+insights are unavailable.
+
+Context-first category assignment uses category definitions, inclusion conditions, and exclusion conditions to assign public Topics. A non-rejected primary or secondary candidate that is semantically ambiguous is repaired once or fails closed; it cannot silently leave a report without its identified category. Taxonomy tags remain supporting metadata and prompt vocabulary, render visibly on reports when present, and do not compete with the weighted category scorer.
 
 Cross-report output is published as Briefings. It uses persisted report projections and evidence rather than generating intelligence inside WordPress. See [cross-report analysis](../workflows/cross-report-analysis.md) and the [WordPress front-end contract](../../README_WORDPRESS.md).

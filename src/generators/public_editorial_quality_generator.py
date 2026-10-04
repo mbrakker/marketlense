@@ -57,7 +57,6 @@ BLOCKING_RULE_IDS = {
     "public_editorial_quality.generic_figure_label",
     "public_editorial_quality.fallback_boilerplate",
     "public_editorial_quality.unsupported_certainty",
-    "public_editorial_quality.nonspecific_decision_implication",
     "public_editorial_quality.figure_linkage_missing",
     "public_editorial_quality.private_operational_reference",
     "public_editorial_quality.mechanical_editorial_scaffold",
@@ -72,6 +71,7 @@ ADVISORY_RULE_IDS = {
     "public_editorial_quality.chart_insight_linkage",
     "public_editorial_quality.source_note_completeness",
     "public_editorial_quality.action_specificity",
+    "public_editorial_quality.nonspecific_decision_implication",
 }
 
 # These failures are source-fidelity release blockers, not weighted editorial

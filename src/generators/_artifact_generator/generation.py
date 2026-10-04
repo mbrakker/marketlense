@@ -46,6 +46,7 @@ from src.generators.artifact_normalization import (
     discard_location_only_quotes,
     fallback_artifact_insights_from_evidence,
     fallback_artifact_insights_from_findings,
+    fallback_artifact_quotes_from_candidates,
     normalize_artifact_editorial_plan,
     normalize_artifact_evidence_ids,
     normalize_artifact_insights,
@@ -967,6 +968,20 @@ def generate_artifacts(
     quotes_final = normalize_artifact_quotes(
         stage_one_results.get("quotes", {}).get("quotes_final")
     )
+    if not quotes_final:
+        quotes_final = fallback_artifact_quotes_from_candidates(
+            safe_evidence.get("quote_candidates")
+        )
+        if quotes_final:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_quotes_completed_from_retained_candidates",
+                    module=logger.name,
+                    fields={"quote_count": len(quotes_final)},
+                )
+            )
 
     insights_final_vars = {
         **base_vars,

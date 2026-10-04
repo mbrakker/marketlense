@@ -4,6 +4,8 @@ from ._shared import *
 
 
 def test_render_includes_artifact_sections(tmp_path):
+    preview_path = tmp_path / "source-preview.png"
+    Image.new("RGB", (3, 3), "white").save(preview_path)
     data = {
         "title": "Sample Report",
         "tldr": "Original TLDR",
@@ -11,12 +13,21 @@ def test_render_includes_artifact_sections(tmp_path):
         "quote": {"text": "Legacy quote", "author": "Author"},
         "commentary": "Legacy commentary",
         "publisher": "Publisher",
+        "source": "https://publisher.example/reports/sample",
         "taxonomy": ["tag"],
         "region": "US",
         "time_period": "2024",
         "contents_page_number": 0,
         "artifacts": {
-            "toc_topics": ["Topic A", "Topic B"],
+            "toc_topics": ["Value strategy", "Topic B"],
+            "toc_topics_expanded": [
+                {
+                    "section_id": "section-value",
+                    "topic": "Value strategy",
+                    "summary": "Generic chapter overview.",
+                    "key_points": ["Generic chapter point."],
+                }
+            ],
             "summary": {
                 "tldr": "Artifact TLDR",
                 "executive_summary": "Artifact executive summary",
@@ -40,9 +51,20 @@ def test_render_includes_artifact_sections(tmp_path):
                 {
                     "id": "i1",
                     "text": "Artifact insight 1",
+                    "so_what": (
+                        "The evidence makes price positioning a strategic choice."
+                    ),
+                    "now_what": (
+                        "Review how value messages differ across purchase contexts."
+                    ),
                     "evidence_id": "f1",
                     "evidence_spans": [
-                        {"evidence_id": "f1", "source_pack": "findings", "page": 4}
+                        {
+                            "evidence_id": "f1",
+                            "source_pack": "findings",
+                            "page": 4,
+                            "section_id": "section-value",
+                        }
                     ],
                     "metric": {"value": "10", "unit": "%", "timeframe": "2024"},
                 },
@@ -82,12 +104,17 @@ def test_render_includes_artifact_sections(tmp_path):
         doc_name="sample.pdf",
         file_id="file_1",
         out_dir=str(tmp_path),
-        preview_png=None,
+        preview_png=str(preview_path),
     )
     resp = render_report(req, _ctx())
     html = Path(resp.html_path).read_text(encoding="utf-8")
 
     assert "Signals to watch after reading this report" in html
+    signals_html = html.split('id="signals"', 1)[1].split('id="evidence"', 1)[0]
+    assert "Value Strategy" in signals_html
+    assert "Artifact insight 1" in signals_html
+    assert "The evidence makes price positioning a strategic choice." in signals_html
+    assert "Review how value messages differ across purchase contexts." in signals_html
     assert "Artifact TLDR" in html
     assert "Artifact executive summary" in html
     assert "What leaders should take from the report" in html
@@ -104,6 +131,16 @@ def test_render_includes_artifact_sections(tmp_path):
     assert 'class="claim-strip"' in html
     assert "Sample Report, page 4" in html
     assert "Sample Report, page 2 · Report" in html
+    taxonomy_html = html.split('id="taxonomy"', 1)[1].split('id="source"', 1)[0]
+    assert re.search(
+        r"<details[^>]*open[^>]*>\s*<summary>Tags</summary>", taxonomy_html
+    )
+    source_html = html.split('id="source"', 1)[1]
+    assert 'href="https://publisher.example/reports/sample"' in source_html
+    assert re.search(
+        r'<a[^>]*href="https://publisher\.example/reports/sample"[^>]*>\s*<img',
+        source_html,
+    )
     assert "f1 · report page" not in html
     assert "quote_02" not in html
     assert "quote_02 · report page" not in html

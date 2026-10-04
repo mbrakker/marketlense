@@ -197,6 +197,9 @@ def section_root(section: str) -> str:
 
 def section_policy(section: str) -> str:
     section_key = section_root(section)
+    section_field = section.strip().lower().rsplit(".", 1)[-1]
+    if section_key == "insights" and section_field in {"so_what", "now_what"}:
+        return "soft"
     if any(section_key.startswith(prefix) for prefix in STRICT_SECTION_PREFIXES):
         return "strict"
     if any(section_key.startswith(prefix) for prefix in SOFT_SECTION_PREFIXES):

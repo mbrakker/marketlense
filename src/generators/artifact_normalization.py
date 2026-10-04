@@ -671,11 +671,11 @@ def carry_soft_copy_binding_semantics_to_final_sentences(
 def source_backed_summary_claim_bindings(
     summary: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Derive fallback-summary bindings solely from retained direct evidence."""
+    """Derive fallback-summary bindings from direct or descriptive evidence."""
 
     bindings: List[Dict[str, Any]] = []
     for claim in summary.get("claim_evidence_map", []):
-        if not isinstance(claim, dict) or not _claim_has_direct_evidence(claim):
+        if not isinstance(claim, dict) or not _claim_has_safe_summary_evidence(claim):
             continue
         claim_text = _s(claim.get("claim")).strip()
         evidence_ids = list(
@@ -686,7 +686,8 @@ def source_backed_summary_claim_bindings(
                     *[
                         _s(span.get("evidence_id")).strip()
                         for span in claim.get("evidence_spans") or []
-                        if isinstance(span, dict) and _span_is_direct(span)
+                        if isinstance(span, dict)
+                        and _span_is_safe_summary_source(span)
                     ],
                 ]
                 if evidence_id
@@ -748,18 +749,31 @@ def constrain_summary_to_source_backed_claims(
     if not weak_strong_claims and not require_direct_fallback:
         return False
     direct_claims = [
-        claim for claim in valid_claims if _claim_has_direct_evidence(claim)
+        claim
+        for claim in valid_claims
+        if _claim_has_direct_evidence(claim) and _s(claim.get("claim")).strip()
     ]
     if not direct_claims:
         return False
-    public_claims = [_s(claim.get("claim")).strip() for claim in direct_claims]
+    descriptive_claims = [
+        claim
+        for claim in valid_claims
+        if not _claim_has_direct_evidence(claim)
+        and _claim_has_descriptive_doc_map_evidence(claim)
+    ]
+    fallback_claims = [*direct_claims, *descriptive_claims]
+    fallback_claims = [
+        claim for claim in fallback_claims if _s(claim.get("claim")).strip()
+    ]
+    direct_public_claims = [_s(claim.get("claim")).strip() for claim in direct_claims]
+    public_claims = [_s(claim.get("claim")).strip() for claim in fallback_claims]
     public_claims = [claim for claim in public_claims if claim]
     if not public_claims:
         return False
     compact_claim = next(
         (
             claim
-            for claim in public_claims
+            for claim in direct_public_claims
             if _is_complete_short_sentence(claim, limit=18)
         ),
         None,
@@ -773,10 +787,10 @@ def constrain_summary_to_source_backed_claims(
             retryable=False,
             context={
                 "field": "summary.card_tldr_compact",
-                "word_count": len(" ".join(public_claims[0].split()).split()),
+                "word_count": len(" ".join(direct_public_claims[0].split()).split()),
             },
         )
-    summary["claim_evidence_map"] = direct_claims
+    summary["claim_evidence_map"] = fallback_claims
     summary["tldr"] = public_claims[0]
     summary["card_tldr_compact"] = compact_claim
     summary["executive_summary"] = " ".join(public_claims[:3])
@@ -824,6 +838,36 @@ def _claim_has_direct_evidence(claim: Dict[str, Any]) -> bool:
     )
 
 
+def _claim_has_descriptive_doc_map_evidence(claim: Dict[str, Any]) -> bool:
+    claim_text = _s(claim.get("claim")).strip()
+    spans = [
+        span for span in claim.get("evidence_spans") or [] if isinstance(span, dict)
+    ]
+    return bool(
+        claim_text
+        and not _strong_claim_text(claim_text)
+        and spans
+        and any(
+            _s(span.get("source_pack")).strip() == "doc_map"
+            and _s(span.get("text")).strip()
+            for span in spans
+        )
+    )
+
+
+def _claim_has_safe_summary_evidence(claim: Dict[str, Any]) -> bool:
+    return _claim_has_direct_evidence(claim) or _claim_has_descriptive_doc_map_evidence(
+        claim
+    )
+
+
+def _span_is_safe_summary_source(span: Dict[str, Any]) -> bool:
+    return _span_is_direct(span) or (
+        _s(span.get("source_pack")).strip() == "doc_map"
+        and bool(_s(span.get("text")).strip())
+    )
+
+
 def _span_is_direct(span: Dict[str, Any]) -> bool:
     return _s(span.get("source_pack")).strip() in {
         "findings",
@@ -834,7 +878,7 @@ def _span_is_direct(span: Dict[str, Any]) -> bool:
 def _strong_claim_text(text: str) -> bool:
     return bool(
         re.search(
-            r"(?:\d+(?:[\.,]\d+)?\s*(?:%|percent|percentage|bps|points|x|times|million|billion|trillion|k|m|bn)\b|[$€£]\s*\d|\b(?:proves?|guarantees?|must|will|always|never|only|highest|lowest|largest|smallest|dominates?|requires?)\b)",
+            r"(?:\d+(?:[\.,]\d+)?\s*(?:%|percent|percentage|bps|points|x|times|million|billion|trillion|k|m|bn)\b|[$€£]\s*\d|\b(?:proves?|guarantees?|must|will|always|never|only|highest|lowest|largest|smallest|dominates?|requires?|increas(?:e|es|ed|ing)|rose|grew|declin(?:e|es|ed|ing)|fell|drop(?:s|ped|ping)?|reduc(?:e|es|ed|ing)|boost(?:s|ed|ing)?|dr(?:ive|ives|iven|iving)|caus(?:e|es|ed|ing)|result(?:s|ed|ing)?|lead(?:s|ing)?\s+to|improv(?:e|es|ed|ing)|worsen(?:s|ed|ing)|predict(?:s|ed|ing)|forecast(?:s|ed|ing))\b)",
             text,
             re.IGNORECASE,
         )
@@ -2136,6 +2180,40 @@ def artifact_quote_candidates(evidence_packs: Dict[str, Any]) -> List[Any]:
     elif isinstance(quote_pack, list):
         quote_candidates = quote_pack
     return quote_candidates
+
+
+def fallback_artifact_quotes_from_candidates(
+    quote_candidates_pack: Any, *, limit: int = 3
+) -> List[Dict[str, Any]]:
+    """Reuse retained verbatim quote candidates when quote selection abstains."""
+    if limit <= 0:
+        return []
+    candidates = (
+        quote_candidates_pack.get("quote_candidates")
+        if isinstance(quote_candidates_pack, dict)
+        else quote_candidates_pack if isinstance(quote_candidates_pack, list) else []
+    )
+    if not isinstance(candidates, list):
+        return []
+    fallback: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if len(fallback) >= limit or not isinstance(candidate, dict):
+            continue
+        evidence_id = _s(candidate.get("id") or candidate.get("evidence_id")).strip()
+        text = _s(candidate.get("text")).strip()
+        if not evidence_id or not text:
+            continue
+        page = candidate.get("page")
+        fallback.append(
+            {
+                "text": text,
+                "speaker": "Unknown",
+                "citation": _s(candidate.get("source")).strip(),
+                "page": page if isinstance(page, int) and page > 0 else 0,
+                "evidence_id": evidence_id,
+            }
+        )
+    return normalize_artifact_quotes(fallback)
 
 
 def _normalize_claims(items: Any) -> List[Dict[str, Any]]:

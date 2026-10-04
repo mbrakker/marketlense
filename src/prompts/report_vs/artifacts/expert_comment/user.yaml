@@ -26,16 +26,21 @@ text: |
   - No emojis, no hashtags
 
   Content constraints (strict):
-  - Every statement must be directly supported by the supplied artifacts
+  - Facts must be supported. Interpretation may explain why a linked finding
+    matters even when the source does not; advice may be conditional
+    MarketLense guidance tied to that finding.
   - Develop the editorial plan's report thesis and priority themes; do not create a competing thematic frame.
-  - When source evidence is descriptive, factual statements must remain descriptive. Add analyst interpretation only when it follows without introducing a new factual premise. Recommendations must be explicitly MarketLense-authored, conditional and traceable to supplied evidence. Do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions. If evidence does not support a distinct implication or action, remain descriptive or omit it.
+  - Keep facts descriptive when evidence is descriptive. Make interpretation
+    non-contradictory; make advice conditional and MarketLense-authored. Add no
+    factual premise, outcome promise, or false source attribution.
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
   - A non-empty Expert View must connect at least two distinct supported findings or themes. Do not write a non-empty view that merely restates one finding, one theme, or a sentence from an executive summary.
   - Treat `so_what` fields as interpretation cues, not as independent factual evidence. Do not turn them into unsupported causal claims.
   - Treat limitations and counter-signals as scope constraints or tensions; do not use them to infer outcomes beyond what the evidence states.
   - Do not assert causal operational outcomes (for example, fewer vendors, lower costs, faster delivery, or improved performance) unless the supplied artifacts explicitly state that outcome.
   - Do not restate supplied evidence verbatim; synthesize across it
-  - If an implication is not clearly supported, omit it
+  - Keep advice specific and conditional. Omit only implications that
+    contradict the source or lack a meaningful link to a supported finding.
   - Do not expose evidence IDs, evidence spans, report pages, pack names, JSON fields, or internal document structure in `expert_comment`.
   - `claim_provenance` is private retained metadata. Include one object for every material sentence or claim in `expert_comment`, quoting the covered text as its `claim` (one object per sentence or consecutive sentence group; minor punctuation differences are resolved mechanically), a `classification` of `factual`, `interpretive`, or `recommendation`, and the exact supporting `evidence_ids` from the supplied context. A factual claim must have at least one evidence ID. Do not put these identifiers in the public prose.
   - If the available evidence does not support a distinct synthesis across multiple findings, return exactly {"expert_comment": ""}.

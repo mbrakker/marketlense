@@ -380,7 +380,14 @@
           {% for card in view.signal_cards %}
           <article class="tag-card">
             <h3>{{ macros.format_chip_label(card.title, tag_acronym_map) }}</h3>
-            <p>{{ card.summary }}</p>
+            {% if card.source_label %}<p class="card-meta"><span class="badge">{{ card.source_label }}</span></p>{% endif %}
+            {% if card.signal %}<p>{{ card.signal }}</p>{% elif card.summary %}<p>{{ card.summary }}</p>{% endif %}
+            {% if card.so_what or card.now_what %}
+            <dl class="insight-implications">
+              {% if card.so_what %}<div><dt>So what</dt><dd>{{ card.so_what }}</dd></div>{% endif %}
+              {% if card.now_what %}<div><dt>Now what</dt><dd>{{ card.now_what }}</dd></div>{% endif %}
+            </dl>
+            {% endif %}
           </article>
           {% endfor %}
         </div>
@@ -474,7 +481,7 @@
           </details>
           {% endif %}
           {% if view.snapshot.tags %}
-          <details>
+          <details open>
             <summary>Tags</summary>
             <div class="topic-body">{{ macros.chip_list(view.snapshot.tags, tag_acronym_map) }}</div>
           </details>
@@ -504,7 +511,9 @@
         <div class="source-layout">
           {% if view.hero_image %}
           <figure class="source-frame">
+            {% if view.source_url %}<a href="{{ view.source_url }}" rel="noopener" target="_blank" aria-label="Open the original source report: {{ view.report_title }}">{% endif %}
             {{ macros.responsive_image(view.hero_image, loading="lazy") }}
+            {% if view.source_url %}</a>{% endif %}
             <figcaption>{{ view.hero_image.caption }}</figcaption>
           </figure>
           {% endif %}

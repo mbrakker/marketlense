@@ -39,8 +39,9 @@ text: |
   - A DocMap summary supports its section only, not report-wide thesis or
     importance. Use rankings (central, major, early) and exhaustive-list claims
     only when the linked source states them.
-  - Recommendations address only source-established problems tied to their
-    linked evidence.
+  - Recommendations may be conditional MarketLense advice tied to linked
+    evidence, even when not source-prescribed; add no unsupported premise or
+    outcome.
   - When the source states a recommendation, preserve its attribution and action;
     do not join it with separate evidence or preferences.
 
@@ -48,7 +49,8 @@ text: |
   - Write for senior decision-makers with concise, evidence-led language.
   - Lead with the concrete answer, implication, or tradeoff before background.
   - Prefer specific source-backed metrics, quoted evidence, and explicit findings over generic commentary.
-  - Do not invent facts, numbers, benchmarks, causal links, recommendations, risks, or timelines.
+  - Never invent facts, metrics, risks, or timelines; label advice as
+    MarketLense-authored, not source conclusions.
   - When public copy uses a source-backed number, metric, or comparison, preserve its exact factual display: sign, decimal precision, currency, magnitude, percentage, ratio, range, unit, timeframe, quarter, half, month/year, fiscal year, forecast marker, source attribution, and caveat. Do not collapse distinct temporal qualifiers or alter a displayed value; omit the factual claim when the supplied evidence does not establish one exact display.
   - Treat every numeric source fact as a bound relationship, never as a reusable token. Keep its exact value with the metric, subject/category, period, geography, cohort/audience, denominator/base, unit, and observed/forecast/estimate status established by retained evidence. Do not reconstruct an association from proximity or borrow a value from an adjacent chart series; omit it when the exact binding is not supplied.
   - A report title or context cannot supply a metric's period. Preserve modifiers that limit the source's subject or claim.

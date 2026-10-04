@@ -694,7 +694,7 @@ def run_grounding_check(
                     continue
                 reason = s(entry.get("reason") or "Unsupported sentence")
                 section_key = section_root(section)
-                current_policy = section_policy(section_key)
+                current_policy = section_policy(section)
                 classification = normalize_claim_classification(
                     s(entry.get("classification"))
                 )
@@ -1306,12 +1306,18 @@ def _public_factual_items(
         insight_id = insight_entity_id(insight)
         evidence_id = s(insight.get("evidence_id"))
         for field_name in ("text", "so_what", "now_what"):
+            declared_classification = {
+                "text": "factual_claim",
+                "so_what": "analyst_interpretation",
+                "now_what": "prescriptive_recommendation",
+            }[field_name]
             add(
                 f"insight:{insight_id}:{field_name}",
                 f"insights:{insight_id}.{field_name}",
                 insight.get(field_name),
                 [evidence_id],
                 insight.get("evidence"),
+                declared_classification,
             )
     for index, figure in enumerate(artifacts.get("key_figures", []), start=1):
         if not isinstance(figure, dict):
@@ -1546,8 +1552,38 @@ def grounding_issue_severity(
     text: str,
 ) -> str:
     if violation_type in GROUNDING_HARD_FAILURES:
+        editorial_classification = classification in {
+            "analyst_interpretation",
+            "prescriptive_recommendation",
+        }
+        protected_integrity_failures = {
+            "hallucinated_entity_or_event",
+            "hallucinated_evidence_id",
+            "contradicted",
+            "invalid_comparison",
+            "misattributed_quote",
+            "missing_material_evidence",
+            "numerically_inconsistent",
+            "report_directive_misattribution",
+            "unsupported_factual_claim",
+            "unsupported_number",
+        }
+        if (
+            editorial_classification
+            and section_policy_value in {"soft", "mixed"}
+            and violation_type not in protected_integrity_failures
+        ):
+            return "info"
         return "error"
     if violation_type == "not_established":
+        if (
+            classification in {
+                "analyst_interpretation",
+                "prescriptive_recommendation",
+            }
+            and section_policy_value in {"soft", "mixed"}
+        ):
+            return "info"
         return "warning"
     if violation_type == "evidence_retrieval_failure":
         return "error"

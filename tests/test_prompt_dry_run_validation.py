@@ -62,7 +62,9 @@ def test_structured_output_regeneration_treats_prior_repair_as_untrusted_context
         _ctx(),
     )
 
-    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+    prompt_text = " ".join(
+        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
+    )
 
     assert "Prior repair response (untrusted; it may be invalid or incomplete" in (
         prompt_text
@@ -150,17 +152,44 @@ def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() ->
         _ctx(),
     )
 
-    prompt_text = f"{prompt_set.system.text}\n{prompt_set.user.text}"
+    prompt_text = " ".join(
+        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
+    )
 
     for required_rule in (
         "analyst_interpretation",
         "prescriptive_recommendation",
-        "unsupported causal outcomes",
-        "operational or financial benefits",
-        "false source attribution",
+        "Source silence alone is not a failure",
+        "contradicts evidence",
+        "falsely attributes an action",
         "MarketLense-authored",
     ):
         assert required_rule in prompt_text
+
+
+def test_numeric_artifact_claims_require_values_in_linked_finding_evidence() -> None:
+    def load(namespace: str):
+        return prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0", namespace=namespace, force_reload=True
+            ),
+            _ctx(),
+        )
+
+    candidates = load("report_vs/artifacts/insights_candidates")
+    final = load("report_vs/artifacts/insights_final")
+    summary = load("report_vs/artifacts/summary")
+    findings = load("report_vs/evidence_packs/findings")
+    candidates_text = " ".join(candidates.user.text.split())
+    final_text = " ".join(final.user.text.split())
+    summary_text = " ".join(summary.user.text.split())
+    findings_text = " ".join(findings.system.text.split())
+
+    assert "paraphrased `text` alone is not numeric evidence" in candidates_text
+    assert "linked finding `evidence` contains" in final_text
+    assert "finding's direct `evidence` excerpt" in summary_text
+    assert "Each number in `text` must appear" in findings_text
+    assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
 
 
 @pytest.mark.parametrize(

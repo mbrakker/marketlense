@@ -8,16 +8,17 @@ allowlist:
     max_delta_percent: 0.0138
   - pattern: "totals.total_tokens"
     owner: "MarketLense engineering"
-    reason: "Table periods travel with numeric evidence, compact public copy retains restrictive modifiers, and repaired insights bind only to selected direct source evidence."
+    reason: "Grounded editorial and source-fidelity prompt corrections are approved within the measured 1.5% corpus token ceiling."
     expires_on: "2026-12-31"
     max_delta_absolute: 371
+    max_delta_percent: 0.015
   - pattern: "families.publishing.total_tokens"
     owner: "MarketLense engineering"
-    reason: "Shared public-copy prompts preserve restrictive modifiers, avoid inferred metric periods, and repaired insights bind only to selected direct source evidence."
+    reason: "Bounded prompt additions support specific non-contradictory interpretation, actionable insight cards, and verbatim quote reuse."
     expires_on: "2026-12-31"
-    max_delta_absolute: 324
+    max_delta_absolute: 745
   - pattern: "families.report.total_tokens"
     owner: "MarketLense engineering"
-    reason: "Findings prompts retain table/chart titles and periods with their numeric evidence."
+    reason: "Bounded prompt additions preserve broad-report taxonomy facets, inclusive page ranges, and numeric bindings to direct finding evidence."
     expires_on: "2026-12-31"
-    max_delta_absolute: 47
+    max_delta_absolute: 642

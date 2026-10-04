@@ -6,11 +6,14 @@ text: |
   - DocMap JSON: {{ doc_map_json }}
   - Evidence packs JSON: {{ evidence_json }}
 
-  Task: Return a JSON object with `quotes_final` as an array of 2-4 items. Each item must include:
+  Task: Return up to 3 complete, legible retained quote candidates; do not
+  return an empty array when any valid candidate exists. Each item includes:
   - text: verbatim quote
-  - speaker: who said it if known, else "Unknown"
-  - citation: short location (section title or source)
-  - page: page number if known, else omit or set 0
-  - evidence_id: exactly one existing evidence identifier from the provided context (for example q1, F3, or s2). Do not invent IDs, and do not output arrays or comma-separated IDs.
+  - speaker: copy only if identified; otherwise "Unknown"
+  - citation and page: copy the candidate's supplied source/location and
+    printed page, if present
+  - evidence_id: copy the selected candidate's `id` exactly. Do not substitute, normalize, or invent IDs, and do not output arrays or comma-separated IDs.
     If no valid ID can be determined, set it to an empty string.
-  Quotes must come from the provided context; do not paraphrase.
+  Copy text and candidate ID exactly. Do not paraphrase, repair, splice, or
+  combine quotes. Exclude only visibly corrupted, incomplete, or non-quote
+  candidates; invent no speaker or citation.

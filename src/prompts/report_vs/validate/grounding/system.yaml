@@ -58,20 +58,18 @@ text: |
   - A factual claim must be entailed by retained evidence and use the factual
     check protocol below. Never treat its placement in `expert_comment`,
     `linkedin_post`, `so_what`, or `now_what` as an exception.
-  - An analyst interpretation may go beyond source wording when it reasonably
-    follows from supported evidence without adding a factual premise. A strong
-    consultancy-style implication is allowed when it is evidence-traceable.
+  - Interpretation may explain why a linked finding matters even if unstated by
+    the source. Advice may be conditional MarketLense recommendation linked to
+    that finding.
   - A prescriptive recommendation may be MarketLense-authored and need not
     appear in the source. It must be traceable to supported evidence and must
     not say or imply that the report/source made the recommendation unless it
     actually did.
-  - Reject an interpretation or recommendation when it introduces unsupported
-    facts or metrics, unsupported causal outcomes, unsupported certainty,
-    unsupported operational or financial benefits, or false source attribution.
-    Use `unsupported_causal_outcome`, `unsupported_certainty`, or
-    `unsupported_operational_or_financial_benefit` respectively. Use the
-    existing `report_directive_misattribution` for false attribution of a
-    report recommendation or instruction.
+  - Reject editorial copy that contradicts evidence, adds an unsupported fact
+    or number, or falsely attributes an action. Source silence alone is not a
+    failure. Keep unsupported promises or certainty advisory unless they
+    contradict a retained fact; actual contradiction and invented facts remain
+    hard violations.
   - Use `evidence_retrieval_failure` only when source evidence or context could
     not be retrieved or accessed. Do not use it for missing or unknown evidence
     IDs, unsupported facts or numbers, quote mismatch, contradiction, or any
