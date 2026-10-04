@@ -1,0 +1,285 @@
+{
+  "schema_version": "1.0",
+  "benchmark": "MarketLense frozen five-report ingestion performance baseline",
+  "recorded_at_utc": "2026-10-04T13:12:55Z",
+  "baseline_commit_sha": "d1fa1273814a0eee2c25efb2ab1c826761a0be25",
+  "frozen_manifest": {
+    "path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "report_count": 5
+  },
+  "configuration": {
+    "isolated_app_yaml_sha256": "f3c38f7793103c4e8957fdf434b4cbb5b41e96bdf828b86ff98bf9e2862738bf",
+    "configuration_hash": "2a9784436e51abf917cc0a43daf7fd951763d913d028f6332e3f3ccf3cb36c10",
+    "policy_hash": "b7743c06f02b644720c2541b317e4adac7093c5f6c522f9078080becd0cdc3e7",
+    "publication_disabled": true,
+    "wordpress_publish_queue": {
+      "enabled": false,
+      "worker_concurrency_limit": 1,
+      "max_attempts": 3
+    },
+    "report_analysis_queue": {
+      "enabled": 1,
+      "worker_concurrency_limit": 1,
+      "max_attempts": 3
+    },
+    "source_ingest_queue": {
+      "enabled": 1,
+      "worker_concurrency_limit": 1,
+      "max_attempts": 3
+    },
+    "max_duration_seconds": 7200,
+    "cross_report_analysis_enabled": false,
+    "model_provider_reasoning_pricing": [
+      {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "high",
+        "pricing_version": "openai-2026-09-22.v1"
+      },
+      {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "low",
+        "pricing_version": "openai-2026-09-22.v1"
+      },
+      {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "pricing_version": "openai-2026-09-22.v1"
+      }
+    ]
+  },
+  "command": {
+    "shell": "PowerShell",
+    "command_text": "@'\nfrom pathlib import Path\nimport hashlib, json, subprocess\nfrom scripts.quality.run_frozen_reliability_cohort import _load_members\nfrom scripts.quality.ias_live_canary_runner import run_frozen_cohort_once\nmanifest=Path('docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json')\nhead=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()\nstatus=subprocess.check_output(['git','status','--porcelain'],text=True).strip()\nif status: raise RuntimeError(f'Working tree not clean before baseline: {status}')\nsources=_load_members(manifest)\nif len(sources)!=5: raise RuntimeError(f'Expected exactly 5 frozen sources, got {len(sources)}')\nruns_root=Path('tmp/performance-baseline-next-five-batch-20261004-provenance-fix')\nruns_root.mkdir(parents=True,exist_ok=True)\nprint('RUN_START',json.dumps({'head':head,'manifest_sha256':hashlib.sha256(manifest.read_bytes()).hexdigest(),'source_ids':[s['content_md5'] for s in sources],'reports':[s['report_name'] for s in sources],'runs_root':str(runs_root),'publication_enabled':False,'max_duration_seconds':7200},sort_keys=True),flush=True)\nresult=run_frozen_cohort_once(runs_root=runs_root,sources=sources,max_duration_seconds=7200)\npath=runs_root/'cohort_result.json'\npath.write_text(json.dumps(result,sort_keys=True,separators=(',',':')),encoding='utf-8')\nprint('RUN_COMPLETE',json.dumps({'result_path':str(path),'result':result},sort_keys=True),flush=True)\n'@ | python -",
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "source_loader": "scripts.quality.run_frozen_reliability_cohort._load_members"
+  },
+  "execution": {
+    "submitted_together": true,
+    "run_directory": "tmp/performance-baseline-next-five-batch-20261004-provenance-fix/ias-first-attempt-wru4thg9",
+    "workflow_root_id": "c6c40ae2-c678-4a87-89f2-f854911b8598",
+    "fresh_isolated_state": true,
+    "reports": [
+      {
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "report_name": "Final Web Version Report Consumer Trends 2026",
+        "publisher": "Capgemini Research Institute",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+        "source_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+        "admission": "admitted",
+        "final_validation": "pass",
+        "publication_readiness": "pass",
+        "final_state": "awaiting_review",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "targeted_regeneration_repairs": 1,
+        "structured_output_repair_calls": 0,
+        "workflow_attempts": 1,
+        "fresh_isolated_state": true
+      },
+      {
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+        "publisher": "Activate",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "source_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+        "admission": "admitted",
+        "final_validation": "pass",
+        "publication_readiness": "pass",
+        "final_state": "awaiting_review",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "targeted_regeneration_repairs": 0,
+        "structured_output_repair_calls": 0,
+        "workflow_attempts": 1,
+        "fresh_isolated_state": true
+      },
+      {
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "report_name": "2026 Global M&A Outlook",
+        "publisher": "KPMG",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+        "source_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+        "admission": "admitted",
+        "final_validation": "pass",
+        "publication_readiness": "pass",
+        "final_state": "awaiting_review",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "targeted_regeneration_repairs": 0,
+        "structured_output_repair_calls": 1,
+        "workflow_attempts": 1,
+        "fresh_isolated_state": true
+      },
+      {
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "report_name": "Trends and Predictions 2026",
+        "publisher": "Reuters Institute",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+        "source_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+        "admission": "admitted",
+        "final_validation": "pass",
+        "publication_readiness": "pass",
+        "final_state": "awaiting_review",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "targeted_regeneration_repairs": 1,
+        "structured_output_repair_calls": 0,
+        "workflow_attempts": 1,
+        "fresh_isolated_state": true
+      },
+      {
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "report_name": "mobile-app-trends-2026-pdf",
+        "publisher": "Adjust",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+        "source_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+        "admission": "admitted",
+        "final_validation": "pass",
+        "publication_readiness": "pass",
+        "final_state": "awaiting_review",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "targeted_regeneration_repairs": 1,
+        "structured_output_repair_calls": 0,
+        "workflow_attempts": 1,
+        "fresh_isolated_state": true
+      }
+    ]
+  },
+  "metrics": {
+    "cohort_wall_clock_seconds": 2736.513,
+    "measurement_method": "cohort_metrics.duration_seconds from one run_frozen_cohort_once call with all five sources; member durations were not summed",
+    "throughput_reports_per_hour": 6.578,
+    "model_provider_calls": 212,
+    "input_tokens": 1909345,
+    "output_tokens": 392620,
+    "file_search_calls": 25,
+    "estimated_total_cost_usd": 0.438991,
+    "automatic_repairs": {
+      "reports_with_targeted_regeneration": 3,
+      "targeted_regeneration_events": 3,
+      "structured_output_repair_calls": 1,
+      "primary_workflow_retry_transitions": 0,
+      "provider_call_failures": 0
+    },
+    "operator_interventions": 0,
+    "publication_writes": 0
+  },
+  "acceptance": {
+    "status": "pass",
+    "admitted_reports": "5/5",
+    "final_validation_passes": "5/5",
+    "publication_readiness_passes": "5/5",
+    "unsupported_retained_factual_claims": 0,
+    "unresolved_retained_factual_claims": 0,
+    "operator_interventions": 0,
+    "publication_disabled": true,
+    "publication_writes": 0,
+    "exact_frozen_source_identities": true,
+    "fresh_isolated_state": true,
+    "actual_batch_wall_clock": true
+  },
+  "publication_audit": {
+    "wordpress_publish_queue_enabled": false,
+    "wordpress_publish_jobs": 0,
+    "wordpress_publish_outbox_jobs": 0,
+    "published_rows": 0,
+    "publication_approval_rows": 0,
+    "external_effect_attempts": 0
+  },
+  "telemetry": {
+    "largest_stage_wall_time_sums": [
+      {
+        "stage": "report_analysis",
+        "completed_spans": 5,
+        "summed_wall_seconds": 2624.943,
+        "max_single_span_seconds": 716.232
+      },
+      {
+        "stage": "report_selection",
+        "completed_spans": 5,
+        "summed_wall_seconds": 527.505,
+        "max_single_span_seconds": 213.448
+      },
+      {
+        "stage": "report_render",
+        "completed_spans": 5,
+        "summed_wall_seconds": 32.626,
+        "max_single_span_seconds": 18.02
+      }
+    ],
+    "stage_sums_can_overlap": true,
+    "prompt_family_elapsed_time_available": false,
+    "prompt_family_elapsed_time_note": "Existing prompt-family summary artifacts contain no elapsed/duration fields.",
+    "largest_queue_wait_sums": [
+      {
+        "stage": "signal_generation",
+        "measured_spans": 4,
+        "summed_queue_wait_seconds": 2196.117,
+        "max_single_wait_seconds": 741.409
+      },
+      {
+        "stage": "source_ingest",
+        "measured_spans": 5,
+        "summed_queue_wait_seconds": 1489.645,
+        "max_single_wait_seconds": 968.347
+      }
+    ]
+  },
+  "auxiliary_workflow_outcomes": {
+    "dead_letters": [
+      {
+        "job_type": "briefing_generation.v1",
+        "error_code": "cross_report_analysis_disabled",
+        "count": 1
+      },
+      {
+        "job_type": "signal_candidate.v1",
+        "error_code": "cross_report_no_projected_sources",
+        "count": 2
+      }
+    ],
+    "pending_non_report_jobs_at_report_cohort_completion": [
+      {
+        "job_type": "publication_readiness.v1",
+        "entity_type": "signal",
+        "count": 1
+      },
+      {
+        "job_type": "signal_generation.v1",
+        "entity_type": "signal",
+        "count": 20
+      }
+    ],
+    "automatic_remediation_records_requiring_operator_action": 3,
+    "manual_operator_actor_events": 0,
+    "root_causes": [
+      {
+        "error_code": "cross_report_analysis_disabled",
+        "count": 1,
+        "cause": "The frozen isolated configuration has cross_report_analysis.enabled=false; optional briefing generation reports that disabled state."
+      },
+      {
+        "error_code": "cross_report_no_projected_sources",
+        "count": 2,
+        "cause": "Optional signal candidate selection found no eligible projected cross-report sources."
+      }
+    ],
+    "scope_note": "Auxiliary cross-report/signal work did not affect the five report validation/readiness outcomes. No production behavior or cross-report configuration was changed for this baseline."
+  },
+  "root_cause_fix": {
+    "failure": "A safe grounding removal in one summary field could remove a family-wide provenance identity while the same unsupported sentence remained in a sibling public summary field; atomic summary preservation could also overwrite deterministic sibling repairs.",
+    "fix_commit": "d1fa1273814a0eee2c25efb2ab1c826761a0be25",
+    "fix": "Propagate safe grounding removal to every identical public summary occurrence, and preserve deterministic intermediate text only for non-planner sibling paths.",
+    "regression_test": "tests/test_report_regeneration_generator.py::test_summary_safe_removal_clears_same_claim_from_sibling_fields"
+  }
+}
