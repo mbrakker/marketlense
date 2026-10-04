@@ -5,6 +5,7 @@ from pathlib import Path
 
 import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
+    ensure_isolated_publication_queue_disabled,
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
 )
@@ -15,6 +16,7 @@ from src.services.config_service import (
     load_workflow_queue_policies,
     new_runtime_context,
 )
+from src.services.workflow_queue_service import get_workflow_queue_control
 
 
 def test_prepare_isolated_canary_run_creates_fresh_root_with_only_rooted_mutable_paths(
@@ -55,6 +57,32 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
         new_runtime_context(task_id="isolated-canary-queue-test"),
     )
     assert queues["wordpress_publish"].enabled is False
+
+
+def test_isolated_canary_persists_publication_queue_disabled_without_changing_limits(
+    tmp_path: Path,
+) -> None:
+    run = prepare_isolated_canary_run(runs_root=tmp_path)
+    ctx = new_runtime_context(task_id="isolated-canary-publication-queue-test")
+    settings = load_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)), ctx
+    )
+    initial = get_workflow_queue_control(
+        settings.state_db, "wordpress_publish", ctx
+    )
+
+    disabled = ensure_isolated_publication_queue_disabled(
+        state_db=settings.state_db, ctx=ctx
+    )
+    persisted = get_workflow_queue_control(
+        settings.state_db, "wordpress_publish", ctx
+    )
+
+    assert initial.enabled is True
+    assert disabled.enabled is False
+    assert persisted.enabled is False
+    assert persisted.worker_concurrency_limit == initial.worker_concurrency_limit
+    assert persisted.max_attempts == initial.max_attempts
 
 
 def test_frozen_member_validation_uses_its_own_artifact_not_a_sibling_report(

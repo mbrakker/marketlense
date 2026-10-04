@@ -9,7 +9,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
@@ -30,6 +30,7 @@ from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationSource,
 )
 from src.contracts.workflow_control import SupervisorRunRequest
+from src.contracts.workflow_queue import WorkflowQueueControl
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -52,6 +53,10 @@ from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
+)
+from src.services.workflow_queue_service import (
+    get_workflow_queue_control,
+    set_workflow_queue_control,
 )
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
@@ -189,6 +194,24 @@ def _isolated_config(
     return config
 
 
+def ensure_isolated_publication_queue_disabled(
+    *, state_db: str, ctx: Any
+) -> WorkflowQueueControl:
+    """Persist the canary publication stop at the durable queue boundary."""
+
+    control = get_workflow_queue_control(state_db, "wordpress_publish", ctx)
+    return set_workflow_queue_control(
+        state_db,
+        replace(
+            control,
+            enabled=False,
+            updated_at_utc="",
+            updated_by="frozen_cohort_canary",
+        ),
+        ctx,
+    )
+
+
 def run_ias_first_attempt_canary(
     *,
     runs_root: Path,
@@ -270,6 +293,9 @@ def run_frozen_cohort_once(
             ctx,
         )
         _assert_empty_stores(run=run, settings=settings)
+        ensure_isolated_publication_queue_disabled(
+            state_db=settings.state_db, ctx=ctx
+        )
         for result, source in zip(results, sources, strict=True):
             source_path = Path(str(source["resolved_source_path"]))
             if not source_path.is_file():
