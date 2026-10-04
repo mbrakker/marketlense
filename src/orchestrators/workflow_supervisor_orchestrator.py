@@ -16,6 +16,7 @@ from src.orchestrators.workflow_worker_orchestrator import (
     run_workflow_worker_once,
 )
 from src.services import workflow_queue_service
+from src.utils.clock import utc_now_seconds_iso
 from src.utils.logging import child_context, log_event
 
 logger = logging.getLogger("market_lense.workflow_supervisor")
@@ -172,7 +173,7 @@ def run_supervisor_once(
         deps.release_lease(
             request.state_db,
             owner_id=request.worker_id,
-            now_utc=request.now_utc,
+            now_utc=utc_now_seconds_iso(),
             ctx=ctx,
         )
 
@@ -252,6 +253,10 @@ def _run_worker_batches_parallel(
     next_candidate = 0
     dispatch_sequence = 0
     runtime_exhausted = False
+    lease_lost = False
+    lease_heartbeat_seconds = max(
+        0.1, min(30.0, max(1, request.settings.lease_seconds) / 3)
+    )
     with ThreadPoolExecutor(
         max_workers=request.settings.max_parallel_workers,
         thread_name_prefix="workflow-supervisor",
@@ -342,7 +347,22 @@ def _run_worker_batches_parallel(
                 dispatch_sequence += 1
             if not in_flight:
                 break
-            done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+            done, _ = wait(
+                in_flight,
+                timeout=lease_heartbeat_seconds,
+                return_when=FIRST_COMPLETED,
+            )
+            if not done:
+                if not lease_lost and not deps.acquire_lease(
+                    request.state_db,
+                    owner_id=request.worker_id,
+                    now_utc=utc_now_seconds_iso(),
+                    lease_seconds=request.settings.lease_seconds,
+                    ctx=ctx,
+                ):
+                    lease_lost = True
+                    runtime_exhausted = True
+                continue
             reopen_epoch = False
             last_success_queue = ""
             for future in sorted(done, key=lambda item: in_flight[item][3]):
@@ -411,6 +431,8 @@ def _run_worker_batches_parallel(
                 pending_recheck_queues.clear()
         if runtime_exhausted and remaining > 0:
             deferred += 1
+        if lease_lost:
+            errors.append("supervisor_lease_lost")
     return recovered, completed, deferred, errors, materialized
 
 

@@ -62,6 +62,7 @@ def _request(
     max_total_jobs: int,
     max_jobs_per_queue: int = 1,
     max_runtime_seconds: int = 120,
+    supervisor_lease_seconds: int = 180,
     state_db: str = "state.sqlite",
 ) -> SupervisorRunRequest:
     return SupervisorRunRequest(
@@ -78,6 +79,7 @@ def _request(
             max_jobs_per_queue=max_jobs_per_queue,
             max_total_jobs=max_total_jobs,
             max_runtime_seconds=max_runtime_seconds,
+            lease_seconds=supervisor_lease_seconds,
         ),
     )
 
@@ -302,6 +304,99 @@ def test_parallel_supervisor_respects_runtime_after_in_flight_workers_finish() -
     assert result.completed_job_count == 3
     assert result.deferred_job_count >= 1
     assert len(calls) == 3
+
+
+def test_parallel_supervisor_renews_lease_while_workers_run() -> None:
+    acquire_calls: list[str] = []
+    worker_started = Event()
+    lease_renewed = Event()
+    release_worker = Event()
+
+    def acquire_lease(*_args, **kwargs):
+        acquire_calls.append(str(kwargs["now_utc"]))
+        if len(acquire_calls) > 1:
+            lease_renewed.set()
+        return True
+
+    def worker(**kwargs):
+        del kwargs
+        worker_started.set()
+        assert release_worker.wait(timeout=5)
+        return _succeeded_worker()
+
+    request = _request(
+        max_parallel_workers=2,
+        max_total_jobs=1,
+        supervisor_lease_seconds=1,
+    )
+    dependencies = replace(
+        _dependencies(worker), acquire_lease=acquire_lease
+    )
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            run_supervisor_once, request, _ctx(), dependencies=dependencies
+        )
+        try:
+            assert worker_started.wait(timeout=2)
+            assert lease_renewed.wait(timeout=2)
+        finally:
+            release_worker.set()
+        result = future.result(timeout=5)
+
+    assert result.status == "healthy"
+    assert acquire_calls[0] == request.now_utc
+    assert acquire_calls[1] != request.now_utc
+
+
+def test_parallel_supervisor_stops_dispatch_after_losing_lease() -> None:
+    acquire_calls: list[str] = []
+    worker_calls: list[str] = []
+    two_workers_started = Event()
+    lease_lost = Event()
+    release_workers = Event()
+    lock = Lock()
+
+    def acquire_lease(*_args, **kwargs):
+        acquire_calls.append(str(kwargs["now_utc"]))
+        if len(acquire_calls) > 1:
+            lease_lost.set()
+            return False
+        return True
+
+    def worker(**kwargs):
+        with lock:
+            worker_calls.append(str(kwargs["queue_name"]))
+            if len(worker_calls) == 2:
+                two_workers_started.set()
+        assert release_workers.wait(timeout=5)
+        return _succeeded_worker()
+
+    request = _request(
+        max_parallel_workers=2,
+        max_total_jobs=3,
+        max_jobs_per_queue=3,
+        supervisor_lease_seconds=1,
+    )
+    dependencies = replace(
+        _dependencies(worker), acquire_lease=acquire_lease
+    )
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            run_supervisor_once, request, _ctx(), dependencies=dependencies
+        )
+        try:
+            assert two_workers_started.wait(timeout=2)
+            assert lease_lost.wait(timeout=2)
+        finally:
+            release_workers.set()
+        result = future.result(timeout=5)
+
+    assert result.status == "failed"
+    assert result.error_codes == ["supervisor_lease_lost"]
+    assert len(acquire_calls) == 2
+    assert len(worker_calls) == 2
 
 
 def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> None:
@@ -1120,3 +1215,5 @@ def test_project_supervisor_configuration_uses_the_tested_three_worker_cap() -> 
 
     assert settings.supervisor.max_parallel_workers == 3
     assert settings.supervisor.max_jobs_per_queue == 3
+    assert settings.supervisor.max_runtime_seconds == 600
+    assert settings.supervisor.lease_seconds == 180
