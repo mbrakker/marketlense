@@ -54,6 +54,7 @@ from src.services.report_store_service import (
     record_source_identity_observation,
 )
 from src.utils.errors import AppError
+from src.utils.slugify import slugify
 
 
 @dataclass(frozen=True)
@@ -179,6 +180,12 @@ def _isolated_config(
         "worker_batches_enabled": True,
     }
     config["workflow_control"] = workflow_control
+    workflow_queues = dict(config.get("workflow_queues") or {})
+    workflow_queues["wordpress_publish"] = {
+        **dict(workflow_queues.get("wordpress_publish") or {}),
+        "enabled": False,
+    }
+    config["workflow_queues"] = workflow_queues
     return config
 
 
@@ -335,11 +342,12 @@ def run_frozen_cohort_once(
                 ctx=ctx,
                 max_duration_seconds=max_duration_seconds,
             )
-            for result in results:
+            for result, source in zip(results, sources, strict=True):
                 result.update(
                     _read_result(
                         settings=settings,
                         report_id=str(result["report_id"]),
+                        source_path=Path(str(source["resolved_source_path"])),
                         validation_run_id=str(queue_submission.validation_run_id),
                         root_workflow_id=root_workflow_id,
                         ctx=ctx,
@@ -485,6 +493,7 @@ def _run_preselected_canary(
             _read_result(
                 settings=settings,
                 report_id=report_id,
+                source_path=source_path,
                 validation_run_id=str(submission.validation_run_id),
                 root_workflow_id=str(submission.root_workflow_id),
                 ctx=ctx,
@@ -765,7 +774,13 @@ def _queue_terminal_state(
 
 
 def _read_result(
-    *, settings, report_id: str, validation_run_id: str, root_workflow_id: str, ctx
+    *,
+    settings,
+    report_id: str,
+    source_path: Path,
+    validation_run_id: str,
+    root_workflow_id: str,
+    ctx,
 ) -> dict[str, Any]:
     with sqlite3.connect(settings.state_db) as conn:
         readiness_job = conn.execute(
@@ -844,7 +859,9 @@ def _read_result(
         ),
         ctx,
     )
-    validation_pass = _validation_passed(Path(settings.output_dir))
+    validation_pass = report_validation_passed(
+        Path(settings.output_dir), source_path
+    )
     terminal_failure = ""
     final_state = status
     if status != "awaiting_review":
@@ -1132,13 +1149,19 @@ def _cohort_operator_intervention_count(*, state_db: str, root_workflow_id: str)
         )
 
 
-def _validation_passed(output_dir: Path) -> bool:
-    reports = sorted(output_dir.rglob("validation.json"))
-    if not reports:
-        return False
+def report_validation_passed(output_dir: Path, source_path: Path) -> bool:
+    """Read final validation from the artifact belonging to one source report."""
+
+    validation_path = (
+        output_dir
+        / slugify(source_path.name)
+        / "report_analysis"
+        / "validation.json"
+    )
     try:
         return (
-            json.loads(reports[-1].read_text(encoding="utf-8")).get("status") == "pass"
+            json.loads(validation_path.read_text(encoding="utf-8")).get("status")
+            == "pass"
         )
     except (OSError, ValueError, json.JSONDecodeError):
         return False

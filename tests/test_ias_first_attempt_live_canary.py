@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
@@ -11,6 +12,7 @@ from src.contracts.config import ConfigLoadRequest
 from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
+    load_workflow_queue_policies,
     new_runtime_context,
 )
 
@@ -48,6 +50,28 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     )
     assert control.supervisor.enabled is True
     assert control.supervisor.worker_batches_enabled is True
+    queues = load_workflow_queue_policies(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-canary-queue-test"),
+    )
+    assert queues["wordpress_publish"].enabled is False
+
+
+def test_frozen_member_validation_uses_its_own_artifact_not_a_sibling_report(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "output"
+    source_path = tmp_path / "sources" / "adjust.pdf"
+    target = output_dir / "adjust-pdf" / "report_analysis" / "validation.json"
+    sibling = output_dir / "z-sibling" / "report_analysis" / "validation.json"
+    target.parent.mkdir(parents=True)
+    sibling.parent.mkdir(parents=True)
+    target.write_text('{"status":"fail"}', encoding="utf-8")
+    sibling.write_text('{"status":"pass"}', encoding="utf-8")
+
+    read_member_validation = getattr(canary_runner, "report_validation_passed", None)
+    assert read_member_validation is not None
+    assert read_member_validation(output_dir, source_path) is False
 
 
 def test_live_canary_records_a_typed_terminal_input_failure(tmp_path: Path) -> None:
