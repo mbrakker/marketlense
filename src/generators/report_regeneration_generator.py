@@ -1411,6 +1411,16 @@ def _preserve_atomic_target_families(
         )
     }
     paths_by_root: Dict[str, List[str]] = {}
+    planner_fields = {
+        re.sub(r"\[[^\]]*\]", "", str(path or ""))
+        for target in plan.targets
+        for path in target.allowed_paths
+    }
+    state_only_paths = {
+        str(path or "")
+        for path in additional_paths
+        if re.sub(r"\[[^\]]*\]", "", str(path or "")) not in planner_fields
+    }
     for target in plan.targets:
         for allowed_path in target.allowed_paths:
             root = re.split(r"[.\[]", str(allowed_path or ""), maxsplit=1)[0]
@@ -1469,13 +1479,15 @@ def _preserve_atomic_target_families(
         for allowed_path in sorted(paths, key=claim_path_order):
             if allowed_path in summary_claim_removal_paths:
                 continue
+            source_for_copy = (
+                family_state[root]
+                if root in state.soft_copy_repair_texts
+                or allowed_path in state_only_paths
+                else updated_artifacts.get(root, family_state[root])
+            )
             merged_family = _copy_allowed_mutation_path(
                 original_family=merged_family,
-                target_family=(
-                    family_state[root]
-                    if root in state.soft_copy_repair_texts
-                    else updated_artifacts.get(root, family_state[root])
-                ),
+                target_family=source_for_copy,
                 full_path=allowed_path,
                 root=root,
             )
@@ -3394,13 +3406,57 @@ def _summary_claim_repairs(
             issues=issues,
             summary_claim_map_targets=summary_claim_map_targets,
         )
-        if repairs is None or any(
-            repair.claim.claim_id in claim_ids for repair in repairs
+        if repairs is None or (
+            not _uses_safe_removal(execution)
+            and any(repair.claim.claim_id in claim_ids for repair in repairs)
         ):
             return None
         claim_ids.update(repair.claim.claim_id for repair in repairs)
         resolved[field] = repairs
     return resolved
+
+
+def _expand_summary_repairs_to_duplicate_fields(
+    execution: _RegenerationHandlerExecution,
+    repairs_by_field: Dict[str, List[_SoftCopyClaimRepair]],
+) -> Dict[str, List[_SoftCopyClaimRepair]]:
+    """Remove every public occurrence of a failed summary claim identity."""
+
+    if not _uses_safe_removal(execution) or not any(
+        str(repair.issue.rule_id or "").strip().casefold() == "grounding"
+        for repairs in repairs_by_field.values()
+        for repair in repairs
+    ):
+        return repairs_by_field
+    fields = ("tldr", "card_tldr_compact", "executive_summary")
+    expanded = {field: list(repairs) for field, repairs in repairs_by_field.items()}
+    for repairs in repairs_by_field.values():
+        for repair in repairs:
+            for summary_field in fields:
+                text = _s(execution.state.summary.get(summary_field))
+                matching = [
+                    (start, end, sentence)
+                    for start, end, sentence in _soft_copy_sentence_spans(text)
+                    if hashlib.sha256(
+                        _normalized_soft_copy_text(sentence).encode("utf-8")
+                    ).hexdigest()
+                    == repair.claim.text_hash
+                ]
+                if not matching:
+                    continue
+                existing = expanded.setdefault(summary_field, [])
+                for start, end, sentence in matching:
+                    if any(
+                        item.claim.claim_id == repair.claim.claim_id
+                        and item.start == start
+                        and item.end == end
+                        for item in existing
+                    ):
+                        continue
+                    existing.append(
+                        replace(repair, text=sentence, start=start, end=end)
+                    )
+    return expanded
 
 
 def _retained_summary_claim_replacement(
@@ -3700,6 +3756,10 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             issues=copy_issues,
             summary_claim_map_targets=claim_map_targets or [],
         )
+        if scoped_repairs is not None:
+            scoped_repairs = _expand_summary_repairs_to_duplicate_fields(
+                execution, scoped_repairs
+            )
         if claim_map_targets is None or scoped_repairs is None:
             _raise_summary_safe_removal_target_unresolved(execution)
         if claim_map_targets:
@@ -3723,6 +3783,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
         }
         used_retained_replacement_ids: set[str] = set()
         for field, repairs in scoped_repairs.items():
+            prior_field_text = _s(execution.state.summary.get(field))
             replacements: Dict[str, str | None] = {}
             for repair in repairs:
                 if _uses_safe_removal(execution):
@@ -3822,6 +3883,10 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     _s(execution.state.summary.get(field)), repairs, replacements
                 )
             execution.state.summary[field] = reconstructed
+            if reconstructed != prior_field_text:
+                mutation_path = f"summary.{field}"
+                if mutation_path not in execution.state.deterministic_mutation_paths:
+                    execution.state.deterministic_mutation_paths.append(mutation_path)
         execution.state.regenerated_sections.append("summary")
         execution.state.prompt_namespaces.append(namespace)
         return
