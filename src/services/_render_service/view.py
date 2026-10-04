@@ -296,11 +296,12 @@ def _build_render_view(
     topics_covered = _coerce_public_topics_covered(artifacts)
     key_figures = _coerce_public_key_figures(artifacts)
     chart_insight_cards = _coerce_public_chart_insight_cards(artifacts)
+    # The Findings section already renders these insights; Signals should use
+    # distinct topic copy instead of repeating the same claims a second time.
     signal_cards = _build_signal_cards(
         topics=topics,
         topic_briefs=topic_briefs,
         tags=snapshot_tags,
-        insights=insights,
         prefer_key_points=bool(topics_covered),
     )
     core_signal = _build_core_signal(

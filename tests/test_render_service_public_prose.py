@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from bs4 import BeautifulSoup
+
+from src.contracts.report_assets import RenderRequest
 from src.services._render_service.normalization import (
     _build_core_signal,
     _build_signal_cards,
@@ -11,6 +14,62 @@ from src.services._render_service.normalization import (
     _sanitize_linkedin_post,
     _sanitize_public_prose,
 )
+from src.services.config_service import new_runtime_context
+from src.services.render_service import render_report
+
+
+def test_report_renders_insight_once_and_uses_distinct_topic_copy_for_signals(
+    tmp_path: Path,
+) -> None:
+    insight = "Decision relevance is shifting as buyers reassess channel investments."
+    request = RenderRequest(
+        schema_version="1.0",
+        data={
+            "title": "Market Outlook 2026",
+            "publisher": "Example Research",
+            "_figure_section_enabled": False,
+            "artifacts": {
+                "toc_topics": ["Channel mix"],
+                "toc_topics_expanded": [
+                    {
+                        "section_id": "channel-mix",
+                        "title": "Channel mix",
+                        "summary": "A separate theme summary from the contents.",
+                    }
+                ],
+                "insights_final": [
+                    {
+                        "text": insight,
+                        "evidence_id": "finding-1",
+                        "so_what": "Investment choices depend on channel performance.",
+                        "section_ids": ["channel-mix"],
+                    }
+                ],
+            },
+            "evidence_packs": {"doc_map": {"title": "Market Outlook 2026"}},
+        },
+        doc_name="Market Outlook 2026.pdf",
+        file_id="market-outlook-2026",
+        out_dir=str(tmp_path / "output"),
+    )
+
+    response = render_report(
+        request,
+        new_runtime_context(task_id="render-signal-duplication-test"),
+    )
+    document = BeautifulSoup(
+        Path(response.html_path).read_text(encoding="utf-8"), "html.parser"
+    )
+    findings = document.select_one("#findings")
+    signals = document.select_one("#signals")
+
+    assert findings is not None
+    assert signals is not None
+    assert findings.get_text(" ", strip=True).count(insight) == 1
+    assert insight not in signals.get_text(" ", strip=True)
+    assert "A separate theme summary from the contents." in signals.get_text(
+        " ", strip=True
+    )
 
 
 def test_signal_cards_use_retained_insights_and_editorial_implications() -> None:
