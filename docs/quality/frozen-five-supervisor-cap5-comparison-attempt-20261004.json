@@ -1,0 +1,596 @@
+{
+  "authoritative_baseline": false,
+  "benchmark": "Frozen five-report supervisor cap-5 comparison attempt",
+  "comparison_to_cap_3_run": {
+    "all_report_stage_queue_wait_seconds": {
+      "cap_3": 573.671,
+      "cap_5": 13.461,
+      "delta_seconds": -560.21,
+      "reduction_percent": 97.65
+    },
+    "automatic_repairs": {
+      "cap_3": 0,
+      "cap_5": 3
+    },
+    "cap_3_run_artifact": "docs/quality/frozen-five-same-queue-dispatch-benchmark-20261004.json",
+    "cap_3_tested_code_commit_sha": "2e246d4017f6b5eeb4336d01f168010303613658",
+    "cohort_wall_clock_seconds": {
+      "cap_3": 1083.927,
+      "cap_3_over_cap_5_speed_ratio": 0.76,
+      "cap_5": 1426.002,
+      "delta_percent": 31.56,
+      "delta_seconds": 342.075
+    },
+    "estimated_total_cost_usd": {
+      "cap_3": 0.389098,
+      "cap_5": 0.459454,
+      "delta_percent": 18.08,
+      "delta_usd": 0.070356
+    },
+    "file_search_calls": {
+      "cap_3": 30,
+      "cap_5": 28,
+      "delta": -2
+    },
+    "final_validation_passes": {
+      "cap_3": "5/5",
+      "cap_5": "4/5"
+    },
+    "input_tokens": {
+      "cap_3": 1696787,
+      "cap_5": 1976015,
+      "delta": 279228
+    },
+    "max_observed_running_jobs_by_stage": {
+      "cap_3": {
+        "publication_readiness": 3,
+        "report_analysis": 3,
+        "report_render": 3,
+        "report_selection": 3,
+        "source_ingest": 3
+      },
+      "cap_5": {
+        "publication_readiness": 4,
+        "report_analysis": 5,
+        "report_render": 5,
+        "report_selection": 5,
+        "source_ingest": 5
+      }
+    },
+    "model_provider_calls": {
+      "cap_3": 184,
+      "cap_5": 204,
+      "delta": 20
+    },
+    "output_tokens": {
+      "cap_3": 299363,
+      "cap_5": 405982,
+      "delta": 106619
+    },
+    "publication_readiness_passes": {
+      "cap_3": "5/5",
+      "cap_5": "4/5"
+    },
+    "report_analysis_queue_wait_seconds": {
+      "cap_3": 551.307,
+      "cap_5": 0.915
+    }
+  },
+  "configuration": {
+    "durable_report_queue_worker_limit": 5,
+    "isolated_app_yaml_sha256": "741c356f5108cea6e6d03399d2b9bca6c8e42fb596a5af28079c40108ed84d66",
+    "max_jobs_per_queue": 5,
+    "max_parallel_workers": 5,
+    "max_total_jobs": 20,
+    "models_prompts_reasoning_validation_schemas_evidence_requirements_retries_and_durable_queue_limits_changed": false,
+    "publication_enabled": false,
+    "publication_queue_enabled": false,
+    "publication_writes": 0,
+    "repository_app_yaml_sha256": "b07fe3d4710ad4298a9f1229d3d0fbf44ca9cee068e1caffd59fd23b36ef0f61",
+    "supervisor_enabled_in_isolated_run": true,
+    "worker_batches_enabled": true
+  },
+  "execution": {
+    "all_reports_terminal_at_utc": "2026-10-04T18:28:58.577+00:00",
+    "cohort_submission_count": 1,
+    "command_used": "PowerShell from candidate worktree C:\\Users\\8FEE~1\\AppData\\Local\\Temp\\marketlense-supervisor-cap5-20261004: assigned $scriptPath = Join-Path $env:TEMP 'run_marketlense_supervisor_cap5_20261004.py', then invoked python -u $scriptPath; wrapper SHA256 83814698120bdef374a451a41901f72a550082f9cbe1e8b7a6062321f51d8853. Wrapper verifies manifest SHA and five members, loads those members with _load_members(), then calls run_frozen_cohort_once(runs_root=$env:TEMP/marketlense-supervisor-cap5-runs-20261004, sources=sources, max_duration_seconds=7200).",
+    "duration_measurement": "time.monotonic from runner entry to all reports terminal",
+    "duration_seconds": 1426.002,
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "fresh_isolated_state": true,
+    "isolated_run_directory": "C:\\Users\\\u041c\u0438\u0445\u0430\u0438\u043b\\AppData\\Local\\Temp\\marketlense-supervisor-cap5-runs-20261004\\ias-first-attempt-fe_hv60d",
+    "raw_runner_result_outside_repository": "C:\\Users\\8FEE~1\\AppData\\Local\\Temp\\marketlense-supervisor-cap5-result-20261004.json",
+    "reports_submitted_together": 5,
+    "started_at_utc": "2026-10-04T18:05:12.603+00:00",
+    "workflow_root_id": "36b51373-ce87-49f8-a110-84d553e11e31"
+  },
+  "experiment_branch": "experiment/supervisor-cap5",
+  "frozen_cohort": {
+    "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "member_count": 5,
+    "members": [
+      {
+        "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf"
+      },
+      {
+        "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"
+      },
+      {
+        "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf"
+      },
+      {
+        "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf"
+      },
+      {
+        "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf"
+      }
+    ]
+  },
+  "matched_four_passing_report_comparison": {
+    "cap_3": {
+      "aggregate_queue_wait_seconds": 571.045,
+      "aggregate_service_execution_seconds": 2096.89,
+      "last_of_four_terminal_at_utc": "2026-10-04T17:37:59.591633+00:00",
+      "mean_report_elapsed_seconds": 1072.151,
+      "mean_report_service_execution_seconds": 524.222,
+      "report_count": 4,
+      "reports": [
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1065.106,
+          "last_terminal_at_utc": "2026-10-04T17:37:50.106017+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 2.626,
+          "report_id": "cohort-2acb4a56e14add5d7717",
+          "report_name": "2026 Global M&A Outlook",
+          "service_execution_seconds": 576.503,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1074.453,
+          "last_terminal_at_utc": "2026-10-04T17:37:59.452633+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 551.571,
+          "report_id": "cohort-4b763ae2286ca69fe8ac",
+          "report_name": "Trends and Predictions 2026",
+          "service_execution_seconds": 493.439,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1074.592,
+          "last_terminal_at_utc": "2026-10-04T17:37:59.591633+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 8.424,
+          "report_id": "cohort-81af3890cd84ece81ef1",
+          "report_name": "Final Web Version Report Consumer Trends 2026",
+          "service_execution_seconds": 490.804,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1074.454,
+          "last_terminal_at_utc": "2026-10-04T17:37:59.453633+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 8.424,
+          "report_id": "cohort-cbb6e7df67412186b8bc",
+          "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+          "service_execution_seconds": 536.144,
+          "stage_sample_count": 5
+        }
+      ],
+      "runner_start_to_last_of_four_passes_seconds": 1078.087,
+      "stage_totals": {
+        "publication_readiness": {
+          "execution_seconds_total": 1.221,
+          "queue_wait_seconds_total": 1.384,
+          "sample_count": 4
+        },
+        "report_analysis": {
+          "execution_seconds_total": 1483.465,
+          "queue_wait_seconds_total": 551.031,
+          "sample_count": 4
+        },
+        "report_render": {
+          "execution_seconds_total": 18.033,
+          "queue_wait_seconds_total": 2.748,
+          "sample_count": 4
+        },
+        "report_selection": {
+          "execution_seconds_total": 577.124,
+          "queue_wait_seconds_total": 1.794,
+          "sample_count": 4
+        },
+        "source_ingest": {
+          "execution_seconds_total": 17.047,
+          "queue_wait_seconds_total": 14.088,
+          "sample_count": 4
+        }
+      }
+    },
+    "cap_5": {
+      "aggregate_queue_wait_seconds": 11.892,
+      "aggregate_service_execution_seconds": 2770.816,
+      "last_of_four_terminal_at_utc": "2026-10-04T18:28:52.789173+00:00",
+      "mean_report_elapsed_seconds": 1416.998,
+      "mean_report_service_execution_seconds": 692.704,
+      "report_count": 4,
+      "reports": [
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1416.789,
+          "last_terminal_at_utc": "2026-10-04T18:28:52.789173+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 2.473,
+          "report_id": "cohort-2acb4a56e14add5d7717",
+          "report_name": "2026 Global M&A Outlook",
+          "service_execution_seconds": 671.383,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1416.351,
+          "last_terminal_at_utc": "2026-10-04T18:28:52.351173+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 2.473,
+          "report_id": "cohort-4b763ae2286ca69fe8ac",
+          "report_name": "Trends and Predictions 2026",
+          "service_execution_seconds": 718.851,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1417.383,
+          "last_terminal_at_utc": "2026-10-04T18:28:52.383173+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 3.473,
+          "report_id": "cohort-81af3890cd84ece81ef1",
+          "report_name": "Final Web Version Report Consumer Trends 2026",
+          "service_execution_seconds": 670.062,
+          "stage_sample_count": 5
+        },
+        {
+          "final_validation": "pass",
+          "first_enqueue_to_last_terminal_seconds": 1417.47,
+          "last_terminal_at_utc": "2026-10-04T18:28:52.470173+00:00",
+          "publication_readiness": "pass",
+          "queue_wait_seconds": 3.473,
+          "report_id": "cohort-cbb6e7df67412186b8bc",
+          "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+          "service_execution_seconds": 710.52,
+          "stage_sample_count": 5
+        }
+      ],
+      "runner_start_to_last_of_four_passes_seconds": 1420.186,
+      "stage_totals": {
+        "publication_readiness": {
+          "execution_seconds_total": 2.377,
+          "queue_wait_seconds_total": 3.616,
+          "sample_count": 4
+        },
+        "report_analysis": {
+          "execution_seconds_total": 1751.885,
+          "queue_wait_seconds_total": 0.732,
+          "sample_count": 4
+        },
+        "report_render": {
+          "execution_seconds_total": 37.449,
+          "queue_wait_seconds_total": 2.22,
+          "sample_count": 4
+        },
+        "report_selection": {
+          "execution_seconds_total": 952.583,
+          "queue_wait_seconds_total": 2.732,
+          "sample_count": 4
+        },
+        "source_ingest": {
+          "execution_seconds_total": 26.522,
+          "queue_wait_seconds_total": 2.592,
+          "sample_count": 4
+        }
+      }
+    },
+    "deltas": {
+      "aggregate_queue_wait_seconds": {
+        "cap_3": 571.045,
+        "cap_5": 11.892,
+        "delta": -559.153,
+        "delta_percent": -97.92
+      },
+      "aggregate_service_execution_seconds": {
+        "cap_3": 2096.89,
+        "cap_5": 2770.816,
+        "delta": 673.926,
+        "delta_percent": 32.14
+      },
+      "mean_report_elapsed_seconds": {
+        "cap_3": 1072.151,
+        "cap_5": 1416.998,
+        "delta": 344.847,
+        "delta_percent": 32.16
+      },
+      "mean_report_service_execution_seconds": {
+        "cap_3": 524.222,
+        "cap_5": 692.704,
+        "delta": 168.482,
+        "delta_percent": 32.14
+      },
+      "runner_start_to_last_of_four_passes_seconds": {
+        "cap_3": 1078.087,
+        "cap_5": 1420.186,
+        "delta": 342.099,
+        "delta_percent": 31.73
+      }
+    },
+    "description": "Matched reports that passed final validation and publication readiness in the cap-5 run, compared with those same report IDs in the cap-3 run. Both source runs still submitted all five frozen reports together; this is not a counterfactual four-report batch.",
+    "failed_report_context": {
+      "all_reports_terminal_at_utc": "2026-10-04T18:28:58.577000+00:00",
+      "analysis_execution_seconds": 1074.603,
+      "failure_terminal_at_utc": "2026-10-04T18:28:50.456545+00:00",
+      "four_successes_completed_seconds_after_failure": 2.333,
+      "fourth_success_group_last_terminal_at_utc": "2026-10-04T18:28:52.789173+00:00",
+      "last_stage": "report_render",
+      "last_stage_outcome": "dead_letter",
+      "report_id": "cohort-b638414df0b1fccea1cd",
+      "report_name": "mobile-app-trends-2026-pdf",
+      "runner_finished_seconds_after_failed_report": 8.12
+    },
+    "interpretation": "The failed Adjust report is an analysis execution outlier. Excluding it from the outcome set, the four passing reports still reached their final readiness outcomes later in cap 5 than cap 3 in these single samples. Queue waiting fell sharply, while their measured service execution time increased. The retained telemetry cannot establish that the failed output caused the additional latency or derive a counterfactual four-report batch.",
+    "provider_calls_tokens_file_search_and_cost_attribution": "Unavailable per report in the existing run_frozen_cohort_once output; those metrics are cohort-wide. They are not prorated into the four-report view.",
+    "report_ids": [
+      "cohort-2acb4a56e14add5d7717",
+      "cohort-4b763ae2286ca69fe8ac",
+      "cohort-81af3890cd84ece81ef1",
+      "cohort-cbb6e7df67412186b8bc"
+    ]
+  },
+  "metrics": {
+    "automatic_queue_retries": 0,
+    "automatic_repair_dispositions": {
+      "targeted_repair": 3
+    },
+    "automatic_repairs": 3,
+    "cohort_wall_clock_seconds": 1426.002,
+    "estimated_total_cost_usd": 0.459454,
+    "file_search_calls": 28,
+    "input_tokens": 1976015,
+    "model_provider_calls": 204,
+    "operator_interventions": 0,
+    "output_tokens": 405982,
+    "publication_writes": 0,
+    "structured_output_repair_calls": 0
+  },
+  "objective": "Compare simultaneous frozen five-report ingestion with max_parallel_workers and max_jobs_per_queue raised from 3 to 5; preserve generation, validation, retry, queue and publication policies.",
+  "quality_and_safety_outcomes": {
+    "acceptance_failure": "One report failed grounding validation and publication readiness with two unresolved retained factual claims after three targeted repairs.",
+    "acceptance_passed": false,
+    "exact_frozen_source_identities": true,
+    "final_validation_passes": "4/5",
+    "isolated_fresh_state": true,
+    "operator_interventions": 0,
+    "publication_enabled": false,
+    "publication_queue_enabled": false,
+    "publication_readiness_passes": "4/5",
+    "publication_writes": 0,
+    "reports": [
+      {
+        "admission": "admitted",
+        "automatic_repair_dispositions": {},
+        "automatic_repairs": 0,
+        "failure": null,
+        "final_state": "awaiting_review",
+        "final_validation": "pass",
+        "frozen_content_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "operator_intervention": false,
+        "publication_readiness": "pass",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "report_name": "Final Web Version Report Consumer Trends 2026",
+        "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "workflow_retries": 0
+      },
+      {
+        "admission": "admitted",
+        "automatic_repair_dispositions": {},
+        "automatic_repairs": 0,
+        "failure": null,
+        "final_state": "awaiting_review",
+        "final_validation": "pass",
+        "frozen_content_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "operator_intervention": false,
+        "publication_readiness": "pass",
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+        "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "workflow_retries": 0
+      },
+      {
+        "admission": "admitted",
+        "automatic_repair_dispositions": {},
+        "automatic_repairs": 0,
+        "failure": null,
+        "final_state": "awaiting_review",
+        "final_validation": "pass",
+        "frozen_content_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "operator_intervention": false,
+        "publication_readiness": "pass",
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "report_name": "2026 Global M&A Outlook",
+        "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "workflow_retries": 0
+      },
+      {
+        "admission": "admitted",
+        "automatic_repair_dispositions": {},
+        "automatic_repairs": 0,
+        "failure": null,
+        "final_state": "awaiting_review",
+        "final_validation": "pass",
+        "frozen_content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "operator_intervention": false,
+        "publication_readiness": "pass",
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "report_name": "Trends and Predictions 2026",
+        "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "workflow_retries": 0
+      },
+      {
+        "admission": "admitted",
+        "automatic_repair_dispositions": {
+          "targeted_repair": 3
+        },
+        "automatic_repairs": 3,
+        "failure": {
+          "artifact_family": "summary.tldr",
+          "claim_or_entity_id": "soft_copy:summary:042b2b47f8c457d6",
+          "error_context": {
+            "affected_section": "summary.tldr"
+          },
+          "inner_error_class": "",
+          "outer_code": "validation_failed",
+          "repair_attempt": 1,
+          "stage": "semantic_validation",
+          "validator_rule": "grounding"
+        },
+        "final_state": "failed",
+        "final_validation": "fail",
+        "frozen_content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "operator_intervention": false,
+        "publication_readiness": "fail",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "report_name": "mobile-app-trends-2026-pdf",
+        "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+        "unresolved_retained_factual_claims": 2,
+        "unsupported_retained_factual_claims": 0,
+        "workflow_retries": 0
+      }
+    ],
+    "reports_admitted": "5/5",
+    "unresolved_retained_factual_claims": 2,
+    "unsupported_retained_factual_claims": 0
+  },
+  "recorded_at_utc": "2026-10-04T18:31:42+00:00",
+  "schema_version": "1.0",
+  "stage_telemetry": {
+    "by_stage": {
+      "publication_readiness": {
+        "comparison_at_cap_3": {
+          "execution_seconds_max": 0.385,
+          "execution_seconds_total": 1.463,
+          "queue_wait_seconds_total": 2.105,
+          "sample_count": 5
+        },
+        "execution_max_delta_seconds_vs_cap_3": 0.5,
+        "execution_seconds_max": 0.885,
+        "execution_seconds_total": 2.377,
+        "queue_wait_delta_seconds_vs_cap_3": 1.511,
+        "queue_wait_seconds_total": 3.616,
+        "sample_count": 4
+      },
+      "report_analysis": {
+        "comparison_at_cap_3": {
+          "execution_seconds_max": 436.069,
+          "execution_seconds_total": 1901.67,
+          "queue_wait_seconds_total": 551.307,
+          "sample_count": 5
+        },
+        "execution_max_delta_seconds_vs_cap_3": 638.534,
+        "execution_seconds_max": 1074.603,
+        "execution_seconds_total": 2826.488,
+        "queue_wait_delta_seconds_vs_cap_3": -550.392,
+        "queue_wait_seconds_total": 0.915,
+        "sample_count": 5
+      },
+      "report_render": {
+        "comparison_at_cap_3": {
+          "execution_seconds_max": 5.654,
+          "execution_seconds_total": 20.07,
+          "queue_wait_seconds_total": 3.333,
+          "sample_count": 5
+        },
+        "execution_max_delta_seconds_vs_cap_3": 4.354,
+        "execution_seconds_max": 10.008,
+        "execution_seconds_total": 47.351,
+        "queue_wait_delta_seconds_vs_cap_3": -0.558,
+        "queue_wait_seconds_total": 2.775,
+        "sample_count": 5
+      },
+      "report_selection": {
+        "comparison_at_cap_3": {
+          "execution_seconds_max": 217.259,
+          "execution_seconds_total": 709.619,
+          "queue_wait_seconds_total": 2.415,
+          "sample_count": 5
+        },
+        "execution_max_delta_seconds_vs_cap_3": 101.726,
+        "execution_seconds_max": 318.985,
+        "execution_seconds_total": 1170.746,
+        "queue_wait_delta_seconds_vs_cap_3": 1.0,
+        "queue_wait_seconds_total": 3.415,
+        "sample_count": 5
+      },
+      "source_ingest": {
+        "comparison_at_cap_3": {
+          "execution_seconds_max": 5.161,
+          "execution_seconds_total": 22.208,
+          "queue_wait_seconds_total": 14.511,
+          "sample_count": 5
+        },
+        "execution_max_delta_seconds_vs_cap_3": 2.166,
+        "execution_seconds_max": 7.327,
+        "execution_seconds_total": 33.426,
+        "queue_wait_delta_seconds_vs_cap_3": -11.771,
+        "queue_wait_seconds_total": 2.74,
+        "sample_count": 5
+      }
+    },
+    "interpretation": "The telemetry identifies stage maxima, but does not derive a resource-constrained critical path or attribute the increased execution time to a specific scheduler/provider cause.",
+    "largest_execution_stage_by_max": "report_analysis",
+    "largest_execution_stage_max_seconds": 1074.603,
+    "max_observed_running_jobs_by_stage": {
+      "publication_readiness": 4,
+      "report_analysis": 5,
+      "report_render": 5,
+      "report_selection": 5,
+      "source_ingest": 5
+    },
+    "prompt_family_elapsed_time": "unavailable",
+    "provider_request_timing": "unavailable",
+    "resource_constrained_critical_path_derived": false,
+    "second_largest_execution_stage_by_max": "report_selection",
+    "second_largest_execution_stage_max_seconds": 318.985,
+    "terminal_dependency_chain_available": false
+  },
+  "starting_checkout": {
+    "head_sha": "c997c1dbdc75aa8bb0b2412400e1bb023b141742",
+    "working_tree_clean": true
+  },
+  "status": "failed_quality_gate_not_authoritative",
+  "tested_code_commit_sha": "a257974ae271e1420f4d9adbd08bc34b3769021b",
+  "verification": {
+    "benchmark_gate": "failed; evidence is non-authoritative and must not be committed or pushed as a passing baseline",
+    "diff_check": "git diff --check passed",
+    "focused_tests": "python -m pytest -q tests/test_workflow_supervisor_parallelism.py tests/test_ias_first_attempt_live_canary.py \u2014 22 passed in 26.34s",
+    "ruff": "python -m ruff check src/services/_config_service/workflow_control.py tests/test_workflow_supervisor_parallelism.py tests/test_ias_first_attempt_live_canary.py \u2014 passed",
+    "yaml_parse": "src/config/app.yaml and src/config/app.example.yaml parsed successfully"
+  }
+}
