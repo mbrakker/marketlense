@@ -57,6 +57,9 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     )
     assert control.supervisor.enabled is True
     assert control.supervisor.worker_batches_enabled is True
+    assert control.supervisor.max_parallel_workers == 3
+    assert control.supervisor.max_jobs_per_queue == 1
+    assert control.supervisor.max_total_jobs == 20
     queues = load_workflow_queue_policies(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
         new_runtime_context(task_id="isolated-canary-queue-test"),
@@ -269,9 +272,14 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
         report_ids=("report-a", "report-b"),
     )
 
-    assert evidence["critical_path"]["terminal_report_id"] == "report-b"
-    assert evidence["critical_path"]["path_source"] == "workflow_job_parent_chain"
-    path_jobs = evidence["critical_path"]["jobs"]
+    assert (
+        evidence["terminal_dependency_chain"]["terminal_report_id"] == "report-b"
+    )
+    assert (
+        evidence["terminal_dependency_chain"]["path_source"]
+        == "workflow_job_parent_chain"
+    )
+    path_jobs = evidence["terminal_dependency_chain"]["jobs"]
     assert [item["stage"] for item in path_jobs] == [
         "source_ingest",
         "report_selection",
@@ -279,7 +287,12 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
         "report_render",
         "publication_readiness",
     ]
-    assert all(item["on_critical_path"] for item in path_jobs)
+    assert all(item["on_terminal_dependency_chain"] for item in path_jobs)
+    assert evidence["resource_constrained_critical_path"]["derived"] is False
+    assert all(
+        "materially_contributes_to_critical_path" not in item
+        for item in evidence["stage_attempts"]
+    )
     analysis = next(
         item for item in evidence["stage_attempts"] if item["job_id"] == telemetry_job
     )
@@ -292,11 +305,11 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
         evidence["queue_concurrency"]["source_ingest"]["max_observed_running_jobs"] == 1
     )
     assert evidence["publication_write_count"] == 0
-    assert any(
-        item["job_id"] == job_ids[("report-a", "source_ingest")]
-        and item["materially_contributes_to_critical_path"]
+    assert next(
+        item
         for item in evidence["stage_attempts"]
-    )
+        if item["job_id"] == job_ids[("report-a", "source_ingest")]
+    )["on_terminal_dependency_chain"] is False
 
 
 def test_retained_claim_counts_require_the_exact_report_and_source_identity(

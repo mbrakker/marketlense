@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "benchmark": "MarketLense frozen five-report ingestion performance baseline",
-  "status": "authoritative_current_production_configuration",
-  "recorded_at_utc": "2026-10-04T14:53:35Z",
+  "status": "authoritative",
+  "recorded_at_utc": "2026-10-04T15:53:30Z",
   "baseline_commit_sha": "9879e37b98ff6905e5020074e201de136b1fd811",
   "frozen_manifest": {
     "path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
@@ -30,7 +30,7 @@
       "max_runtime_seconds": 120,
       "lease_seconds": 180
     },
-    "effective_queue_concurrency_note": "Durable queue worker limits were seeded to configured max_workers=5. The unchanged production supervisor has max_jobs_per_queue=1 and max_parallel_workers=3. Observed simultaneous running jobs were 1 in each main queue. No concurrency setting was changed.",
+    "effective_queue_concurrency_note": "The five main report queues each had configured and durable worker capacity 5; the production supervisor capped each queue at one dispatched job, and observed same-queue concurrency was 1.",
     "queues": {
       "source_ingest": {
         "configured_policy": {
@@ -176,6 +176,47 @@
         },
         "max_observed_running_jobs": 0
       }
+    },
+    "supervisor_dispatch_capacity": {
+      "max_parallel_workers": 3,
+      "max_jobs_per_queue": 1,
+      "max_total_jobs": 20
+    },
+    "scheduler_capacity_summary": {
+      "queue_capacity": {
+        "source_ingest": {
+          "configured_worker_limit": 5,
+          "durable_worker_concurrency_limit": 5
+        },
+        "report_selection": {
+          "configured_worker_limit": 5,
+          "durable_worker_concurrency_limit": 5
+        },
+        "report_analysis": {
+          "configured_worker_limit": 5,
+          "durable_worker_concurrency_limit": 5
+        },
+        "report_render": {
+          "configured_worker_limit": 5,
+          "durable_worker_concurrency_limit": 5
+        },
+        "publication_readiness": {
+          "configured_worker_limit": 5,
+          "durable_worker_concurrency_limit": 5
+        }
+      },
+      "supervisor_dispatch_capacity": {
+        "max_parallel_workers": 3,
+        "max_jobs_per_queue": 1,
+        "max_total_jobs": 20
+      },
+      "observed_max_simultaneous_running_jobs_per_queue": {
+        "publication_readiness": 1,
+        "report_analysis": 1,
+        "report_render": 1,
+        "report_selection": 1,
+        "source_ingest": 1
+      }
     }
   },
   "command": {
@@ -198,7 +239,8 @@
     "cohort_wall_clock_seconds": 2262.244,
     "duration_method": "time.monotonic from runner entry to all reports terminal",
     "reports_per_hour": 7.9567,
-    "critical_path": {
+    "outer_driver_wall_clock_seconds": 2262.55,
+    "terminal_dependency_chain": {
       "available": true,
       "source": "workflow_job_parent_chain",
       "report_id": "cohort-4b763ae2286ca69fe8ac",
@@ -206,13 +248,6 @@
       "path_enqueued_at_utc": "2026-10-04T14:01:14+00:00",
       "terminal_completed_at_utc": "2026-10-04T14:38:49.459124+00:00",
       "elapsed_seconds": 2255.459,
-      "ordered_job_ids": [
-        "c01b9e9c-afaa-4176-bbc7-d2b2ebc27894",
-        "e9820b76-40b1-4daa-85ff-8a50dc90bd2d",
-        "4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3",
-        "e038b488-ea12-451b-86e1-a6d88489944e",
-        "b7823901-f40c-49a4-b479-2b1dfa0a5223"
-      ],
       "dependency_gaps": [
         {
           "from_stage": "source_ingest",
@@ -234,9 +269,17 @@
           "to_stage": "publication_readiness",
           "seconds": 0.349
         }
+      ],
+      "ordered_parent_job_chain": [
+        "c01b9e9c-afaa-4176-bbc7-d2b2ebc27894",
+        "e9820b76-40b1-4daa-85ff-8a50dc90bd2d",
+        "4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3",
+        "e038b488-ea12-451b-86e1-a6d88489944e",
+        "b7823901-f40c-49a4-b479-2b1dfa0a5223"
       ]
     },
-    "outer_driver_wall_clock_seconds": 2262.55
+    "resource_constrained_critical_path_derived": false,
+    "resource_constrained_critical_path_note": "The retained timings identify the terminal report's parent-job dependency chain. They do not derive a full resource-constrained critical path across scheduler contention."
   },
   "usage_and_cost": {
     "model_provider_calls": 192,
@@ -456,7 +499,6 @@
         "max_observed_running_jobs": 1
       }
     },
-    "critical_path_flags_note": "on_critical_path is derived from the actual workflow parent-job chain. materially_contributes_to_critical_path compares overlap against durable per-queue worker limits; the global supervisor cap is retained above.",
     "auxiliary_queue_outcomes": [
       {
         "queue_name": "briefing_generation",
@@ -497,40 +539,44 @@
       "effective_execution_completed_at_utc",
       "queue_wait_seconds",
       "execution_seconds",
-      "on_critical_path",
-      "materially_contributes_to_critical_path"
+      "on_terminal_dependency_chain"
     ],
     "stage_attempt_timing_rows_encoding": "One pipe-delimited record per attempt; column order is stage_attempt_timing_columns.",
     "stage_attempt_timing_rows": [
-      "cohort-81af3890cd84ece81ef1|source_ingest|4f958a1b-49cb-4509-a518-18b3222332d6||1|succeeded|2026-10-04T14:01:13+00:00|2026-10-04T14:01:13+00:00|2026-10-04T14:01:14.180521+00:00|2026-10-04T14:01:14.180521+00:00|2026-10-04T14:01:16.696521+00:00|1.181|2.516|False|False",
-      "cohort-cbb6e7df67412186b8bc|source_ingest|87402064-07d7-4c6d-bed0-93e8d36a410f||1|succeeded|2026-10-04T14:01:13+00:00|2026-10-04T14:01:13+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:19.083499+00:00|3.986|2.097|False|False",
-      "cohort-2acb4a56e14add5d7717|source_ingest|6f88fdc2-d6cb-419d-8193-6b51f32daf12||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:39.620732+00:00|502.764|2.857|False|False",
-      "cohort-4b763ae2286ca69fe8ac|source_ingest|c01b9e9c-afaa-4176-bbc7-d2b2ebc27894||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:13.197899+00:00|895.794|3.404|True|False",
-      "cohort-b638414df0b1fccea1cd|source_ingest|1d1956f5-ccdb-4014-bb73-915106130ffa||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:39.922259+00:00|81.836|4.086|False|False",
-      "cohort-81af3890cd84ece81ef1|report_selection|9c1db002-3b09-46fb-8c53-db3cc5af48bd|4f958a1b-49cb-4509-a518-18b3222332d6|1|succeeded|2026-10-04T14:01:16+00:00|2026-10-04T14:01:16+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:02:35.524499+00:00|0.986|78.538|False|False",
-      "cohort-81af3890cd84ece81ef1|report_analysis|5cf0e07e-c054-46bd-8e78-03bbb4d4a68c|9c1db002-3b09-46fb-8c53-db3cc5af48bd|1|succeeded|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:09:36.323259+00:00|0.836|420.487|False|False",
-      "cohort-cbb6e7df67412186b8bc|report_selection|05712a0a-56c2-431c-b7c8-142ef1ee252e|87402064-07d7-4c6d-bed0-93e8d36a410f|1|succeeded|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:06:03.495259+00:00|0.836|207.659|False|False",
-      "cohort-81af3890cd84ece81ef1|report_render|aef63baa-ce66-4a90-80b7-3dcd3cda01b6|5cf0e07e-c054-46bd-8e78-03bbb4d4a68c|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:39.349732+00:00|0.764|2.586|False|False",
-      "cohort-b638414df0b1fccea1cd|report_selection|624a31f3-6311-4cbd-8fd0-b1d95f4dbab4|1d1956f5-ccdb-4014-bb73-915106130ffa|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:10:45.402732+00:00|0.764|68.639|False|False",
-      "cohort-cbb6e7df67412186b8bc|report_analysis|ce151ca2-e448-4ea7-b891-e0fb1bf978b6|05712a0a-56c2-431c-b7c8-142ef1ee252e|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:16:09.451732+00:00|0.764|392.688|False|False",
-      "cohort-b638414df0b1fccea1cd|report_analysis|48888e1a-d9e4-4097-bf5e-af8c06a33e3a|624a31f3-6311-4cbd-8fd0-b1d95f4dbab4|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:22:27.745899+00:00|0.794|377.952|False|False",
-      "cohort-cbb6e7df67412186b8bc|report_render|73ee37b4-d352-4d7d-927c-88e55739e8ad|ce151ca2-e448-4ea7-b891-e0fb1bf978b6|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:12.223899+00:00|0.794|2.43|False|False",
-      "cohort-81af3890cd84ece81ef1|publication_readiness|3aba6fc9-fe3d-4e30-81a5-004716b0af6d|aef63baa-ce66-4a90-80b7-3dcd3cda01b6|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:10.041899+00:00|0.794|0.248|False|False",
-      "cohort-2acb4a56e14add5d7717|report_selection|f5cfdfed-813d-434a-af18-e1887035972b|6f88fdc2-d6cb-419d-8193-6b51f32daf12|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:17:19.469899+00:00|0.794|69.676|False|False",
-      "cohort-b638414df0b1fccea1cd|report_render|27f79e3d-a19a-4908-a434-3043526c315d|48888e1a-d9e4-4097-bf5e-af8c06a33e3a|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:31.535733+00:00|0.208|3.328|False|False",
-      "cohort-cbb6e7df67412186b8bc|publication_readiness|4f608f93-be32-4c03-96ec-9842af9bb0f1|73ee37b4-d352-4d7d-927c-88e55739e8ad|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:36.769733+00:00|0.208|8.562|False|False",
-      "cohort-2acb4a56e14add5d7717|report_analysis|4e4343b8-103f-4afb-9b89-bf7a6b0b6fff|f5cfdfed-813d-434a-af18-e1887035972b|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:28:37.407733+00:00|0.208|369.2|False|False",
-      "cohort-4b763ae2286ca69fe8ac|report_selection|e9820b76-40b1-4daa-85ff-8a50dc90bd2d|c01b9e9c-afaa-4176-bbc7-d2b2ebc27894|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:23:34.710733+00:00|0.208|66.503|True|False",
-      "cohort-2acb4a56e14add5d7717|report_render|1799ba66-55f8-4578-963d-e39099eb2702|4e4343b8-103f-4afb-9b89-bf7a6b0b6fff|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:42.217398+00:00|0.876|4.341|False|False",
-      "cohort-4b763ae2286ca69fe8ac|report_analysis|4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3|e9820b76-40b1-4daa-85ff-8a50dc90bd2d|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:38:43.529398+00:00|0.876|605.653|True|False",
-      "cohort-b638414df0b1fccea1cd|publication_readiness|74c94abf-4065-442d-ac32-604c3adee489|27f79e3d-a19a-4908-a434-3043526c315d|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:38.097398+00:00|0.876|0.221|False|False",
-      "cohort-4b763ae2286ca69fe8ac|report_render|e038b488-ea12-451b-86e1-a6d88489944e|4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3|1|succeeded|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:48.650939+00:00|0.128|4.523|True|False",
-      "cohort-2acb4a56e14add5d7717|publication_readiness|811b1021-478b-413a-aa17-9b78b362d924|1799ba66-55f8-4578-963d-e39099eb2702|1|succeeded|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.367939+00:00|0.128|0.24|False|False",
-      "cohort-4b763ae2286ca69fe8ac|publication_readiness|b7823901-f40c-49a4-b479-2b1dfa0a5223|e038b488-ea12-451b-86e1-a6d88489944e|1|succeeded|2026-10-04T14:38:49+00:00|2026-10-04T14:38:49+00:00|2026-10-04T14:38:49.233124+00:00|2026-10-04T14:38:49.233124+00:00|2026-10-04T14:38:49.459124+00:00|0.233|0.226|True|False"
+      "cohort-81af3890cd84ece81ef1|source_ingest|4f958a1b-49cb-4509-a518-18b3222332d6||1|succeeded|2026-10-04T14:01:13+00:00|2026-10-04T14:01:13+00:00|2026-10-04T14:01:14.180521+00:00|2026-10-04T14:01:14.180521+00:00|2026-10-04T14:01:16.696521+00:00|1.181|2.516|false",
+      "cohort-cbb6e7df67412186b8bc|source_ingest|87402064-07d7-4c6d-bed0-93e8d36a410f||1|succeeded|2026-10-04T14:01:13+00:00|2026-10-04T14:01:13+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:19.083499+00:00|3.986|2.097|false",
+      "cohort-2acb4a56e14add5d7717|source_ingest|6f88fdc2-d6cb-419d-8193-6b51f32daf12||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:39.620732+00:00|502.764|2.857|false",
+      "cohort-4b763ae2286ca69fe8ac|source_ingest|c01b9e9c-afaa-4176-bbc7-d2b2ebc27894||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:13.197899+00:00|895.794|3.404|true",
+      "cohort-b638414df0b1fccea1cd|source_ingest|1d1956f5-ccdb-4014-bb73-915106130ffa||1|succeeded|2026-10-04T14:01:14+00:00|2026-10-04T14:01:14+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:39.922259+00:00|81.836|4.086|false",
+      "cohort-81af3890cd84ece81ef1|report_selection|9c1db002-3b09-46fb-8c53-db3cc5af48bd|4f958a1b-49cb-4509-a518-18b3222332d6|1|succeeded|2026-10-04T14:01:16+00:00|2026-10-04T14:01:16+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:01:16.986499+00:00|2026-10-04T14:02:35.524499+00:00|0.986|78.538|false",
+      "cohort-81af3890cd84ece81ef1|report_analysis|5cf0e07e-c054-46bd-8e78-03bbb4d4a68c|9c1db002-3b09-46fb-8c53-db3cc5af48bd|1|succeeded|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:09:36.323259+00:00|0.836|420.487|false",
+      "cohort-cbb6e7df67412186b8bc|report_selection|05712a0a-56c2-431c-b7c8-142ef1ee252e|87402064-07d7-4c6d-bed0-93e8d36a410f|1|succeeded|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:02:35.836259+00:00|2026-10-04T14:06:03.495259+00:00|0.836|207.659|false",
+      "cohort-81af3890cd84ece81ef1|report_render|aef63baa-ce66-4a90-80b7-3dcd3cda01b6|5cf0e07e-c054-46bd-8e78-03bbb4d4a68c|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:39.349732+00:00|0.764|2.586|false",
+      "cohort-b638414df0b1fccea1cd|report_selection|624a31f3-6311-4cbd-8fd0-b1d95f4dbab4|1d1956f5-ccdb-4014-bb73-915106130ffa|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:10:45.402732+00:00|0.764|68.639|false",
+      "cohort-cbb6e7df67412186b8bc|report_analysis|ce151ca2-e448-4ea7-b891-e0fb1bf978b6|05712a0a-56c2-431c-b7c8-142ef1ee252e|1|succeeded|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:09:36.763732+00:00|2026-10-04T14:16:09.451732+00:00|0.764|392.688|false",
+      "cohort-b638414df0b1fccea1cd|report_analysis|48888e1a-d9e4-4097-bf5e-af8c06a33e3a|624a31f3-6311-4cbd-8fd0-b1d95f4dbab4|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:22:27.745899+00:00|0.794|377.952|false",
+      "cohort-cbb6e7df67412186b8bc|report_render|73ee37b4-d352-4d7d-927c-88e55739e8ad|ce151ca2-e448-4ea7-b891-e0fb1bf978b6|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:12.223899+00:00|0.794|2.43|false",
+      "cohort-81af3890cd84ece81ef1|publication_readiness|3aba6fc9-fe3d-4e30-81a5-004716b0af6d|aef63baa-ce66-4a90-80b7-3dcd3cda01b6|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:10.041899+00:00|0.794|0.248|false",
+      "cohort-2acb4a56e14add5d7717|report_selection|f5cfdfed-813d-434a-af18-e1887035972b|6f88fdc2-d6cb-419d-8193-6b51f32daf12|1|succeeded|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:16:09.793899+00:00|2026-10-04T14:17:19.469899+00:00|0.794|69.676|false",
+      "cohort-b638414df0b1fccea1cd|report_render|27f79e3d-a19a-4908-a434-3043526c315d|48888e1a-d9e4-4097-bf5e-af8c06a33e3a|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:31.535733+00:00|0.208|3.328|false",
+      "cohort-cbb6e7df67412186b8bc|publication_readiness|4f608f93-be32-4c03-96ec-9842af9bb0f1|73ee37b4-d352-4d7d-927c-88e55739e8ad|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:36.769733+00:00|0.208|8.562|false",
+      "cohort-2acb4a56e14add5d7717|report_analysis|4e4343b8-103f-4afb-9b89-bf7a6b0b6fff|f5cfdfed-813d-434a-af18-e1887035972b|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:28:37.407733+00:00|0.208|369.2|false",
+      "cohort-4b763ae2286ca69fe8ac|report_selection|e9820b76-40b1-4daa-85ff-8a50dc90bd2d|c01b9e9c-afaa-4176-bbc7-d2b2ebc27894|1|succeeded|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:22:28.207733+00:00|2026-10-04T14:23:34.710733+00:00|0.208|66.503|true",
+      "cohort-2acb4a56e14add5d7717|report_render|1799ba66-55f8-4578-963d-e39099eb2702|4e4343b8-103f-4afb-9b89-bf7a6b0b6fff|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:42.217398+00:00|0.876|4.341|false",
+      "cohort-4b763ae2286ca69fe8ac|report_analysis|4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3|e9820b76-40b1-4daa-85ff-8a50dc90bd2d|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:38:43.529398+00:00|0.876|605.653|true",
+      "cohort-b638414df0b1fccea1cd|publication_readiness|74c94abf-4065-442d-ac32-604c3adee489|27f79e3d-a19a-4908-a434-3043526c315d|1|succeeded|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:37.876398+00:00|2026-10-04T14:28:38.097398+00:00|0.876|0.221|false",
+      "cohort-4b763ae2286ca69fe8ac|report_render|e038b488-ea12-451b-86e1-a6d88489944e|4ef6a07a-6d70-4915-9a8f-c2e52b89d6e3|1|succeeded|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:48.650939+00:00|0.128|4.523|true",
+      "cohort-2acb4a56e14add5d7717|publication_readiness|811b1021-478b-413a-aa17-9b78b362d924|1799ba66-55f8-4578-963d-e39099eb2702|1|succeeded|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.127939+00:00|2026-10-04T14:38:44.367939+00:00|0.128|0.24|false",
+      "cohort-4b763ae2286ca69fe8ac|publication_readiness|b7823901-f40c-49a4-b479-2b1dfa0a5223|e038b488-ea12-451b-86e1-a6d88489944e|1|succeeded|2026-10-04T14:38:49+00:00|2026-10-04T14:38:49+00:00|2026-10-04T14:38:49.233124+00:00|2026-10-04T14:38:49.233124+00:00|2026-10-04T14:38:49.459124+00:00|0.233|0.226|true"
     ],
     "queue_wait_measurement_source": "performance_telemetry.queue_wait_ms for all 25 recorded attempts.",
     "execution_measurement_source": "performance_telemetry.wall_time_ms for all 25 recorded attempts.",
-    "completion_timestamp_note": "attempt_completed_at_utc is the persisted workflow-attempt timestamp; effective_execution_completed_at_utc is derived as started_at_utc plus the retained wall_time_ms measurement."
+    "completion_timestamp_note": "attempt_completed_at_utc is the persisted workflow-attempt timestamp; effective_execution_completed_at_utc is started_at_utc plus the retained wall_time_ms measurement.",
+    "terminal_dependency_chain_note": "on_terminal_dependency_chain reports membership in the retained workflow parent-job chain only; it does not assert membership or non-membership in a full resource-constrained critical path.",
+    "resource_constrained_critical_path": {
+      "derived": false,
+      "reason": "The retained run evidence does not include all scheduler contention and dispatch decisions needed to derive one."
+    }
   },
   "acceptance": {
     "exact_frozen_five_sources": true,
@@ -548,20 +594,63 @@
     "observed_queue_concurrency_recorded": true
   },
   "bottleneck_summary": {
-    "longest_critical_path_queue_wait": {
+    "terminal_dependency_chain_longest_queue_wait": {
       "stage": "source_ingest",
       "seconds": 895.794
     },
-    "largest_critical_path_execution": {
+    "terminal_dependency_chain_largest_execution": {
       "stage": "report_analysis",
       "seconds": 605.653
     },
-    "largest_dependency_dispatch_gaps_seconds": {
+    "terminal_dependency_chain_dependency_dispatch_gaps_seconds": {
       "source_ingest_to_report_selection": 374.802,
-      "report_selection_to_report_analysis": 302.289
+      "report_selection_to_report_analysis": 302.289,
+      "report_analysis_to_report_render": 0.471,
+      "report_render_to_publication_readiness": 0.349
     },
-    "interpretation": "The longest measured critical-path delay is source_ingest queue wait, followed by report_analysis execution. Large gaps between parent-stage effective completion and child enqueue also matter; overlapping stage execution sums do not capture these delays."
+    "resource_constrained_critical_path_derived": false,
+    "first_performance_hypothesis": "Test supervisor scheduling and dispatch first, given max_jobs_per_queue=1, max_parallel_workers=3, observed same-queue concurrency 1, long source_ingest queue wait, and the measured dependency dispatch gaps."
   },
   "auxiliary_workflow_scope_note": "Ancillary briefing and signal jobs are outside the five-report admission, validation and readiness denominator. Non-success ancillary outcomes are retained here and were not changed for this benchmark.",
-  "historical_baseline_supersedes": "docs/quality/frozen-five-ingestion-performance-baseline-20261004.json"
+  "artifact_role": "authoritative_baseline",
+  "baseline_contract": {
+    "authoritative_baseline_wall_clock_seconds": 2262.244,
+    "fivefold_optimization_target_max_seconds": 452.449,
+    "fivefold_target_calculation": "2262.244 / 5 = 452.4488 seconds, rounded up to 452.449",
+    "baseline_cost_usd": 0.378316,
+    "optimized_candidate_cost_usd_max": 0.378316,
+    "baseline_provider_calls": 192,
+    "baseline_file_search_calls": 23,
+    "required_quality_gate": {
+      "final_validation": "5/5 pass",
+      "publication_readiness": "5/5 pass",
+      "unsupported_retained_factual_claims": 0,
+      "unresolved_retained_factual_claims": 0
+    },
+    "frozen_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7"
+  },
+  "supersedes_historical_artifact": "docs/quality/frozen-five-ingestion-performance-baseline-20261004.json",
+  "verification": {
+    "github_ci_evidence": "No GitHub CI evidence is attached to these benchmark commits; local verification is recorded here.",
+    "commands": [
+      {
+        "command": "python -m pytest -q tests/test_ias_first_attempt_live_canary.py tests/test_frozen_reliability_cohort_runner.py",
+        "result": "24 passed in 42.95s"
+      },
+      {
+        "command": "python -m pytest -q tests/test_workflow_supervisor_parallelism.py tests/test_workflow_supervisor_orchestrator.py",
+        "result": "7 passed in 7.43s"
+      },
+      {
+        "command": "ruff check scripts/quality/ias_live_canary_runner.py tests/test_ias_first_attempt_live_canary.py",
+        "result": "All checks passed."
+      },
+      {
+        "command": "git diff --check",
+        "result": "Pass after the evidence edit; see finalized commit diff."
+      }
+    ]
+  },
+  "no_live_rerun_for_finalization": true,
+  "no_live_rerun_reason": "The retained isolated cohort result and workflow/usage databases contained the source identities, stage timestamps, concurrency, usage, cost, publication and validation evidence needed for deterministic terminology and contract updates."
 }

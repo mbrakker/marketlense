@@ -288,5 +288,8 @@
     "historical_observation_valid": true,
     "reason": "The fresh isolated workflow DB defaulted source_ingest and report_analysis durable worker concurrency to 1, while the isolated app.yaml configured max_workers=5. The 2736.513-second run remains a historical observation under the accidental serial queue controls but is not a valid configured x5 throughput denominator.",
     "superseded_by": "docs/quality/frozen-five-ingestion-performance-baseline-20261004-queue-configured.json"
-  }
+  },
+  "status": "historical_superseded",
+  "artifact_role": "historical_invalid_for_authoritative_x5_denominator",
+  "superseded_by": "docs/quality/frozen-five-ingestion-performance-baseline-20261004-queue-configured.json"
 }

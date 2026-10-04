@@ -261,7 +261,17 @@ def _collect_frozen_cohort_queue_timing_evidence(
     """Collect queue timing, dependencies, and overlap from retained telemetry."""
 
     if not report_ids:
-        return {"stage_attempts": [], "critical_path": {"available": False}}
+        return {
+            "stage_attempts": [],
+            "terminal_dependency_chain": {"available": False},
+            "resource_constrained_critical_path": {
+                "derived": False,
+                "reason": (
+                    "The retained cohort telemetry does not capture all "
+                    "scheduler contention."
+                ),
+            },
+        }
     report_marks = ",".join("?" for _ in report_ids)
     stage_marks = ",".join("?" for _ in _FROZEN_REPORT_QUEUE_STAGES)
     with sqlite3.connect(state_db) as conn:
@@ -438,8 +448,7 @@ def _collect_frozen_cohort_queue_timing_evidence(
                 "effective_completed_at_utc": effective_end.isoformat()
                 if effective_end
                 else "",
-                "on_critical_path": False,
-                "materially_contributes_to_critical_path": False,
+                "on_terminal_dependency_chain": False,
             }
             stage_attempts.append(item)
             by_job.setdefault(job_id, []).append(item)
@@ -456,7 +465,7 @@ def _collect_frozen_cohort_queue_timing_evidence(
             report_id not in readiness or completed > readiness[report_id][0]
         ):
             readiness[report_id] = (completed, job_id)
-    critical_path: dict[str, Any] = {"available": False}
+    terminal_dependency_chain: dict[str, Any] = {"available": False}
     if len(readiness) == len(report_ids):
         report_id, (terminal_time, terminal_job_id) = max(
             readiness.items(), key=lambda item: item[1][0]
@@ -480,7 +489,7 @@ def _collect_frozen_cohort_queue_timing_evidence(
             and all(by_job.get(job_id) for job_id in chain)
         )
         for item in path_attempts:
-            item["on_critical_path"] = True
+            item["on_terminal_dependency_chain"] = True
         path_enqueue = (
             _parse_telemetry_time(path_attempts[0]["enqueued_at_utc"])
             if path_available
@@ -491,7 +500,7 @@ def _collect_frozen_cohort_queue_timing_evidence(
             if path_available
             else None
         )
-        critical_path = {
+        terminal_dependency_chain = {
             "available": path_available and path_start is not None,
             "path_source": "workflow_job_parent_chain",
             "terminal_report_id": report_id,
@@ -514,22 +523,6 @@ def _collect_frozen_cohort_queue_timing_evidence(
             **controls.get(queue_name, {}),
             "max_observed_running_jobs": _maximum_interval_concurrency(queue_spans),
         }
-        limit = int(controls.get(queue_name, {}).get("configured_workers", 1))
-        for waiting in queue_spans:
-            if not waiting["on_critical_path"] or not waiting["queue_wait_seconds"]:
-                continue
-            start = _parse_telemetry_time(waiting["started_at_utc"])
-            if start is None:
-                continue
-            blockers = _saturated_queue_contributors(
-                start - timedelta(seconds=waiting["queue_wait_seconds"]),
-                start,
-                [item for item in queue_spans if item["job_id"] != waiting["job_id"]],
-                limit,
-            )
-            for item in queue_spans:
-                if item["job_id"] in blockers:
-                    item["materially_contributes_to_critical_path"] = True
 
     stage_metrics = {}
     for item in stage_attempts:
@@ -553,7 +546,14 @@ def _collect_frozen_cohort_queue_timing_evidence(
         "stage_attempts": stage_attempts,
         "queue_controls": controls,
         "queue_concurrency": concurrency,
-        "critical_path": critical_path,
+        "terminal_dependency_chain": terminal_dependency_chain,
+        "resource_constrained_critical_path": {
+            "derived": False,
+            "reason": (
+                "The retained cohort telemetry does not capture all "
+                "scheduler contention."
+            ),
+        },
         "performance_telemetry_by_stage": performance_by_stage,
         "prompt_family_elapsed_time": "unavailable",
         "provider_request_timing": "unavailable",
@@ -587,33 +587,6 @@ def _maximum_interval_concurrency(spans: list[dict[str, Any]]) -> int:
         active += delta
         maximum = max(maximum, active)
     return maximum
-
-
-def _saturated_queue_contributors(
-    wait_start: datetime,
-    wait_end: datetime,
-    spans: list[dict[str, Any]],
-    worker_limit: int,
-) -> set[str]:
-    intervals = []
-    points = {wait_start, wait_end}
-    for span in spans:
-        start = _parse_telemetry_time(span["started_at_utc"])
-        end = _parse_telemetry_time(span["effective_completed_at_utc"])
-        if start is None or end is None:
-            continue
-        left, right = max(start, wait_start), min(end, wait_end)
-        if right > left:
-            intervals.append((span["job_id"], left, right))
-            points.update((left, right))
-    ordered = sorted(points)
-    contributors = set()
-    for left, right in zip(ordered, ordered[1:], strict=False):
-        midpoint = left + (right - left) / 2
-        active = [job_id for job_id, start, end in intervals if start <= midpoint < end]
-        if len(active) >= worker_limit:
-            contributors.update(active)
-    return contributors
 
 
 def run_ias_first_attempt_canary(
@@ -790,8 +763,19 @@ def run_frozen_cohort_once(
                 root_workflow_id=root_workflow_id,
                 report_ids=tuple(str(result["report_id"]) for result in results),
             )
+            supervisor_capacity = load_workflow_control_settings(
+                ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+                ctx,
+            ).supervisor
             queue_timing.update(
                 {
+                    "supervisor_dispatch_capacity": {
+                        "max_parallel_workers": (
+                            supervisor_capacity.max_parallel_workers
+                        ),
+                        "max_jobs_per_queue": supervisor_capacity.max_jobs_per_queue,
+                        "max_total_jobs": supervisor_capacity.max_total_jobs,
+                    },
                     "runner_started_at_utc": run_started_at_utc,
                     "all_reports_terminal_observed_at_utc": terminal_observed_at_utc,
                     "runner_to_terminal_wall_seconds": round(
