@@ -108,9 +108,11 @@ def run_supervisor_once(
                     worker_completed,
                     worker_deferred,
                     worker_errors,
+                    worker_materialized,
                 ) = _run_worker_batches_parallel(
                     request=request, ctx=ctx, deps=deps, started=started
                 )
+                materialized += worker_materialized
             recovered += worker_recovered
             completed += worker_completed
             deferred += worker_deferred
@@ -221,37 +223,112 @@ def _run_worker_batches_parallel(
     ctx: RunContext,
     deps: SupervisorDependencies,
     started: float,
-) -> tuple[int, int, int, list[str]]:
+) -> tuple[int, int, int, list[str], int]:
     """Fairly overlap independent queue work without exceeding the job allowance."""
     remaining = request.settings.max_total_jobs
     recovered = completed = deferred = 0
+    materialized = 0
     errors: list[str] = []
-    candidates = [
-        (queue_name, ordinal)
-        for ordinal in range(request.settings.max_jobs_per_queue)
-        for queue_name in WORKFLOW_QUEUE_NAMES
-    ]
-    inactive_queues: set[str] = set()
+
+    queue_start_index = 0
+
+    def _candidate_sequence() -> list[tuple[str, int]]:
+        ordered_queues = (
+            WORKFLOW_QUEUE_NAMES[queue_start_index:]
+            + WORKFLOW_QUEUE_NAMES[:queue_start_index]
+        )
+        return [
+            (queue_name, ordinal)
+            for ordinal in range(request.settings.max_jobs_per_queue)
+            for queue_name in ordered_queues
+        ]
+
+    candidates = _candidate_sequence()
+    idle_queues: set[str] = set()
+    attempts_by_queue = dict.fromkeys(WORKFLOW_QUEUE_NAMES, 0)
+    pending_rechecks: list[str] = []
+    pending_recheck_queues: set[str] = set()
+    epoch = 0
     next_candidate = 0
+    dispatch_sequence = 0
     runtime_exhausted = False
     with ThreadPoolExecutor(
         max_workers=request.settings.max_parallel_workers,
         thread_name_prefix="workflow-supervisor",
     ) as executor:
-        in_flight: dict[Future[WorkflowWorkerRunResult], str] = {}
-        while in_flight or next_candidate < len(candidates):
+        in_flight: dict[Future[WorkflowWorkerRunResult], tuple[str, int, int, int]] = {}
+        while in_flight or next_candidate < len(candidates) or pending_rechecks:
             while (
                 not runtime_exhausted
-                and next_candidate < len(candidates)
+                and (next_candidate < len(candidates) or pending_rechecks)
                 and len(in_flight) < request.settings.max_parallel_workers
                 and len(in_flight) < remaining
             ):
                 if time.monotonic() - started >= request.settings.max_runtime_seconds:
                     runtime_exhausted = True
                     break
+                for pending_index in range(len(pending_rechecks) - 1, -1, -1):
+                    queue_name = pending_rechecks[pending_index]
+                    if (
+                        queue_name in idle_queues
+                        or attempts_by_queue[queue_name]
+                        >= request.settings.max_jobs_per_queue
+                    ):
+                        pending_rechecks.pop(pending_index)
+                        pending_recheck_queues.discard(queue_name)
+                for recheck_index, queue_name in enumerate(pending_rechecks):
+                    active_ordinals = {
+                        worker_ordinal
+                        for active_queue, worker_ordinal, _active_epoch, _rank in (
+                            in_flight.values()
+                        )
+                        if active_queue == queue_name
+                    }
+                    if (
+                        attempts_by_queue[queue_name] + len(active_ordinals)
+                        >= request.settings.max_jobs_per_queue
+                    ):
+                        continue
+                    ordinal = next(
+                        slot
+                        for slot in range(request.settings.max_jobs_per_queue)
+                        if slot not in active_ordinals
+                    )
+                    pending_rechecks.pop(recheck_index)
+                    pending_recheck_queues.discard(queue_name)
+                    future = executor.submit(
+                        _run_worker,
+                        request=request,
+                        ctx=ctx,
+                        deps=deps,
+                        queue_name=queue_name,
+                        ordinal=ordinal,
+                    )
+                    in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
+                    dispatch_sequence += 1
+                    break
+                else:
+                    queue_name = ""
+                if queue_name:
+                    continue
+                if next_candidate >= len(candidates):
+                    break
                 queue_name, ordinal = candidates[next_candidate]
                 next_candidate += 1
-                if queue_name in inactive_queues:
+                if queue_name in idle_queues:
+                    continue
+                active_queue_workers = [
+                    worker_ordinal
+                    for active_queue, worker_ordinal, _active_epoch, _rank in (
+                        in_flight.values()
+                    )
+                    if active_queue == queue_name
+                ]
+                if ordinal in active_queue_workers:
+                    continue
+                if attempts_by_queue[queue_name] + len(active_queue_workers) >= (
+                    request.settings.max_jobs_per_queue
+                ):
                     continue
                 future = executor.submit(
                     _run_worker,
@@ -261,12 +338,15 @@ def _run_worker_batches_parallel(
                     queue_name=queue_name,
                     ordinal=ordinal,
                 )
-                in_flight[future] = queue_name
+                in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
+                dispatch_sequence += 1
             if not in_flight:
                 break
             done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
-            for future in done:
-                queue_name = in_flight.pop(future)
+            reopen_epoch = False
+            last_success_queue = ""
+            for future in sorted(done, key=lambda item: in_flight[item][3]):
+                queue_name, _ordinal, worker_epoch, _rank = in_flight.pop(future)
                 result = future.result()
                 result_recovered, result_completed, result_deferred, result_errors = (
                     _worker_result_counts(queue_name=queue_name, result=result)
@@ -276,12 +356,62 @@ def _run_worker_batches_parallel(
                 deferred += result_deferred
                 errors.extend(result_errors)
                 if result.terminal_status == "idle":
-                    inactive_queues.add(queue_name)
+                    if worker_epoch == epoch:
+                        idle_queues.add(queue_name)
+                    else:
+                        current_epoch_poll_active = any(
+                            active_queue == queue_name and active_epoch == epoch
+                            for active_queue, _ordinal, active_epoch, _rank in (
+                                in_flight.values()
+                            )
+                        )
+                        candidate_remains = any(
+                            candidate_queue == queue_name
+                            for candidate_queue, _ordinal in candidates[next_candidate:]
+                        )
+                        if (
+                            queue_name not in idle_queues
+                            and not current_epoch_poll_active
+                            and not candidate_remains
+                            and queue_name not in pending_recheck_queues
+                            and attempts_by_queue[queue_name]
+                            < request.settings.max_jobs_per_queue
+                        ):
+                            # Only re-offer the stale queue. Restarting every
+                            # queue here can create an idle-poll feedback loop.
+                            pending_rechecks.append(queue_name)
+                            pending_recheck_queues.add(queue_name)
                 else:
                     remaining -= 1
+                    attempts_by_queue[queue_name] += 1
+                    if result.terminal_status == "succeeded":
+                        last_success_queue = queue_name
+                        if (
+                            request.settings.materialize_outbox_enabled
+                            and remaining > 0
+                        ):
+                            new_job_ids = deps.materialize_outbox(
+                                request.state_db,
+                                f"supervisor:{request.worker_id}:{request.now_utc}:rescan:{completed}",
+                                ctx,
+                                limit=remaining,
+                            )
+                            materialized += len(new_job_ids)
+                            reopen_epoch = reopen_epoch or bool(new_job_ids)
+            if reopen_epoch:
+                epoch += 1
+                idle_queues.clear()
+                if last_success_queue:
+                    queue_start_index = (
+                        WORKFLOW_QUEUE_NAMES.index(last_success_queue) + 1
+                    ) % len(WORKFLOW_QUEUE_NAMES)
+                candidates = _candidate_sequence()
+                next_candidate = 0
+                pending_rechecks.clear()
+                pending_recheck_queues.clear()
         if runtime_exhausted and remaining > 0:
             deferred += 1
-    return recovered, completed, deferred, errors
+    return recovered, completed, deferred, errors, materialized
 
 
 def _run_worker(

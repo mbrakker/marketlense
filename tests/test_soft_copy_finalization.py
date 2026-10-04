@@ -58,6 +58,77 @@ def test_finalization_rebuilds_expert_provenance_after_numeric_display_correctio
     assert claim["evidence_ids"] == ["f1"]
 
 
+def test_regenerated_repair_binding_follows_final_source_corrected_sentence() -> None:
+    stale_sentence = (
+        "Global finance day 1 retention fell from 13% in 2024 to 12.9% in 2025."
+    )
+    source_sentence = (
+        "Global finance day 1 retention fell from 13% in 2024 to 12% in 2025."
+    )
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "finance-retention", "evidence": source_sentence, "pages": [13]}
+            ]
+        }
+    }
+    original = _assemble_soft_copy(
+        expert_comment=stale_sentence,
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": stale_sentence,
+                    "classification": "factual",
+                    "evidence_ids": ["finance-retention"],
+                }
+            ]
+        },
+    )
+    original_claim = next(
+        claim
+        for claim in original["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )
+
+    finalized = _assemble_soft_copy(
+        expert_comment=stale_sentence,
+        insights_final=[
+            {
+                "id": "finance-retention",
+                "text": "Finance retention declined.",
+                "evidence_id": "finance-retention",
+                "evidence": source_sentence,
+            }
+        ],
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "expert_comment": [
+                {
+                    "claim": stale_sentence,
+                    "classification": "factual",
+                    "evidence_ids": ["finance-retention"],
+                }
+            ]
+        },
+        existing_soft_copy_claim_provenance=original[
+            "soft_copy_claim_provenance"
+        ],
+        replaced_soft_copy_claim_ids={"expert_comment": [original_claim["claim_id"]]},
+        soft_copy_repair_texts={"expert_comment": [stale_sentence]},
+    )
+
+    assert finalized["expert_comment"] == source_sentence
+    claim = next(
+        item
+        for item in finalized["soft_copy_claim_provenance"]["claims"]
+        if item["artifact_family"] == "expert_comment"
+    )
+    assert claim["text_hash"] == sha256(source_sentence.encode()).hexdigest()
+    assert claim["evidence_ids"] == ["finance-retention"]
+    assert_retained_soft_copy_claims_match_public_copy(finalized)
+
+
 def test_finalization_rebuilds_linkedin_provenance_after_range_display_correction() -> (
     None
 ):

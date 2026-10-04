@@ -306,6 +306,82 @@ def test_build_regeneration_plan_keeps_hard_repair_claim_scoped():
     assert [issue.rule_id for issue in plan.targets[0].issues] == ["grounding"]
 
 
+def test_hard_soft_copy_repair_keeps_coupled_grounding_warnings_in_plan():
+    expert_text = "Expert copy overstates the evidence."
+    expert_claim = build_soft_copy_claim_provenance(
+        artifact_family="expert_comment",
+        text=expert_text,
+        declared_claims=[
+            {
+                "claim": expert_text,
+                "classification": "factual",
+                "evidence_ids": ["e2"],
+            }
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={"namespace": "test/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )[0]
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message="Unsupported summary fact.",
+                severity="error",
+                affected_section="summary.claim_evidence_map:1.claim",
+                rule_id="grounding",
+                repair_target="summary",
+                entity_id="soft_copy:summary:unsupported",
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="Expert copy overstates the evidence.",
+                severity="warning",
+                affected_section="expert_comment",
+                rule_id="grounding",
+                repair_target="expert_comment",
+                entity_id=expert_claim.claim_id,
+            ),
+            ValidationIssue(
+                schema_version="1.0",
+                message="Unrelated topic wording warning.",
+                severity="warning",
+                affected_section="topics_covered[2].why_it_matters",
+                rule_id="artifact_quality",
+                repair_target="topics",
+            ),
+        ],
+        artifacts={
+            "summary": {
+                "claim_evidence_map": [
+                    {
+                        "claim": "Unsupported summary fact.",
+                        "evidence_id": "e1",
+                        "pages": [1],
+                    }
+                ]
+            },
+            "expert_comment": expert_text,
+            "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+                [expert_claim]
+            ),
+            "topics_covered": [{"id": "topic-2", "why_it_matters": "Copy."}],
+        },
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == [
+        "summary",
+        "expert_comment",
+    ]
+    assert [issue.severity for target in plan.targets for issue in target.issues] == [
+        "error",
+        "warning",
+    ]
+
+
 def test_mobile_numbers_failure_targets_exact_insight_so_what_leaf():
     artifacts = {
         "insights_final": [
@@ -987,6 +1063,7 @@ __all__ = [
     "test_build_regeneration_plan_skips_info_and_orders_errors_first",
     "test_build_regeneration_plan_maps_public_artifact_copy_to_its_family",
     "test_build_regeneration_plan_keeps_hard_repair_claim_scoped",
+    "test_hard_soft_copy_repair_keeps_coupled_grounding_warnings_in_plan",
     "test_mobile_numbers_failure_targets_exact_insight_so_what_leaf",
     "test_persisting_insight_metric_failures_preempt_linkedin_and_skip_noop_copy",
     "test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error",

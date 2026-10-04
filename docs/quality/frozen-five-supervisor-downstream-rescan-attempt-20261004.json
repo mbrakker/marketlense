@@ -1,0 +1,244 @@
+{
+  "schema_version": "1.0",
+  "benchmark": "Frozen five report downstream queue recheck experiment",
+  "result": "failed_not_authoritative",
+  "retention_decision": "not_committed_or_pushed",
+  "candidate_commit_sha": "b4342b92e54d6527085e53db7625c6b976a489c5",
+  "frozen_cohort": {
+    "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "member_count": 5,
+    "members": [
+      {
+        "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+        "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff"
+      },
+      {
+        "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf",
+        "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b"
+      },
+      {
+        "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf",
+        "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3"
+      },
+      {
+        "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf",
+        "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b"
+      },
+      {
+        "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf",
+        "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235"
+      }
+    ]
+  },
+  "execution": {
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "cohort_submissions": 1,
+    "reports_submitted_together": 5,
+    "fresh_isolated_state": true,
+    "isolated_run_directory": "%TEMP%/marketlense-frozen-five-supervisor-rescan-runs/ias-first-attempt-q71dvydj",
+    "runner_started_at_utc": "2026-10-04T19:09:47.539+00:00",
+    "all_reports_terminal_at_utc": "2026-10-04T19:42:10.299+00:00",
+    "duration_measurement": "time.monotonic from runner entry to all reports terminal",
+    "cohort_wall_clock_seconds": 1942.798,
+    "raw_result_outside_repository": "%TEMP%/marketlense-frozen-five-supervisor-rescan-b4342b92-result.json",
+    "command_used": "PowerShell: $runnerPath = Join-Path $env:TEMP 'run_marketlense_frozen_five_supervisor_rescan_b4342b92.py'; .venv\\Scripts\\python.exe -u $runnerPath",
+    "wrapper_sha256": "47a53f0ad44bb40c58e66b52f810e1f47dbdba65568bb1b5c83e9834b2789630"
+  },
+  "configuration": {
+    "supervisor_enabled": true,
+    "worker_batches_enabled": true,
+    "max_parallel_workers": 3,
+    "max_jobs_per_queue": 3,
+    "max_total_jobs": 20,
+    "max_runtime_seconds": 120,
+    "durable_report_queue_worker_limit": 5,
+    "wordpress_publish_enabled": false,
+    "publication_write_count": 0,
+    "disabled_quality_rule_waiver_count": 0,
+    "models_prompts_reasoning_validation_schemas_retries_and_queue_limits_changed": false
+  },
+  "metrics": {
+    "model_provider_calls": 221,
+    "input_tokens": 2088790,
+    "output_tokens": 441294,
+    "file_search_calls": 27,
+    "estimated_total_cost_usd": 0.481379,
+    "automatic_repairs": 6,
+    "structured_output_repair_calls": 2,
+    "workflow_retries": 0,
+    "operator_interventions": 0,
+    "publication_write_count": 0,
+    "maximum_observed_same_queue_concurrency": {
+      "source_ingest": 3,
+      "report_selection": 3,
+      "report_analysis": 3,
+      "report_render": 3,
+      "publication_readiness": 2
+    },
+    "stage_telemetry": {
+      "source_ingest": {
+        "samples": 5,
+        "execution_seconds_total": 19.712,
+        "execution_seconds_max": 4.304,
+        "queue_wait_seconds_total": 243.764
+      },
+      "report_selection": {
+        "samples": 5,
+        "execution_seconds_total": 604.138,
+        "execution_seconds_max": 210.633,
+        "queue_wait_seconds_total": 886.552
+      },
+      "report_analysis": {
+        "samples": 5,
+        "execution_seconds_total": 2773.131,
+        "execution_seconds_max": 879.435,
+        "queue_wait_seconds_total": 1977.671
+      },
+      "report_render": {
+        "samples": 4,
+        "execution_seconds_total": 13.607,
+        "execution_seconds_max": 4.431,
+        "queue_wait_seconds_total": 847.572
+      },
+      "publication_readiness": {
+        "samples": 3,
+        "execution_seconds_total": 0.871,
+        "execution_seconds_max": 0.352,
+        "queue_wait_seconds_total": 1179.113
+      }
+    },
+    "selection_to_analysis_dispatch_gap_seconds": {
+      "previous_cap3": 436.369,
+      "candidate": null,
+      "candidate_available": false,
+      "reason": "The runner could not derive a complete terminal dependency chain for this failed cohort."
+    },
+    "prompt_family_elapsed_time": "unavailable",
+    "provider_request_timing": "unavailable",
+    "resource_constrained_critical_path": "unavailable"
+  },
+  "comparison_to_accepted_cap3": {
+    "baseline_wall_clock_seconds": 1083.927,
+    "candidate_wall_clock_seconds": 1942.798,
+    "wall_clock_delta_seconds": 858.871,
+    "wall_clock_delta_percent": 79.24,
+    "report_analysis_queue_wait_seconds": {
+      "baseline": 551.307,
+      "candidate": 1977.671,
+      "delta_seconds": 1426.364,
+      "delta_percent": 258.72
+    },
+    "source_ingest_queue_wait_seconds": {
+      "baseline": 14.511,
+      "candidate": 243.764
+    },
+    "report_selection_queue_wait_seconds": {
+      "baseline": 2.415,
+      "candidate": 886.552
+    },
+    "estimated_cost_usd": {
+      "baseline": 0.389098,
+      "candidate": 0.481379,
+      "delta_usd": 0.092281,
+      "delta_percent": 23.72
+    },
+    "provider_calls": {
+      "baseline": 184,
+      "candidate": 221,
+      "delta_percent": 20.11
+    },
+    "input_tokens": {
+      "baseline": 1696787,
+      "candidate": 2088790,
+      "delta_percent": 23.1
+    },
+    "output_tokens": {
+      "baseline": 299363,
+      "candidate": 441294,
+      "delta_percent": 47.41
+    },
+    "file_search_calls": {
+      "baseline": 30,
+      "candidate": 27
+    }
+  },
+  "comparison_to_authoritative_baseline": {
+    "baseline_wall_clock_seconds": 2262.244,
+    "candidate_wall_clock_seconds": 1942.798,
+    "speedup_ratio": 1.1644,
+    "candidate_reduction_percent": 14.12
+  },
+  "quality": {
+    "admitted_reports": 5,
+    "validation_pass_count": 3,
+    "publication_readiness_pass_count": 3,
+    "unresolved_retained_factual_claims": 1,
+    "unsupported_retained_factual_claims": 1,
+    "reports": [
+      {
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "terminal_failure_code": ""
+      },
+      {
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "terminal_failure_code": ""
+      },
+      {
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "validation": "fail",
+        "publication_readiness": "fail",
+        "unresolved_retained_factual_claims": 1,
+        "unsupported_retained_factual_claims": 0,
+        "terminal_failure_code": "validation_failed"
+      },
+      {
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0,
+        "terminal_failure_code": ""
+      },
+      {
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "validation": "fail",
+        "publication_readiness": "fail",
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 1,
+        "terminal_failure_code": "soft_copy_claim_provenance_coverage_invalid"
+      }
+    ]
+  },
+  "acceptance": {
+    "five_of_five_admitted": true,
+    "five_of_five_validation_pass": false,
+    "five_of_five_readiness_pass": false,
+    "zero_unresolved_retained_claims": false,
+    "zero_unsupported_retained_claims": false,
+    "zero_operator_interventions": true,
+    "publication_disabled_and_zero_writes": true,
+    "exact_frozen_source_identities": true,
+    "fresh_isolated_state": true,
+    "actual_batch_wall_clock": true,
+    "performance_below_accepted_cap3_wall_clock": false,
+    "report_analysis_wait_materially_lower": false,
+    "source_ingest_wait_not_materially_regressed": false,
+    "same_queue_concurrency_three": true,
+    "overall_accepted": false
+  },
+  "root_cause_observed": "Downstream submissions were durable outbox events and were materialized only before the supervisor worker loop. The first candidate fix re-materialized after completion, but stale idle results reopened the entire queue scan; a focused regression reproduced the extra full scans. Live source and downstream queue waits rose sharply, including waits near the 120-second supervisor runtime window. The larger report_analysis execution time and two stochastic quality failures also contributed to the result."
+}

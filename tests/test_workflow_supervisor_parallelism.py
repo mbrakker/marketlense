@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from threading import Event, Lock
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ from src.contracts.workflow_control import (
     WorkflowSupervisorSettings,
 )
 from src.contracts.workflow_queue import (
+    WORKFLOW_QUEUE_NAMES,
     MailboxDeliveryPayload,
     MailboxDeliveryResult,
     PublisherDiscoveryPayload,
@@ -21,6 +23,8 @@ from src.contracts.workflow_queue import (
     ReportAcquisitionResult,
     ReportAnalysisPayload,
     ReportAnalysisResult,
+    ReportSelectionPayload,
+    ReportSelectionResult,
     SourceIngestPayload,
     SourceIngestResult,
     WorkflowJobSubmission,
@@ -40,6 +44,7 @@ from src.services.workflow_queue_service import (
     enqueue_workflow_job,
     get_workflow_job,
     list_workflow_job_attempts,
+    materialize_workflow_outbox,
     set_workflow_queue_control,
 )
 from src.utils.errors import AppError
@@ -56,6 +61,7 @@ def _request(
     max_parallel_workers: int,
     max_total_jobs: int,
     max_jobs_per_queue: int = 1,
+    max_runtime_seconds: int = 120,
     state_db: str = "state.sqlite",
 ) -> SupervisorRunRequest:
     return SupervisorRunRequest(
@@ -71,6 +77,7 @@ def _request(
             max_parallel_workers=max_parallel_workers,
             max_jobs_per_queue=max_jobs_per_queue,
             max_total_jobs=max_total_jobs,
+            max_runtime_seconds=max_runtime_seconds,
         ),
     )
 
@@ -136,7 +143,13 @@ def _enqueue_report_acquisition_jobs(
 
 
 def _queue_handler_registration(
-    *, queue_name, job_type, payload_type, result_type, handler
+    *,
+    queue_name,
+    job_type,
+    payload_type,
+    result_type,
+    handler,
+    allowed_downstream_job_types=(),
 ):
     return WorkflowQueueHandlerRegistration(
         queue_name=queue_name,
@@ -148,7 +161,7 @@ def _queue_handler_registration(
         default_lease_seconds=60,
         budget_profile="default",
         expected_external_effects=(),
-        allowed_downstream_job_types=(),
+        allowed_downstream_job_types=allowed_downstream_job_types,
     )
 
 
@@ -229,6 +242,123 @@ def test_supervisor_never_exceeds_total_job_cap_with_parallel_workers() -> None:
 
     assert result.completed_job_count == 2
     assert len(calls) == 2
+
+
+def test_parallel_supervisor_stops_after_one_fully_idle_queue_scan() -> None:
+    calls: list[str] = []
+
+    def worker(**kwargs):
+        calls.append(str(kwargs["queue_name"]))
+        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+
+    result = run_supervisor_once(
+        _request(
+            max_parallel_workers=3,
+            max_total_jobs=10,
+            max_jobs_per_queue=3,
+        ),
+        _ctx(),
+        dependencies=_dependencies(worker),
+    )
+
+    assert result.completed_job_count == 0
+    assert all(calls.count(queue_name) <= 3 for queue_name in WORKFLOW_QUEUE_NAMES)
+    assert len(calls) <= 3 * len(WORKFLOW_QUEUE_NAMES)
+
+
+def test_parallel_supervisor_respects_runtime_after_in_flight_workers_finish() -> None:
+    calls: list[str] = []
+    lock = Lock()
+    three_started = Event()
+    release = Event()
+
+    def worker(**kwargs):
+        with lock:
+            calls.append(str(kwargs["queue_name"]))
+            if len(calls) == 3:
+                three_started.set()
+        assert release.wait(timeout=5)
+        return _succeeded_worker()
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            run_supervisor_once,
+            _request(
+                max_parallel_workers=3,
+                max_total_jobs=10,
+                max_jobs_per_queue=3,
+                max_runtime_seconds=1,
+            ),
+            _ctx(),
+            dependencies=_dependencies(worker),
+        )
+        try:
+            assert three_started.wait(timeout=2)
+            assert not release.wait(timeout=1.1)
+        finally:
+            release.set()
+        result = future.result(timeout=5)
+
+    assert result.completed_job_count == 3
+    assert result.deferred_job_count >= 1
+    assert len(calls) == 3
+
+
+def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> None:
+    analysis_poll_started = Event()
+    child_materialized = Event()
+    second_scan_reached_end = Event()
+    queue_calls: dict[str, int] = {}
+    queue_calls_lock = Lock()
+    materialize_calls = 0
+
+    def worker(**kwargs):
+        queue_name = str(kwargs["queue_name"])
+        with queue_calls_lock:
+            queue_calls[queue_name] = queue_calls.get(queue_name, 0) + 1
+            call_number = queue_calls[queue_name]
+        if queue_name == "source_ingest":
+            assert analysis_poll_started.wait(timeout=5)
+            return _succeeded_worker()
+        if queue_name == "report_analysis":
+            if call_number == 1:
+                analysis_poll_started.set()
+                assert child_materialized.wait(timeout=5)
+                assert second_scan_reached_end.wait(timeout=5)
+                return SimpleNamespace(
+                    released_lease_job_ids=[], terminal_status="idle"
+                )
+            return _succeeded_worker()
+        if queue_name == "publisher_discovery":
+            if call_number == 2:
+                second_scan_reached_end.set()
+            return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+
+    def materialize_outbox(*_args, **_kwargs):
+        nonlocal materialize_calls
+        materialize_calls += 1
+        if materialize_calls == 2:
+            child_materialized.set()
+            return ["materialized-report-analysis-job"]
+        return []
+
+    dependencies = replace(
+        _dependencies(worker), materialize_outbox=materialize_outbox
+    )
+    result = run_supervisor_once(
+        _request(
+            max_parallel_workers=3,
+            max_total_jobs=5,
+            max_jobs_per_queue=1,
+        ),
+        _ctx(),
+        dependencies=dependencies,
+    )
+
+    assert result.completed_job_count == 2
+    assert queue_calls["report_analysis"] == 2
+    assert queue_calls["publisher_discovery"] <= 2
 
 
 def test_supervisor_never_exceeds_global_worker_cap_when_candidates_remain() -> None:
@@ -861,6 +991,126 @@ def test_parallel_supervisor_persists_three_real_queue_worker_outcomes(
         get_workflow_job(state_db, job_id, _ctx()).status for job_id in job_ids
     ]
     assert persisted_statuses == ["succeeded", "succeeded", "succeeded"]
+
+
+def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pass(
+    tmp_path,
+) -> None:
+    state_db = str(tmp_path / "downstream-same-pass.sqlite")
+    _set_queue_concurrency(state_db, "source_ingest", 3)
+    _set_queue_concurrency(state_db, "report_selection", 3)
+    source_job, _ = enqueue_workflow_job(
+        state_db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
+            payload=SourceIngestPayload(
+                source_identity_id="source-1",
+                input_reference="snapshot:source-1",
+                input_content_hash="source-hash-1",
+                report_id="report-1",
+            ),
+            idempotency_key="same-pass:source-ingest",
+            deduplication_scope="supervisor-same-pass",
+        ),
+        _ctx(),
+        now_utc="2026-08-11T00:00:00+00:00",
+    )
+    selection_was_idle = Event()
+    selection_executed = Event()
+    selection_worker_ids: list[str] = []
+
+    def ingest(job, _payload, _ctx):
+        assert selection_was_idle.wait(timeout=10)
+        return WorkflowQueueHandlerResult(
+            result=SourceIngestResult(
+                output_reference=f"prepared:{job.job_id}",
+                output_content_hash="prepared-hash",
+                output_verified=True,
+            ),
+            downstream=[
+                WorkflowJobSubmission(
+                    schema_version="1.0",
+                    queue_name="report_selection",
+                    job_type="report_selection.v1",
+                    payload=ReportSelectionPayload(report_id="report-1"),
+                    idempotency_key="same-pass:report-selection",
+                    deduplication_scope="supervisor-same-pass",
+                    root_workflow_id=job.root_workflow_id,
+                    parent_job_id=job.job_id,
+                    entity_type="report",
+                    entity_id="report-1",
+                    report_id="report-1",
+                    available_at_utc="2026-08-11T00:00:00+00:00",
+                )
+            ],
+        )
+
+    def select(_job, _payload, _ctx):
+        selection_executed.set()
+        return WorkflowQueueHandlerResult(
+            result=ReportSelectionResult(
+                output_reference="selected:report-1",
+                output_content_hash="selection-hash",
+                output_verified=True,
+            )
+        )
+
+    registry = {
+        ("source_ingest", "source_ingest.v1"): _queue_handler_registration(
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
+            payload_type=SourceIngestPayload,
+            result_type=SourceIngestResult,
+            handler=ingest,
+            allowed_downstream_job_types=("report_selection.v1",),
+        ),
+        ("report_selection", "report_selection.v1"): _queue_handler_registration(
+            queue_name="report_selection",
+            job_type="report_selection.v1",
+            payload_type=ReportSelectionPayload,
+            result_type=ReportSelectionResult,
+            handler=select,
+        ),
+    }
+
+    def run_worker(**kwargs):
+        result = run_workflow_worker_once(registry=registry, **kwargs)
+        if kwargs["queue_name"] == "report_selection":
+            if result.terminal_status == "idle":
+                selection_was_idle.set()
+            elif result.terminal_status == "succeeded":
+                selection_worker_ids.append(result.worker_id)
+        return result
+
+    dependencies = _dependencies(run_worker)
+    dependencies = SupervisorDependencies(
+        acquire_lease=dependencies.acquire_lease,
+        release_lease=dependencies.release_lease,
+        materialize_outbox=materialize_workflow_outbox,
+        recover_leases=dependencies.recover_leases,
+        run_worker=dependencies.run_worker,
+        reconcile=dependencies.reconcile,
+        queue_health=dependencies.queue_health,
+    )
+
+    result = run_supervisor_once(
+        _request(
+            max_parallel_workers=3,
+            max_total_jobs=3,
+            max_jobs_per_queue=3,
+            state_db=state_db,
+        ),
+        _ctx(),
+        dependencies=dependencies,
+    )
+
+    assert selection_was_idle.is_set()
+    assert selection_executed.is_set()
+    assert result.completed_job_count == 2
+    assert get_workflow_job(state_db, source_job.job_id, _ctx()).status == "succeeded"
+    assert len(selection_worker_ids) == 1
 
 
 def test_project_supervisor_configuration_uses_the_tested_three_worker_cap() -> None:

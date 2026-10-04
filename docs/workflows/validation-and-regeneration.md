@@ -215,6 +215,14 @@ a deterministic policy or lineage change to request the earlier safe stage.
 
 When a repair is supported, the workflow maps validation issues to the narrowest appropriate artifact family and revalidates the result. Retry and backoff are controlled by orchestration; generators surface typed errors rather than retrying provider calls themselves. Publication policy determines whether unresolved validation issues block WordPress side effects.
 
+When a hard grounding issue targets Summary, Expert View, or LinkedIn copy, the
+same bounded repair plan also retains grounding warnings from those public
+soft-copy families. Final source-display normalization can update their shared
+sentence and provenance grid; co-targeting these warnings prevents an untouched
+warning from becoming a new hard claim failure during that correction. Other
+warning-only families remain out of scope, and every candidate still passes the
+full existing validation and promotion gates.
+
 Candidate repair retains a content-free failure fingerprint, declared mutation roots,
 selected/quarantined evidence identities, strategy identity, and before/after repair
 delta. A rolled-back candidate remains audit-only: the next attempt starts from the
@@ -299,6 +307,12 @@ claims stay available for the same report-level grounding batch used by final
 artifact validation. Candidate and final results therefore use the same stable
 claim, exact linked evidence, and validator identity rules without a per-claim
 model call.
+
+Final source-display correction may change a repaired sentence after its repair
+text was recorded. Provenance finalization therefore matches the declared repaired
+binding to the canonical final sentence grid and computes the hash and source spans
+from that final sentence. It does not infer a binding from wording; unmatched
+sentences remain unbound and fail the exact-coverage check.
 
 For family-level soft-copy regeneration, exact unchanged sentences keep their
 retained records. New sentences receive factual bindings from the repair's selected

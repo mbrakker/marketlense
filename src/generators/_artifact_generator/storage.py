@@ -682,35 +682,36 @@ def _soft_copy_claim_provenance_payload(
         text = soft_copy_public_text(family, public_output)
         declared = bindings.get(family)
         if family in repair_texts:
-            final_sentences = set(soft_copy_material_sentences(text))
+            final_sentences = soft_copy_material_sentences(text)
+            final_sentence_by_normalized = {
+                " ".join(sentence.split()): sentence for sentence in final_sentences
+            }
             retained_hashes = {
                 claim.text_hash for claim in claims if claim.artifact_family == family
             }
-            for repaired_text in repair_texts[family]:
-                # A repair may later be rolled back by validation. Only carry
-                # provenance from the repair for sentences that still occur on
-                # the canonical final public sentence grid.
-                retained_repair_sentences = [
-                    sentence
-                    for sentence in soft_copy_material_sentences(
-                        str(repaired_text or "")
-                    )
-                    if sentence in final_sentences
-                ]
-                if not retained_repair_sentences:
+            repaired_sentences: list[str] = []
+            repaired_bindings: list[dict[str, Any]] = []
+            for binding in declared or []:
+                if not isinstance(binding, dict):
                     continue
-                repair_text = " ".join(retained_repair_sentences)
-                retained_repair_set = set(retained_repair_sentences)
-                repaired_bindings = [
-                    binding
-                    for binding in declared or []
-                    if isinstance(binding, dict)
-                    and " ".join(str(binding.get("claim") or "").split())
-                    in retained_repair_set
-                ]
+                normalized_claim = " ".join(
+                    str(binding.get("claim") or "").split()
+                )
+                final_sentence = final_sentence_by_normalized.get(normalized_claim)
+                if not final_sentence:
+                    continue
+                sentence_hash = hashlib.sha256(
+                    final_sentence.encode("utf-8")
+                ).hexdigest()
+                if sentence_hash in retained_hashes:
+                    continue
+                repaired_sentences.append(final_sentence)
+                repaired_bindings.append({**binding, "claim": final_sentence})
+                retained_hashes.add(sentence_hash)
+            if repaired_sentences:
                 repaired_claims = build_soft_copy_claim_provenance(
                     artifact_family=family,
-                    text=repair_text,
+                    text=" ".join(repaired_sentences),
                     declared_claims=repaired_bindings,
                     evidence_span_index=span_index,
                     producing_prompt_identity=dict(prompt_identities.get(family) or {}),
@@ -724,8 +725,6 @@ def _soft_copy_claim_provenance_payload(
                     # sentence, including unchanged sentences already
                     # retained above. Keep each canonical sentence identity
                     # once and preserve its existing semantic binding.
-                    if claim.text_hash in retained_hashes:
-                        continue
                     claims.append(
                         replace(
                             claim,
@@ -734,7 +733,6 @@ def _soft_copy_claim_provenance_payload(
                             ),
                         )
                     )
-                    retained_hashes.add(claim.text_hash)
         elif text:
             retained = [claim for claim in claims if claim.artifact_family == family]
             if not isinstance(declared, list) or not declared:

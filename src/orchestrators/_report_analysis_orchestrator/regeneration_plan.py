@@ -1506,9 +1506,28 @@ def _build_regeneration_plan(
         if any(str(issue.severity).lower() == "error" for issue in target_issues)
     }
     if hard_target_keys:
+        soft_copy_targets = {"summary", "expert_comment", "linkedin_post"}
+        repair_target_keys = set(hard_target_keys)
+        if hard_target_keys & soft_copy_targets:
+            # Final soft-copy normalization can update declarations and public
+            # wording across these families together. Keep their factual
+            # grounding warnings in the same bounded candidate so a repair to
+            # one family cannot turn an untouched warning in another into a
+            # new blocking claim.
+            repair_target_keys.update(
+                target_key
+                for target_key, target_issues in grouped.items()
+                if target_key in soft_copy_targets
+                and any(
+                    str(issue.severity or "").strip().lower() == "warning"
+                    and str(issue.rule_id or "").strip().lower() == "grounding"
+                    for issue in target_issues
+                )
+            )
         # A blocking, targetable failure must not fan out into unrelated
         # warning-only families. Retain warnings on the same target so its
-        # repair still sees all local context, but keep claim recovery bounded.
+        # repair still sees all local context, plus grounding warnings on the
+        # public soft-copy families that share final source-display correction.
         grouped = {
             target_key: (
                 _keep_atomic_insight_context(target_key, target_issues, artifacts)
@@ -1520,7 +1539,7 @@ def _build_regeneration_plan(
                 )
             )
             for target_key, target_issues in grouped.items()
-            if target_key in hard_target_keys
+            if target_key in repair_target_keys
         }
         unmappable = [
             issue for issue in unmappable if str(issue.severity).lower() == "error"
