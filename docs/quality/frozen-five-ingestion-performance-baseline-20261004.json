@@ -281,5 +281,12 @@
     "fix_commit": "d1fa1273814a0eee2c25efb2ab1c826761a0be25",
     "fix": "Propagate safe grounding removal to every identical public summary occurrence, and preserve deterministic intermediate text only for non-planner sibling paths.",
     "regression_test": "tests/test_report_regeneration_generator.py::test_summary_safe_removal_clears_same_claim_from_sibling_fields"
+  },
+  "baseline_validity": {
+    "throughput_baseline_valid": false,
+    "status": "historical_invalid_for_authoritative_x5_denominator",
+    "historical_observation_valid": true,
+    "reason": "The fresh isolated workflow DB defaulted source_ingest and report_analysis durable worker concurrency to 1, while the isolated app.yaml configured max_workers=5. The 2736.513-second run remains a historical observation under the accidental serial queue controls but is not a valid configured x5 throughput denominator.",
+    "superseded_by": "docs/quality/frozen-five-ingestion-performance-baseline-20261004-queue-configured.json"
   }
 }
