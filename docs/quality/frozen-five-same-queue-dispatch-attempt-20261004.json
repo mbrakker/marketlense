@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0",
+  "benchmark": "Frozen five same-queue supervisor dispatch experiment",
+  "status": "rejected_incomplete",
+  "artifact_role": "candidate_diagnostic_not_baseline",
+  "baseline": {
+    "artifact": "docs/quality/frozen-five-ingestion-performance-baseline-20261004-queue-configured.json",
+    "commit_sha": "9879e37b98ff6905e5020074e201de136b1fd811",
+    "wall_clock_seconds": 2262.244,
+    "estimated_cost_usd": 0.378316,
+    "max_same_queue_concurrency": 1,
+    "provider_calls": 192,
+    "input_tokens": 1643758,
+    "output_tokens": 330955,
+    "file_search_calls": 23
+  },
+  "candidate": {
+    "commit_sha_tested": "2e246d4017f6b5eeb4336d01f168010303613658",
+    "commit_state": "detached_candidate_object_not_on_branch",
+    "branch_head_before": "5fa1179206093eec89aa12803cef65dc0d64c165",
+    "pushed": false,
+    "frozen_manifest": {
+      "path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+      "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+      "member_count": 5,
+      "source_md5s": [
+        "81af3890cd84ece81ef16e1aabda8027",
+        "cbb6e7df67412186b8bc094a424ac890",
+        "2acb4a56e14add5d7717f34c378f9091",
+        "4b763ae2286ca69fe8acb63b17508dfb",
+        "b638414df0b1fccea1cd8a93eaf8f5aa"
+      ]
+    },
+    "configuration": {
+      "supervisor_max_parallel_workers": 3,
+      "supervisor_max_jobs_per_queue": 3,
+      "supervisor_max_total_jobs": 20,
+      "durable_report_queue_worker_limit": 5,
+      "publication_enabled": false,
+      "models_prompts_reasoning_evidence_validators_changed": false
+    }
+  },
+  "run": {
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "reports_submitted_together": 5,
+    "isolated_run_directory": "%TEMP%/marketlense-frozen-five-same-queue-runs/ias-first-attempt-o20o852e",
+    "approximate_elapsed_to_last_usage_write_seconds": 1122.197,
+    "cohort_wall_clock_seconds": null,
+    "speedup_ratio": null,
+    "interrupted_reason": "Usage ledger exceeded the hard cost ceiling while two reports were still in report_analysis.",
+    "cost_at_abort_trigger_observation_usd": 0.382449,
+    "run_created_local": "2026-10-04T18:47:32.6689233+02:00",
+    "last_usage_write_local": "2026-10-04T19:06:14.8663521+02:00",
+    "raw_result_written": false,
+    "complete_batch_measurement": false
+  },
+  "partial_metrics": {
+    "max_observed_same_queue_concurrency": {
+      "source_ingest": 3,
+      "report_selection": 3,
+      "report_analysis": 3,
+      "report_render": 3
+    },
+    "model_provider_calls": 179,
+    "input_tokens": 1674350,
+    "output_tokens": 301244,
+    "file_search_calls": 29,
+    "estimated_cost_usd_at_stop": 0.386558,
+    "cost_delta_over_ceiling_usd": 0.008242,
+    "provider_error_statuses": 0,
+    "provider_429_or_timeout_events_observed": 0,
+    "automatic_queue_retries": 0,
+    "structured_output_repair_calls": 1,
+    "operator_interventions": 0,
+    "publication_attempts": 0,
+    "publication_writes": 0
+  },
+  "partial_quality": {
+    "source_ingest": "5/5 succeeded",
+    "report_selection": "5/5 succeeded",
+    "report_analysis": "3 succeeded, 2 interrupted while running",
+    "report_render": "3 succeeded",
+    "publication_readiness": "0 records; not reached",
+    "validation": {
+      "pass_artifacts": 3,
+      "incomplete_or_unavailable": 2,
+      "reports": [
+        {"report_id": "cohort-81af3890cd84ece81ef1", "validation": "pass", "readiness": "not_reached", "unsupported_claims": 0, "unresolved_claims": 0},
+        {"report_id": "cohort-cbb6e7df67412186b8bc", "validation": "pass", "readiness": "not_reached", "unsupported_claims": 0, "unresolved_claims": 0},
+        {"report_id": "cohort-2acb4a56e14add5d7717", "validation": "unavailable", "readiness": "not_reached", "unsupported_claims": null, "unresolved_claims": null},
+        {"report_id": "cohort-4b763ae2286ca69fe8ac", "validation": "pass", "readiness": "not_reached", "unsupported_claims": 0, "unresolved_claims": 0},
+        {"report_id": "cohort-b638414df0b1fccea1cd", "validation": "unavailable", "readiness": "not_reached", "unsupported_claims": null, "unresolved_claims": null}
+      ]
+    },
+    "publication_disabled": true,
+    "new_quality_waivers": 0,
+    "final_quality_gate_passed": false
+  },
+  "partial_stage_telemetry": {
+    "source_ingest": {"attempts": 5, "queue_wait_total_seconds": 13.567, "execution_total_seconds": 19.674, "execution_max_seconds": 4.591},
+    "report_selection": {"attempts": 5, "queue_wait_total_seconds": 1.194, "execution_total_seconds": 725.724, "execution_max_seconds": 253.006},
+    "report_analysis": {"completed_attempts": 3, "queue_wait_total_seconds": 2.906, "execution_total_seconds": 1320.944, "execution_max_seconds": 498.175},
+    "report_render": {"attempts": 3, "queue_wait_total_seconds": 2.415, "execution_total_seconds": 8.198, "execution_max_seconds": 3.315},
+    "largest_completed_parent_to_child_dispatch_gaps_seconds": {
+      "source_ingest_to_report_selection": 250.435,
+      "report_selection_to_report_analysis": 438.965,
+      "report_analysis_to_report_render": 118.749
+    },
+    "terminal_dependency_chain_available": false,
+    "note": "Partial telemetry only; the three direct-transition gaps are maxima over completed parent/child pairs, not a cohort critical path."
+  },
+  "root_cause_and_candidate_change": {
+    "confirmed_root_cause": "The supervisor built a fixed candidate list with max_jobs_per_queue entries per queue; the configured value 1 allowed only one same-queue worker candidate despite durable capacity 5 and a global cap of 3.",
+    "candidate_changes": [
+      "Set max_jobs_per_queue to 3, matching the existing global three-worker cap without increasing queue worker limits.",
+      "Assigned distinct worker IDs to same-queue candidate slots so concurrent lease ownership and attempt accounting remain attributable."
+    ],
+    "remaining_scheduler_finding": "Queues polled idle early in a pass can remain inactive after another queue later creates their downstream jobs. Partial telemetry still shows dispatch gaps up to 438.965 seconds; this candidate did not remove that constraint."
+  },
+  "verification": {
+    "focused_tests": "100 passed in 76.46s",
+    "ruff": "All checks passed.",
+    "yaml_parse": "Passed for src/config/app.yaml and src/config/app.example.yaml.",
+    "git_diff_check": "Passed.",
+    "live_acceptance": "Failed: cost ceiling exceeded before all five reports reached terminal validation/readiness.",
+    "commit_or_push": "Not performed because acceptance criteria did not pass."
+  },
+  "command": "python -c \"import json,tempfile; from pathlib import Path; from scripts.quality.run_frozen_reliability_cohort import _load_members; from scripts.quality.ias_live_canary_runner import run_frozen_cohort_once; manifest=Path('docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json'); sources=_load_members(manifest); result=run_frozen_cohort_once(runs_root=Path(tempfile.gettempdir())/'marketlense-frozen-five-same-queue-runs',sources=sources,max_duration_seconds=7200); output=Path(tempfile.gettempdir())/'marketlense-frozen-five-same-queue-2e246d4017f6-result.json'; output.write_text(json.dumps(result,sort_keys=True,separators=(',',':')),encoding='utf-8'); reports=[{key:item.get(key) for key in ('report_id','source_identity_id','admission_outcome','final_state','validation','publication_readiness','unsupported_retained_factual_claims','unresolved_retained_factual_claims','terminal_failure_code')} for item in result.get('reports',[])]; print(json.dumps({'git_sha':result.get('git_sha'),'run_directory':result.get('run_directory'),'raw_result':str(output),'cohort_metrics':result.get('cohort_metrics'),'reports':reports},sort_keys=True))\""
+}

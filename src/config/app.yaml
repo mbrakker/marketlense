@@ -1055,7 +1055,7 @@ workflow_control:
     evidence_enabled: true
     # Provider-wait work is validated at a bounded three-worker cap.
     max_parallel_workers: 3
-    max_jobs_per_queue: 1
+    max_jobs_per_queue: 3
     max_total_jobs: 20
     max_runtime_seconds: 120
     lease_seconds: 180

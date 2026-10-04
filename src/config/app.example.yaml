@@ -148,7 +148,7 @@ workflow_control:
     # The feature gate remains off until queue health and recovery evidence are reviewed.
     enabled: false
     max_parallel_workers: 3
-    max_jobs_per_queue: 1
+    max_jobs_per_queue: 3
     max_total_jobs: 20
     max_runtime_seconds: 120
     lease_seconds: 180

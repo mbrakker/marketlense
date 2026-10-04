@@ -271,13 +271,16 @@ work without retaining prompts, source text, credentials, or raw provider data.
 
 ## Provider-wait overlap
 
-The supervisor remains serial by default. When the explicit supervisor feature
-gate is enabled, `max_parallel_workers` may run up to three independent queue
-workers at once. Dispatch remains fair by queue round and never submits more
-work than the remaining `max_total_jobs` allowance; existing per-queue durable
-worker limits still decide whether a job can be leased. This overlaps external
-provider wait only. It does not relax leases, retries, idempotency, output
-verification, outbox transactions, or approval-gated publication.
+The supervisor remains disabled by default. When worker batches are explicitly
+enabled, `max_parallel_workers` bounds all workers in a pass and
+`max_jobs_per_queue` bounds candidate workers for each queue. Candidates are
+offered in queue rounds, so a queue backlog can use available slots without
+preventing other queues from being offered work. Durable queue controls
+atomically enforce each queue's own worker limit, enabled state, pause state,
+and emergency stop before leasing a job. Dispatch also respects the remaining
+`max_total_jobs` allowance. These limits overlap provider wait only; they do not
+relax leases, retries, idempotency, output verification, outbox transactions, or
+approval-gated publication.
 
 SQLite remains appropriate for the current one-host, conservative-worker
 deployment. Reassess PostgreSQL or a broker only after measured sustained lock

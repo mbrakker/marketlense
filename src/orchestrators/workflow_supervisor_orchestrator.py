@@ -292,10 +292,13 @@ def _run_worker(
     queue_name: str,
     ordinal: int,
 ):
+    worker_id = f"{request.worker_id}:{queue_name}"
+    if ordinal > 0:
+        worker_id = f"{worker_id}:{ordinal + 1}"
     return deps.run_worker(
         state_db=request.state_db,
         queue_name=queue_name,
-        worker_id=f"{request.worker_id}:{queue_name}",
+        worker_id=worker_id,
         ctx=child_context(ctx, task_id=f"supervisor:{queue_name}:{ordinal + 1}"),
         now_utc=request.now_utc,
     )
