@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -47,6 +47,7 @@ from src.services.config_service import (
     build_ingest_settings,
     load_settings,
     load_workflow_control_settings,
+    load_workflow_queue_policies,
     new_runtime_context,
 )
 from src.services.llm_usage_ledger_service import read_usage_run_summary
@@ -56,6 +57,7 @@ from src.services.report_store_service import (
 )
 from src.services.workflow_queue_service import (
     get_workflow_queue_control,
+    seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
 from src.utils.errors import AppError
@@ -80,6 +82,13 @@ _AUTOMATIC_REPAIR_DISPOSITIONS = {
 }
 _DIAGNOSTIC_TOKEN_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-[]"
+)
+_FROZEN_REPORT_QUEUE_STAGES = (
+    "source_ingest",
+    "report_selection",
+    "report_analysis",
+    "report_render",
+    "publication_readiness",
 )
 
 
@@ -212,6 +221,401 @@ def ensure_isolated_publication_queue_disabled(
     )
 
 
+def _seed_isolated_workflow_queue_controls(
+    *, state_db: str, config_path: Path, ctx: Any
+) -> dict[str, WorkflowQueueControl]:
+    """Seed a fresh canary queue from its isolated app.yaml before submission."""
+
+    policies = load_workflow_queue_policies(
+        ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
+    )
+    controls = seed_workflow_queue_controls(
+        state_db,
+        [
+            WorkflowQueueControl(
+                schema_version=policy.schema_version,
+                queue_name=policy.queue_name,
+                mode="active",
+                enabled=policy.enabled,
+                worker_concurrency_limit=policy.max_workers,
+                maximum_pending=policy.maximum_pending,
+                maximum_fanout=policy.maximum_fanout,
+                max_attempts=policy.max_attempts,
+                lease_seconds=policy.lease_seconds,
+                budget_profile=policy.budget_profile,
+                retry_delay_seconds=policy.retry_delay_seconds,
+                emergency_stop_reason="",
+                updated_at_utc="",
+                updated_by="config_seed",
+            )
+            for policy in policies.values()
+        ],
+        ctx,
+    )
+    return {control.queue_name: control for control in controls}
+
+
+def _collect_frozen_cohort_queue_timing_evidence(
+    *, state_db: str, root_workflow_id: str, report_ids: tuple[str, ...]
+) -> dict[str, Any]:
+    """Collect queue timing, dependencies, and overlap from retained telemetry."""
+
+    if not report_ids:
+        return {"stage_attempts": [], "critical_path": {"available": False}}
+    report_marks = ",".join("?" for _ in report_ids)
+    stage_marks = ",".join("?" for _ in _FROZEN_REPORT_QUEUE_STAGES)
+    with sqlite3.connect(state_db) as conn:
+        conn.row_factory = sqlite3.Row
+        controls = {
+            str(row["queue_name"]): {
+                "enabled": bool(row["enabled"]),
+                "configured_workers": int(row["worker_concurrency_limit"]),
+                "max_attempts": int(row["max_attempts"]),
+            }
+            for row in conn.execute(
+                "SELECT queue_name,enabled,worker_concurrency_limit,max_attempts "
+                "FROM workflow_queue_controls WHERE queue_name IN ("
+                + stage_marks
+                + ", 'wordpress_publish')",
+                _FROZEN_REPORT_QUEUE_STAGES,
+            )
+        }
+        jobs = {
+            str(row["job_id"]): dict(row)
+            for row in conn.execute(
+                "SELECT job_id,report_id,queue_name,parent_job_id,job_type,status,"
+                "created_at_utc,available_at_utc,started_at_utc,completed_at_utc "
+                "FROM workflow_jobs WHERE root_workflow_id=? AND report_id IN ("
+                + report_marks
+                + ") AND queue_name IN ("
+                + stage_marks
+                + ")",
+                (root_workflow_id, *report_ids, *_FROZEN_REPORT_QUEUE_STAGES),
+            )
+        }
+        attempts: dict[str, list[dict[str, Any]]] = {}
+        for row in conn.execute(
+            "SELECT a.job_id,a.attempt_number,a.started_at_utc,a.completed_at_utc,"
+            "a.outcome,a.error_code FROM workflow_job_attempts AS a "
+            "JOIN workflow_jobs AS j ON j.job_id=a.job_id "
+            "WHERE j.root_workflow_id=? AND j.report_id IN ("
+            + report_marks
+            + ") AND j.queue_name IN ("
+            + stage_marks
+            + ") ORDER BY a.job_id,a.attempt_number",
+            (root_workflow_id, *report_ids, *_FROZEN_REPORT_QUEUE_STAGES),
+        ):
+            attempts.setdefault(str(row["job_id"]), []).append(dict(row))
+        measurements: dict[str, dict[str, list[int]]] = {}
+        for row in conn.execute(
+            "SELECT s.attributes_json,m.metric,m.status,m.integer_value "
+            "FROM performance_telemetry_spans AS s "
+            "JOIN performance_telemetry_measurements AS m ON m.span_id=s.span_id "
+            "WHERE s.stage IN (" + stage_marks + ") ORDER BY s.rowid,m.metric",
+            _FROZEN_REPORT_QUEUE_STAGES,
+        ):
+            if row["status"] != "observed" or row["integer_value"] is None:
+                continue
+            if row["metric"] not in {"queue_wait_ms", "wall_time_ms"}:
+                continue
+            try:
+                job_id = str(
+                    json.loads(row["attributes_json"] or "{}").get("job_id") or ""
+                )
+            except json.JSONDecodeError:
+                continue
+            if job_id in jobs:
+                measurements.setdefault(job_id, {}).setdefault(
+                    str(row["metric"]), []
+                ).append(int(row["integer_value"]))
+        retry_count = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM workflow_job_attempts AS a "
+                "JOIN workflow_jobs AS j ON j.job_id=a.job_id "
+                "WHERE j.root_workflow_id=? AND a.outcome='retry_wait'",
+                (root_workflow_id,),
+            ).fetchone()[0]
+        )
+        operator_count = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM workflow_job_transitions AS t "
+                "JOIN workflow_jobs AS j ON j.job_id=t.job_id "
+                "WHERE j.root_workflow_id=? AND t.reason IN "
+                "('operator_requeue','queue-requeue')",
+                (root_workflow_id,),
+            ).fetchone()[0]
+        )
+        publish_attempts = int(
+            conn.execute(
+                "SELECT COUNT(*) FROM workflow_job_attempts AS a "
+                "JOIN workflow_jobs AS j ON j.job_id=a.job_id "
+                "WHERE j.root_workflow_id=? AND j.queue_name='wordpress_publish'",
+                (root_workflow_id,),
+            ).fetchone()[0]
+        )
+        published = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='published'"
+        ).fetchone()
+        publish_records = (
+            int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM published"
+                ).fetchone()[0]
+            )
+            if published
+            else 0
+        )
+
+    stage_attempts: list[dict[str, Any]] = []
+    by_job: dict[str, list[dict[str, Any]]] = {}
+    for job_id, job in jobs.items():
+        job_attempts = attempts.get(job_id, [])
+        metric_values = measurements.get(job_id, {})
+        for index, attempt in enumerate(job_attempts):
+            wait_values = metric_values.get("queue_wait_ms", [])
+            wall_values = metric_values.get("wall_time_ms", [])
+            wait_from_telemetry = len(wait_values) == len(job_attempts)
+            wall_from_telemetry = len(wall_values) == len(job_attempts)
+            wait_ms = wait_values[index] if wait_from_telemetry else None
+            wall_ms = wall_values[index] if wall_from_telemetry else None
+            started = str(attempt["started_at_utc"] or "")
+            completed = str(attempt["completed_at_utc"] or "")
+            start_dt = _parse_telemetry_time(started)
+            end_dt = _parse_telemetry_time(completed)
+            if wait_ms is None and start_dt is not None:
+                ready = _parse_telemetry_time(
+                    str(job["available_at_utc"] or job["created_at_utc"])
+                )
+                if index:
+                    prior = _parse_telemetry_time(
+                        str(job_attempts[index - 1]["completed_at_utc"] or "")
+                    )
+                    if prior is not None:
+                        ready = max(ready or prior, prior)
+                if ready is not None:
+                    wait_ms = max(0, round((start_dt - ready).total_seconds() * 1000))
+            if wall_ms is None and start_dt is not None and end_dt is not None:
+                measured = round((end_dt - start_dt).total_seconds() * 1000)
+                wall_ms = measured if measured > 0 else None
+            effective_end = (
+                start_dt + timedelta(milliseconds=wall_ms)
+                if start_dt is not None and wall_ms is not None
+                else end_dt
+            )
+            item = {
+                "job_id": job_id,
+                "report_id": str(job["report_id"]),
+                "stage": str(job["queue_name"]),
+                "job_type": str(job["job_type"]),
+                "parent_job_id": str(job["parent_job_id"] or ""),
+                "attempt_number": int(attempt["attempt_number"]),
+                "outcome": str(attempt["outcome"] or ""),
+                "error_code": str(attempt["error_code"] or ""),
+                "enqueued_at_utc": str(job["created_at_utc"]),
+                "available_at_utc": str(job["available_at_utc"]),
+                "started_at_utc": started,
+                "completed_at_utc": completed,
+                "queue_wait_seconds": round(wait_ms / 1000, 3)
+                if wait_ms is not None
+                else None,
+                "queue_wait_source": (
+                    "performance_telemetry.queue_wait_ms"
+                    if wait_from_telemetry
+                    else "persisted_queue_timestamps"
+                    if wait_ms is not None
+                    else "unavailable"
+                ),
+                "execution_seconds": round(wall_ms / 1000, 3)
+                if wall_ms is not None
+                else None,
+                "execution_source": (
+                    "performance_telemetry.wall_time_ms"
+                    if wall_from_telemetry
+                    else "workflow_attempt_timestamps"
+                    if wall_ms is not None
+                    else "unavailable"
+                ),
+                "effective_completed_at_utc": effective_end.isoformat()
+                if effective_end
+                else "",
+                "on_critical_path": False,
+                "materially_contributes_to_critical_path": False,
+            }
+            stage_attempts.append(item)
+            by_job.setdefault(job_id, []).append(item)
+
+    readiness: dict[str, tuple[datetime, str]] = {}
+    for job_id, job_attempts in by_job.items():
+        job = jobs[job_id]
+        if job["queue_name"] != "publication_readiness" or not job_attempts:
+            continue
+        final = job_attempts[-1]
+        completed = _parse_telemetry_time(final["effective_completed_at_utc"])
+        report_id = str(job["report_id"])
+        if completed is not None and (
+            report_id not in readiness or completed > readiness[report_id][0]
+        ):
+            readiness[report_id] = (completed, job_id)
+    critical_path: dict[str, Any] = {"available": False}
+    if len(readiness) == len(report_ids):
+        report_id, (terminal_time, terminal_job_id) = max(
+            readiness.items(), key=lambda item: item[1][0]
+        )
+        chain: list[str] = []
+        current = terminal_job_id
+        while current in jobs and current not in chain:
+            chain.append(current)
+            current = str(jobs[current]["parent_job_id"] or "")
+        chain.reverse()
+        path_available = (
+            bool(chain)
+            and jobs[chain[0]]["queue_name"] == "source_ingest"
+            and jobs[chain[-1]]["queue_name"] == "publication_readiness"
+            and all(jobs[job_id]["report_id"] == report_id for job_id in chain)
+        )
+        path_attempts = [item for job_id in chain for item in by_job.get(job_id, [])]
+        path_available = (
+            path_available
+            and len(path_attempts) > 0
+            and all(by_job.get(job_id) for job_id in chain)
+        )
+        for item in path_attempts:
+            item["on_critical_path"] = True
+        path_enqueue = (
+            _parse_telemetry_time(path_attempts[0]["enqueued_at_utc"])
+            if path_available
+            else None
+        )
+        path_start = (
+            _parse_telemetry_time(path_attempts[0]["started_at_utc"])
+            if path_available
+            else None
+        )
+        critical_path = {
+            "available": path_available and path_start is not None,
+            "path_source": "workflow_job_parent_chain",
+            "terminal_report_id": report_id,
+            "terminal_job_id": terminal_job_id,
+            "terminal_completed_at_utc": terminal_time.isoformat(),
+            "path_enqueued_at_utc": path_enqueue.isoformat() if path_enqueue else "",
+            "path_started_at_utc": path_start.isoformat() if path_start else "",
+            "elapsed_seconds": (
+                round((terminal_time - path_enqueue).total_seconds(), 3)
+                if path_enqueue
+                else None
+            ),
+            "jobs": path_attempts,
+        }
+
+    concurrency = {}
+    for queue_name in _FROZEN_REPORT_QUEUE_STAGES:
+        queue_spans = [item for item in stage_attempts if item["stage"] == queue_name]
+        concurrency[queue_name] = {
+            **controls.get(queue_name, {}),
+            "max_observed_running_jobs": _maximum_interval_concurrency(queue_spans),
+        }
+        limit = int(controls.get(queue_name, {}).get("configured_workers", 1))
+        for waiting in queue_spans:
+            if not waiting["on_critical_path"] or not waiting["queue_wait_seconds"]:
+                continue
+            start = _parse_telemetry_time(waiting["started_at_utc"])
+            if start is None:
+                continue
+            blockers = _saturated_queue_contributors(
+                start - timedelta(seconds=waiting["queue_wait_seconds"]),
+                start,
+                [item for item in queue_spans if item["job_id"] != waiting["job_id"]],
+                limit,
+            )
+            for item in queue_spans:
+                if item["job_id"] in blockers:
+                    item["materially_contributes_to_critical_path"] = True
+
+    stage_metrics = {}
+    for item in stage_attempts:
+        summary = stage_metrics.setdefault(
+            item["stage"], {"queue_wait_seconds": [], "execution_seconds": []}
+        )
+        for metric in summary:
+            if item[metric] is not None:
+                summary[metric].append(item[metric])
+    performance_by_stage = [
+        {
+            "stage": stage,
+            "sample_count": len(values["execution_seconds"]),
+            "queue_wait_seconds_total": round(sum(values["queue_wait_seconds"]), 3),
+            "execution_seconds_total": round(sum(values["execution_seconds"]), 3),
+            "execution_seconds_max": max(values["execution_seconds"], default=None),
+        }
+        for stage, values in sorted(stage_metrics.items())
+    ]
+    return {
+        "stage_attempts": stage_attempts,
+        "queue_controls": controls,
+        "queue_concurrency": concurrency,
+        "critical_path": critical_path,
+        "performance_telemetry_by_stage": performance_by_stage,
+        "prompt_family_elapsed_time": "unavailable",
+        "provider_request_timing": "unavailable",
+        "automatic_queue_retry_count": retry_count,
+        "operator_intervention_count": operator_count,
+        "wordpress_publish_attempt_count": publish_attempts,
+        "published_record_count": publish_records,
+        "publication_write_count": publish_attempts + publish_records,
+    }
+
+
+def _parse_telemetry_time(value: str) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def _maximum_interval_concurrency(spans: list[dict[str, Any]]) -> int:
+    events = []
+    for span in spans:
+        start = _parse_telemetry_time(span["started_at_utc"])
+        end = _parse_telemetry_time(span["effective_completed_at_utc"])
+        if start is not None and end is not None and end > start:
+            events.extend(((end, -1), (start, 1)))
+    active = maximum = 0
+    for _, delta in sorted(events, key=lambda event: (event[0], event[1])):
+        active += delta
+        maximum = max(maximum, active)
+    return maximum
+
+
+def _saturated_queue_contributors(
+    wait_start: datetime,
+    wait_end: datetime,
+    spans: list[dict[str, Any]],
+    worker_limit: int,
+) -> set[str]:
+    intervals = []
+    points = {wait_start, wait_end}
+    for span in spans:
+        start = _parse_telemetry_time(span["started_at_utc"])
+        end = _parse_telemetry_time(span["effective_completed_at_utc"])
+        if start is None or end is None:
+            continue
+        left, right = max(start, wait_start), min(end, wait_end)
+        if right > left:
+            intervals.append((span["job_id"], left, right))
+            points.update((left, right))
+    ordered = sorted(points)
+    contributors = set()
+    for left, right in zip(ordered, ordered[1:], strict=False):
+        midpoint = left + (right - left) / 2
+        active = [job_id for job_id, start, end in intervals if start <= midpoint < end]
+        if len(active) >= worker_limit:
+            contributors.update(active)
+    return contributors
+
+
 def run_ias_first_attempt_canary(
     *,
     runs_root: Path,
@@ -269,6 +673,7 @@ def run_frozen_cohort_once(
     """Submit one immutable retained cohort through the production queue once."""
 
     git_sha = _require_clean_git_sha()
+    run_started_at_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     started_at = time.monotonic()
     run = prepare_isolated_canary_run(runs_root=runs_root)
     results = [_empty_result(run, started_at) for _ in sources]
@@ -276,7 +681,12 @@ def run_frozen_cohort_once(
         "cost_usd": None,
         "duration_seconds": None,
         "bounded_automatic_repair": None,
+        "duration_measurement": (
+            "time.monotonic from runner entry to all reports terminal"
+        ),
     }
+    terminal_observed_at_utc = ""
+    terminal_observed_monotonic: float | None = None
     for result in results:
         result["git_sha"] = git_sha
     prepared_sources: list[PreselectedFrozenValidationSource] = []
@@ -293,9 +703,12 @@ def run_frozen_cohort_once(
             ctx,
         )
         _assert_empty_stores(run=run, settings=settings)
-        ensure_isolated_publication_queue_disabled(
-            state_db=settings.state_db, ctx=ctx
+        seeded_controls = _seed_isolated_workflow_queue_controls(
+            state_db=settings.state_db,
+            config_path=run.config_path,
+            ctx=ctx,
         )
+        ensure_isolated_publication_queue_disabled(state_db=settings.state_db, ctx=ctx)
         for result, source in zip(results, sources, strict=True):
             source_path = Path(str(source["resolved_source_path"]))
             if not source_path.is_file():
@@ -368,6 +781,40 @@ def run_frozen_cohort_once(
                 ctx=ctx,
                 max_duration_seconds=max_duration_seconds,
             )
+            terminal_observed_monotonic = time.monotonic()
+            terminal_observed_at_utc = datetime.now(timezone.utc).isoformat(
+                timespec="milliseconds"
+            )
+            queue_timing = _collect_frozen_cohort_queue_timing_evidence(
+                state_db=settings.state_db,
+                root_workflow_id=root_workflow_id,
+                report_ids=tuple(str(result["report_id"]) for result in results),
+            )
+            queue_timing.update(
+                {
+                    "runner_started_at_utc": run_started_at_utc,
+                    "all_reports_terminal_observed_at_utc": terminal_observed_at_utc,
+                    "runner_to_terminal_wall_seconds": round(
+                        terminal_observed_monotonic - started_at, 3
+                    ),
+                    "configured_queue_controls_at_bootstrap": {
+                        name: {
+                            "enabled": control.enabled,
+                            "worker_concurrency_limit": (
+                                control.worker_concurrency_limit
+                            ),
+                            "max_attempts": control.max_attempts,
+                            "budget_profile": control.budget_profile,
+                        }
+                        for name, control in sorted(seeded_controls.items())
+                        if name
+                        in {
+                            *_FROZEN_REPORT_QUEUE_STAGES,
+                            "wordpress_publish",
+                        }
+                    },
+                }
+            )
             for result, source in zip(results, sources, strict=True):
                 result.update(
                     _read_result(
@@ -385,13 +832,23 @@ def run_frozen_cohort_once(
                     "input_tokens": results[0]["input_tokens"],
                     "output_tokens": results[0]["output_tokens"],
                     "cost_usd": results[0]["cost"],
+                    "file_search_calls": results[0]["file_search_calls"],
                     "bounded_automatic_repair": any(
                         bool(result["bounded_automatic_repair"]) for result in results
                     ),
+                    "automatic_repair_count": sum(
+                        int(result["automatic_repair_count"]) for result in results
+                    ),
+                    "structured_output_repair_calls": sum(
+                        int(result["structured_output_repair_calls"])
+                        for result in results
+                    ),
+                    "workflow_retry_count": queue_timing["automatic_queue_retry_count"],
                     "operator_intervention_count": _cohort_operator_intervention_count(
                         state_db=settings.state_db,
                         root_workflow_id=root_workflow_id,
                     ),
+                    "queue_timing": queue_timing,
                 }
             )
     except AppError as exc:
@@ -403,8 +860,12 @@ def run_frozen_cohort_once(
             if not result["terminal_failure_code"]:
                 result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
-        cohort_metrics["duration_seconds"] = _finish_frozen_cohort_results(
-            results, started_at, retain_member_duration=False
+        cohort_metrics["duration_seconds"] = (
+            round(terminal_observed_monotonic - started_at, 3)
+            if terminal_observed_monotonic is not None
+            else _finish_frozen_cohort_results(
+                results, started_at, retain_member_duration=False
+            )
         )
         for result in results:
             # Usage and repair records are scoped to the one batch root workflow.
@@ -415,6 +876,7 @@ def run_frozen_cohort_once(
                     "bounded_automatic_repair": None,
                     "operator_intervention": None,
                     "model_provider_calls": None,
+                    "file_search_calls": None,
                     "input_tokens": None,
                     "output_tokens": None,
                     "cost": None,
@@ -837,16 +1299,16 @@ def _read_result(
                 (root_workflow_id,),
             ).fetchone()
         )
-        automatic_queue_repair = bool(
+        workflow_retry_count = int(
             conn.execute(
                 """
-                SELECT 1 FROM workflow_job_attempts AS attempts
+                SELECT COUNT(*) FROM workflow_job_attempts AS attempts
                 JOIN workflow_jobs AS job ON job.job_id=attempts.job_id
-                WHERE job.root_workflow_id=? AND attempts.outcome='retry_wait'
-                LIMIT 1
+                WHERE job.root_workflow_id=? AND job.report_id=?
+                  AND attempts.outcome='retry_wait'
                 """,
-                (root_workflow_id,),
-            ).fetchone()
+                (root_workflow_id, report_id),
+            ).fetchone()[0]
         )
         failure = conn.execute(
             """
@@ -867,15 +1329,36 @@ def _read_result(
                 (validation_run_id, report_id),
             ).fetchone()[0]
         )
-        bounded_manifest_repair = bool(
-            conn.execute(
-                """
-                SELECT 1 FROM validation_run_stage_records
-                WHERE validation_run_id=? AND repair_disposition IN ({}) LIMIT 1
-                """.format(",".join("?" for _ in _AUTOMATIC_REPAIR_DISPOSITIONS)),
-                (validation_run_id, *sorted(_AUTOMATIC_REPAIR_DISPOSITIONS)),
-            ).fetchone()
-        )
+        repair_disposition_rows = conn.execute(
+            """
+            SELECT stages.repair_disposition,COUNT(*)
+            FROM validation_run_stage_records AS stages
+            JOIN validation_run_entity_attempts AS attempts
+              ON attempts.attempt_id=stages.attempt_id
+            WHERE attempts.validation_run_id=? AND attempts.report_id=?
+              AND stages.repair_disposition IN ({})
+            GROUP BY stages.repair_disposition
+            """.format(",".join("?" for _ in _AUTOMATIC_REPAIR_DISPOSITIONS)),
+            (
+                validation_run_id,
+                report_id,
+                *sorted(_AUTOMATIC_REPAIR_DISPOSITIONS),
+            ),
+        ).fetchall()
+        repair_disposition_counts = {
+            str(disposition): int(count)
+            for disposition, count in repair_disposition_rows
+        }
+        automatic_repair_count = sum(repair_disposition_counts.values())
+        with sqlite3.connect(settings.usage_db_path) as usage_conn:
+            structured_output_repair_calls = int(
+                usage_conn.execute(
+                    "SELECT COUNT(*) FROM llm_usage_events "
+                    "WHERE run_id=? AND report_id=? "
+                    "AND action='structured_output:repair'",
+                    (root_workflow_id, report_id),
+                ).fetchone()[0]
+            )
     readiness_payload = _read_readiness_payload(readiness_job)
     usage = read_usage_run_summary(
         LLMUsageRunSummaryRequest(
@@ -885,8 +1368,14 @@ def _read_result(
         ),
         ctx,
     )
-    validation_pass = report_validation_passed(
-        Path(settings.output_dir), source_path
+    file_search_calls = _read_usage_tool_call_count(
+        usage_db_path=settings.usage_db_path, run_id=root_workflow_id
+    )
+    validation_pass = report_validation_passed(Path(settings.output_dir), source_path)
+    retained_claim_counts = _read_retained_claim_counts(
+        output_dir=Path(settings.output_dir),
+        source_path=source_path,
+        report_id=report_id,
     )
     terminal_failure = ""
     final_state = status
@@ -908,23 +1397,35 @@ def _read_result(
         if terminal_failure
         else {}
     )
+    report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
     return {
         "workflow_attempt_count": attempts,
         "final_state": final_state,
         "awaiting_review": final_state == "awaiting_review",
         "bounded_automatic_repair": (
-            bounded_manifest_repair
-            or automatic_queue_repair
+            automatic_repair_count > 0
+            or workflow_retry_count > 0
             or any(
-                Path(settings.output_dir).rglob("regeneration_candidate_audit_*.json")
+                report_output_dir.rglob("regeneration_candidate_audit_*.json")
             )
         ),
+        "automatic_repair_count": automatic_repair_count,
+        "repair_disposition_counts": repair_disposition_counts,
+        "structured_output_repair_calls": structured_output_repair_calls,
+        "workflow_retry_count": workflow_retry_count,
         "operator_intervention": operator_intervention,
         "publication_readiness": (
             "pass" if readiness_payload.get("status") == "pass" else "fail"
         ),
         "validation": "pass" if validation_pass else "fail",
+        "unsupported_retained_factual_claims": (
+            retained_claim_counts[0] if retained_claim_counts is not None else None
+        ),
+        "unresolved_retained_factual_claims": (
+            retained_claim_counts[1] if retained_claim_counts is not None else None
+        ),
         "model_provider_calls": usage.call_count,
+        "file_search_calls": file_search_calls,
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cost": usage.estimated_cost_usd,
@@ -1193,6 +1694,55 @@ def report_validation_passed(output_dir: Path, source_path: Path) -> bool:
         return False
 
 
+def _read_retained_claim_counts(
+    *, output_dir: Path, source_path: Path, report_id: str
+) -> tuple[int, int] | None:
+    """Read final retained-claim counts only when report and source identities match."""
+
+    validation_path = (
+        output_dir
+        / slugify(source_path.name)
+        / "report_analysis"
+        / "validation_retained_claim_validation_candidate.json"
+    )
+    try:
+        payload = json.loads(validation_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    identity = payload.get("validation_identity")
+    if not isinstance(identity, dict):
+        return None
+    source_hash = hashlib.md5(
+        source_path.read_bytes(), usedforsecurity=False
+    ).hexdigest()
+    if (
+        identity.get("report_id") != report_id
+        or identity.get("source_md5") != source_hash
+        or type(payload.get("unsupported_factual_count")) is not int
+        or type(payload.get("unresolved_factual_count")) is not int
+    ):
+        return None
+    return (
+        int(payload["unsupported_factual_count"]),
+        int(payload["unresolved_factual_count"]),
+    )
+
+
+def _read_usage_tool_call_count(*, usage_db_path: str, run_id: str) -> int:
+    """Read existing provider tool calls from the canonical LLM usage ledger."""
+
+    if not Path(usage_db_path).is_file():
+        return 0
+    with sqlite3.connect(usage_db_path) as conn:
+        return int(
+            conn.execute(
+                "SELECT COALESCE(SUM(tool_calls),0) "
+                "FROM llm_usage_events WHERE run_id=?",
+                (run_id,),
+            ).fetchone()[0]
+        )
+
+
 def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
     del started_at
     return {
@@ -1211,9 +1761,14 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
         "publication_readiness": "fail",
         "validation": "fail",
         "model_provider_calls": 0,
+        "file_search_calls": 0,
         "input_tokens": 0,
         "output_tokens": 0,
         "cost": 0.0,
+        "automatic_repair_count": 0,
+        "repair_disposition_counts": {},
+        "structured_output_repair_calls": 0,
+        "workflow_retry_count": 0,
         "total_duration_seconds": 0.0,
         "terminal_failure_code": "",
         "run_directory": str(run.root),
