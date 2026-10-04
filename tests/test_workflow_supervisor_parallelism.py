@@ -413,6 +413,10 @@ def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> N
             queue_calls[queue_name] = queue_calls.get(queue_name, 0) + 1
             call_number = queue_calls[queue_name]
         if queue_name == "source_ingest":
+            if call_number > 1:
+                return SimpleNamespace(
+                    released_lease_job_ids=[], terminal_status="idle"
+                )
             assert analysis_poll_started.wait(timeout=5)
             return _succeeded_worker()
         if queue_name == "report_analysis":
@@ -423,7 +427,9 @@ def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> N
                 return SimpleNamespace(
                     released_lease_job_ids=[], terminal_status="idle"
                 )
-            return _succeeded_worker()
+            if call_number == 2:
+                return _succeeded_worker()
+            return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
         if queue_name == "publisher_discovery":
             if call_number == 2:
                 second_scan_reached_end.set()
@@ -452,7 +458,7 @@ def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> N
     )
 
     assert result.completed_job_count == 2
-    assert queue_calls["report_analysis"] == 2
+    assert queue_calls["report_analysis"] == 3
     assert queue_calls["publisher_discovery"] <= 2
 
 
@@ -499,11 +505,11 @@ def test_supervisor_never_exceeds_global_worker_cap_when_candidates_remain() -> 
     assert maximum_active == 2
 
 
-def test_supervisor_overlaps_same_queue_jobs_with_distinct_lease_owners(
+def test_supervisor_reuses_three_same_queue_slots_for_the_backlog(
     tmp_path,
 ) -> None:
     state_db = str(tmp_path / "same-queue.sqlite")
-    job_ids = _enqueue_report_acquisition_jobs(state_db, 3)
+    job_ids = _enqueue_report_acquisition_jobs(state_db, 5)
     lock = Lock()
     release = Event()
     three_started = Event()
@@ -550,7 +556,7 @@ def test_supervisor_overlaps_same_queue_jobs_with_distinct_lease_owners(
             run_supervisor_once,
             _request(
                 max_parallel_workers=3,
-                max_total_jobs=3,
+                max_total_jobs=5,
                 max_jobs_per_queue=3,
                 state_db=state_db,
             ),
@@ -564,24 +570,20 @@ def test_supervisor_overlaps_same_queue_jobs_with_distinct_lease_owners(
         result = future.result(timeout=15)
 
     assert result.status == "healthy"
-    assert result.completed_job_count == 3
+    assert result.completed_job_count == 5
     assert maximum_active == 3
     statuses = [get_workflow_job(state_db, job_id, _ctx()).status for job_id in job_ids]
-    assert statuses == [
-        "succeeded",
-        "succeeded",
-        "succeeded",
-    ]
+    assert statuses == ["succeeded"] * 5
     attempts = [
         attempt
         for job_id in job_ids
         for attempt in list_workflow_job_attempts(state_db, job_id, _ctx())
     ]
-    assert len(attempts) == 3
+    assert len(attempts) == 5
     assert len({attempt.worker_id for attempt in attempts}) == 3
 
 
-def test_supervisor_respects_durable_queue_limit_and_reuses_available_capacity(
+def test_supervisor_respects_durable_limit_and_reuses_queue_slots_within_pass(
     tmp_path,
 ) -> None:
     state_db = str(tmp_path / "durable-cap.sqlite")
@@ -657,23 +659,11 @@ def test_supervisor_respects_durable_queue_limit_and_reuses_available_capacity(
         first_pass = future.result(timeout=15)
 
     assert maximum_active == 2
-    assert first_pass.completed_job_count == 2
+    assert first_pass.completed_job_count == 3
     assert sum(
         get_workflow_job(state_db, job_id, _ctx()).status == "pending"
         for job_id in job_ids
-    ) == 1
-
-    second_pass = run_supervisor_once(
-        _request(
-            max_parallel_workers=3,
-            max_total_jobs=3,
-            max_jobs_per_queue=3,
-            state_db=state_db,
-        ),
-        _ctx(),
-        dependencies=SupervisorDependencies(run_worker=run_worker),
-    )
-    assert second_pass.completed_job_count == 1
+    ) == 0
     statuses = [get_workflow_job(state_db, job_id, _ctx()).status for job_id in job_ids]
     assert statuses == [
         "succeeded",

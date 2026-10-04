@@ -273,13 +273,15 @@ work without retaining prompts, source text, credentials, or raw provider data.
 
 The supervisor remains disabled by default. When worker batches are explicitly
 enabled, `max_parallel_workers` bounds all workers in a pass and
-`max_jobs_per_queue` bounds candidate workers for each queue. Candidates are
-offered in queue rounds, so a queue backlog can use available slots without
-preventing other queues from being offered work. Durable queue controls
-atomically enforce each queue's own worker limit, enabled state, pause state,
-and emergency stop before leasing a job. Dispatch also respects the remaining
-`max_total_jobs` allowance. These limits overlap provider wait only; they do not
-relax leases, retries, idempotency, output verification, outbox transactions, or
+`max_jobs_per_queue` bounds active candidate workers for each queue. Candidates
+are offered in queue rounds, and a successful worker returns its slot for that
+queue's remaining backlog while runtime and `max_total_jobs` allow. Successful
+work also materializes its outbox and makes newly eligible downstream queues
+available in the same pass. An empty queue is skipped until scheduler progress
+makes another check useful. Durable queue controls atomically enforce each
+queue's own worker limit, enabled state, pause state, and emergency stop before
+leasing a job. These limits overlap provider wait only; they do not relax
+leases, retries, idempotency, output verification, outbox transactions, or
 approval-gated publication.
 
 SQLite remains appropriate for the current one-host, conservative-worker

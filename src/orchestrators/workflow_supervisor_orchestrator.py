@@ -246,7 +246,6 @@ def _run_worker_batches_parallel(
 
     candidates = _candidate_sequence()
     idle_queues: set[str] = set()
-    attempts_by_queue = dict.fromkeys(WORKFLOW_QUEUE_NAMES, 0)
     pending_rechecks: list[str] = []
     pending_recheck_queues: set[str] = set()
     epoch = 0
@@ -274,13 +273,36 @@ def _run_worker_batches_parallel(
                     break
                 for pending_index in range(len(pending_rechecks) - 1, -1, -1):
                     queue_name = pending_rechecks[pending_index]
-                    if (
-                        queue_name in idle_queues
-                        or attempts_by_queue[queue_name]
-                        >= request.settings.max_jobs_per_queue
-                    ):
+                    if queue_name in idle_queues:
                         pending_rechecks.pop(pending_index)
                         pending_recheck_queues.discard(queue_name)
+                if next_candidate < len(candidates):
+                    queue_name, ordinal = candidates[next_candidate]
+                    next_candidate += 1
+                    if queue_name in idle_queues:
+                        continue
+                    active_ordinals = {
+                        worker_ordinal
+                        for active_queue, worker_ordinal, _active_epoch, _rank in (
+                            in_flight.values()
+                        )
+                        if active_queue == queue_name
+                    }
+                    if ordinal in active_ordinals:
+                        continue
+                    if len(active_ordinals) >= request.settings.max_jobs_per_queue:
+                        continue
+                    future = executor.submit(
+                        _run_worker,
+                        request=request,
+                        ctx=ctx,
+                        deps=deps,
+                        queue_name=queue_name,
+                        ordinal=ordinal,
+                    )
+                    in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
+                    dispatch_sequence += 1
+                    continue
                 for recheck_index, queue_name in enumerate(pending_rechecks):
                     active_ordinals = {
                         worker_ordinal
@@ -289,10 +311,7 @@ def _run_worker_batches_parallel(
                         )
                         if active_queue == queue_name
                     }
-                    if (
-                        attempts_by_queue[queue_name] + len(active_ordinals)
-                        >= request.settings.max_jobs_per_queue
-                    ):
+                    if len(active_ordinals) >= request.settings.max_jobs_per_queue:
                         continue
                     ordinal = next(
                         slot
@@ -313,38 +332,7 @@ def _run_worker_batches_parallel(
                     dispatch_sequence += 1
                     break
                 else:
-                    queue_name = ""
-                if queue_name:
-                    continue
-                if next_candidate >= len(candidates):
                     break
-                queue_name, ordinal = candidates[next_candidate]
-                next_candidate += 1
-                if queue_name in idle_queues:
-                    continue
-                active_queue_workers = [
-                    worker_ordinal
-                    for active_queue, worker_ordinal, _active_epoch, _rank in (
-                        in_flight.values()
-                    )
-                    if active_queue == queue_name
-                ]
-                if ordinal in active_queue_workers:
-                    continue
-                if attempts_by_queue[queue_name] + len(active_queue_workers) >= (
-                    request.settings.max_jobs_per_queue
-                ):
-                    continue
-                future = executor.submit(
-                    _run_worker,
-                    request=request,
-                    ctx=ctx,
-                    deps=deps,
-                    queue_name=queue_name,
-                    ordinal=ordinal,
-                )
-                in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
-                dispatch_sequence += 1
             if not in_flight:
                 break
             done, _ = wait(
@@ -365,6 +353,7 @@ def _run_worker_batches_parallel(
                 continue
             reopen_epoch = False
             last_success_queue = ""
+            successful_queues: list[str] = []
             for future in sorted(done, key=lambda item: in_flight[item][3]):
                 queue_name, _ordinal, worker_epoch, _rank = in_flight.pop(future)
                 result = future.result()
@@ -376,36 +365,33 @@ def _run_worker_batches_parallel(
                 deferred += result_deferred
                 errors.extend(result_errors)
                 if result.terminal_status == "idle":
-                    if worker_epoch == epoch:
-                        idle_queues.add(queue_name)
-                    else:
-                        current_epoch_poll_active = any(
-                            active_queue == queue_name and active_epoch == epoch
-                            for active_queue, _ordinal, active_epoch, _rank in (
-                                in_flight.values()
-                            )
+                    current_epoch_poll_active = any(
+                        active_queue == queue_name and active_epoch == epoch
+                        for active_queue, _ordinal, active_epoch, _rank in (
+                            in_flight.values()
                         )
-                        candidate_remains = any(
-                            candidate_queue == queue_name
-                            for candidate_queue, _ordinal in candidates[next_candidate:]
-                        )
-                        if (
-                            queue_name not in idle_queues
-                            and not current_epoch_poll_active
-                            and not candidate_remains
-                            and queue_name not in pending_recheck_queues
-                            and attempts_by_queue[queue_name]
-                            < request.settings.max_jobs_per_queue
-                        ):
+                    )
+                    candidate_remains = any(
+                        candidate_queue == queue_name
+                        for candidate_queue, _ordinal in candidates[next_candidate:]
+                    )
+                    if (
+                        not current_epoch_poll_active
+                        and not candidate_remains
+                        and queue_name not in pending_recheck_queues
+                    ):
+                        if worker_epoch == epoch:
+                            idle_queues.add(queue_name)
+                        elif queue_name not in idle_queues:
                             # Only re-offer the stale queue. Restarting every
                             # queue here can create an idle-poll feedback loop.
                             pending_rechecks.append(queue_name)
                             pending_recheck_queues.add(queue_name)
                 else:
                     remaining -= 1
-                    attempts_by_queue[queue_name] += 1
                     if result.terminal_status == "succeeded":
                         last_success_queue = queue_name
+                        successful_queues.append(queue_name)
                         if (
                             request.settings.materialize_outbox_enabled
                             and remaining > 0
@@ -429,6 +415,11 @@ def _run_worker_batches_parallel(
                 next_candidate = 0
                 pending_rechecks.clear()
                 pending_recheck_queues.clear()
+            for queue_name in successful_queues:
+                idle_queues.discard(queue_name)
+                if queue_name not in pending_recheck_queues:
+                    pending_rechecks.append(queue_name)
+                    pending_recheck_queues.add(queue_name)
         if runtime_exhausted and remaining > 0:
             deferred += 1
         if lease_lost:

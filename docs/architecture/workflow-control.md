@@ -24,6 +24,12 @@ Budget `defer` decisions are durable recovery work in the canonical usage-ledger
 
 `python -m src.cli supervise-workflows --once` composes existing queue operations; it is not a scheduler and never loops. A durable singleton lease prevents concurrent supervisors from duplicating supervisory work. With its feature gates enabled, one pass runs in this order: outbox materialisation, expired worker-lease recovery, registered deferred-work recovery, registered remediation recovery, bounded queue-worker candidates in round-robin queue order, reconciliation, then queue-health collection. `max_parallel_workers` is the global worker cap, `max_jobs_per_queue` bounds candidates for each queue, and `max_total_jobs` bounds non-idle work for the pass. Durable queue controls remain authoritative for per-queue concurrency and prevent claims while disabled, paused, or emergency-stopped. The default configuration is read-only-safe. The `autonomous_mvp` overlay enables the supervisor and the two recovery reapers, but leaves normal queue-worker batches to their existing workers; recovery handoffs therefore stay durable and do not execute an alternate in-memory workflow.
 
+In the parallel worker path, `max_jobs_per_queue` bounds active candidate slots;
+successful workers return their slot to the same queue so queued work can
+continue within the pass, subject to global worker, total-job, runtime, and
+durable queue limits. Newly materialized downstream work reopens the fair queue
+scan, while a fully idle queue is skipped until useful work completes.
+
 Use an external timer only after observing queue health and recovery evidence:
 
 ```cron
