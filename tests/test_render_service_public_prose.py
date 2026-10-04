@@ -72,6 +72,61 @@ def test_report_renders_insight_once_and_uses_distinct_topic_copy_for_signals(
     )
 
 
+def test_report_omits_advisory_items_repeated_by_retained_insights(
+    tmp_path: Path,
+) -> None:
+    decision_implication = "Track channel investment against buyer demand."
+    priority_move = "Reallocate spend when channel returns weaken."
+    request = RenderRequest(
+        schema_version="1.0",
+        data={
+            "title": "Market Outlook 2026",
+            "publisher": "Example Research",
+            "_figure_section_enabled": False,
+            "artifacts": {
+                "insights_final": [
+                    {
+                        "text": "Buyers are shifting investment across channels.",
+                        "so_what": decision_implication,
+                        "now_what": priority_move,
+                        "evidence_id": "finding-1",
+                    }
+                ],
+                "executive_advisory": {
+                    "decision_brief": {
+                        "status": "generated",
+                        "decision_implications": [decision_implication],
+                        "priority_moves": [priority_move],
+                    }
+                },
+            },
+            "evidence_packs": {"doc_map": {"title": "Market Outlook 2026"}},
+        },
+        doc_name="Market Outlook 2026.pdf",
+        file_id="market-outlook-advisory-duplication",
+        out_dir=str(tmp_path / "output"),
+    )
+
+    response = render_report(
+        request,
+        new_runtime_context(task_id="render-advisory-duplication-test"),
+    )
+    document = BeautifulSoup(
+        Path(response.html_path).read_text(encoding="utf-8"), "html.parser"
+    )
+    findings = document.select_one("#findings")
+    advisory = document.select_one(".advisory-suite")
+
+    assert findings is not None
+    assert advisory is not None
+    findings_text = findings.get_text(" ", strip=True)
+    advisory_text = advisory.get_text(" ", strip=True)
+    assert findings_text.count(decision_implication) == 1
+    assert findings_text.count(priority_move) == 1
+    assert decision_implication not in advisory_text
+    assert priority_move not in advisory_text
+
+
 def test_signal_cards_use_retained_insights_and_editorial_implications() -> None:
     cards = _build_signal_cards(
         topics=["Value redefined"],

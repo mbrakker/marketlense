@@ -81,6 +81,33 @@ _SENTENCE_ABBREVIATION_AT_END = re.compile(
 )
 
 
+def _suppress_repeated_insight_advisory_items(
+    advisory: dict[str, Any], insights: list[dict[str, Any]]
+) -> None:
+    decision = advisory.get("decision")
+    if not isinstance(decision, dict):
+        return
+
+    repeated_fields = (
+        ("decision_implications", "so_what"),
+        ("priority_moves", "now_what"),
+    )
+    for advisory_field, insight_field in repeated_fields:
+        insight_copy = {
+            re.sub(r"\s+", " ", _s(insight.get(insight_field))).strip().casefold()
+            for insight in insights
+            if _s(insight.get(insight_field))
+        }
+        items = decision.get(advisory_field)
+        if isinstance(items, list) and insight_copy:
+            decision[advisory_field] = [
+                item
+                for item in items
+                if re.sub(r"\s+", " ", _s(item)).strip().casefold()
+                not in insight_copy
+            ]
+
+
 def _build_figure_slides(
     data: dict[str, Any], out_dir: Path, report_title: str
 ) -> list[dict[str, Any]]:
@@ -293,6 +320,7 @@ def _build_render_view(
     linkedin_status = _coerce_family_status(artifacts, "linkedin_post")
     report_quality_score = _build_report_quality_score(data)
     advisory = _coerce_public_advisory(artifacts)
+    _suppress_repeated_insight_advisory_items(advisory, insights)
     topics_covered = _coerce_public_topics_covered(artifacts)
     key_figures = _coerce_public_key_figures(artifacts)
     chart_insight_cards = _coerce_public_chart_insight_cards(artifacts)
