@@ -3408,12 +3408,10 @@ def _retained_summary_claim_replacement(
     *,
     field: str,
     excluded_claim_ids: set[str],
-) -> str | None:
+) -> tuple[str, str] | None:
     """Reuse one already retained, source-bound summary claim for an empty card."""
 
     claims = execution.state.summary.get("claim_evidence_map")
-    if not isinstance(claims, list):
-        return None
     try:
         provenance = soft_copy_claim_provenance_from_payload(
             execution.state.existing_soft_copy_claim_provenance
@@ -3429,20 +3427,37 @@ def _retained_summary_claim_replacement(
         if retained.artifact_family == "summary":
             provenance_by_hash.setdefault(retained.text_hash, []).append(retained)
     word_limit = 18 if field == "card_tldr_compact" else 45
-    for mapped_claim in claims:
-        if not isinstance(mapped_claim, dict):
-            continue
-        sentence = _normalized_soft_copy_text(mapped_claim.get("claim"))
+    candidates: list[tuple[str, str, list[int] | None]] = []
+    if isinstance(claims, list):
+        for mapped_claim in claims:
+            if not isinstance(mapped_claim, dict):
+                continue
+            candidates.append(
+                (
+                    _normalized_soft_copy_text(mapped_claim.get("claim")),
+                    _s(mapped_claim.get("evidence_id")).strip(),
+                    [
+                        int(page)
+                        for page in mapped_claim.get("pages", [])
+                        if isinstance(page, int) and page > 0
+                    ]
+                    if isinstance(mapped_claim.get("pages"), list)
+                    else [],
+                )
+            )
+    for summary_field in ("tldr", "card_tldr_compact", "executive_summary"):
+        for sentence in soft_copy_material_sentences(
+            _s(execution.state.summary.get(summary_field))
+        ):
+            candidates.append((_normalized_soft_copy_text(sentence), "", None))
+
+    for sentence, evidence_id, mapped_pages in candidates:
         sentences = soft_copy_material_sentences(sentence)
-        evidence_id = _s(mapped_claim.get("evidence_id")).strip()
-        canonical_spans = span_index.get(evidence_id.casefold(), [])
         if (
             not sentence
             or len(sentences) != 1
             or sentences[0] != sentence
             or len(sentence.split()) > word_limit
-            or not evidence_id
-            or not canonical_spans
         ):
             continue
         text_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
@@ -3451,11 +3466,19 @@ def _retained_summary_claim_replacement(
             for retained in provenance_by_hash.get(text_hash, [])
             if retained.claim_id not in excluded_claim_ids
             and retained.classification == "factual"
-            and evidence_id in retained.evidence_ids
+            and retained.evidence_ids
+            and (not evidence_id or evidence_id in retained.evidence_ids)
         ]
         if len(matching) != 1:
             continue
         retained = matching[0]
+        canonical_spans = [
+            span
+            for retained_evidence_id in retained.evidence_ids
+            for span in span_index.get(retained_evidence_id.casefold(), [])
+        ]
+        if not canonical_spans:
+            continue
         expected_spans = tuple(
             dict(span)
             for retained_evidence_id in retained.evidence_ids
@@ -3470,14 +3493,13 @@ def _retained_summary_claim_replacement(
                 if isinstance(span.get("page"), int) and span["page"] > 0
             )
         )
-        mapped_pages = [
-            int(page)
-            for page in mapped_claim.get("pages", [])
-            if isinstance(page, int) and page > 0
-        ]
-        if expected_pages and mapped_pages != expected_pages:
+        if (
+            mapped_pages is not None
+            and expected_pages
+            and mapped_pages != expected_pages
+        ):
             continue
-        return sentence
+        return sentence, retained.claim_id
     return None
 
 
@@ -3694,6 +3716,12 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             return
         scoped_repairs = _summary_claim_repairs(execution)
     if scoped_repairs is not None:
+        failed_summary_claim_ids = {
+            repair.claim.claim_id
+            for repairs in scoped_repairs.values()
+            for repair in repairs
+        }
+        used_retained_replacement_ids: set[str] = set()
         for field, repairs in scoped_repairs.items():
             replacements: Dict[str, str | None] = {}
             for repair in repairs:
@@ -3767,12 +3795,14 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                 "tldr",
                 "card_tldr_compact",
             }:
-                replacement = _retained_summary_claim_replacement(
+                retained_replacement = _retained_summary_claim_replacement(
                     execution,
                     field=field,
-                    excluded_claim_ids={repair.claim.claim_id for repair in repairs},
+                    excluded_claim_ids=(
+                        failed_summary_claim_ids | used_retained_replacement_ids
+                    ),
                 )
-                if replacement is None:
+                if retained_replacement is None:
                     raise AppError(
                         code="summary_safe_removal_no_supported_replacement",
                         message=(
@@ -3785,6 +3815,8 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                             "field": f"summary.{field}",
                         },
                     )
+                replacement, replacement_claim_id = retained_replacement
+                used_retained_replacement_ids.add(replacement_claim_id)
                 replacements[repairs[-1].claim.claim_id] = replacement
                 reconstructed = _reconstruct_soft_copy_claims(
                     _s(execution.state.summary.get(field)), repairs, replacements

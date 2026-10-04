@@ -570,6 +570,147 @@ def test_summary_safe_removal_without_retained_replacement_fails_typed(tmp_path)
     assert error.value.code == "summary_safe_removal_no_supported_replacement"
 
 
+def test_summary_safe_removal_reuses_other_retained_supported_sentences(tmp_path):
+    current = _current_artifacts()
+    failed_tldr = "Unsupported broad summary claim."
+    failed_compact = "Unsupported compact summary claim."
+    supported_tldr = "A retained source finding changed during the measured period."
+    supported_compact = "Another retained finding describes buyer priorities."
+    current["summary"].update(
+        {
+            "tldr": failed_tldr,
+            "card_tldr_compact": failed_compact,
+            "executive_summary": f"{supported_tldr} {supported_compact}",
+            "claim_evidence_map": [
+                {
+                    "claim": failed_tldr,
+                    "evidence_id": "f1",
+                    "evidence": "Evidence text",
+                    "pages": [1],
+                },
+                {
+                    "claim": failed_compact,
+                    "evidence_id": "f2",
+                    "evidence": "Evidence text 2",
+                    "pages": [2],
+                },
+            ],
+        }
+    )
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].extend(
+        [
+            {"id": "f3", "evidence": "Evidence text 3", "pages": [3]},
+            {"id": "f4", "evidence": "Evidence text 4", "pages": [4]},
+        ]
+    )
+    span_index = artifact_evidence_span_index(
+        doc_map=evidence_packs["doc_map"], evidence_packs=evidence_packs
+    )
+
+    def provenance(text: str, evidence_id: str) -> SoftCopyClaimProvenance:
+        text_hash = hashlib.sha256(text.encode()).hexdigest()
+        return SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="summary",
+            claim_id=f"soft_copy:summary:{text_hash[:16]}",
+            text_hash=text_hash,
+            classification="factual",
+            evidence_ids=(evidence_id,),
+            source_spans=tuple(
+                dict(span) for span in span_index[evidence_id.casefold()]
+            ),
+            producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+
+    retained = soft_copy_claim_provenance_from_payload(
+        current["soft_copy_claim_provenance"]
+    )
+    retained = [claim for claim in retained if claim.artifact_family != "summary"]
+    retained.extend(
+        [
+            provenance(failed_tldr, "f1"),
+            provenance(failed_compact, "f2"),
+            provenance(supported_tldr, "f3"),
+            provenance(supported_compact, "f4"),
+        ]
+    )
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        retained
+    )
+    issues = [
+        RegenerationIssue(
+            rule_id="grounding",
+            affected_section="summary.tldr",
+            message="The TLDR claim is unsupported.",
+            severity="error",
+            entity_id=provenance(failed_tldr, "f1").claim_id,
+        ),
+        RegenerationIssue(
+            rule_id="grounding",
+            affected_section="summary.card_tldr_compact",
+            message="The compact TLDR claim is unsupported.",
+            severity="error",
+            entity_id=provenance(failed_compact, "f2").claim_id,
+        ),
+    ]
+    target = RegenerationTarget(
+        target_section="summary",
+        repair_action="REMOVE_CLAIM",
+        repair_strategy="safe_removal",
+        issues=issues,
+        allowed_paths=[
+            "summary.tldr[claim_index=0]",
+            "summary.card_tldr_compact[claim_index=0]",
+        ],
+    )
+    plan = RegenerationPlan(
+        mode="targeted",
+        targets=[target],
+        unmappable_issues=[],
+        broad_retry_allowed=False,
+    )
+    openai_client = _FakeOpenAIClient()
+
+    response = _regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=3,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    summary = response.updated_artifacts["summary"]
+    assert summary["tldr"] == supported_tldr
+    assert summary["card_tldr_compact"] == supported_compact
+    assert failed_tldr not in summary["tldr"]
+    assert failed_compact not in summary["card_tldr_compact"]
+    retained_ids = {
+        claim["claim_id"]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"][
+            "claims"
+        ]
+    }
+    assert provenance(failed_tldr, "f1").claim_id not in retained_ids
+    assert provenance(failed_compact, "f2").claim_id not in retained_ids
+    assert openai_client.calls == []
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+
+
 @pytest.mark.parametrize("attempt_index", [2, 3])
 def test_later_no_prompt_repair_does_not_add_empty_prompt_requirements_to_cache(
     tmp_path,
