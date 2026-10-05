@@ -321,8 +321,8 @@ def test_projection_prefers_source_backed_publisher_identity(
     analysis = _analysis_state(ingest_settings, ctx)
     analysis = replace(
         analysis,
-        payload=replace(analysis.payload, publisher=""),
-        normalized_payload=replace(analysis.normalized_payload, publisher=""),
+        payload=replace(analysis.payload, publisher="AI"),
+        normalized_payload=replace(analysis.normalized_payload, publisher="AI"),
         runtime=replace(analysis.runtime, publisher_name="Acme Research"),
     )
 

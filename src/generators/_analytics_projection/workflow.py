@@ -48,8 +48,8 @@ def build_projection(
             severity="error",
             context={"report_id": report_id},
         )
-    publisher = _clean_text(payload.publisher) or _clean_text(
-        analysis.runtime.publisher_name
+    publisher = _clean_text(analysis.runtime.publisher_name) or _clean_text(
+        payload.publisher
     )
     canonical_publisher_id = _clean_text(analysis.runtime.ctx.publisher_id)
     validation_status = (
