@@ -2135,6 +2135,15 @@ def _active_repair_target(
             if "[claim_index=" in path
             or ("[item=" in path and path.rsplit(".", 1)[-1] in {"text", "claim"})
         ]
+        if family == "summary" and field in {
+            "tldr",
+            "card_tldr_compact",
+            "executive_summary",
+        }:
+            field_prefix = f"summary.{field}[claim_index="
+            stable_paths = [
+                path for path in stable_paths if path.startswith(field_prefix)
+            ]
         matches = []
         for path in stable_paths:
             found, value = _read_repair_path(
@@ -2144,6 +2153,13 @@ def _active_repair_target(
                 matches.append(path)
         if len(matches) == 1:
             active_path = matches[0]
+        elif len(matches) > 1 and family == "summary":
+            active_path = min(
+                matches,
+                key=lambda path: int(
+                    re.search(r"\[claim_index=(\d+)\]$", path).group(1)
+                ),
+            )
         elif not matches and failed_claim:
             if family == "summary" and field in {
                 "tldr",
@@ -3307,9 +3323,11 @@ def _remove_soft_copy_claim(text: str, repair: _SoftCopyClaimRepair) -> str:
 def _mark_soft_copy_claim_removed(
     execution: _RegenerationHandlerExecution, repair: _SoftCopyClaimRepair
 ) -> None:
-    execution.state.replaced_soft_copy_claim_ids.setdefault(
+    removed_ids = execution.state.replaced_soft_copy_claim_ids.setdefault(
         repair.artifact_family, []
-    ).append(repair.claim.claim_id)
+    )
+    if repair.claim.claim_id not in removed_ids:
+        removed_ids.append(repair.claim.claim_id)
 
 
 def _reconstruct_soft_copy_claims(
@@ -3372,7 +3390,59 @@ def _summary_claim_repairs(
         ]
         if not target_issues:
             return None
+    resolved: Dict[str, List[_SoftCopyClaimRepair]] = {}
+    try:
+        retained_claims = soft_copy_claim_provenance_from_payload(
+            execution.state.existing_soft_copy_claim_provenance
+        )
+    except AppError:
+        retained_claims = []
     for issue in target_issues:
+        entity_id = str(issue.entity_id or "").strip()
+        matching_claims = [
+            claim
+            for claim in retained_claims
+            if claim.artifact_family == "summary"
+            and entity_id in {claim.claim_id, claim.text_hash}
+        ]
+        exact_matches = 0
+        if len(matching_claims) == 1:
+            claim = matching_claims[0]
+            for path in execution.target.allowed_paths:
+                path_match = re.fullmatch(
+                    r"summary\.(tldr|card_tldr_compact|executive_summary)"
+                    r"\[claim_index=(\d+)\]",
+                    path,
+                )
+                if not path_match:
+                    continue
+                field, raw_index = path_match.groups()
+                spans = _soft_copy_sentence_spans(
+                    _s(execution.state.summary.get(field))
+                )
+                index = int(raw_index)
+                if index >= len(spans):
+                    continue
+                start, end, sentence = spans[index]
+                sentence_hash = hashlib.sha256(
+                    _normalized_soft_copy_text(sentence).encode("utf-8")
+                ).hexdigest()
+                if sentence_hash != claim.text_hash:
+                    continue
+                resolved.setdefault(field, []).append(
+                    _SoftCopyClaimRepair(
+                        artifact_family="summary",
+                        claim=claim,
+                        text=sentence,
+                        start=start,
+                        end=end,
+                        issue=issue,
+                        issues=(issue,),
+                    )
+                )
+                exact_matches += 1
+        if exact_matches:
+            continue
         affected = str(issue.affected_section or "").casefold()
         field = next(
             (
@@ -3385,7 +3455,11 @@ def _summary_claim_repairs(
         if not field:
             return None
         grouped.setdefault(field, []).append(issue)
-    resolved: Dict[str, List[_SoftCopyClaimRepair]] = {}
+    exact_claim_ids = {
+        repair.claim.claim_id
+        for repairs in resolved.values()
+        for repair in repairs
+    }
     claim_ids: set[str] = set()
     for field, issues in grouped.items():
         repairs = _soft_copy_claim_repairs(
@@ -3395,13 +3469,16 @@ def _summary_claim_repairs(
             issues=issues,
             summary_claim_map_targets=summary_claim_map_targets,
         )
-        if repairs is None or (
-            not _uses_safe_removal(execution)
-            and any(repair.claim.claim_id in claim_ids for repair in repairs)
+        if repairs is None:
+            return None
+        if not _uses_safe_removal(execution) and any(
+            repair.claim.claim_id in claim_ids
+            and repair.claim.claim_id not in exact_claim_ids
+            for repair in repairs
         ):
             return None
         claim_ids.update(repair.claim.claim_id for repair in repairs)
-        resolved[field] = repairs
+        resolved.setdefault(field, []).extend(repairs)
     return resolved
 
 
@@ -3778,17 +3855,27 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             for repair in repairs
         }
         used_retained_replacement_ids: set[str] = set()
+        shared_claim_replacements: Dict[str, str | None] = {}
         for field, repairs in scoped_repairs.items():
             prior_field_text = _s(execution.state.summary.get(field))
             replacements: Dict[str, str | None] = {}
             for repair in repairs:
+                if repair.claim.claim_id in replacements:
+                    continue
+                if repair.claim.claim_id in shared_claim_replacements:
+                    replacements[repair.claim.claim_id] = shared_claim_replacements[
+                        repair.claim.claim_id
+                    ]
+                    continue
                 if _uses_safe_removal(execution):
                     replacements[repair.claim.claim_id] = None
+                    shared_claim_replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
                     continue
                 claim_grounding = _claim_scoped_grounding_package(execution, repair)
                 if not _claim_has_repair_support(claim_grounding):
                     replacements[repair.claim.claim_id] = None
+                    shared_claim_replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
                     continue
                 selected_evidence_ids = set(claim_grounding["evidence_ids"])
@@ -3834,6 +3921,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     evidence_ids=decision.evidence_ids_used,
                 ):
                     replacements[repair.claim.claim_id] = None
+                    shared_claim_replacements[repair.claim.claim_id] = None
                     _mark_soft_copy_claim_removed(execution, repair)
                     continue
                 _record_soft_copy_claim_bindings(
@@ -3845,6 +3933,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     repaired_text=repaired_text,
                 )
                 replacements[repair.claim.claim_id] = repaired_text
+                shared_claim_replacements[repair.claim.claim_id] = repaired_text
             reconstructed = _reconstruct_soft_copy_claims(
                 _s(execution.state.summary.get(field)), repairs, replacements
             )

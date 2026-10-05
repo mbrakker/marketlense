@@ -637,6 +637,125 @@ def test_summary_claim_repair_skips_warning_outside_planned_paths(tmp_path) -> N
     }
 
 
+def test_summary_claim_repair_updates_repeated_exact_paths_once(tmp_path) -> None:
+    current = _current_artifacts()
+    failed = "The report overstates the benchmark scope."
+    current["summary"]["card_tldr_compact"] = failed
+    current["summary"]["executive_summary"] = f"{failed} {failed}"
+    evidence_packs = _evidence_packs()
+    evidence_packs["doc_map"]["sections"].append(
+        {"id": "f2", "title": "Benchmark scope", "summary": failed, "pages": [2]}
+    )
+    evidence_packs["findings"]["findings"][1].update(
+        evidence=failed, text=failed, pages=[2]
+    )
+    summary_claims = build_soft_copy_claim_provenance(
+        artifact_family="summary",
+        text=soft_copy_public_text("summary", current["summary"]),
+        declared_claims=[
+            {
+                "claim": "Old TLDR.",
+                "classification": "interpretive",
+                "evidence_ids": [],
+            },
+            {"claim": failed, "classification": "factual", "evidence_ids": ["f2"]},
+        ],
+        evidence_span_index=artifact_evidence_span_index(
+            doc_map=evidence_packs["doc_map"], evidence_packs=evidence_packs
+        ),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    non_summary_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            current["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family != "summary"
+    ]
+    current["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [*non_summary_claims, *summary_claims]
+    )
+    failed_claim = next(
+        claim
+        for claim in summary_claims
+        if claim.text_hash == hashlib.sha256(failed.encode()).hexdigest()
+    )
+    issue = ValidationIssue(
+        rule_id="grounding",
+        affected_section="summary",
+        message="The retained claim is not established by its evidence.",
+        severity="error",
+        repair_target="summary",
+        entity_id=failed_claim.claim_id,
+        evidence_ids=["f2"],
+    )
+    plan = _build_regeneration_plan(
+        issues=[issue], artifacts=current, broad_retry_available=False
+    )
+    assert plan.mode == "targeted"
+    assert plan.targets[0].allowed_paths == [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.executive_summary[claim_index=0]",
+        "summary.executive_summary[claim_index=1]",
+    ]
+
+    class _SummaryFieldOpenAIClient(_FakeOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            del ctx
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            claim_scope = json.loads(variables["claim_repair_scope_json"])
+            field = claim_scope["field"]
+            replacement = "Repaired summary claim."
+            self.calls.append(req)
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps({"summary": {field: replacement}}),
+                parsed_json={
+                    "summary": {field: replacement},
+                    "claim_provenance": [
+                        {
+                            "claim": replacement,
+                            "classification": "interpretive",
+                            "evidence_ids": ["f2"],
+                        }
+                    ],
+                },
+                request_id=f"req-summary-{field}",
+            )
+
+    openai_client = _SummaryFieldOpenAIClient()
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert response.updated_artifacts["summary"]["card_tldr_compact"] == (
+        "Repaired summary claim."
+    )
+    assert response.updated_artifacts["summary"]["executive_summary"] == (
+        "Repaired summary claim. Repaired summary claim."
+    )
+    assert response.updated_artifacts["summary"]["tldr"] == "Old TLDR."
+    assert len(openai_client.calls) == 1
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+
+
 def test_ambiguous_soft_copy_issue_is_not_widened_to_family_regeneration(
     tmp_path,
 ) -> None:

@@ -986,6 +986,57 @@ def test_summary_repair_keeps_same_claim_grounding_context_only():
     assert all(issue.rule_id != "artifact_quality" for issue in planned_issues)
 
 
+def test_summary_repair_maps_duplicate_claim_surfaces_together():
+    copy_text = "The report benchmarks gaming, commerce, and finance applications."
+    provenance = build_soft_copy_claim_provenance(
+        artifact_family="summary",
+        text=copy_text,
+        declared_claims=[
+            {
+                "claim": copy_text,
+                "classification": "factual",
+                "evidence_ids": ["e1"],
+            }
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={"namespace": "test/summary"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    artifacts = {
+        "summary": {
+            "tldr": copy_text,
+            "card_tldr_compact": copy_text,
+            "executive_summary": copy_text,
+        },
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            provenance
+        ),
+    }
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                message="The evidence does not establish the benchmark framing.",
+                severity="error",
+                affected_section="summary",
+                rule_id="grounding",
+                repair_target="summary",
+                entity_id=provenance[0].claim_id,
+            )
+        ],
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    assert plan.targets[0].allowed_paths == [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.executive_summary[claim_index=0]",
+        "summary.tldr[claim_index=0]",
+    ]
+
+
 def test_run_report_analysis_snapshot_preserves_internal_payload_metadata(tmp_path):
     runtime = _runtime(tmp_path)
     source = _source(runtime)
@@ -1071,6 +1122,8 @@ __all__ = [
     "test_summary_claim_map_grounding_is_limited_to_the_failed_item",
     "test_validation_loop_preflights_empty_summary_package_to_safe_removal",
     "test_insight_repair_authorizes_same_claim_grounding_warning_fields",
+    "test_summary_repair_keeps_same_claim_grounding_context_only",
+    "test_summary_repair_maps_duplicate_claim_surfaces_together",
     "test_run_report_analysis_rejects_unsupported_repair_target",
     "test_run_report_analysis_snapshot_preserves_internal_payload_metadata",
 ]

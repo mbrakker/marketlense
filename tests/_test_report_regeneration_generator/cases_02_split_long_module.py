@@ -355,6 +355,18 @@ def test_summary_safe_removal_clears_same_claim_from_sibling_fields(tmp_path) ->
         [*retained, *summary_claims]
     )
     failed_hash = hashlib.sha256(failed.encode()).hexdigest()
+    issue = RegenerationIssue(
+        rule_id="grounding",
+        affected_section="summary",
+        message="The compact vertical benchmark claim is unsupported.",
+        severity="error",
+        entity_id=f"soft_copy:summary:{failed_hash[:16]}",
+    )
+    allowed_paths = _allowed_paths("summary", [issue], current, "REMOVE_CLAIM")
+    assert allowed_paths == [
+        "summary.card_tldr_compact[claim_index=0]",
+        "summary.executive_summary[claim_index=0]",
+    ]
     plan = RegenerationPlan(
         mode="targeted",
         targets=[
@@ -362,16 +374,8 @@ def test_summary_safe_removal_clears_same_claim_from_sibling_fields(tmp_path) ->
                 target_section="summary",
                 repair_action="REMOVE_CLAIM",
                 repair_strategy="safe_removal",
-                issues=[
-                    RegenerationIssue(
-                        rule_id="grounding",
-                        affected_section="summary.card_tldr_compact",
-                        message="The compact vertical benchmark claim is unsupported.",
-                        severity="error",
-                        entity_id=f"soft_copy:summary:{failed_hash[:16]}",
-                    )
-                ],
-                allowed_paths=["summary.card_tldr_compact[claim_index=0]"],
+                issues=[issue],
+                allowed_paths=allowed_paths,
             )
         ],
         unmappable_issues=[],

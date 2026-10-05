@@ -511,7 +511,7 @@ def _allowed_paths(
         for path in (
             _issue_insight_allowed_paths(issue, artifacts)
             if target_key == "insights_bundle"
-            else [_issue_allowed_path(target_key, issue, artifacts)]
+            else _issue_allowed_paths(target_key, issue, artifacts)
         )
     ]
     if target_key == "insights_bundle" and any(
@@ -520,12 +520,15 @@ def _allowed_paths(
         return []
     if target_key in {
         "summary",
-        "insights_bundle",
         "key_figures",
         "quotes",
         "expert_comment",
         "linkedin_post",
-    } and any(not path for path in resolved):
+    } and any(
+        not _issue_allowed_paths(target_key, issue, artifacts) for issue in path_issues
+    ):
+        return []
+    if target_key == "insights_bundle" and any(not path for path in resolved):
         return []
     paths: set[str] = set()
     for path in resolved:
@@ -637,11 +640,11 @@ def _issue_allowed_path(
                     if not stable_id and str(index + 1) == identity:
                         return f"summary.claim_evidence_map[{index}].claim"
             return ""
-        soft_copy_path = _soft_copy_claim_path(
+        soft_copy_paths = _soft_copy_claim_paths(
             family="summary", entity_id=entity_id, artifacts=artifacts
         )
-        if soft_copy_path:
-            return soft_copy_path
+        if len(soft_copy_paths) == 1:
+            return soft_copy_paths[0]
         match = re.match(
             r"^(?:summary\.)?(tldr|card_tldr_compact|executive_summary)(?:\.|$)",
             affected,
@@ -649,6 +652,8 @@ def _issue_allowed_path(
         if match:
             return f"summary.{match.group(1)}"
         return ""
+
+
     if target_key == "insights_bundle":
         insight_paths = _issue_insight_allowed_paths(issue, artifacts)
         return insight_paths[0] if len(insight_paths) == 1 else ""
@@ -723,6 +728,26 @@ def _issue_allowed_path(
                 return next(iter(paths))
         return ""
     return target_key
+
+
+def _issue_allowed_paths(
+    target_key: str, issue: RegenerationIssue, artifacts: Dict[str, Any]
+) -> List[str]:
+    """Resolve a validation issue to every exact retained leaf it identifies."""
+
+    if target_key == "summary" and not re.match(
+        r"^summary\.claim_evidence_map(?:[:\[])",
+        str(issue.affected_section or "").strip(),
+    ):
+        paths = _soft_copy_claim_paths(
+            family="summary",
+            entity_id=str(issue.entity_id or "").strip(),
+            artifacts=artifacts,
+        )
+        if paths:
+            return paths
+    path = _issue_allowed_path(target_key, issue, artifacts)
+    return [path] if path else []
 
 
 def _issue_insight_allowed_paths(
@@ -1055,17 +1080,17 @@ def _has_scalar_leaf(value: Dict[str, Any], field_path: str) -> bool:
     return not isinstance(current, (dict, list))
 
 
-def _soft_copy_claim_path(
+def _soft_copy_claim_paths(
     *, family: str, entity_id: str, artifacts: Dict[str, Any]
-) -> str:
+) -> List[str]:
     if not entity_id:
-        return ""
+        return []
     try:
         claims = soft_copy_claim_provenance_from_payload(
             artifacts.get("soft_copy_claim_provenance")
         )
     except AppError:
-        return ""
+        return []
     claim = next(
         (
             value
@@ -1075,7 +1100,7 @@ def _soft_copy_claim_path(
         None,
     )
     if claim is None:
-        return ""
+        return []
     text_fields = (
         (
             ("summary", "tldr"),
@@ -1099,7 +1124,18 @@ def _soft_copy_claim_path(
             if text_hash == claim.text_hash:
                 base = f"summary.{field}" if field else family
                 matches.append(f"{base}[claim_index={index}]")
-    return matches[0] if len(matches) == 1 else ""
+    return sorted(matches)
+
+
+def _soft_copy_claim_path(
+    *, family: str, entity_id: str, artifacts: Dict[str, Any]
+) -> str:
+    """Resolve the existing single-surface soft-copy lookup contract."""
+
+    paths = _soft_copy_claim_paths(
+        family=family, entity_id=entity_id, artifacts=artifacts
+    )
+    return paths[0] if len(paths) == 1 else ""
 
 
 # Ordered, materially distinct repair strategies per target.  The planner
@@ -1283,27 +1319,29 @@ def _summary_issue_groups(
     """Keep unrelated summary leaves in separate model-repair targets."""
 
     paths = [
-        (issue, _issue_allowed_path("summary", issue, artifacts)) for issue in issues
+        (issue, _issue_allowed_paths("summary", issue, artifacts))
+        for issue in issues
     ]
-    if any(not path for _issue, path in paths):
+    if any(not issue_paths for _issue, issue_paths in paths):
         return [issues]
-    grouped: Dict[str, List[RegenerationIssue]] = {}
-    for issue, path in paths:
-        map_claim = re.fullmatch(
-            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\]\.claim",
-            path,
+    grouped: Dict[tuple[str, ...], List[RegenerationIssue]] = {}
+    for issue, issue_paths in paths:
+        path_roots = tuple(
+            sorted({path.split("[claim_index=", 1)[0] for path in issue_paths})
         )
-        soft_copy_claim = re.fullmatch(
-            r"summary\.(?:tldr|card_tldr_compact|executive_summary)"
-            r"(?:\[claim_index=\d+\])?",
-            path,
-        )
-        if map_claim:
-            group_key = path
-        elif soft_copy_claim:
-            group_key = path.split("[claim_index=", 1)[0]
+        if all(
+            re.fullmatch(
+                r"summary\.(?:tldr|card_tldr_compact|executive_summary)"
+                r"\[claim_index=\d+\]",
+                path,
+            )
+            for path in issue_paths
+        ):
+            group_key = path_roots
+        elif len(issue_paths) > 1:
+            group_key = tuple(sorted(issue_paths))
         else:
-            group_key = path
+            group_key = (issue_paths[0],)
         grouped.setdefault(group_key, []).append(issue)
     return [grouped[key] for key in sorted(grouped)]
 

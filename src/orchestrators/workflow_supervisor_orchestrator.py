@@ -266,6 +266,7 @@ def _run_worker_batches_parallel(
     next_candidate = 0
     dispatch_sequence = 0
     priority_queue_names: tuple[str, ...] = ()
+    pending_downstream_queue_names: list[str] = []
     runtime_exhausted = False
     lease_lost = False
     lease_heartbeat_seconds = max(
@@ -389,7 +390,6 @@ def _run_worker_batches_parallel(
             reopen_epoch = False
             last_success_queue = ""
             successful_queues: list[str] = []
-            ready_downstream_queues: list[str] = []
             for future in sorted(done, key=lambda item: in_flight[item][3]):
                 queue_name, _ordinal, worker_epoch, _rank = in_flight.pop(future)
                 result = future.result()
@@ -418,6 +418,8 @@ def _run_worker_batches_parallel(
                     ):
                         if worker_epoch == epoch:
                             idle_queues.add(queue_name)
+                            if queue_name in pending_downstream_queue_names:
+                                pending_downstream_queue_names.remove(queue_name)
                         elif queue_name not in idle_queues:
                             # Only re-offer the stale queue. Restarting every
                             # queue here can create an idle-poll feedback loop.
@@ -425,6 +427,8 @@ def _run_worker_batches_parallel(
                             pending_recheck_queues.add(queue_name)
                 else:
                     remaining -= 1
+                    if queue_name in pending_downstream_queue_names:
+                        pending_downstream_queue_names.remove(queue_name)
                     if result.terminal_status == "succeeded":
                         last_success_queue = queue_name
                         successful_queues.append(queue_name)
@@ -434,9 +438,12 @@ def _run_worker_batches_parallel(
                             queue_name_value = str(downstream_queue).strip()
                             if (
                                 queue_name_value in WORKFLOW_QUEUE_NAMES
-                                and queue_name_value not in ready_downstream_queues
+                                and queue_name_value
+                                not in pending_downstream_queue_names
                             ):
-                                ready_downstream_queues.append(queue_name_value)
+                                pending_downstream_queue_names.append(
+                                    queue_name_value
+                                )
                         # A successful worker may have enqueued work directly,
                         # outside the outbox. Make every previously idle queue
                         # eligible again while this pass still has capacity.
@@ -466,7 +473,7 @@ def _run_worker_batches_parallel(
                     priority_queue_names = tuple(
                         dict.fromkeys(
                             (
-                                *ready_downstream_queues,
+                                *pending_downstream_queue_names,
                                 next_queue,
                                 *successful_queues,
                             )
