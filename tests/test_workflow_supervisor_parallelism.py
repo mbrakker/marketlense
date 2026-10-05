@@ -1292,6 +1292,91 @@ def test_materialized_downstream_queue_gets_spare_slot_before_other_queue_backlo
     assert render_backlog_started.is_set()
 
 
+def test_materialized_child_does_not_discard_same_queue_backlog_recheck() -> None:
+    lock = Lock()
+    two_analysis_workers_started = Event()
+    release_analysis_workers = Event()
+    render_started = Event()
+    render_completed = Event()
+    analysis_backlog_started = Event()
+    analysis_child_pending = False
+    render_pending = False
+    analysis_calls = 0
+
+    def worker(**kwargs):
+        nonlocal analysis_calls, analysis_child_pending, render_pending
+        queue_name = str(kwargs["queue_name"])
+        if queue_name == "report_analysis":
+            with lock:
+                analysis_calls += 1
+                call_number = analysis_calls
+                if call_number == 2:
+                    two_analysis_workers_started.set()
+                if call_number == 3:
+                    analysis_child_pending = True
+            if call_number <= 2:
+                assert release_analysis_workers.wait(timeout=10)
+                return _succeeded_worker()
+            if call_number == 3:
+                assert two_analysis_workers_started.wait(timeout=5)
+                return _succeeded_worker()
+            if call_number == 4:
+                analysis_backlog_started.set()
+                return _succeeded_worker()
+            return SimpleNamespace(
+                released_lease_job_ids=[], terminal_status="idle"
+            )
+        if queue_name == "report_render":
+            with lock:
+                if not render_pending:
+                    return SimpleNamespace(
+                        released_lease_job_ids=[], terminal_status="idle"
+                    )
+                render_pending = False
+                render_started.set()
+            render_completed.set()
+            return _succeeded_worker()
+        if queue_name == "publisher_discovery" and render_completed.is_set():
+            assert analysis_backlog_started.wait(timeout=5)
+        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+
+    def materialize_outbox(*_args, **_kwargs):
+        nonlocal analysis_child_pending, render_pending
+        with lock:
+            if analysis_child_pending:
+                analysis_child_pending = False
+                render_pending = True
+                return ["report-render-child"]
+        return []
+
+    dependencies = replace(
+        _dependencies(worker), materialize_outbox=materialize_outbox
+    )
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            run_supervisor_once,
+            _request(
+                max_parallel_workers=3,
+                max_total_jobs=10,
+                max_jobs_per_queue=3,
+            ),
+            _ctx(),
+            dependencies=dependencies,
+        )
+        try:
+            assert two_analysis_workers_started.wait(timeout=5)
+            assert render_started.wait(timeout=3)
+            assert analysis_backlog_started.wait(timeout=3)
+        finally:
+            release_analysis_workers.set()
+        result = future.result(timeout=15)
+
+    assert result.completed_job_count == 5
+    assert render_completed.is_set()
+    assert analysis_backlog_started.is_set()
+
+
 def test_selection_backlog_gets_a_fair_slot_before_third_analysis_worker() -> None:
     lock = Lock()
     two_analysis_workers_started = Event()

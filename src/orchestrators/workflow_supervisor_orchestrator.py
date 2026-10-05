@@ -265,6 +265,7 @@ def _run_worker_batches_parallel(
     epoch = 0
     next_candidate = 0
     dispatch_sequence = 0
+    priority_queue_names: tuple[str, ...] = ()
     runtime_exhausted = False
     lease_lost = False
     lease_heartbeat_seconds = max(
@@ -275,6 +276,48 @@ def _run_worker_batches_parallel(
         thread_name_prefix="workflow-supervisor",
     ) as executor:
         in_flight: dict[Future[WorkflowWorkerRunResult], tuple[str, int, int, int]] = {}
+
+        def _schedule_pending_recheck() -> bool:
+            nonlocal dispatch_sequence
+            for pending_index, queue_name in enumerate(pending_rechecks):
+                if queue_name in idle_queues:
+                    pending_rechecks.pop(pending_index)
+                    pending_recheck_queues.discard(queue_name)
+                    return True
+                active_ordinals = {
+                    worker_ordinal
+                    for active_queue, worker_ordinal, _active_epoch, _rank in (
+                        in_flight.values()
+                    )
+                    if active_queue == queue_name
+                }
+                if len(active_ordinals) >= request.settings.max_jobs_per_queue:
+                    continue
+                ordinal = next(
+                    slot
+                    for slot in range(request.settings.max_jobs_per_queue)
+                    if slot not in active_ordinals
+                )
+                pending_rechecks.pop(pending_index)
+                pending_recheck_queues.discard(queue_name)
+                future = executor.submit(
+                    _run_worker,
+                    request=request,
+                    ctx=ctx,
+                    deps=deps,
+                    queue_name=queue_name,
+                    ordinal=ordinal,
+                )
+                in_flight[future] = (
+                    queue_name,
+                    ordinal,
+                    epoch,
+                    dispatch_sequence,
+                )
+                dispatch_sequence += 1
+                return True
+            return False
+
         while in_flight or next_candidate < len(candidates) or pending_rechecks:
             while (
                 not runtime_exhausted
@@ -290,6 +333,12 @@ def _run_worker_batches_parallel(
                     if queue_name in idle_queues:
                         pending_rechecks.pop(pending_index)
                         pending_recheck_queues.discard(queue_name)
+                if (
+                    pending_rechecks
+                    and next_candidate >= len(priority_queue_names)
+                    and _schedule_pending_recheck()
+                ):
+                    continue
                 if next_candidate < len(candidates):
                     queue_name, ordinal = candidates[next_candidate]
                     next_candidate += 1
@@ -317,35 +366,7 @@ def _run_worker_batches_parallel(
                     in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
                     dispatch_sequence += 1
                     continue
-                for recheck_index, queue_name in enumerate(pending_rechecks):
-                    active_ordinals = {
-                        worker_ordinal
-                        for active_queue, worker_ordinal, _active_epoch, _rank in (
-                            in_flight.values()
-                        )
-                        if active_queue == queue_name
-                    }
-                    if len(active_ordinals) >= request.settings.max_jobs_per_queue:
-                        continue
-                    ordinal = next(
-                        slot
-                        for slot in range(request.settings.max_jobs_per_queue)
-                        if slot not in active_ordinals
-                    )
-                    pending_rechecks.pop(recheck_index)
-                    pending_recheck_queues.discard(queue_name)
-                    future = executor.submit(
-                        _run_worker,
-                        request=request,
-                        ctx=ctx,
-                        deps=deps,
-                        queue_name=queue_name,
-                        ordinal=ordinal,
-                    )
-                    in_flight[future] = (queue_name, ordinal, epoch, dispatch_sequence)
-                    dispatch_sequence += 1
-                    break
-                else:
+                if not _schedule_pending_recheck():
                     break
             if not in_flight:
                 break
@@ -433,8 +454,6 @@ def _run_worker_batches_parallel(
                     priority_queue_names=priority_queue_names
                 )
                 next_candidate = 0
-                pending_rechecks.clear()
-                pending_recheck_queues.clear()
             for queue_name in successful_queues:
                 idle_queues.discard(queue_name)
                 if queue_name not in pending_recheck_queues:
