@@ -20,11 +20,13 @@ import yaml
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
 from src.contracts.llm_usage import LLMUsageRunSummaryRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_store import (
     ReportSourceRecordRequest,
     SourceIdentityObservation,
     SourceIdentityObservationRecordRequest,
 )
+from src.contracts.semantic_ids import ReportId
 from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationCohortSubmissionRequest,
     PreselectedFrozenValidationSource,
@@ -51,6 +53,9 @@ from src.services.config_service import (
     new_runtime_context,
 )
 from src.services.llm_usage_ledger_service import read_usage_run_summary
+from src.services.report_analysis_store_service import (
+    pack_path as resolve_report_analysis_pack_path,
+)
 from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
@@ -1355,11 +1360,14 @@ def _read_result(
     file_search_calls = _read_usage_tool_call_count(
         usage_db_path=settings.usage_db_path, run_id=root_workflow_id
     )
-    validation_pass = report_validation_passed(Path(settings.output_dir), source_path)
+    validation_pass = report_validation_passed(
+        Path(settings.output_dir), source_path, report_id=report_id, ctx=ctx
+    )
     retained_claim_counts = _read_retained_claim_counts(
         output_dir=Path(settings.output_dir),
         source_path=source_path,
         report_id=report_id,
+        ctx=ctx,
     )
     terminal_failure = ""
     final_state = status
@@ -1660,14 +1668,38 @@ def _cohort_operator_intervention_count(*, state_db: str, root_workflow_id: str)
         )
 
 
-def report_validation_passed(output_dir: Path, source_path: Path) -> bool:
+def _report_analysis_pack_path(
+    *,
+    output_dir: Path,
+    source_path: Path,
+    report_id: str,
+    pack_name: str,
+    ctx,
+) -> Path:
+    response = resolve_report_analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id=ReportId(report_id),
+            pack_name=pack_name,
+            report_slug=slugify(source_path.name),
+        ),
+        ctx,
+    )
+    return Path(response.output_path)
+
+
+def report_validation_passed(
+    output_dir: Path, source_path: Path, *, report_id: str, ctx
+) -> bool:
     """Read final validation from the artifact belonging to one source report."""
 
-    validation_path = (
-        output_dir
-        / slugify(source_path.name)
-        / "report_analysis"
-        / "validation.json"
+    validation_path = _report_analysis_pack_path(
+        output_dir=output_dir,
+        source_path=source_path,
+        report_id=report_id,
+        pack_name="validation",
+        ctx=ctx,
     )
     try:
         return (
@@ -1679,15 +1711,16 @@ def report_validation_passed(output_dir: Path, source_path: Path) -> bool:
 
 
 def _read_retained_claim_counts(
-    *, output_dir: Path, source_path: Path, report_id: str
+    *, output_dir: Path, source_path: Path, report_id: str, ctx
 ) -> tuple[int, int] | None:
     """Read final retained-claim counts only when report and source identities match."""
 
-    validation_path = (
-        output_dir
-        / slugify(source_path.name)
-        / "report_analysis"
-        / "validation_retained_claim_validation_candidate.json"
+    validation_path = _report_analysis_pack_path(
+        output_dir=output_dir,
+        source_path=source_path,
+        report_id=report_id,
+        pack_name="validation_retained_claim_validation_candidate",
+        ctx=ctx,
     )
     try:
         payload = json.loads(validation_path.read_text(encoding="utf-8"))

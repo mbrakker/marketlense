@@ -15,12 +15,15 @@ from scripts.quality.ias_live_canary_runner import (
     run_ias_first_attempt_canary,
 )
 from src.contracts.config import ConfigLoadRequest
+from src.contracts.report_analysis import AnalysisPackPathRequest
+from src.contracts.semantic_ids import ReportId
 from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
     load_workflow_queue_policies,
     new_runtime_context,
 )
+from src.services.report_analysis_store_service import pack_path
 from src.services.workflow_queue_service import get_workflow_queue_control
 
 
@@ -315,17 +318,25 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
 def test_retained_claim_counts_require_the_exact_report_and_source_identity(
     tmp_path: Path,
 ) -> None:
-    source = tmp_path / "source.pdf"
+    source = tmp_path / "sources" / f"source-{'x' * 80}.pdf"
+    source.parent.mkdir(parents=True)
     source.write_bytes(b"frozen source")
     source_hash = hashlib.md5(source.read_bytes(), usedforsecurity=False).hexdigest()
     report_id = f"cohort-{source_hash[:20]}"
-    validation = (
-        tmp_path
-        / "output"
-        / canary_runner.slugify(source.name)
-        / "report_analysis"
-        / "validation_retained_claim_validation_candidate.json"
+    ctx = new_runtime_context(task_id="canary-retained-claim-path")
+    validation = Path(
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(tmp_path / "output"),
+                report_id=ReportId(report_id),
+                pack_name="validation_retained_claim_validation_candidate",
+                report_slug=canary_runner.slugify(source.name),
+            ),
+            ctx,
+        ).output_path
     )
+    assert validation.parent.parent.name != canary_runner.slugify(source.name)
     validation.parent.mkdir(parents=True)
     validation.write_text(
         json.dumps(
@@ -342,11 +353,17 @@ def test_retained_claim_counts_require_the_exact_report_and_source_identity(
     )
 
     assert _read_retained_claim_counts(
-        output_dir=tmp_path / "output", source_path=source, report_id=report_id
+        output_dir=tmp_path / "output",
+        source_path=source,
+        report_id=report_id,
+        ctx=ctx,
     ) == (0, 0)
     assert (
         _read_retained_claim_counts(
-            output_dir=tmp_path / "output", source_path=source, report_id="other"
+            output_dir=tmp_path / "output",
+            source_path=source,
+            report_id="other",
+            ctx=ctx,
         )
         is None
     )
@@ -356,17 +373,49 @@ def test_frozen_member_validation_uses_its_own_artifact_not_a_sibling_report(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "output"
-    source_path = tmp_path / "sources" / "adjust.pdf"
-    target = output_dir / "adjust-pdf" / "report_analysis" / "validation.json"
-    sibling = output_dir / "z-sibling" / "report_analysis" / "validation.json"
+    source_path = tmp_path / "sources" / f"adjust-{'x' * 80}.pdf"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_bytes(b"frozen Adjust source")
+    source_hash = hashlib.md5(
+        source_path.read_bytes(), usedforsecurity=False
+    ).hexdigest()
+    report_id = f"cohort-{source_hash[:20]}"
+    ctx = new_runtime_context(task_id="canary-member-validation-path")
+    target = Path(
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id=ReportId(report_id),
+                pack_name="validation",
+                report_slug=canary_runner.slugify(source_path.name),
+            ),
+            ctx,
+        ).output_path
+    )
+    sibling = Path(
+        pack_path(
+            AnalysisPackPathRequest(
+                schema_version="1.0",
+                output_dir=str(output_dir),
+                report_id=ReportId("cohort-sibling"),
+                pack_name="validation",
+                report_slug="z-sibling",
+            ),
+            ctx,
+        ).output_path
+    )
+    assert target.parent.parent.name != canary_runner.slugify(source_path.name)
     target.parent.mkdir(parents=True)
     sibling.parent.mkdir(parents=True)
-    target.write_text('{"status":"fail"}', encoding="utf-8")
-    sibling.write_text('{"status":"pass"}', encoding="utf-8")
+    target.write_text('{"status":"pass"}', encoding="utf-8")
+    sibling.write_text('{"status":"fail"}', encoding="utf-8")
 
     read_member_validation = getattr(canary_runner, "report_validation_passed", None)
     assert read_member_validation is not None
-    assert read_member_validation(output_dir, source_path) is False
+    assert read_member_validation(
+        output_dir, source_path, report_id=report_id, ctx=ctx
+    ) is True
 
 
 def test_live_canary_records_a_typed_terminal_input_failure(tmp_path: Path) -> None:
