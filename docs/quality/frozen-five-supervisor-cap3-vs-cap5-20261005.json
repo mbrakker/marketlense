@@ -1,0 +1,1049 @@
+{
+  "benchmark": "Frozen five report supervisor cap-3 versus cap-5 comparison on current production implementation",
+  "cap3_failure_diagnosis": {
+    "classification": "Output and repair-path variance relative to the passing cap-5 Adjust result; no production change or preferred-result rerun was made.",
+    "final_unresolved_retained_factual_claims": 5,
+    "final_unsupported_retained_factual_claims": 0,
+    "initial_validation_failure_categories": [
+      "overbroad regional/subvertical measure-coverage claims",
+      "unsupported market-representativeness claim",
+      "metric/category relationship mismatch"
+    ],
+    "repair_attempts": [
+      {
+        "attempt": 1,
+        "failure_categories": [
+          "reintroduced removed summary claim",
+          "lost material evidence reference",
+          "changed undeclared paths"
+        ],
+        "outcome": "rolled_back",
+        "strategy": "current_evidence"
+      },
+      {
+        "attempt": 2,
+        "failure_categories": [
+          "lost material evidence reference",
+          "changed undeclared paths"
+        ],
+        "outcome": "rolled_back",
+        "strategy": "alternative_evidence"
+      },
+      {
+        "attempt": 3,
+        "failure_categories": [
+          "lost material evidence reference",
+          "changed undeclared paths"
+        ],
+        "outcome": "rolled_back",
+        "strategy": "safe_removal"
+      }
+    ],
+    "report_id": "cohort-b638414df0b1fccea1cd",
+    "report_name": "mobile-app-trends-2026-pdf"
+  },
+  "comparison": {
+    "automatic_repairs": {
+      "cap3": 9,
+      "cap5": 6
+    },
+    "cohort_wall_clock_seconds": {
+      "cap3": 1390.728,
+      "cap3_slower_percent_vs_cap5": 15.78,
+      "cap5": 1201.19,
+      "delta_cap3_minus_cap5": 189.538
+    },
+    "cost_usd": {
+      "cap3": 0.415024,
+      "cap5": 0.441918,
+      "delta_cap3_minus_cap5": -0.026894,
+      "delta_percent_vs_cap5": -6.09
+    },
+    "file_search_calls": {
+      "cap3": 24,
+      "cap5": 26
+    },
+    "input_tokens": {
+      "cap3": 1847336,
+      "cap5": 1879211
+    },
+    "output_tokens": {
+      "cap3": 360870,
+      "cap5": 399097
+    },
+    "per_report_outcomes": [
+      {
+        "cap3": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 3,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "cap5": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 3,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "report_name": "Final Web Version Report Consumer Trends 2026",
+        "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf"
+      },
+      {
+        "cap3": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 0,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "cap5": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 0,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+        "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"
+      },
+      {
+        "cap3": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 0,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "cap5": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 0,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "report_name": "2026 Global M&A Outlook",
+        "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf"
+      },
+      {
+        "cap3": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 3,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "cap5": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 3,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 1,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "report_name": "Trends and Predictions 2026",
+        "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf"
+      },
+      {
+        "cap3": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 3,
+          "publication_readiness": "fail",
+          "structured_output_repair_calls": 1,
+          "terminal_failure_code": "validation_failed",
+          "unresolved_retained_factual_claims": 5,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "fail",
+          "workflow_retry_count": 0
+        },
+        "cap5": {
+          "admission_outcome": "admitted",
+          "automatic_repair_count": 0,
+          "publication_readiness": "pass",
+          "structured_output_repair_calls": 0,
+          "terminal_failure_code": "",
+          "unresolved_retained_factual_claims": 0,
+          "unsupported_retained_factual_claims": 0,
+          "validation": "pass",
+          "workflow_retry_count": 0
+        },
+        "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "report_name": "mobile-app-trends-2026-pdf",
+        "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf"
+      }
+    ],
+    "per_report_stage_timings": {
+      "cap3": {
+        "cohort-2acb4a56e14add5d7717": [
+          {
+            "attempt": 1,
+            "execution_seconds": 2.325,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 8.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 81.351,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 208.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 421.322,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 643.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 5.934,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.249,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-4b763ae2286ca69fe8ac": [
+          {
+            "attempt": 1,
+            "execution_seconds": 3.671,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 4.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 146.803,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 3.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 683.992,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 142.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 2.847,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.196,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 2.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-81af3890cd84ece81ef1": [
+          {
+            "attempt": 1,
+            "execution_seconds": 3.778,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 4.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 60.215,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 150.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 630.42,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 83.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 3.205,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.274,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-b638414df0b1fccea1cd": [
+          {
+            "attempt": 1,
+            "execution_seconds": 3.058,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 153.874,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 691.938,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 1.544,
+            "outcome": "dead_letter",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          }
+        ],
+        "cohort-cbb6e7df67412186b8bc": [
+          {
+            "attempt": 1,
+            "execution_seconds": 1.871,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 2.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 291.021,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 5.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 428.687,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 552.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 5.788,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 85.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.246,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "publication_readiness"
+          }
+        ]
+      },
+      "cap5": {
+        "cohort-2acb4a56e14add5d7717": [
+          {
+            "attempt": 1,
+            "execution_seconds": 3.182,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 4.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 202.328,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 2.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 534.633,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 4.021,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.365,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-4b763ae2286ca69fe8ac": [
+          {
+            "attempt": 1,
+            "execution_seconds": 5.154,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 3.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 179.358,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 3.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 981.107,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 5.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 7.349,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.915,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-81af3890cd84ece81ef1": [
+          {
+            "attempt": 1,
+            "execution_seconds": 2.32,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 3.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 193.431,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 607.436,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 3.524,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.378,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 370.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-b638414df0b1fccea1cd": [
+          {
+            "attempt": 1,
+            "execution_seconds": 4.36,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 5.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 172.458,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 2.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 489.343,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 2.411,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.205,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 2.0,
+            "stage": "publication_readiness"
+          }
+        ],
+        "cohort-cbb6e7df67412186b8bc": [
+          {
+            "attempt": 1,
+            "execution_seconds": 5.036,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 4.0,
+            "stage": "source_ingest"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 290.285,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 3.0,
+            "stage": "report_selection"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 453.641,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 1.0,
+            "stage": "report_analysis"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 4.451,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "report_render"
+          },
+          {
+            "attempt": 1,
+            "execution_seconds": 0.477,
+            "outcome": "succeeded",
+            "queue_wait_seconds": 0.0,
+            "stage": "publication_readiness"
+          }
+        ]
+      }
+    },
+    "provider_calls": {
+      "cap3": 193,
+      "cap5": 215
+    },
+    "provider_error_429_timeout_events": {
+      "cap3": {
+        "recorded_429_or_rate_limit_events": 0,
+        "recorded_provider_errors": 0,
+        "recorded_timeout_events": 0
+      },
+      "cap5": {
+        "recorded_429_or_rate_limit_events": 0,
+        "recorded_provider_errors": 0,
+        "recorded_timeout_events": 0
+      },
+      "source": "Canonical llm_usage_events status/error fields; recorded events only."
+    },
+    "publication_writes": {
+      "cap3": 0,
+      "cap5": 0
+    },
+    "repair_candidate_audit_latency_seconds": {
+      "cap3": 506.655,
+      "cap5": 596.206,
+      "note": "Existing regeneration audit latency totals; counts and paths differ, so not a like-for-like repair latency comparison."
+    },
+    "stage_metrics": [
+      {
+        "cap3": {
+          "execution_seconds_max": 0.274,
+          "execution_seconds_total": 0.965,
+          "queue_wait_seconds_total": 5.0,
+          "sample_count": 4,
+          "stage": "publication_readiness"
+        },
+        "cap5": {
+          "execution_seconds_max": 0.915,
+          "execution_seconds_total": 2.34,
+          "queue_wait_seconds_total": 374.0,
+          "sample_count": 5,
+          "stage": "publication_readiness"
+        },
+        "delta_cap3_minus_cap5": {
+          "execution_seconds_max": -0.641,
+          "execution_seconds_total": -1.375,
+          "queue_wait_seconds_total": -369.0
+        },
+        "stage": "publication_readiness"
+      },
+      {
+        "cap3": {
+          "execution_seconds_max": 691.938,
+          "execution_seconds_total": 2856.359,
+          "queue_wait_seconds_total": 1420.0,
+          "sample_count": 5,
+          "stage": "report_analysis"
+        },
+        "cap5": {
+          "execution_seconds_max": 981.107,
+          "execution_seconds_total": 3066.16,
+          "queue_wait_seconds_total": 9.0,
+          "sample_count": 5,
+          "stage": "report_analysis"
+        },
+        "delta_cap3_minus_cap5": {
+          "execution_seconds_max": -289.169,
+          "execution_seconds_total": -209.801,
+          "queue_wait_seconds_total": 1411.0
+        },
+        "stage": "report_analysis"
+      },
+      {
+        "cap3": {
+          "execution_seconds_max": 5.934,
+          "execution_seconds_total": 19.318,
+          "queue_wait_seconds_total": 86.0,
+          "sample_count": 5,
+          "stage": "report_render"
+        },
+        "cap5": {
+          "execution_seconds_max": 7.349,
+          "execution_seconds_total": 21.756,
+          "queue_wait_seconds_total": 0.0,
+          "sample_count": 5,
+          "stage": "report_render"
+        },
+        "delta_cap3_minus_cap5": {
+          "execution_seconds_max": -1.415,
+          "execution_seconds_total": -2.438,
+          "queue_wait_seconds_total": 86.0
+        },
+        "stage": "report_render"
+      },
+      {
+        "cap3": {
+          "execution_seconds_max": 291.021,
+          "execution_seconds_total": 733.264,
+          "queue_wait_seconds_total": 366.0,
+          "sample_count": 5,
+          "stage": "report_selection"
+        },
+        "cap5": {
+          "execution_seconds_max": 290.285,
+          "execution_seconds_total": 1037.86,
+          "queue_wait_seconds_total": 10.0,
+          "sample_count": 5,
+          "stage": "report_selection"
+        },
+        "delta_cap3_minus_cap5": {
+          "execution_seconds_max": 0.736,
+          "execution_seconds_total": -304.596,
+          "queue_wait_seconds_total": 356.0
+        },
+        "stage": "report_selection"
+      },
+      {
+        "cap3": {
+          "execution_seconds_max": 3.778,
+          "execution_seconds_total": 14.703,
+          "queue_wait_seconds_total": 18.0,
+          "sample_count": 5,
+          "stage": "source_ingest"
+        },
+        "cap5": {
+          "execution_seconds_max": 5.154,
+          "execution_seconds_total": 20.052,
+          "queue_wait_seconds_total": 19.0,
+          "sample_count": 5,
+          "stage": "source_ingest"
+        },
+        "delta_cap3_minus_cap5": {
+          "execution_seconds_max": -1.376,
+          "execution_seconds_total": -5.349,
+          "queue_wait_seconds_total": -1.0
+        },
+        "stage": "source_ingest"
+      }
+    ],
+    "structured_output_repairs": {
+      "cap3": 1,
+      "cap5": 1
+    },
+    "throughput_reports_per_hour": {
+      "cap3": 12.943,
+      "cap5": 14.985,
+      "cap5_advantage_percent_vs_cap3": 15.78
+    },
+    "workflow_retries": {
+      "cap3": 0,
+      "cap5": 0
+    }
+  },
+  "confounders_and_limits": [
+    "One batch sample was measured at each cap; stochastic model output and workload differences prevent a causal estimate of concurrency alone.",
+    "Cap 3 triggered 9 automatic repairs versus 6 at cap 5. Adjust had 3 failed regeneration candidates and 1 structured-output repair, while its cap-5 output needed no automatic repair and passed. This semantic-work variance is not attributable to worker count from these samples.",
+    "Cap 3 used fewer calls, tokens, and estimated cost, but this accompanies different model output and repair paths; those deltas are not causal concurrency effects.",
+    "The cap-3 batch failed Adjust validation/readiness, so readiness telemetry has 4 samples versus 5 at cap 5.",
+    "Stage execution/wait totals overlap across reports and must not be summed to derive cohort wall clock; the cohort duration uses the runner monotonic batch interval.",
+    "Provider request latency and prompt-family elapsed time are unavailable. Cap 3 has no complete terminal dependency chain because Adjust failed before readiness; resource-constrained critical path is not derived."
+  ],
+  "frozen_cohort": {
+    "exact_source_identities_match_in_both_runs": true,
+    "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "member_count": 5,
+    "members": [
+      {
+        "content_md5": "81af3890cd84ece81ef16e1aabda8027",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "report_name": "Final Web Version Report Consumer Trends 2026",
+        "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+        "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf"
+      },
+      {
+        "content_md5": "cbb6e7df67412186b8bc094a424ac890",
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "report_name": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f",
+        "source_identity_id": "source:4d84943bbcfdef81ad8c08f29f6f6b0b",
+        "source_path": "out/browser_downloads/cdn.sanity.io/b224e6d4d2bc/d8ca0bf6efb9c703343867f6df0f26a2553aa78f.pdf"
+      },
+      {
+        "content_md5": "2acb4a56e14add5d7717f34c378f9091",
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "report_name": "2026 Global M&A Outlook",
+        "source_identity_id": "source:1ffb71d718276f8a1761fc706a2a3cb3",
+        "source_path": "out/browser_downloads/kpmg.com/d2cdf31f6df8/kpmg-2026-global-ma-outlook.pdf"
+      },
+      {
+        "content_md5": "4b763ae2286ca69fe8acb63b17508dfb",
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "report_name": "Trends and Predictions 2026",
+        "source_identity_id": "source:79cb8c886c55b49bfdec2128d5b25e0b",
+        "source_path": "out/browser_downloads/reutersinstitute.politics.ox.ac.uk/b0e410340498/Trends_and_Predictions_2026.pdf"
+      },
+      {
+        "content_md5": "b638414df0b1fccea1cd8a93eaf8f5aa",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "report_name": "mobile-app-trends-2026-pdf",
+        "source_identity_id": "source:8cb648b6bbd9dbae4ec1d915c38cf235",
+        "source_path": "out/browser_downloads/www.adjust.com/b6b998e34a7c/mobile-app-trends-2026.pdf"
+      }
+    ]
+  },
+  "production_code_comparison": {
+    "cap3_tested_head_sha": "fed101064fa75b0bdc765209002ba0415e14ec17",
+    "cap5_code_commit_sha": "0ec3cdff841e16df7044f6645fe8379a464f41ca",
+    "git_diff_paths_between_cap5_code_commit_and_cap3_head": [
+      "10improvements.md",
+      "CONSOLIDATED_TODO.md",
+      "docs/quality/frozen-five-systematic-fixes-baseline-20261005.json"
+    ],
+    "production_app_yaml_sha256": "462477accb62aeef7f0a40dbabdc86bf22c1146315662bbb3f71da81d1d642c1",
+    "production_app_yaml_sha256_matches": true,
+    "production_code_and_runtime_configuration_equivalent": true
+  },
+  "recommendation": {
+    "next_measured_bottleneck": "report_analysis execution remains the largest measured cap-5 stage (3066.160 aggregate seconds; 981.107 seconds maximum individual stage). Cap-3 queue wait totals were highest at report_analysis (1420 seconds) and report_selection (366 seconds). No provider-latency or prompt-family timing is available.",
+    "production_configuration_changed": false,
+    "reason": "Cap 5 was 15.78% faster in these measured batches and passed all five quality checks; cap 3 failed Adjust quality and showed much higher report-analysis and report-selection queue wait. Retain existing 5/5 without attributing the full speed gap causally to concurrency.",
+    "selected_production_outer_concurrency": {
+      "max_jobs_per_queue": 5,
+      "max_parallel_workers": 5
+    }
+  },
+  "recorded_at_utc": "2026-10-05T16:11:08.946+00:00",
+  "runs": {
+    "cap3": {
+      "cohort_submission_count": 1,
+      "command": "$runnerScript = Join-Path $env:TEMP 'marketlense_cap3_current_head_20261005.py'; $env:PYTHONPATH = (Get-Location).Path; python -u $runnerScript",
+      "configuration": {
+        "durable_report_queue_worker_limits": {
+          "publication_readiness": 5,
+          "report_analysis": 5,
+          "report_render": 5,
+          "report_selection": 5,
+          "source_ingest": 5
+        },
+        "models_prompts_reasoning_effort_validation_schemas_evidence_retries_internal_concurrency_unchanged": true,
+        "publication_enabled": false,
+        "supervisor_dispatch_capacity": {
+          "max_duration_seconds_argument": 7200,
+          "max_jobs_per_queue": 3,
+          "max_parallel_workers": 3,
+          "max_runtime_seconds": 1200,
+          "max_total_jobs": 60
+        }
+      },
+      "executed_wrapper_sha256": "e12a1de87e910072c419a1c020a56ee770414a24aeec3981f7618130c4ba7239",
+      "fresh_isolated_state": true,
+      "git_worktree_clean_before_run": true,
+      "isolated_app_yaml_sha256": "da2ab4e6f6934928be4b2d6f008b56b769504ea39c6e97ca44b96430158b9b22",
+      "isolated_run_id": "ias-first-attempt-8yjlp4_k",
+      "metrics": {
+        "automatic_repairs": 9,
+        "cohort_wall_clock_seconds": 1390.728,
+        "duration_measurement": "time.monotonic from runner entry to all reports terminal",
+        "estimated_total_cost_usd": 0.415024,
+        "file_search_calls": 24,
+        "input_tokens": 1847336,
+        "max_observed_concurrency_by_stage": {
+          "publication_readiness": 1,
+          "report_analysis": 3,
+          "report_render": 2,
+          "report_selection": 3,
+          "source_ingest": 2
+        },
+        "model_provider_calls": 193,
+        "operator_interventions": 0,
+        "output_tokens": 360870,
+        "provider_reliability": {
+          "provider_call_statuses": {
+            "completed": 193
+          },
+          "recorded_429_or_rate_limit_events": 0,
+          "recorded_provider_errors": 0,
+          "recorded_timeout_events": 0
+        },
+        "publication_writes": 0,
+        "repair_candidate_audit_count": 5,
+        "repair_candidate_audit_latency_seconds_total": 506.655,
+        "repair_candidate_audits": [
+          {
+            "attempt": 1,
+            "latency_seconds": 179.32,
+            "promotion_outcome": "promoted",
+            "report_id": "cohort-81af3890cd84ece81ef1",
+            "strategy": "current_evidence",
+            "validation_status": "pass"
+          },
+          {
+            "attempt": 1,
+            "latency_seconds": 44.554,
+            "promotion_outcome": "rolled_back",
+            "report_id": "cohort-b638414df0b1fccea1cd",
+            "strategy": "current_evidence",
+            "validation_status": "fail"
+          },
+          {
+            "attempt": 2,
+            "latency_seconds": 22.862,
+            "promotion_outcome": "rolled_back",
+            "report_id": "cohort-b638414df0b1fccea1cd",
+            "strategy": "alternative_evidence",
+            "validation_status": "fail"
+          },
+          {
+            "attempt": 3,
+            "latency_seconds": 22.546,
+            "promotion_outcome": "rolled_back",
+            "report_id": "cohort-b638414df0b1fccea1cd",
+            "strategy": "safe_removal",
+            "validation_status": "fail"
+          },
+          {
+            "attempt": 1,
+            "latency_seconds": 237.373,
+            "promotion_outcome": "promoted",
+            "report_id": "cohort-4b763ae2286ca69fe8ac",
+            "strategy": "current_evidence",
+            "validation_status": "pass"
+          }
+        ],
+        "reports_per_hour": 12.943,
+        "resource_constrained_critical_path_derived": false,
+        "structured_output_repairs": 1,
+        "terminal_dependency_chain": {
+          "available": false
+        },
+        "workflow_retries": 0
+      },
+      "production_app_yaml_sha256": "462477accb62aeef7f0a40dbabdc86bf22c1146315662bbb3f71da81d1d642c1",
+      "quality_outcomes": {
+        "all_five_submitted_together": true,
+        "exact_frozen_source_identities": true,
+        "final_validation_pass": 4,
+        "fresh_isolated_state": true,
+        "operator_interventions": 0,
+        "publication_enabled": false,
+        "publication_readiness_pass": 4,
+        "publication_writes": 0,
+        "quality_gate_pass": false,
+        "reports_admitted": 5,
+        "unresolved_retained_factual_claims": 5,
+        "unsupported_retained_factual_claims": 0
+      },
+      "reports_submitted_together": 5,
+      "run_started_at_utc": "2026-10-05T15:47:58.247+00:00",
+      "tested_commit_sha": "fed101064fa75b0bdc765209002ba0415e14ec17"
+    },
+    "cap5": {
+      "cohort_submission_count": 1,
+      "command": "python -u $env:TEMP\\marketlense_run_frozen_five_systematic_fixes_20261005.py",
+      "configuration": {
+        "durable_report_queue_worker_limits": {
+          "publication_readiness": 5,
+          "report_analysis": 5,
+          "report_render": 5,
+          "report_selection": 5,
+          "source_ingest": 5
+        },
+        "models_prompts_reasoning_effort_validation_schemas_evidence_retries_internal_concurrency_unchanged": true,
+        "publication_enabled": false,
+        "supervisor_dispatch_capacity": {
+          "max_jobs_per_queue": 5,
+          "max_parallel_workers": 5,
+          "max_runtime_seconds": 1200,
+          "max_total_jobs": 60
+        }
+      },
+      "evidence_artifact": "docs/quality/frozen-five-systematic-fixes-baseline-20261005.json",
+      "fresh_isolated_state": true,
+      "isolated_app_yaml_sha256": "5359dc341c8027f0a0e60c5379258bd9ddac36fe99344f72dd6f13e0f0e3d0f3",
+      "isolated_run_id": "ias-first-attempt-xx_zx9u4",
+      "metrics": {
+        "automatic_repairs": 6,
+        "cohort_wall_clock_seconds": 1201.19,
+        "duration_measurement": "time.monotonic from runner entry to all reports terminal",
+        "estimated_total_cost_usd": 0.441918,
+        "file_search_calls": 26,
+        "input_tokens": 1879211,
+        "max_observed_concurrency_by_stage": {
+          "publication_readiness": 1,
+          "report_analysis": 5,
+          "report_render": 1,
+          "report_selection": 5,
+          "source_ingest": 4
+        },
+        "model_provider_calls": 215,
+        "operator_interventions": 0,
+        "output_tokens": 399097,
+        "provider_reliability": {
+          "provider_call_statuses": {
+            "completed": 215
+          },
+          "recorded_429_or_rate_limit_events": 0,
+          "recorded_provider_errors": 0,
+          "recorded_timeout_events": 0
+        },
+        "publication_writes": 0,
+        "repair_candidate_audit_count": 3,
+        "repair_candidate_audit_latency_seconds_total": 596.206,
+        "repair_candidate_audits": [
+          {
+            "attempt": 1,
+            "latency_seconds": 161.518,
+            "promotion_outcome": "promoted",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-81af3890cd84ece81ef1",
+            "validation_status": "pass"
+          },
+          {
+            "attempt": 1,
+            "latency_seconds": 236.558,
+            "promotion_outcome": "rolled_back",
+            "repair_strategy": "current_evidence",
+            "report_id": "cohort-4b763ae2286ca69fe8ac",
+            "validation_status": "fail"
+          },
+          {
+            "attempt": 2,
+            "latency_seconds": 198.13,
+            "promotion_outcome": "promoted",
+            "repair_strategy": "alternative_evidence",
+            "report_id": "cohort-4b763ae2286ca69fe8ac",
+            "validation_status": "pass"
+          }
+        ],
+        "reports_per_hour": 14.985,
+        "resource_constrained_critical_path_derived": false,
+        "structured_output_repairs": 1,
+        "terminal_dependency_chain": {
+          "available": true,
+          "elapsed_seconds": 1186.915,
+          "terminal_report_id": "cohort-4b763ae2286ca69fe8ac"
+        },
+        "workflow_retries": 0
+      },
+      "production_app_yaml_sha256": "462477accb62aeef7f0a40dbabdc86bf22c1146315662bbb3f71da81d1d642c1",
+      "quality_outcomes": {
+        "all_five_submitted_together": true,
+        "exact_frozen_source_identities": true,
+        "final_validation_pass": 5,
+        "fresh_isolated_state": true,
+        "operator_interventions": 0,
+        "publication_enabled": false,
+        "publication_readiness_pass": 5,
+        "publication_writes": 0,
+        "quality_gate_pass": true,
+        "reports_admitted": 5,
+        "unresolved_retained_factual_claims": 0,
+        "unsupported_retained_factual_claims": 0
+      },
+      "reports_submitted_together": 5,
+      "run_started_at_utc": "unavailable in retained cap-5 artifact",
+      "tested_commit_sha": "0ec3cdff841e16df7044f6645fe8379a464f41ca"
+    }
+  },
+  "schema_version": "1.0",
+  "tested_current_head_sha": "fed101064fa75b0bdc765209002ba0415e14ec17"
+}
