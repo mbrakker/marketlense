@@ -19,8 +19,16 @@ def test_empty_quarantined_grounding_skips_provider_strategies_before_regenerati
         {
             "claim": "The unsupported claim has no retained backing.",
             "evidence_id": "rejected-source",
+            "evidence": "Rejected claim evidence.",
             "pages": [27],
-        }
+        },
+        {
+            "id": "supported-sibling",
+            "claim": "The sibling has distinct retained backing.",
+            "evidence_id": "sibling-source",
+            "evidence": "Retained evidence for the sibling claim.",
+            "pages": [28],
+        },
     ]
     issue = ValidationIssue(
         schema_version="1.0",
@@ -30,7 +38,15 @@ def test_empty_quarantined_grounding_skips_provider_strategies_before_regenerati
         rule_id="grounding",
     )
     evidence_packs = {
-        "findings": {"findings": []},
+        "findings": {
+            "findings": [
+                {
+                    "id": "sibling-source",
+                    "evidence": "Retained evidence for the sibling claim.",
+                    "pages": [28],
+                }
+            ]
+        },
         "doc_map": {"sections": []},
     }
     plan = _build_regeneration_plan(
@@ -49,10 +65,7 @@ def test_empty_quarantined_grounding_skips_provider_strategies_before_regenerati
         broad_retry_available=False,
     )
 
-    assert skipped == [
-        ("summary", "current_evidence"),
-        ("summary", "alternative_evidence"),
-    ]
+    assert skipped == [("summary", "current_evidence")]
     assert plan.targets[0].repair_action == "REMOVE_CLAIM"
     assert plan.targets[0].repair_strategy == "safe_removal"
     assert plan.targets[0].allowed_paths == ["summary.claim_evidence_map[0]"]
@@ -79,7 +92,9 @@ def test_empty_quarantined_grounding_skips_provider_strategies_before_regenerati
         openai_client=openai_client,
         prompt_client=prompt_client,
     )
-    assert response.updated_artifacts["summary"]["claim_evidence_map"] == []
+    assert response.updated_artifacts["summary"]["claim_evidence_map"] == [
+        artifacts["summary"]["claim_evidence_map"][1]
+    ]
     assert openai_client.calls == []
     assert prompt_client.render_calls == []
 

@@ -315,6 +315,7 @@ def test_successful_worker_rechecks_idle_downstream_queue_without_outbox() -> No
 def test_ready_downstream_work_precedes_same_queue_backlog_after_success() -> None:
     lock = Lock()
     render_polled_idle = Event()
+    render_completed = Event()
     order: list[str] = []
     analysis_calls = 0
     render_ready = False
@@ -326,13 +327,15 @@ def test_ready_downstream_work_precedes_same_queue_backlog_after_success() -> No
             with lock:
                 analysis_calls += 1
                 call_number = analysis_calls
-                if call_number > 1:
-                    order.append(f"analysis:{call_number}")
             if call_number == 1:
                 assert render_polled_idle.wait(timeout=5)
                 with lock:
                     render_ready = True
                 order.append("analysis:1")
+            else:
+                assert render_completed.wait(timeout=5)
+                with lock:
+                    order.append(f"analysis:{call_number}")
             return _succeeded_worker(
                 downstream_queue_names=(
                     ("report_render",) if call_number == 1 else ()
@@ -343,6 +346,7 @@ def test_ready_downstream_work_precedes_same_queue_backlog_after_success() -> No
                 if render_ready:
                     render_ready = False
                     order.append("render")
+                    render_completed.set()
                     return _succeeded_worker()
             render_polled_idle.set()
         return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")

@@ -379,8 +379,13 @@ def _quarantines_failed_evidence(issue: ValidationIssue) -> bool:
     """Keep a rejected binding out of the next atomic repair prompt."""
 
     rule_id = str(issue.rule_id or "").strip().lower()
+    violation_type = str(issue.violation_type or "").strip().lower()
     if rule_id == "public_editorial_quality.duplicate_insight":
         # The wording duplicates a sibling; their shared source is still valid.
+        return False
+    if rule_id == "grounding" and violation_type == "contradicted":
+        # A contradicted statement needs correction against the same source;
+        # quarantine is appropriate for unsupported claims, not contradictions.
         return False
     if rule_id.startswith("retained_claim."):
         return rule_id == "retained_claim.evidence_reference_completeness"
@@ -1180,7 +1185,16 @@ def _strategy_options(
         options.append(("REGENERATE_ITEM", "current_evidence"))
     else:
         options.append(("REGENERATE_ITEM", "current_evidence"))
-        if target_key in _ALTERNATIVE_EVIDENCE_TARGETS:
+        has_summary_claim_map_issue = target_key == "summary" and any(
+            str(issue.affected_section or "")
+            .strip()
+            .startswith("summary.claim_evidence_map")
+            for issue in ordered_issues
+        )
+        if (
+            target_key in _ALTERNATIVE_EVIDENCE_TARGETS
+            and not has_summary_claim_map_issue
+        ):
             options.append(("REBIND_EVIDENCE", "alternative_evidence"))
         if target_key != "insights_bundle" or _has_single_failed_insight_id(
             ordered_issues

@@ -564,7 +564,7 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
     def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
         del settings, ctx, report_name, md5
         validation_requests.append((pack_name, req.artifacts))
-        if pack_name == "validation_regen_candidate_3":
+        if pack_name == "validation_regen_candidate_2":
             candidate_package.update(
                 {
                     "schema_version": "1.3",
@@ -598,7 +598,7 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
         regeneration_requests.append(request)
         plan_target = request.plan.targets[0]
         candidate = deepcopy(request.current_artifacts)
-        if request.attempt_index == 3:
+        if plan_target.repair_strategy == "safe_removal":
             candidate["summary"]["claim_evidence_map"] = []
         return ArtifactRegenerationResponse(
             updated_artifacts=candidate,
@@ -613,7 +613,9 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
             repair_strategy=plan_target.repair_strategy,
             selected_evidence_ids=list(plan_target.selected_evidence_ids),
             deterministic_mutation_paths=(
-                ["summary.claim_evidence_map[0]"] if request.attempt_index == 3 else []
+                ["summary.claim_evidence_map[0]"]
+                if plan_target.repair_strategy == "safe_removal"
+                else []
             ),
         )
 
@@ -665,14 +667,12 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
 
     assert [
         request.plan.targets[0].repair_strategy for request in regeneration_requests
-    ] == ["current_evidence", "alternative_evidence", "safe_removal"]
+    ] == ["current_evidence", "safe_removal"]
     assert [name for name, _artifacts in validation_requests] == [
         "validation_regen_candidate_1",
         "validation_regen_candidate_2",
-        "validation_regen_candidate_3",
     ]
     assert [attempt.promotion_outcome for attempt in attempts] == [
-        "rolled_back",
         "rolled_back",
         "promoted",
     ]

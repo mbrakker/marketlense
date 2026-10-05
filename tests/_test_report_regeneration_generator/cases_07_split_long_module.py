@@ -283,6 +283,104 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     ]
 
 
+def test_summary_claim_map_repairs_use_only_the_target_claim_evidence(tmp_path):
+    class _ClaimScopedEvidenceClient(_FakeOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            current_items = json.loads(variables["current_section_json"])[
+                "claim_evidence_map"
+            ]
+            assert len(current_items) == 1
+            claim = current_items[0]
+            grounding = json.loads(variables["grounding_package_json"])
+            expected_evidence_id = claim["evidence_id"]
+            assert grounding["evidence_ids"] == [expected_evidence_id]
+            assert {
+                str(
+                    entry.get("id")
+                    or entry.get("evidence_id")
+                    or (entry.get("entry") or {}).get("id")
+                    or (entry.get("entry") or {}).get("evidence_id")
+                )
+                for entry in grounding["relevant_evidence"]
+            } == {expected_evidence_id}
+            claim["claim"] = f"Corrected claim supported by {expected_evidence_id}."
+            payload = {"summary": {"claim_evidence_map": [claim]}}
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id=f"req-claim-map-{expected_evidence_id}",
+            )
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "id": "claim-one",
+            "claim": "First unsupported claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence for the first claim.",
+            "pages": [1],
+        },
+        {
+            "id": "claim-two",
+            "claim": "Second unsupported claim.",
+            "evidence_id": "f2",
+            "evidence": "Evidence for the second claim.",
+            "pages": [2],
+        },
+    ]
+    issues = [
+        ValidationIssue(
+            rule_id="grounding",
+            violation_type="contradicted",
+            affected_section=f"summary.claim_evidence_map:{claim_id}.claim",
+            message="[grounding] The cited source contradicts the current claim.",
+            severity="error",
+            entity_id=f"summary_claim:{claim_id}",
+            evidence_ids=[evidence_id],
+        )
+        for claim_id, evidence_id in (("claim-one", "f1"), ("claim-two", "f2"))
+    ]
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    assert all(issue.excluded_evidence_ids == [] for issue in plan.targets[0].issues)
+    client = _ClaimScopedEvidenceClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    claims = response.updated_artifacts["summary"]["claim_evidence_map"]
+    assert [claim["claim"] for claim in claims] == [
+        "Corrected claim supported by f1.",
+        "Corrected claim supported by f2.",
+    ]
+    assert len(client.calls) == 2
+
+
 def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path):
     class _UnchangedClaimMapOpenAIClient(_FakeOpenAIClient):
         def _legacy_chat_json(self, req, ctx):
@@ -293,7 +391,7 @@ def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path)
                     "claim_evidence_map": [
                         {
                             "id": "claim-one",
-                            "claim": "Unsupported original claim.",
+                            "claim": "The source contradicts the original claim.",
                             "evidence_id": "f1",
                             "evidence": "Evidence text",
                             "pages": [1],
@@ -312,7 +410,7 @@ def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path)
     artifacts["summary"]["claim_evidence_map"] = [
         {
             "id": "claim-one",
-            "claim": "Unsupported original claim.",
+            "claim": "The source contradicts the original claim.",
             "evidence_id": "f1",
             "evidence": "Evidence text",
             "pages": [1],
@@ -322,8 +420,9 @@ def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path)
         issues=[
             ValidationIssue(
                 rule_id="grounding",
+                violation_type="contradicted",
                 affected_section="summary.claim_evidence_map:claim-one.claim",
-                message="[grounding] The claim is not established by its evidence.",
+                message="[grounding] The cited source contradicts the current claim.",
                 severity="error",
                 entity_id="summary_claim:claim-one",
                 evidence_ids=["f1"],
@@ -406,6 +505,7 @@ def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path
         issues=[
             ValidationIssue(
                 rule_id="grounding",
+                violation_type="contradicted",
                 affected_section="summary.claim_evidence_map:2.claim",
                 message="[grounding] Unsupported summary claim",
                 severity="error",

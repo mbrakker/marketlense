@@ -711,6 +711,21 @@ def retained_grounding_evidence_ids_for_target(
         evidence_packs=evidence_packs,
         doc_map=doc_map,
     )
+    if target.target_section == "summary":
+        claims = _copy_dict(artifacts.get("summary")).get("claim_evidence_map")
+        claim_targets = _summary_claim_map_targets_for_claims(
+            claims, _summary_repair_issues(target)
+        )
+        if claim_targets is not None:
+            return _unique_strings(
+                evidence_id
+                for _index, claim, issues in claim_targets
+                for evidence_id in _summary_claim_map_grounding_package(
+                    claim=claim,
+                    issues=issues,
+                    grounding_package=package,
+                ).get("evidence_ids", [])
+            )
     return _unique_strings(package.get("evidence_ids") or [])
 
 
@@ -1441,8 +1456,7 @@ def _preserve_atomic_target_families(
                 continue
             source_for_copy = (
                 family_state[root]
-                if root in state.soft_copy_repair_texts
-                or allowed_path in state_only_paths
+                if allowed_path in state_only_paths
                 else updated_artifacts.get(root, family_state[root])
             )
             merged_family = _copy_allowed_mutation_path(
@@ -3636,6 +3650,15 @@ def _summary_claim_map_targets(
     target_issues = (
         _summary_repair_issues(execution.target) if issues is None else issues
     )
+    return _summary_claim_map_targets_for_claims(claims, target_issues)
+
+
+def _summary_claim_map_targets_for_claims(
+    claims: Any,
+    target_issues: List[RegenerationIssue],
+) -> List[tuple[int, Dict[str, Any], List[RegenerationIssue]]] | None:
+    """Resolve claim-map issues to stable rows without an execution context."""
+
     if not isinstance(claims, list) or not target_issues:
         return None
     grouped: Dict[int, List[RegenerationIssue]] = {}
@@ -3697,7 +3720,11 @@ def _regenerate_summary_claim_map_items(
         execution.state.regenerated_sections.append("summary")
         return
     for index, claim, issues in targets:
-        grounding_package = execution.grounding_package
+        grounding_package = _summary_claim_map_grounding_package(
+            claim=claim,
+            issues=issues,
+            grounding_package=execution.grounding_package,
+        )
         if not grounding_package.get("evidence_ids"):
             raise AppError(
                 code="regeneration_target_item_no_retained_evidence",
@@ -3785,6 +3812,65 @@ def _regenerate_summary_claim_map_items(
         claims[index] = {**claim, "claim": repaired_text}
     execution.state.regenerated_sections.append("summary")
     execution.state.prompt_namespaces.append(namespace)
+
+
+def _summary_claim_map_grounding_package(
+    *,
+    claim: Dict[str, Any],
+    issues: List[RegenerationIssue],
+    grounding_package: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Limit a claim-map repair to the source bindings on that exact row."""
+
+    claim_evidence_ids = _unique_strings(
+        [
+            *(
+                claim.get("evidence_ids")
+                if isinstance(claim.get("evidence_ids"), list)
+                else []
+            ),
+            claim.get("evidence_id"),
+            *(
+                span.get("evidence_id")
+                for span in (
+                    claim.get("source_spans")
+                    or claim.get("evidence_spans")
+                    or []
+                )
+                if isinstance(span, dict)
+            ),
+            *(evidence_id for issue in issues for evidence_id in issue.evidence_ids),
+        ]
+    )
+    allowed_ids = {
+        _normalized_evidence_id(evidence_id)
+        for evidence_id in claim_evidence_ids
+        if _normalized_evidence_id(evidence_id)
+    }
+    relevant_evidence = [
+        entry
+        for entry in grounding_package.get("relevant_evidence", [])
+        if isinstance(entry, dict)
+        and _normalized_evidence_id(_entry_evidence_id(entry)) in allowed_ids
+    ]
+    evidence_ids = _unique_strings(
+        _entry_evidence_id(entry) for entry in relevant_evidence
+    )
+    issue_pages = _unique_ints(page for issue in issues for page in issue.pages)
+    return {
+        "current_section": {"claim_evidence_map": [deepcopy(claim)]},
+        "relevant_evidence": relevant_evidence,
+        # Query windows are target-wide; exact claim bindings are the only
+        # admissible evidence for this atomic map-row repair.
+        "evidence_windows": [],
+        "evidence_ids": evidence_ids,
+        "quarantined_evidence_ids": _unique_strings(
+            evidence_id
+            for issue in issues
+            for evidence_id in issue.excluded_evidence_ids
+        ),
+        "pages": issue_pages,
+    }
 
 
 def _remove_summary_claim_map_targets(

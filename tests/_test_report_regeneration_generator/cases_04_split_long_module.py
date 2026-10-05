@@ -692,3 +692,132 @@ def test_claim_scoped_repair_bridges_quarantine_to_rewritten_factual_claim(
 
     assert not result.passed
     assert any("quarantined" in issue.message for issue in result.issues)
+
+
+def test_expert_claim_repair_keeps_final_source_display_and_provenance_aligned(
+    tmp_path,
+) -> None:
+    current = _current_artifacts()
+    old_text = "The prior share claim is unsupported."
+    sibling_text = "A separate interpretation stays in place."
+    repaired_text = "The share was 45.30% in 2025."
+    canonical_text = "The share was 45.3% in 2025."
+    current["expert_comment"] = f"{old_text} {sibling_text}"
+    current["summary"]["claim_evidence_map"] = [
+        {
+            "claim": canonical_text,
+            "evidence_id": "f1",
+            "evidence": canonical_text,
+            "pages": [1],
+        }
+    ]
+    old_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:old-share-claim",
+        text_hash=hashlib.sha256(old_text.encode()).hexdigest(),
+        classification="factual",
+        evidence_ids=("f1",),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    sibling_claim = SoftCopyClaimProvenance(
+        schema_version="1.0",
+        artifact_family="expert_comment",
+        claim_id="soft_copy:expert_comment:sibling-interpretation",
+        text_hash=hashlib.sha256(sibling_text.encode()).hexdigest(),
+        classification="interpretive",
+        evidence_ids=(),
+        source_spans=(),
+        producing_prompt_identity={"namespace": "report_vs/artifacts/expert_comment"},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    current["soft_copy_claim_provenance"]["claims"] = [
+        claim
+        for claim in current["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] != "expert_comment"
+    ] + soft_copy_claim_provenance_to_payload([old_claim, sibling_claim])["claims"]
+
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"][0] = {
+        "id": "f1",
+        "text": canonical_text,
+        "evidence": canonical_text,
+        "page": 1,
+        "pages": [1],
+    }
+
+    class _SourceDisplayRepairClient(_ClaimScopedExpertOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            if (
+                "system::report_vs/artifacts/regenerate/expert_comment"
+                in req.system_prompt
+            ):
+                self.calls.append(req)
+                payload = {"expert_comment": repaired_text}
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(payload),
+                    parsed_json=payload,
+                    request_id="req-expert-source-display-repair",
+                )
+            return super()._legacy_chat_json(req, ctx)
+
+    target = RegenerationTarget(
+        target_section="expert_comment",
+        regenerate_steps=["expert_comment"],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["expert_comment[claim_index=0]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="expert_comment",
+                message="The generated share precision differs from its evidence.",
+                severity="error",
+                entity_id=old_claim.claim_id,
+                evidence_ids=["f1"],
+            )
+        ],
+    )
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=2,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=current,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_SourceDisplayRepairClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    final_text = response.updated_artifacts["expert_comment"]
+    assert final_text == f"{canonical_text} {sibling_text}"
+    final_claims = [
+        claim
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    ]
+    assert {claim["text_hash"] for claim in final_claims} == {
+        hashlib.sha256(canonical_text.encode()).hexdigest(),
+        hashlib.sha256(sibling_text.encode()).hexdigest(),
+    }
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
