@@ -1385,6 +1385,14 @@ def _preserve_atomic_target_families(
             str(path or ""),
         )
     }
+    summary_claim_removal_paths.update(
+        str(path)
+        for path in additional_paths
+        if re.fullmatch(
+            r"summary\.claim_evidence_map\[(?:item=[^\]]+|\d+)\]",
+            str(path or ""),
+        )
+    )
     paths_by_root: Dict[str, List[str]] = {}
     planner_fields = {
         re.sub(r"\[[^\]]*\]", "", str(path or ""))
@@ -4381,9 +4389,24 @@ def _retire_removed_summary_claim_map_rows(
         repaired_summary["claim_evidence_map"] = [
             raw for index, raw in enumerate(summary_map) if index not in remove_indexes
         ]
-        mutation_path = "summary.claim_evidence_map"
-        if mutation_path not in execution.state.deterministic_mutation_paths:
-            execution.state.deterministic_mutation_paths.append(mutation_path)
+        stable_ids = [
+            str(raw.get("id") or raw.get("claim_id") or "").strip()
+            if isinstance(raw, dict)
+            else ""
+            for raw in summary_map
+        ]
+        stable_ids_are_unique = bool(
+            stable_ids
+            and all(stable_ids)
+            and len(stable_ids) == len(set(stable_ids))
+        )
+        for index in sorted(remove_indexes):
+            selector = (
+                f"item={stable_ids[index]}" if stable_ids_are_unique else str(index)
+            )
+            mutation_path = f"summary.claim_evidence_map[{selector}]"
+            if mutation_path not in execution.state.deterministic_mutation_paths:
+                execution.state.deterministic_mutation_paths.append(mutation_path)
 
 
 def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> None:

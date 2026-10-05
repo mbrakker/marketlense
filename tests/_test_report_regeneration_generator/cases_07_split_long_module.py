@@ -699,6 +699,11 @@ def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
     assert [item["claim"] for item in repaired_summary["claim_evidence_map"]] == [
         sentence for _family, sentence, _evidence_id in expected_map
     ]
+    map_row_path = "summary.claim_evidence_map[3]"
+    assert (map_row_path in response.deterministic_mutation_paths) is (
+        not shared_evidence_binding
+    )
+    assert "summary.claim_evidence_map" not in response.deterministic_mutation_paths
 
 
 def test_summary_claim_map_issue_uses_map_path_before_soft_copy_provenance_path():

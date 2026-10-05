@@ -78,6 +78,133 @@ def test_scope_validation_rejects_mutated_sibling_item() -> None:
     ]
 
 
+def test_scope_allows_only_the_claim_map_row_derived_from_summary_copy_removal() -> (
+    None
+):
+    from src.orchestrators._report_analysis_orchestrator.validation import (
+        _verified_deterministic_mutation_paths,
+    )
+
+    retained_text = "The retained cohort remains stable."
+    removed_text = "An unsupported forecast is removed."
+    retained_claim = _soft_copy_claim(
+        family="summary", text=retained_text, evidence_id="finding-1", page=6
+    )
+    removed_claim = _soft_copy_claim(
+        family="summary", text=removed_text, evidence_id="finding-2", page=7
+    )
+    before = {
+        "summary": {
+            "executive_summary": f"{retained_text} {removed_text}",
+            "claim_evidence_map": [
+                {
+                    "id": "retained",
+                    "claim": retained_text,
+                    "evidence_id": "finding-1",
+                    "pages": [6],
+                },
+                {
+                    "id": "removed",
+                    "claim": removed_text,
+                    "evidence_id": "finding-2",
+                    "pages": [7],
+                },
+            ],
+        },
+        "soft_copy_claim_provenance": {
+            "schema_version": "1.0",
+            "claims": [retained_claim, removed_claim],
+        },
+    }
+    after = deepcopy(before)
+    after["summary"]["executive_summary"] = retained_text
+    after["summary"]["claim_evidence_map"].pop(1)
+    after["soft_copy_claim_provenance"]["claims"].pop(1)
+    removed_map_path = "summary.claim_evidence_map[item=removed]"
+    plan = SimpleNamespace(
+        targets=[
+            SimpleNamespace(
+                target_section="summary",
+                repair_action="REMOVE_CLAIM",
+                allowed_paths=["summary.executive_summary[claim_index=1]"],
+                issues=[SimpleNamespace(entity_id=removed_claim["claim_id"])],
+            )
+        ]
+    )
+
+    verified_paths = _verified_deterministic_mutation_paths(
+        paths=[removed_map_path], before=before, after=after, plan=plan
+    )
+    scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+        deterministic_mutation_paths=[removed_map_path],
+    )
+    unplanned_scope = _scope_validation_report(
+        before=before,
+        after=after,
+        plan=plan,
+        verified_derived_roots=frozenset({"soft_copy_claim_provenance"}),
+        deterministic_mutation_paths=["summary.claim_evidence_map[item=retained]"],
+    )
+    integrity = validate_regeneration_candidate(
+        current_artifacts=before,
+        candidate_artifacts=after,
+        evidence_packs={},
+        ctx=_ctx(),
+        removed_summary_claim_paths=tuple(verified_paths),
+    )
+    reintroduced = deepcopy(after)
+    reintroduced["summary"]["claim_evidence_map"].append(
+        before["summary"]["claim_evidence_map"][1]
+    )
+    reintroduced_integrity = validate_regeneration_candidate(
+        current_artifacts=before,
+        candidate_artifacts=reintroduced,
+        evidence_packs={},
+        ctx=_ctx(),
+        removed_summary_claim_paths=tuple(verified_paths),
+    )
+    ambiguous_before = deepcopy(before)
+    ambiguous_claim = _soft_copy_claim(
+        family="summary",
+        text="A second claim uses the same evidence.",
+        evidence_id="finding-2",
+        page=7,
+    )
+    ambiguous_before["soft_copy_claim_provenance"]["claims"].append(
+        ambiguous_claim
+    )
+    ambiguous_after = deepcopy(after)
+    ambiguous_after["soft_copy_claim_provenance"]["claims"].append(
+        ambiguous_claim
+    )
+    ambiguous_paths = _verified_deterministic_mutation_paths(
+        paths=[removed_map_path],
+        before=ambiguous_before,
+        after=ambiguous_after,
+        plan=plan,
+    )
+
+    assert verified_paths == {removed_map_path}
+    assert not ambiguous_paths
+    assert scope.status == "pass"
+    assert unplanned_scope.status == "fail"
+    assert not any(
+        "lost the original material evidence" in issue.message
+        for issue in integrity.issues
+    )
+    assert any(
+        issue.rule_id == "regeneration_removed_summary_claim_reintroduced"
+        for issue in reintroduced_integrity.issues
+    )
+    assert after["summary"]["claim_evidence_map"] == [
+        before["summary"]["claim_evidence_map"][0]
+    ]
+
+
 def test_scope_validation_tracks_stable_item_additions_and_removals() -> None:
     before = {
         "insights_final": [

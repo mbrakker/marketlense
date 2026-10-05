@@ -6,6 +6,7 @@ and bounded artifact regeneration attempts.
 
 from __future__ import annotations
 
+import hashlib
 import inspect
 import re
 from copy import deepcopy
@@ -34,6 +35,11 @@ from src.contracts.report_analysis import (
 )
 from src.contracts.report_generation import ReportRuntimeState
 from src.contracts.semantic_ids import ReportId
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+    soft_copy_material_sentences,
+    soft_copy_public_text,
+)
 from src.contracts.validation import (
     ValidationIssue,
     ValidationReport,
@@ -891,6 +897,15 @@ def _verified_deterministic_mutation_paths(
                 continue
             verified.update(expected_paths)
 
+    verified.update(
+        _verified_summary_copy_map_removals(
+            requested=requested,
+            before=before,
+            after=after,
+            plan=plan,
+        )
+    )
+
     remaining = requested - verified
     if not remaining:
         return verified
@@ -947,6 +962,204 @@ def _verified_deterministic_mutation_paths(
     if remaining == expected:
         verified.update(expected)
     return verified
+
+
+def _verified_summary_copy_map_removals(
+    *,
+    requested: set[str],
+    before: Dict[str, Any],
+    after: Dict[str, Any],
+    plan,
+) -> set[str]:
+    """Verify exact map-row deletions caused by planned summary-copy removal."""
+
+    map_path_pattern = re.compile(
+        r"^summary\.claim_evidence_map\[(?:(?:item=)([^\]]+)|(\d+))\]$"
+    )
+    changed_map_paths = {
+        path
+        for path in _artifact_diff_paths(before, after)
+        if map_path_pattern.fullmatch(path)
+    }
+    candidate_paths = requested & changed_map_paths
+    if not candidate_paths:
+        return set()
+
+    before_summary = before.get("summary")
+    after_summary = after.get("summary")
+    if not isinstance(before_summary, dict) or not isinstance(after_summary, dict):
+        return set()
+    before_map = before_summary.get("claim_evidence_map")
+    after_map = after_summary.get("claim_evidence_map")
+    if not isinstance(before_map, list) or not isinstance(after_map, list):
+        return set()
+    try:
+        original_claims = soft_copy_claim_provenance_from_payload(
+            before.get("soft_copy_claim_provenance")
+        )
+        candidate_claims = soft_copy_claim_provenance_from_payload(
+            after.get("soft_copy_claim_provenance")
+        )
+    except AppError:
+        return set()
+
+    public_hashes = {
+        _summary_copy_text_hash(sentence)
+        for sentence in soft_copy_material_sentences(
+            soft_copy_public_text("summary", after_summary)
+        )
+    }
+    active_bindings = {
+        tuple(sorted(set(claim.evidence_ids)))
+        for claim in candidate_claims
+        if claim.artifact_family == "summary"
+        and claim.text_hash in public_hashes
+        and claim.evidence_ids
+    }
+    changed_indexes_by_path: dict[str, tuple[int, dict[str, Any]]] = {}
+    for path in candidate_paths:
+        match = map_path_pattern.fullmatch(path)
+        if match is None:
+            continue
+        stable_id, raw_index = match.groups()
+        if stable_id:
+            matches = [
+                (index, row)
+                for index, row in enumerate(before_map)
+                if isinstance(row, dict)
+                and _summary_claim_row_id(row, index) == stable_id
+            ]
+            if len(matches) != 1:
+                continue
+            index, row = matches[0]
+            if any(
+                isinstance(candidate, dict)
+                and _summary_claim_row_id(candidate, candidate_index) == stable_id
+                for candidate_index, candidate in enumerate(after_map)
+            ):
+                continue
+        else:
+            index = int(raw_index)
+            if index >= len(before_map) or not isinstance(before_map[index], dict):
+                continue
+            row = before_map[index]
+        changed_indexes_by_path[path] = (index, row)
+
+    if not changed_indexes_by_path:
+        return set()
+
+    verified: set[str] = set()
+    for target in plan.targets:
+        if target.target_section != "summary":
+            continue
+        issue_claim_ids = {
+            str(issue.entity_id or "").strip()
+            for issue in target.issues
+            if str(issue.entity_id or "").strip()
+        }
+        if not issue_claim_ids:
+            continue
+        removed_claims = []
+        for path in target.allowed_paths:
+            match = re.fullmatch(
+                r"summary\.(tldr|card_tldr_compact|executive_summary)"
+                r"\[claim_index=(\d+)\]",
+                str(path or "").strip(),
+            )
+            if match is None:
+                continue
+            field, raw_index = match.groups()
+            old_sentences = soft_copy_material_sentences(
+                before_summary.get(field)
+                if isinstance(before_summary.get(field), str)
+                else ""
+            )
+            index = int(raw_index)
+            if index >= len(old_sentences):
+                continue
+            text_hash = _summary_copy_text_hash(old_sentences[index])
+            claim_matches = [
+                claim
+                for claim in original_claims
+                if claim.artifact_family == "summary"
+                and claim.claim_id in issue_claim_ids
+                and claim.text_hash == text_hash
+                and claim.evidence_ids
+            ]
+            if len(claim_matches) == 1 and text_hash not in public_hashes:
+                removed_claims.extend(claim_matches)
+        for claim in removed_claims:
+            evidence_ids = set(claim.evidence_ids)
+            if sum(
+                1
+                for candidate in original_claims
+                if candidate.artifact_family == "summary"
+                and set(candidate.evidence_ids) == evidence_ids
+            ) != 1:
+                continue
+            binding = tuple(sorted(evidence_ids))
+            if binding in active_bindings:
+                continue
+            matching_original_rows = [
+                (index, row)
+                for index, row in enumerate(before_map)
+                if isinstance(row, dict)
+                and _summary_claim_row_evidence_ids(row) == evidence_ids
+                and _summary_copy_text_hash(str(row.get("claim") or ""))
+                not in public_hashes
+            ]
+            if len(matching_original_rows) != 1:
+                continue
+            row_index, _row = matching_original_rows[0]
+            matching_paths = [
+                path
+                for path, (index, _row) in changed_indexes_by_path.items()
+                if index == row_index
+            ]
+            if len(matching_paths) != 1:
+                continue
+            path = matching_paths[0]
+            verified.add(path)
+    return verified
+
+
+def _summary_copy_text_hash(value: str) -> str:
+    normalized = " ".join(str(value or "").split())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _summary_claim_row_id(row: dict[str, Any], index: int) -> str:
+    return str(
+        row.get("id")
+        or row.get("insight_id")
+        or row.get("key_figure_id")
+        or row.get("claim_id")
+        or f"claim_{index + 1}"
+    ).strip()
+
+
+def _summary_claim_row_evidence_ids(row: dict[str, Any]) -> set[str]:
+    evidence_ids = {
+        str(row.get("evidence_id") or "").strip()
+        if isinstance(row.get("evidence_id"), str)
+        else ""
+    }
+    values = row.get("evidence_ids")
+    if isinstance(values, list):
+        evidence_ids.update(
+            str(value).strip() for value in values if isinstance(value, str)
+        )
+    for key in ("evidence_spans", "source_spans"):
+        values = row.get(key)
+        if isinstance(values, list):
+            evidence_ids.update(
+                str(value.get("evidence_id") or "").strip()
+                for value in values
+                if isinstance(value, dict)
+                and isinstance(value.get("evidence_id"), str)
+            )
+    evidence_ids.discard("")
+    return evidence_ids
 
 
 def _path_root(path: str) -> str:
@@ -1733,6 +1946,34 @@ def _run_validation_regeneration_loop(
         artifact_diff = _artifact_diff_summary(artifacts_before, candidate_artifacts)
         candidate_artifacts_path = _candidate_artifacts_path(regeneration_response)
         candidate_enforced = bool(candidate_artifacts_path)
+        deterministic_mutation_paths = tuple(
+            getattr(regeneration_response, "deterministic_mutation_paths", []) or []
+        )
+        repair_decisions = tuple(
+            getattr(regeneration_response, "repair_decisions", []) or []
+        )
+        verified_mutation_paths = _verified_deterministic_mutation_paths(
+            paths=deterministic_mutation_paths,
+            before=artifacts_before,
+            after=candidate_artifacts,
+            plan=plan,
+            doc_map=evidence_packs.get("doc_map", {}),
+            evidence_packs=evidence_packs,
+            repair_decisions=repair_decisions,
+        )
+        removed_summary_claim_paths = {
+            str(path)
+            for target in plan.targets
+            if target.target_section == "summary"
+            and target.repair_action == "REMOVE_CLAIM"
+            for path in target.allowed_paths
+            if str(path).startswith("summary.claim_evidence_map[")
+        }
+        removed_summary_claim_paths.update(
+            path
+            for path in verified_mutation_paths
+            if path.startswith("summary.claim_evidence_map[")
+        )
         candidate_result = (
             validate_regeneration_candidate(
                 current_artifacts=working_artifacts,
@@ -1755,14 +1996,7 @@ def _run_validation_regeneration_loop(
                     and target.repair_action == "REMOVE_CLAIM"
                     for issue in target.issues
                 ),
-                removed_summary_claim_paths=tuple(
-                    str(path)
-                    for target in plan.targets
-                    if target.target_section == "summary"
-                    and target.repair_action == "REMOVE_CLAIM"
-                    for path in target.allowed_paths
-                    if str(path).startswith("summary.claim_evidence_map[")
-                ),
+                removed_summary_claim_paths=tuple(sorted(removed_summary_claim_paths)),
             )
             if candidate_enforced
             else CandidateIntegrityResult(issues=[], evidence_lineage=[])
@@ -1817,14 +2051,10 @@ def _run_validation_regeneration_loop(
             after=candidate_artifacts,
             plan=plan,
             verified_derived_roots=candidate_result.verified_derived_roots,
-            deterministic_mutation_paths=tuple(
-                getattr(regeneration_response, "deterministic_mutation_paths", []) or []
-            ),
+            deterministic_mutation_paths=deterministic_mutation_paths,
             doc_map=evidence_packs.get("doc_map", {}),
             evidence_packs=evidence_packs,
-            repair_decisions=tuple(
-                getattr(regeneration_response, "repair_decisions", []) or []
-            ),
+            repair_decisions=repair_decisions,
         )
         payload_completeness_issue = None
         try:
