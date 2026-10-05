@@ -1,0 +1,920 @@
+{
+  "schema_version": "1.0",
+  "benchmark": "Frozen-five report-analysis repair-path optimization proof",
+  "status": "quality_pass_aggregate_target_met_in_single_observation",
+  "recorded_at_utc": "2026-10-05T18:20:00.530+00:00",
+  "commits": {
+    "outer_concurrency": "555d4f1c",
+    "report_analysis_p0_repair_path": "b83787f8338db33ac511141498370016f835317c",
+    "report_analysis_p1_evidence_fidelity_batching": "4254d27ef1435f58f36bf218bf7544ad37fa1261"
+  },
+  "operating_configuration": {
+    "max_parallel_workers": 3,
+    "max_jobs_per_queue": 3,
+    "max_total_jobs": 60,
+    "max_runtime_seconds": 1200,
+    "durable_queue_worker_concurrency_limit": 5,
+    "explicit_configuration_up_to_five_remains_supported": true
+  },
+  "frozen_cohort": {
+    "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "member_count": 5,
+    "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7"
+  },
+  "optimization": {
+    "priority": "P0 repair-path correctness followed by P1 exact-evidence semantic batching",
+    "p0_repair_path": {
+      "priority": "P0 repair-path reliability",
+      "root_cause": "When deterministic summary-copy removal retired a uniquely bound summary.claim_evidence_map row, the generator reported only the broad map root. Orchestrator scope verification authorized only paths directly listed in the repair plan, so the exact derived row deletion could be treated as undeclared and a safe candidate rolled back.",
+      "change": "The generator now reports each retired map row by exact stable item ID or index. The orchestrator admits that derived path only after before/after artifact diff, planned summary sentence removal, issue claim ID, provenance, evidence binding uniqueness, and absence from the resulting public summary all agree. Candidate validation still rejects reintroduced claims and ambiguous bindings fail closed.",
+      "live_cohort_exercised_summary_copy_removal": false,
+      "live_scope_note": "Adjust had no targeted repair in this run. The specific derived-row path is covered by focused deterministic tests; the live cohort does not establish that this fix reduces repair latency."
+    },
+    "p1_change": "Evidence-fidelity semantic fallback claims are grouped only when ordered evidence IDs and source text match; results map to unique claim IDs, while malformed or incomplete outputs fail closed.",
+    "live_evidence": "The P1 KPMG run batched three claims sharing source:page:2 into one call and checked one page-5 claim in a second: four candidates in two calls rather than four independent calls for these inputs.",
+    "p0_specific_derived_claim_map_removal_exercised_live": false,
+    "p0_live_scope_note": "The Reuters repair changed one executive-summary sentence and kept summary.claim_evidence_map paths protected. Exact derived-row deletion was verified by deterministic regression tests, not exercised live."
+  },
+  "baseline": {
+    "artifact_path": "docs/quality/frozen-five-systematic-fixes-baseline-20261005.json",
+    "commit_sha": "0ec3cdff841e16df7044f6645fe8379a464f41ca",
+    "max_parallel_workers": 5,
+    "max_jobs_per_queue": 5,
+    "metrics": {
+      "cohort_wall_clock_seconds": 1201.19,
+      "report_analysis_execution_seconds_total": 3066.16,
+      "report_analysis_execution_seconds_max": 981.107,
+      "report_analysis_queue_wait_seconds_total": 9.0,
+      "provider_calls": 215,
+      "input_tokens": 1879211,
+      "output_tokens": 399097,
+      "file_search_calls": 26,
+      "estimated_cost_usd": 0.441918,
+      "automatic_repairs": 6,
+      "repair_candidate_attempts": 3,
+      "repair_candidate_latency_seconds": 596.206,
+      "structured_output_repair_calls": 1,
+      "workflow_retries": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "semantic_validation_provider_calls": null,
+      "grounding_provider_calls_or_batches": null
+    },
+    "semantic_and_grounding_count_note": "The retained baseline does not include per-call semantic-validation or grounding counts. These before values are unavailable and are not inferred."
+  },
+  "current_run": {
+    "git_sha": "4254d27ef1435f58f36bf218bf7544ad37fa1261",
+    "workflow_run_id": "3602b1c3-fcb6-4286-9d89-8bfca283dca3",
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "command": "$env:PYTHONPATH = (Get-Location).Path; $wrapperPath = Join-Path $env:TEMP 'marketlense_report_analysis_p1_frozen_five_20261005.py'; python -u $wrapperPath",
+    "wrapper_sha256": "48e7efc44714e36518eaa2394fb751b1163a9ff6146fdf46aacad16a5fd8d861",
+    "isolated_run_directory": "tmp/report-analysis-p1-frozen-five-20261005/ias-first-attempt-3cqnvoqd",
+    "isolated_config_sha256": "726afe64781aafaa8b4211b6486cde1d053cbd35141ceb4c59fcc124a0f0820a",
+    "fresh_isolated_state": true,
+    "reports_submitted_together": 5,
+    "frozen_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "wordpress_publish_enabled": false,
+    "publication_writes": 0,
+    "supervisor_dispatch_capacity": {
+      "max_parallel_workers": 3,
+      "max_jobs_per_queue": 3,
+      "max_total_jobs": 60,
+      "max_runtime_seconds": 1200,
+      "max_observed_running_report_analysis_jobs": 3
+    },
+    "durable_queue_controls": {
+      "report_analysis_worker_concurrency_limit": 5,
+      "wordpress_publish_enabled": false,
+      "max_attempts_report_analysis": 2
+    },
+    "timing": {
+      "started_at_utc": "2026-10-05T17:58:54.196+00:00",
+      "all_reports_terminal_at_utc": "2026-10-05T18:20:00.530+00:00",
+      "cohort_wall_clock_seconds": 1266.361,
+      "duration_measurement": "time.monotonic from runner entry to all reports terminal"
+    },
+    "metrics": {
+      "report_analysis_execution_seconds_total": 2451.388,
+      "report_analysis_execution_seconds_max": 661.75,
+      "report_analysis_execution_seconds_median": 443.278,
+      "report_analysis_queue_wait_seconds_total": 1014.0,
+      "provider_calls": 193,
+      "input_tokens": 1729940,
+      "output_tokens": 339456,
+      "file_search_calls": 26,
+      "estimated_cost_usd": 0.398352,
+      "automatic_repairs": 3,
+      "repair_candidate_attempts": 1,
+      "repair_candidate_latency_seconds": 186.995,
+      "structured_output_repair_calls": 0,
+      "semantic_validation_provider_calls": 13,
+      "retained_claim_semantic_validation_count": 116,
+      "grounding_provider_calls_or_batches": 36,
+      "workflow_retries": 0,
+      "automatic_queue_retries": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "provider_error_events": 0,
+      "provider_429_events": 0,
+      "provider_timeout_events": 0
+    },
+    "reports": [
+      {
+        "publisher": "Capgemini Research Institute",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "report_analysis_execution_seconds": 429.209,
+        "report_analysis_queue_wait_seconds": 134.0,
+        "automatic_repairs": 0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "final_state": "awaiting_review",
+        "workflow_attempt_count": 1,
+        "workflow_retries": 0
+      },
+      {
+        "publisher": "Activate",
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "report_analysis_execution_seconds": 443.278,
+        "report_analysis_queue_wait_seconds": 344.0,
+        "automatic_repairs": 0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "final_state": "awaiting_review",
+        "workflow_attempt_count": 1,
+        "workflow_retries": 0
+      },
+      {
+        "publisher": "KPMG",
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "report_analysis_execution_seconds": 489.632,
+        "report_analysis_queue_wait_seconds": 229.0,
+        "automatic_repairs": 0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "final_state": "awaiting_review",
+        "workflow_attempt_count": 1,
+        "workflow_retries": 0
+      },
+      {
+        "publisher": "Reuters Institute",
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "report_analysis_execution_seconds": 661.75,
+        "report_analysis_queue_wait_seconds": 307.0,
+        "automatic_repairs": 3,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "final_state": "awaiting_review",
+        "workflow_attempt_count": 1,
+        "workflow_retries": 0
+      },
+      {
+        "publisher": "Adjust",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "report_analysis_execution_seconds": 427.519,
+        "report_analysis_queue_wait_seconds": 0.0,
+        "automatic_repairs": 0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "final_state": "awaiting_review",
+        "workflow_attempt_count": 1,
+        "workflow_retries": 0
+      }
+    ],
+    "stage_performance": [
+      {
+        "execution_seconds_max": 0.585,
+        "execution_seconds_total": 1.698,
+        "queue_wait_seconds_total": 7.0,
+        "sample_count": 5,
+        "stage": "publication_readiness"
+      },
+      {
+        "execution_seconds_max": 661.75,
+        "execution_seconds_total": 2451.388,
+        "queue_wait_seconds_total": 1014.0,
+        "sample_count": 5,
+        "stage": "report_analysis"
+      },
+      {
+        "execution_seconds_max": 4.443,
+        "execution_seconds_total": 16.859,
+        "queue_wait_seconds_total": 0.0,
+        "sample_count": 5,
+        "stage": "report_render"
+      },
+      {
+        "execution_seconds_max": 228.252,
+        "execution_seconds_total": 762.348,
+        "queue_wait_seconds_total": 278.0,
+        "sample_count": 5,
+        "stage": "report_selection"
+      },
+      {
+        "execution_seconds_max": 4.534,
+        "execution_seconds_total": 20.718,
+        "queue_wait_seconds_total": 18.0,
+        "sample_count": 5,
+        "stage": "source_ingest"
+      }
+    ],
+    "queue_concurrency": {
+      "publication_readiness": {
+        "configured_workers": 5,
+        "enabled": true,
+        "max_attempts": 3,
+        "max_observed_running_jobs": 1
+      },
+      "report_analysis": {
+        "configured_workers": 5,
+        "enabled": true,
+        "max_attempts": 2,
+        "max_observed_running_jobs": 3
+      },
+      "report_render": {
+        "configured_workers": 5,
+        "enabled": true,
+        "max_attempts": 3,
+        "max_observed_running_jobs": 1
+      },
+      "report_selection": {
+        "configured_workers": 5,
+        "enabled": true,
+        "max_attempts": 3,
+        "max_observed_running_jobs": 4
+      },
+      "source_ingest": {
+        "configured_workers": 5,
+        "enabled": true,
+        "max_attempts": 3,
+        "max_observed_running_jobs": 3
+      }
+    },
+    "repair_audits": [
+      {
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "attempt": 1,
+        "strategy": "current_evidence",
+        "outcome": "promoted",
+        "validation_status": "pass",
+        "validation_issue_count": 6,
+        "validation_issue_identifiers": [
+          "artifact_quality:expert_comment",
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "family_confidence:quotes",
+          "grounding:linkedin_post",
+          "grounding:metadata.title"
+        ],
+        "latency_seconds": 186.995,
+        "artifact_path": "trends-and-predictions-2026-pdf/report_analysis/regeneration_candidate_audit_1.json",
+        "artifact_sha256": "2d175e8261b0896e3ed3cbeaaf10af8999d5ca2c7aeafde99de30a859fcff358",
+        "changed_paths": [
+          "summary.executive_summary[claim_index=1]"
+        ],
+        "summary_claim_map_rows_changed": false
+      }
+    ],
+    "validation_artifacts": [
+      {
+        "publisher": "Capgemini Research Institute",
+        "validation_artifact": "final-web-version-report-consumer-trends-2026-pdf/report_analysis/validation.json",
+        "validation_sha256": "34b33058391b7db1527fae3a7b90a6e560ac48243f67e33300419328234f99f8",
+        "validation_status": "pass",
+        "retained_claim_artifact": "final-web-version-report-consumer-trends-2026-pdf/report_analysis/retained_claim_validation.json",
+        "retained_claim_sha256": "656a6e274a687add3d1094078bf6fc3bdd4df255c7f4d91a49922b257b920cd4",
+        "readiness_status": "awaiting_review",
+        "semantic_validation_count": 24,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      },
+      {
+        "publisher": "Activate",
+        "validation_artifact": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/validation.json",
+        "validation_sha256": "97abfb1f37951516b344351a6fbc12d97c538951c574418c99ad3d24cc6979db",
+        "validation_status": "pass",
+        "retained_claim_artifact": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/retained_claim_validation.json",
+        "retained_claim_sha256": "d2a6b5213cd83298b47ccaa33abe4b2f42ca29fc8b6984646cc92008dcf9ca0e",
+        "readiness_status": "awaiting_review",
+        "semantic_validation_count": 21,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      },
+      {
+        "publisher": "KPMG",
+        "validation_artifact": "kpmg-2026-global-ma-outlook-pdf/report_analysis/validation.json",
+        "validation_sha256": "004a89ccb5540d2440714a4eee9ca095896cd16b1236d179daf370d0948175e0",
+        "validation_status": "pass",
+        "retained_claim_artifact": "kpmg-2026-global-ma-outlook-pdf/report_analysis/retained_claim_validation.json",
+        "retained_claim_sha256": "967c425f83c7081f6393c3785771d671690e450b9dbb81d4b0f888366adde016",
+        "readiness_status": "awaiting_review",
+        "semantic_validation_count": 27,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      },
+      {
+        "publisher": "Reuters Institute",
+        "validation_artifact": "trends-and-predictions-2026-pdf/report_analysis/validation.json",
+        "validation_sha256": "c02b997cf5c51a072f4ad4069abd66c0088d95abc05b932784494466fce0b48f",
+        "validation_status": "pass",
+        "retained_claim_artifact": "trends-and-predictions-2026-pdf/report_analysis/retained_claim_validation.json",
+        "retained_claim_sha256": "24df957b940f1942f1ab26445b06acdd42ac2b37a6914c3028316d91a5591aea",
+        "readiness_status": "awaiting_review",
+        "semantic_validation_count": 23,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      },
+      {
+        "publisher": "Adjust",
+        "validation_artifact": "mobile-app-trends-2026-pdf/report_analysis/validation.json",
+        "validation_sha256": "96dbe72a9eb72dcf73feabb40157051a450c65e2b4b2134a2257eec16430ea2a",
+        "validation_status": "pass",
+        "retained_claim_artifact": "mobile-app-trends-2026-pdf/report_analysis/retained_claim_validation.json",
+        "retained_claim_sha256": "e8938d8ab768d20aa57f93b16a735fee606ada77ddc4d2d15d155f02b6f4e3e4",
+        "readiness_status": "awaiting_review",
+        "semantic_validation_count": 21,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      }
+    ],
+    "evidence_fidelity_artifacts": {
+      "Capgemini Research Institute": {
+        "artifact": "final-web-version-report-consumer-trends-2026-pdf/report_analysis/evidence_fidelity.json",
+        "sha256": "2c29d27b4f88d10decc372fcb62f0027505fea502e5cb22026ffd087ee0702f5",
+        "semantic_candidate_count": 1,
+        "semantic_candidates": [
+          {
+            "claim_id": "evidence:findings:value-fairness-quality",
+            "evidence_ids": [
+              "source:page:4"
+            ],
+            "pages": [
+              4
+            ]
+          }
+        ]
+      },
+      "Activate": {
+        "artifact": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf/report_analysis/evidence_fidelity.json",
+        "sha256": "9784f82ef997d5652e0707ccf0176d20758382d187447026c36d04b0a6432e34",
+        "semantic_candidate_count": 2,
+        "semantic_candidates": [
+          {
+            "claim_id": "evidence:findings:growth_forecast",
+            "evidence_ids": [
+              "source:page:4"
+            ],
+            "pages": [
+              4
+            ]
+          },
+          {
+            "claim_id": "evidence:findings:growth_access_segment",
+            "evidence_ids": [
+              "source:page:5"
+            ],
+            "pages": [
+              5
+            ]
+          }
+        ]
+      },
+      "KPMG": {
+        "artifact": "kpmg-2026-global-ma-outlook-pdf/report_analysis/evidence_fidelity.json",
+        "sha256": "8f2ccb03980febde06fefec134d6d91712e756bfb9917951b6cdb5e83bbc4e42",
+        "semantic_candidate_count": 4,
+        "semantic_candidates": [
+          {
+            "claim_id": "evidence:findings:execution-capability-outcomes",
+            "evidence_ids": [
+              "source:page:2"
+            ],
+            "pages": [
+              2
+            ]
+          },
+          {
+            "claim_id": "evidence:findings:buyer-approach-differences",
+            "evidence_ids": [
+              "source:page:5"
+            ],
+            "pages": [
+              5
+            ]
+          },
+          {
+            "claim_id": "evidence:quote_candidates:quote-1",
+            "evidence_ids": [
+              "source:page:2"
+            ],
+            "pages": [
+              2
+            ]
+          },
+          {
+            "claim_id": "evidence:quote_candidates:quote-2",
+            "evidence_ids": [
+              "source:page:2"
+            ],
+            "pages": [
+              2
+            ]
+          }
+        ]
+      },
+      "Reuters Institute": {
+        "artifact": "trends-and-predictions-2026-pdf/report_analysis/evidence_fidelity.json",
+        "sha256": "4d298e9fcbf3786db0d0b13de5518b7382f11ce61c74a20836979cebb5979df7",
+        "semantic_candidate_count": 3,
+        "semantic_candidates": [
+          {
+            "claim_id": "evidence:findings:search-traffic-forecast",
+            "evidence_ids": [
+              "source:page:4"
+            ],
+            "pages": [
+              4
+            ]
+          },
+          {
+            "claim_id": "evidence:findings:multiple-formats",
+            "evidence_ids": [
+              "source:page:3"
+            ],
+            "pages": [
+              3
+            ]
+          },
+          {
+            "claim_id": "evidence:findings:creator-publisher-responses",
+            "evidence_ids": [
+              "source:page:5"
+            ],
+            "pages": [
+              5
+            ]
+          }
+        ]
+      },
+      "Adjust": {
+        "artifact": "mobile-app-trends-2026-pdf/report_analysis/evidence_fidelity.json",
+        "sha256": "b2379a2dba9ca07af2b8e1ee13606a44c679745c85e06e933a9a725b30d1c17d",
+        "semantic_candidate_count": 0,
+        "semantic_candidates": []
+      }
+    },
+    "provider_usage_attribution": {
+      "ledger_rows": 193,
+      "provider_call_status": "all completed",
+      "error_stage_and_error_code_rows": 0,
+      "semantic_validation_calls_total": 13,
+      "semantic_validation_calls": {
+        "evidence_fidelity": 8,
+        "retained_final_package": 5,
+        "regeneration_candidate": 0
+      },
+      "evidence_fidelity_candidate_count": 10,
+      "evidence_fidelity_semantic_candidates_by_report": {
+        "Capgemini Research Institute": 1,
+        "Activate": 2,
+        "KPMG": 4,
+        "Reuters Institute": 3,
+        "Adjust": 0
+      },
+      "retained_claim_semantic_validation_counts_by_report": {
+        "Capgemini Research Institute": 24,
+        "Activate": 21,
+        "KPMG": 27,
+        "Reuters Institute": 23,
+        "Adjust": 21
+      },
+      "retained_claim_semantic_validation_total": 116,
+      "grounding_calls_by_report": {
+        "Capgemini Research Institute": 6,
+        "Activate": 6,
+        "KPMG": 7,
+        "Reuters Institute": 12,
+        "Adjust": 5
+      },
+      "provider_calls_by_stage": {
+        "admission_preflight": 20,
+        "artifact_cover_semantics_primary": 5,
+        "artifact_editorial_plan_primary": 5,
+        "artifact_expert_comment_primary": 5,
+        "artifact_insights_candidates_primary": 5,
+        "artifact_insights_final_primary": 5,
+        "artifact_linkedin_post_primary": 5,
+        "artifact_quotes_final_primary": 5,
+        "artifact_summary_primary": 6,
+        "category_fit": 5,
+        "evidence_pack_primary": 30,
+        "figure_ranking": 43,
+        "taxonomy_primary": 5,
+        "validation_grounding_batch_01_primary": 6,
+        "validation_grounding_batch_02_primary": 6,
+        "validation_grounding_batch_03_primary": 6,
+        "validation_grounding_batch_04_primary": 6,
+        "validation_grounding_batch_05_primary": 6,
+        "validation_grounding_batch_06_primary": 5,
+        "validation_grounding_batch_07_primary": 1,
+        "validation_semantic_primary": 13
+      },
+      "batching_observation": {
+        "report": "KPMG",
+        "page_2_group_claims": [
+          "evidence:findings:execution-capability-outcomes",
+          "evidence:quote_candidates:quote-1",
+          "evidence:quote_candidates:quote-2"
+        ],
+        "page_2_group_calls": 1,
+        "separate_page_5_claim": "evidence:findings:buyer-approach-differences",
+        "page_5_calls": 1,
+        "candidates": 4,
+        "observed_calls": 2,
+        "independent_per_claim_calls": 4,
+        "avoided_round_trips_for_these_inputs": 2
+      },
+      "timing_limit": "Provider request and prompt-family elapsed times are unavailable in retained telemetry."
+    }
+  },
+  "comparison": {
+    "design_note": "One accepted cap-five baseline and one final frozen-five cohort were compared; a P0 intermediate cohort was also run. No 20-report run or controlled three-versus-five experiment was run. Results are single-cohort observations, not causal estimates.",
+    "baseline_vs_final": {
+      "report_analysis_execution_seconds_total": {
+        "baseline": 3066.16,
+        "current": 2451.388,
+        "change_percent": -20.05,
+        "reduction_percent": 20.05
+      },
+      "report_analysis_execution_seconds_max": {
+        "baseline": 981.107,
+        "current": 661.75,
+        "change_percent": -32.55
+      },
+      "report_analysis_median": {
+        "baseline": null,
+        "current": 443.278,
+        "baseline_note": "Per-report baseline durations are unavailable."
+      },
+      "cohort_wall_clock_seconds": {
+        "baseline": 1201.19,
+        "current": 1266.361,
+        "change_percent": 5.43
+      },
+      "report_analysis_queue_wait_seconds_total": {
+        "baseline": 9.0,
+        "current": 1014.0
+      },
+      "provider_calls": {
+        "baseline": 215,
+        "current": 193,
+        "change_percent": -10.23
+      },
+      "input_tokens": {
+        "baseline": 1879211,
+        "current": 1729940,
+        "change_percent": -7.94
+      },
+      "output_tokens": {
+        "baseline": 399097,
+        "current": 339456,
+        "change_percent": -14.94
+      },
+      "file_search_calls": {
+        "baseline": 26,
+        "current": 26
+      },
+      "estimated_cost_usd": {
+        "baseline": 0.441918,
+        "current": 0.398352,
+        "change_percent": -9.86
+      },
+      "automatic_repairs": {
+        "baseline": 6,
+        "current": 3
+      },
+      "repair_candidate_attempts": {
+        "baseline": 3,
+        "current": 1
+      },
+      "structured_output_repair_calls": {
+        "baseline": 1,
+        "current": 0
+      },
+      "semantic_validation_provider_calls": {
+        "baseline": null,
+        "current": 13
+      },
+      "grounding_provider_calls_or_batches": {
+        "baseline": null,
+        "current": 36
+      },
+      "performance_target": {
+        "required_reduction_percent": 20,
+        "observed_aggregate_report_analysis_reduction_percent": 20.05,
+        "met_in_single_observation": true,
+        "causal_attribution_established": false
+      }
+    },
+    "p0_intermediate_vs_final_p1": {
+      "report_analysis_execution_seconds_total": {
+        "p0": 2858.583,
+        "p1": 2451.388,
+        "change_percent": -14.24
+      },
+      "cohort_wall_clock_seconds": {
+        "p0": 1334.233,
+        "p1": 1266.361,
+        "change_percent": -5.09
+      },
+      "note": "Stochastic content and repair differences mean this staged comparison does not isolate batching."
+    }
+  },
+  "quality_outcomes": {
+    "reports_admitted": 5,
+    "reports_validation_pass": 5,
+    "reports_publication_readiness_pass": 5,
+    "reports_awaiting_review": 5,
+    "unsupported_retained_claims": 0,
+    "unresolved_retained_claims": 0,
+    "operator_interventions": 0,
+    "workflow_retries": 0,
+    "automatic_queue_retries": 0,
+    "provider_failures": 0,
+    "publication_writes": 0,
+    "new_quality_waivers": 0
+  },
+  "verification": {
+    "phase_one_supervisor_tests": {
+      "command": "python -m pytest -q tests/test_workflow_supervisor_parallelism.py tests/test_workflow_control_supervisor.py tests/test_ias_first_attempt_live_canary.py",
+      "result": "41 passed"
+    },
+    "repair_regression_before_implementation": {
+      "command": "python -m pytest -q tests/test_report_regeneration_generator.py::test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row tests/test_regeneration_candidate.py::test_scope_allows_only_the_claim_map_row_derived_from_summary_copy_removal",
+      "result": "2 expected failures before implementation"
+    },
+    "repair_regression_after_implementation": {
+      "command": "python -m pytest -q tests/test_report_regeneration_generator.py::test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row tests/test_regeneration_candidate.py::test_scope_allows_only_the_claim_map_row_derived_from_summary_copy_removal",
+      "result": "3 passed"
+    },
+    "focused_report_analysis_suites": {
+      "command": "python -m pytest -q tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_report_analysis_generator.py tests/test_report_analysis_orchestrator_decomposition.py tests/test_atomic_regeneration_contract.py tests/test_report_regeneration_identity_and_failures.py",
+      "result": "282 passed"
+    },
+    "ruff": {
+      "command": "python -m ruff check src/generators/report_regeneration_generator.py src/orchestrators/_report_analysis_orchestrator/validation.py tests/_test_report_regeneration_generator/cases_07_split_long_module.py tests/_test_regeneration_candidate/cases_01_scope_and_derived.py",
+      "result": "11 findings, all present on unchanged baseline lines; baseline and changed-file counts match, with no new Ruff findings. One introduced import-order finding was fixed before this comparison."
+    },
+    "git_diff_check": "rerun before commit",
+    "documentation_reference_generator": "python scripts/docs/generate_references.py completed; no generated reference changes were needed",
+    "full_report_analysis_and_fidelity_suite": {
+      "command": "python -m pytest -q tests/test_claim_validation_generator.py tests/test_evidence_pack_generator.py tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_report_analysis_generator.py tests/test_report_analysis_orchestrator_decomposition.py tests/test_atomic_regeneration_contract.py tests/test_report_regeneration_identity_and_failures.py",
+      "result": "391 passed in 24.72s"
+    },
+    "p1_scoped_ruff": {
+      "command": "python -m ruff check src/generators/claim_validation_generator.py src/generators/evidence_pack_generator.py tests/_test_claim_validation_generator/cases_01_evidence_fidelity.py",
+      "result": "All checks passed"
+    },
+    "p1_changed_python_files_ruff_comparison": {
+      "command": "python -m ruff check src/generators/claim_validation_generator.py src/generators/evidence_pack_generator.py tests/_test_claim_validation_generator/cases_01_evidence_fidelity.py src/generators/report_regeneration_generator.py src/orchestrators/_report_analysis_orchestrator/validation.py tests/_test_report_regeneration_generator/cases_07_split_long_module.py tests/_test_regeneration_candidate/cases_01_scope_and_derived.py",
+      "result": "11 Ruff findings, all present on unchanged baseline lines; no new findings."
+    },
+    "final_frozen_five_live_run": {
+      "command": "$env:PYTHONPATH = (Get-Location).Path; $wrapperPath = Join-Path $env:TEMP 'marketlense_report_analysis_p1_frozen_five_20261005.py'; python -u $wrapperPath",
+      "wrapper_sha256": "48e7efc44714e36518eaa2394fb751b1163a9ff6146fdf46aacad16a5fd8d861",
+      "result": "5/5 admitted, validation and readiness pass, zero retained unsupported/unresolved factual claims, retries, interventions, provider failures, or publication writes; all provider ledger rows completed."
+    },
+    "frozen_five_benchmark_json_parse": {
+      "command": "python -m json.tool docs/quality/frozen-five-report-analysis-repair-path-20261005.json",
+      "result": "passed after evidence update"
+    }
+  },
+  "remaining_bottleneck": "Intrinsic report_analysis remains the largest measured stage: 2451.388 seconds aggregate, 661.750 seconds maximum, and 1014 seconds aggregate report-analysis queue wait. The run recorded 43 figure-ranking calls, 36 grounding calls/batches, and 30 evidence-pack calls. Cohort wall time was 1266.361 seconds versus 1201.190 seconds for the cap-five baseline, so intrinsic-stage execution improved in this observation while end-to-end wall time increased. Provider-request and prompt-family timings are unavailable; no narrower latency bottleneck is established.",
+  "intermediate_run_p0": {
+    "git_sha": "b83787f8338db33ac511141498370016f835317c",
+    "workflow_run_id": "141ad4e2-a1a1-4fcc-897c-579a507a7f03",
+    "entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "command": "$env:PYTHONPATH = (Get-Location).Path; $wrapperPath = Join-Path $env:TEMP 'marketlense_report_analysis_p0_frozen_five_20261005.py'; python -u $wrapperPath",
+    "wrapper_sha256": "bad930bbb1073ffcfccdda91130d61d9baf28a887d2a8ef00009a87b37b767d3",
+    "isolated_run_directory": "tmp/report-analysis-p0-frozen-five-20261005/ias-first-attempt-v72dy921",
+    "isolated_config_sha256": "aa17497104d9675ba0d4a9e662721b2a519b9dc5834cd1e5cf0164a653055e59",
+    "fresh_isolated_state": true,
+    "reports_submitted_together": 5,
+    "publication_queue_enabled": false,
+    "publication_writes": 0,
+    "supervisor_dispatch_capacity": {
+      "max_parallel_workers": 3,
+      "max_jobs_per_queue": 3,
+      "max_total_jobs": 60,
+      "max_observed_running_report_analysis_jobs": 3
+    },
+    "durable_queue_controls": {
+      "report_analysis_worker_concurrency_limit": 5,
+      "wordpress_publish_enabled": false
+    },
+    "timing": {
+      "started_at_utc": "2026-10-05T17:17:02.506+00:00",
+      "all_reports_terminal_at_utc": "2026-10-05T17:39:16.712+00:00",
+      "cohort_wall_clock_seconds": 1334.233,
+      "duration_measurement": "time.monotonic from runner entry until all five report paths were terminal"
+    },
+    "metrics": {
+      "report_analysis_execution_seconds_total": 2858.583,
+      "report_analysis_execution_seconds_max": 1014.798,
+      "report_analysis_execution_seconds_median": 470.294,
+      "report_analysis_queue_wait_seconds_total": 1278.0,
+      "provider_calls": 213,
+      "input_tokens": 2150132,
+      "output_tokens": 382436,
+      "file_search_calls": 29,
+      "estimated_cost_usd": 0.465605,
+      "automatic_repairs": 3,
+      "repair_candidate_attempts": 2,
+      "repair_candidate_latency_seconds": 529.295,
+      "structured_output_repair_calls": 4,
+      "semantic_validation_provider_calls": 15,
+      "retained_claim_semantic_validation_count": 96,
+      "grounding_provider_calls_or_batches": 43,
+      "workflow_retries": 0,
+      "automatic_queue_retries": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "provider_error_events": 0,
+      "provider_429_events": 0,
+      "provider_timeout_events": 0
+    },
+    "stage_performance": [
+      {
+        "stage": "source_ingest",
+        "execution_seconds_total": 17.581,
+        "queue_wait_seconds_total": 18.0
+      },
+      {
+        "stage": "report_selection",
+        "execution_seconds_total": 807.85,
+        "queue_wait_seconds_total": 278.0
+      },
+      {
+        "stage": "report_analysis",
+        "execution_seconds_total": 2858.583,
+        "execution_seconds_max": 1014.798,
+        "queue_wait_seconds_total": 1278.0
+      },
+      {
+        "stage": "report_render",
+        "execution_seconds_total": 59.725,
+        "queue_wait_seconds_total": 28.0
+      },
+      {
+        "stage": "publication_readiness",
+        "execution_seconds_total": 1.459,
+        "queue_wait_seconds_total": 5.0
+      }
+    ],
+    "reports": [
+      {
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "publisher": "Capgemini Research Institute",
+        "source_to_readiness_elapsed_seconds": 669.216,
+        "report_analysis_execution_seconds": 526.082,
+        "report_analysis_queue_wait_seconds": 2.0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_claims": 0,
+        "unresolved_retained_claims": 0,
+        "automatic_repairs": 0,
+        "workflow_retries": 0
+      },
+      {
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "publisher": "Activate",
+        "source_to_readiness_elapsed_seconds": 1312.471,
+        "report_analysis_execution_seconds": 393.657,
+        "report_analysis_queue_wait_seconds": 484.0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_claims": 0,
+        "unresolved_retained_claims": 0,
+        "automatic_repairs": 0,
+        "workflow_retries": 0
+      },
+      {
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "publisher": "KPMG",
+        "source_to_readiness_elapsed_seconds": 1317.284,
+        "report_analysis_execution_seconds": 1014.798,
+        "report_analysis_queue_wait_seconds": 153.0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_claims": 0,
+        "unresolved_retained_claims": 0,
+        "automatic_repairs": 3,
+        "repair_candidate_attempts": 2,
+        "workflow_retries": 0
+      },
+      {
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "publisher": "Reuters Institute",
+        "source_to_readiness_elapsed_seconds": 881.26,
+        "report_analysis_execution_seconds": 470.294,
+        "report_analysis_queue_wait_seconds": 257.0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_claims": 0,
+        "unresolved_retained_claims": 0,
+        "automatic_repairs": 0,
+        "workflow_retries": 0
+      },
+      {
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "publisher": "Adjust",
+        "source_to_readiness_elapsed_seconds": 1158.228,
+        "report_analysis_execution_seconds": 453.752,
+        "report_analysis_queue_wait_seconds": 382.0,
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_claims": 0,
+        "unresolved_retained_claims": 0,
+        "automatic_repairs": 0,
+        "workflow_retries": 0
+      }
+    ],
+    "repair_audits": [
+      {
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "attempt": 1,
+        "strategy": "current_evidence",
+        "outcome": "rolled_back",
+        "validation_status": "fail",
+        "validation_issue_count": 6,
+        "validation_issue_identifiers": [
+          "artifact_quality:expert_comment",
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "grounding:insights:selective-2025-ma-activity.text",
+          "grounding:metadata.title",
+          "public_editorial_quality.duplicate_insight"
+        ],
+        "latency_seconds": 275.068,
+        "artifact_path": "kpmg-2026-global-ma-outlook-pdf/report_analysis/regeneration_candidate_audit_1.json",
+        "artifact_sha256": "33613109dbe2f63543e3f94e04b5fa36e4a27dd580fb81ac83a2b232ccb1f4be"
+      },
+      {
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "attempt": 2,
+        "strategy": "alternative_evidence",
+        "outcome": "promoted",
+        "validation_status": "pass",
+        "validation_issue_count": 5,
+        "validation_issue_identifiers": [
+          "artifact_quality:expert_comment",
+          "artifact_quality:insights_final[5].text",
+          "artifact_quality:summary.executive_summary",
+          "artifact_quality:summary.tldr",
+          "grounding:metadata.title"
+        ],
+        "latency_seconds": 254.227,
+        "artifact_path": "kpmg-2026-global-ma-outlook-pdf/report_analysis/regeneration_candidate_audit_2.json",
+        "artifact_sha256": "942c7e0b437bb4863821ceacb6c2ef50cfe1688fe2bf8359b4af08e8e8aabebf"
+      }
+    ],
+    "validation_artifacts": [
+      {
+        "artifact_path": "kpmg-2026-global-ma-outlook-pdf/report_analysis/validation.json",
+        "sha256": "b36fcd0b85c388c4955852af9be9cac1ece1a21a03899023abae84035ad8c95b",
+        "status": "pass"
+      },
+      {
+        "artifact_path": "kpmg-2026-global-ma-outlook-pdf/report_analysis/retained_claim_validation.json",
+        "sha256": "e7d444541a535fbc189264ad5828dacb8739d1c2d274f39e77e37b1d0526e577",
+        "semantic_validation_count": 25,
+        "unsupported_factual_count": 0,
+        "unresolved_factual_count": 0
+      }
+    ],
+    "provider_usage_attribution": {
+      "ledger_rows": 213,
+      "provider_call_status": "all completed",
+      "error_stage_and_error_code_rows": 0,
+      "semantic_validation_calls": 15,
+      "grounding_calls": 43,
+      "semantic_claim_validation_counts_by_report": {
+        "Capgemini": 11,
+        "Activate": 17,
+        "KPMG": 25,
+        "Reuters Institute": 25,
+        "Adjust": 18
+      },
+      "timing_limit": "Provider request and prompt-family elapsed times are unavailable in the retained telemetry."
+    }
+  }
+}
