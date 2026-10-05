@@ -466,24 +466,36 @@ def _execute_with_policy(
             exc=exc,
         )
         retry_decision = _llm_retry_decision(exc)
+        failure_fields = {
+            "operation": operation_name,
+            "scope": policy.scope,
+            "attempt": 0,
+            "retryable": retry_decision.retryable,
+            "retry_decision_code": retry_decision.reason_code,
+            "retry_owner": "orchestrator",
+            "service_attempt_limit": 1,
+            "legacy_configured_retries": policy.retries,
+            "code": exc.code if isinstance(exc, AppError) else "",
+            "error": exc.message if isinstance(exc, AppError) else str(exc),
+        }
+        if isinstance(exc, AppError):
+            provider_error_type = exc.context.get("provider_error_type")
+            http_status = exc.context.get("http_status")
+            if (
+                isinstance(provider_error_type, str)
+                and provider_error_type.isidentifier()
+                and len(provider_error_type) <= 80
+            ):
+                failure_fields["provider_error_type"] = provider_error_type
+            if type(http_status) is int and 100 <= http_status <= 599:
+                failure_fields["http_status"] = http_status
         logger.info(
             log_event(
                 ctx,
                 role="service",
                 event="llm_call_failed",
                 module=logger.name,
-                fields={
-                    "operation": operation_name,
-                    "scope": policy.scope,
-                    "attempt": 0,
-                    "retryable": retry_decision.retryable,
-                    "retry_decision_code": retry_decision.reason_code,
-                    "retry_owner": "orchestrator",
-                    "service_attempt_limit": 1,
-                    "legacy_configured_retries": policy.retries,
-                    "code": exc.code if isinstance(exc, AppError) else "",
-                    "error": exc.message if isinstance(exc, AppError) else str(exc),
-                },
+                fields=failure_fields,
             )
         )
         raise

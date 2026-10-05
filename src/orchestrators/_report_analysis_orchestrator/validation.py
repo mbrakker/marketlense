@@ -77,6 +77,7 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _build_regeneration_plan,
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
+from src.orchestrators.retry_orchestrator import RetryPolicy, run_with_retry
 from src.utils.artifact_diff import artifact_diff_paths as _artifact_diff_paths
 from src.utils.cache_utils import sha256_json
 from src.utils.editorial_identity import failed_insight_id
@@ -235,7 +236,8 @@ def _run_validation_with_fallback(
         dependencies.run_validation, "openai_client"
     ):
         kwargs["openai_client"] = openai_client
-    try:
+
+    def run_validation() -> ValidationReport:
         return dependencies.run_validation(
             validation_req,
             runtime.settings,
@@ -244,6 +246,23 @@ def _run_validation_with_fallback(
             report_name=runtime.report_name,
             md5=runtime.md5,
             **kwargs,
+        )
+
+    try:
+        return run_with_retry(
+            step_name=f"report_analysis_validation:{pack_name}",
+            operation=run_validation,
+            ctx=mode_ctx,
+            logger=logger,
+            module_name=logger.name,
+            policy=RetryPolicy(
+                retries=1,
+                base_delay_seconds=0.5,
+                backoff_step_seconds=0.5,
+                jitter_seconds=0.25,
+            ),
+            retry_event="validation_retry",
+            failure_event="validation_retry_exhausted",
         )
     except Exception as exc:
         logger.info(

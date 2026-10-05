@@ -46,6 +46,69 @@ def test_scope_rejects_canonical_projection_when_its_source_did_not_change() -> 
     )
 
 
+def test_soft_copy_repair_allows_rebuilt_family_status_with_preserved_summary() -> None:
+    summary = {"executive_summary": "A retained report overview."}
+    insights = [{"id": "insight-1", "text": "A source-backed finding."}]
+    before = {
+        "summary": summary,
+        "insights_candidates": [],
+        "insights_final": insights,
+        "quotes_final": [],
+        "expert_comment": "Original expert comment.",
+        "linkedin_post": "Original LinkedIn post.",
+    }
+    before["family_status"] = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        expert_comment=before["expert_comment"],
+        linkedin_post=before["linkedin_post"],
+    )
+    # Legacy report status is intentionally retained while summary is unchanged.
+    before["family_status"]["summary"] = {
+        "schema_version": "1.0",
+        "family": "summary",
+        "source": "artifact",
+        "status": "abstained",
+        "confidence_score": 1.0,
+        "policy_action": "abstain",
+        "reason": "summary_no_short_direct_claim",
+    }
+    before["family_status"]["expert_comment"]["confidence_score"] = 1.0
+    before["family_status"]["linkedin_post"]["confidence_score"] = 1.0
+
+    candidate = deepcopy(before)
+    candidate["expert_comment"] = "Repaired expert comment."
+    candidate["family_status"] = build_artifact_family_status(
+        summary=summary,
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        expert_comment=candidate["expert_comment"],
+        linkedin_post=candidate["linkedin_post"],
+    )
+    candidate["family_status"]["summary"] = before["family_status"]["summary"]
+
+    verified_roots, issues = _verify_derived_artifact_roots(
+        current_artifacts=before,
+        candidate_artifacts=candidate,
+        evidence_packs={},
+    )
+
+    assert not issues
+    assert "family_status" in verified_roots
+    scope = _scope_validation_report(
+        before=before,
+        after=candidate,
+        plan=SimpleNamespace(
+            targets=[SimpleNamespace(allowed_paths=["expert_comment[claim_index=0]"])]
+        ),
+        verified_derived_roots=verified_roots,
+    )
+    assert scope.status == "pass"
+
+
 def test_scope_allows_transitive_projection_from_changed_editorial_plan() -> None:
     from src.generators._artifact_generator.storage import (
         build_canonical_regeneration_derived_artifacts,

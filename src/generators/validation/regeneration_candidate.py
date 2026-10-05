@@ -18,6 +18,7 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.contracts.validation import ValidationIssue
 from src.generators._artifact_generator.storage import (
+    _preserve_unchanged_summary_status,
     build_canonical_regeneration_derived_artifacts,
 )
 from src.generators.artifact_normalization import artifact_evidence_span_index
@@ -566,6 +567,12 @@ def _verify_derived_artifact_roots(
         evidence_packs=evidence_packs,
         roots=changed,
     )
+    if "family_status" in changed:
+        expected["family_status"] = _preserve_unchanged_summary_status(
+            rebuilt=expected["family_status"],
+            promoted_baseline=current_artifacts,
+            candidate_artifacts=candidate_artifacts,
+        )
     verified = frozenset(
         root for root in changed if candidate_artifacts.get(root) == expected[root]
     )

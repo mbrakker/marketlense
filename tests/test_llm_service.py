@@ -49,6 +49,10 @@ def test_llm_service_propagates_retryable_error_without_retrying(
                 code="openai_chat_failed",
                 message="retry at orchestrator",
                 retryable=True,
+                context={
+                    "provider_error_type": "APIStatusError",
+                    "http_status": 503,
+                },
             )
 
     client = llm_service.build_openai_client(
@@ -87,6 +91,8 @@ def test_llm_service_propagates_retryable_error_without_retrying(
     assert failed_fields["retry_owner"] == "orchestrator"
     assert failed_fields["service_attempt_limit"] == 1
     assert failed_fields["legacy_configured_retries"] == 3
+    assert failed_fields["provider_error_type"] == "APIStatusError"
+    assert failed_fields["http_status"] == 503
 
 
 def test_llm_service_opens_circuit_after_repeated_failures(

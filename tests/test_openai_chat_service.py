@@ -585,11 +585,16 @@ def test_analyze_report_falls_back_to_legacy_chat_completion(
 
 
 def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
-    external_boundary_mocks_only, tmp_path, assert_app_error
+    external_boundary_mocks_only,
+    tmp_path,
+    assert_app_error,
 ) -> None:
+    class _ProviderUnavailable(RuntimeError):
+        status_code = 503
+
     class _FailingChatCompletions:
         def create(self, **kwargs):
-            raise RuntimeError("provider boom")
+            raise _ProviderUnavailable("provider unavailable")
 
     class _FailingClient:
         def __init__(self, **kwargs):
@@ -601,6 +606,8 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
         svc.openai_chat_json(_chat_request(tmp_path), _ctx())
 
     assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)
+    assert exc_info.value.context["provider_error_type"] == "_ProviderUnavailable"
+    assert exc_info.value.context["http_status"] == 503
 
 
 def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(

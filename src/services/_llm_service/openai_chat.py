@@ -533,6 +533,7 @@ def openai_chat_json(
             context={
                 "model": request.model,
                 "provider_error_type": type(exc).__name__,
+                "http_status": _openai_error_status_code(exc),
             },
         ) from exc
 
