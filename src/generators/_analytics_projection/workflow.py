@@ -10,7 +10,7 @@ from src.contracts.analytics_projection import (
     AnalyticsProjectionBuildRequest,
     AnalyticsReportRow,
 )
-from src.contracts.semantic_ids import ReportId
+from src.contracts.semantic_ids import PublisherId, ReportId
 from src.generators._analytics_projection.builders import (
     _build_categories,
     _build_claims,
@@ -48,7 +48,10 @@ def build_projection(
             severity="error",
             context={"report_id": report_id},
         )
-    publisher = _clean_text(payload.publisher)
+    publisher = _clean_text(payload.publisher) or _clean_text(
+        analysis.runtime.publisher_name
+    )
+    canonical_publisher_id = _clean_text(analysis.runtime.ctx.publisher_id)
     validation_status = (
         analysis.validation_report.status if analysis.validation_report else ""
     )
@@ -83,7 +86,11 @@ def build_projection(
         report_id=report_id,
         title=title,
         publisher=publisher,
-        publisher_id=_publisher_id(publisher),
+        publisher_id=(
+            PublisherId(canonical_publisher_id)
+            if canonical_publisher_id
+            else _publisher_id(publisher)
+        ),
         source_md5=analysis.runtime.md5,
         ingest_run_id=str(analysis.runtime.ctx.run_id),
         analysis_run_id=analysis_run_id,

@@ -313,6 +313,32 @@ def test_projection_generator_stable_ids_and_vector_serialization(
     assert "source_file_id" not in finding_queue.metadata
 
 
+def test_projection_prefers_source_backed_publisher_identity(
+    ingest_settings: IngestSettings,
+    run_context: RunContext,
+) -> None:
+    ctx = replace(run_context, publisher_id="publisher:acme-research")
+    analysis = _analysis_state(ingest_settings, ctx)
+    analysis = replace(
+        analysis,
+        payload=replace(analysis.payload, publisher=""),
+        normalized_payload=replace(analysis.normalized_payload, publisher=""),
+        runtime=replace(analysis.runtime, publisher_name="Acme Research"),
+    )
+
+    batch = build_projection(
+        AnalyticsProjectionBuildRequest(
+            schema_version=PROJECTION_SCHEMA_VERSION,
+            analysis=analysis,
+            rendered_html_path="out/report.html",
+            generated_at_utc="2026-04-22T12:00:00Z",
+        )
+    )
+
+    assert batch.report.publisher == "Acme Research"
+    assert batch.report.publisher_id == "publisher:acme-research"
+
+
 def test_projection_store_idempotent_upsert_and_report_scoped_stale_cleanup(
     ingest_settings: IngestSettings,
     run_context: RunContext,
