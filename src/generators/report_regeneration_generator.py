@@ -2085,6 +2085,18 @@ def _render_regeneration_model(
         "linkedin_post",
     }:
         replacement = claim_index_operation.value
+        claim_path = re.fullmatch(
+            r"(.+)\[claim_index=(\d+)\]", claim_index_operation.path
+        )
+        if claim_path:
+            base_path, raw_index = claim_path.groups()
+            found, original_text = _read_repair_path(
+                _current_repair_artifacts(execution.state), base_path
+            )
+            if found and isinstance(original_text, str):
+                replacement = _preserve_soft_copy_claim_boundary(
+                    original_text, int(raw_index), replacement
+                )
         if root_key == "summary":
             field = claim_index_operation.path.split(".", 1)[1].split("[", 1)[0]
             root_value: Any = {field: replacement}
@@ -2693,6 +2705,7 @@ def _write_repair_path(value: Dict[str, Any], path: str, replacement: Any) -> bo
         if index >= len(spans):
             return False
         start, end = spans[index][:2]
+        replacement = _preserve_soft_copy_claim_boundary(text, index, replacement)
         _write_mutation_path(value, base_path, text[:start] + replacement + text[end:])
         return True
     found, _ = _read_repair_path(value, path)
@@ -2700,6 +2713,22 @@ def _write_repair_path(value: Dict[str, Any], path: str, replacement: Any) -> bo
         return False
     _write_mutation_path(value, path, replacement)
     return True
+
+
+def _preserve_soft_copy_claim_boundary(
+    text: str, index: int, replacement: str
+) -> str:
+    """Keep a repaired claim separate from its untouched following sentence."""
+
+    spans = _soft_copy_sentence_spans(text)
+    if index >= len(spans):
+        return replacement.strip()
+    _, end, original_sentence = spans[index]
+    normalized = replacement.strip()
+    if not text[end:].strip() or not normalized or normalized[-1] in ".!?":
+        return normalized
+    original_terminal = original_sentence.rstrip()[-1:]
+    return normalized + (original_terminal if original_terminal in ".!?" else ".")
 
 
 def _normalize_state_evidence_ids(execution: _RegenerationHandlerExecution) -> None:

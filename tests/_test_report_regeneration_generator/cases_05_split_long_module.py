@@ -110,8 +110,15 @@ def test_atomic_repair_rejects_selected_evidence_missing_from_retained_package(
     assert captured.value.context["reason"] == "evidence_not_retained_or_quarantined"
 
 
+@pytest.mark.parametrize(
+    ("provider_replacement", "expected_replacement"),
+    [
+        ("Repaired LinkedIn claim.", "Repaired LinkedIn claim."),
+        ("Repaired LinkedIn claim", "Repaired LinkedIn claim."),
+    ],
+)
 def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
-    tmp_path,
+    tmp_path, provider_replacement, expected_replacement
 ) -> None:
     current = _current_artifacts()
     original_text = "Original factual LinkedIn sentence."
@@ -195,7 +202,9 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
             source_status=current["source_status"],
             categories=["Category"],
         ),
-        openai_client=_ClaimScopedSoftCopyOpenAIClient(),
+        openai_client=_ClaimScopedSoftCopyOpenAIClient(
+            linkedin_replacement=provider_replacement
+        ),
         prompt_client=_FakePromptClient(),
     )
 
@@ -205,7 +214,7 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
         for claim in claims
         if claim["artifact_family"] == "linkedin_post"
         and claim["text_hash"]
-        == hashlib.sha256(b"Repaired LinkedIn claim.").hexdigest()
+        == hashlib.sha256(expected_replacement.encode()).hexdigest()
     )
     selection = response.updated_artifacts["_repair_evidence_selection"][
         f"linkedin_post:{original_claim.claim_id}"
@@ -215,7 +224,7 @@ def test_linkedin_atomic_repair_rebuilds_only_the_changed_claim_provenance(
     )
 
     assert response.updated_artifacts["linkedin_post"] == (
-        "Repaired LinkedIn claim. Unchanged LinkedIn sentence."
+        f"{expected_replacement} Unchanged LinkedIn sentence."
     )
     assert repaired["classification"] == "factual"
     assert repaired["evidence_ids"] == ["f2"]

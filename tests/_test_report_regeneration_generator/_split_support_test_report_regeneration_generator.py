@@ -653,17 +653,22 @@ class _PunctuationClaimScopedExpertOpenAIClient(_ClaimScopedExpertOpenAIClient):
 
 
 class _ClaimScopedSoftCopyOpenAIClient(_ClaimScopedExpertOpenAIClient):
+    def __init__(self, linkedin_replacement="Repaired LinkedIn claim."):
+        super().__init__()
+        self.linkedin_replacement = linkedin_replacement
+
     def _legacy_chat_json(self, req, ctx):
         if "system::report_vs/artifacts/regenerate/linkedin_post" in req.system_prompt:
             self.calls.append(req)
+            replacement = self.linkedin_replacement
             return OpenAIResponseResult(
                 schema_version="1.0",
-                text='{"linkedin_post":"Repaired LinkedIn claim."}',
+                text=json.dumps({"linkedin_post": replacement}),
                 parsed_json={
-                    "linkedin_post": "Repaired LinkedIn claim.",
+                    "linkedin_post": replacement,
                     "claim_provenance": [
                         {
-                            "claim": "Repaired LinkedIn claim.",
+                            "claim": replacement,
                             "classification": "interpretive",
                             "evidence_ids": ["f2"],
                         }
