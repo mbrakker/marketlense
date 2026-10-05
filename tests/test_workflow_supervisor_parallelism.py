@@ -696,14 +696,14 @@ def test_supervisor_never_exceeds_global_worker_cap_when_candidates_remain() -> 
     assert maximum_active == 2
 
 
-def test_supervisor_reuses_three_same_queue_slots_for_the_backlog(
+def test_supervisor_reuses_five_same_queue_slots_for_the_backlog(
     tmp_path,
 ) -> None:
     state_db = str(tmp_path / "same-queue.sqlite")
     job_ids = _enqueue_report_acquisition_jobs(state_db, 5)
     lock = Lock()
     release = Event()
-    three_started = Event()
+    five_started = Event()
     active = 0
     maximum_active = 0
 
@@ -712,8 +712,8 @@ def test_supervisor_reuses_three_same_queue_slots_for_the_backlog(
         with lock:
             active += 1
             maximum_active = max(maximum_active, active)
-            if active == 3:
-                three_started.set()
+            if active == 5:
+                five_started.set()
         try:
             assert release.wait(timeout=10)
             return WorkflowQueueHandlerResult(
@@ -746,23 +746,23 @@ def test_supervisor_reuses_three_same_queue_slots_for_the_backlog(
         future = executor.submit(
             run_supervisor_once,
             _request(
-                max_parallel_workers=3,
+                max_parallel_workers=5,
                 max_total_jobs=5,
-                max_jobs_per_queue=3,
+                max_jobs_per_queue=5,
                 state_db=state_db,
             ),
             _ctx(),
             dependencies=SupervisorDependencies(run_worker=run_worker),
         )
         try:
-            assert three_started.wait(timeout=10)
+            assert five_started.wait(timeout=10)
         finally:
             release.set()
         result = future.result(timeout=15)
 
     assert result.status == "healthy"
     assert result.completed_job_count == 5
-    assert maximum_active == 3
+    assert maximum_active == 5
     statuses = [get_workflow_job(state_db, job_id, _ctx()).status for job_id in job_ids]
     assert statuses == ["succeeded"] * 5
     attempts = [
@@ -771,7 +771,7 @@ def test_supervisor_reuses_three_same_queue_slots_for_the_backlog(
         for attempt in list_workflow_job_attempts(state_db, job_id, _ctx())
     ]
     assert len(attempts) == 5
-    assert len({attempt.worker_id for attempt in attempts}) == 3
+    assert len({attempt.worker_id for attempt in attempts}) == 5
 
 
 def test_supervisor_respects_durable_limit_and_reuses_queue_slots_within_pass(
@@ -1820,12 +1820,12 @@ def test_downstream_work_runs_before_same_queue_upstream_backlog_drains() -> Non
     assert downstream_completed == 5
 
 
-def test_project_supervisor_configuration_uses_the_tested_three_worker_cap() -> None:
+def test_project_supervisor_configuration_uses_the_tested_five_worker_cap() -> None:
     settings = config_service.load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path="src/config/app.yaml"), _ctx()
     )
 
-    assert settings.supervisor.max_parallel_workers == 3
-    assert settings.supervisor.max_jobs_per_queue == 3
+    assert settings.supervisor.max_parallel_workers == 5
+    assert settings.supervisor.max_jobs_per_queue == 5
     assert settings.supervisor.max_runtime_seconds == 1200
     assert settings.supervisor.lease_seconds == 180

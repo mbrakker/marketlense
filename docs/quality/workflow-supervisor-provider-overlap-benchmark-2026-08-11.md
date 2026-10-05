@@ -5,12 +5,15 @@
 
 ## Decision
 
-`workflow_control.supervisor.max_parallel_workers` is set to the tested cap of
-three when the existing supervisor and worker-batch gates are enabled. The
-runtime default remains one worker, and configuration values above three are
-clamped to three.
+At the time of this 2026-08-11 benchmark,
+`workflow_control.supervisor.max_parallel_workers` was capped at three when the
+existing supervisor and worker-batch gates were enabled. The runtime default
+remained one worker. On 2026-10-05, the configured and parser-enforced cap was
+raised to five for the frozen five-report workflow; the three-worker
+measurements below remain historical and do not quantify the five-worker
+cohort result.
 
-This change preserves the queue's leases, retry states, idempotency keys,
+The 2026-08-11 change preserved the queue's leases, retry states, idempotency keys,
 outbox processing, result validation, and publication approval controls. It
 does not change a prompt, model, cache policy, quality threshold, or cost
 policy.

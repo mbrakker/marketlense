@@ -147,8 +147,8 @@ workflow_control:
   supervisor:
     # The feature gate remains off until queue health and recovery evidence are reviewed.
     enabled: false
-    max_parallel_workers: 3
-    max_jobs_per_queue: 3
+    max_parallel_workers: 5
+    max_jobs_per_queue: 5
     max_total_jobs: 60
     max_runtime_seconds: 120
     lease_seconds: 180
