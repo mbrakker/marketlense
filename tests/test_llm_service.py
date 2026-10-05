@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -295,6 +298,165 @@ def test_generic_builder_names_preserve_provider_operations_contract() -> None:
         llm_service.openai_client_policy_from_settings
         is llm_service.client_policy_from_settings
     )
+
+
+def test_rate_limit_is_shared_by_separately_built_clients_in_one_process(
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="market_lense.llm_service")
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+    two_calls_started = threading.Event()
+    release_calls = threading.Event()
+
+    def provider_call(req, ctx):
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+            if active == 2:
+                two_calls_started.set()
+        try:
+            assert release_calls.wait(timeout=2)
+            return SimpleNamespace(parsed_json={"ok": True})
+        finally:
+            with lock:
+                active -= 1
+
+    policy = LLMClientPolicy(
+        schema_version="1.0",
+        scope="validation",
+        rate_limit_max_in_flight=2,
+        rate_limit_min_interval_ms=0,
+        circuit_breaker_failure_threshold=0,
+        circuit_breaker_recovery_seconds=0.0,
+    )
+    clients = [
+        llm_service.build_client_from_callables(
+            policy=policy,
+            openai_chat_json=provider_call,
+        )
+        for _ in range(3)
+    ]
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = [
+            pool.submit(
+                clients[index % len(clients)].openai_chat_json,
+                SimpleNamespace(model="gpt-5-mini"),
+                RunContext(
+                    schema_version="1.0",
+                    run_id=f"r-{index}",
+                    task_id=f"report-{index}:batch:01:grounding",
+                    span_id=f"s-{index}",
+                ),
+            )
+            for index in range(6)
+        ]
+        assert two_calls_started.wait(timeout=2)
+        time.sleep(0.03)
+        with lock:
+            assert active == 2
+            assert max_active == 2
+        release_calls.set()
+        assert all(future.result().parsed_json == {"ok": True} for future in futures)
+
+    assert max_active == 2
+    starts = [
+        event
+        for event in _events(caplog)
+        if event.get("event") == "llm_rate_limiter_call_started"
+        and event.get("fields", {}).get("scope") == "validation"
+    ]
+    assert starts
+    assert max(event["fields"]["grounding_in_flight"] for event in starts) == 2
+    assert (
+        max(event["fields"]["max_observed_grounding_in_flight"] for event in starts)
+        == 2
+    )
+    waits = [
+        event
+        for event in _events(caplog)
+        if event.get("event") == "llm_rate_limiter_wait"
+        and event.get("fields", {}).get("scope") == "validation"
+    ]
+    assert any(event["fields"]["in_flight_wait_ms"] > 0 for event in waits)
+
+
+def test_grounding_rate_limit_is_shared_across_provider_operations() -> None:
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+    chat_started = threading.Event()
+    vector_started = threading.Event()
+    release_calls = threading.Event()
+
+    def provider_call(req, ctx, *, operation: str):
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+            if operation == "chat":
+                chat_started.set()
+            else:
+                vector_started.set()
+        try:
+            assert release_calls.wait(timeout=2)
+            return SimpleNamespace(parsed_json={"ok": True})
+        finally:
+            with lock:
+                active -= 1
+
+    policy = LLMClientPolicy(
+        schema_version="1.0",
+        scope="validation",
+        rate_limit_max_in_flight=1,
+        rate_limit_min_interval_ms=0,
+        circuit_breaker_failure_threshold=0,
+        circuit_breaker_recovery_seconds=0.0,
+    )
+    client = llm_service.build_client_from_callables(
+        policy=policy,
+        openai_chat_json=lambda req, ctx: provider_call(req, ctx, operation="chat"),
+        openai_respond_with_vector_store=lambda req, ctx: provider_call(
+            req, ctx, operation="vector"
+        ),
+    )
+    chat_ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-chat",
+        task_id="report-chat:batch:01:grounding",
+        span_id="span-chat",
+    )
+    vector_ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-vector",
+        task_id="report-vector:batch:01:grounding",
+        span_id="span-vector",
+    )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        chat_future = pool.submit(
+            client.openai_chat_json,
+            SimpleNamespace(model="gpt-5-mini"),
+            chat_ctx,
+        )
+        assert chat_started.wait(timeout=2)
+        vector_future = pool.submit(
+            client.openai_respond_with_vector_store,
+            SimpleNamespace(model="gpt-5-mini", vector_store_id="vs-test"),
+            vector_ctx,
+        )
+        assert not vector_started.wait(timeout=0.03)
+        with lock:
+            assert active == 1
+            assert max_active == 1
+        release_calls.set()
+        assert chat_future.result().parsed_json == {"ok": True}
+        assert vector_future.result().parsed_json == {"ok": True}
+
+    assert max_active == 1
 
 
 def test_llm_service_fails_over_to_openrouter_chat_json_contract(

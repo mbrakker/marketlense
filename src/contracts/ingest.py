@@ -532,6 +532,22 @@ class IngestSettings:
             "doc": "Whether validation grounding model calls should use vector store retrieval."
         },
     )
+    validation_grounding_global_max_in_flight: int = field(
+        default=5,
+        metadata={
+            "doc": (
+                "Process-wide cap for concurrent validation grounding provider calls."
+            )
+        },
+    )
+    validation_grounding_global_min_interval_ms: int = field(
+        default=250,
+        metadata={
+            "doc": (
+                "Minimum milliseconds between validation grounding call starts."
+            )
+        },
+    )
     strict_schema_validation: bool = field(
         default=True,
         metadata={

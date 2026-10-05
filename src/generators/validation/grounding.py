@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict
 from typing import Any, Callable, List, Mapping, Sequence
 
@@ -335,6 +337,12 @@ def run_grounding_check(
                 "public_item_count": len(public_item_ids),
                 "max_claims_per_batch": GROUNDING_MAX_CLAIMS_PER_CALL,
                 "max_public_items_per_batch": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
+                "configured_global_max_in_flight": int(
+                    getattr(settings, "validation_grounding_global_max_in_flight", 1)
+                ),
+                "configured_global_min_interval_ms": int(
+                    getattr(settings, "validation_grounding_global_min_interval_ms", 0)
+                ),
             },
         )
     )
@@ -369,6 +377,8 @@ def run_grounding_check(
         def validate_grounding_payload(
             payload: object,
             expected_inputs: Sequence[ClaimSemanticInput] | None = None,
+            *,
+            ctx=prompt_ctx,
         ) -> None:
             validate_schema(
                 SchemaValidateRequest(
@@ -376,7 +386,7 @@ def run_grounding_check(
                     payload=payload,
                     schema_name="grounding_validation_output",
                 ),
-                prompt_ctx,
+                ctx,
             )
             _validate_grounding_check_coverage(
                 payload,
@@ -440,16 +450,47 @@ def run_grounding_check(
         recovery_attempted = False
         if reused_payload is None:
             response_payload: dict[str, Any] = {"unsupported": [], "checks": []}
-            for batch_index, (batch_spec, batch_vars, batch_bundle) in enumerate(
-                zip(
-                    grounding_batches,
-                    batch_prompt_vars,
-                    prompt_bundles,
-                    strict=True,
+            batch_jobs = [
+                (batch_index, batch_spec, batch_vars, batch_bundle)
+                for batch_index, (batch_spec, batch_vars, batch_bundle) in enumerate(
+                    zip(
+                        grounding_batches,
+                        batch_prompt_vars,
+                        prompt_bundles,
+                        strict=True,
+                    ),
+                    start=1,
+                )
+            ]
+            configured_limit = max(
+                1,
+                int(
+                    getattr(
+                        settings,
+                        "validation_grounding_global_max_in_flight",
+                        1,
+                    )
                 ),
-                start=1,
-            ):
+            )
+            max_workers = min(configured_limit, len(batch_jobs))
+            batch_failure_event = threading.Event()
+            batch_failure_lock = threading.Lock()
+
+            def _execute_batch(
+                batch_index: int,
+                batch_spec: tuple[dict, list[ClaimSemanticInput]],
+                batch_vars: dict[str, str],
+                batch_bundle,
+            ) -> tuple[int, Any, bool]:
                 _batch_payload, batch_semantic_inputs = batch_spec
+                batch_task_id = (
+                    f"{prompt_ctx.task_id}:batch:{batch_index:02d}:grounding"
+                )
+                batch_ctx = child_context(
+                    prompt_ctx,
+                    task_id=batch_task_id,
+                )
+                batch_recovery_attempted = False
 
                 def call_model(
                     mode: str,
@@ -460,9 +501,9 @@ def run_grounding_check(
                     base_bundle=batch_bundle,
                     call_index=batch_index,
                 ):
-                    nonlocal recovery_attempted
+                    nonlocal batch_recovery_attempted
                     if mode != "primary":
-                        recovery_attempted = True
+                        batch_recovery_attempted = True
                     bundle = base_bundle
                     if mode != "primary":
                         bundle = recovery_prompt_bundle(
@@ -476,7 +517,7 @@ def run_grounding_check(
                                 "evidence_json": variables["evidence_json"],
                             },
                             settings=settings,
-                            ctx=prompt_ctx,
+                            ctx=batch_ctx,
                             prompt_client=prompt_client,
                             vector_store_id=(
                                 request.vector_store_id
@@ -488,7 +529,7 @@ def run_grounding_check(
                         openai_client=openai_client,
                         prompt_bundle=bundle,
                         settings=settings,
-                        ctx=prompt_ctx,
+                        ctx=batch_ctx,
                         vector_store_id=(
                             request.vector_store_id
                             if grounding_use_vector_store
@@ -510,7 +551,9 @@ def run_grounding_check(
                     )
 
                 def validate_recovery_payload(payload: Any) -> None:
-                    validate_grounding_payload(payload, batch_semantic_inputs)
+                    validate_grounding_payload(
+                        payload, batch_semantic_inputs, ctx=batch_ctx
+                    )
 
                 recovery = execute_structured_output(
                     StructuredOutputExecutionRequest(
@@ -523,7 +566,7 @@ def run_grounding_check(
                         prompt_family=batch_bundle.routing_decision.namespace,
                         terminal_failure_code="validation_grounding_invalid_json",
                     ),
-                    prompt_ctx,
+                    batch_ctx,
                     call_model=call_model,
                     normalize_payload=lambda payload: (
                         dict(payload) if isinstance(payload, dict) else payload
@@ -534,10 +577,105 @@ def run_grounding_check(
                     ),
                     model_pricing=settings.model_pricing,
                 )
-                response_payload["unsupported"].extend(
-                    recovery.payload.get("unsupported") or []
-                )
-                response_payload["checks"].extend(recovery.payload.get("checks") or [])
+
+                return batch_index, recovery.payload, batch_recovery_attempted
+
+            def execute_batch(
+                batch_index: int,
+                batch_spec: tuple[dict, list[ClaimSemanticInput]],
+                batch_vars: dict[str, str],
+                batch_bundle,
+            ) -> tuple[int, Any, bool]:
+                try:
+                    return _execute_batch(
+                        batch_index,
+                        batch_spec,
+                        batch_vars,
+                        batch_bundle,
+                    )
+                except Exception:
+                    with batch_failure_lock:
+                        batch_failure_event.set()
+                    raise
+
+            batch_results: dict[int, tuple[Any, bool]] = {}
+            batch_failures: list[tuple[int, Exception]] = []
+            next_batch = 0
+            pending: dict[Future, int] = {}
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                while next_batch < max_workers:
+                    with batch_failure_lock:
+                        if batch_failure_event.is_set():
+                            break
+                        batch_index, batch_spec, batch_vars, batch_bundle = batch_jobs[
+                            next_batch
+                        ]
+                        pending[
+                            executor.submit(
+                                execute_batch,
+                                batch_index,
+                                batch_spec,
+                                batch_vars,
+                                batch_bundle,
+                            )
+                        ] = batch_index
+                        next_batch += 1
+
+                while pending:
+                    completed, _not_completed = wait(
+                        pending, return_when=FIRST_COMPLETED
+                    )
+                    for future in sorted(completed, key=pending.__getitem__):
+                        batch_index = pending.pop(future)
+                        try:
+                            _index, payload, batch_recovery_attempted = future.result()
+                        except Exception as exc:
+                            batch_failures.append((batch_index, exc))
+                        else:
+                            batch_results[batch_index] = (
+                                payload,
+                                batch_recovery_attempted,
+                            )
+
+                    if batch_failures:
+                        for future, batch_index in sorted(
+                            pending.items(), key=lambda item: item[1]
+                        ):
+                            if future.cancel():
+                                continue
+                            try:
+                                future.result()
+                            except Exception as exc:
+                                batch_failures.append((batch_index, exc))
+                        pending.clear()
+                        _failure_index, failure = min(
+                            batch_failures, key=lambda item: item[0]
+                        )
+                        raise failure
+
+                    while next_batch < len(batch_jobs) and len(pending) < max_workers:
+                        with batch_failure_lock:
+                            if batch_failure_event.is_set():
+                                break
+                            batch_index, batch_spec, batch_vars, batch_bundle = (
+                                batch_jobs[next_batch]
+                            )
+                            pending[
+                                executor.submit(
+                                    execute_batch,
+                                    batch_index,
+                                    batch_spec,
+                                    batch_vars,
+                                    batch_bundle,
+                                )
+                            ] = batch_index
+                            next_batch += 1
+
+            for batch_index in sorted(batch_results):
+                payload, batch_recovery_attempted = batch_results[batch_index]
+                recovery_attempted = recovery_attempted or batch_recovery_attempted
+                response_payload["unsupported"].extend(payload.get("unsupported") or [])
+                response_payload["checks"].extend(payload.get("checks") or [])
             validate_grounding_payload(response_payload)
         else:
             response_payload = reused_payload

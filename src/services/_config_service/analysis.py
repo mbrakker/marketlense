@@ -70,6 +70,38 @@ def _resolve_analysis_settings(
                 env_first=True,
             ),
             _SettingSpec(
+                field_name="validation_grounding_global_max_in_flight",
+                config_key="validation_grounding_global_max_in_flight",
+                default=_to_int(
+                    _default_config_value(
+                        "analysis",
+                        "validation_grounding_global_max_in_flight",
+                        fallback=5,
+                    ),
+                    5,
+                ),
+                coerce=_to_int,
+                env_key="VALIDATION_GROUNDING_GLOBAL_MAX_IN_FLIGHT",
+                env_first=True,
+                minimum=1,
+            ),
+            _SettingSpec(
+                field_name="validation_grounding_global_min_interval_ms",
+                config_key="validation_grounding_global_min_interval_ms",
+                default=_to_int(
+                    _default_config_value(
+                        "analysis",
+                        "validation_grounding_global_min_interval_ms",
+                        fallback=250,
+                    ),
+                    250,
+                ),
+                coerce=_to_int,
+                env_key="VALIDATION_GROUNDING_GLOBAL_MIN_INTERVAL_MS",
+                env_first=True,
+                minimum=0,
+            ),
+            _SettingSpec(
                 field_name="strict_schema_validation",
                 config_key="strict_schema_validation",
                 default=_to_config_bool(

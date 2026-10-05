@@ -15891,6 +15891,12 @@
         "validation_data_gap_policy": {
           "type": "string"
         },
+        "validation_grounding_global_max_in_flight": {
+          "type": "integer"
+        },
+        "validation_grounding_global_min_interval_ms": {
+          "type": "integer"
+        },
         "validation_grounding_use_vector_store": {
           "type": "boolean"
         },
@@ -22207,6 +22213,12 @@
         },
         "validation_data_gap_policy": {
           "type": "string"
+        },
+        "validation_grounding_global_max_in_flight": {
+          "type": "integer"
+        },
+        "validation_grounding_global_min_interval_ms": {
+          "type": "integer"
         },
         "validation_grounding_use_vector_store": {
           "type": "boolean"

@@ -1005,6 +1005,12 @@ def run_report_pipeline(
         validation_openai_client = llm_service.build_client_for_settings(
             settings,
             scope="validation",
+            rate_limit_max_in_flight=(
+                settings.validation_grounding_global_max_in_flight
+            ),
+            rate_limit_min_interval_ms=(
+                settings.validation_grounding_global_min_interval_ms
+            ),
             base_client=openai_client_override,
         )
         regeneration_openai_client = llm_service.build_client_for_settings(

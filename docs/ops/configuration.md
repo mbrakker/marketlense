@@ -111,6 +111,13 @@ The document-map, insight-candidate, and final-insight routes allow 16,384
 output tokens because live GPT-6 responses exhausted the previous 8,192-token
 cap on reasoning alone.
 
+`analysis.validation_grounding_global_max_in_flight` bounds both the per-report
+grounding batch workers and provider calls shared by validation clients in one
+Python process. Its default is five. `analysis.validation_grounding_global_min_interval_ms`
+spaces call starts by 250 milliseconds by default; set it to zero only when the
+provider's rate policy and current workload support unpaced starts. Separate
+worker processes each enforce their own cap.
+
 Every configured generative route, including
 `publisher_inventory/meaningful_candidate_screen`, is routed and priced as
 `gpt-6-luna`. The browser/OpenRouter fallback uses `openai/gpt-6-luna` and

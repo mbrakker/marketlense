@@ -194,6 +194,12 @@ def _config_load_complete_fields(
         "vector_store_retention_days": settings.vector_store_retention_days,
         "artifacts_use_vector_store": settings.artifacts_use_vector_store,
         "validation_grounding_use_vector_store": settings.validation_grounding_use_vector_store,
+        "validation_grounding_global_max_in_flight": (
+            settings.validation_grounding_global_max_in_flight
+        ),
+        "validation_grounding_global_min_interval_ms": (
+            settings.validation_grounding_global_min_interval_ms
+        ),
         "strict_schema_validation": settings.strict_schema_validation,
         "cost_ledger_path": settings.cost_ledger_path,
         "cost_daily_path": settings.cost_daily_path,
@@ -478,6 +484,12 @@ def load_settings(request: ConfigLoadRequest, ctx: RunContext) -> AppSettings:
         artifacts_use_vector_store=analysis_settings["artifacts_use_vector_store"],
         validation_grounding_use_vector_store=analysis_settings[
             "validation_grounding_use_vector_store"
+        ],
+        validation_grounding_global_max_in_flight=analysis_settings[
+            "validation_grounding_global_max_in_flight"
+        ],
+        validation_grounding_global_min_interval_ms=analysis_settings[
+            "validation_grounding_global_min_interval_ms"
         ],
         strict_schema_validation=analysis_settings["strict_schema_validation"],
         cost_ledger_path=analysis_settings["cost_ledger_path"],

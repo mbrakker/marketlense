@@ -38,6 +38,10 @@ ingest:
     max_runtime_seconds: 43200
     limit_decision: "stop"
 
+analysis:
+  validation_grounding_global_max_in_flight: 5
+  validation_grounding_global_min_interval_ms: 250
+
 publish:
   wp:
     site_url: "https://example.com"

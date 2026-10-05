@@ -29,6 +29,9 @@ class _RateLimiterState:
     semaphore: threading.BoundedSemaphore
     gate_lock: threading.Lock
     next_allowed_monotonic: float
+    active_lock: threading.Lock
+    active_count: int = 0
+    max_observed_grounding_in_flight: int = 0
 
 
 @dataclass(frozen=True)
@@ -98,12 +101,19 @@ def _get_circuit_breaker_state(
 
 
 def _get_rate_limiter_state(
-    policy: LLMClientPolicy, operation_name: str
+    policy: LLMClientPolicy,
+    operation_name: str,
+    *,
+    share_grounding_across_operations: bool = False,
 ) -> _RateLimiterState | None:
     max_in_flight = policy.rate_limit_max_in_flight
     if max_in_flight is None or int(max_in_flight) <= 0:
         return None
-    scope = _policy_scope(policy, operation_name)
+    scope = (
+        "validation:grounding"
+        if share_grounding_across_operations and policy.scope == "validation"
+        else _policy_scope(policy, operation_name)
+    )
     min_interval_seconds = max(0.0, float(policy.rate_limit_min_interval_ms) / 1000.0)
     with _RATE_LIMITERS_LOCK:
         limiter = _RATE_LIMITERS.get(scope)
@@ -118,6 +128,7 @@ def _get_rate_limiter_state(
                 semaphore=threading.BoundedSemaphore(int(max_in_flight)),
                 gate_lock=threading.Lock(),
                 next_allowed_monotonic=0.0,
+                active_lock=threading.Lock(),
             )
             _RATE_LIMITERS[scope] = limiter
         return limiter
@@ -160,7 +171,14 @@ def _with_rate_limit(
     monotonic_fn: Callable[[], float],
     call: Callable[[], _T],
 ) -> _T:
-    limiter = _get_rate_limiter_state(policy, operation_name)
+    is_grounding_task = policy.scope == "validation" and str(ctx.task_id).endswith(
+        ":grounding"
+    )
+    limiter = _get_rate_limiter_state(
+        policy,
+        operation_name,
+        share_grounding_across_operations=is_grounding_task,
+    )
     if limiter is None:
         return call()
 
@@ -188,7 +206,66 @@ def _with_rate_limit(
             in_flight_wait_ms=in_flight_wait_ms,
             rate_wait_ms=rate_wait_ms,
         )
-        return call()
+        track_grounding_call = is_grounding_task
+        with limiter.active_lock:
+            limiter.active_count += 1
+            limiter.max_observed_grounding_in_flight = max(
+                limiter.max_observed_grounding_in_flight,
+                limiter.active_count,
+            )
+            active_count = limiter.active_count
+            max_observed_grounding_in_flight = limiter.max_observed_grounding_in_flight
+        if track_grounding_call:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="llm_rate_limiter_call_started",
+                    module=logger.name,
+                    fields={
+                        "operation": operation_name,
+                        "scope": policy.scope,
+                        "grounding_in_flight": active_count,
+                        "max_observed_grounding_in_flight": (
+                            max_observed_grounding_in_flight
+                        ),
+                        "global_max_in_flight": limiter.max_in_flight,
+                        "execution_layer": "llm_service_call",
+                    },
+                )
+            )
+        succeeded = False
+        try:
+            result = call()
+            succeeded = True
+            return result
+        finally:
+            with limiter.active_lock:
+                limiter.active_count -= 1
+                active_count = limiter.active_count
+                max_observed_grounding_in_flight = (
+                    limiter.max_observed_grounding_in_flight
+                )
+            if track_grounding_call:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="llm_rate_limiter_call_finished",
+                        module=logger.name,
+                        fields={
+                            "operation": operation_name,
+                            "scope": policy.scope,
+                            "grounding_in_flight": active_count,
+                            "max_observed_grounding_in_flight": (
+                                max_observed_grounding_in_flight
+                            ),
+                            "global_max_in_flight": limiter.max_in_flight,
+                            "outcome": "success" if succeeded else "error",
+                            "execution_layer": "llm_service_call",
+                        },
+                    )
+                )
     finally:
         limiter.semaphore.release()
 

@@ -585,8 +585,11 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
         evidence_pack_global_min_interval_ms=0,
         artifact_global_max_in_flight=2,
         artifact_global_min_interval_ms=0,
+        validation_grounding_global_max_in_flight=1,
+        validation_grounding_global_min_interval_ms=0,
     )
     tracking_client = _TrackingOpenAIClient(sleep_seconds=0.04)
+    validation_max_active: list[int] = []
 
     def _gen(
         file,
@@ -601,8 +604,21 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
         assert client_bundle is not None
         evidence_pack_openai_client = client_bundle.evidence_pack_client
         artifact_openai_client = client_bundle.artifact_client
+        validation_openai_client = client_bundle.validation_client
         vector_req = SimpleNamespace(model="gpt-5", vector_store_id="vs_1")
         chat_req = SimpleNamespace(model="gpt-5")
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = [
+                pool.submit(
+                    validation_openai_client.openai_chat_json,
+                    chat_req,
+                    ctx,
+                )
+                for _ in range(4)
+            ]
+            for future in futures:
+                future.result()
+        validation_max_active.append(tracking_client.max_active["chat"])
         with ThreadPoolExecutor(max_workers=4) as pool:
             futures = [
                 pool.submit(
@@ -641,6 +657,7 @@ def test_run_report_pipeline_uses_orchestrator_rate_limiter() -> None:
         openai_client_override=tracking_client,
     )
     assert response.status == "processed"
+    assert validation_max_active == [1]
     assert tracking_client.max_active["vector"] <= 2
     assert tracking_client.max_active["chat"] <= 2
 

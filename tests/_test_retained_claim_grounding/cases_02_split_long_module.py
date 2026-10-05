@@ -1,6 +1,13 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
+import json
+import threading
 from pathlib import Path as _SplitPath
+from types import SimpleNamespace
+
+from src.contracts.openai import OpenAIResponseResult
+from src.utils.errors import AppError
 
 __file__ = str(
     _SplitPath(__file__).resolve().parent.parent / "test_retained_claim_grounding.py"
@@ -18,7 +25,8 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
     )
 
     claim_texts = [
-        f"The report describes merchant payment operations from a distinctive {word} angle."
+        f"The report describes merchant payment operations from a distinctive "
+        f"{word} angle."
         for word in (
             "alpha",
             "bravo",
@@ -36,7 +44,9 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
             "findings": [
                 {
                     "id": f"evidence-{index}",
-                    "text": "A retained passage discusses a separate operational subject.",
+                    "text": (
+                        "A retained passage discusses a separate operational subject."
+                    ),
                 }
                 for index in range(len(claim_texts))
             ]
@@ -113,6 +123,486 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
         expected_ids
     )
     assert {result.status for result in captured_packages[0].results} == {"supported"}
+
+
+def test_grounding_batches_overlap_refill_and_merge_in_batch_order(tmp_path) -> None:
+    from src.generators.claim_validation_generator import (
+        retained_claim_semantic_inputs,
+        validate_retained_claims,
+    )
+
+    claim_texts = [
+        f"The report describes merchant payment operations from a distinctive "
+        f"{word} angle."
+        for word in (
+            "alpha",
+            "bravo",
+            "charlie",
+            "delta",
+            "echo",
+            "foxtrot",
+            "golf",
+            "hotel",
+            "india",
+        )
+    ]
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": f"evidence-{index}",
+                    "text": (
+                        "A retained passage discusses a separate operational subject."
+                    ),
+                }
+                for index in range(len(claim_texts))
+            ]
+        }
+    }
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": f"claim-{index}",
+                    "claim": text,
+                    "evidence_id": f"evidence-{index}",
+                }
+                for index, text in enumerate(claim_texts)
+            ]
+        }
+    }
+    request = replace(
+        _retained_request(),
+        report_id="grounding-parallel-order",
+        source_id="source-parallel-order",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+    )
+    package = validate_retained_claims(artifacts, evidence_packs)
+    semantic_inputs = retained_claim_semantic_inputs(
+        package, evidence_packs, source_identity="source-parallel-order"
+    )
+    audit_payload = grounding_payload(
+        request, artifacts, retained_claim_inputs=semantic_inputs
+    )
+    claim_entries = audit_payload["retained_claims_to_ground"]
+    expected_ids = [entry["item_id"] for entry in claim_entries]
+
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+    batch_three_started = threading.Event()
+    finished_batches: list[int] = []
+    materialized = []
+    captured_packages: list[ClaimValidationPackage] = []
+    user_prompt_variables: list[dict[str, str]] = []
+
+    class RecordingPromptClient(FakePromptClient):
+        def render_prompt(self, request, ctx):
+            rendered = request.template.text
+            for name, value in request.variables.items():
+                rendered = rendered.replace(f"{{{{ {name} }}}}", str(value))
+            if request.template.path.endswith("/user"):
+                user_prompt_variables.append(dict(request.variables))
+            return SimpleNamespace(text=rendered)
+
+    class TrackingProvider:
+        def openai_chat_json(self, req, ctx):
+            nonlocal active, max_active
+            task_id = str(ctx.task_id)
+            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+            try:
+                if batch_index == 1:
+                    assert batch_three_started.wait(timeout=2)
+                elif batch_index == 3:
+                    batch_three_started.set()
+                batch_payload = json.loads(req.user_prompt[len("user ") :])
+                group = batch_payload["retained_claims_to_ground"]
+                payload = {
+                    "unsupported": [],
+                    "checks": [
+                        _grounding_check(entry["item_id"], entry["text"], "entailed")
+                        for entry in group
+                    ],
+                }
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(payload),
+                    parsed_json=payload,
+                    input_tokens=0,
+                    output_tokens=0,
+                    tool_calls=0,
+                    model=req.model,
+                )
+            finally:
+                with lock:
+                    active -= 1
+                    finished_batches.append(batch_index)
+
+    base_settings = _settings(tmp_path)
+    settings_values = vars(base_settings).copy()
+    settings_values.update(
+        validation_grounding_global_max_in_flight=2,
+        validation_grounding_global_min_interval_ms=0,
+    )
+    settings = SimpleNamespace(**settings_values)
+    issues = run_grounding_check(
+        request=request,
+        settings=settings,
+        grounding_use_vector_store=False,
+        evidence_texts=["General report evidence."],
+        evidence_windows=[],
+        prompt_client=RecordingPromptClient(),
+        openai_client=TrackingProvider(),
+        ctx=_ctx(),
+        source_id="source-parallel-order",
+        prompt_family_reuse_reader=lambda *_: SimpleNamespace(
+            reusable=False, reason="not_found", output_payload={}
+        ),
+        prompt_family_materializer=lambda materialization, _ctx: materialized.append(
+            materialization
+        ),
+        retained_claim_package=package,
+        retained_claim_inputs=semantic_inputs,
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert issues == []
+    assert max_active == 2
+    assert finished_batches[0] == 2
+    assert len(materialized) == 1
+    batch_payloads = [
+        json.loads(variables["report_json"]) for variables in user_prompt_variables
+    ]
+    assert len(batch_payloads) == 3
+    assert [
+        claim["item_id"]
+        for batch_payload in batch_payloads
+        for claim in batch_payload["retained_claims_to_ground"]
+    ] == expected_ids
+    for variables, batch_payload in zip(
+        user_prompt_variables, batch_payloads, strict=True
+    ):
+        assert json.loads(variables["evidence_json"]) == ["General report evidence."]
+        for claim in batch_payload["retained_claims_to_ground"]:
+            assert {
+                evidence["evidence_id"] for evidence in claim["retained_evidence"]
+            } == set(claim["evidence_ids"])
+    assert [check["item_id"] for check in materialized[0].output_payload["checks"]] == (
+        expected_ids
+    )
+    captured_claim_ids = {
+        result.candidate.claim_id for result in captured_packages[0].results
+    }
+    assert captured_claim_ids == set(expected_ids)
+    assert {result.status for result in captured_packages[0].results} == {
+        "supported"
+    }, [
+        (result.status, result.semantic_outcome, result.reasons)
+        for result in captured_packages[0].results
+    ]
+
+
+def test_grounding_batch_failure_discards_sibling_results_and_stops_refill(
+    tmp_path,
+) -> None:
+    from src.generators.claim_validation_generator import (
+        retained_claim_semantic_inputs,
+        validate_retained_claims,
+    )
+
+    claim_texts = [
+        f"The report describes merchant payment operations from a distinct "
+        f"{word} angle."
+        for word in ("alpha", "bravo", "charlie", "delta", "echo")
+    ]
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": f"evidence-{index}",
+                    "text": (
+                        "A retained passage discusses a separate operational subject."
+                    ),
+                }
+                for index in range(len(claim_texts))
+            ]
+        }
+    }
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": f"claim-{index}",
+                    "claim": text,
+                    "evidence_id": f"evidence-{index}",
+                }
+                for index, text in enumerate(claim_texts)
+            ]
+        }
+    }
+    request = replace(
+        _retained_request(),
+        report_id="grounding-parallel-failure",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+    )
+    package = validate_retained_claims(artifacts, evidence_packs)
+    semantic_inputs = retained_claim_semantic_inputs(package, evidence_packs)
+    audit_payload = grounding_payload(
+        request, artifacts, retained_claim_inputs=semantic_inputs
+    )
+    claim_entries = audit_payload["retained_claims_to_ground"]
+    groups = [claim_entries[:4], claim_entries[4:]]
+    started = threading.Barrier(2)
+    called: list[int] = []
+    materialized = []
+    captured_packages: list[ClaimValidationPackage] = []
+
+    class FailingBatchProvider:
+        def openai_chat_json(self, req, ctx):
+            batch_index = int(str(ctx.task_id).rsplit(":batch:", 1)[1].split(":", 1)[0])
+            called.append(batch_index)
+            started.wait(timeout=2)
+            if batch_index == 2:
+                raise AppError(
+                    code="grounding_batch_failed",
+                    message="batch provider failed",
+                    retryable=False,
+                )
+            payload = {
+                "unsupported": [],
+                "checks": [
+                    _grounding_check(entry["item_id"], entry["text"], "entailed")
+                    for entry in groups[0]
+                ],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=req.model,
+            )
+
+    base_settings = _settings(tmp_path)
+    settings_values = vars(base_settings).copy()
+    settings_values.update(
+        validation_grounding_global_max_in_flight=2,
+        validation_grounding_global_min_interval_ms=0,
+    )
+    settings = SimpleNamespace(**settings_values)
+    issues = run_grounding_check(
+        request=request,
+        settings=settings,
+        grounding_use_vector_store=False,
+        evidence_texts=["General report evidence."],
+        evidence_windows=[],
+        prompt_client=FakePromptClient(),
+        openai_client=FailingBatchProvider(),
+        ctx=_ctx(),
+        source_id="source-parallel-failure",
+        prompt_family_reuse_reader=lambda *_: SimpleNamespace(
+            reusable=False, reason="not_found", output_payload={}
+        ),
+        prompt_family_materializer=lambda materialization, _ctx: materialized.append(
+            materialization
+        ),
+        retained_claim_package=package,
+        retained_claim_inputs=semantic_inputs,
+        retained_claim_validation_sink=captured_packages.append,
+    )
+
+    assert called == [1, 2] or called == [2, 1]
+    assert len(issues) == 1
+    assert "batch provider failed" in issues[0].message
+    assert materialized == []
+    assert captured_packages == []
+
+
+def test_grounding_shared_cap_bounds_two_simultaneous_reports(tmp_path) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    from src.contracts.run_context import RunContext
+    from src.generators.claim_validation_generator import (
+        retained_claim_semantic_inputs,
+        validate_retained_claims,
+    )
+    from src.services import llm_service
+
+    claim_texts = [
+        f"The report describes payment operations from a distinct {word} angle."
+        for word in ("alpha", "bravo", "charlie", "delta", "echo")
+    ]
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {
+                    "id": f"evidence-{index}",
+                    "text": (
+                        "A retained passage discusses a separate operational subject."
+                    ),
+                }
+                for index in range(len(claim_texts))
+            ]
+        }
+    }
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "id": f"claim-{index}",
+                    "claim": text,
+                    "evidence_id": f"evidence-{index}",
+                }
+                for index, text in enumerate(claim_texts)
+            ]
+        }
+    }
+    package = validate_retained_claims(artifacts, evidence_packs)
+    max_active = 0
+    active = 0
+    calls = 0
+    lock = threading.Lock()
+    two_calls_started = threading.Event()
+    release_calls = threading.Event()
+    materialized: dict[str, object] = {}
+
+    class SharedProvider:
+        def openai_chat_json(self, req, ctx):
+            nonlocal active, calls, max_active
+            task_id = str(ctx.task_id)
+            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            with lock:
+                calls += 1
+                active += 1
+                max_active = max(max_active, active)
+                if active == 2:
+                    two_calls_started.set()
+            try:
+                assert release_calls.wait(timeout=2)
+                claim_entries = entries[batch_index - 1]
+                payload = {
+                    "unsupported": [],
+                    "checks": [
+                        _grounding_check(entry["item_id"], entry["text"], "entailed")
+                        for entry in claim_entries
+                    ],
+                }
+                return OpenAIResponseResult(
+                    schema_version="1.0",
+                    text=json.dumps(payload),
+                    parsed_json=payload,
+                    input_tokens=0,
+                    output_tokens=0,
+                    tool_calls=0,
+                    model=req.model,
+                )
+            finally:
+                with lock:
+                    active -= 1
+
+    requests = []
+    semantic_inputs_by_report = {}
+    entries = []
+    for report_suffix in ("a", "b"):
+        source_id = f"source-report-{report_suffix}"
+        request = replace(
+            _retained_request(),
+            report_id=f"grounding-report-{report_suffix}",
+            source_id=source_id,
+            artifacts=artifacts,
+            evidence_packs=evidence_packs,
+        )
+        semantic_inputs = retained_claim_semantic_inputs(
+            package, evidence_packs, source_identity=source_id
+        )
+        payload = grounding_payload(
+            request, artifacts, retained_claim_inputs=semantic_inputs
+        )
+        requests.append(request)
+        semantic_inputs_by_report[request.report_id] = semantic_inputs
+        entries = [
+            payload["retained_claims_to_ground"][index : index + 4]
+            for index in range(0, len(claim_texts), 4)
+        ]
+
+    base_settings = _settings(tmp_path)
+    settings_values = vars(base_settings).copy()
+    settings_values.update(
+        validation_grounding_global_max_in_flight=2,
+        validation_grounding_global_min_interval_ms=0,
+    )
+    settings = SimpleNamespace(**settings_values)
+    provider = SharedProvider()
+    clients = [
+        llm_service.build_client_for_settings(
+            settings,
+            scope="validation",
+            rate_limit_max_in_flight=2,
+            rate_limit_min_interval_ms=0,
+            base_client=provider,
+        )
+        for _ in requests
+    ]
+
+    def run_report(index: int) -> list[ValidationIssue]:
+        request = requests[index]
+        return run_grounding_check(
+            request=request,
+            settings=settings,
+            grounding_use_vector_store=False,
+            evidence_texts=["Report-specific source evidence."],
+            evidence_windows=[],
+            prompt_client=FakePromptClient(),
+            openai_client=clients[index],
+            ctx=RunContext(
+                schema_version="1.0",
+                run_id=f"run-{index}",
+                task_id=f"report-{index}",
+                span_id=f"span-{index}",
+            ),
+            source_id=request.source_id,
+            prompt_family_reuse_reader=lambda *_: SimpleNamespace(
+                reusable=False, reason="not_found", output_payload={}
+            ),
+            prompt_family_materializer=lambda item, _ctx: materialized.__setitem__(
+                item.report_id, item.output_payload
+            ),
+            retained_claim_package=package,
+            retained_claim_inputs=semantic_inputs_by_report[request.report_id],
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as report_executor:
+        report_futures = [
+            report_executor.submit(run_report, index) for index in range(2)
+        ]
+        assert two_calls_started.wait(timeout=2)
+        with lock:
+            assert active == 2
+            assert max_active == 2
+        release_calls.set()
+        report_issues = [future.result() for future in report_futures]
+
+    assert report_issues == [[], []]
+    assert calls == 4
+    assert max_active == 2
+    assert set(materialized) == {request.report_id for request in requests}
+    expected_ids = [
+        entry["item_id"]
+        for entry in grounding_payload(
+            requests[0],
+            artifacts,
+            retained_claim_inputs=semantic_inputs_by_report[requests[0].report_id],
+        )["retained_claims_to_ground"]
+    ]
+    for output_payload in materialized.values():
+        assert [check["item_id"] for check in output_payload["checks"]] == expected_ids
 
 
 def test_stale_report_grounding_is_not_reused_for_current_retained_claim(

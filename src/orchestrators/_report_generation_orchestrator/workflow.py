@@ -123,13 +123,33 @@ def _build_model_client(
 ):
     if provided_client is not None:
         return provided_client
+    rate_limit_max_in_flight = (
+        settings.validation_grounding_global_max_in_flight
+        if scope == "validation"
+        else None
+    )
+    rate_limit_min_interval_ms = (
+        settings.validation_grounding_global_min_interval_ms
+        if scope == "validation"
+        else 0
+    )
     if openai_chat_json_with_images is not None or openai_ocr_pdf is not None:
         return llm_service.build_client_from_callables(
-            policy=llm_service.client_policy_from_settings(settings, scope=scope),
+            policy=llm_service.client_policy_from_settings(
+                settings,
+                scope=scope,
+                rate_limit_max_in_flight=rate_limit_max_in_flight,
+                rate_limit_min_interval_ms=rate_limit_min_interval_ms,
+            ),
             openai_chat_json_with_images=openai_chat_json_with_images,
             openai_ocr_pdf=openai_ocr_pdf,
         )
-    return llm_service.build_client_for_settings(settings, scope=scope)
+    return llm_service.build_client_for_settings(
+        settings,
+        scope=scope,
+        rate_limit_max_in_flight=rate_limit_max_in_flight,
+        rate_limit_min_interval_ms=rate_limit_min_interval_ms,
+    )
 
 
 def _admission_context_identity(

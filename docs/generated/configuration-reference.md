@@ -6,6 +6,7 @@ The example file shows supported environment-specific overlay areas. The configu
 
 | Configuration area | Example keys |
 | --- | --- |
+| `analysis` | `validation_grounding_global_max_in_flight`, `validation_grounding_global_min_interval_ms` |
 | `browser_download` | `captcha_handoff`, `max_tokens`, `model`, `openrouter_model`, `private_api_playbook_min_distinct_source_urls`, `private_api_playbook_min_success_count`, `private_api_playbook_promotion_mode`, `route_memory_ttl_seconds`, `route_playbook_promotion_mode`, `route_suppression`, `run_budget` |
 | `cost` | `budget_authority`, `usage_db_path` |
 | `ingest` | `admission`, `candidate_page_gate`, `drive`, `gdrive_folder_id`, `google_sa_path`, `run_budget`, `source_quarantine`, `validation` |
