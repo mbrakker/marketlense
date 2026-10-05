@@ -233,11 +233,25 @@ def _run_worker_batches_parallel(
 
     queue_start_index = 0
 
-    def _candidate_sequence() -> list[tuple[str, int]]:
+    def _candidate_sequence(
+        *, priority_queue_names: tuple[str, ...] = ()
+    ) -> list[tuple[str, int]]:
         ordered_queues = (
             WORKFLOW_QUEUE_NAMES[queue_start_index:]
             + WORKFLOW_QUEUE_NAMES[:queue_start_index]
         )
+        priority_queues = tuple(
+            queue_name
+            for index, queue_name in enumerate(priority_queue_names)
+            if queue_name in ordered_queues
+            and queue_name not in priority_queue_names[:index]
+        )
+        if priority_queues:
+            ordered_queues = priority_queues + tuple(
+                queue_name
+                for queue_name in ordered_queues
+                if queue_name not in priority_queues
+            )
         return [
             (queue_name, ordinal)
             for ordinal in range(request.settings.max_jobs_per_queue)
@@ -411,7 +425,13 @@ def _run_worker_batches_parallel(
                     queue_start_index = (
                         WORKFLOW_QUEUE_NAMES.index(last_success_queue) + 1
                     ) % len(WORKFLOW_QUEUE_NAMES)
-                candidates = _candidate_sequence()
+                    next_queue = WORKFLOW_QUEUE_NAMES[queue_start_index]
+                    priority_queue_names = (last_success_queue, next_queue)
+                else:
+                    priority_queue_names = ()
+                candidates = _candidate_sequence(
+                    priority_queue_names=priority_queue_names
+                )
                 next_candidate = 0
                 pending_rechecks.clear()
                 pending_recheck_queues.clear()
@@ -443,7 +463,7 @@ def _run_worker(
         queue_name=queue_name,
         worker_id=worker_id,
         ctx=child_context(ctx, task_id=f"supervisor:{queue_name}:{ordinal + 1}"),
-        now_utc=request.now_utc,
+        now_utc=utc_now_seconds_iso(),
     )
 
 

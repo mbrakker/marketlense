@@ -28,7 +28,9 @@ In the parallel worker path, `max_jobs_per_queue` bounds active candidate slots;
 successful workers return their slot to the same queue so queued work can
 continue within the pass, subject to global worker, total-job, runtime, and
 durable queue limits. Newly materialized downstream work reopens the fair queue
-scan, while a fully idle queue is skipped until useful work completes.
+scan, while a fully idle queue is skipped until useful work completes. Queue
+preference is applied within round-robin queue order, so a preferred queue is
+offered first without taking every global worker slot ahead of other queues.
 
 Use an external timer only after observing queue health and recovery evidence:
 

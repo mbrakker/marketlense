@@ -183,6 +183,7 @@ def test_repair_delta_excludes_deferred_grounding_execution_metadata() -> None:
 
     for delta in (introduced, persisting, resolved, severity_changed):
         assert delta.introduced == []
+        assert delta.introduced_hard_failures == []
         assert delta.persisting == []
         assert delta.resolved == []
         assert delta.severity_changes == []
@@ -253,6 +254,9 @@ def test_repair_delta_keeps_real_findings_and_severity_changes_with_deferred_mar
     delta = _repair_delta(before, after)
 
     assert [item.rule_id for item in delta.introduced] == ["claim_support"]
+    assert [item.rule_id for item in delta.introduced_hard_failures] == [
+        "claim_support"
+    ]
     assert {item.rule_id for item in delta.persisting} == {
         "numbers",
         "artifact_quality",
@@ -275,6 +279,9 @@ def test_candidate_only_failure_is_introduced_against_current_baseline() -> None
     delta = _repair_delta(current_baseline, candidate)
 
     assert [item.rule_id for item in delta.introduced] == ["candidate_rule"]
+    assert [item.rule_id for item in delta.introduced_hard_failures] == [
+        "candidate_rule"
+    ]
     assert _introduced_hard_failure_count(current_baseline, candidate) == 1
     assert delta.resolved == []
     assert [item.rule_id for item in delta.persisting] == ["current_rule"]

@@ -60,6 +60,9 @@ from src.generators.artifact_normalization import (
     stabilize_broad_artifact_editorial_plan,
     strip_linkedin_inline_reference_ids,
 )
+from src.generators.artifact_normalization import (
+    page_bound_direct_evidence_packs as _page_bound_direct_evidence_packs,
+)
 from src.generators.artifact_prompt_provenance import (
     artifact_family_for_producing_namespace,
     artifact_prompt_identity,
@@ -683,49 +686,6 @@ def _build_grounding_package(
         "quarantined_evidence_ids": quarantined_ids,
         "pages": issue_pages,
     }
-
-
-def _page_bound_direct_evidence_packs(
-    evidence_packs: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Keep only findings and quotes with canonical direct source pages."""
-
-    direct_packs = {
-        name: evidence_packs[name]
-        for name in ("findings", "quote_candidates")
-        if name in evidence_packs
-    }
-    span_index = artifact_evidence_span_index(doc_map={}, evidence_packs=direct_packs)
-    eligible_ids = {
-        evidence_id
-        for evidence_id, spans in span_index.items()
-        if any(
-            span.get("source_pack") in {"findings", "quote_candidates"}
-            and isinstance(span.get("page"), int)
-            and span["page"] > 0
-            and _s(span.get("text")).strip()
-            for span in spans
-        )
-    }
-    filtered: Dict[str, Any] = {}
-    for name, root_key in (
-        ("findings", "findings"),
-        ("quote_candidates", "quote_candidates"),
-    ):
-        payload = direct_packs.get(name)
-        entries = payload.get(root_key) if isinstance(payload, dict) else None
-        if isinstance(payload, dict) and isinstance(entries, list):
-            filtered[name] = {
-                **payload,
-                root_key: [
-                    entry
-                    for entry in entries
-                    if isinstance(entry, dict)
-                    and _normalized_evidence_id(_entry_evidence_id(entry))
-                    in eligible_ids
-                ],
-            }
-    return filtered
 
 
 def retained_grounding_evidence_ids_for_target(

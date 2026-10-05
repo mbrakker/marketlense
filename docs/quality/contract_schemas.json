@@ -31579,6 +31579,12 @@
             }
           ]
         },
+        "introduced_hard_failures": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.regeneration.FailureFingerprint"
+          },
+          "type": "array"
+        },
         "mutation_scope_result": {
           "type": "string"
         },

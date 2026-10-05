@@ -1429,6 +1429,24 @@ def _build_regeneration_plan(
                 )
             )
             known.add(fingerprint.key)
+        for fingerprint in repair_memory[-1].introduced_hard_failures:
+            if fingerprint.key in known:
+                continue
+            planning_issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message=(
+                        "A blocking validation fingerprint was introduced by the "
+                        "prior candidate."
+                    ),
+                    severity="error",
+                    affected_section=fingerprint.affected_section,
+                    rule_id=fingerprint.rule_id,
+                    entity_id=fingerprint.entity_id,
+                    evidence_ids=list(fingerprint.evidence_ids),
+                )
+            )
+            known.add(fingerprint.key)
     grouped: Dict[str, List[RegenerationIssue]] = {}
     unmappable: List[RegenerationIssue] = []
     public_editorial_abstention = False

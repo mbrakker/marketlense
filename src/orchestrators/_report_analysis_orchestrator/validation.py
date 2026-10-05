@@ -47,6 +47,7 @@ from src.generators._artifact_generator.storage import (
 from src.generators.artifact_normalization import (
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
+    page_bound_direct_evidence_packs,
 )
 from src.generators.public_editorial_quality_generator import (
     evaluate_public_editorial_quality,
@@ -518,6 +519,13 @@ def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDe
     after_items = {
         key: _failure_fingerprint(item) for key, item in after_by_key.items()
     }
+    introduced_keys = after_items.keys() - before_items.keys()
+    hard_after_keys = {
+        _failure_fingerprint(item).key
+        for item in after.issues
+        if _is_repair_delta_accountable_issue(item)
+        and str(item.severity or "").strip().lower() == "error"
+    }
     return RepairDelta(
         resolved=[
             before_items[key]
@@ -528,6 +536,9 @@ def _repair_delta(before: ValidationReport, after: ValidationReport) -> RepairDe
         ],
         introduced=[
             after_items[key] for key in sorted(after_items.keys() - before_items.keys())
+        ],
+        introduced_hard_failures=[
+            after_items[key] for key in sorted(introduced_keys & hard_after_keys)
         ],
         severity_changes=[
             RepairSeverityChange(
@@ -765,8 +776,9 @@ def _verified_deterministic_mutation_paths(
     if rebind_targets:
         if not isinstance(doc_map, dict) or not isinstance(evidence_packs, dict):
             return set()
+        direct_evidence_packs = page_bound_direct_evidence_packs(evidence_packs)
         span_index = artifact_evidence_span_index(
-            doc_map=doc_map, evidence_packs=evidence_packs
+            doc_map={}, evidence_packs=direct_evidence_packs
         )
         for target in rebind_targets:
             identities_for_target = {
@@ -857,8 +869,8 @@ def _verified_deterministic_mutation_paths(
                 insights_candidates=[],
                 insights_final=[canonical],
                 quotes_final=[],
-                doc_map=doc_map,
-                evidence_packs=evidence_packs,
+                doc_map={},
+                evidence_packs=direct_evidence_packs,
             )
             if not canonical.get("evidence_spans"):
                 continue

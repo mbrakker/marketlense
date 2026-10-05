@@ -110,6 +110,12 @@ class RepairDelta:
     resolved: List[FailureFingerprint] = field(default_factory=list)
     persisting: List[FailureFingerprint] = field(default_factory=list)
     introduced: List[FailureFingerprint] = field(default_factory=list)
+    introduced_hard_failures: List[FailureFingerprint] = field(
+        default_factory=list,
+        metadata={
+            "doc": "New candidate failures whose validation severity is error."
+        },
+    )
     introduced_hard_failure_count: int | None = None
     introduced_failure_categories: List[str] = field(
         default_factory=list,

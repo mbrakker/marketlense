@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -8,13 +9,17 @@ __file__ = str(
 )
 
 from types import SimpleNamespace
+
 import pytest
+
 from src.contracts.openai import OpenAIResponseResult
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
+    FailureFingerprint,
     RegenerationIssue,
     RegenerationPlan,
     RegenerationTarget,
+    RepairDelta,
     repair_strategy_fingerprint,
 )
 from src.contracts.validation import ValidationIssue
@@ -33,6 +38,7 @@ from tests.test_report_regeneration_generator import (
     _FakePromptClient,
     _settings,
 )
+
 from ._shared import (
     _source_backed_artifacts,
 )

@@ -2151,6 +2151,51 @@ def artifact_evidence_span_index(
     )
 
 
+def page_bound_direct_evidence_packs(
+    evidence_packs: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Keep only findings and quotes with canonical direct source pages."""
+
+    direct_packs = {
+        name: evidence_packs[name]
+        for name in ("findings", "quote_candidates")
+        if isinstance(evidence_packs.get(name), dict)
+    }
+    span_index = artifact_evidence_span_index(doc_map={}, evidence_packs=direct_packs)
+    eligible_ids = {
+        evidence_id
+        for evidence_id, spans in span_index.items()
+        if any(
+            span.get("source_pack") in {"findings", "quote_candidates"}
+            and isinstance(span.get("page"), int)
+            and span["page"] > 0
+            and _s(span.get("text")).strip()
+            for span in spans
+        )
+    }
+    filtered: Dict[str, Any] = {}
+    for name, root_key in (
+        ("findings", "findings"),
+        ("quote_candidates", "quote_candidates"),
+    ):
+        payload = direct_packs.get(name)
+        entries = payload.get(root_key) if isinstance(payload, dict) else None
+        if isinstance(payload, dict) and isinstance(entries, list):
+            filtered[name] = {
+                **payload,
+                root_key: [
+                    entry
+                    for entry in entries
+                    if isinstance(entry, dict)
+                    and _s(entry.get("id") or entry.get("evidence_id"))
+                    .strip()
+                    .casefold()
+                    in eligible_ids
+                ],
+            }
+    return filtered
+
+
 def normalize_expert_domain(categories: Optional[List[str]]) -> str:
     if not isinstance(categories, (list, tuple)):
         return "industry"

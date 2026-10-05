@@ -284,10 +284,14 @@ def test_rebound_insight_uses_canonical_evidence_pages_and_spans(tmp_path) -> No
         "The supported replacement evidence explains the recommendation."
     )
     assert rebound["pages"] == [2]
-    expected_spans = artifact_evidence_span_index(
-        doc_map=evidence_packs["doc_map"],
-        evidence_packs=evidence_packs,
-    )["f2"]
+    expected_spans = [
+        span
+        for span in artifact_evidence_span_index(
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+        )["f2"]
+        if span.get("source_pack") in {"findings", "quote_candidates"}
+    ]
     assert rebound["evidence_spans"] == expected_spans
     assert response.deterministic_mutation_paths == [
         f"{item_path}.evidence",

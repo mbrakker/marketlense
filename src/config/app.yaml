@@ -1053,12 +1053,12 @@ workflow_control:
     worker_batches_enabled: false
     reconcile_enabled: true
     evidence_enabled: true
-    # Keep the pass open through long report-selection work so newly queued
-    # analysis work can dispatch without waiting for another pass.
+    # Keep the pass open through long report-analysis work so downstream
+    # stages can dispatch without waiting for another pass.
     max_parallel_workers: 3
     max_jobs_per_queue: 3
     max_total_jobs: 20
-    max_runtime_seconds: 600
+    max_runtime_seconds: 1200
     lease_seconds: 180
   remediation_reaper:
     schema_version: "1.0"

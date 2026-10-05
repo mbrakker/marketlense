@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -150,6 +151,50 @@ def test_insight_rebind_without_direct_alternative_advances_to_safe_removal():
     assert skipped == [("insights_bundle", "alternative_evidence")]
     assert plan.targets[0].repair_action == "REMOVE_CLAIM"
     assert plan.targets[0].repair_strategy == "safe_removal"
+
+
+def test_retry_plan_keeps_new_blocking_family_failure_with_original_failure():
+    artifacts = _current_artifacts()
+    summary_claim = next(
+        claim
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "summary"
+    )
+    expert_claim = next(
+        claim
+        for claim in artifacts["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "expert_comment"
+    )
+    original_issue = ValidationIssue(
+        schema_version="1.1",
+        rule_id="grounding",
+        message="The summary claim is not established by its evidence.",
+        severity="error",
+        affected_section="summary.tldr",
+        entity_id=summary_claim["claim_id"],
+        evidence_ids=["f1"],
+    )
+    introduced_expert_issue = FailureFingerprint(
+        rule_id="grounding",
+        affected_section="expert_comment",
+        entity_id=expert_claim["claim_id"],
+        evidence_ids=["f1"],
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[original_issue],
+        artifacts=artifacts,
+        broad_retry_available=False,
+        repair_memory=[RepairDelta(introduced_hard_failures=[introduced_expert_issue])],
+    )
+
+    assert [target.target_section for target in plan.targets] == [
+        "summary",
+        "expert_comment",
+    ]
+    assert all(
+        target.repair_action == "REGENERATE_ITEM" for target in plan.targets
+    )
 
 
 def test_quotes_ladder_rejects_failed_restore_before_rewrite() -> None:
