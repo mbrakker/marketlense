@@ -613,7 +613,19 @@ def generate_evidence_packs(
             if initial_fidelity.unresolved_factual_count
             else initial_fidelity
         )
+        unfiltered_results = results
         results = exclude_untrusted_evidence(results, fidelity)
+        for pack_name, payload in results.items():
+            if payload != unfiltered_results.get(pack_name):
+                _store_pack(
+                    analysis_store=analysis_store,
+                    output_dir=settings.output_dir,
+                    report_id=report_id,
+                    pack_name=pack_name,
+                    payload=payload,
+                    ctx=ctx,
+                    report_name=report_name,
+                )
         results["evidence_fidelity"] = asdict(fidelity)
         _store_pack(
             analysis_store=analysis_store,

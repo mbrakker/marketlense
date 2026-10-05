@@ -1132,6 +1132,50 @@ def test_generate_evidence_packs_normalizes_legacy_findings_shape(tmp_path):
     assert finding["pages"] == [3]
 
 
+def test_generate_evidence_packs_persists_untrusted_findings_exclusion(tmp_path):
+    analysis_store = FakeAnalysisStore()
+    fake_openai = RoutedOpenAIClient(
+        payloads_by_pack={
+            "doc_map": substantive_doc_map(),
+            "findings": {
+                "findings": [
+                    {
+                        "id": "finding-unsupported",
+                        "text": "Digital advertising grew 28% in 2025.",
+                        "pages": [4],
+                    }
+                ]
+            },
+        }
+    )
+
+    packs = generate_evidence_packs(
+        report_id="r1",
+        report_name="report",
+        vector_store_id="vs_1",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=_ctx(),
+        openai_client=fake_openai,
+        prompt_client=FakePromptClient(),
+        analysis_store=analysis_store,
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": "Digital advertising grew 18% in 2025.",
+            }
+        ],
+    )
+
+    persisted_findings = [
+        payload
+        for _, pack_name, payload in analysis_store.stored
+        if pack_name == "findings"
+    ]
+    assert packs["findings"]["findings"] == []
+    assert persisted_findings[-1]["findings"] == []
+
+
 def test_generate_evidence_packs_parses_limitations_json_array_from_text(tmp_path):
     fake_openai = RoutedOpenAIClient(
         payloads_by_pack={
@@ -1247,6 +1291,7 @@ __all__ = [
     "test_generate_evidence_packs_coerces_docmap_object_fields_to_schema_types",
     "test_generate_evidence_packs_warns_on_doc_map_sections_missing_summary",
     "test_generate_evidence_packs_normalizes_legacy_findings_shape",
+    "test_generate_evidence_packs_persists_untrusted_findings_exclusion",
     "test_generate_evidence_packs_parses_limitations_json_array_from_text",
     "test_generate_evidence_packs_normalizes_quote_candidates_shape",
     "test_generate_evidence_packs_uses_registry_subset",
