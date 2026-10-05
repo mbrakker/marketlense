@@ -5488,11 +5488,14 @@ def _handle_expert_comment_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
-    claim_issues = [
+    blocking_issues = [
         issue
         for issue in execution.target.issues
         if str(issue.severity or "").strip().lower() == "error"
     ]
+    # A warning-only sibling target still needs the claim-level repair path;
+    # mixed targets remain scoped to their blocking issues.
+    claim_issues = blocking_issues or list(execution.target.issues)
     claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="expert_comment",
@@ -5728,11 +5731,14 @@ def _handle_linkedin_post_regeneration(
     execution: _RegenerationHandlerExecution,
 ) -> None:
     _normalize_state_evidence_ids(execution)
-    claim_issues = [
+    blocking_issues = [
         issue
         for issue in execution.target.issues
         if str(issue.severity or "").strip().lower() == "error"
     ]
+    # A warning-only sibling target still needs the claim-level repair path;
+    # mixed targets remain scoped to their blocking issues.
+    claim_issues = blocking_issues or list(execution.target.issues)
     claim_repairs = _soft_copy_claim_repairs(
         execution,
         artifact_family="linkedin_post",

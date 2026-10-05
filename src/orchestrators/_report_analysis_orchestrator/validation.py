@@ -1550,12 +1550,14 @@ def _run_validation_regeneration_loop(
             promoted_artifacts,
             evidence_packs,
         )
+        # Strategy memory describes rejected candidates; only the promoted
+        # artifacts and their validation report define current planner state.
         plan = _build_regeneration_plan(
             issues=current_validation_report.issues,
             artifacts=working_artifacts,
             broad_retry_available=not broad_retry_used,
             rejected_strategy_keys=rejected_strategy_keys,
-            repair_memory=repair_memory,
+            repair_memory=(),
         )
         plan, empty_grounding_strategies = _preflight_empty_grounding_strategies(
             plan=plan,
@@ -1564,7 +1566,7 @@ def _run_validation_regeneration_loop(
             evidence_packs=evidence_packs,
             rejected_strategy_keys=rejected_strategy_keys,
             broad_retry_available=not broad_retry_used,
-            repair_memory=repair_memory,
+            repair_memory=(),
         )
         if empty_grounding_strategies:
             logger.info(

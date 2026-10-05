@@ -518,7 +518,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
 
 
-def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
+def test_rolled_back_summary_candidate_advances_to_bounded_safe_removal(tmp_path):
     from src.generators.claim_validation_generator import (
         claim_validation_package_hash,
     )
@@ -600,6 +600,8 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
         candidate = deepcopy(request.current_artifacts)
         if plan_target.repair_strategy == "safe_removal":
             candidate["summary"]["claim_evidence_map"] = []
+        else:
+            candidate["summary"]["tldr"] = "Out-of-scope candidate mutation."
         return ArtifactRegenerationResponse(
             updated_artifacts=candidate,
             regenerated_sections=["summary"],
@@ -676,6 +678,7 @@ def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
         "rolled_back",
         "promoted",
     ]
+    assert attempts[0].repair_delta.mutation_scope_result == "fail"
     assert loop_state.final_status == "pass"
     assert promoted_validation.status == "pass"
     assert promoted_artifacts["summary"]["claim_evidence_map"] == []

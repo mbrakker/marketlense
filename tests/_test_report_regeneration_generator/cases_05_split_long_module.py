@@ -919,3 +919,71 @@ def test_regeneration_abstains_only_an_unsupported_expert_claim_without_model_ca
     assert original_claims[1].claim_id not in claim_ids
     assert original_claims[2].claim_id in claim_ids
     assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
+
+
+def test_warning_only_soft_copy_target_runs_with_a_sibling_blocking_repair(
+    tmp_path,
+) -> None:
+    current_artifacts = _current_artifacts()
+    provenance = current_artifacts["soft_copy_claim_provenance"]["claims"]
+    expert_claim = next(
+        claim for claim in provenance if claim["artifact_family"] == "expert_comment"
+    )
+    expert_claim["evidence_ids"] = ["f2"]
+    linkedin_claim = next(
+        claim for claim in provenance if claim["artifact_family"] == "linkedin_post"
+    )
+    linkedin_claim["evidence_ids"] = ["f2"]
+    issues = [
+        ValidationIssue(
+            rule_id="grounding",
+            affected_section="expert_comment",
+            message="A retained Expert View claim is not established.",
+            severity="warning",
+            entity_id=expert_claim["claim_id"],
+            evidence_ids=["f2"],
+        ),
+        ValidationIssue(
+            rule_id="grounding",
+            affected_section="linkedin_post",
+            message="A retained LinkedIn claim is not established.",
+            severity="error",
+            entity_id=linkedin_claim["claim_id"],
+            evidence_ids=["f2"],
+        ),
+    ]
+    plan = _build_regeneration_plan(
+        issues=issues,
+        artifacts=current_artifacts,
+        broad_retry_available=False,
+    )
+    openai_client = _ClaimScopedSoftCopyOpenAIClient()
+    evidence_packs = _evidence_packs()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=current_artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=current_artifacts["source_status"],
+            categories=["Category"],
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert [target.target_section for target in plan.targets] == [
+        "expert_comment",
+        "linkedin_post",
+    ]
+    assert [issue.severity for issue in plan.targets[0].issues] == ["warning"]
+    assert response.updated_artifacts["expert_comment"] == "Repaired middle claim."
+    assert response.updated_artifacts["linkedin_post"] == ""
+    assert len(openai_client.calls) == 1
+    assert_retained_soft_copy_claims_match_public_copy(response.updated_artifacts)
