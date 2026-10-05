@@ -450,7 +450,10 @@ def _run_worker_batches_parallel(
                         WORKFLOW_QUEUE_NAMES.index(last_success_queue) + 1
                     ) % len(WORKFLOW_QUEUE_NAMES)
                     next_queue = WORKFLOW_QUEUE_NAMES[queue_start_index]
-                    priority_queue_names = (last_success_queue, next_queue)
+                    # Give the next queue in workflow order first access to the
+                    # newly opened epoch. The successful queue remains next so
+                    # same-queue backlog still progresses after ready downstream work.
+                    priority_queue_names = (next_queue, last_success_queue)
                 else:
                     priority_queue_names = ()
                 candidates = _candidate_sequence(
