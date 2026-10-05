@@ -1932,7 +1932,10 @@ def _run_validation_regeneration_loop(
             input_sha256=candidate_input_sha256,
             validator_identity=validator_identity,
         )
-        repeated_candidate_hash = rejection_fingerprint in rejected_candidate_hashes
+        candidate_changed = candidate_sha256 != candidate_input_sha256
+        repeated_candidate_hash = candidate_changed and (
+            rejection_fingerprint in rejected_candidate_hashes
+        )
         if repeated_candidate_hash:
             candidate_validation_report = _append_candidate_hash_repeat_issue(
                 candidate_validation_report
@@ -2127,7 +2130,8 @@ def _run_validation_regeneration_loop(
                 rejected_strategy_keys.add(strategy_fingerprint)
                 rejected_strategy_keys.update(planned_strategy_keys)
                 repair_memory.append(repair_delta)
-                rejected_candidate_hashes.add(rejection_fingerprint)
+                if candidate_changed:
+                    rejected_candidate_hashes.add(rejection_fingerprint)
                 # Deterministic identity corrections are candidate-scoped: a
                 # rolled-back candidate leaves the promoted identity untouched.
                 promoted_payload_overrides = {}

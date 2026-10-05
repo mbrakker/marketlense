@@ -283,6 +283,83 @@ def test_summary_claim_map_repair_changes_only_the_identified_claim(tmp_path):
     ]
 
 
+def test_summary_claim_map_no_change_is_returned_to_validation_planner(tmp_path):
+    class _UnchangedClaimMapOpenAIClient(_FakeOpenAIClient):
+        def _legacy_chat_json(self, req, ctx):
+            del ctx
+            self.calls.append(req)
+            payload = {
+                "summary": {
+                    "claim_evidence_map": [
+                        {
+                            "id": "claim-one",
+                            "claim": "Unsupported original claim.",
+                            "evidence_id": "f1",
+                            "evidence": "Evidence text",
+                            "pages": [1],
+                        }
+                    ]
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-unchanged-claim-map",
+            )
+
+    artifacts = _current_artifacts()
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "id": "claim-one",
+            "claim": "Unsupported original claim.",
+            "evidence_id": "f1",
+            "evidence": "Evidence text",
+            "pages": [1],
+        }
+    ]
+    plan = _build_regeneration_plan(
+        issues=[
+            ValidationIssue(
+                rule_id="grounding",
+                affected_section="summary.claim_evidence_map:claim-one.claim",
+                message="[grounding] The claim is not established by its evidence.",
+                severity="error",
+                entity_id="summary_claim:claim-one",
+                evidence_ids=["f1"],
+            )
+        ],
+        artifacts=artifacts,
+        broad_retry_available=False,
+    )
+    openai_client = _UnchangedClaimMapOpenAIClient()
+
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=plan,
+            current_artifacts=artifacts,
+            doc_map=_evidence_packs()["doc_map"],
+            evidence_packs=_evidence_packs(),
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=openai_client,
+        prompt_client=_FakePromptClient(),
+    )
+
+    assert len(openai_client.calls) == 1
+    assert response.updated_artifacts["summary"]["claim_evidence_map"] == artifacts[
+        "summary"
+    ]["claim_evidence_map"]
+
+
 def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path):
     original_claims = [
         {

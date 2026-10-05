@@ -15,6 +15,10 @@ from src.orchestrators.workflow_queue_orchestrator import (
     WorkflowQueueHandlerRegistration,
     execute_workflow_queue_handler,
 )
+from src.services.performance_telemetry_service import (
+    record_performance_measurement,
+    record_performance_span,
+)
 from src.services.workflow_queue_service import (
     claim_next_workflow_job,
     complete_workflow_job,
@@ -22,10 +26,6 @@ from src.services.workflow_queue_service import (
     load_workflow_job_payload,
     release_expired_workflow_leases,
     start_workflow_job,
-)
-from src.services.performance_telemetry_service import (
-    record_performance_measurement,
-    record_performance_span,
 )
 from src.utils.errors import AppError
 from src.utils.logging import child_context
@@ -38,6 +38,7 @@ class WorkflowWorkerRunResult:
     released_lease_job_ids: list[str]
     claimed_job_id: str = ""
     terminal_status: str = "idle"
+    downstream_queue_names: tuple[str, ...] = ()
 
 
 def _is_budget_deferral_error(error: AppError) -> bool:
@@ -110,6 +111,13 @@ def run_workflow_worker_once(
             released_lease_job_ids=released,
             claimed_job_id=running.job_id,
             terminal_status=completed.status,
+            downstream_queue_names=tuple(
+                dict.fromkeys(
+                    str(submission.queue_name).strip()
+                    for submission in execution.downstream
+                    if str(submission.queue_name).strip()
+                )
+            ),
         )
     except AppError as exc:
         failed = fail_workflow_job(

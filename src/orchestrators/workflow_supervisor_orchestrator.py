@@ -389,6 +389,7 @@ def _run_worker_batches_parallel(
             reopen_epoch = False
             last_success_queue = ""
             successful_queues: list[str] = []
+            ready_downstream_queues: list[str] = []
             for future in sorted(done, key=lambda item: in_flight[item][3]):
                 queue_name, _ordinal, worker_epoch, _rank = in_flight.pop(future)
                 result = future.result()
@@ -427,6 +428,15 @@ def _run_worker_batches_parallel(
                     if result.terminal_status == "succeeded":
                         last_success_queue = queue_name
                         successful_queues.append(queue_name)
+                        for downstream_queue in getattr(
+                            result, "downstream_queue_names", ()
+                        ):
+                            queue_name_value = str(downstream_queue).strip()
+                            if (
+                                queue_name_value in WORKFLOW_QUEUE_NAMES
+                                and queue_name_value not in ready_downstream_queues
+                            ):
+                                ready_downstream_queues.append(queue_name_value)
                         # A successful worker may have enqueued work directly,
                         # outside the outbox. Make every previously idle queue
                         # eligible again while this pass still has capacity.
@@ -450,10 +460,18 @@ def _run_worker_batches_parallel(
                         WORKFLOW_QUEUE_NAMES.index(last_success_queue) + 1
                     ) % len(WORKFLOW_QUEUE_NAMES)
                     next_queue = WORKFLOW_QUEUE_NAMES[queue_start_index]
-                    # Give the next queue in workflow order first access to the
-                    # newly opened epoch. The successful queue remains next so
-                    # same-queue backlog still progresses after ready downstream work.
-                    priority_queue_names = (next_queue, last_success_queue)
+                    # Dispatch the child queues actually emitted by the
+                    # completed workflow steps before guessed queue-order
+                    # fallbacks and same-queue backlog.
+                    priority_queue_names = tuple(
+                        dict.fromkeys(
+                            (
+                                *ready_downstream_queues,
+                                next_queue,
+                                *successful_queues,
+                            )
+                        )
+                    )
                 else:
                     priority_queue_names = ()
                 candidates = _candidate_sequence(

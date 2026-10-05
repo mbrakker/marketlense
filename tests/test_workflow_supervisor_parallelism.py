@@ -183,9 +183,13 @@ def _dependencies(worker) -> SupervisorDependencies:
     )
 
 
-def _succeeded_worker(**kwargs):
+def _succeeded_worker(*, downstream_queue_names=(), **kwargs):
     del kwargs
-    return SimpleNamespace(released_lease_job_ids=[], terminal_status="succeeded")
+    return SimpleNamespace(
+        released_lease_job_ids=[],
+        terminal_status="succeeded",
+        downstream_queue_names=list(downstream_queue_names),
+    )
 
 
 def test_supervisor_overlaps_independent_workers_when_parallelism_is_enabled() -> None:
@@ -329,7 +333,11 @@ def test_ready_downstream_work_precedes_same_queue_backlog_after_success() -> No
                 with lock:
                     render_ready = True
                 order.append("analysis:1")
-            return _succeeded_worker()
+            return _succeeded_worker(
+                downstream_queue_names=(
+                    ("report_render",) if call_number == 1 else ()
+                )
+            )
         if queue_name == "report_render":
             with lock:
                 if render_ready:
@@ -351,6 +359,55 @@ def test_ready_downstream_work_precedes_same_queue_backlog_after_success() -> No
 
     assert result.completed_job_count == 3
     assert order[:3] == ["analysis:1", "render", "analysis:2"], order
+
+
+def test_actual_render_children_precede_analysis_backlog() -> None:
+    lock = Lock()
+    order: list[str] = []
+    render_completed = False
+    analysis_completed = False
+    readiness_completed = False
+
+    def worker(**kwargs):
+        nonlocal render_completed, analysis_completed, readiness_completed
+        queue_name = str(kwargs["queue_name"])
+        with lock:
+            if queue_name == "report_render" and not render_completed:
+                render_completed = True
+                order.append("report_render")
+                return _succeeded_worker(
+                    downstream_queue_names=(
+                        "analytics_projection",
+                        "publication_readiness",
+                    )
+                )
+            if queue_name == "publication_readiness" and not readiness_completed:
+                readiness_completed = True
+                order.append("publication_readiness")
+                return _succeeded_worker()
+            if (
+                queue_name == "report_analysis"
+                and render_completed
+                and not analysis_completed
+            ):
+                analysis_completed = True
+                order.append("report_analysis")
+                return _succeeded_worker()
+        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+
+    result = run_supervisor_once(
+        _request(
+            max_parallel_workers=2,
+            max_total_jobs=3,
+            max_jobs_per_queue=1,
+            max_runtime_seconds=5,
+        ),
+        _ctx(),
+        dependencies=_dependencies(worker),
+    )
+
+    assert result.completed_job_count == 3
+    assert order == ["report_render", "publication_readiness", "report_analysis"]
 
 
 def test_parallel_supervisor_respects_runtime_after_in_flight_workers_finish() -> None:

@@ -3693,13 +3693,18 @@ def _regenerate_summary_claim_map_items(
                 context={"report_id": execution.runtime.request.report_id},
             )
         repaired_text = _s(matching[0].get("claim")).strip()
-        if not repaired_text or repaired_text == _s(claim.get("claim")).strip():
+        if not repaired_text:
             raise AppError(
                 code="regeneration_target_item_unresolved",
-                message="Targeted summary claim repair did not change the failed claim.",
+                message="Targeted summary claim repair returned an empty claim.",
                 retryable=False,
                 context={"report_id": execution.runtime.request.report_id},
             )
+        if repaired_text == _s(claim.get("claim")).strip():
+            # Preserve the no-op candidate so the validation orchestrator can
+            # reject this strategy and advance its bounded ladder to rebinding
+            # or safe removal. Raising here bypasses those planner-owned paths.
+            continue
         claims[index] = {**claim, "claim": repaired_text}
     execution.state.regenerated_sections.append("summary")
     execution.state.prompt_namespaces.append(namespace)

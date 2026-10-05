@@ -518,6 +518,169 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
     )
 
 
+def test_noop_summary_repairs_advance_to_bounded_safe_removal(tmp_path):
+    from src.generators.claim_validation_generator import (
+        claim_validation_package_hash,
+    )
+    from src.orchestrators._report_analysis_orchestrator.validation import (
+        _run_validation_regeneration_loop,
+    )
+
+    runtime = replace(
+        _runtime(tmp_path),
+        settings=replace(
+            _runtime(tmp_path).settings, validation_regeneration_max_attempts=3
+        ),
+    )
+    original = _artifacts_without_retained_claims(
+        summary={
+            "tldr": "The report documents a market shift.",
+            "card_tldr_compact": "Observed changes shaped market priorities.",
+            "executive_summary": "The report describes evidence-backed findings.",
+            "claim_evidence_map": [
+                {
+                    "id": "claim-one",
+                    "claim": "The market shifted during the observed period.",
+                    "evidence_id": "f1",
+                    "pages": [1],
+                }
+            ],
+        }
+    )
+    _set_interpretive_summary_provenance(original)
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="[semantic] The cited evidence does not establish the claim relationship.",
+        severity="error",
+        affected_section="summary.claim_evidence_map:claim-one.claim",
+        rule_id="semantic",
+        repair_target="summary",
+        evidence_ids=["f1"],
+    )
+    validation_requests = []
+    regeneration_requests = []
+    candidate_package = {}
+
+    def _run_validation(req, settings, ctx, *, pack_name, report_name, md5):
+        del settings, ctx, report_name, md5
+        validation_requests.append((pack_name, req.artifacts))
+        if pack_name == "validation_regen_candidate_3":
+            candidate_package.update(
+                {
+                    "schema_version": "1.3",
+                    "artifact_hash": sha256_json(req.artifacts),
+                    "package_hash": "",
+                    "results": [],
+                    "readiness_status": "awaiting_review",
+                    "unsupported_factual_count": 0,
+                    "unresolved_factual_count": 0,
+                    "deterministic_pass_count": 0,
+                    "semantic_validation_count": 0,
+                    "semantic_execution_identities": [],
+                    "validation_identity": None,
+                    "lineage": None,
+                }
+            )
+            candidate_package["package_hash"] = claim_validation_package_hash(
+                candidate_package
+            )
+            return ValidationReport(
+                schema_version="1.1", status="pass", issues=[], severity="pass"
+            )
+        return ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            issues=[issue],
+            severity="error",
+        )
+
+    def _regenerate(request):
+        regeneration_requests.append(request)
+        plan_target = request.plan.targets[0]
+        candidate = deepcopy(request.current_artifacts)
+        if request.attempt_index == 3:
+            candidate["summary"]["claim_evidence_map"] = []
+        return ArtifactRegenerationResponse(
+            updated_artifacts=candidate,
+            regenerated_sections=["summary"],
+            prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+            candidate_artifacts_path=str(
+                tmp_path
+                / "out"
+                / f"artifacts_regen_candidate_{request.attempt_index}.json"
+            ),
+            repair_action=plan_target.repair_action,
+            repair_strategy=plan_target.repair_strategy,
+            selected_evidence_ids=list(plan_target.selected_evidence_ids),
+            deterministic_mutation_paths=(
+                ["summary.claim_evidence_map[0]"] if request.attempt_index == 3 else []
+            ),
+        )
+
+    deps = _deps(
+        read_json=lambda _request, _ctx: SimpleNamespace(payload=candidate_package),
+        run_validation=_run_validation,
+        regenerate_artifacts=_regenerate,
+    )
+    (
+        promoted_artifacts,
+        promoted_validation,
+        attempts,
+        loop_state,
+        _evidence_paths,
+        _payload_overrides,
+    ) = _run_validation_regeneration_loop(
+        runtime=runtime,
+        mode_ctx=runtime.ctx,
+        base_payload=_payload(),
+        current_artifacts=original,
+        current_validation_report=ValidationReport(
+            schema_version="1.1",
+            status="fail",
+            severity="error",
+            issues=[issue],
+        ),
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "evidence": "Retained evidence supports the topic.",
+                        "pages": [1],
+                    },
+                    {
+                        "id": "f2",
+                        "evidence": "Alternative retained evidence.",
+                        "pages": [2],
+                    },
+                ]
+            },
+            "doc_map": {"sections": []},
+        },
+        source_status=original["source_status"],
+        category_labels=["Category"],
+        vector_store_id=None,
+        dependencies=deps,
+    )
+
+    assert [
+        request.plan.targets[0].repair_strategy for request in regeneration_requests
+    ] == ["current_evidence", "alternative_evidence", "safe_removal"]
+    assert [name for name, _artifacts in validation_requests] == [
+        "validation_regen_candidate_1",
+        "validation_regen_candidate_2",
+        "validation_regen_candidate_3",
+    ]
+    assert [attempt.promotion_outcome for attempt in attempts] == [
+        "rolled_back",
+        "rolled_back",
+        "promoted",
+    ]
+    assert loop_state.final_status == "pass"
+    assert promoted_validation.status == "pass"
+    assert promoted_artifacts["summary"]["claim_evidence_map"] == []
+
+
 def test_run_report_analysis_maps_topic_section_failures_to_topics_regeneration(
     tmp_path,
 ):
