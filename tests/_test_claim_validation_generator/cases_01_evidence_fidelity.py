@@ -543,6 +543,148 @@ def test_evidence_fidelity_semantics_for_unresolved_descriptions() -> None:
     assert package.semantic_execution_identities == ["semantic-execution"]
 
 
+def test_evidence_fidelity_batches_identical_evidence_and_fails_closed() -> None:
+    calls = []
+    page_two = "Advertising has become an established channel."
+    page_three = page_two
+
+    def semantic_batch(candidates, sources):
+        claim_ids = [candidate.claim_id for candidate in candidates]
+        calls.append((claim_ids, sources))
+        if claim_ids == ["evidence:findings:f1", "evidence:findings:f2"]:
+            return {
+                claim_ids[1]: (False, "semantic_unsupported", "semantic-batch-1"),
+                claim_ids[0]: (True, "semantic_supported", "semantic-batch-1"),
+            }
+        return {}
+
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Advertising is an established channel.",
+                        "page": 2,
+                    },
+                    {
+                        "id": "f2",
+                        "text": "Advertising is a mature channel.",
+                        "page": 2,
+                    },
+                    {
+                        "id": "f3",
+                        "text": "Retailers are changing checkout systems.",
+                        "page": 3,
+                    },
+                ]
+            }
+        },
+        source_spans=[
+            {"id": "source:page:2", "page": 2, "text": page_two},
+            {"id": "source:page:3", "page": 3, "text": page_three},
+        ],
+        semantic_batch_validator=semantic_batch,
+    )
+
+    by_id = {result.candidate.claim_id: result for result in package.results}
+    assert len(calls) == 2
+    assert calls[0] == (
+        ["evidence:findings:f1", "evidence:findings:f2"],
+        [page_two],
+    )
+    assert calls[1] == (["evidence:findings:f3"], [page_three])
+    assert by_id["evidence:findings:f1"].status == "supported"
+    assert by_id["evidence:findings:f2"].status == "unsupported"
+    assert by_id["evidence:findings:f3"].status == "unsupported"
+    assert by_id["evidence:findings:f3"].reasons == [
+        "semantic_support_not_established"
+    ]
+    assert package.semantic_validation_count == 3
+    assert package.semantic_execution_identities == ["semantic-batch-1"]
+
+
+def test_evidence_fidelity_marks_malformed_semantic_batch_unsupported() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Advertising is an established channel.",
+                        "page": 2,
+                    },
+                    {
+                        "id": "f2",
+                        "text": "Advertising is a mature channel.",
+                        "page": 2,
+                    },
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:2",
+                "page": 2,
+                "text": "Advertising has become an established channel.",
+            }
+        ],
+        semantic_batch_validator=lambda *_: ["malformed"],  # type: ignore[arg-type]
+    )
+
+    assert all(result.status == "unsupported" for result in package.results)
+    assert all(result.semantic_validator_used for result in package.results)
+    assert package.semantic_validation_count == 2
+    assert package.unsupported_factual_count == 2
+
+
+def test_evidence_fidelity_duplicate_ids_fail_closed_without_call() -> None:
+    calls = []
+
+    def semantic_batch(candidates, sources):
+        calls.append((candidates, sources))
+        return {
+            candidate.claim_id: (True, "semantic_supported", "semantic-batch")
+            for candidate in candidates
+        }
+
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "duplicate",
+                        "text": "Advertising is an established channel.",
+                        "page": 2,
+                    },
+                    {
+                        "id": "duplicate",
+                        "text": "Advertising is a mature channel.",
+                        "page": 2,
+                    },
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:2",
+                "page": 2,
+                "text": "Advertising has become an established channel.",
+            }
+        ],
+        semantic_batch_validator=semantic_batch,
+    )
+
+    assert calls == []
+    assert len(package.results) == 2
+    assert all(result.status == "unsupported" for result in package.results)
+    assert all(
+        result.reasons == ["semantic_claim_identity_ambiguous"]
+        for result in package.results
+    )
+    assert package.semantic_validation_count == 0
+
+
 def test_evidence_fidelity_rejects_fabricated_quote_and_missing_provenance() -> None:
     fabricated = validate_evidence_fidelity(
         {

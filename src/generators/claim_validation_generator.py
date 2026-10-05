@@ -89,6 +89,9 @@ SemanticValidator = Callable[[ClaimCandidate, list[str]], tuple[bool, str, str]]
 SemanticBatchValidator = Callable[
     [list[ClaimSemanticInput]], list[ClaimSemanticGroundingResult]
 ]
+EvidenceSemanticBatchValidator = Callable[
+    [list[ClaimCandidate], list[str]], Mapping[str, tuple[bool, str, str]]
+]
 
 
 @dataclass(frozen=True)
@@ -608,6 +611,7 @@ def _validate_claims_against_sources(
     *,
     artifact: object,
     semantic_validator: SemanticValidator | None = None,
+    evidence_semantic_batch_validator: EvidenceSemanticBatchValidator | None = None,
     semantic_batch_validator: SemanticBatchValidator | None = None,
     semantic_results: list[ClaimSemanticGroundingResult] | None = None,
     source_identity: str = "",
@@ -617,8 +621,15 @@ def _validate_claims_against_sources(
     Candidate extraction remains owned by the artifact or evidence-pack boundary.
     Deterministic checks always run first. Retained-claim semantic fallback is
     collected into one batch and consumes only identity-matched tri-state results.
+    Evidence-fidelity fallbacks batch only claims supplied identical ordered evidence.
     """
 
+    if semantic_validator is not None and evidence_semantic_batch_validator is not None:
+        raise ValueError("Provide a semantic validator or its batch adapter, not both")
+    if evidence_semantic_batch_validator is not None and (
+        semantic_batch_validator is not None or semantic_results is not None
+    ):
+        raise ValueError("Evidence-fidelity and retained-claim batching cannot overlap")
     results: list[ClaimValidationResult] = []
     semantic_ids: list[str] = []
     for candidate_input in candidates:
@@ -661,7 +672,11 @@ def _validate_claims_against_sources(
         execution_identity = ""
         semantic_outcome: ClaimSemanticOutcome | None = None
         semantic_reason = ""
-        if status == "unresolved" and semantic_validator is not None:
+        if (
+            status == "unresolved"
+            and semantic_validator is not None
+            and evidence_semantic_batch_validator is None
+        ):
             sources = [
                 source_evidence[ref.evidence_id][1]
                 for ref in candidate.evidence_references
@@ -692,6 +707,79 @@ def _validate_claims_against_sources(
                 semantic_execution_identity=execution_identity,
             )
         )
+
+    if evidence_semantic_batch_validator is not None:
+        pending_by_evidence: dict[
+            tuple[tuple[str, str], ...], list[tuple[int, ClaimCandidate]]
+        ] = {}
+        pending_id_counts: dict[str, int] = {}
+        for index, (candidate_input, result) in enumerate(
+            zip(candidates, results, strict=True)
+        ):
+            if result.deterministic_status != "unresolved":
+                continue
+            candidate = candidate_input.candidate
+            pending_id_counts[candidate.claim_id] = (
+                pending_id_counts.get(candidate.claim_id, 0) + 1
+            )
+            evidence_bindings = tuple(
+                (ref.evidence_id, source_evidence[ref.evidence_id][1])
+                for ref in candidate.evidence_references
+                if ref.evidence_id in source_evidence
+            )
+            pending_by_evidence.setdefault(evidence_bindings, []).append(
+                (index, candidate)
+            )
+
+        duplicate_claim_ids = {
+            claim_id for claim_id, count in pending_id_counts.items() if count > 1
+        }
+        for evidence_bindings, indexed_candidates in pending_by_evidence.items():
+            valid_candidates = [
+                (index, candidate)
+                for index, candidate in indexed_candidates
+                if candidate.claim_id not in duplicate_claim_ids
+            ]
+            for index, candidate in indexed_candidates:
+                if candidate.claim_id in duplicate_claim_ids:
+                    results[index] = replace(
+                        results[index],
+                        status="unsupported",
+                        reasons=["semantic_claim_identity_ambiguous"],
+                    )
+            if not valid_candidates:
+                continue
+
+            batch_candidates = [candidate for _index, candidate in valid_candidates]
+            batch_result = evidence_semantic_batch_validator(
+                batch_candidates,
+                [text for _evidence_id, text in evidence_bindings],
+            )
+            if not isinstance(batch_result, Mapping):
+                batch_result = {}
+            for index, candidate in valid_candidates:
+                member = batch_result.get(candidate.claim_id)
+                if (
+                    not isinstance(member, tuple)
+                    or len(member) != 3
+                    or type(member[0]) is not bool
+                    or not isinstance(member[1], str)
+                    or not isinstance(member[2], str)
+                ):
+                    supported = False
+                    reason = "semantic_support_not_established"
+                    execution_identity = ""
+                else:
+                    supported, reason, execution_identity = member
+                results[index] = replace(
+                    results[index],
+                    status="supported" if supported else "unsupported",
+                    reasons=[reason],
+                    semantic_outcome="entailed" if supported else None,
+                    semantic_reason=reason,
+                    semantic_validator_used=True,
+                    semantic_execution_identity=execution_identity,
+                )
 
     if semantic_batch_validator is not None and semantic_results is not None:
         raise ValueError("Provide a semantic batch validator or results, not both")
@@ -1713,6 +1801,7 @@ def validate_evidence_fidelity(
     *,
     source_spans: list[dict[str, object]],
     semantic_validator: SemanticValidator | None = None,
+    semantic_batch_validator: EvidenceSemanticBatchValidator | None = None,
 ) -> ClaimValidationPackage:
     """Validate generated, editorially usable evidence against PDF-derived spans."""
 
@@ -1722,6 +1811,7 @@ def validate_evidence_fidelity(
         source_evidence,
         artifact=evidence_packs,
         semantic_validator=semantic_validator,
+        evidence_semantic_batch_validator=semantic_batch_validator,
     )
 
 

@@ -575,7 +575,9 @@ def generate_evidence_packs(
             )
         }
 
-        def semantic_fallback(candidate, sources):
+        def semantic_batch_fallback(candidates, sources):
+            if not candidates or not sources:
+                return {}
             outcome = run_semantic_validation(
                 insights=[
                     {
@@ -584,6 +586,7 @@ def generate_evidence_packs(
                         "metric": {},
                         "evidence_id": candidate.claim_id,
                     }
+                    for candidate in candidates
                 ],
                 quotes=[],
                 evidence_texts=sources,
@@ -597,18 +600,22 @@ def generate_evidence_packs(
                 report_id=report_id,
                 source_id=source_identity_id,
             )
-            support = outcome.metric_support.get(candidate.claim_id)
-            return (
-                bool(support and support.supported),
-                support.reason if support else "semantic_support_not_established",
-                outcome.execution_identity,
-            )
+            batch_results = {}
+            for candidate in candidates:
+                support = outcome.metric_support.get(candidate.claim_id)
+                if support is not None:
+                    batch_results[candidate.claim_id] = (
+                        bool(support.supported),
+                        support.reason,
+                        outcome.execution_identity,
+                    )
+            return batch_results
 
         fidelity = (
             validate_evidence_fidelity(
                 results,
                 source_spans=validated_source_spans,
-                semantic_validator=semantic_fallback,
+                semantic_batch_validator=semantic_batch_fallback,
             )
             if initial_fidelity.unresolved_factual_count
             else initial_fidelity
