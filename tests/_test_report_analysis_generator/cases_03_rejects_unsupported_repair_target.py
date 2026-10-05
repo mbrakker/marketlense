@@ -808,6 +808,81 @@ def test_summary_claim_map_grounding_is_limited_to_the_failed_item():
     assert normalized.excluded_evidence_ids == ["evidence-b"]
 
 
+def test_indexed_summary_claim_issue_resolves_only_the_failed_item():
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "claim": "First claim.",
+                    "evidence_id": "evidence-a",
+                    "pages": [4],
+                },
+                {
+                    "claim": "Failed claim.",
+                    "evidence_id": "evidence-b",
+                    "pages": [27],
+                },
+            ]
+        }
+    }
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="The failed summary claim is not established by its evidence.",
+        severity="error",
+        affected_section="summary.claim_evidence_map[1]",
+        rule_id="claim_support",
+        repair_target="summary",
+        entity_id="evidence-b",
+    )
+
+    normalized = _normalize_regeneration_issue(issue, artifacts)
+    rewritten_identity = _normalize_regeneration_issue(
+        replace(issue, entity_id="replacement-evidence"), artifacts
+    )
+
+    assert normalized.evidence_ids == ["evidence-b"]
+    assert normalized.pages == [27]
+    assert normalized.failure_fingerprint == rewritten_identity.failure_fingerprint
+
+
+def test_indexed_summary_claim_support_failure_gets_exact_repair_path():
+    artifacts = {
+        "summary": {
+            "claim_evidence_map": [
+                {
+                    "claim": "Failed claim.",
+                    "evidence_id": "evidence-conclusion",
+                    "pages": [40, 41],
+                }
+            ]
+        }
+    }
+    issue = ValidationIssue(
+        schema_version="1.0",
+        message="A strong claim is supported only by a section summary.",
+        severity="error",
+        affected_section="summary.claim_evidence_map[0]",
+        rule_id="claim_support",
+        repair_target="summary",
+        entity_id="evidence-conclusion",
+    )
+
+    plan = _build_regeneration_plan(
+        issues=[issue],
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert plan.mode == "targeted"
+    assert len(plan.targets) == 1
+    assert plan.targets[0].repair_action == "REGENERATE_ITEM"
+    assert plan.targets[0].repair_strategy == "current_evidence"
+    assert plan.targets[0].allowed_paths == [
+        "summary.claim_evidence_map[0].claim"
+    ]
+    assert plan.targets[0].selected_evidence_ids == ["evidence-conclusion"]
+
+
 def test_validation_loop_preflights_empty_summary_package_to_safe_removal(tmp_path):
     class _StopAtRegeneration(Exception):
         pass
@@ -1120,6 +1195,8 @@ __all__ = [
     "test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error",
     "test_multi_insight_retry_does_not_offer_single_item_safe_removal",
     "test_summary_claim_map_grounding_is_limited_to_the_failed_item",
+    "test_indexed_summary_claim_issue_resolves_only_the_failed_item",
+    "test_indexed_summary_claim_support_failure_gets_exact_repair_path",
     "test_validation_loop_preflights_empty_summary_package_to_safe_removal",
     "test_insight_repair_authorizes_same_claim_grounding_warning_fields",
     "test_summary_repair_keeps_same_claim_grounding_context_only",

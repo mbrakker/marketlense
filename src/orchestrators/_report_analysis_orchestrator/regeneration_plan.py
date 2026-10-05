@@ -199,34 +199,9 @@ def _issue_grounding(
     ):
         topic_index = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_topic_grounding(topic_index, artifacts)
-    summary_claim_match = re.match(
-        r"^summary\.claim_evidence_map:([^.:]+)(?:\.|$)", section, re.IGNORECASE
-    )
-    if summary_claim_match:
-        identity = summary_claim_match.group(1).strip()
-        summary_value = artifacts.get("summary")
-        summary = summary_value if isinstance(summary_value, dict) else {}
-        claims = summary.get("claim_evidence_map") or []
-        matching_claims = [
-            (index, claim)
-            for index, claim in enumerate(claims)
-            if isinstance(claim, dict)
-            and (
-                identity
-                in {
-                    str(claim.get("id") or "").strip(),
-                    str(claim.get("claim_id") or "").strip(),
-                }
-                or (
-                    not str(claim.get("id") or claim.get("claim_id") or "").strip()
-                    and identity.isdigit()
-                    and int(identity) == index + 1
-                )
-            )
-        ]
-        if len(matching_claims) != 1:
-            return [], []
-        summary_claim = matching_claims[0][1]
+    summary_claim_entry = _summary_claim_entry(section, artifacts)
+    if summary_claim_entry is not None:
+        _, summary_claim = summary_claim_entry
         raw_evidence_ids = summary_claim.get("evidence_ids")
         summary_claim_evidence_ids = (
             [str(value).strip() for value in raw_evidence_ids if str(value).strip()]
@@ -270,6 +245,69 @@ def _issue_grounding(
         quote_id = section.split(":", 1)[1].strip() if ":" in section else ""
         return _lookup_quote_grounding(quote_id, artifacts)
     return [], []
+
+
+def _summary_claim_entry(
+    section: str, artifacts: Dict[str, Any]
+) -> tuple[int, Dict[str, Any]] | None:
+    """Resolve a validator summary-claim path to its exact retained item."""
+
+    legacy_match = re.match(
+        r"^summary\.claim_evidence_map:([^.:]+)(?:\.|$)", section, re.IGNORECASE
+    )
+    indexed_match = re.match(
+        r"^summary\.claim_evidence_map\[([^\]]+)\](?:\.|$)",
+        section,
+        re.IGNORECASE,
+    )
+    summary_value = artifacts.get("summary")
+    summary = summary_value if isinstance(summary_value, dict) else {}
+    claims = summary.get("claim_evidence_map")
+    if not isinstance(claims, list):
+        return None
+
+    if indexed_match:
+        identity = indexed_match.group(1).strip()
+        if identity.startswith("item="):
+            identity = identity[len("item=") :]
+        elif identity.isdigit():
+            index = int(identity)
+            if index < len(claims) and isinstance(claims[index], dict):
+                return index, claims[index]
+            return None
+        matching_claims = [
+            (index, claim)
+            for index, claim in enumerate(claims)
+            if isinstance(claim, dict)
+            and identity
+            in {
+                str(claim.get("id") or "").strip(),
+                str(claim.get("claim_id") or "").strip(),
+            }
+        ]
+        return matching_claims[0] if len(matching_claims) == 1 else None
+
+    if legacy_match:
+        identity = legacy_match.group(1).strip()
+        matching_claims = [
+            (index, claim)
+            for index, claim in enumerate(claims)
+            if isinstance(claim, dict)
+            and (
+                identity
+                in {
+                    str(claim.get("id") or "").strip(),
+                    str(claim.get("claim_id") or "").strip(),
+                }
+                or (
+                    not str(claim.get("id") or claim.get("claim_id") or "").strip()
+                    and identity.isdigit()
+                    and int(identity) == index + 1
+                )
+            )
+        ]
+        return matching_claims[0] if len(matching_claims) == 1 else None
+    return None
 
 
 RULE_ID_RE = re.compile(r"^\[([^\]]+)\]")
@@ -351,9 +389,13 @@ def _normalize_regeneration_issue(
             # the planner's existing safe-removal strategy after a rejection.
             fingerprint_section = stable_claim_path
             fingerprint_entity_id = ""
-    if str(issue.affected_section or "").startswith("summary.claim_evidence_map:"):
-        # Id-less map entries have a stable one-based identity in the section
-        # path. The provenance-derived entity ID hashes the changing copy.
+    if re.match(
+        r"^summary\.claim_evidence_map(?::|\[)",
+        str(issue.affected_section or ""),
+        re.IGNORECASE,
+    ):
+        # Map paths carry a stable item identity; the validator's entity ID
+        # may be the changing evidence binding and must not split the retry.
         fingerprint_entity_id = ""
     fingerprint = FailureFingerprint(
         rule_id=issue.rule_id or _extract_rule_id(issue.message),
@@ -629,21 +671,15 @@ def _issue_allowed_path(
     if target_key == "report_identity":
         return ""
     if target_key == "summary":
-        map_match = re.match(r"^summary\.claim_evidence_map:([^.:]+)", affected)
-        if map_match:
-            identity = map_match.group(1)
-            entries = artifacts.get("summary", {}).get("claim_evidence_map", [])
-            if isinstance(entries, list):
-                for index, entry in enumerate(entries):
-                    if not isinstance(entry, dict):
-                        continue
-                    stable_id = str(
-                        entry.get("id") or entry.get("claim_id") or ""
-                    ).strip()
-                    if stable_id == identity:
-                        return f"summary.claim_evidence_map[item={identity}].claim"
-                    if not stable_id and str(index + 1) == identity:
-                        return f"summary.claim_evidence_map[{index}].claim"
+        summary_claim_entry = _summary_claim_entry(affected, artifacts)
+        if summary_claim_entry is not None:
+            index, entry = summary_claim_entry
+            stable_id = str(entry.get("id") or entry.get("claim_id") or "").strip()
+            item_identity = f"item={stable_id}" if stable_id else str(index)
+            return f"summary.claim_evidence_map[{item_identity}].claim"
+        if re.match(
+            r"^summary\.claim_evidence_map(?::|\[)", affected, re.IGNORECASE
+        ):
             return ""
         soft_copy_paths = _soft_copy_claim_paths(
             family="summary", entity_id=entity_id, artifacts=artifacts
