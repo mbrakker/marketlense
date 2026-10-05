@@ -1057,7 +1057,7 @@ workflow_control:
     # stages can dispatch without waiting for another pass.
     max_parallel_workers: 3
     max_jobs_per_queue: 3
-    max_total_jobs: 20
+    max_total_jobs: 60
     max_runtime_seconds: 1200
     lease_seconds: 180
   remediation_reaper:

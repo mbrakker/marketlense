@@ -149,7 +149,7 @@ workflow_control:
     enabled: false
     max_parallel_workers: 3
     max_jobs_per_queue: 3
-    max_total_jobs: 20
+    max_total_jobs: 60
     max_runtime_seconds: 120
     lease_seconds: 180
   # These profiles only select existing budget/preflight/model-policy controls.

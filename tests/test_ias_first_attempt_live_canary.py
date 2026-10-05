@@ -59,7 +59,7 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     assert control.supervisor.worker_batches_enabled is True
     assert control.supervisor.max_parallel_workers == 3
     assert control.supervisor.max_jobs_per_queue == 3
-    assert control.supervisor.max_total_jobs == 20
+    assert control.supervisor.max_total_jobs == 60
     queues = load_workflow_queue_policies(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
         new_runtime_context(task_id="isolated-canary-queue-test"),
