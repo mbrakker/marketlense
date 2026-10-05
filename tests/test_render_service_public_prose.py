@@ -591,6 +591,12 @@ def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
     assert _sanitize_public_prose(text) == text
 
 
+def test_render_sanitizer_preserves_day_number_metric_terms() -> None:
+    text = "Day-1 retention improved, while day-7 retention stayed stable."
+
+    assert _sanitize_public_prose(text) == text
+
+
 def test_linkedin_sanitizer_preserves_paragraphs() -> None:
     assert _sanitize_linkedin_post(
         "*Activate Technology & Media Outlook: 2026 Edition* (finding_12)\n\n"

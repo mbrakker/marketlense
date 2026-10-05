@@ -198,6 +198,58 @@ def test_currency_integer_truncated_before_source_decimal_routes_to_repair() -> 
     assert [target.target_section for target in plan.targets] == ["insights_bundle"]
 
 
+def test_day_number_soft_copy_retains_claim_identity_for_numeric_repair() -> None:
+    sentence = "Day-1 retention costs $1."
+    sentence_hash = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+    claim_id = f"soft_copy:expert_comment:{sentence_hash[:16]}"
+    artifacts = {
+        "expert_comment": sentence,
+        "insights_final": [
+            {
+                "id": "day-one-retention",
+                "text": "Day-1 retention costs $1.3.",
+                "evidence_id": "retained-day-one",
+                "evidence": "Day-1 retention costs $1.3.",
+            }
+        ],
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+            [
+                SoftCopyClaimProvenance(
+                    schema_version="1.0",
+                    artifact_family="expert_comment",
+                    claim_id=claim_id,
+                    text_hash=sentence_hash,
+                    classification="factual",
+                    evidence_ids=("retained-day-one",),
+                    source_spans=(),
+                    producing_prompt_identity={"namespace": "test/expert-comment"},
+                    generation_attempt=1,
+                    regeneration_attempt=0,
+                )
+            ]
+        ),
+    }
+
+    quality = evaluate_public_editorial_quality(
+        report_id="day-number-report", artifacts=artifacts
+    )
+    incomplete_numeric = next(
+        issue
+        for issue in quality.issues
+        if issue.rule_id == "public_editorial_quality.incomplete_numeric_expression"
+    )
+    plan = _build_regeneration_plan(
+        issues=validation_issues_from_public_editorial_quality(quality),
+        artifacts=artifacts,
+        broad_retry_available=True,
+    )
+
+    assert incomplete_numeric.public_item_id == claim_id
+    assert plan.mode == "targeted"
+    assert [target.target_section for target in plan.targets] == ["expert_comment"]
+    assert plan.targets[0].allowed_paths == ["expert_comment[claim_index=0]"]
+
+
 def test_truncated_key_figure_label_uses_linked_insight_for_repair() -> None:
     artifacts = _retained_artifacts()
     artifacts["insights_final"][0].update(

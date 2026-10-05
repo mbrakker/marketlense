@@ -41,8 +41,8 @@ _FIELDWORK_ISO_RANGE_PATTERN = re.compile(
 _SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 _SENTENCE_ABBREVIATION = re.compile(r"\b(?:U\.S|U\.K|e\.g|i\.e)\.", re.I)
 _INLINE_INTERNAL_REFERENCE = re.compile(
-    r"(?:\s*[\[(](?!(?:q[1-4]|h[12])\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
-    r"\b(?!(?:q[1-4]|h[12])\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
+    r"(?:\s*[\[(](?!(?:q[1-4]|h[12]|day[-_]?\d{1,5})\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}[\])]|"
+    r"\b(?!(?:q[1-4]|h[12]|day[-_]?\d{1,5})\b)(?:[a-z]{1,4}|finding|insight|claim)[_-]?\d{1,5}\b)",
     re.IGNORECASE,
 )
 _PROVIDER_FILE_CITATION = re.compile(

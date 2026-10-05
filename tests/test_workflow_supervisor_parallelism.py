@@ -268,6 +268,46 @@ def test_parallel_supervisor_stops_after_one_fully_idle_queue_scan() -> None:
     assert len(calls) <= 3 * len(WORKFLOW_QUEUE_NAMES)
 
 
+def test_successful_worker_rechecks_idle_downstream_queue_without_outbox() -> None:
+    lock = Lock()
+    target_was_idle = Event()
+    producer_completed = Event()
+    target_completed = Event()
+    target_queue, producer_queue = WORKFLOW_QUEUE_NAMES[:2]
+
+    def worker(**kwargs):
+        queue_name = str(kwargs["queue_name"])
+        if queue_name == target_queue:
+            if producer_completed.is_set():
+                target_completed.set()
+                return _succeeded_worker()
+            target_was_idle.set()
+            return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+        if queue_name == producer_queue:
+            assert target_was_idle.wait(timeout=3)
+            with lock:
+                if not producer_completed.is_set():
+                    producer_completed.set()
+                    return _succeeded_worker()
+        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
+
+    result = run_supervisor_once(
+        _request(
+            max_parallel_workers=2,
+            max_total_jobs=2,
+            max_runtime_seconds=5,
+            supervisor_lease_seconds=3,
+        ),
+        _ctx(),
+        dependencies=_dependencies(worker),
+    )
+
+    assert result.completed_job_count == 2
+    assert target_was_idle.is_set()
+    assert producer_completed.is_set()
+    assert target_completed.is_set()
+
+
 def test_parallel_supervisor_respects_runtime_after_in_flight_workers_finish() -> None:
     calls: list[str] = []
     lock = Lock()
@@ -399,7 +439,7 @@ def test_parallel_supervisor_stops_dispatch_after_losing_lease() -> None:
     assert len(worker_calls) == 2
 
 
-def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> None:
+def test_successful_outbox_materialization_reopens_idle_queue_epoch() -> None:
     analysis_poll_started = Event()
     child_materialized = Event()
     second_scan_reached_end = Event()
@@ -458,8 +498,8 @@ def test_stale_idle_poll_rechecks_its_queue_without_reopening_every_queue() -> N
     )
 
     assert result.completed_job_count == 2
-    assert queue_calls["report_analysis"] == 3
-    assert queue_calls["publisher_discovery"] <= 2
+    assert queue_calls["report_analysis"] == 4
+    assert queue_calls["publisher_discovery"] == 3
 
 
 def test_supervisor_never_exceeds_global_worker_cap_when_candidates_remain() -> None:

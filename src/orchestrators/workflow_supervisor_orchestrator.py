@@ -427,6 +427,10 @@ def _run_worker_batches_parallel(
                     if result.terminal_status == "succeeded":
                         last_success_queue = queue_name
                         successful_queues.append(queue_name)
+                        # A successful worker may have enqueued work directly,
+                        # outside the outbox. Make every previously idle queue
+                        # eligible again while this pass still has capacity.
+                        reopen_epoch = True
                         if (
                             request.settings.materialize_outbox_enabled
                             and remaining > 0
@@ -438,7 +442,6 @@ def _run_worker_batches_parallel(
                                 limit=remaining,
                             )
                             materialized += len(new_job_ids)
-                            reopen_epoch = reopen_epoch or bool(new_job_ids)
             if reopen_epoch:
                 epoch += 1
                 idle_queues.clear()

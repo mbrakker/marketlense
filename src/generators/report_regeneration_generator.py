@@ -3720,6 +3720,7 @@ def _remove_summary_claim_map_targets(
 
 def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> None:
     namespace = execution.handler.prompt_namespaces[0]
+    original_summary = deepcopy(execution.state.summary)
     if _uses_safe_removal(execution):
         repair_issues = _summary_repair_issues(execution.target)
         claim_map_issues = [
@@ -3765,6 +3766,7 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
             return
         scoped_repairs = _summary_claim_repairs(execution)
     if scoped_repairs is not None:
+        removed_summary_claim_ids: set[str] = set()
         failed_summary_claim_ids = {
             repair.claim.claim_id
             for repairs in scoped_repairs.values()
@@ -3872,10 +3874,21 @@ def _handle_summary_regeneration(execution: _RegenerationHandlerExecution) -> No
                     _s(execution.state.summary.get(field)), repairs, replacements
                 )
             execution.state.summary[field] = reconstructed
+            removed_summary_claim_ids.update(
+                claim_id
+                for claim_id, replacement in replacements.items()
+                if replacement is None
+            )
             if reconstructed != prior_field_text:
                 mutation_path = f"summary.{field}"
                 if mutation_path not in execution.state.deterministic_mutation_paths:
                     execution.state.deterministic_mutation_paths.append(mutation_path)
+        _retire_removed_summary_claim_map_rows(
+            execution=execution,
+            repaired_summary=execution.state.summary,
+            original_summary=original_summary,
+            removed_claim_ids=sorted(removed_summary_claim_ids),
+        )
         execution.state.regenerated_sections.append("summary")
         execution.state.prompt_namespaces.append(namespace)
         return
@@ -4028,6 +4041,13 @@ def _record_atomic_summary_claim_bindings(
         for claim in retained_claims
         if claim.artifact_family == "summary" and claim.text_hash not in public_hashes
     ]
+    _retire_removed_summary_claim_map_rows(
+        execution=execution,
+        repaired_summary=repaired_summary,
+        original_summary=current_artifacts.get("summary", {}),
+        removed_claim_ids=stale_claim_ids,
+        additional_bindings=repaired_bindings,
+    )
     retained_hashes = {
         claim.text_hash
         for claim in retained_claims
@@ -4061,6 +4081,129 @@ def _record_atomic_summary_claim_bindings(
         binding["claim"] for binding in repaired_bindings
     )
     return True
+
+
+def _summary_claim_map_evidence_ids(claim: Dict[str, Any]) -> set[str]:
+    """Read direct evidence identities from one retained summary-map row."""
+
+    evidence_ids = {
+        _s(claim.get("evidence_id")).strip()
+        if isinstance(claim.get("evidence_id"), str)
+        else ""
+    }
+    raw_ids = claim.get("evidence_ids")
+    if isinstance(raw_ids, list):
+        evidence_ids.update(
+            _s(value).strip() for value in raw_ids if isinstance(value, str)
+        )
+    for span_key in ("evidence_spans", "source_spans"):
+        spans = claim.get(span_key)
+        if isinstance(spans, list):
+            evidence_ids.update(
+                _s(span.get("evidence_id")).strip()
+                for span in spans
+                if isinstance(span, dict) and isinstance(span.get("evidence_id"), str)
+            )
+    evidence_ids.discard("")
+    return evidence_ids
+
+
+def _retire_removed_summary_claim_map_rows(
+    *,
+    execution: _RegenerationHandlerExecution,
+    repaired_summary: Dict[str, Any],
+    original_summary: Dict[str, Any],
+    removed_claim_ids: Sequence[str],
+    additional_bindings: Sequence[Dict[str, Any]] = (),
+) -> None:
+    """Remove only a unique evidence-map row bound to removed public copy."""
+
+    removed_ids = set(removed_claim_ids)
+    summary_map = repaired_summary.get("claim_evidence_map")
+    original_map = original_summary.get("claim_evidence_map")
+    if not removed_ids or not isinstance(summary_map, list) or not isinstance(
+        original_map, list
+    ):
+        return
+    retained_claims = soft_copy_claim_provenance_from_payload(
+        execution.state.existing_soft_copy_claim_provenance
+    )
+    removed_claims = [
+        claim
+        for claim in retained_claims
+        if claim.artifact_family == "summary"
+        and claim.claim_id in removed_ids
+        and claim.evidence_ids
+    ]
+    public_text = soft_copy_public_text("summary", repaired_summary)
+    public_hashes = {
+        hashlib.sha256(_normalized_soft_copy_text(sentence).encode("utf-8")).hexdigest()
+        for sentence in soft_copy_material_sentences(public_text)
+    }
+    public_claims = [
+        claim
+        for claim in retained_claims
+        if claim.artifact_family == "summary"
+        and claim.text_hash in public_hashes
+        and claim.claim_id not in removed_ids
+    ]
+    active_evidence_bindings = {
+        tuple(sorted(set(claim.evidence_ids)))
+        for claim in public_claims
+        if claim.evidence_ids
+    }
+    active_evidence_bindings.update(
+        tuple(sorted(set(_unique_strings(binding.get("evidence_ids", [])))))
+        for binding in [
+            *execution.state.soft_copy_claim_bindings.get("summary", []),
+            *additional_bindings,
+        ]
+        if binding.get("evidence_ids")
+    )
+    remove_indexes: set[int] = set()
+    for removed_claim in removed_claims:
+        evidence_ids = set(removed_claim.evidence_ids)
+        if sum(
+            1
+            for claim in retained_claims
+            if claim.artifact_family == "summary"
+            and set(claim.evidence_ids) == evidence_ids
+        ) != 1:
+            continue
+        matching_indexes = [
+            index
+            for index, raw in enumerate(summary_map)
+            if index < len(original_map)
+            and raw == original_map[index]
+            and isinstance(raw, dict)
+            and _summary_claim_map_evidence_ids(raw) == evidence_ids
+            and hashlib.sha256(
+                _normalized_soft_copy_text(_s(raw.get("claim"))).encode("utf-8")
+            ).hexdigest()
+            not in public_hashes
+        ]
+        if len(matching_indexes) != 1:
+            continue
+        map_index = matching_indexes[0]
+        map_claim_hash = hashlib.sha256(
+            _normalized_soft_copy_text(
+                _s(summary_map[map_index].get("claim"))
+            ).encode("utf-8")
+        ).hexdigest()
+        if any(
+            set(claim.evidence_ids) == evidence_ids
+            or claim.text_hash == map_claim_hash
+            for claim in public_claims
+        ) or tuple(sorted(evidence_ids)) in active_evidence_bindings:
+            continue
+        remove_indexes.add(map_index)
+    if remove_indexes:
+        repaired_summary["claim_evidence_map"] = [
+            raw for index, raw in enumerate(summary_map) if index not in remove_indexes
+        ]
+        mutation_path = "summary.claim_evidence_map"
+        if mutation_path not in execution.state.deterministic_mutation_paths:
+            execution.state.deterministic_mutation_paths.append(mutation_path)
 
 
 def _handle_topics_regeneration(execution: _RegenerationHandlerExecution) -> None:

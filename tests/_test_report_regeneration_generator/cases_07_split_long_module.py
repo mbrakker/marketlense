@@ -371,6 +371,159 @@ def test_summary_claim_map_repair_resolves_idless_claim_by_stable_index(tmp_path
     ]
 
 
+@pytest.mark.parametrize("shared_evidence_binding", [False, True])
+def test_summary_copy_removal_retires_only_uniquely_bound_claim_map_row(
+    tmp_path, shared_evidence_binding: bool
+):
+    artifacts = _current_artifacts()
+    summary_sentences = [
+        ("tldr", "A supported lead claim.", "f1"),
+        ("card_tldr_compact", "A supported compact claim.", "f2"),
+        (
+            "executive_summary",
+            "A retained executive claim.",
+            "f4" if shared_evidence_binding else "f3",
+        ),
+        ("executive_summary", "An unsupported forecast claim.", "f4"),
+    ]
+    artifacts["summary"]["tldr"] = summary_sentences[0][1]
+    artifacts["summary"]["card_tldr_compact"] = summary_sentences[1][1]
+    artifacts["summary"]["executive_summary"] = " ".join(
+        sentence for family, sentence, _evidence_id in summary_sentences
+        if family == "executive_summary"
+    )
+    artifacts["summary"]["claim_evidence_map"] = [
+        {
+            "claim": sentence,
+            "evidence_id": evidence_id,
+            "evidence": f"Evidence for {evidence_id}",
+            "pages": [index],
+        }
+        for index, (_family, sentence, evidence_id) in enumerate(
+            summary_sentences, start=1
+        )
+    ]
+    summary_claims = [
+        SoftCopyClaimProvenance(
+            schema_version="1.0",
+            artifact_family="summary",
+            claim_id=(
+                "soft_copy:summary:"
+                f"{hashlib.sha256(sentence.encode()).hexdigest()[:16]}"
+            ),
+            text_hash=hashlib.sha256(sentence.encode()).hexdigest(),
+            classification="factual",
+            evidence_ids=(evidence_id,),
+            source_spans=(),
+            producing_prompt_identity={"namespace": "report_vs/artifacts/summary"},
+            generation_attempt=1,
+            regeneration_attempt=0,
+        )
+        for _family, sentence, evidence_id in summary_sentences
+    ]
+    other_claims = [
+        claim
+        for claim in soft_copy_claim_provenance_from_payload(
+            artifacts["soft_copy_claim_provenance"]
+        )
+        if claim.artifact_family != "summary"
+    ]
+    artifacts["soft_copy_claim_provenance"] = soft_copy_claim_provenance_to_payload(
+        [*other_claims, *summary_claims]
+    )
+    failed_claim = summary_claims[-1]
+
+    class _RemoveSummarySentenceClient:
+        def openai_chat_json(self, req, ctx):
+            del ctx
+            variables = _parse_fixture_variables(req.user_prompt)
+            assert variables is not None
+            repair_context = json.loads(variables["repair_context_json"])
+            path = "summary.executive_summary[claim_index=1]"
+            assert repair_context["allowed_paths"] == [path]
+            payload = {
+                "repair_decision": {
+                    "schema_version": "1.0",
+                    "repair_action": repair_context["repair_action"],
+                    "repair_strategy": repair_context["repair_strategy"],
+                    "evidence_ids_used": [],
+                    "changed_paths": [path],
+                    "minimal_patch": [
+                        {"op": "replace", "path": path, "value": ""}
+                    ],
+                }
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                request_id="req-remove-summary-copy-claim",
+            )
+
+    target = RegenerationTarget(
+        target_section="summary",
+        regenerate_steps=["summary"],
+        prompt_namespaces=["report_vs/artifacts/regenerate/summary"],
+        repair_action="REGENERATE_ITEM",
+        repair_strategy="current_evidence",
+        allowed_paths=["summary.executive_summary[claim_index=1]"],
+        issues=[
+            RegenerationIssue(
+                rule_id="grounding",
+                affected_section="summary.executive_summary",
+                message="The retained forecast claim is unsupported.",
+                severity="error",
+                entity_id=failed_claim.claim_id,
+                evidence_ids=["f4"],
+            )
+        ],
+    )
+    evidence_packs = _evidence_packs()
+    evidence_packs["findings"]["findings"].extend(
+        {"id": evidence_id, "evidence": sentence, "text": sentence}
+        for _family, sentence, evidence_id in summary_sentences[2:]
+    )
+    response = regenerate_artifacts(
+        ArtifactRegenerationRequest(
+            report_id="report-1",
+            report_name="report-1",
+            attempt_index=1,
+            plan=RegenerationPlan(
+                mode="targeted",
+                targets=[target],
+                unmappable_issues=[],
+                broad_retry_allowed=False,
+            ),
+            current_artifacts=artifacts,
+            doc_map=evidence_packs["doc_map"],
+            evidence_packs=evidence_packs,
+            settings=_settings(tmp_path),
+            ctx=_ctx(),
+            source_status=artifacts["source_status"],
+            categories=["Category"],
+            vector_store_id=None,
+            md5="md5",
+        ),
+        openai_client=_RemoveSummarySentenceClient(),
+        prompt_client=_FakePromptClient(),
+    )
+
+    repaired_summary = response.updated_artifacts["summary"]
+    assert repaired_summary["executive_summary"] == "A retained executive claim."
+    assert failed_claim.claim_id not in {
+        claim["claim_id"]
+        for claim in response.updated_artifacts["soft_copy_claim_provenance"]["claims"]
+    }
+    expected_map = (
+        summary_sentences
+        if shared_evidence_binding
+        else summary_sentences[:-1]
+    )
+    assert [item["claim"] for item in repaired_summary["claim_evidence_map"]] == [
+        sentence for _family, sentence, _evidence_id in expected_map
+    ]
+
+
 def test_summary_claim_map_issue_uses_map_path_before_soft_copy_provenance_path():
     artifacts = _current_artifacts()
     artifacts["summary"]["executive_summary"] = (
