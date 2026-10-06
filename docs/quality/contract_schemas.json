@@ -17989,6 +17989,1376 @@
       ],
       "type": "object"
     },
+    "src.contracts.cto_evidence.CTOEvidenceAttempt": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_number": {
+          "type": "integer"
+        },
+        "failure_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "initial_execution",
+            "deterministic_recovery",
+            "structured_output_recovery",
+            "evidence_claim_reuse",
+            "semantic_repair",
+            "targeted_regeneration",
+            "workflow_retry",
+            "operator_retry",
+            "manual_intervention",
+            "abstention",
+            "terminal_failure"
+          ]
+        },
+        "operator_intervention": {
+          "type": "boolean"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "failed",
+            "abstained",
+            "not_evaluated"
+          ]
+        },
+        "parent_attempt_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "subject_id",
+        "attempt_number",
+        "kind",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceBundle": {
+      "additionalProperties": false,
+      "properties": {
+        "collector_repository_sha": {
+          "type": "string"
+        },
+        "completeness": {
+          "enum": [
+            "complete",
+            "incomplete",
+            "invalid"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_evaluated",
+            "insufficient_evidence"
+          ]
+        },
+        "executive_summary": {
+          "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceExecutiveSummary"
+        },
+        "generated_at_utc": {
+          "type": "string"
+        },
+        "historical_state": {
+          "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceHistoricalState"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "declared_run",
+            "historical_system_snapshot"
+          ]
+        },
+        "run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceRun"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceRunEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceSourceReference"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "generated_at_utc",
+        "collector_repository_sha",
+        "mode",
+        "run",
+        "run_evidence",
+        "historical_state",
+        "source_references",
+        "completeness",
+        "disposition",
+        "executive_summary",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_identity": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceIdentity"
+          },
+          "type": "array"
+        },
+        "baseline_repository_sha": {
+          "type": "string"
+        },
+        "baseline_selector": {
+          "type": "string"
+        },
+        "baseline_source_id": {
+          "type": "string"
+        },
+        "candidate_identity": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceIdentity"
+          },
+          "type": "array"
+        },
+        "candidate_repository_sha": {
+          "type": "string"
+        },
+        "candidate_selector": {
+          "type": "string"
+        },
+        "candidate_source_id": {
+          "type": "string"
+        },
+        "causal_attribution": {
+          "enum": [
+            "not_established"
+          ]
+        },
+        "changed_variables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "comparison_id": {
+          "type": "string"
+        },
+        "invariants": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceInvariant"
+          },
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric_deltas": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceMetric"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "declared",
+            "compatible",
+            "incompatible",
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "comparison_id",
+        "baseline_source_id",
+        "candidate_source_id",
+        "baseline_selector",
+        "candidate_selector",
+        "baseline_repository_sha",
+        "candidate_repository_sha",
+        "baseline_identity",
+        "candidate_identity",
+        "invariants",
+        "changed_variables",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceCriterion": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "criterion_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "disposition": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_evaluated",
+            "insufficient_evidence"
+          ]
+        },
+        "expected_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "metric_id": {
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "eq",
+            "ne",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "truthy"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "criterion_id",
+        "description",
+        "metric_id",
+        "operator",
+        "expected_value",
+        "required"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceCriterionCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "fail_count": {
+          "type": "integer"
+        },
+        "insufficient_evidence_count": {
+          "type": "integer"
+        },
+        "not_evaluated_count": {
+          "type": "integer"
+        },
+        "pass_count": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "pass_count",
+        "fail_count",
+        "not_evaluated_count",
+        "insufficient_evidence_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceExecutiveSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_provider_call_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completeness": {
+          "enum": [
+            "complete",
+            "incomplete",
+            "invalid"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_evaluated",
+            "insufficient_evidence"
+          ]
+        },
+        "external_actions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceExternalAction"
+          },
+          "type": "array"
+        },
+        "historical_metric_count": {
+          "type": "integer"
+        },
+        "key_metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceMetric"
+          },
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "declared_run",
+            "historical_system_snapshot"
+          ]
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcomes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceOutcomeCount"
+          },
+          "type": "array"
+        },
+        "quality_dimensions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceQualityDimension"
+          },
+          "type": "array"
+        },
+        "recovery_attempt_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required_criteria": {
+          "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceCriterionCounts"
+        },
+        "reused_validation_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "subject_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tested_repository_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "mode",
+        "run_id",
+        "run_type",
+        "objective",
+        "tested_repository_sha",
+        "subject_count",
+        "required_criteria",
+        "outcomes",
+        "key_metrics",
+        "recovery_attempt_count",
+        "reused_validation_count",
+        "avoided_provider_call_count",
+        "quality_dimensions",
+        "external_actions",
+        "historical_metric_count",
+        "completeness",
+        "disposition",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceExternalAction": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_writes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempted_actions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authenticated_readback": {
+          "enum": [
+            "verified",
+            "failed",
+            "not_run",
+            "unavailable"
+          ]
+        },
+        "blocked_actions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failed_actions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "idempotency_result": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_evaluated",
+            "unavailable"
+          ]
+        },
+        "repeat_result": {
+          "enum": [
+            "zero_write",
+            "writes",
+            "failed",
+            "not_run",
+            "unavailable"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "skipped_actions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "system",
+        "attempted_actions",
+        "actual_writes",
+        "skipped_actions",
+        "blocked_actions",
+        "failed_actions",
+        "authenticated_readback",
+        "repeat_result",
+        "idempotency_result",
+        "source_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceHistoricalState": {
+      "additionalProperties": false,
+      "properties": {
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceMetric"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "metrics",
+        "source_ids",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "key",
+        "value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceInvariant": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_value": {
+          "type": "string"
+        },
+        "candidate_value": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "key",
+        "baseline_value",
+        "candidate_value"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "measurement_semantics": {
+          "type": "string"
+        },
+        "metric_id": {
+          "type": "string"
+        },
+        "numerator": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_id",
+        "status",
+        "value",
+        "unit",
+        "source_ids",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceOutcomeCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "outcome",
+        "count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceQualityDimension": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "type": "string"
+        },
+        "metric_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reviewed_subject_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reviewer_attribution": {
+          "enum": [
+            "available",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "rubric_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "dimension",
+        "status",
+        "reviewed_subject_count",
+        "rubric_id",
+        "reviewer_attribution",
+        "metric_ids",
+        "source_ids"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceReuseDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "avoided_grounding_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avoided_provider_calls": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "eligible_candidates": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fallback_reason_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "newly_executed_validations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reused_validations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "subject_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "subject_id",
+        "eligible_candidates",
+        "reused_validations",
+        "newly_executed_validations",
+        "avoided_grounding_calls",
+        "avoided_provider_calls",
+        "fallback_reason_code",
+        "source_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceRun": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configuration_identities": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceIdentity"
+          },
+          "type": "array"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceCriterion"
+          },
+          "type": "array"
+        },
+        "ended_at_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "external_side_effects_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objective": {
+          "type": "string"
+        },
+        "operator_intervention_policy": {
+          "type": "string"
+        },
+        "producer_repository_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required_evidence_classes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "run_type": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceSourceReference"
+          },
+          "type": "array"
+        },
+        "stages_in_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stages_out_of_scope": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "started_at_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subjects": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceSubject"
+          },
+          "type": "array"
+        },
+        "tested_repository_sha": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "run_type",
+        "objective",
+        "tested_repository_sha",
+        "producer_repository_sha",
+        "started_at_utc",
+        "ended_at_utc",
+        "subjects",
+        "configuration_identities",
+        "stages_in_scope",
+        "stages_out_of_scope",
+        "external_side_effects_enabled",
+        "operator_intervention_policy",
+        "sources",
+        "required_evidence_classes",
+        "criteria"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceRunEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_history_status": {
+          "enum": [
+            "observed",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceAttempt"
+          },
+          "type": "array"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceComparison"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceCriterion"
+          },
+          "type": "array"
+        },
+        "external_actions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceExternalAction"
+          },
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceMetric"
+          },
+          "type": "array"
+        },
+        "outcomes": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceOutcomeCount"
+          },
+          "type": "array"
+        },
+        "quality_dimensions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceQualityDimension"
+          },
+          "type": "array"
+        },
+        "reuse_decisions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceReuseDecision"
+          },
+          "type": "array"
+        },
+        "reuse_evidence_status": {
+          "enum": [
+            "observed",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "subjects": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.cto_evidence.CTOEvidenceSubject"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "subjects",
+        "metrics",
+        "criteria",
+        "outcomes",
+        "attempts",
+        "reuse_decisions",
+        "quality_dimensions",
+        "external_actions",
+        "comparison",
+        "attempt_history_status",
+        "reuse_evidence_status",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceSourceReference": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "format_id": {
+          "type": "string"
+        },
+        "observed_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "producer": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "run",
+            "baseline",
+            "candidate",
+            "supporting"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "declared",
+            "verified",
+            "missing",
+            "mismatch"
+          ]
+        },
+        "tested_repository_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "source_id",
+        "producer",
+        "format_id",
+        "path",
+        "sha256",
+        "tested_repository_sha"
+      ],
+      "type": "object"
+    },
+    "src.contracts.cto_evidence.CTOEvidenceSubject": {
+      "additionalProperties": false,
+      "properties": {
+        "identity_sha256": {
+          "type": "string"
+        },
+        "immutable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_identity_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "terminal_outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "subject_id",
+        "identity_sha256",
+        "immutable"
+      ],
+      "type": "object"
+    },
     "src.contracts.deferred_work.DeferredWorkArtifactReference": {
       "additionalProperties": false,
       "properties": {

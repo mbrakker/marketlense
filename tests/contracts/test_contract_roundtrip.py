@@ -121,6 +121,24 @@ def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
         if field.default_factory is not MISSING:
             values[field.name] = field.default_factory()
             continue
+        if field.name == "schema_version":
+            declared_schema_version = getattr(
+                importlib.import_module(contract_cls.__module__),
+                "SCHEMA_VERSION",
+                None,
+            )
+            if isinstance(declared_schema_version, str):
+                values[field.name] = declared_schema_version
+                continue
+        if field.name in {"sha256", "identity_sha256"}:
+            values[field.name] = "a" * 64
+            continue
+        if field.name.endswith("_repository_sha"):
+            values[field.name] = "a" * 40
+            continue
+        if field.name.endswith("_at_utc"):
+            values[field.name] = "2024-01-01T00:00:00+00:00"
+            continue
         annotation = hints.get(field.name, field.type)
         values[field.name] = _build_value(annotation, field.name, stack)
     return contract_cls(**values)
@@ -155,7 +173,9 @@ def _from_plain(annotation: Any, raw: Any) -> Any:
     if origin is tuple:
         if len(args) == 2 and args[1] is Ellipsis:
             return tuple(_from_plain(args[0], item) for item in raw)
-        return tuple(_from_plain(arg, item) for arg, item in zip(args, raw))
+        return tuple(
+            _from_plain(arg, item) for arg, item in zip(args, raw, strict=True)
+        )
     if origin is set:
         item_type = args[0] if args else Any
         return {_from_plain(item_type, item) for item in raw}

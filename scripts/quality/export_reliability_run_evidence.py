@@ -6,10 +6,11 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import sqlite3
 from collections import Counter
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
 _FAILURE_DIAGNOSTIC_FIELDS = (
     "stage",
@@ -135,6 +136,89 @@ _REPAIR_MODE_FIELDS = (
     "estimated_cost_usd",
     "latency_ms",
 )
+RunDisposition = Literal["pass", "fail", "not_evaluated", "insufficient_evidence"]
+_SUCCESS_TERMINAL_OUTCOMES = frozenset(
+    {
+        "awaiting_review",
+        "completed",
+        "publish_ready",
+        "published_verified",
+        "success",
+        "succeeded",
+    }
+)
+_FAILURE_TERMINAL_OUTCOMES = frozenset({"blocked", "failed", "permanent_failure"})
+_NOT_EVALUATED_TERMINAL_OUTCOMES = frozenset(
+    {"not_evaluated", "not_required", "skipped", "suppressed"}
+)
+
+
+def _terminal_disposition(
+    outcomes: Iterable[str], *, expected_count: int
+) -> RunDisposition:
+    """Classify only complete, typed terminal outcomes for the exported scope."""
+
+    normalized = [str(outcome or "").strip().casefold() for outcome in outcomes]
+    if expected_count < 1 or len(normalized) != expected_count:
+        return "insufficient_evidence"
+    if any(outcome in _FAILURE_TERMINAL_OUTCOMES for outcome in normalized):
+        return "fail"
+    if all(outcome in _SUCCESS_TERMINAL_OUTCOMES for outcome in normalized):
+        return "pass"
+    if all(outcome in _NOT_EVALUATED_TERMINAL_OUTCOMES for outcome in normalized):
+        return "not_evaluated"
+    return "insufficient_evidence"
+
+
+def _disposition_status(disposition: RunDisposition) -> str:
+    return {
+        "pass": "passed_reliability_targets",
+        "fail": "failed_reliability_targets",
+        "not_evaluated": "not_evaluated",
+        "insufficient_evidence": "insufficient_evidence",
+    }[disposition]
+
+
+def _usage_rows_for_validation_run(
+    usage_db: Path, *, validation_run_id: str
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Read LLM accounting only when the ledger can prove run attribution."""
+
+    def unavailable(reason: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        return [], {
+            "status": "unavailable",
+            "reason": reason,
+            "matching_event_count": None,
+        }
+
+    if not usage_db.is_file():
+        return unavailable("usage_database_missing")
+    try:
+        database_uri = f"file:{usage_db.resolve().as_posix()}?mode=ro"
+        with sqlite3.connect(database_uri, uri=True) as connection:
+            columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(llm_usage_events)")
+            }
+            if not columns:
+                return unavailable("usage_table_missing")
+            if "validation_run_id" not in columns:
+                return unavailable("validation_run_id_not_retained")
+            query = (
+                "SELECT action, semantic_task, prompt_namespace, provider, model, "
+                "input_tokens, output_tokens, estimated_cost_usd "
+                "FROM llm_usage_events WHERE validation_run_id=?"
+            )
+            cursor = connection.execute(query, (validation_run_id,))
+            names = [str(column[0]) for column in cursor.description or ()]
+            rows = [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+    except sqlite3.Error:
+        return unavailable("usage_query_unavailable")
+    return rows, {
+        "status": "available",
+        "scope": "validation_run_id",
+        "matching_event_count": len(rows),
+    }
 
 
 def _bounded_diagnostic_token(value: object) -> str:
@@ -409,21 +493,51 @@ def export_frozen_cohort_outcome_views(
         terminal_rows=terminal_rows,
     )
     _write_json(output_dir / "aggregate_funnel.json", aggregate_funnel)
+    disposition = _terminal_disposition(
+        (row["terminal_outcome"] for row in terminal_rows),
+        expected_count=int(aggregate_funnel["immutable_cohort_size"]),
+    )
+    if disposition == "pass" and int(
+        aggregate_funnel["publication_ready_count"]
+    ) != int(aggregate_funnel["immutable_cohort_size"]):
+        disposition = "fail"
+    findings = [
+        "Immutable cohort retained; no member replacement occurred.",
+        "Publication and repeat publication were not performed; "
+        "publication was not evaluated.",
+        "Terminal outcomes are complete and typed.",
+    ]
+    findings.append(
+        {
+            "pass": (
+                "All scoped terminal outcomes and publication-readiness results passed."
+            ),
+            "fail": (
+                "At least one required terminal outcome or publication-readiness "
+                "result failed."
+            ),
+            "not_evaluated": "No scoped terminal outcome was evaluated.",
+            "insufficient_evidence": (
+                "The scoped terminal outcome evidence is incomplete or unavailable."
+            ),
+        }[disposition]
+    )
     _write_json(
         output_dir / "audit_findings.json",
         {
-            "status": "failed_reliability_targets",
+            "status": _disposition_status(disposition),
+            "disposition": disposition,
+            "scope": {
+                "terminal_outcomes": "in_scope",
+                "publication": "not_evaluated",
+            },
             "cohort_size": aggregate_funnel["immutable_cohort_size"],
             "typed_terminal_outcomes": aggregate_funnel["immutable_cohort_size"],
             "awaiting_review": aggregate_funnel["awaiting_review_count"],
             "publish_ready": aggregate_funnel["publication_ready_count"],
             "publication_performed": False,
-            "findings": [
-                "Immutable cohort retained; no member replacement occurred.",
-                "Publication and repeat publication were not run because the required "
-                "cohort success threshold was not met.",
-                "Terminal outcomes are complete and typed.",
-            ],
+            "publication_disposition": "not_evaluated",
+            "findings": findings,
         },
     )
 
@@ -622,16 +736,9 @@ def export_run_evidence(
             artifact_dir=artifact_dir, validation_run_id=validation_run_id
         ),
     )
-    usage_rows: list[dict[str, Any]] = []
-    if usage_db.exists():
-        with sqlite3.connect(usage_db) as conn:
-            usage_rows = _rows(
-                conn,
-                "SELECT action, semantic_task, prompt_namespace, provider, model, "
-                "input_tokens, output_tokens, estimated_cost_usd "
-                "FROM llm_usage_events",
-                (),
-            )
+    usage_rows, usage_attribution = _usage_rows_for_validation_run(
+        usage_db, validation_run_id=validation_run_id
+    )
     _write_csv(
         output_dir / "llm_usage_metrics.csv",
         [
@@ -646,17 +753,53 @@ def export_run_evidence(
         ],
         usage_rows,
     )
-    cost_by_stage = Counter()
+    cost_by_stage: dict[str, float] = {}
+    stages_with_incomplete_cost: set[str] = set()
+    missing_cost_event_count = 0
     for row in usage_rows:
-        cost_by_stage[
-            str(row.get("semantic_task") or row.get("action") or "unattributed")
-        ] += float(row.get("estimated_cost_usd") or 0)
+        stage = str(row.get("semantic_task") or row.get("action") or "unattributed")
+        raw_cost = row.get("estimated_cost_usd")
+        if not isinstance(raw_cost, (int, float, str)):
+            stages_with_incomplete_cost.add(stage)
+            missing_cost_event_count += 1
+            continue
+        try:
+            cost = float(raw_cost)
+        except (TypeError, ValueError):
+            stages_with_incomplete_cost.add(stage)
+            missing_cost_event_count += 1
+            continue
+        if not math.isfinite(cost):
+            stages_with_incomplete_cost.add(stage)
+            missing_cost_event_count += 1
+            continue
+        cost_by_stage[stage] = cost_by_stage.get(stage, 0.0) + cost
+    if usage_attribution["status"] == "unavailable":
+        cost_attribution = {
+            "status": "unavailable",
+            "reason": usage_attribution["reason"],
+            "missing_cost_event_count": None,
+        }
+    else:
+        cost_attribution = {
+            "status": "partial" if missing_cost_event_count else "available",
+            "scope": "validation_run_id",
+            "missing_cost_event_count": missing_cost_event_count,
+        }
+    cost_stages = sorted(set(cost_by_stage) | stages_with_incomplete_cost)
     _write_csv(
         output_dir / "cost_by_stage.csv",
         ["stage", "estimated_cost_usd"],
         [
-            {"stage": key, "estimated_cost_usd": f"{value:.6f}"}
-            for key, value in sorted(cost_by_stage.items())
+            {
+                "stage": stage,
+                "estimated_cost_usd": (
+                    "unavailable"
+                    if stage in stages_with_incomplete_cost
+                    else f"{cost_by_stage[stage]:.6f}"
+                ),
+            }
+            for stage in cost_stages
         ],
     )
     _write_csv(
@@ -665,8 +808,16 @@ def export_run_evidence(
         [
             {
                 "report_id": row["report_id"],
-                "estimated_cost_usd": "unattributed",
-                "status": "retention_gap",
+                "estimated_cost_usd": (
+                    "unattributed"
+                    if usage_attribution["status"] == "available"
+                    else "unavailable"
+                ),
+                "status": (
+                    "retention_gap"
+                    if usage_attribution["status"] == "available"
+                    else "unavailable"
+                ),
             }
             for row in terminal_rows
         ],
@@ -695,25 +846,47 @@ def export_run_evidence(
                 "value": sum(
                     1
                     for row in terminal_rows
-                    if row["terminal_outcome"] != "publish_ready"
+                    if str(row["terminal_outcome"] or "").casefold()
+                    in _FAILURE_TERMINAL_OUTCOMES
                 ),
             }
         ],
     )
+    disposition = _terminal_disposition(
+        (row["terminal_outcome"] for row in terminal_rows),
+        expected_count=len(members),
+    )
+    findings = [
+        "Immutable cohort retained; no member replacement occurred.",
+        "Publication and repeat publication were not performed; "
+        "publication was not evaluated.",
+        "Terminal outcomes are typed and attributed to each member's current attempt.",
+        {
+            "pass": "All scoped terminal outcomes passed.",
+            "fail": "At least one scoped terminal outcome failed.",
+            "not_evaluated": "No scoped terminal outcome was evaluated.",
+            "insufficient_evidence": (
+                "The scoped terminal outcome evidence is incomplete or unavailable."
+            ),
+        }[disposition],
+    ]
     _write_json(
         output_dir / "audit_findings.json",
         {
             "validation_run_id": validation_run_id,
-            "status": "failed_reliability_targets",
+            "status": _disposition_status(disposition),
+            "disposition": disposition,
+            "scope": {
+                "terminal_outcomes": "in_scope",
+                "publication": "not_evaluated",
+            },
             "cohort_size": len(members),
             "publish_ready": counts.get("publish_ready", 0),
             "publication_performed": False,
-            "findings": [
-                "Immutable cohort retained; no member replacement occurred.",
-                "Publication and repeat publication were not run because the required "
-                "cohort success threshold was not met.",
-                "Terminal outcomes are complete and typed.",
-            ],
+            "publication_disposition": "not_evaluated",
+            "usage_attribution": usage_attribution,
+            "cost_attribution": cost_attribution,
+            "findings": findings,
         },
     )
     _write_json(
@@ -732,11 +905,22 @@ def export_run_evidence(
             "artifact_dir": artifact_dir.as_posix(),
             "state_dir": state_dir.as_posix(),
             "safe_fields_only": True,
+            "usage_attribution": usage_attribution,
+            "cost_attribution": cost_attribution,
         },
     )
     (output_dir / "AUDIT.md").write_text(
-        "# Reliability audit\n\nThe immutable cohort failed the reliability target. "
-        "No WordPress write was authorized. See `audit_findings.json`.\n",
+        "# Reliability audit\n\n"
+        + {
+            "pass": "The immutable scoped cohort passed the reliability target.",
+            "fail": "The immutable scoped cohort failed the reliability target.",
+            "not_evaluated": "The immutable scoped cohort was not evaluated.",
+            "insufficient_evidence": (
+                "The immutable scoped cohort has insufficient "
+                "terminal-outcome evidence."
+            ),
+        }[disposition]
+        + " Publication was not evaluated. See `audit_findings.json`.\n",
         encoding="utf-8",
     )
 

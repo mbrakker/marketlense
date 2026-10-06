@@ -34,6 +34,7 @@ try:
         normalize_text,
         scan_logs,
     )
+    from scripts.quality._cto_review_evidence.run_projection import project_cto_evidence
 except ModuleNotFoundError:  # Direct `python scripts/quality/...` execution.
     from _cto_review_evidence.cto_evidence import write_cto_evidence
     from _cto_review_evidence.log_content_leakage import (
@@ -41,6 +42,12 @@ except ModuleNotFoundError:  # Direct `python scripts/quality/...` execution.
         normalize_text,
         scan_logs,
     )
+    from _cto_review_evidence.run_projection import project_cto_evidence
+
+from src.contracts.cto_evidence import (  # noqa: E402
+    cto_evidence_bundle_payload,
+    parse_cto_evidence_bundle,
+)
 
 COLLECTOR_VERSION = "3.0"
 COST_TOLERANCE = Decimal("0.000001")
@@ -198,6 +205,7 @@ class EvidencePaths:
     include_github_status: bool = False
     allow_unavailable_run_logs: bool = False
     repository_root: Path = ROOT
+    run_manifest_path: Path | None = None
 
 
 def _freshness_state(
@@ -989,6 +997,8 @@ def _executive_summary(
     failures = [row for row in failure_rows if isinstance(row, dict)]
     return {
         "schema_version": "1.0",
+        "summary_scope": "historical_state",
+        "canonical_evidence_bundle": "cto_evidence_bundle.json",
         "generated_at": _utc_now(),
         "evidence_run_id": run_id,
         "repository_commit_sha": commit_sha,
@@ -1050,6 +1060,7 @@ def validate_consistency(
         "effective_run_profile_matrix.json",
         "github_main_status.json",
         "runtime_telemetry.json",
+        "cto_evidence_bundle.json",
     )
     files = {name: output_dir / name for name in required_names}
     for name, path in files.items():
@@ -1062,6 +1073,9 @@ def validate_consistency(
     detailed = json.loads(files["detailed_metrics.json"].read_text(encoding="utf-8"))
     summary = json.loads(files["executive_summary.json"].read_text(encoding="utf-8"))
     leakage = json.loads(files["log_content_leakage.json"].read_text(encoding="utf-8"))
+    canonical_bundle = json.loads(
+        files["cto_evidence_bundle.json"].read_text(encoding="utf-8")
+    )
     architecture = json.loads(
         files["architecture_manifest.json"].read_text(encoding="utf-8")
     )
@@ -1082,6 +1096,16 @@ def validate_consistency(
     ):
         raise DuplicateEvidenceRunIdError(
             "Evidence artifacts do not share one evidence run ID"
+        )
+    try:
+        parse_cto_evidence_bundle(canonical_bundle)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise EvidenceConsistencyError(
+            "Canonical CTO evidence bundle fails contract validation"
+        ) from exc
+    if summary.get("summary_scope") != "historical_state":
+        raise EvidenceConsistencyError(
+            "Legacy executive summary is not labelled as historical state"
         )
     if any(
         str(item.get("repository_commit_sha") or "") != commit_sha
@@ -1586,6 +1610,16 @@ def collect(
             include_github_status=paths.include_github_status,
             tested_commit_sha=commit_sha,
         )
+        canonical_bundle = project_cto_evidence(
+            run_manifest_path=paths.run_manifest_path,
+            repository_root=paths.repository_root,
+            collector_repository_sha=commit_sha,
+            historical_telemetry_path=staging_dir / "runtime_telemetry.json",
+        )
+        canonical_bundle_path = _write_json(
+            staging_dir / "cto_evidence_bundle.json",
+            cto_evidence_bundle_payload(canonical_bundle),
+        )
         detailed_path = _write_json(
             staging_dir / "detailed_metrics.json",
             {
@@ -1602,6 +1636,7 @@ def collect(
             for path in [
                 *csv_paths,
                 *cto_paths,
+                canonical_bundle_path,
                 detailed_path,
                 snapshot_manifest_path,
                 leakage_path,
@@ -1631,6 +1666,11 @@ def collect(
             "maximum_canaries_per_class": paths.maximum_canaries_per_class,
             "include_github_status": paths.include_github_status,
             "allow_unavailable_run_logs": paths.allow_unavailable_run_logs,
+            "run_manifest_path": (
+                _public_path(paths.run_manifest_path, ROOT)
+                if paths.run_manifest_path is not None
+                else None
+            ),
         }
         manifest_path = _write_json(
             staging_dir / "evidence_run_manifest.json",
@@ -1771,6 +1811,11 @@ def main() -> int:
             "run-owned canonical logs; repository-wide logs are never substituted."
         ),
     )
+    parser.add_argument(
+        "--run-manifest",
+        default="",
+        help="Optional repository-relative declared workload evidence-run manifest.",
+    )
     args = parser.parse_args()
     for path in collect(
         EvidencePaths(
@@ -1790,6 +1835,7 @@ def main() -> int:
             replace_output=args.replace_output,
             include_github_status=args.include_github_status,
             allow_unavailable_run_logs=args.allow_unavailable_run_logs,
+            run_manifest_path=Path(args.run_manifest) if args.run_manifest else None,
         ),
         command_args=tuple(sys.argv[1:]),
     ):

@@ -230,7 +230,7 @@ def _read_row(path: Path) -> CropQaScorecardRow | None:
     detectors = qa.get("detectors")
     detector_confidence = (
         {
-            str(name): float(details.get("confidence"))
+            str(name): float(details["confidence"])
             for name, details in detectors.items()
             if isinstance(name, str)
             and isinstance(details, dict)

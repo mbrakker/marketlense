@@ -38,6 +38,36 @@ infers cache or cost data from test duration. Use
 before/after run artifacts. It only proves a speed improvement when the profile
 matches and neither quality nor estimated cost regresses.
 
+## Canonical CTO evidence projection
+
+`scripts/quality/collect_cto_review_evidence.py` writes
+`cto_evidence_bundle.json` as the universal, bounded evidence contract. A
+repository-relative `--run-manifest` declares one open-taxonomy workload run,
+its immutable subjects, tested SHA, scope, required evidence classes, criteria,
+and hash-pinned producer artifacts. Without a run manifest, the bundle is an
+explicit historical system snapshot and has no workload disposition. Historical
+collector totals remain separate and cannot affect run denominators, costs,
+criteria, or outcome rates.
+
+Producer-specific artifacts remain authoritative. Versioned projections
+currently cover generic scalar/subject evidence, frozen reliability cohorts,
+artifact DAG benchmarks, provider latency and critical-path profiles,
+concurrency proofs, reuse benchmarks, File Search reduction, acquisition
+projections, crop-QA sidecars, editorial review corpora, and WordPress action
+evidence. A source format without an adapter remains traceable but incomplete;
+the collector does not infer unavailable per-subject cost, provider intervals,
+authenticated writes, or replay results. Each source is retained by repository
+path and SHA-256. Comparison identities and invariants must agree, and a delta
+is never a causal claim by itself.
+
+The canonical bundle keeps required criteria, recovery attempts, reuse and
+avoided work, quality dimensions, provider timing semantics, and external
+actions alongside measurements. Missing values remain unavailable; out-of-
+scope criteria remain `not_evaluated`. `complete` describes evidence coverage,
+while run disposition is derived only from required criteria. The collector
+does not publish a second PR/release reviewer surface; the release-evidence
+owner may consume this bundle.
+
 ## Per-call provider latency profile
 
 `scripts/quality/profile_provider_calls.py` reads the existing LLM usage ledger
