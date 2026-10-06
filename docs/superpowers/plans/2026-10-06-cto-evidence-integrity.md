@@ -64,8 +64,8 @@
 **Files:** Commit only this plan, the projector, CTO bundle contract parser, and projection tests.
 
 - [x] Inspect the final diff and stage only task files; unrelated in-progress edits stayed unstaged.
-- [ ] Commit on `main` and push the resulting changes to `origin/main`.
-- [ ] Report exact test/check outcomes, retained evidence inputs and bundle outcomes, and commit SHA.
+- [x] Commit on `main` and push the resulting changes to `origin/main`; verification record reached `origin/main` on 2026-10-07.
+- [x] Report exact test/check outcomes, retained evidence inputs and bundle outcomes, and commit SHA in the final response.
 
 ## Verification results
 
