@@ -308,6 +308,99 @@ def test_required_exact_sha_is_incomplete_without_source_binding(
     assert any("exact_repository_sha" in item for item in bundle.limitations)
 
 
+def test_exact_sha_requires_every_run_source_to_be_bound(tmp_path: Path) -> None:
+    sources = [
+        _source(
+            tmp_path / "repo" / "evidence" / "metrics-1.json",
+            source_id="run_metrics_1",
+            payload={"measurements": {"calls": 1}},
+        ),
+        _source(
+            tmp_path / "repo" / "evidence" / "metrics-2.json",
+            source_id="run_metrics_2",
+            tested_sha=None,
+            payload={
+                "tested_repository_sha": RUN_SHA,
+                "measurements": {"calls": 2},
+            },
+        ),
+    ]
+
+    _, bundle = _project(tmp_path, _run_manifest(sources=sources))
+
+    assert bundle.completeness == "complete"
+
+
+def test_exact_sha_is_incomplete_when_one_candidate_source_is_unbound(
+    tmp_path: Path,
+) -> None:
+    bound = _source(
+        tmp_path / "repo" / "evidence" / "bound.json",
+        source_id="bound_metrics",
+        payload={"measurements": {"calls": 1}},
+    )
+    unbound = _source(
+        tmp_path / "repo" / "evidence" / "unbound.json",
+        source_id="unbound_metrics",
+        tested_sha=None,
+        role="candidate",
+        payload={"measurements": {"retries": 2}},
+    )
+
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(sources=[bound, unbound], required=["exact_repository_sha"]),
+    )
+
+    assert bundle.completeness == "incomplete"
+    assert bundle.disposition != "pass"
+    assert any("exact_repository_sha" in item for item in bundle.limitations)
+
+
+def test_exact_sha_contradiction_in_one_run_source_is_invalid(tmp_path: Path) -> None:
+    bound = _source(
+        tmp_path / "repo" / "evidence" / "bound.json",
+        source_id="bound_metrics",
+        payload={"measurements": {"calls": 1}},
+    )
+    contradictory = _source(
+        tmp_path / "repo" / "evidence" / "contradictory.json",
+        source_id="contradictory_metrics",
+        payload={
+            "tested_repository_sha": BASELINE_SHA,
+            "measurements": {"retries": 2},
+        },
+    )
+
+    _, bundle = _project(tmp_path, _run_manifest(sources=[bound, contradictory]))
+
+    assert bundle.completeness == "invalid"
+    assert bundle.disposition == "fail"
+
+
+def test_unbound_supporting_source_does_not_block_exact_run_sha(
+    tmp_path: Path,
+) -> None:
+    run_source = _source(
+        tmp_path / "repo" / "evidence" / "run.json",
+        source_id="run_metrics",
+        payload={"measurements": {"calls": 1}},
+    )
+    supporting_source = _source(
+        tmp_path / "repo" / "evidence" / "context.json",
+        source_id="context",
+        tested_sha=None,
+        role="supporting",
+        payload={"measurements": {"context_count": 1}},
+    )
+
+    _, bundle = _project(
+        tmp_path, _run_manifest(sources=[run_source, supporting_source])
+    )
+
+    assert bundle.completeness == "complete"
+
+
 def test_per_subject_totals_that_disagree_with_run_totals_are_invalid(
     tmp_path: Path,
 ) -> None:
@@ -441,9 +534,10 @@ def test_wordpress_attempt_readback_and_repeat_are_independent(tmp_path: Path) -
     )
     _, bundle = _project(
         tmp_path,
-        _run_manifest(sources=[source], required=["external_actions"]),
+        _run_manifest(sources=[source], required=["external_actions", "side_effects"]),
     )
 
+    assert bundle.completeness == "complete"
     assert bundle.run_evidence is not None
     action = bundle.run_evidence.external_actions[0]
     assert action.attempted_actions == 11
@@ -500,7 +594,8 @@ def test_provider_elapsed_and_active_wall_are_distinct_measurements(
         _run_manifest(sources=[source], required=["provider_timing"]),
     )
 
-    assert bundle.completeness == "complete"
+    assert bundle.completeness == "incomplete"
+    assert bundle.disposition != "pass"
     assert bundle.run_evidence is not None
     metrics = {item.metric_id: item for item in bundle.run_evidence.metrics}
     total = metrics["run_metrics.provider_elapsed_ms_total"]
@@ -514,6 +609,7 @@ def test_provider_elapsed_and_active_wall_are_distinct_measurements(
         "run_metrics.provider_elapsed_ms_total",
         "run_metrics.provider_active_wall_ms",
     }
+    assert any("provider_timing" in item for item in bundle.limitations)
 
 
 def test_provider_profile_binds_only_the_declared_hashed_report_subject(
@@ -649,6 +745,31 @@ def test_acquisition_retry_preserves_attempts_and_per_subject_cost(
         if item.metric_id == "resource.acquisition.cost_usd"
     ]
     assert sorted(item.value for item in costs if item.value is not None) == [1.5, 1.5]
+
+
+def test_generic_cost_metric_name_does_not_prove_resource_usage(
+    tmp_path: Path,
+) -> None:
+    source = _source(
+        tmp_path / "repo" / "evidence" / "generic-cost.json",
+        payload={"measurements": {"estimated_cost_usd": 1.25}},
+    )
+
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(sources=[source], required=["resource_usage"]),
+    )
+
+    assert bundle.completeness == "incomplete"
+    assert bundle.disposition != "pass"
+    assert bundle.run_evidence is not None
+    cost = next(
+        item
+        for item in bundle.run_evidence.metrics
+        if item.metric_id == "run_metrics.estimated_cost_usd"
+    )
+    assert cost.value == 1.25
+    assert any("resource_usage" in item for item in bundle.limitations)
 
 
 def test_unregistered_source_format_is_incomplete_not_silently_complete(

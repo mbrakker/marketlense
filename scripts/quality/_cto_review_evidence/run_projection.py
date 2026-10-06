@@ -46,6 +46,25 @@ FORMAT_ACQUISITION = "marketlense/acquisition-projection/1.0"
 FORMAT_CROP_QA = "marketlense/crop-qa-sidecar/1.0"
 FORMAT_HUMAN_REVIEW = "marketlense/editorial-review/1.0"
 FORMAT_WORDPRESS = "marketlense/wordpress-publication-evidence/1.0"
+_NUMERIC_FORMAT_EVIDENCE_CLASSES = {
+    FORMAT_ARTIFACT_DAG: frozenset(
+        {"performance", "provider_timing", "resource_usage", "quality", "side_effects"}
+    ),
+    FORMAT_PROVIDER_PROFILE: frozenset(
+        {"performance", "provider_timing", "resource_usage"}
+    ),
+    FORMAT_PROVIDER_CRITICAL_PATH: frozenset(
+        {"performance", "provider_timing", "resource_usage", "quality"}
+    ),
+    FORMAT_CONCURRENCY: frozenset(
+        {"performance", "provider_timing", "resource_usage", "concurrency", "quality"}
+    ),
+    FORMAT_REUSE: frozenset({"performance", "resource_usage", "quality"}),
+    FORMAT_FILE_SEARCH: frozenset(
+        {"performance", "resource_usage", "quality", "side_effects"}
+    ),
+    FORMAT_ACQUISITION: frozenset({"performance", "resource_usage"}),
+}
 
 _METRIC_KEY_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.:-]{0,127}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -243,8 +262,16 @@ def project_cto_evidence(
         available_classes.add("source_integrity")
     comparison_sources: dict[str, object] = {}
     crop_sources: list[_LoadedSource] = []
+    run_sha_source_count = 0
+    run_sha_sources_bound = True
+    run_sha_is_proven = False
     for item in loaded:
+        needs_run_sha = item.reference.role in {"run", "candidate"}
+        if needs_run_sha:
+            run_sha_source_count += 1
         if item.issue is not None:
+            if needs_run_sha:
+                run_sha_sources_bound = False
             source_projection.limitations.append(item.issue)
             if (
                 item.reference.status == "mismatch"
@@ -261,33 +288,39 @@ def project_cto_evidence(
             if item.reference.role in {"baseline", "candidate"}
             else None,
         )
-        expected_sha = item.reference.tested_repository_sha
-        if expected_sha is None:
+        declared_sha = item.reference.tested_repository_sha
+        declared_sha = declared_sha.lower() if declared_sha is not None else None
+        if item.reference.role == "baseline" and run.comparison is not None:
+            expected_sha = run.comparison.baseline_repository_sha.lower()
+        elif item.reference.role == "candidate" and run.comparison is not None:
+            expected_sha = run.comparison.candidate_repository_sha.lower()
+        elif needs_run_sha:
             expected_sha = (
-                run.comparison.baseline_repository_sha
-                if run.comparison is not None
-                and item.reference.source_id == run.comparison.baseline_source_id
-                else run.comparison.candidate_repository_sha
-                if run.comparison is not None
-                and item.reference.source_id == run.comparison.candidate_source_id
-                else run.tested_repository_sha
+                run.tested_repository_sha.lower()
+                if run.tested_repository_sha is not None
+                else None
             )
-        if source_sha is not None and source_sha != expected_sha:
+        else:
+            expected_sha = declared_sha
+        if expected_sha is not None and (
+            (declared_sha is not None and declared_sha != expected_sha)
+            or (source_sha is not None and source_sha != expected_sha)
+        ):
+            if needs_run_sha:
+                run_sha_sources_bound = False
             source_projection.invalid = True
             source_projection.limitations.append(
                 f"Source {item.reference.source_id} tested SHA contradicts its "
                 "declared run or comparison endpoint."
             )
             continue
-        if (
-            item.reference.role in {"run", "candidate"}
-            and expected_sha == run.tested_repository_sha
-            and (
-                item.reference.tested_repository_sha == run.tested_repository_sha
-                or source_sha == run.tested_repository_sha
+        if needs_run_sha:
+            bound = expected_sha is not None and (
+                declared_sha == expected_sha or source_sha == expected_sha
             )
-        ):
-            available_classes.add("exact_repository_sha")
+            run_sha_sources_bound = run_sha_sources_bound and bound
+            if bound and expected_sha == run.tested_repository_sha:
+                run_sha_is_proven = True
         if item.reference.format_id == FORMAT_CROP_QA:
             crop_sources.append(item)
             continue
@@ -315,6 +348,9 @@ def project_cto_evidence(
             run.comparison.candidate_source_id if run.comparison else "",
         }:
             comparison_sources[item.reference.source_id] = item.payload
+
+    if run_sha_source_count > 0 and run_sha_sources_bound and run_sha_is_proven:
+        available_classes.add("exact_repository_sha")
 
     if crop_sources:
         crop_projection = _project_crop_sidecars(crop_sources, run)
@@ -595,7 +631,8 @@ def _project_generic(
                     semantics=_semantics(name),
                 )
             )
-        result.available_classes.update(_classes_for_metric_names(tuple(flattened)))
+        if flattened:
+            result.available_classes.add("measurements")
     elif measurements is not None:
         result.invalid = True
         result.limitations.append(
@@ -711,9 +748,11 @@ def _project_numeric(
                 semantics=_semantics(name),
             )
         )
-    result.available_classes.update(
-        _classes_for_metric_names(tuple(item.metric_id for item in result.metrics))
-    )
+    if result.metrics:
+        result.available_classes.add("measurements")
+        result.available_classes.update(
+            _NUMERIC_FORMAT_EVIDENCE_CLASSES.get(source.format_id, ())
+        )
     return result
 
 
@@ -747,102 +786,6 @@ def _bind_single_subject(
         for metric in tuple(projection.metrics)
     )
     projection.available_classes.add("subjects")
-
-
-def _classes_for_metric_names(metric_ids: tuple[str, ...]) -> set[str]:
-    if not metric_ids:
-        return set()
-    names = tuple(item.casefold() for item in metric_ids)
-    classes = {"measurements"}
-    if any(
-        any(
-            token in name
-            for token in (
-                "cost",
-                "token",
-                "provider_call",
-                "file_search_call",
-                "browser_call",
-            )
-        )
-        for name in names
-    ):
-        classes.add("resource_usage")
-    if any(
-        any(
-            token in name
-            for token in ("seconds", "duration", "latency", "wall_time", "throughput")
-        )
-        for name in names
-    ):
-        classes.add("performance")
-    if any(
-        any(
-            token in name
-            for token in (
-                "provider_elapsed",
-                "provider_active",
-                "provider_interval",
-                "active_interval",
-                "interval_union",
-                "exclusive_exposure",
-                "exclusive_exposed",
-                "queue_wait",
-                "limiter_wait",
-                "in_flight_wait",
-                "rate_spacing_wait",
-            )
-        )
-        for name in names
-    ):
-        classes.add("provider_timing")
-    if any(
-        any(
-            token in name
-            for token in ("critical_path", "path_regression", "dependency_overlap")
-        )
-        for name in names
-    ):
-        classes.add("critical_path")
-    if any(
-        any(
-            token in name
-            for token in (
-                "concurrency",
-                "max_overlap",
-                "worker_count",
-                "parallel_worker",
-                "running_jobs",
-                "in_flight",
-            )
-        )
-        for name in names
-    ):
-        classes.add("concurrency")
-    if any(
-        any(
-            token in name
-            for token in (
-                "quality",
-                "readiness",
-                "factual",
-                "validation_rate",
-                "score",
-                "editorial",
-            )
-        )
-        for name in names
-    ):
-        classes.add("quality")
-    if any(
-        any(
-            token in name
-            for token in ("side_effect", "publication", "actual_write", "publish")
-        )
-        for name in names
-    ):
-        classes.add("side_effects")
-    return classes
 
 
 def _project_frozen_cohort(
@@ -1540,6 +1483,7 @@ def _project_wordpress(
         )
     )
     result.available_classes.add("external_actions")
+    result.available_classes.add("side_effects")
     result.attempt_history_status = "partial"
     result.limitations.extend(
         (
