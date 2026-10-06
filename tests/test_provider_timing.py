@@ -21,6 +21,8 @@ def test_provider_request_timing_uses_monotonic_clock() -> None:
 
     assert result is response
     assert timing.provider_elapsed_ms == 1375.0
+    assert timing.provider_request_start_monotonic_ms == 20_000.0
+    assert timing.provider_request_finish_monotonic_ms == 21_375.0
     assert timing.provider_call_status == "completed"
 
 
@@ -40,6 +42,8 @@ def test_failed_provider_request_retains_elapsed_time_and_error_type() -> None:
     timing = provider_timing_from_exception(caught.value)
     assert timing is not None
     assert timing.provider_elapsed_ms == 250.0
+    assert timing.provider_request_start_monotonic_ms == 4_000.0
+    assert timing.provider_request_finish_monotonic_ms == 4_250.0
     assert timing.provider_call_status == "failed"
     assert timing.provider_error_type == "ProviderTimeout"
     assert timing.provider_http_status == 504

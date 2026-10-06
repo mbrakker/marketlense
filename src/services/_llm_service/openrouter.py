@@ -546,6 +546,12 @@ def _record_openrouter_usage_accounting(
                     {
                         "provider_operation": provider_timing.operation,
                         "provider_elapsed_ms": provider_timing.provider_elapsed_ms,
+                        "provider_request_start_monotonic_ms": (
+                            provider_timing.provider_request_start_monotonic_ms
+                        ),
+                        "provider_request_finish_monotonic_ms": (
+                            provider_timing.provider_request_finish_monotonic_ms
+                        ),
                         "limiter_wait_ms": provider_timing.limiter_wait_ms,
                         "in_flight_wait_ms": provider_timing.in_flight_wait_ms,
                         "rate_spacing_wait_ms": (

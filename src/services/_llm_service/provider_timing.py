@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from contextlib import contextmanager, suppress
 from contextvars import ContextVar
@@ -16,6 +17,8 @@ class ProviderCallTiming:
     operation: str
     provider_elapsed_ms: float
     provider_call_status: str
+    provider_request_start_monotonic_ms: float
+    provider_request_finish_monotonic_ms: float
     in_flight_wait_ms: int = 0
     rate_spacing_wait_ms: int = 0
     provider_error_type: str = ""
@@ -56,6 +59,8 @@ def _timing(
     error: Exception | None = None,
 ) -> ProviderCallTiming:
     ended_at = monotonic_fn()
+    started_ms = _bounded_monotonic_ms(started_at)
+    finished_ms = _bounded_monotonic_ms(ended_at)
     in_flight_wait_ms, rate_spacing_wait_ms = _limiter_wait.get()
     status_code = None
     request_id = None
@@ -80,12 +85,22 @@ def _timing(
         operation=operation,
         provider_elapsed_ms=max(0.0, round((ended_at - started_at) * 1_000, 3)),
         provider_call_status=status,
+        provider_request_start_monotonic_ms=started_ms,
+        provider_request_finish_monotonic_ms=finished_ms,
         in_flight_wait_ms=in_flight_wait_ms,
         rate_spacing_wait_ms=rate_spacing_wait_ms,
         provider_error_type=type(error).__name__ if error is not None else "",
         provider_http_status=status_code,
         provider_request_id=request_id,
     )
+
+
+def _bounded_monotonic_ms(value: float) -> float:
+    """Persist a finite monotonic clock reading with millisecond precision."""
+
+    if not math.isfinite(value) or value < 0:
+        return 0.0
+    return round(min(value * 1_000, float(2**53 - 1)), 3)
 
 
 def timed_provider_request(

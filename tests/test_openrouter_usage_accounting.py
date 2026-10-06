@@ -103,6 +103,10 @@ def test_openrouter_chat_json_records_provider_usage_to_sqlite(
     metadata = json.loads(row["metadata_json"])
     assert metadata["provider_operation"] == "chat.completions.http"
     assert metadata["provider_elapsed_ms"] >= 0
+    assert metadata["provider_request_start_monotonic_ms"] >= 0
+    assert metadata["provider_request_finish_monotonic_ms"] >= metadata[
+        "provider_request_start_monotonic_ms"
+    ]
     assert metadata["limiter_wait_ms"] == 0
 
 

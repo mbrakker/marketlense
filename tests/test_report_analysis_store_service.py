@@ -5,13 +5,16 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts.files import ReadTextRequest
 from src.contracts.report_analysis import (
     AnalysisPackPathRequest,
     AnalysisStorePackRequest,
 )
 from src.services.file_service import (
+    WINDOWS_MAX_PATH_LENGTH,
     WINDOWS_SAFE_ATOMIC_PATH_LENGTH,
     atomic_write_temp_path_length,
+    read_text,
 )
 from src.services.report_analysis_store_service import pack_path, store_pack
 from src.utils.errors import AppError
@@ -368,32 +371,104 @@ def test_pack_path_bounds_long_destination_and_atomic_temp_paths(
     )
 
     stored_path = Path(response.output_path)
-    assert len(str(stored_path.resolve())) <= 259
+    assert len(str(stored_path.resolve())) < WINDOWS_MAX_PATH_LENGTH
     assert atomic_write_temp_path_length(stored_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
 
 
-def test_pack_path_rejects_destination_that_cannot_fit_after_compaction(
+def test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted(
     run_context, tmp_path: Path
 ) -> None:
-    pack_name = "prompt_family_report_vs_evidence_packs_limitations"
+    pack_name = "validation_regen_candidate_3_retained_claim_validation_candidate"
     output_dir = tmp_path / "isolated-cohort"
     minimum_path = (
         output_dir / ("a" * 12) / "report_analysis" / f"{pack_name}.json"
     )
-    padding_length = 280 - len(str(minimum_path.resolve()))
+    padding_length = 260 - len(str(minimum_path.resolve()))
     assert 0 < padding_length < 255
     output_dir = output_dir / ("x" * padding_length)
+    old_slug_only_destination = (
+        output_dir
+        / ("a" * 12)
+        / "report_analysis"
+        / f"{pack_name}.json"
+    )
+    assert len(str(old_slug_only_destination.resolve())) == 261
 
-    with pytest.raises(AppError) as exc_info:
+    request = AnalysisPackPathRequest(
+        schema_version="1.0",
+        output_dir=str(output_dir),
+        report_id="cohort-11b0b55157f7d0636815",
+        pack_name=pack_name,
+        report_slug="2026-global-payments-and-fraud-report-pdf",
+    )
+    first = Path(pack_path(request, run_context).output_path)
+    second = Path(pack_path(request, run_context).output_path)
+
+    assert first == second
+    assert len(str(first.resolve())) < WINDOWS_MAX_PATH_LENGTH
+    assert atomic_write_temp_path_length(first) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    assert first.parent.parent.name != request.report_slug
+
+    different_pack = Path(
         pack_path(
             AnalysisPackPathRequest(
                 schema_version="1.0",
-                output_dir=str(output_dir),
-                report_id="cohort-11b0b55157f7d0636815",
-                pack_name=pack_name,
-                report_slug="2026-global-payments-and-fraud-report-pdf",
+                output_dir=request.output_dir,
+                report_id=request.report_id,
+                pack_name=(
+                    "validation_regen_candidate_4_retained_claim_validation_candidate"
+                ),
+                report_slug=request.report_slug,
             ),
             run_context,
         )
+        .output_path
+    )
+    assert different_pack != first
 
-    assert exc_info.value.code == "analysis_pack_path_too_long"
+
+def test_store_pack_round_trips_long_validation_candidate_under_long_root(
+    run_context, tmp_path: Path
+) -> None:
+    pack_name = "validation_regen_candidate_3_retained_claim_validation_candidate"
+    output_dir = tmp_path / ("realistic-isolated-run-root-" + "r" * 45)
+    report_slug = "long-report-slug-for-a-frozen-reliability-cohort-validation-run"
+    request = AnalysisPackPathRequest(
+        schema_version="1.0",
+        output_dir=str(output_dir),
+        report_id="cohort-11b0b55157f7d0636815",
+        pack_name=pack_name,
+        report_slug=report_slug,
+    )
+    expected_path = Path(pack_path(request, run_context).output_path)
+    stored = store_pack(
+        AnalysisStorePackRequest(
+            schema_version="1.0",
+            output_dir=str(output_dir),
+            report_id=request.report_id,
+            pack_name=pack_name,
+            payload=_valid_retained_claim_package_payload(),
+            report_slug=report_slug,
+        ),
+        run_context,
+    )
+
+    assert Path(stored.output_path) == expected_path
+    assert json.loads(expected_path.read_text(encoding="utf-8")) == (
+        _valid_retained_claim_package_payload()
+    )
+    resolved_for_read = Path(
+        pack_path(request, run_context).output_path
+    )
+    read_response = read_text(
+        ReadTextRequest(schema_version="1.0", path=str(resolved_for_read)),
+        run_context,
+    )
+    assert json.loads(read_response.content) == _valid_retained_claim_package_payload()
+    assert len(str(expected_path.resolve())) < WINDOWS_MAX_PATH_LENGTH
+    assert (
+        atomic_write_temp_path_length(expected_path)
+        <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    )
+    assert expected_path.parent.parent.name != report_slug
+    assert expected_path.stem != pack_name

@@ -681,6 +681,10 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
     assert row["provider_call_status"] == "failed"
     assert metadata["provider_operation"] == "chat.completions.create"
     assert metadata["provider_elapsed_ms"] >= 0
+    assert metadata["provider_request_start_monotonic_ms"] >= 0
+    assert metadata["provider_request_finish_monotonic_ms"] >= metadata[
+        "provider_request_start_monotonic_ms"
+    ]
     assert metadata["provider_error_type"] == "_ProviderUnavailable"
     assert metadata["provider_http_status"] == 503
     assert metadata["provider_retryable"] is True

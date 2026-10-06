@@ -42,24 +42,30 @@ matches and neither quality nor estimated cost regresses.
 
 `scripts/quality/profile_provider_calls.py` reads the existing LLM usage ledger
 for one report and groups calls by prompt namespace, stage, and reasoning
-effort. It reports provider elapsed time separately from measured in-flight
-and rate-spacing waits, preserves untimed historical rows as untimed, and lists
-the slowest individual calls without retaining prompts or responses.
+effort. New rows include bounded monotonic request start and finish readings.
+The profiler reports summed provider work separately from the union of active
+provider intervals, exclusive exposure, and maximum overlap. Historical rows
+without interval data remain supported as untimed for interval analysis. It can
+also read report wall time from a runner result and report-analysis execution
+from the workflow telemetry database.
 
 ```powershell
-python scripts/quality/profile_provider_calls.py --usage-db <isolated-run>/state/llm_usage.sqlite --report-id <ledger-report-id> --output-json docs/quality/provider-latency-profile.json
+python scripts/quality/profile_provider_calls.py --usage-db <isolated-run>/state/llm_usage.sqlite --workflow-db <isolated-run>/state/workflow.sqlite --run-result-json <isolated-run>/result.json --report-id <ledger-report-id> --output-json docs/quality/provider-latency-profile.json
 ```
 
 `provider_elapsed_ms` covers only the outbound SDK or HTTP request. Queue wait,
 prompt rendering, schema validation, and deterministic post-processing are
-outside that duration. This profile helper is evidence tooling, not a quality
-gate or an optimization selector.
+outside that duration. The sum of provider elapsed time is aggregate work, not
+critical-path duration. Prompt-family interval unions can overlap each other,
+and the tool does not reconstruct the workflow dependency graph; its exposure
+ranking is evidence for review, not exact causal attribution.
 
-On Windows, keep the frozen-run `--runs-root` short (for example, `out/p`).
-Each member nests report-analysis artifacts beneath that root; report-slug
-compaction cannot compensate when the root itself leaves no room for the
-longest validation-package filename. A path that exceeds the supported limit
-can prevent repair candidates from being validated or promoted.
+The canonical report-analysis path builder compacts the report slug first and
+then the pack filename with deterministic readable prefixes and hashes. It
+checks both the final destination and atomic-write temporary path against their
+supported budgets. The operator-supplied output root is preserved; if the root
+alone leaves insufficient room for a safe path, path construction fails with a
+typed error.
 
 CI also measures each existing standalone coverage, mutation,
 quality-regression, PDF, public-render, retained-LLM-routing,
