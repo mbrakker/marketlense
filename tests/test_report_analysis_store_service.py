@@ -90,7 +90,7 @@ def _valid_candidate_audit_payload() -> dict:
 
 def _valid_retained_claim_package_payload() -> dict:
     return {
-        "schema_version": "1.3",
+        "schema_version": "1.4",
         "artifact_hash": "a" * 64,
         "package_hash": "b" * 64,
         "results": [],
@@ -240,8 +240,7 @@ def test_store_pack_routes_regenerated_claim_package_to_its_schema(
             output_dir=str(tmp_path / "out"),
             report_id="file123",
             pack_name=(
-                "validation_regen_candidate_1_"
-                "retained_claim_validation_candidate"
+                "validation_regen_candidate_1_retained_claim_validation_candidate"
             ),
             payload=_valid_retained_claim_package_payload(),
             report_slug="report",
@@ -251,7 +250,7 @@ def test_store_pack_routes_regenerated_claim_package_to_its_schema(
 
     stored = Path(response.output_path)
     assert stored.exists()
-    assert json.loads(stored.read_text(encoding="utf-8"))["schema_version"] == "1.3"
+    assert json.loads(stored.read_text(encoding="utf-8"))["schema_version"] == "1.4"
 
 
 def test_store_pack_rejects_pack_name_path_traversal(
@@ -352,9 +351,7 @@ def test_pack_path_bounds_long_destination_and_atomic_temp_paths(
     report_slug = "2026-global-payments-and-fraud-report-pdf"
     pack_name = "prompt_family_report_vs_evidence_packs_limitations"
     output_dir = tmp_path / "isolated-cohort"
-    unbounded_path = (
-        output_dir / report_slug / "report_analysis" / f"{pack_name}.json"
-    )
+    unbounded_path = output_dir / report_slug / "report_analysis" / f"{pack_name}.json"
     padding_length = 280 - len(str(unbounded_path.resolve()))
     assert 0 < padding_length < 255
     output_dir = output_dir / ("x" * padding_length)
@@ -380,17 +377,12 @@ def test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted
 ) -> None:
     pack_name = "validation_regen_candidate_3_retained_claim_validation_candidate"
     output_dir = tmp_path / "isolated-cohort"
-    minimum_path = (
-        output_dir / ("a" * 12) / "report_analysis" / f"{pack_name}.json"
-    )
+    minimum_path = output_dir / ("a" * 12) / "report_analysis" / f"{pack_name}.json"
     padding_length = 260 - len(str(minimum_path.resolve()))
     assert 0 < padding_length < 255
     output_dir = output_dir / ("x" * padding_length)
     old_slug_only_destination = (
-        output_dir
-        / ("a" * 12)
-        / "report_analysis"
-        / f"{pack_name}.json"
+        output_dir / ("a" * 12) / "report_analysis" / f"{pack_name}.json"
     )
     assert len(str(old_slug_only_destination.resolve())) == 261
 
@@ -421,8 +413,7 @@ def test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted
                 report_slug=request.report_slug,
             ),
             run_context,
-        )
-        .output_path
+        ).output_path
     )
     assert different_pack != first
 
@@ -457,9 +448,7 @@ def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     assert json.loads(expected_path.read_text(encoding="utf-8")) == (
         _valid_retained_claim_package_payload()
     )
-    resolved_for_read = Path(
-        pack_path(request, run_context).output_path
-    )
+    resolved_for_read = Path(pack_path(request, run_context).output_path)
     read_response = read_text(
         ReadTextRequest(schema_version="1.0", path=str(resolved_for_read)),
         run_context,
@@ -467,8 +456,7 @@ def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     assert json.loads(read_response.content) == _valid_retained_claim_package_payload()
     assert len(str(expected_path.resolve())) < WINDOWS_MAX_PATH_LENGTH
     assert (
-        atomic_write_temp_path_length(expected_path)
-        <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+        atomic_write_temp_path_length(expected_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
     )
     assert expected_path.parent.parent.name != report_slug
     assert expected_path.stem != pack_name

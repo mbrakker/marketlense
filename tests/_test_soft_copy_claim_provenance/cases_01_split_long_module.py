@@ -397,7 +397,7 @@ def test_repaired_summary_does_not_infer_binding_from_paraphrased_direct_claim()
             },
         )
 
-    assert captured.value.code == "soft_copy_claim_provenance_bindings_incomplete"
+    assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
 def test_repaired_summary_does_not_choose_between_direct_claim_evidence_rows() -> None:
@@ -440,7 +440,7 @@ def test_repaired_summary_does_not_choose_between_direct_claim_evidence_rows() -
             soft_copy_repair_texts={"summary": [sentence]},
         )
 
-    assert captured.value.code == "soft_copy_claim_provenance_bindings_incomplete"
+    assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
 
 
 def test_artifact_assembly_canonicalizes_soft_copy_aliases_before_strict_validation() -> (

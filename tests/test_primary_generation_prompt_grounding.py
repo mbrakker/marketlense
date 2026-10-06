@@ -33,13 +33,18 @@ MANDATORY_PRESSURE_PATTERNS = (
     ("why this matters", r"\bexplain why (?:the selected angle|this) matters\b"),
 )
 IAS_UNSUPPORTED_CLAIM_GUARDS = {
-    "predictions": "do not invent predictions",
-    "causality": "causality",
-    "budget movement": "budget movement",
-    "performance outcomes": "performance effects",
-    "operational benefits": "operational benefits",
-    "mandatory actions": "mandatory actions",
+    "descriptive comparisons": "a descriptive comparison, change, or forecast does not establish a value ranking",
+    "source certainty": "keep source frequency, likelihood, modality, and certainty qualifiers",
+    "recommendation attribution": "recommendations may be conditional marketlense advice tied to linked evidence",
+    "unsupported facts": "never invent facts, metrics, risks, or timelines",
 }
+IAS_LINKEDIN_CLAIM_GUARDS = (
+    "do not invent predictions",
+    "budget movement",
+    "performance effects",
+    "operational benefits",
+    "mandatory actions",
+)
 
 
 def _ctx() -> RunContext:
@@ -375,4 +380,7 @@ def test_retained_ias_case_materializes_each_primary_generation_prompt(
     normalised = _normalise_whitespace(rendered)
     for guard in IAS_UNSUPPORTED_CLAIM_GUARDS.values():
         assert guard in normalised
+    if namespace == "report_vs/artifacts/linkedin_post":
+        for guard in IAS_LINKEDIN_CLAIM_GUARDS:
+            assert guard in normalised
     assert _mandatory_pressure_conflicts(rendered) == ()

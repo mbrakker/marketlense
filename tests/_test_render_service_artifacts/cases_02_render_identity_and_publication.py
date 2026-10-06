@@ -112,9 +112,13 @@ def test_render_includes_artifact_sections(tmp_path):
     assert "Signals to watch after reading this report" in html
     signals_html = html.split('id="signals"', 1)[1].split('id="evidence"', 1)[0]
     assert "Value Strategy" in signals_html
-    assert "Artifact insight 1" in signals_html
-    assert "The evidence makes price positioning a strategic choice." in signals_html
-    assert "Review how value messages differ across purchase contexts." in signals_html
+    assert "Artifact insight 1" not in signals_html
+    assert (
+        "The evidence makes price positioning a strategic choice." not in signals_html
+    )
+    assert (
+        "Review how value messages differ across purchase contexts." not in signals_html
+    )
     assert "Artifact TLDR" in html
     assert "Artifact executive summary" in html
     assert "What leaders should take from the report" in html

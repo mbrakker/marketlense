@@ -15,12 +15,12 @@
         {"text": "The survey does not establish a cause, forecast, or operating consequence."}
       ],
       "expected_policy": [
-        "factual statements must remain descriptive",
-        "remain descriptive or omit it",
-        "do not invent predictions, causality, business impact"
+        "a descriptive comparison, change, or forecast does not establish a value ranking",
+        "when the evidence supports only a descriptive fact, make the sentence descriptive",
+        "recommendations may be conditional MarketLense advice tied to linked evidence"
       ],
       "namespace_expectations": {
-        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/summary": ["write for senior decision-makers"],
         "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
         "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
       }
@@ -39,12 +39,12 @@
       ],
       "limitations": [],
       "expected_policy": [
-        "add analyst interpretation only when it follows without introducing a new factual premise",
-        "recommendations must be explicitly marketlense-authored, conditional and traceable to supplied evidence",
-        "classify source-derived factual statements as factual and marketlense-authored recommendations as recommendation"
+        "recommendations may be conditional MarketLense advice tied to linked evidence, even when not source-prescribed",
+        "when the source states a recommendation, preserve its attribution and action",
+        "classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation"
       ],
       "namespace_expectations": {
-        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/summary": ["write for senior decision-makers"],
         "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
         "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
       }
@@ -63,12 +63,12 @@
         {"text": "The evidence is a single partial observation and does not support extrapolation."}
       ],
       "expected_policy": [
-        "remain descriptive or omit it",
-        "do not invent predictions, causality, business impact",
-        "do not invent predictions, causality, business impact, budget movement, performance effects, operational benefits or mandatory actions"
+        "omit that added proposition unless the retained source explicitly establishes it",
+        "never invent facts, metrics, risks, or timelines",
+        "add no unsupported premise or outcome"
       ],
       "namespace_expectations": {
-        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/summary": ["write for senior decision-makers"],
         "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
         "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
       }
@@ -88,11 +88,11 @@
         {"text": "The result is limited to the surveyed cohort and does not establish a performance outcome."}
       ],
       "expected_policy": [
-        "classify source-derived factual statements as factual and marketlense-authored recommendations as recommendation; never present a recommendation as a source claim",
-        "recommendations must be explicitly marketlense-authored, conditional and traceable to supplied evidence"
+        "classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim",
+        "recommendations may be conditional MarketLense advice tied to linked evidence"
       ],
       "namespace_expectations": {
-        "report_vs/artifacts/summary": ["write for executives"],
+        "report_vs/artifacts/summary": ["write for senior decision-makers"],
         "report_vs/artifacts/expert_comment": ["strategic, analytical, and interpretive in tone"],
         "report_vs/artifacts/linkedin_post": ["write for experienced ecommerce, digital, and strategy operators"]
       }

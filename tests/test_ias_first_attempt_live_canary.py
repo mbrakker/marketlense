@@ -27,6 +27,11 @@ from src.services.report_analysis_store_service import pack_path
 from src.services.workflow_queue_service import get_workflow_queue_control
 
 
+def _long_test_output_root(tmp_path: Path) -> Path:
+    """Keep path-compaction coverage deterministic on short Linux temp roots."""
+    return tmp_path / ("isolated-run-" + "r" * 20) / "output"
+
+
 def test_prepare_isolated_canary_run_creates_fresh_root_with_only_rooted_mutable_paths(
     tmp_path: Path,
 ) -> None:
@@ -78,16 +83,12 @@ def test_isolated_canary_persists_publication_queue_disabled_without_changing_li
     settings = load_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)), ctx
     )
-    initial = get_workflow_queue_control(
-        settings.state_db, "wordpress_publish", ctx
-    )
+    initial = get_workflow_queue_control(settings.state_db, "wordpress_publish", ctx)
 
     disabled = ensure_isolated_publication_queue_disabled(
         state_db=settings.state_db, ctx=ctx
     )
-    persisted = get_workflow_queue_control(
-        settings.state_db, "wordpress_publish", ctx
-    )
+    persisted = get_workflow_queue_control(settings.state_db, "wordpress_publish", ctx)
 
     assert initial.enabled is True
     assert disabled.enabled is False
@@ -275,9 +276,7 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
         report_ids=("report-a", "report-b"),
     )
 
-    assert (
-        evidence["terminal_dependency_chain"]["terminal_report_id"] == "report-b"
-    )
+    assert evidence["terminal_dependency_chain"]["terminal_report_id"] == "report-b"
     assert (
         evidence["terminal_dependency_chain"]["path_source"]
         == "workflow_job_parent_chain"
@@ -308,11 +307,14 @@ def test_cohort_queue_timing_uses_persisted_attempts_and_existing_elapsed_metric
         evidence["queue_concurrency"]["source_ingest"]["max_observed_running_jobs"] == 1
     )
     assert evidence["publication_write_count"] == 0
-    assert next(
-        item
-        for item in evidence["stage_attempts"]
-        if item["job_id"] == job_ids[("report-a", "source_ingest")]
-    )["on_terminal_dependency_chain"] is False
+    assert (
+        next(
+            item
+            for item in evidence["stage_attempts"]
+            if item["job_id"] == job_ids[("report-a", "source_ingest")]
+        )["on_terminal_dependency_chain"]
+        is False
+    )
 
 
 def test_retained_claim_counts_require_the_exact_report_and_source_identity(
@@ -324,11 +326,12 @@ def test_retained_claim_counts_require_the_exact_report_and_source_identity(
     source_hash = hashlib.md5(source.read_bytes(), usedforsecurity=False).hexdigest()
     report_id = f"cohort-{source_hash[:20]}"
     ctx = new_runtime_context(task_id="canary-retained-claim-path")
+    output_dir = _long_test_output_root(tmp_path)
     validation = Path(
         pack_path(
             AnalysisPackPathRequest(
                 schema_version="1.0",
-                output_dir=str(tmp_path / "output"),
+                output_dir=str(output_dir),
                 report_id=ReportId(report_id),
                 pack_name="validation_retained_claim_validation_candidate",
                 report_slug=canary_runner.slugify(source.name),
@@ -353,14 +356,14 @@ def test_retained_claim_counts_require_the_exact_report_and_source_identity(
     )
 
     assert _read_retained_claim_counts(
-        output_dir=tmp_path / "output",
+        output_dir=output_dir,
         source_path=source,
         report_id=report_id,
         ctx=ctx,
     ) == (0, 0)
     assert (
         _read_retained_claim_counts(
-            output_dir=tmp_path / "output",
+            output_dir=output_dir,
             source_path=source,
             report_id="other",
             ctx=ctx,
@@ -372,7 +375,7 @@ def test_retained_claim_counts_require_the_exact_report_and_source_identity(
 def test_frozen_member_validation_uses_its_own_artifact_not_a_sibling_report(
     tmp_path: Path,
 ) -> None:
-    output_dir = tmp_path / "output"
+    output_dir = _long_test_output_root(tmp_path)
     source_path = tmp_path / "sources" / f"adjust-{'x' * 80}.pdf"
     source_path.parent.mkdir(parents=True)
     source_path.write_bytes(b"frozen Adjust source")
@@ -413,9 +416,10 @@ def test_frozen_member_validation_uses_its_own_artifact_not_a_sibling_report(
 
     read_member_validation = getattr(canary_runner, "report_validation_passed", None)
     assert read_member_validation is not None
-    assert read_member_validation(
-        output_dir, source_path, report_id=report_id, ctx=ctx
-    ) is True
+    assert (
+        read_member_validation(output_dir, source_path, report_id=report_id, ctx=ctx)
+        is True
+    )
 
 
 def test_live_canary_records_a_typed_terminal_input_failure(tmp_path: Path) -> None:

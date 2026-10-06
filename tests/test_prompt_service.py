@@ -186,8 +186,9 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
     )
 
     normalized_findings_system = " ".join(findings_prompt.system.text.split())
-    assert "include the displayed title and period/timeframe from the same page in `evidence`" in (
-        normalized_findings_system
+    assert (
+        "include the displayed title and period/timeframe from the same page in `evidence`"
+        in (normalized_findings_system)
     )
     prompt_text = findings_prompt.user.text.casefold()
 
@@ -428,7 +429,7 @@ def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> 
         "Separate facts from different sections or topics",
         "A DocMap summary supports its section only, not report-wide thesis or importance",
         "Use rankings (central, major, early) and exhaustive-list claims only when the linked source states them",
-        "Recommendations address only source-established problems tied to their linked evidence",
+        "Recommendations may be conditional MarketLense advice tied to linked evidence",
     )
 
     for prompt in prompts:
