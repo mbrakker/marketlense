@@ -236,7 +236,25 @@
           "evidence_quality_grade": { "type": "string" },
           "confidence": { "type": "string" },
           "risk": { "type": "string" },
-          "evidence_span_count": { "type": "integer" }
+          "evidence_span_count": { "type": "integer" },
+          "evidence_references": {
+            "type": "array",
+            "description": "Typed source-pack identity for evidence spans linked to this claim.",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id", "source_pack"],
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "description": "Identifier of the supporting evidence span."
+                },
+                "source_pack": {
+                  "type": "string",
+                  "description": "Canonical evidence pack that owns the identifier."
+                }
+              }
+            }
+          }
         }
       }
     },

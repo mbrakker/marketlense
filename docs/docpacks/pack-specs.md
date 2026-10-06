@@ -48,6 +48,12 @@ context only: each finding remains grounded in file-search evidence.
 to the supplied DocMap with optional `section_id` and `section_title`. These
 links are additive, so legacy retained findings packs remain schema-valid.
 
+When source spans are available, `findings` and `quote_candidates` are checked
+before they become canonical persisted or reusable outputs. Unsupported or
+unresolved items are removed from the pack, their family status is updated, and
+the `evidence_fidelity` pack retains the rejection audit. Reused material is
+subject to the same check before it can reach artifact generation.
+
 The production registry has one representative-evidence path. Its final
 insights retain source-backed metrics, priority moves, and counter-signals;
 artifact assembly deterministically projects those supported fields into the
@@ -74,6 +80,12 @@ Cross-pack checks require `artifacts` evidence references to resolve to known ID
 - `quote_candidates.quote_candidates[].id`
 - IDs in retained specialist-family payloads, when replaying an artifact created
   before those families were retired
+
+Claim-ledger rows may include `evidence_references[]`, projected from typed
+evidence spans as `{evidence_id, source_pack}` pairs. The existing
+`evidence_ids[]` field remains available for identifier lookup; readiness uses
+the typed pairs to distinguish equal identifiers owned by different packs and
+keeps legacy untyped identifiers conservative.
 
 `artifacts.toc_entries[]` is the authoritative Covered topics structure, deterministically derived from eligible `doc_map.sections[]`, with:
 

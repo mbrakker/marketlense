@@ -325,6 +325,54 @@ def test_render_surfaces_editorial_details_from_evidence_packs(tmp_path):
     assert "Fieldwork:" not in html
 
 
+def test_render_omits_findings_removed_by_evidence_fidelity(tmp_path):
+    unsupported = (
+        "Survey findings reflect questionnaire respondents' views and are intended "
+        "as directional guidance."
+    )
+    data = {
+        "title": "Fidelity Report",
+        "tldr": "Concise lead.",
+        "insights": ["Supported insight"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "region": "Global",
+        "time_period": "2026",
+        "contents_page_number": 0,
+        "evidence_packs": {
+            "findings": {"findings": []},
+            "evidence_fidelity": {
+                "readiness_status": "not_publishable",
+                "results": [
+                    {
+                        "candidate": {
+                            "claim_id": "evidence:findings:research-methodology",
+                            "text": unsupported,
+                            "factual": True,
+                        },
+                        "status": "unsupported",
+                    }
+                ],
+            },
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="fidelity.pdf",
+        file_id="file_fidelity",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert unsupported not in html
+    assert "research-methodology" not in html
+
+
 def test_render_hides_figure_sections_when_disabled(tmp_path):
     data = {
         "title": "No Figures Report",
@@ -418,7 +466,9 @@ def test_render_uses_per_asset_figure_captions(tmp_path):
                     "insight_id": "i1",
                     "source_page": 2,
                     "caption": "Primary generated caption",
-                    "public_takeaway": "The primary chart supports the published finding.",
+                    "public_takeaway": (
+                        "The primary chart supports the published finding."
+                    ),
                 },
                 {
                     "status": "generated",
@@ -428,7 +478,9 @@ def test_render_uses_per_asset_figure_captions(tmp_path):
                     "insight_id": "i2",
                     "source_page": 3,
                     "caption": "Detected secondary caption",
-                    "public_takeaway": "The secondary table supports the published finding.",
+                    "public_takeaway": (
+                        "The secondary table supports the published finding."
+                    ),
                 },
             ]
         },

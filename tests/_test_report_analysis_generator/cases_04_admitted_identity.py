@@ -36,9 +36,9 @@ def test_admitted_analysis_rejects_unattributed_publisher_before_provider_work(
     assert exc_info.value.context["invalid_fields"] == ["publisher_id"]
 
 
-def test_admitted_analysis_preserves_canonical_identity_when_publisher_id_is_display_name(
+def test_admitted_analysis_keeps_canonical_identity_for_display_publisher(
     tmp_path,
-):
+) -> None:
     runtime = replace(
         _runtime(tmp_path),
         ctx=replace(
@@ -56,7 +56,29 @@ def test_admitted_analysis_preserves_canonical_identity_when_publisher_id_is_dis
     category_requests = []
     evidence_contexts = []
     artifact_contexts = []
+    artifact_evidence_packs = []
     validation_requests = []
+    filtered_evidence_packs = {
+        "doc_map": {"docMap": {"title": "Doc Title", "publisher": "Publisher"}},
+        "findings": {"findings": []},
+        "evidence_fidelity": {
+            "readiness_status": "not_publishable",
+            "results": [
+                {
+                    "candidate": {
+                        "claim_id": "evidence:findings:research-methodology",
+                        "factual": True,
+                    },
+                    "status": "unsupported",
+                }
+            ],
+        },
+    }
+
+    def capture_artifacts(**kwargs):
+        artifact_contexts.append(kwargs["ctx"])
+        artifact_evidence_packs.append(kwargs["evidence_packs"])
+        return _artifacts()
 
     deps = _deps(
         extract_taxonomy=lambda request, ctx: (
@@ -70,11 +92,9 @@ def test_admitted_analysis_preserves_canonical_identity_when_publisher_id_is_dis
         ),
         generate_evidence_packs=lambda **kwargs: (
             evidence_contexts.append(kwargs["ctx"])
-            or {"doc_map": {"docMap": {"title": "Doc Title", "publisher": "Publisher"}}}
+            or filtered_evidence_packs
         ),
-        generate_artifacts=lambda **kwargs: (
-            artifact_contexts.append(kwargs["ctx"]) or _artifacts()
-        ),
+        generate_artifacts=capture_artifacts,
         run_validation=lambda request, *args, **kwargs: (
             validation_requests.append(request)
             or ValidationReport(
@@ -107,4 +127,9 @@ def test_admitted_analysis_preserves_canonical_identity_when_publisher_id_is_dis
     assert evidence_contexts[0].publisher_id == "Mintel"
     assert artifact_contexts[0].source_identity_id == "source:canonical-report"
     assert artifact_contexts[0].publisher_id == "Mintel"
+    assert artifact_evidence_packs[0] is filtered_evidence_packs
+    assert artifact_evidence_packs[0]["findings"]["findings"] == []
+    assert artifact_evidence_packs[0]["evidence_fidelity"]["results"][0][
+        "candidate"
+    ]["claim_id"] == "evidence:findings:research-methodology"
     assert validation_requests[0].source_id == "source:canonical-report"

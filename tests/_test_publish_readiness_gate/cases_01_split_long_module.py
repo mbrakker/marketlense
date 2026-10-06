@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -628,6 +629,54 @@ def test_publish_readiness_blocks_quarantined_evidence_rendered_in_final_html() 
     assert readiness.status == "fail"
     assert fidelity.status == "fail"
     assert fidelity.surfaces == ["rendered_html:evidence:F2"]
+
+
+def test_publish_readiness_keeps_same_id_claims_separate_by_source_pack() -> None:
+    artifacts, evidence_packs, html, provenance = _ready_inputs()
+    artifacts["claim_ledgers"] = [
+        {
+            "claim_text": "Revenue grew in the measured market.",
+            "evidence_ids": ["research-methodology"],
+            "evidence_references": [
+                {
+                    "evidence_id": "research-methodology",
+                    "source_pack": "doc_map",
+                }
+            ],
+        }
+    ]
+    evidence_packs["evidence_fidelity"] = {
+        "readiness_status": "not_publishable",
+        "results": [
+            {
+                "candidate": {
+                    "claim_id": "evidence:findings:research-methodology",
+                    "source_family": "evidence_pack:findings",
+                    "factual": True,
+                },
+                "status": "unsupported",
+            }
+        ],
+    }
+
+    readiness = _evaluate_readiness_for_test(
+        report_id="report-1",
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        final_html=html,
+        final_html_path="",
+        category_ids=["markets"],
+        provenance=provenance,
+    )
+
+    fidelity = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.evidence_fidelity"
+    )
+    assert fidelity.status == "pass"
+    assert fidelity.detail == "audit_untrusted=1; rendered_untrusted=0"
 
 
 @pytest.mark.parametrize(

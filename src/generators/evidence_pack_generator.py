@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from hashlib import sha256
 from typing import Dict, Optional, Tuple
 
@@ -165,6 +165,12 @@ def _prompt_namespace_for_strategy(strategy: EvidencePackStrategy) -> str:
     return f"report_vs/{strategy.prompt_namespace_suffix}"
 
 
+def _prompt_family_processing_version(pack_name: str) -> str:
+    if pack_name in {"findings", "quote_candidates"}:
+        return "report_generation_checkpoint_v3"
+    return "report_generation_checkpoint_v2"
+
+
 def _attach_pack_family_status(pack_name: str, payload: dict) -> dict:
     enriched = dict(payload)
     enriched["family_status"] = serialize_family_status(
@@ -305,7 +311,6 @@ def generate_evidence_packs(
     retrieval_results_observer=None,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
-    # Missing identity disables retained-family reuse; it must not borrow MD5.
     source_identity_id = str(ctx.source_identity_id or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
@@ -322,6 +327,10 @@ def generate_evidence_packs(
     )
     strategies = _resolve_pack_steps(settings)
     results: Dict[str, dict] = {}
+    pack_contexts: dict[str, RunContext] = {}
+    deferred_materializations: dict[
+        str, tuple[PromptFamilyMaterializationRequest, RunContext, bool]
+    ] = {}
     parallel_workers = _pack_parallel_workers(settings, max(0, len(strategies) - 1))
     logger.info(
         log_event(
@@ -341,6 +350,7 @@ def generate_evidence_packs(
     doc_strategy = strategies[0]
     step_name = doc_strategy.pack_name
     step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
+    pack_contexts[step_name] = step_ctx
     retrieval_results: list = []
     retrieval_observed = False
 
@@ -368,9 +378,8 @@ def generate_evidence_packs(
             source_url=source_url,
             openai_client=openai_client,
             prompt_client=prompt_client,
-            analysis_store=analysis_store,
             prompt_family_reuse_reader=prompt_family_reuse_reader,
-            prompt_family_materializer=prompt_family_materializer,
+            deferred_materializations=deferred_materializations,
             strategy=doc_strategy,
             retrieval_results_observer=observe_doc_map_results,
             require_retrieval_results=shares_retrieval,
@@ -465,6 +474,7 @@ def generate_evidence_packs(
             for strategy in parallel_strategies:
                 step_name = strategy.pack_name
                 step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
+                pack_contexts[step_name] = step_ctx
                 future = executor.submit(
                     _generate_pack,
                     report_id=report_id,
@@ -478,9 +488,8 @@ def generate_evidence_packs(
                     source_url=source_url,
                     openai_client=openai_client,
                     prompt_client=prompt_client,
-                    analysis_store=analysis_store,
                     prompt_family_reuse_reader=prompt_family_reuse_reader,
-                    prompt_family_materializer=prompt_family_materializer,
+                    deferred_materializations=deferred_materializations,
                     strategy=strategy,
                     shared_retrieval_context_json=(
                         serialize_shared_retrieval_context(retrieval_results)
@@ -532,6 +541,7 @@ def generate_evidence_packs(
         for strategy in parallel_strategies:
             step_name = strategy.pack_name
             step_ctx = child_context(ctx, task_id=f"{ctx.task_id}:{step_name}")
+            pack_contexts[step_name] = step_ctx
             parallel_results[step_name] = _generate_pack(
                 report_id=report_id,
                 report_name=report_name,
@@ -544,9 +554,8 @@ def generate_evidence_packs(
                 source_url=source_url,
                 openai_client=openai_client,
                 prompt_client=prompt_client,
-                analysis_store=analysis_store,
                 prompt_family_reuse_reader=prompt_family_reuse_reader,
-                prompt_family_materializer=prompt_family_materializer,
+                deferred_materializations=deferred_materializations,
                 strategy=strategy,
                 shared_retrieval_context_json=(
                     serialize_shared_retrieval_context(retrieval_results)
@@ -620,29 +629,34 @@ def generate_evidence_packs(
             if initial_fidelity.unresolved_factual_count
             else initial_fidelity
         )
-        unfiltered_results = results
         results = exclude_untrusted_evidence(results, fidelity)
-        for pack_name, payload in results.items():
-            if payload != unfiltered_results.get(pack_name):
-                _store_pack(
-                    analysis_store=analysis_store,
-                    output_dir=settings.output_dir,
-                    report_id=report_id,
-                    pack_name=pack_name,
-                    payload=payload,
-                    ctx=ctx,
-                    report_name=report_name,
+        for pack_name in ("findings", "quote_candidates"):
+            if pack_name in results:
+                results[pack_name] = _attach_pack_family_status(
+                    pack_name, results[pack_name]
                 )
         results["evidence_fidelity"] = asdict(fidelity)
+
+    # Store and materialize only the authoritative post-fidelity outputs. These
+    # are the same payloads returned to report-analysis and artifact generation.
+    for pack_name, payload in results.items():
         _store_pack(
             analysis_store=analysis_store,
             output_dir=settings.output_dir,
             report_id=report_id,
-            pack_name="evidence_fidelity",
-            payload=results["evidence_fidelity"],
-            ctx=ctx,
+            pack_name=pack_name,
+            payload=payload,
+            ctx=pack_contexts.get(pack_name, ctx),
             report_name=report_name,
         )
+    for pack_name, (request, materialization_ctx, always_materialize) in (
+        deferred_materializations.items()
+    ):
+        if always_materialize or results[pack_name] != request.output_payload:
+            prompt_family_materializer(
+                replace(request, output_payload=results[pack_name]),
+                materialization_ctx,
+            )
     logger.info(
         log_event(
             ctx,
@@ -668,9 +682,8 @@ def _generate_pack(
     source_url: str,
     openai_client,
     prompt_client,
-    analysis_store,
     prompt_family_reuse_reader,
-    prompt_family_materializer,
+    deferred_materializations,
     strategy: EvidencePackStrategy,
     prompt_user_variables: Optional[Dict[str, str]] = None,
     shared_retrieval_context_json: str = "",
@@ -763,6 +776,50 @@ def _generate_pack(
         }
     )
 
+    def defer_family_materialization(
+        payload: dict,
+        *,
+        relevant_hash: str,
+        always_materialize: bool,
+    ) -> None:
+        if not source_identity_id or not vector_provenance_verified:
+            return
+        deferred_materializations[pack_name] = (
+            PromptFamilyMaterializationRequest(
+                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                db_path=settings.reports_db,
+                output_dir=settings.output_dir,
+                report_id=report_id,
+                report_slug=report_name,
+                source_id=source_identity_id,
+                family_id=prompt_namespace,
+                family_schema_version="1.0",
+                processing_version=_prompt_family_processing_version(pack_name),
+                output_payload=payload,
+                system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                prompt_content_hash=prompt_bundle.prompt_content_hash,
+                prompt_dependency_manifest=asdict(
+                    prompt_bundle.dependency_manifest
+                ),
+                execution_identity=prompt_bundle.execution_identity.execution_identity,
+                execution_identity_manifest=asdict(
+                    prompt_bundle.execution_identity
+                ),
+                prompt_policy_version=prompt_bundle.prompt_content_hash,
+                model_name=prompt_bundle.resolved_model,
+                model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                model_policy_namespace="report_vs",
+                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                relevant_input_hash=relevant_hash,
+                configuration_policy_hash=configuration_policy_hash,
+                validator_version=f"{schema_name}:1.0",
+                validation_status="pass",
+            ),
+            ctx,
+            always_materialize,
+        )
+
     def normalize_and_validate_reused(payload: object) -> dict:
         normalized = strategy.normalize_payload(payload, report_id, report_name).payload
         validate_schema(
@@ -773,6 +830,8 @@ def _generate_pack(
         )
         return _attach_pack_family_status(pack_name, normalized)
 
+    # Missing canonical identity disables retained-family reuse; never
+    # substitute the source MD5 for this identity.
     if (
         source_identity_id
         and vector_provenance_verified
@@ -788,7 +847,7 @@ def _generate_pack(
                 source_id=source_identity_id,
                 family_id=prompt_namespace,
                 family_schema_version="1.0",
-                processing_version="report_generation_checkpoint_v2",
+                processing_version=_prompt_family_processing_version(pack_name),
                 prompt_content_hash=prompt_bundle.prompt_content_hash,
                 execution_identity=prompt_bundle.execution_identity.execution_identity,
                 model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -803,14 +862,10 @@ def _generate_pack(
         )
         if reuse.reusable:
             reused_payload = normalize_and_validate_reused(reuse.output_payload)
-            _store_pack(
-                analysis_store=analysis_store,
-                output_dir=settings.output_dir,
-                report_id=report_id,
-                pack_name=pack_name,
-                payload=reused_payload,
-                ctx=ctx,
-                report_name=report_name,
+            defer_family_materialization(
+                reused_payload,
+                relevant_hash=relevant_input_hash,
+                always_materialize=False,
             )
             logger.info(
                 log_event(
@@ -1002,46 +1057,11 @@ def _generate_pack(
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)
         result_payload["_cache"] = {**cache_meta, "key": cache_key}
-    _store_pack(
-        analysis_store=analysis_store,
-        output_dir=settings.output_dir,
-        report_id=report_id,
-        pack_name=pack_name,
-        payload=result_payload,
-        ctx=ctx,
-        report_name=report_name,
+    defer_family_materialization(
+        result_payload,
+        relevant_hash=("" if recovery_attempted else relevant_input_hash),
+        always_materialize=True,
     )
-    if source_identity_id and vector_provenance_verified:
-        prompt_family_materializer(
-            PromptFamilyMaterializationRequest(
-                schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
-                db_path=settings.reports_db,
-                output_dir=settings.output_dir,
-                report_id=report_id,
-                report_slug=report_name,
-                source_id=source_identity_id,
-                family_id=prompt_namespace,
-                family_schema_version="1.0",
-                processing_version="report_generation_checkpoint_v2",
-                output_payload=result_payload,
-                system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
-                user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
-                prompt_content_hash=prompt_bundle.prompt_content_hash,
-                prompt_dependency_manifest=asdict(prompt_bundle.dependency_manifest),
-                execution_identity=prompt_bundle.execution_identity.execution_identity,
-                execution_identity_manifest=asdict(prompt_bundle.execution_identity),
-                prompt_policy_version=prompt_bundle.prompt_content_hash,
-                model_name=prompt_bundle.resolved_model,
-                model_provider=str(prompt_bundle.execution_policy.policy.provider),
-                model_policy_namespace="report_vs",
-                routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                relevant_input_hash=("" if recovery_attempted else relevant_input_hash),
-                configuration_policy_hash=configuration_policy_hash,
-                validator_version=f"{schema_name}:1.0",
-                validation_status="pass",
-            ),
-            ctx,
-        )
     logger.info(
         log_event(
             ctx,

@@ -881,6 +881,21 @@ def build_universal_claim_ledger(
                             ids.append(evidence_id)
         return sorted(dict.fromkeys(ids))
 
+    def _evidence_references(spans: Any) -> List[Dict[str, str]]:
+        references: set[tuple[str, str]] = set()
+        if isinstance(spans, list):
+            for span in spans:
+                if not isinstance(span, dict):
+                    continue
+                evidence_id = _s(span.get("evidence_id")).strip()
+                source_pack = _s(span.get("source_pack")).strip()
+                if evidence_id and source_pack:
+                    references.add((evidence_id, source_pack))
+        return [
+            {"evidence_id": evidence_id, "source_pack": source_pack}
+            for evidence_id, source_pack in sorted(references)
+        ]
+
     def _append(
         *,
         artifact_section: str,
@@ -900,25 +915,27 @@ def build_universal_claim_ledger(
         resolved_support = support_type or (
             "direct_evidence_span" if span_count else "canonical_evidence_id"
         )
-        ledger.append(
-            {
-                "schema_version": "1.0",
-                "canonical_claim_id": f"{report_id}:{artifact_section}:{local_id}",
-                "claim_text": text,
-                "artifact_section": artifact_section,
-                "evidence_ids": evidence_ids,
-                "support_type": resolved_support,
-                "evidence_quality_grade": (
-                    _s(evidence_quality_grade).strip()
-                    or EVIDENCE_QUALITY_BY_SUPPORT_TYPE.get(
-                        resolved_support, "source_backed"
-                    )
-                ),
-                "confidence": confidence,
-                "risk": risk,
-                "evidence_span_count": span_count,
-            }
-        )
+        entry = {
+            "schema_version": "1.0",
+            "canonical_claim_id": f"{report_id}:{artifact_section}:{local_id}",
+            "claim_text": text,
+            "artifact_section": artifact_section,
+            "evidence_ids": evidence_ids,
+            "support_type": resolved_support,
+            "evidence_quality_grade": (
+                _s(evidence_quality_grade).strip()
+                or EVIDENCE_QUALITY_BY_SUPPORT_TYPE.get(
+                    resolved_support, "source_backed"
+                )
+            ),
+            "confidence": confidence,
+            "risk": risk,
+            "evidence_span_count": span_count,
+        }
+        typed_references = _evidence_references(spans)
+        if typed_references:
+            entry["evidence_references"] = typed_references
+        ledger.append(entry)
 
     for index, claim in enumerate(summary.get("claim_evidence_map") or [], start=1):
         if not isinstance(claim, dict):
@@ -1991,7 +2008,10 @@ def finalize_regeneration_candidate_artifacts(
         except AppError as exc:
             raise AppError(
                 code="regeneration_deterministic_projection_failed",
-                message="Final soft-copy provenance could not be rebuilt deterministically",
+                message=(
+                    "Final soft-copy provenance could not be rebuilt "
+                    "deterministically"
+                ),
                 retryable=False,
                 context={
                     "projection": "soft_copy_claim_provenance",
@@ -2365,7 +2385,10 @@ def _chart_takeaway(
     insight = insights_by_evidence.get(evidence_id, {})
     if _s(insight.get("text")).strip():
         return _s(insight.get("text")).strip()
-    return f"{_s(figure.get('label')).strip()} is reported at {_s(figure.get('figure')).strip()}."
+    return (
+        f"{_s(figure.get('label')).strip()} is reported at "
+        f"{_s(figure.get('figure')).strip()}."
+    )
 
 
 def _business_implication(

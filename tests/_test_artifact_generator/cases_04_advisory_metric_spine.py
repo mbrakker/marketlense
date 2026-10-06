@@ -337,14 +337,15 @@ def test_metric_spine_renders_one_clean_primary_metric(
     assert [figure["figure"] for figure in figures] == [expected_display]
 
 
-def test_metric_spine_preserves_a_coherent_forecast_range_when_normalization_cannot_shorten_it() -> (
-    None
-):
+def test_metric_spine_preserves_coherent_forecast_range() -> None:
     spine = derive_metric_spine_from_insights(
         [
             {
                 "id": "market-range",
-                "text": "AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029.",
+                "text": (
+                    "AI revenue is projected to rise from roughly $200 billion in "
+                    "2023 to around $1.4 trillion by 2029."
+                ),
                 "evidence_id": "market-range",
                 "metric": {
                     "label": "AI revenue market scale",
@@ -400,14 +401,20 @@ def test_metric_spine_omits_metric_when_no_clean_display_is_available() -> None:
     assert spine == []
 
 
-def test_key_figures_do_not_extract_an_unstructured_percentage_from_insight_text() -> None:
+def test_key_figures_do_not_extract_an_unstructured_percentage_from_insight_text() -> (
+    None
+):
     insights = [
         {
             "id": "iab-market-scale",
-            "text": "AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029.",
+            "text": (
+                "AI revenue is projected to rise from roughly $200 billion in 2023 "
+                "to around $1.4 trillion by 2029."
+            ),
             "evidence_id": "iab-market-scale",
             "evidence": (
-                "Market scale: AI revenue is projected to rise from roughly $200 billion in 2023 to around $1.4 trillion by 2029; "
+                "Market scale: AI revenue is projected to rise from roughly $200 "
+                "billion in 2023 to around $1.4 trillion by 2029; "
                 "generative AI is expected to augment ~61% of jobs in Europe."
             ),
             "metric": {
@@ -719,6 +726,72 @@ def test_assemble_artifacts_builds_universal_claim_ledger() -> None:
     assert ledger[1]["canonical_claim_id"] == "ledger-report:insights_final:i1"
 
 
+def test_claim_ledger_preserves_typed_evidence_source_identity() -> None:
+    from src.generators._artifact_generator.storage import build_universal_claim_ledger
+
+    ledger = build_universal_claim_ledger(
+        report_id="ledger-report",
+        summary={
+            "claim_evidence_map": [
+                {
+                    "claim": "Survey respondents reported directional views.",
+                    "evidence_id": "research-methodology",
+                    "evidence_spans": [
+                        {
+                            "evidence_id": "research-methodology",
+                            "source_pack": "doc_map",
+                            "page": 64,
+                        }
+                    ],
+                }
+            ]
+        },
+        insights_final=[],
+        quotes_final=[],
+        metric_spine=[],
+        executive_advisory={},
+    )
+
+    assert ledger[0]["evidence_ids"] == ["research-methodology"]
+    assert ledger[0]["evidence_references"] == [
+        {"evidence_id": "research-methodology", "source_pack": "doc_map"}
+    ]
+    validate_schema(
+        SchemaValidateRequest(
+            schema_version="1.0",
+            schema_name="artifacts",
+            payload={
+                "toc_topics": [],
+                "editorial_plan": {
+                    "report_thesis": "Source spans distinguish evidence packs.",
+                    "themes": [
+                        {"theme": "Evidence", "priority": 1, "evidence_ids": ["f1"]},
+                        {
+                            "theme": "Source identity",
+                            "priority": 2,
+                            "evidence_ids": ["f2"],
+                        },
+                    ],
+                },
+                "summary": {
+                    "tldr": "Typed source identity.",
+                    "card_tldr_compact": "Typed source identity.",
+                    "executive_summary": "Typed source identity is retained.",
+                    "claim_evidence_map": [],
+                },
+                "cover_semantics": _cover_semantics(),
+                "insights_candidates": [],
+                "insights_final": [],
+                "quotes_final": [],
+                "expert_comment": "",
+                "linkedin_post": "",
+                "claim_ledgers": ledger,
+            },
+        ),
+        _ctx(),
+    )
+
+
 def test_assemble_artifacts_builds_topics_key_figures_and_chart_cards() -> None:
     evidence = _evidence_packs()
     evidence["findings"]["findings"][0] = {
@@ -975,6 +1048,7 @@ __all__ = [
     "test_build_executive_advisory_artifacts_separates_decision_roles",
     "test_build_executive_advisory_artifacts_omits_unsupported_decision_fields",
     "test_assemble_artifacts_builds_universal_claim_ledger",
+    "test_claim_ledger_preserves_typed_evidence_source_identity",
     "test_assemble_artifacts_builds_topics_key_figures_and_chart_cards",
     "test_generate_artifacts_passes_metric_spine_to_editorial_prompts",
 ]
