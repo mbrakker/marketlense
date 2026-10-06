@@ -1,0 +1,3536 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "single_report_provider_latency_profile",
+  "recorded_at_utc": "2026-10-06T09:52:23.659946+00:00",
+  "implementation_commit": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+  "run": {
+    "report_id": "cohort-81af3890cd84ece81ef1",
+    "publisher_id": "Capgemini Research Institute",
+    "source_identity_id": "source:f584854bc13cdca0b0d86327c85f71ff",
+    "selected_because": "Highest report_analysis duration in the latest accepted frozen-five cohort (378.228 seconds).",
+    "frozen_cohort_manifest": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "frozen_cohort_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "run_root": "out/provider-latency-profile-20261006/frozen-reliability-qv_70kak",
+    "fresh_isolated_state": true,
+    "command": "python -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --runs-root out/provider-latency-profile-20261006 --max-duration 1200 --report-ids cohort-81af3890cd84ece81ef1",
+    "git_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+    "runtime_settings": {
+      "outer_parallelism": 3,
+      "grounding_max_in_flight": 5,
+      "grounding_min_interval_ms": 250,
+      "model_prompt_reasoning_changes": false,
+      "publication_write_count": 0,
+      "publication_readiness_mode": "readiness_only"
+    },
+    "quality": {
+      "validation": "pass",
+      "publication_readiness": "pass",
+      "unsupported_retained_factual_claims": 0,
+      "unresolved_retained_factual_claims": 0,
+      "automatic_targeted_repairs": 3,
+      "operator_interventions": false,
+      "workflow_retries": 0,
+      "rule_waivers": 0,
+      "publication_approval_rows": 0,
+      "publication_rows": 0,
+      "terminal_state": "awaiting_review"
+    },
+    "post_readiness_queue_observation": {
+      "queue": "signal_generation",
+      "dead_letter_jobs": 6,
+      "pending_jobs": 2,
+      "error_code": "signal_grounding_insufficient",
+      "scope": "Post-readiness queue work; separate from this report's validation and readiness result."
+    }
+  },
+  "path_regression": {
+    "failing_pack": "validation_regen_candidate_3_retained_claim_validation_candidate",
+    "regression_test": "tests/test_report_analysis_store_service.py::test_pack_path_compacts_long_candidate_after_report_slug_budget_is_exhausted",
+    "before_fix_destination_path_length": 261,
+    "after_fix_destination_path_length": 259,
+    "after_fix_atomic_temp_path_length": 240,
+    "supported_destination_max_length": 259,
+    "supported_atomic_temp_max_length": 240,
+    "live_run_longest_validation_candidate_path_length": 259,
+    "live_run_analysis_path_error": false,
+    "operator_root_shortened": false
+  },
+  "critical_path_recommendation": {
+    "experiment": "Run a quality-gated isolated A/B with report_vs/doc_map reasoning effort high -> medium.",
+    "basis": "The single doc-map request was 85.918 seconds of provider-active wall time, all 85.918 seconds exclusive of other provider calls, in evidence_pack_primary. It used high effort and 5,817 reasoning tokens.",
+    "quality_guard": "Use the same report, input and validation/readiness checks; reject the setting if grounding or editorial quality regresses.",
+    "not_implemented": true
+  },
+  "top_5_wall_clock_exposure_opportunities": [
+    {
+      "prompt_namespace": "report_vs/validate/grounding",
+      "stages": [
+        "validation_grounding_batch_01_primary",
+        "validation_grounding_batch_02_primary",
+        "validation_grounding_batch_03_primary",
+        "validation_grounding_batch_04_primary",
+        "validation_grounding_batch_05_primary"
+      ],
+      "call_count": 15,
+      "provider_active_wall_ms": 137793.094,
+      "exclusive_exposed_wall_time_ms": 8946.227,
+      "aggregate_provider_elapsed_ms": 536426.584,
+      "max_simultaneous_calls": 5,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_tokens": 14535,
+      "limiter_wait_ms_total": 7458.0,
+      "input_tokens": 132676,
+      "output_tokens": 72460,
+      "estimated_cost_usd": 0.044649
+    },
+    {
+      "prompt_namespace": "report_vs/doc_map",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "call_count": 1,
+      "provider_active_wall_ms": 85918.051,
+      "exclusive_exposed_wall_time_ms": 85918.051,
+      "aggregate_provider_elapsed_ms": 85918.051,
+      "max_simultaneous_calls": 1,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_tokens": 5817,
+      "limiter_wait_ms_total": 0.0,
+      "input_tokens": 43504,
+      "output_tokens": 8010,
+      "estimated_cost_usd": 0.020855
+    },
+    {
+      "prompt_namespace": "report_vs/artifacts/summary",
+      "stages": [
+        "artifact_summary_primary"
+      ],
+      "call_count": 1,
+      "provider_active_wall_ms": 44178.864,
+      "exclusive_exposed_wall_time_ms": 10587.734,
+      "aggregate_provider_elapsed_ms": 44178.864,
+      "max_simultaneous_calls": 1,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_tokens": 3050,
+      "limiter_wait_ms_total": 495.0,
+      "input_tokens": 14652,
+      "output_tokens": 3915,
+      "estimated_cost_usd": 0.003423
+    },
+    {
+      "prompt_namespace": "report_vs/artifacts/insights_candidates",
+      "stages": [
+        "artifact_insights_candidates_primary"
+      ],
+      "call_count": 1,
+      "provider_active_wall_ms": 33817.519,
+      "exclusive_exposed_wall_time_ms": 0.0,
+      "aggregate_provider_elapsed_ms": 33817.52,
+      "max_simultaneous_calls": 1,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_tokens": 2035,
+      "limiter_wait_ms_total": 247.0,
+      "input_tokens": 14786,
+      "output_tokens": 3659,
+      "estimated_cost_usd": 0.003308
+    },
+    {
+      "prompt_namespace": "report_vs/artifacts/expert_comment",
+      "stages": [
+        "artifact_expert_comment_primary"
+      ],
+      "call_count": 1,
+      "provider_active_wall_ms": 29951.662,
+      "exclusive_exposed_wall_time_ms": 21916.079,
+      "aggregate_provider_elapsed_ms": 29951.663,
+      "max_simultaneous_calls": 1,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_tokens": 2400,
+      "limiter_wait_ms_total": 247.0,
+      "input_tokens": 3597,
+      "output_tokens": 2916,
+      "estimated_cost_usd": 0.001818
+    }
+  ],
+  "provider_profile": {
+    "aggregate_provider_work_semantics": "sum of per-call elapsed time; not critical-path duration",
+    "cached_input_token_reported_call_count": 38,
+    "cached_input_tokens": 53889,
+    "critical_path_attribution": "not_reconstructed",
+    "estimated_cost_usd": 0.108506,
+    "exclusive_exposed_wall_semantics": "group-active intervals with no other provider call active in the report",
+    "groups_by_prompt_namespace": [
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 15,
+        "cached_input_tokens": 53889,
+        "call_count": 15,
+        "estimated_cost_usd": 0.044649,
+        "exclusive_exposed_wall_time_ms": 8946.227,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 132676,
+        "interval_timed_call_count": 15,
+        "limiter_wait_ms_total": 7458.0,
+        "max_simultaneous_calls": 5,
+        "output_tokens": 72460,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 137793.094,
+        "provider_elapsed_ms_max": 48172.454,
+        "provider_elapsed_ms_median": 36448.201,
+        "provider_elapsed_ms_total": 536426.584,
+        "rate_spacing_wait_ms_total": 7458.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 15,
+        "reasoning_tokens": 14535,
+        "stages": [
+          "validation_grounding_batch_01_primary",
+          "validation_grounding_batch_02_primary",
+          "validation_grounding_batch_03_primary",
+          "validation_grounding_batch_04_primary",
+          "validation_grounding_batch_05_primary"
+        ],
+        "timed_call_count": 15,
+        "tool_calls": 0,
+        "total_tokens": 205136,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "doc_map"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.020855,
+        "exclusive_exposed_wall_time_ms": 85918.051,
+        "file_search_call_count": 5,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 43504,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 8010,
+        "prompt_namespace": "report_vs/doc_map",
+        "prompt_namespaces": [
+          "report_vs/doc_map"
+        ],
+        "provider_active_wall_ms": 85918.051,
+        "provider_elapsed_ms_max": 85918.051,
+        "provider_elapsed_ms_median": 85918.051,
+        "provider_elapsed_ms_total": 85918.051,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 5817,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 5,
+        "total_tokens": 51514,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "summary"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.003423,
+        "exclusive_exposed_wall_time_ms": 10587.734,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14652,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 495.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 3915,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "prompt_namespaces": [
+          "report_vs/artifacts/summary"
+        ],
+        "provider_active_wall_ms": 44178.864,
+        "provider_elapsed_ms_max": 44178.864,
+        "provider_elapsed_ms_median": 44178.864,
+        "provider_elapsed_ms_total": 44178.864,
+        "rate_spacing_wait_ms_total": 495.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 3050,
+        "stages": [
+          "artifact_summary_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18567,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "figure_ranking"
+        ],
+        "cached_input_token_reported_call_count": 6,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001735,
+        "exclusive_exposed_wall_time_ms": 18132.27,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 4174,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 2,
+        "output_tokens": 2637,
+        "prompt_namespace": "rank_candidates",
+        "prompt_namespaces": [
+          "rank_candidates"
+        ],
+        "provider_active_wall_ms": 27587.102,
+        "provider_elapsed_ms_max": 11700.668,
+        "provider_elapsed_ms_median": 5194.041,
+        "provider_elapsed_ms_total": 37041.934,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1110,
+        "stages": [
+          "figure_ranking"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 6811,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_candidates"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.003308,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14786,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 3659,
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_candidates"
+        ],
+        "provider_active_wall_ms": 33817.519,
+        "provider_elapsed_ms_max": 33817.52,
+        "provider_elapsed_ms_median": 33817.52,
+        "provider_elapsed_ms_total": 33817.52,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2035,
+        "stages": [
+          "artifact_insights_candidates_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18445,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "report"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001955,
+        "exclusive_exposed_wall_time_ms": 966.541,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 10867,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 3,
+        "output_tokens": 1737,
+        "prompt_namespace": "rank_candidates/crop_refine",
+        "prompt_namespaces": [
+          "rank_candidates/crop_refine"
+        ],
+        "provider_active_wall_ms": 12790.661,
+        "provider_elapsed_ms_max": 6895.899,
+        "provider_elapsed_ms_median": 5453.631,
+        "provider_elapsed_ms_total": 33710.952,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1215,
+        "stages": [
+          "admission_preflight"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 12604,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "expert_comment"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001818,
+        "exclusive_exposed_wall_time_ms": 21916.079,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 3597,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2916,
+        "prompt_namespace": "report_vs/artifacts/expert_comment",
+        "prompt_namespaces": [
+          "report_vs/artifacts/expert_comment"
+        ],
+        "provider_active_wall_ms": 29951.662,
+        "provider_elapsed_ms_max": 29951.663,
+        "provider_elapsed_ms_median": 29951.663,
+        "provider_elapsed_ms_total": 29951.663,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2400,
+        "stages": [
+          "artifact_expert_comment_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 6513,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "findings"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.005165,
+        "exclusive_exposed_wall_time_ms": 4257.093,
+        "file_search_call_count": 1,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 17295,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 1870,
+        "prompt_namespace": "report_vs/evidence_packs/findings",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/findings"
+        ],
+        "provider_active_wall_ms": 20748.663,
+        "provider_elapsed_ms_max": 20748.663,
+        "provider_elapsed_ms_median": 20748.663,
+        "provider_elapsed_ms_total": 20748.663,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 1006,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 1,
+        "total_tokens": 19165,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002678,
+        "exclusive_exposed_wall_time_ms": 19861.773,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 15943,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2168,
+        "prompt_namespace": "report_vs/artifacts/insights_final",
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_final"
+        ],
+        "provider_active_wall_ms": 19861.773,
+        "provider_elapsed_ms_max": 19861.774,
+        "provider_elapsed_ms_median": 19861.774,
+        "provider_elapsed_ms_total": 19861.774,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 1162,
+        "stages": [
+          "artifact_insights_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18111,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "quote_candidates"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.004567,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 1,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14057,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 248.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 1322,
+        "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/quote_candidates"
+        ],
+        "provider_active_wall_ms": 16178.875,
+        "provider_elapsed_ms_max": 16178.874,
+        "provider_elapsed_ms_median": 16178.874,
+        "provider_elapsed_ms_total": 16178.874,
+        "rate_spacing_wait_ms_total": 248.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 711,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 1,
+        "total_tokens": 15379,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "category_fit"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001941,
+        "exclusive_exposed_wall_time_ms": 15249.442,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9272,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2027,
+        "prompt_namespace": "report_vs/context_category_fit",
+        "prompt_namespaces": [
+          "report_vs/context_category_fit"
+        ],
+        "provider_active_wall_ms": 15249.442,
+        "provider_elapsed_ms_max": 15249.442,
+        "provider_elapsed_ms_median": 15249.442,
+        "provider_elapsed_ms_total": 15249.442,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 202,
+        "stages": [
+          "category_fit"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 11299,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_semantic"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 0,
+        "call_count": 3,
+        "estimated_cost_usd": 0.00138,
+        "exclusive_exposed_wall_time_ms": 4341.701,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9013,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 956,
+        "prompt_namespace": "report_vs/validate/semantic",
+        "prompt_namespaces": [
+          "report_vs/validate/semantic"
+        ],
+        "provider_active_wall_ms": 10674.17,
+        "provider_elapsed_ms_max": 4309.589,
+        "provider_elapsed_ms_median": 3220.085,
+        "provider_elapsed_ms_total": 10674.171,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 423,
+        "stages": [
+          "validation_semantic_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 9969,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "linkedin_post"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001083,
+        "exclusive_exposed_wall_time_ms": 266.254,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 6948,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 777,
+        "prompt_namespace": "report_vs/artifacts/linkedin_post",
+        "prompt_namespaces": [
+          "report_vs/artifacts/linkedin_post"
+        ],
+        "provider_active_wall_ms": 8301.837,
+        "provider_elapsed_ms_max": 8301.836,
+        "provider_elapsed_ms_median": 8301.836,
+        "provider_elapsed_ms_total": 8301.836,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 571,
+        "stages": [
+          "artifact_linkedin_post_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 7725,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "editorial_plan"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001668,
+        "exclusive_exposed_wall_time_ms": 6977.745,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13472,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 642,
+        "prompt_namespace": "report_vs/artifacts/editorial_plan",
+        "prompt_namespaces": [
+          "report_vs/artifacts/editorial_plan"
+        ],
+        "provider_active_wall_ms": 6977.745,
+        "provider_elapsed_ms_max": 6977.744,
+        "provider_elapsed_ms_median": 6977.744,
+        "provider_elapsed_ms_total": 6977.744,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 337,
+        "stages": [
+          "artifact_editorial_plan_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14114,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "methods"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002144,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19595,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 169.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 369,
+        "prompt_namespace": "report_vs/evidence_packs/methods",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/methods"
+        ],
+        "provider_active_wall_ms": 5706.483,
+        "provider_elapsed_ms_max": 5706.482,
+        "provider_elapsed_ms_median": 5706.482,
+        "provider_elapsed_ms_total": 5706.482,
+        "rate_spacing_wait_ms_total": 169.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 223,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19964,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "limitations"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002121,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19555,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 409.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 331,
+        "prompt_namespace": "report_vs/evidence_packs/limitations",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/limitations"
+        ],
+        "provider_active_wall_ms": 4984.384,
+        "provider_elapsed_ms_max": 4984.384,
+        "provider_elapsed_ms_median": 4984.384,
+        "provider_elapsed_ms_total": 4984.384,
+        "rate_spacing_wait_ms_total": 409.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 298,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19886,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "taxonomy"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002476,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 22720,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 409,
+        "prompt_namespace": "report_vs/taxonomy",
+        "prompt_namespaces": [
+          "report_vs/taxonomy"
+        ],
+        "provider_active_wall_ms": 4607.759,
+        "provider_elapsed_ms_max": 4607.759,
+        "provider_elapsed_ms_median": 4607.759,
+        "provider_elapsed_ms_total": 4607.759,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 0,
+        "stages": [
+          "taxonomy_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 23129,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "quotes_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001452,
+        "exclusive_exposed_wall_time_ms": 279.911,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13337,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 236,
+        "prompt_namespace": "report_vs/artifacts/quotes",
+        "prompt_namespaces": [
+          "report_vs/artifacts/quotes"
+        ],
+        "provider_active_wall_ms": 4063.037,
+        "provider_elapsed_ms_max": 4063.037,
+        "provider_elapsed_ms_median": 4063.037,
+        "provider_elapsed_ms_total": 4063.037,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 215,
+        "stages": [
+          "artifact_quotes_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 13573,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "summary"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.000521,
+        "exclusive_exposed_wall_time_ms": 3938.774,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 3764,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 290,
+        "prompt_namespace": "report_vs/artifacts/regenerate/summary",
+        "prompt_namespaces": [
+          "report_vs/artifacts/regenerate/summary"
+        ],
+        "provider_active_wall_ms": 3938.774,
+        "provider_elapsed_ms_max": 3938.775,
+        "provider_elapsed_ms_median": 3938.775,
+        "provider_elapsed_ms_total": 3938.775,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 168,
+        "stages": [
+          "artifact_summary_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 4054,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "scope"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002076,
+        "exclusive_exposed_wall_time_ms": 38.601,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19632,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 225,
+        "prompt_namespace": "report_vs/evidence_packs/scope",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/scope"
+        ],
+        "provider_active_wall_ms": 3534.488,
+        "provider_elapsed_ms_max": 3534.488,
+        "provider_elapsed_ms_median": 3534.488,
+        "provider_elapsed_ms_total": 3534.488,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 81,
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19857,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "cover_semantics"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001491,
+        "exclusive_exposed_wall_time_ms": 2503.806,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14250,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 131,
+        "prompt_namespace": "report_vs/artifacts/cover_semantics",
+        "prompt_namespaces": [
+          "report_vs/artifacts/cover_semantics"
+        ],
+        "provider_active_wall_ms": 2503.806,
+        "provider_elapsed_ms_max": 2503.806,
+        "provider_elapsed_ms_median": 2503.806,
+        "provider_elapsed_ms_total": 2503.806,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 55,
+        "stages": [
+          "artifact_cover_semantics_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14381,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      }
+    ],
+    "groups_by_provider_elapsed": [
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 3664,
+        "call_count": 3,
+        "estimated_cost_usd": 0.012127,
+        "exclusive_exposed_wall_time_ms": 8946.227,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 26605,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 19593,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 137793.094,
+        "provider_elapsed_ms_max": 48172.454,
+        "provider_elapsed_ms_median": 47698.37,
+        "provider_elapsed_ms_total": 137793.094,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 2713,
+        "stage": "validation_grounding_batch_01_primary",
+        "stages": [
+          "validation_grounding_batch_01_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 46198,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12691,
+        "call_count": 3,
+        "estimated_cost_usd": 0.010328,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27492,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 2238.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 17441,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 126656.52,
+        "provider_elapsed_ms_max": 43627.015,
+        "provider_elapsed_ms_median": 42648.511,
+        "provider_elapsed_ms_total": 126656.52,
+        "rate_spacing_wait_ms_total": 2238.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 4085,
+        "stage": "validation_grounding_batch_04_primary",
+        "stages": [
+          "validation_grounding_batch_04_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 44933,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12969,
+        "call_count": 3,
+        "estimated_cost_usd": 0.008662,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27902,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 1491.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 14079,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 110748.393,
+        "provider_elapsed_ms_max": 38187.52,
+        "provider_elapsed_ms_median": 36448.201,
+        "provider_elapsed_ms_total": 110748.394,
+        "rate_spacing_wait_ms_total": 1491.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 3487,
+        "stage": "validation_grounding_batch_03_primary",
+        "stages": [
+          "validation_grounding_batch_03_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 41981,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12860,
+        "call_count": 3,
+        "estimated_cost_usd": 0.008333,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27585,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 746.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 13462,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 101110.709,
+        "provider_elapsed_ms_max": 35849.021,
+        "provider_elapsed_ms_median": 33142.062,
+        "provider_elapsed_ms_total": 101110.709,
+        "rate_spacing_wait_ms_total": 746.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 2700,
+        "stage": "validation_grounding_batch_02_primary",
+        "stages": [
+          "validation_grounding_batch_02_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 41047,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "doc_map"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.020855,
+        "exclusive_exposed_wall_time_ms": 85918.051,
+        "file_search_call_count": 5,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 43504,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 8010,
+        "prompt_namespace": "report_vs/doc_map",
+        "prompt_namespaces": [
+          "report_vs/doc_map"
+        ],
+        "provider_active_wall_ms": 85918.051,
+        "provider_elapsed_ms_max": 85918.051,
+        "provider_elapsed_ms_median": 85918.051,
+        "provider_elapsed_ms_total": 85918.051,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 5817,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 5,
+        "total_tokens": 51514,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 11705,
+        "call_count": 3,
+        "estimated_cost_usd": 0.005199,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 23092,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 2983.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 7885,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 60117.869,
+        "provider_elapsed_ms_max": 23227.272,
+        "provider_elapsed_ms_median": 21838.665,
+        "provider_elapsed_ms_total": 60117.867,
+        "rate_spacing_wait_ms_total": 2983.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 1550,
+        "stage": "validation_grounding_batch_05_primary",
+        "stages": [
+          "validation_grounding_batch_05_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 30977,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "summary"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.003423,
+        "exclusive_exposed_wall_time_ms": 10587.734,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14652,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 495.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 3915,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "prompt_namespaces": [
+          "report_vs/artifacts/summary"
+        ],
+        "provider_active_wall_ms": 44178.864,
+        "provider_elapsed_ms_max": 44178.864,
+        "provider_elapsed_ms_median": 44178.864,
+        "provider_elapsed_ms_total": 44178.864,
+        "rate_spacing_wait_ms_total": 495.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 3050,
+        "stage": "artifact_summary_primary",
+        "stages": [
+          "artifact_summary_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18567,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "figure_ranking"
+        ],
+        "cached_input_token_reported_call_count": 6,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001735,
+        "exclusive_exposed_wall_time_ms": 18132.27,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 4174,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 2,
+        "output_tokens": 2637,
+        "prompt_namespace": "rank_candidates",
+        "prompt_namespaces": [
+          "rank_candidates"
+        ],
+        "provider_active_wall_ms": 27587.102,
+        "provider_elapsed_ms_max": 11700.668,
+        "provider_elapsed_ms_median": 5194.041,
+        "provider_elapsed_ms_total": 37041.934,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1110,
+        "stage": "figure_ranking",
+        "stages": [
+          "figure_ranking"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 6811,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_candidates"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.003308,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14786,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 3659,
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_candidates"
+        ],
+        "provider_active_wall_ms": 33817.519,
+        "provider_elapsed_ms_max": 33817.52,
+        "provider_elapsed_ms_median": 33817.52,
+        "provider_elapsed_ms_total": 33817.52,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2035,
+        "stage": "artifact_insights_candidates_primary",
+        "stages": [
+          "artifact_insights_candidates_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18445,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "report"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001955,
+        "exclusive_exposed_wall_time_ms": 966.541,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 10867,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 3,
+        "output_tokens": 1737,
+        "prompt_namespace": "rank_candidates/crop_refine",
+        "prompt_namespaces": [
+          "rank_candidates/crop_refine"
+        ],
+        "provider_active_wall_ms": 12790.661,
+        "provider_elapsed_ms_max": 6895.899,
+        "provider_elapsed_ms_median": 5453.631,
+        "provider_elapsed_ms_total": 33710.952,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1215,
+        "stage": "admission_preflight",
+        "stages": [
+          "admission_preflight"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 12604,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "expert_comment"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001818,
+        "exclusive_exposed_wall_time_ms": 21916.079,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 3597,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2916,
+        "prompt_namespace": "report_vs/artifacts/expert_comment",
+        "prompt_namespaces": [
+          "report_vs/artifacts/expert_comment"
+        ],
+        "provider_active_wall_ms": 29951.662,
+        "provider_elapsed_ms_max": 29951.663,
+        "provider_elapsed_ms_median": 29951.663,
+        "provider_elapsed_ms_total": 29951.663,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2400,
+        "stage": "artifact_expert_comment_primary",
+        "stages": [
+          "artifact_expert_comment_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 6513,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "findings"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.005165,
+        "exclusive_exposed_wall_time_ms": 4257.093,
+        "file_search_call_count": 1,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 17295,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 1870,
+        "prompt_namespace": "report_vs/evidence_packs/findings",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/findings"
+        ],
+        "provider_active_wall_ms": 20748.663,
+        "provider_elapsed_ms_max": 20748.663,
+        "provider_elapsed_ms_median": 20748.663,
+        "provider_elapsed_ms_total": 20748.663,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 1006,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 1,
+        "total_tokens": 19165,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002678,
+        "exclusive_exposed_wall_time_ms": 19861.773,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 15943,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2168,
+        "prompt_namespace": "report_vs/artifacts/insights_final",
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_final"
+        ],
+        "provider_active_wall_ms": 19861.773,
+        "provider_elapsed_ms_max": 19861.774,
+        "provider_elapsed_ms_median": 19861.774,
+        "provider_elapsed_ms_total": 19861.774,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 1162,
+        "stage": "artifact_insights_final_primary",
+        "stages": [
+          "artifact_insights_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18111,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "quote_candidates"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.004567,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 1,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14057,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 248.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 1322,
+        "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/quote_candidates"
+        ],
+        "provider_active_wall_ms": 16178.875,
+        "provider_elapsed_ms_max": 16178.874,
+        "provider_elapsed_ms_median": 16178.874,
+        "provider_elapsed_ms_total": 16178.874,
+        "rate_spacing_wait_ms_total": 248.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 711,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 1,
+        "total_tokens": 15379,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "category_fit"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001941,
+        "exclusive_exposed_wall_time_ms": 15249.442,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9272,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2027,
+        "prompt_namespace": "report_vs/context_category_fit",
+        "prompt_namespaces": [
+          "report_vs/context_category_fit"
+        ],
+        "provider_active_wall_ms": 15249.442,
+        "provider_elapsed_ms_max": 15249.442,
+        "provider_elapsed_ms_median": 15249.442,
+        "provider_elapsed_ms_total": 15249.442,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 202,
+        "stage": "category_fit",
+        "stages": [
+          "category_fit"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 11299,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_semantic"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 0,
+        "call_count": 3,
+        "estimated_cost_usd": 0.00138,
+        "exclusive_exposed_wall_time_ms": 4341.701,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9013,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 956,
+        "prompt_namespace": "report_vs/validate/semantic",
+        "prompt_namespaces": [
+          "report_vs/validate/semantic"
+        ],
+        "provider_active_wall_ms": 10674.17,
+        "provider_elapsed_ms_max": 4309.589,
+        "provider_elapsed_ms_median": 3220.085,
+        "provider_elapsed_ms_total": 10674.171,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 423,
+        "stage": "validation_semantic_primary",
+        "stages": [
+          "validation_semantic_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 9969,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "linkedin_post"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001083,
+        "exclusive_exposed_wall_time_ms": 266.254,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 6948,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 777,
+        "prompt_namespace": "report_vs/artifacts/linkedin_post",
+        "prompt_namespaces": [
+          "report_vs/artifacts/linkedin_post"
+        ],
+        "provider_active_wall_ms": 8301.837,
+        "provider_elapsed_ms_max": 8301.836,
+        "provider_elapsed_ms_median": 8301.836,
+        "provider_elapsed_ms_total": 8301.836,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 571,
+        "stage": "artifact_linkedin_post_primary",
+        "stages": [
+          "artifact_linkedin_post_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 7725,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "editorial_plan"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001668,
+        "exclusive_exposed_wall_time_ms": 6977.745,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13472,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 642,
+        "prompt_namespace": "report_vs/artifacts/editorial_plan",
+        "prompt_namespaces": [
+          "report_vs/artifacts/editorial_plan"
+        ],
+        "provider_active_wall_ms": 6977.745,
+        "provider_elapsed_ms_max": 6977.744,
+        "provider_elapsed_ms_median": 6977.744,
+        "provider_elapsed_ms_total": 6977.744,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 337,
+        "stage": "artifact_editorial_plan_primary",
+        "stages": [
+          "artifact_editorial_plan_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14114,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "methods"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002144,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19595,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 169.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 369,
+        "prompt_namespace": "report_vs/evidence_packs/methods",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/methods"
+        ],
+        "provider_active_wall_ms": 5706.483,
+        "provider_elapsed_ms_max": 5706.482,
+        "provider_elapsed_ms_median": 5706.482,
+        "provider_elapsed_ms_total": 5706.482,
+        "rate_spacing_wait_ms_total": 169.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 223,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19964,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "limitations"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002121,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19555,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 409.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 331,
+        "prompt_namespace": "report_vs/evidence_packs/limitations",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/limitations"
+        ],
+        "provider_active_wall_ms": 4984.384,
+        "provider_elapsed_ms_max": 4984.384,
+        "provider_elapsed_ms_median": 4984.384,
+        "provider_elapsed_ms_total": 4984.384,
+        "rate_spacing_wait_ms_total": 409.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 298,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19886,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "taxonomy"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002476,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 22720,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 409,
+        "prompt_namespace": "report_vs/taxonomy",
+        "prompt_namespaces": [
+          "report_vs/taxonomy"
+        ],
+        "provider_active_wall_ms": 4607.759,
+        "provider_elapsed_ms_max": 4607.759,
+        "provider_elapsed_ms_median": 4607.759,
+        "provider_elapsed_ms_total": 4607.759,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 0,
+        "stage": "taxonomy_primary",
+        "stages": [
+          "taxonomy_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 23129,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "quotes_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001452,
+        "exclusive_exposed_wall_time_ms": 279.911,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13337,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 236,
+        "prompt_namespace": "report_vs/artifacts/quotes",
+        "prompt_namespaces": [
+          "report_vs/artifacts/quotes"
+        ],
+        "provider_active_wall_ms": 4063.037,
+        "provider_elapsed_ms_max": 4063.037,
+        "provider_elapsed_ms_median": 4063.037,
+        "provider_elapsed_ms_total": 4063.037,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 215,
+        "stage": "artifact_quotes_final_primary",
+        "stages": [
+          "artifact_quotes_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 13573,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "summary"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.000521,
+        "exclusive_exposed_wall_time_ms": 3938.774,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 3764,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 290,
+        "prompt_namespace": "report_vs/artifacts/regenerate/summary",
+        "prompt_namespaces": [
+          "report_vs/artifacts/regenerate/summary"
+        ],
+        "provider_active_wall_ms": 3938.774,
+        "provider_elapsed_ms_max": 3938.775,
+        "provider_elapsed_ms_median": 3938.775,
+        "provider_elapsed_ms_total": 3938.775,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 168,
+        "stage": "artifact_summary_primary",
+        "stages": [
+          "artifact_summary_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 4054,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "scope"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002076,
+        "exclusive_exposed_wall_time_ms": 38.601,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 19632,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 225,
+        "prompt_namespace": "report_vs/evidence_packs/scope",
+        "prompt_namespaces": [
+          "report_vs/evidence_packs/scope"
+        ],
+        "provider_active_wall_ms": 3534.488,
+        "provider_elapsed_ms_max": 3534.488,
+        "provider_elapsed_ms_median": 3534.488,
+        "provider_elapsed_ms_total": 3534.488,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 81,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 19857,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "cover_semantics"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001491,
+        "exclusive_exposed_wall_time_ms": 2503.806,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14250,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 131,
+        "prompt_namespace": "report_vs/artifacts/cover_semantics",
+        "prompt_namespaces": [
+          "report_vs/artifacts/cover_semantics"
+        ],
+        "provider_active_wall_ms": 2503.806,
+        "provider_elapsed_ms_max": 2503.806,
+        "provider_elapsed_ms_median": 2503.806,
+        "provider_elapsed_ms_total": 2503.806,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 55,
+        "stage": "artifact_cover_semantics_primary",
+        "stages": [
+          "artifact_cover_semantics_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14381,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      }
+    ],
+    "groups_by_reasoning_effort": [
+      {
+        "artifact_families": [
+          "editorial_plan",
+          "figure_ranking",
+          "findings",
+          "limitations",
+          "linkedin_post",
+          "methods",
+          "quote_candidates",
+          "scope",
+          "summary",
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 28,
+        "cached_input_tokens": 53889,
+        "call_count": 30,
+        "estimated_cost_usd": 0.069152,
+        "exclusive_exposed_wall_time_ms": 53144.698,
+        "file_search_call_count": 2,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 265820,
+        "interval_timed_call_count": 30,
+        "limiter_wait_ms_total": 8779.0,
+        "max_simultaneous_calls": 5,
+        "output_tokens": 84838,
+        "prompt_namespaces": [
+          "rank_candidates",
+          "report_vs/artifacts/editorial_plan",
+          "report_vs/artifacts/linkedin_post",
+          "report_vs/artifacts/regenerate/summary",
+          "report_vs/artifacts/summary",
+          "report_vs/evidence_packs/findings",
+          "report_vs/evidence_packs/limitations",
+          "report_vs/evidence_packs/methods",
+          "report_vs/evidence_packs/quote_candidates",
+          "report_vs/evidence_packs/scope",
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 249564.68,
+        "provider_elapsed_ms_max": 48172.454,
+        "provider_elapsed_ms_median": 21293.664,
+        "provider_elapsed_ms_total": 688018.628,
+        "rate_spacing_wait_ms_total": 8779.0,
+        "reasoning_effort": "medium",
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 30,
+        "reasoning_tokens": 22090,
+        "stages": [
+          "artifact_editorial_plan_primary",
+          "artifact_linkedin_post_primary",
+          "artifact_summary_primary",
+          "evidence_pack_primary",
+          "figure_ranking",
+          "validation_grounding_batch_01_primary",
+          "validation_grounding_batch_02_primary",
+          "validation_grounding_batch_03_primary",
+          "validation_grounding_batch_04_primary",
+          "validation_grounding_batch_05_primary"
+        ],
+        "timed_call_count": 30,
+        "tool_calls": 2,
+        "total_tokens": 350658,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis",
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "doc_map",
+          "expert_comment",
+          "insights_candidates",
+          "insights_final",
+          "validation_semantic"
+        ],
+        "cached_input_token_reported_call_count": 6,
+        "cached_input_tokens": 0,
+        "call_count": 7,
+        "estimated_cost_usd": 0.030039,
+        "exclusive_exposed_wall_time_ms": 132037.604,
+        "file_search_call_count": 5,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 86843,
+        "interval_timed_call_count": 7,
+        "limiter_wait_ms_total": 494.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 17709,
+        "prompt_namespaces": [
+          "report_vs/artifacts/expert_comment",
+          "report_vs/artifacts/insights_candidates",
+          "report_vs/artifacts/insights_final",
+          "report_vs/doc_map",
+          "report_vs/validate/semantic"
+        ],
+        "provider_active_wall_ms": 180223.175,
+        "provider_elapsed_ms_max": 85918.051,
+        "provider_elapsed_ms_median": 19861.774,
+        "provider_elapsed_ms_total": 180223.179,
+        "rate_spacing_wait_ms_total": 494.0,
+        "reasoning_effort": "high",
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 7,
+        "reasoning_tokens": 11837,
+        "stages": [
+          "artifact_expert_comment_primary",
+          "artifact_insights_candidates_primary",
+          "artifact_insights_final_primary",
+          "evidence_pack_primary",
+          "validation_semantic_primary"
+        ],
+        "timed_call_count": 7,
+        "tool_calls": 5,
+        "total_tokens": 104552,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "category_fit",
+          "cover_semantics",
+          "quotes_final",
+          "report",
+          "taxonomy"
+        ],
+        "cached_input_token_reported_call_count": 4,
+        "cached_input_tokens": 0,
+        "call_count": 10,
+        "estimated_cost_usd": 0.009315,
+        "exclusive_exposed_wall_time_ms": 18999.7,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 70446,
+        "interval_timed_call_count": 10,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 3,
+        "output_tokens": 4540,
+        "prompt_namespaces": [
+          "rank_candidates/crop_refine",
+          "report_vs/artifacts/cover_semantics",
+          "report_vs/artifacts/quotes",
+          "report_vs/context_category_fit",
+          "report_vs/taxonomy"
+        ],
+        "provider_active_wall_ms": 39214.705,
+        "provider_elapsed_ms_max": 15249.442,
+        "provider_elapsed_ms_median": 5275.575,
+        "provider_elapsed_ms_total": 60134.996,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_effort": "low",
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 10,
+        "reasoning_tokens": 1687,
+        "stages": [
+          "admission_preflight",
+          "artifact_cover_semantics_primary",
+          "artifact_quotes_final_primary",
+          "category_fit",
+          "taxonomy_primary"
+        ],
+        "timed_call_count": 10,
+        "tool_calls": 0,
+        "total_tokens": 74986,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis",
+          "report_generation"
+        ]
+      }
+    ],
+    "groups_by_stage": [
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 3664,
+        "call_count": 3,
+        "estimated_cost_usd": 0.012127,
+        "exclusive_exposed_wall_time_ms": 8946.227,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 26605,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 19593,
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 137793.094,
+        "provider_elapsed_ms_max": 48172.454,
+        "provider_elapsed_ms_median": 47698.37,
+        "provider_elapsed_ms_total": 137793.094,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 2713,
+        "stage": "validation_grounding_batch_01_primary",
+        "stages": [
+          "validation_grounding_batch_01_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 46198,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "doc_map",
+          "findings",
+          "limitations",
+          "methods",
+          "quote_candidates",
+          "scope"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.036928,
+        "exclusive_exposed_wall_time_ms": 90213.745,
+        "file_search_call_count": 7,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 133638,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 826.0,
+        "max_simultaneous_calls": 5,
+        "output_tokens": 12127,
+        "prompt_namespaces": [
+          "report_vs/doc_map",
+          "report_vs/evidence_packs/findings",
+          "report_vs/evidence_packs/limitations",
+          "report_vs/evidence_packs/methods",
+          "report_vs/evidence_packs/quote_candidates",
+          "report_vs/evidence_packs/scope"
+        ],
+        "provider_active_wall_ms": 106705.315,
+        "provider_elapsed_ms_max": 85918.051,
+        "provider_elapsed_ms_median": 10942.678,
+        "provider_elapsed_ms_total": 137070.942,
+        "rate_spacing_wait_ms_total": 826.0,
+        "reasoning_efforts": [
+          "high",
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 8136,
+        "stage": "evidence_pack_primary",
+        "stages": [
+          "evidence_pack_primary"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 7,
+        "total_tokens": 145765,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12691,
+        "call_count": 3,
+        "estimated_cost_usd": 0.010328,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27492,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 2238.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 17441,
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 126656.52,
+        "provider_elapsed_ms_max": 43627.015,
+        "provider_elapsed_ms_median": 42648.511,
+        "provider_elapsed_ms_total": 126656.52,
+        "rate_spacing_wait_ms_total": 2238.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 4085,
+        "stage": "validation_grounding_batch_04_primary",
+        "stages": [
+          "validation_grounding_batch_04_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 44933,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12969,
+        "call_count": 3,
+        "estimated_cost_usd": 0.008662,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27902,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 1491.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 14079,
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 110748.393,
+        "provider_elapsed_ms_max": 38187.52,
+        "provider_elapsed_ms_median": 36448.201,
+        "provider_elapsed_ms_total": 110748.394,
+        "rate_spacing_wait_ms_total": 1491.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 3487,
+        "stage": "validation_grounding_batch_03_primary",
+        "stages": [
+          "validation_grounding_batch_03_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 41981,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 12860,
+        "call_count": 3,
+        "estimated_cost_usd": 0.008333,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 27585,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 746.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 13462,
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 101110.709,
+        "provider_elapsed_ms_max": 35849.021,
+        "provider_elapsed_ms_median": 33142.062,
+        "provider_elapsed_ms_total": 101110.709,
+        "rate_spacing_wait_ms_total": 746.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 2700,
+        "stage": "validation_grounding_batch_02_primary",
+        "stages": [
+          "validation_grounding_batch_02_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 41047,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_grounding"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 11705,
+        "call_count": 3,
+        "estimated_cost_usd": 0.005199,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 23092,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 2983.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 7885,
+        "prompt_namespaces": [
+          "report_vs/validate/grounding"
+        ],
+        "provider_active_wall_ms": 60117.869,
+        "provider_elapsed_ms_max": 23227.272,
+        "provider_elapsed_ms_median": 21838.665,
+        "provider_elapsed_ms_total": 60117.867,
+        "rate_spacing_wait_ms_total": 2983.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 1550,
+        "stage": "validation_grounding_batch_05_primary",
+        "stages": [
+          "validation_grounding_batch_05_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 30977,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "summary"
+        ],
+        "cached_input_token_reported_call_count": 2,
+        "cached_input_tokens": 0,
+        "call_count": 2,
+        "estimated_cost_usd": 0.003944,
+        "exclusive_exposed_wall_time_ms": 14526.508,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 18416,
+        "interval_timed_call_count": 2,
+        "limiter_wait_ms_total": 495.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 4205,
+        "prompt_namespaces": [
+          "report_vs/artifacts/regenerate/summary",
+          "report_vs/artifacts/summary"
+        ],
+        "provider_active_wall_ms": 48117.638,
+        "provider_elapsed_ms_max": 44178.864,
+        "provider_elapsed_ms_median": 24058.82,
+        "provider_elapsed_ms_total": 48117.639,
+        "rate_spacing_wait_ms_total": 495.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 2,
+        "reasoning_tokens": 3218,
+        "stage": "artifact_summary_primary",
+        "stages": [
+          "artifact_summary_primary"
+        ],
+        "timed_call_count": 2,
+        "tool_calls": 0,
+        "total_tokens": 22621,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "figure_ranking"
+        ],
+        "cached_input_token_reported_call_count": 6,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001735,
+        "exclusive_exposed_wall_time_ms": 18132.27,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 4174,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 2,
+        "output_tokens": 2637,
+        "prompt_namespaces": [
+          "rank_candidates"
+        ],
+        "provider_active_wall_ms": 27587.102,
+        "provider_elapsed_ms_max": 11700.668,
+        "provider_elapsed_ms_median": 5194.041,
+        "provider_elapsed_ms_total": 37041.934,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1110,
+        "stage": "figure_ranking",
+        "stages": [
+          "figure_ranking"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 6811,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_candidates"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.003308,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14786,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 3659,
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_candidates"
+        ],
+        "provider_active_wall_ms": 33817.519,
+        "provider_elapsed_ms_max": 33817.52,
+        "provider_elapsed_ms_median": 33817.52,
+        "provider_elapsed_ms_total": 33817.52,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2035,
+        "stage": "artifact_insights_candidates_primary",
+        "stages": [
+          "artifact_insights_candidates_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18445,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "report"
+        ],
+        "cached_input_token_reported_call_count": 0,
+        "cached_input_tokens": 0,
+        "call_count": 6,
+        "estimated_cost_usd": 0.001955,
+        "exclusive_exposed_wall_time_ms": 966.541,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 10867,
+        "interval_timed_call_count": 6,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 3,
+        "output_tokens": 1737,
+        "prompt_namespaces": [
+          "rank_candidates/crop_refine"
+        ],
+        "provider_active_wall_ms": 12790.661,
+        "provider_elapsed_ms_max": 6895.899,
+        "provider_elapsed_ms_median": 5453.631,
+        "provider_elapsed_ms_total": 33710.952,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 6,
+        "reasoning_tokens": 1215,
+        "stage": "admission_preflight",
+        "stages": [
+          "admission_preflight"
+        ],
+        "timed_call_count": 6,
+        "tool_calls": 0,
+        "total_tokens": 12604,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_generation"
+        ]
+      },
+      {
+        "artifact_families": [
+          "expert_comment"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001818,
+        "exclusive_exposed_wall_time_ms": 21916.079,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 3597,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2916,
+        "prompt_namespaces": [
+          "report_vs/artifacts/expert_comment"
+        ],
+        "provider_active_wall_ms": 29951.662,
+        "provider_elapsed_ms_max": 29951.663,
+        "provider_elapsed_ms_median": 29951.663,
+        "provider_elapsed_ms_total": 29951.663,
+        "rate_spacing_wait_ms_total": 247.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 2400,
+        "stage": "artifact_expert_comment_primary",
+        "stages": [
+          "artifact_expert_comment_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 6513,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "insights_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002678,
+        "exclusive_exposed_wall_time_ms": 19861.773,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 15943,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2168,
+        "prompt_namespaces": [
+          "report_vs/artifacts/insights_final"
+        ],
+        "provider_active_wall_ms": 19861.773,
+        "provider_elapsed_ms_max": 19861.774,
+        "provider_elapsed_ms_median": 19861.774,
+        "provider_elapsed_ms_total": 19861.774,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 1162,
+        "stage": "artifact_insights_final_primary",
+        "stages": [
+          "artifact_insights_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 18111,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "category_fit"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001941,
+        "exclusive_exposed_wall_time_ms": 15249.442,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9272,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 2027,
+        "prompt_namespaces": [
+          "report_vs/context_category_fit"
+        ],
+        "provider_active_wall_ms": 15249.442,
+        "provider_elapsed_ms_max": 15249.442,
+        "provider_elapsed_ms_median": 15249.442,
+        "provider_elapsed_ms_total": 15249.442,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 202,
+        "stage": "category_fit",
+        "stages": [
+          "category_fit"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 11299,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "validation_semantic"
+        ],
+        "cached_input_token_reported_call_count": 3,
+        "cached_input_tokens": 0,
+        "call_count": 3,
+        "estimated_cost_usd": 0.00138,
+        "exclusive_exposed_wall_time_ms": 4341.701,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 9013,
+        "interval_timed_call_count": 3,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 956,
+        "prompt_namespaces": [
+          "report_vs/validate/semantic"
+        ],
+        "provider_active_wall_ms": 10674.17,
+        "provider_elapsed_ms_max": 4309.589,
+        "provider_elapsed_ms_median": 3220.085,
+        "provider_elapsed_ms_total": 10674.171,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_token_reported_call_count": 3,
+        "reasoning_tokens": 423,
+        "stage": "validation_semantic_primary",
+        "stages": [
+          "validation_semantic_primary"
+        ],
+        "timed_call_count": 3,
+        "tool_calls": 0,
+        "total_tokens": 9969,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "linkedin_post"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001083,
+        "exclusive_exposed_wall_time_ms": 266.254,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 6948,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 777,
+        "prompt_namespaces": [
+          "report_vs/artifacts/linkedin_post"
+        ],
+        "provider_active_wall_ms": 8301.837,
+        "provider_elapsed_ms_max": 8301.836,
+        "provider_elapsed_ms_median": 8301.836,
+        "provider_elapsed_ms_total": 8301.836,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 571,
+        "stage": "artifact_linkedin_post_primary",
+        "stages": [
+          "artifact_linkedin_post_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 7725,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "editorial_plan"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001668,
+        "exclusive_exposed_wall_time_ms": 6977.745,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13472,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 642,
+        "prompt_namespaces": [
+          "report_vs/artifacts/editorial_plan"
+        ],
+        "provider_active_wall_ms": 6977.745,
+        "provider_elapsed_ms_max": 6977.744,
+        "provider_elapsed_ms_median": 6977.744,
+        "provider_elapsed_ms_total": 6977.744,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 337,
+        "stage": "artifact_editorial_plan_primary",
+        "stages": [
+          "artifact_editorial_plan_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14114,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "taxonomy"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.002476,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 22720,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 409,
+        "prompt_namespaces": [
+          "report_vs/taxonomy"
+        ],
+        "provider_active_wall_ms": 4607.759,
+        "provider_elapsed_ms_max": 4607.759,
+        "provider_elapsed_ms_median": 4607.759,
+        "provider_elapsed_ms_total": 4607.759,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 0,
+        "stage": "taxonomy_primary",
+        "stages": [
+          "taxonomy_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 23129,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "quotes_final"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001452,
+        "exclusive_exposed_wall_time_ms": 279.911,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 13337,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 236,
+        "prompt_namespaces": [
+          "report_vs/artifacts/quotes"
+        ],
+        "provider_active_wall_ms": 4063.037,
+        "provider_elapsed_ms_max": 4063.037,
+        "provider_elapsed_ms_median": 4063.037,
+        "provider_elapsed_ms_total": 4063.037,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 215,
+        "stage": "artifact_quotes_final_primary",
+        "stages": [
+          "artifact_quotes_final_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 13573,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      },
+      {
+        "artifact_families": [
+          "cover_semantics"
+        ],
+        "cached_input_token_reported_call_count": 1,
+        "cached_input_tokens": 0,
+        "call_count": 1,
+        "estimated_cost_usd": 0.001491,
+        "exclusive_exposed_wall_time_ms": 2503.806,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms_total": 0.0,
+        "input_tokens": 14250,
+        "interval_timed_call_count": 1,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "output_tokens": 131,
+        "prompt_namespaces": [
+          "report_vs/artifacts/cover_semantics"
+        ],
+        "provider_active_wall_ms": 2503.806,
+        "provider_elapsed_ms_max": 2503.806,
+        "provider_elapsed_ms_median": 2503.806,
+        "provider_elapsed_ms_total": 2503.806,
+        "rate_spacing_wait_ms_total": 0.0,
+        "reasoning_efforts": [
+          "low"
+        ],
+        "reasoning_token_reported_call_count": 1,
+        "reasoning_tokens": 55,
+        "stage": "artifact_cover_semantics_primary",
+        "stages": [
+          "artifact_cover_semantics_primary"
+        ],
+        "timed_call_count": 1,
+        "tool_calls": 0,
+        "total_tokens": 14381,
+        "untimed_call_count": 0,
+        "workflows": [
+          "report_analysis"
+        ]
+      }
+    ],
+    "in_flight_wait_ms_total": 0.0,
+    "input_tokens": 423109,
+    "limiter_wait_ms_total": 9273.0,
+    "max_provider_concurrency": 6,
+    "output_tokens": 107087,
+    "provider_active_wall_ms": 412652.493,
+    "provider_active_wall_semantics": "union of persisted monotonic provider-request intervals",
+    "provider_call_status_counts": {
+      "completed": 47
+    },
+    "provider_elapsed_ms_total": 928376.803,
+    "provider_interval_clock_scope": "time.monotonic readings in milliseconds; intervals require a shared host clock domain",
+    "provider_interval_timed_call_count": 47,
+    "rate_spacing_wait_ms_total": 9273.0,
+    "reasoning_token_reported_call_count": 47,
+    "reasoning_tokens": 35614,
+    "report_analysis_execution_seconds": 388.688,
+    "report_analysis_max_provider_concurrency": 6,
+    "report_analysis_non_provider_residual_ms": 16413.27,
+    "report_analysis_provider_active_wall_ms": 372274.73,
+    "report_id": "cohort-81af3890cd84ece81ef1",
+    "report_wall_clock_seconds": 483.348,
+    "report_wall_non_provider_residual_ms": 70695.507,
+    "schema_version": "1.0",
+    "slowest_provider_calls": [
+      {
+        "artifact_family": "doc_map",
+        "cached_input_tokens": null,
+        "estimated_cost_usd": 0.020855,
+        "file_search_call_count": 5,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 43504,
+        "ledger_rowid": 13,
+        "limiter_wait_ms": 0.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 8010,
+        "prompt_namespace": "report_vs/doc_map",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 85918.051,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "responses.create",
+        "provider_request_finish_monotonic_ms": 1132723607.776,
+        "provider_request_start_monotonic_ms": 1132637689.725,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 0.0,
+        "reasoning_effort": "high",
+        "reasoning_tokens": 5817,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "resp_080eb843c0fbea10006ac4c24655dc87d2a0fc7ad3099274bc",
+        "stage": "evidence_pack_primary",
+        "timestamp_utc": "2026-10-06T09:42:52.112883+00:00",
+        "tool_calls": 5,
+        "total_tokens": 51514,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 0,
+        "estimated_cost_usd": 0.004217,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 8912,
+        "ledger_rowid": 35,
+        "limiter_wait_ms": 0.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 6652,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 48172.454,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132925258.334,
+        "provider_request_start_monotonic_ms": 1132877085.88,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 976,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw1dkyesaXH9dsQDoVSgWjELBqGO",
+        "stage": "validation_grounding_batch_01_primary",
+        "timestamp_utc": "2026-10-06T09:46:13.758909+00:00",
+        "tool_calls": 0,
+        "total_tokens": 15564,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 1832,
+        "estimated_cost_usd": 0.004025,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 8892,
+        "ledger_rowid": 41,
+        "limiter_wait_ms": 0.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 6602,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 47698.37,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132978938.345,
+        "provider_request_start_monotonic_ms": 1132931239.975,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1078,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw2XwdDumTkpTDnhy8i7jwT9JuVh",
+        "stage": "validation_grounding_batch_01_primary",
+        "timestamp_utc": "2026-10-06T09:47:07.437817+00:00",
+        "tool_calls": 0,
+        "total_tokens": 15494,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "summary",
+        "cached_input_tokens": 0,
+        "estimated_cost_usd": 0.003423,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 14652,
+        "ledger_rowid": 25,
+        "limiter_wait_ms": 495.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 3915,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 44178.864,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132822166.669,
+        "provider_request_start_monotonic_ms": 1132777987.805,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 495.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 3050,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw03ZOu4dLkS7JhWRmKltDr2O8Wh",
+        "stage": "artifact_summary_primary",
+        "timestamp_utc": "2026-10-06T09:44:30.669256+00:00",
+        "tool_calls": 0,
+        "total_tokens": 18567,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 9027,
+        "estimated_cost_usd": 0.003134,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 9030,
+        "ledger_rowid": 40,
+        "limiter_wait_ms": 747.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 6086,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 43627.015,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132975640.8,
+        "provider_request_start_monotonic_ms": 1132932013.786,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 747.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1716,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw2WKvBbeL0pcWzOO80JKyHTX2NP",
+        "stage": "validation_grounding_batch_04_primary",
+        "timestamp_utc": "2026-10-06T09:47:04.140560+00:00",
+        "tool_calls": 0,
+        "total_tokens": 15116,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 1832,
+        "estimated_cost_usd": 0.003599,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 9030,
+        "ledger_rowid": 34,
+        "limiter_wait_ms": 746.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 5722,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 42648.511,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132920473.862,
+        "provider_request_start_monotonic_ms": 1132877825.35,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 746.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1276,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw1ejLrqILZkgSiq757imAsfSolS",
+        "stage": "validation_grounding_batch_04_primary",
+        "timestamp_utc": "2026-10-06T09:46:08.974554+00:00",
+        "tool_calls": 0,
+        "total_tokens": 14752,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 1832,
+        "estimated_cost_usd": 0.003885,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 8801,
+        "ledger_rowid": 47,
+        "limiter_wait_ms": 0.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 6339,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 41922.27,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1133022474.282,
+        "provider_request_start_monotonic_ms": 1132980552.012,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 0.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 659,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw3JHKp6G1tzCxTbl97oFY41ijMI",
+        "stage": "validation_grounding_batch_01_primary",
+        "timestamp_utc": "2026-10-06T09:47:50.972923+00:00",
+        "tool_calls": 0,
+        "total_tokens": 15140,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 1832,
+        "estimated_cost_usd": 0.003595,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 9432,
+        "ledger_rowid": 46,
+        "limiter_wait_ms": 745.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 5633,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 40380.994,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1133021905.707,
+        "provider_request_start_monotonic_ms": 1132981524.713,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 745.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1093,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw3K0ymXX1Yrj8N2zsR6hUNTuvpS",
+        "stage": "validation_grounding_batch_04_primary",
+        "timestamp_utc": "2026-10-06T09:47:50.404349+00:00",
+        "tool_calls": 0,
+        "total_tokens": 15065,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 9305,
+        "estimated_cost_usd": 0.00244,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 9308,
+        "ledger_rowid": 39,
+        "limiter_wait_ms": 497.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 4694,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 38187.52,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132969971.597,
+        "provider_request_start_monotonic_ms": 1132931784.077,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 497.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1083,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw2WcH9wCZADqYTl2NswMVehA9rH",
+        "stage": "validation_grounding_batch_03_primary",
+        "timestamp_utc": "2026-10-06T09:46:58.471240+00:00",
+        "tool_calls": 0,
+        "total_tokens": 14002,
+        "workflow": "report_analysis"
+      },
+      {
+        "artifact_family": "validation_grounding",
+        "cached_input_tokens": 1832,
+        "estimated_cost_usd": 0.003082,
+        "file_search_call_count": 0,
+        "in_flight_wait_ms": 0.0,
+        "input_tokens": 9308,
+        "ledger_rowid": 33,
+        "limiter_wait_ms": 498.0,
+        "model": "gpt-6-luna",
+        "output_tokens": 4632,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider": "openai",
+        "provider_call_status": "completed",
+        "provider_elapsed_ms": 36448.201,
+        "provider_error_type": null,
+        "provider_http_status": null,
+        "provider_operation": "chat.completions.create",
+        "provider_request_finish_monotonic_ms": 1132914054.454,
+        "provider_request_start_monotonic_ms": 1132877606.254,
+        "provider_retryable": null,
+        "rate_spacing_wait_ms": 498.0,
+        "reasoning_effort": "medium",
+        "reasoning_tokens": 1141,
+        "repair_attempt": 0,
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "request_id": "chatcmpl-EVw1elxlbNBgWYfYTNn0lXDTXq1hD",
+        "stage": "validation_grounding_batch_03_primary",
+        "timestamp_utc": "2026-10-06T09:46:02.555222+00:00",
+        "tool_calls": 0,
+        "total_tokens": 13940,
+        "workflow": "report_analysis"
+      }
+    ],
+    "timed_call_count": 47,
+    "total_tokens": 530196,
+    "untimed_call_count": 0,
+    "usage_event_count": 47,
+    "wall_clock_exposure_ranking": [
+      {
+        "call_count": 15,
+        "exclusive_exposed_wall_time_ms": 8946.227,
+        "limiter_wait_ms_total": 7458.0,
+        "max_simultaneous_calls": 5,
+        "prompt_namespace": "report_vs/validate/grounding",
+        "provider_active_wall_ms": 137793.094,
+        "provider_elapsed_ms_total": 536426.584,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_tokens": 14535,
+        "stages": [
+          "validation_grounding_batch_01_primary",
+          "validation_grounding_batch_02_primary",
+          "validation_grounding_batch_03_primary",
+          "validation_grounding_batch_04_primary",
+          "validation_grounding_batch_05_primary"
+        ]
+      },
+      {
+        "call_count": 1,
+        "exclusive_exposed_wall_time_ms": 85918.051,
+        "limiter_wait_ms_total": 0.0,
+        "max_simultaneous_calls": 1,
+        "prompt_namespace": "report_vs/doc_map",
+        "provider_active_wall_ms": 85918.051,
+        "provider_elapsed_ms_total": 85918.051,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_tokens": 5817,
+        "stages": [
+          "evidence_pack_primary"
+        ]
+      },
+      {
+        "call_count": 1,
+        "exclusive_exposed_wall_time_ms": 10587.734,
+        "limiter_wait_ms_total": 495.0,
+        "max_simultaneous_calls": 1,
+        "prompt_namespace": "report_vs/artifacts/summary",
+        "provider_active_wall_ms": 44178.864,
+        "provider_elapsed_ms_total": 44178.864,
+        "reasoning_efforts": [
+          "medium"
+        ],
+        "reasoning_tokens": 3050,
+        "stages": [
+          "artifact_summary_primary"
+        ]
+      },
+      {
+        "call_count": 1,
+        "exclusive_exposed_wall_time_ms": 0.0,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "provider_active_wall_ms": 33817.519,
+        "provider_elapsed_ms_total": 33817.52,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_tokens": 2035,
+        "stages": [
+          "artifact_insights_candidates_primary"
+        ]
+      },
+      {
+        "call_count": 1,
+        "exclusive_exposed_wall_time_ms": 21916.079,
+        "limiter_wait_ms_total": 247.0,
+        "max_simultaneous_calls": 1,
+        "prompt_namespace": "report_vs/artifacts/expert_comment",
+        "provider_active_wall_ms": 29951.662,
+        "provider_elapsed_ms_total": 29951.663,
+        "reasoning_efforts": [
+          "high"
+        ],
+        "reasoning_tokens": 2400,
+        "stages": [
+          "artifact_expert_comment_primary"
+        ]
+      }
+    ],
+    "wall_clock_exposure_ranking_basis": "per-prompt-family interval union; families can overlap and are not additive"
+  }
+}
