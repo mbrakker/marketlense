@@ -101,6 +101,7 @@ def validate_report(
         openai_client=openai_client,
         prepared=prepared,
         source_id=str(request.source_id or ""),
+        source_md5=str(md5 or ""),
         vector_store_content_hash=str(request.vector_store_content_hash or ""),
     )
     issues = run_validation_rule_registry(

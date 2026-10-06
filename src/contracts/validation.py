@@ -30,9 +30,7 @@ class ValidationIssue:
     )
     violation_type: str = field(
         default="",
-        metadata={
-            "doc": "Optional machine-readable subtype for a validation finding."
-        },
+        metadata={"doc": "Optional machine-readable subtype for a validation finding."},
     )
     repair_target: str = field(
         default="",
@@ -140,6 +138,21 @@ class ValidationRequest(SemanticIdContract):
         default="",
         metadata={
             "doc": "Immutable source identity required for independently retained validator outputs."
+        },
+    )
+    prior_claim_validation_package: dict | None = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Prior canonical claim-validation package offered only for safe "
+                "incremental validation; candidates still pass normal validation."
+            )
+        },
+    )
+    prior_claim_validation_artifact_hash: str = field(
+        default="",
+        metadata={
+            "doc": "Exact artifact hash the prior claim-validation package certifies."
         },
     )
     validation_mode: str = field(

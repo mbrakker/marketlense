@@ -816,9 +816,7 @@ def _verified_deterministic_mutation_paths(
             insight_id = next(iter(identities_for_target))
             path_prefix = f"insights_final[item={insight_id}]"
             target_paths = {
-                path
-                for path in requested
-                if path.startswith(f"{path_prefix}.")
+                path for path in requested if path.startswith(f"{path_prefix}.")
             }
             valid_paths = {
                 f"{path_prefix}.evidence",
@@ -904,9 +902,7 @@ def _verified_deterministic_mutation_paths(
                 for field in ("evidence", "pages", "evidence_spans")
                 if before_item.get(field) != after_item.get(field)
             }
-            expected_paths = {
-                f"{path_prefix}.{field}" for field in changed_fields
-            }
+            expected_paths = {f"{path_prefix}.{field}" for field in changed_fields}
             if target_paths != expected_paths:
                 continue
             if any(
@@ -1109,12 +1105,15 @@ def _verified_summary_copy_map_removals(
                 removed_claims.extend(claim_matches)
         for claim in removed_claims:
             evidence_ids = set(claim.evidence_ids)
-            if sum(
-                1
-                for candidate in original_claims
-                if candidate.artifact_family == "summary"
-                and set(candidate.evidence_ids) == evidence_ids
-            ) != 1:
+            if (
+                sum(
+                    1
+                    for candidate in original_claims
+                    if candidate.artifact_family == "summary"
+                    and set(candidate.evidence_ids) == evidence_ids
+                )
+                != 1
+            ):
                 continue
             binding = tuple(sorted(evidence_ids))
             if binding in active_bindings:
@@ -1174,8 +1173,7 @@ def _summary_claim_row_evidence_ids(row: dict[str, Any]) -> set[str]:
             evidence_ids.update(
                 str(value.get("evidence_id") or "").strip()
                 for value in values
-                if isinstance(value, dict)
-                and isinstance(value.get("evidence_id"), str)
+                if isinstance(value, dict) and isinstance(value.get("evidence_id"), str)
             )
     evidence_ids.discard("")
     return evidence_ids
@@ -1539,6 +1537,54 @@ def _load_candidate_claim_validation_for_promotion(
     return payload
 
 
+def _load_promoted_claim_validation_for_reuse(
+    *,
+    runtime: ReportRuntimeState,
+    dependencies: ReportAnalysisDependencies,
+    ctx,
+) -> Dict[str, Any] | None:
+    """Load the package belonging to the currently promoted artifact set."""
+    pack_name = "validation_retained_claim_validation_candidate"
+    path = dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=pack_name,
+            report_slug=runtime.report_name,
+        ),
+        ctx,
+    ).output_path
+    try:
+        payload = dependencies.read_json(
+            ReadJsonRequest(schema_version="1.0", path=path),
+            ctx,
+        ).payload
+    except AppError as exc:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="validation_claim_reuse_prior_unavailable",
+                module=logger.name,
+                fields={"cause_code": exc.code},
+            )
+        )
+        return None
+    if not isinstance(payload, dict):
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="validation_claim_reuse_prior_unavailable",
+                module=logger.name,
+                fields={"cause_code": "retained_claim_package_invalid"},
+            )
+        )
+        return None
+    return payload
+
+
 def _store_promoted_candidate_claim_validation(
     *,
     runtime: ReportRuntimeState,
@@ -1663,9 +1709,7 @@ def _preflight_empty_grounding_strategies(
                 target.target_section == "summary"
                 and bool(target.issues)
                 and all(
-                    issue.affected_section.startswith(
-                        "summary.claim_evidence_map:"
-                    )
+                    issue.affected_section.startswith("summary.claim_evidence_map:")
                     for issue in target.issues
                 )
             )
@@ -1674,14 +1718,11 @@ def _preflight_empty_grounding_strategies(
                 and target.repair_action == "REBIND_EVIDENCE"
                 and target.repair_strategy == "alternative_evidence"
             )
-            if (
-                not is_insight_evidence_rebind
-                and (
-                    not is_summary_claim_map_target
-                    or target.repair_strategy
-                    not in {"current_evidence", "alternative_evidence"}
-                    or not target.quarantined_evidence_ids
-                )
+            if not is_insight_evidence_rebind and (
+                not is_summary_claim_map_target
+                or target.repair_strategy
+                not in {"current_evidence", "alternative_evidence"}
+                or not target.quarantined_evidence_ids
             ):
                 continue
             evidence_ids = retained_grounding_evidence_ids_for_target(
@@ -1759,6 +1800,11 @@ def _run_validation_regeneration_loop(
     promoted_artifacts = deepcopy(current_artifacts)
     promoted_validation_report = current_validation_report
     working_artifacts = deepcopy(current_artifacts)
+    promoted_claim_validation_package = _load_promoted_claim_validation_for_reuse(
+        runtime=runtime,
+        dependencies=dependencies,
+        ctx=mode_ctx,
+    )
     logger.info(
         log_event(
             mode_ctx,
@@ -2112,18 +2158,34 @@ def _run_validation_regeneration_loop(
             )
             or payload_completeness_issue is not None
         )
+        claim_reuse_eligible = bool(
+            candidate_enforced
+            and plan.mode == "targeted"
+            and candidate_result.passed
+            and not any(
+                str(issue.severity or "").strip().lower() == "error"
+                for issue in scope_validation.issues
+            )
+            and payload_completeness_issue is None
+        )
         candidate_provider_validation = _run_validation_with_fallback(
             runtime=runtime,
             mode_ctx=attempt_ctx,
             dependencies=dependencies,
             validation_req=ValidationRequest(
-                schema_version="1.0",
+                schema_version="1.1",
                 report_id=ReportId(runtime.file.file_id),
                 report=regenerated_payload,
                 artifacts=candidate_artifacts,
                 evidence_packs=evidence_packs,
                 vector_store_id=vector_store_id,
                 source_id=str(runtime.ctx.source_identity_id or "").strip(),
+                prior_claim_validation_package=(
+                    promoted_claim_validation_package if claim_reuse_eligible else None
+                ),
+                prior_claim_validation_artifact_hash=(
+                    sha256_json(working_artifacts) if claim_reuse_eligible else ""
+                ),
                 validation_mode=(
                     "inline_deterministic"
                     if deterministic_candidate_rejection
@@ -2356,12 +2418,13 @@ def _run_validation_regeneration_loop(
                 ) = promotion_state
                 working_artifacts = promoted_artifacts
                 current_validation_report = promoted_validation_report
+                promoted_claim_validation_package = retained_claim_candidate
                 promotion_outcome = "promoted"
                 evidence_paths["artifacts"] = artifacts_path
                 evidence_paths["validation"] = canonical_validation_path
-                evidence_paths[
-                    "validation_retained_claim_validation_candidate"
-                ] = retained_claim_candidate_path
+                evidence_paths["validation_retained_claim_validation_candidate"] = (
+                    retained_claim_candidate_path
+                )
                 promoted_payload_overrides = payload_overrides
             else:
                 promotion_outcome = "rolled_back"

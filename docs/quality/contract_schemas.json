@@ -14775,6 +14775,9 @@
             "interpretive"
           ]
         },
+        "provenance_hash": {
+          "type": "string"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -14939,6 +14942,9 @@
           "type": "string"
         },
         "relevant_input_hash": {
+          "type": "string"
+        },
+        "retrieval_identity": {
           "type": "string"
         },
         "schema_version": {
@@ -42654,6 +42660,19 @@
             "type": "object"
           },
           "type": "object"
+        },
+        "prior_claim_validation_artifact_hash": {
+          "type": "string"
+        },
+        "prior_claim_validation_package": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "publisher_name": {
           "type": "string"

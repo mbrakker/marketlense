@@ -33,6 +33,7 @@ from src.generators.claim_validation_generator import (
     apply_retained_claim_semantic_results,
     metric_claim_text,
     retained_claim_semantic_inputs,
+    reuse_retained_claim_semantic_results,
     validate_retained_claims,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
@@ -117,6 +118,24 @@ def _grounding_batches(
     return batches
 
 
+def _claim_prompt_content_hashes(
+    grounding_batches: Sequence[tuple[dict, list[ClaimSemanticInput]]],
+    prompt_bundles: Sequence[Any],
+) -> dict[str, str]:
+    hashes_by_claim_id: dict[str, list[str]] = {}
+    for (_batch_payload, semantic_inputs), prompt_bundle in zip(
+        grounding_batches, prompt_bundles, strict=True
+    ):
+        for semantic_input in semantic_inputs:
+            hashes_by_claim_id.setdefault(semantic_input.candidate.claim_id, []).append(
+                str(prompt_bundle.prompt_content_hash or "")
+            )
+    return {
+        claim_id: hashes[0] if len(hashes) == 1 else ""
+        for claim_id, hashes in hashes_by_claim_id.items()
+    }
+
+
 def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
     package = validate_retained_claims(
         runtime.request.artifacts,
@@ -144,6 +163,7 @@ def run_grounding_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
         openai_client=runtime.openai_client,
         ctx=runtime.ctx,
         source_id=runtime.source_id,
+        source_md5=str(getattr(runtime, "source_md5", "") or ""),
         vector_store_content_hash=runtime.vector_store_content_hash,
         retained_claim_package=package,
         retained_claim_inputs=semantic_inputs,
@@ -206,6 +226,7 @@ def run_grounding_check(
     openai_client,
     ctx,
     source_id: str = "",
+    source_md5: str = "",
     vector_store_content_hash: str = "",
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
@@ -263,6 +284,92 @@ def run_grounding_check(
         prepare_batch_bundle(variables) for variables in batch_prompt_vars
     ]
     prompt_bundle = prompt_bundles[0]
+    prompt_content_hash_by_claim_id = _claim_prompt_content_hashes(
+        grounding_batches, prompt_bundles
+    )
+    full_grounding_batch_count = len(grounding_batches)
+    configuration_policy_hash = sha256_json(
+        {
+            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
+            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
+            "routing_policy": asdict(prompt_bundle.routing_decision),
+        }
+    )
+    retrieval_identity = sha256_json(
+        {
+            "use_vector_store": grounding_use_vector_store,
+            "vector_store_id": request.vector_store_id or ""
+            if grounding_use_vector_store
+            else "",
+            "vector_store_content_hash": vector_store_content_hash
+            if grounding_use_vector_store
+            else "",
+            "retrieval_mode": grounding_retrieval_mode(grounding_use_vector_store),
+        }
+    )
+    if retained_claim_package is None:
+        retained_claim_package = validate_retained_claims(
+            artifacts,
+            request.evidence_packs,
+            source_identity=source_id or request.source_id,
+        )
+    retained_claim_package, retained_claim_inputs, reuse_telemetry = (
+        reuse_retained_claim_semantic_results(
+            retained_claim_package,
+            retained_claim_inputs,
+            request.prior_claim_validation_package,
+            expected_prior_artifact_hash=request.prior_claim_validation_artifact_hash,
+            report_id=str(request.report_id),
+            source_id=source_id or request.source_id,
+            source_md5=source_md5,
+            configuration_hash=str(ctx.configuration_hash or ""),
+            policy_hash=str(ctx.policy_hash or ""),
+            prompt_family=prompt_namespace,
+            prompt_execution_identity=(
+                prompt_bundle.execution_identity.execution_identity
+            ),
+            model_provider=str(prompt_bundle.execution_policy.policy.provider),
+            model_name=prompt_bundle.resolved_model,
+            configuration_policy_identity=configuration_policy_hash,
+            retrieval_identity=retrieval_identity,
+            prompt_content_hash_by_claim_id=prompt_content_hash_by_claim_id,
+        )
+    )
+
+    def reuse_counter(name: str) -> int:
+        value = reuse_telemetry.get(name, 0)
+        return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+    reused_validation_results = reuse_counter("reused_validation_results")
+    if reused_validation_results:
+        audit_payload = grounding_payload(
+            request,
+            artifacts,
+            retained_claim_inputs=retained_claim_inputs,
+        )
+        public_item_ids = _public_item_ids(audit_payload.get("public_factual_items"))
+        retained_item_ids = _retained_claim_grounding_item_ids(
+            retained_claim_inputs,
+            set(public_item_ids.values()),
+        )
+        grounding_batches = _grounding_batches(audit_payload, retained_claim_inputs)
+        batch_prompt_vars = [
+            {
+                "report_json": json.dumps(batch_payload, ensure_ascii=False),
+                "evidence_json": json.dumps(list(evidence_texts), ensure_ascii=False),
+            }
+            for batch_payload, _batch_semantic_inputs in grounding_batches
+        ]
+        prompt_bundles = [
+            prepare_batch_bundle(variables) for variables in batch_prompt_vars
+        ]
+        prompt_bundle = prompt_bundles[0]
+        prompt_content_hash_by_claim_id = _claim_prompt_content_hashes(
+            grounding_batches, prompt_bundles
+        )
+    reuse_telemetry["grounding_calls_avoided"] = max(
+        0, full_grounding_batch_count - len(grounding_batches)
+    )
     logger.info(
         log_event(
             prompt_ctx,
@@ -346,6 +453,26 @@ def run_grounding_check(
             },
         )
     )
+    logger.info(
+        log_event(
+            prompt_ctx,
+            role="generator",
+            event="validation_claim_reuse_decided",
+            module=LOGGER_NAME,
+            fields={
+                "total_candidate_claims": reuse_counter("total_candidate_claims"),
+                "reused_validation_results": reused_validation_results,
+                "newly_validated_claims": reuse_counter("newly_validated_claims"),
+                "grounding_calls_avoided": reuse_counter("grounding_calls_avoided"),
+                "semantic_validation_calls_avoided": reuse_counter(
+                    "semantic_validation_calls_avoided"
+                ),
+                "reuse_fallback_reason_counts": reuse_telemetry.get(
+                    "reuse_fallback_reason_counts", {}
+                ),
+            },
+        )
+    )
     vector_provenance_verified = not grounding_use_vector_store or bool(
         str(vector_store_content_hash or "").strip()
     )
@@ -361,13 +488,6 @@ def run_grounding_check(
                 "max_claims_per_call": GROUNDING_MAX_CLAIMS_PER_CALL,
                 "max_public_items_per_call": GROUNDING_MAX_PUBLIC_ITEMS_PER_CALL,
             },
-        }
-    )
-    configuration_policy_hash = sha256_json(
-        {
-            "execution_policy_hash": prompt_bundle.execution_policy.policy_hash,
-            "execution_policy": asdict(prompt_bundle.execution_policy.policy),
-            "routing_policy": asdict(prompt_bundle.routing_decision),
         }
     )
     try:
@@ -727,13 +847,14 @@ def run_grounding_check(
             retained_item_ids=retained_item_ids,
             source_identity=source_id or request.source_id,
             prompt_family=prompt_namespace,
-            prompt_content_hash=prompt_bundle.prompt_content_hash,
             execution_identity=prompt_bundle.execution_identity.execution_identity,
             validator_version=GROUNDING_VALIDATOR_VERSION,
             model_provider=str(prompt_bundle.execution_policy.policy.provider),
             model_name=prompt_bundle.resolved_model,
             configuration_policy_identity=configuration_policy_hash,
             relevant_input_hash=relevant_input_hash,
+            retrieval_identity=retrieval_identity,
+            prompt_content_hash_by_claim_id=prompt_content_hash_by_claim_id,
         )
         updated_claim_package = apply_retained_claim_semantic_results(
             retained_claim_package,
@@ -1005,13 +1126,14 @@ def _retained_claim_semantic_results(
     retained_item_ids: Mapping[str, str],
     source_identity: str,
     prompt_family: str,
-    prompt_content_hash: str,
     execution_identity: str,
     validator_version: str,
     model_provider: str,
     model_name: str,
     configuration_policy_identity: str,
     relevant_input_hash: str,
+    retrieval_identity: str,
+    prompt_content_hash_by_claim_id: dict[str, str],
 ) -> list[ClaimSemanticGroundingResult]:
     checks_by_id: dict[str, list[dict[str, Any]]] = {}
     if isinstance(checks, list):
@@ -1024,6 +1146,11 @@ def _retained_claim_semantic_results(
     semantic_results: list[ClaimSemanticGroundingResult] = []
     for semantic_input in semantic_inputs:
         candidate = semantic_input.candidate
+        claim_prompt_content_hash = prompt_content_hash_by_claim_id.get(
+            candidate.claim_id, ""
+        )
+        if not re.fullmatch(r"[0-9a-f]{64}", claim_prompt_content_hash):
+            continue
         matching = checks_by_id.get(retained_item_ids[candidate.claim_id], [])
         if len(matching) != 1:
             continue
@@ -1036,7 +1163,7 @@ def _retained_claim_semantic_results(
         ):
             continue
         identity = ClaimSemanticValidationIdentity(
-            schema_version="1.0",
+            schema_version="1.1",
             claim_id=candidate.claim_id,
             claim_text_hash=candidate.text_hash,
             evidence_ids=[
@@ -1045,13 +1172,14 @@ def _retained_claim_semantic_results(
             evidence_hash=semantic_input.evidence_hash,
             source_identity=source_identity,
             prompt_family=prompt_family,
-            prompt_content_hash=prompt_content_hash,
+            prompt_content_hash=claim_prompt_content_hash,
             execution_identity=execution_identity,
             validator_version=validator_version,
             model_provider=model_provider,
             model_name=model_name,
             configuration_policy_identity=configuration_policy_identity,
             relevant_input_hash=relevant_input_hash,
+            retrieval_identity=retrieval_identity,
         )
         comparison = ProtectedFactComparison.from_payload(
             entry.get("protected_facts"),
@@ -1714,13 +1842,10 @@ def grounding_issue_severity(
             return "info"
         return "error"
     if violation_type == "not_established":
-        if (
-            classification in {
-                "analyst_interpretation",
-                "prescriptive_recommendation",
-            }
-            and section_policy_value in {"soft", "mixed"}
-        ):
+        if classification in {
+            "analyst_interpretation",
+            "prescriptive_recommendation",
+        } and section_policy_value in {"soft", "mixed"}:
             return "info"
         return "warning"
     if violation_type == "evidence_retrieval_failure":

@@ -383,7 +383,7 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
         ):
             candidate_package_payload.update(
                 {
-                    "schema_version": "1.3",
+                    "schema_version": "1.4",
                     "artifact_hash": sha256_json(req.artifacts),
                     "package_hash": "candidate-package-1",
                 }
@@ -393,7 +393,8 @@ def test_candidate_promotion_preserves_promoted_retained_claim_severity(
         )
 
     def _read_candidate_package(request, _ctx):
-        candidate_package_reads.append(request.path)
+        if "validation_regen_candidate_" in request.path:
+            candidate_package_reads.append(request.path)
         return SimpleNamespace(payload=candidate_package_payload)
 
     def _store_analysis_pack(request, ctx):

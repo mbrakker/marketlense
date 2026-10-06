@@ -36,7 +36,7 @@ def test_load_retained_claim_candidate_binds_to_promoted_artifacts(tmp_path):
     candidate_artifacts = {"summary": {"tldr": "Promoted copy."}}
     artifact_hash = sha256_json(candidate_artifacts)
     candidate_package = {
-        "schema_version": "1.3",
+        "schema_version": "1.4",
         "artifact_hash": artifact_hash,
         "package_hash": "promoted-package-hash",
     }
@@ -78,7 +78,7 @@ def test_store_promoted_retained_claim_candidate_to_report_scoped_pack(tmp_path)
             or SimpleNamespace(output_path=f"promoted/{request.pack_name}.json")
         )
     )
-    payload = {"schema_version": "1.3", "artifact_hash": "current"}
+    payload = {"schema_version": "1.4", "artifact_hash": "current"}
 
     stored_path = _store_promoted_candidate_claim_validation(
         runtime=runtime,
@@ -119,7 +119,7 @@ def test_long_validation_candidate_pack_stores_and_loads_after_path_compaction(
     candidate_artifacts = {"summary": {"tldr": "Promoted copy."}}
     artifact_hash = sha256_json(candidate_artifacts)
     candidate_package = {
-        "schema_version": "1.3",
+        "schema_version": "1.4",
         "artifact_hash": artifact_hash,
         "package_hash": "b" * 64,
         "results": [],
@@ -180,7 +180,7 @@ def test_promote_retained_claim_candidate_rejects_artifact_mismatch(tmp_path):
             output_path=f"candidate/{request.pack_name}.json"
         ),
         read_json=lambda _request, _ctx: SimpleNamespace(
-            payload={"schema_version": "1.3", "artifact_hash": "stale"}
+            payload={"schema_version": "1.4", "artifact_hash": "stale"}
         ),
         analysis_store_pack=lambda request, _ctx: stored_requests.append(request),
     )
@@ -961,9 +961,7 @@ def test_indexed_summary_claim_support_failure_gets_exact_repair_path():
     assert len(plan.targets) == 1
     assert plan.targets[0].repair_action == "REGENERATE_ITEM"
     assert plan.targets[0].repair_strategy == "current_evidence"
-    assert plan.targets[0].allowed_paths == [
-        "summary.claim_evidence_map[0].claim"
-    ]
+    assert plan.targets[0].allowed_paths == ["summary.claim_evidence_map[0].claim"]
     assert plan.targets[0].selected_evidence_ids == ["evidence-conclusion"]
 
 
@@ -1168,9 +1166,7 @@ def test_summary_repair_maps_duplicate_claim_surfaces_together():
             "card_tldr_compact": copy_text,
             "executive_summary": copy_text,
         },
-        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
-            provenance
-        ),
+        "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(provenance),
     }
     plan = _build_regeneration_plan(
         issues=[

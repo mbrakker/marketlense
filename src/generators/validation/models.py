@@ -56,6 +56,7 @@ class ValidationRuntime:
     openai_client: Any
     prepared: ValidationPreparedInputs
     source_id: str = ""
+    source_md5: str = ""
     vector_store_content_hash: str = ""
     semantic_outcome: SemanticCheckOutcome = field(
         default_factory=lambda: SemanticCheckOutcome(

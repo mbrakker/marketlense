@@ -364,7 +364,7 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         if pack_name == "validation_regen_candidate_2":
             candidate_package_payload.update(
                 {
-                    "schema_version": "1.3",
+                    "schema_version": "1.4",
                     "artifact_hash": sha256_json(req.artifacts),
                     "package_hash": "candidate-package-2",
                 }
@@ -374,6 +374,11 @@ def test_run_report_analysis_retries_from_last_promoted_artifacts_after_rollback
         )
 
     def _read_json(request, _ctx):
+        if "validation_regen_candidate_" not in request.path:
+            raise AppError(
+                code="file_not_found",
+                message="No previously promoted package is retained in this test.",
+            )
         candidate_package_reads.append(request.path)
         if not request.path.endswith(
             "validation_regen_candidate_2_retained_claim_validation_candidate.json"
@@ -567,7 +572,7 @@ def test_rolled_back_summary_candidate_advances_to_bounded_safe_removal(tmp_path
         if pack_name == "validation_regen_candidate_2":
             candidate_package.update(
                 {
-                    "schema_version": "1.3",
+                    "schema_version": "1.4",
                     "artifact_hash": sha256_json(req.artifacts),
                     "package_hash": "",
                     "results": [],

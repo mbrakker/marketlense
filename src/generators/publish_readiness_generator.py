@@ -835,7 +835,8 @@ def _retained_claim_grounding_result(
     prompt_hashes: set[str] = set()
     model_identities: set[str] = set()
     for result, identity in semantic_rows:
-        if identity.get("schema_version") != "1.0":
+        identity_schema_version = identity.get("schema_version")
+        if identity_schema_version not in {"1.0", "1.1"}:
             problems.add("semantic_execution_identity_invalid")
         required_identity_fields = (
             "claim_id",
@@ -855,6 +856,10 @@ def _retained_claim_grounding_result(
             for field in required_identity_fields
         ):
             problems.add("semantic_execution_identity_incomplete")
+        if identity_schema_version == "1.1" and not re.fullmatch(
+            r"[0-9a-f]{64}", str(identity.get("retrieval_identity") or "")
+        ):
+            problems.add("semantic_retrieval_identity_invalid")
         if identity.get("validator_version") != CLAIM_GROUNDING_VALIDATOR_VERSION:
             problems.add("semantic_validator_version_stale")
         candidate = result.get("candidate")

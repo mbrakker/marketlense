@@ -7,7 +7,7 @@ from typing import Literal
 
 from src.contracts.protected_facts import ProtectedFactComparison
 
-CLAIM_VALIDATION_SCHEMA_VERSION = "1.3"
+CLAIM_VALIDATION_SCHEMA_VERSION = "1.4"
 CLAIM_VALIDATION_VALIDATOR_VERSION = "retained_claim_validation:v2"
 CLAIM_GROUNDING_VALIDATOR_VERSION = "grounding_validation_output:1.5"
 ClaimKind = Literal["numeric", "quotation", "descriptive", "causal", "interpretive"]
@@ -53,6 +53,12 @@ class ClaimCandidate:
     entity_id: str = field(
         default="",
         metadata={"doc": "Stable public item identity when the claim belongs to one."},
+    )
+    provenance_hash: str = field(
+        default="",
+        metadata={
+            "doc": "Hash of retained source-span and evidence-provenance metadata."
+        },
     )
 
 
@@ -100,6 +106,12 @@ class ClaimSemanticValidationIdentity:
     )
     relevant_input_hash: str = field(
         metadata={"doc": "Full report-level grounding input hash."}
+    )
+    retrieval_identity: str = field(
+        default="",
+        metadata={
+            "doc": "Identity of retrieval mode and any verified vector-store content."
+        },
     )
 
 

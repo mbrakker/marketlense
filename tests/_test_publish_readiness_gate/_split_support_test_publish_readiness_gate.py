@@ -122,7 +122,7 @@ def _retained_claim_package(
         evidence_references = (
             [
                 {
-                    "schema_version": "1.3",
+                    "schema_version": "1.4",
                     "evidence_id": "F1",
                     "source_pack": "findings",
                     "page": 1,
@@ -133,9 +133,9 @@ def _retained_claim_package(
             else []
         )
         result = {
-            "schema_version": "1.3",
+            "schema_version": "1.4",
             "candidate": {
-                "schema_version": "1.3",
+                "schema_version": "1.4",
                 "claim_id": f"claim:{index}",
                 "source_family": "summary",
                 "text": f"Retained factual claim {index}.",
@@ -201,7 +201,7 @@ def _retained_claim_package(
         }
         results.append(result)
     package = {
-        "schema_version": "1.3",
+        "schema_version": "1.4",
         "artifact_hash": sha256_json(artifacts),
         "package_hash": "",
         "results": results,

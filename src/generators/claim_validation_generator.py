@@ -19,6 +19,7 @@ from src.contracts.claim_validation import (
     ClaimSemanticGroundingResult,
     ClaimSemanticInput,
     ClaimSemanticOutcome,
+    ClaimSemanticValidationIdentity,
     ClaimValidationCheck,
     ClaimValidationExecutionIdentity,
     ClaimValidationLineage,
@@ -251,6 +252,44 @@ def _references(
     ]
 
 
+_CLAIM_PROVENANCE_KEYS = frozenset(
+    {
+        "evidence",
+        "evidence_id",
+        "evidence_ids",
+        "evidence_spans",
+        "source_id",
+        "source_identity",
+        "source_page",
+        "source_pages",
+        "source_span",
+        "source_spans",
+        "source_text",
+        "source_quote",
+        "provenance",
+        "provenance_id",
+        "page",
+        "pages",
+        "page_number",
+        "start_offset",
+        "end_offset",
+        "span_start",
+        "span_end",
+    }
+)
+
+
+def _claim_provenance_hash(raw: object) -> str:
+    if not isinstance(raw, dict):
+        return ""
+    provenance = {
+        key: value
+        for key, value in raw.items()
+        if key in _CLAIM_PROVENANCE_KEYS or "provenance" in key.casefold()
+    }
+    return _hash(provenance) if provenance else ""
+
+
 def _candidates(
     artifacts: dict, evidence: dict[str, tuple[str, str, int | None]]
 ) -> list[_ClaimValidationInput]:
@@ -290,6 +329,7 @@ def _candidates(
             evidence_references=_references(raw, evidence),
             affected_section=affected_section,
             entity_id=entity_id,
+            provenance_hash=_claim_provenance_hash(raw),
         )
         output.append(
             _ClaimValidationInput(
@@ -1041,7 +1081,7 @@ def _apply_semantic_results(
             reference.evidence_id for reference in candidate.evidence_references
         ]
         identity_matches = (
-            identity.schema_version == "1.0"
+            identity.schema_version in {"1.0", "1.1"}
             and identity.claim_text_hash == candidate.text_hash
             and identity.evidence_ids == expected_evidence_ids
             and identity.evidence_hash == semantic_input.evidence_hash
@@ -1054,6 +1094,7 @@ def _apply_semantic_results(
             and bool(identity.model_name)
             and bool(identity.configuration_policy_identity)
             and bool(identity.relevant_input_hash)
+            and (identity.schema_version == "1.0" or bool(identity.retrieval_identity))
         )
         if not identity_matches:
             updated.append(
@@ -1453,7 +1494,7 @@ def _claim_validation_semantic_results_for_final_inputs(
         expected_evidence_hash = current_evidence_hash_by_candidate.get(candidate_hash)
         execution_identity = str(identity.get("execution_identity") or "")
         if (
-            identity.get("schema_version") != "1.0"
+            identity.get("schema_version") not in {"1.0", "1.1"}
             or not execution_identity
             or str(result.get("semantic_execution_identity") or "")
             != execution_identity
@@ -1466,6 +1507,12 @@ def _claim_validation_semantic_results_for_final_inputs(
             or not str(identity.get("prompt_family") or "")
             or not str(identity.get("configuration_policy_identity") or "")
             or not str(identity.get("relevant_input_hash") or "")
+            or (
+                identity.get("schema_version") == "1.1"
+                and not re.fullmatch(
+                    r"[0-9a-f]{64}", str(identity.get("retrieval_identity") or "")
+                )
+            )
             or identity.get("claim_id") != candidate.get("claim_id")
             or identity.get("claim_text_hash") != candidate.get("text_hash")
             or identity.get("evidence_ids") != expected_evidence_ids
@@ -1559,6 +1606,333 @@ def apply_retained_claim_semantic_results(
         artifact_hash=package.artifact_hash,
         results=results,
     )
+
+
+def reuse_retained_claim_semantic_results(
+    package: ClaimValidationPackage,
+    semantic_inputs: list[ClaimSemanticInput],
+    prior_package: ClaimValidationPackage | dict | None,
+    *,
+    expected_prior_artifact_hash: str,
+    report_id: str,
+    source_id: str,
+    source_md5: str,
+    configuration_hash: str,
+    policy_hash: str,
+    prompt_family: str,
+    prompt_execution_identity: str,
+    model_provider: str,
+    model_name: str,
+    configuration_policy_identity: str,
+    retrieval_identity: str,
+    prompt_content_hash_by_claim_id: dict[str, str],
+) -> tuple[ClaimValidationPackage, list[ClaimSemanticInput], dict[str, object]]:
+    """Reuse only passing semantic results bound to exact claim/source identities."""
+    fallback_reasons: dict[str, int] = {}
+
+    def reject(reason: str) -> None:
+        fallback_reasons[reason] = fallback_reasons.get(reason, 0) + 1
+
+    prior = (
+        asdict(prior_package)
+        if isinstance(prior_package, ClaimValidationPackage)
+        else dict(prior_package)
+        if isinstance(prior_package, dict)
+        else {}
+    )
+    if not prior:
+        reject("prior_package_missing")
+        old_results: list[dict] = []
+    elif prior.get(
+        "schema_version"
+    ) != CLAIM_VALIDATION_SCHEMA_VERSION or not claim_validation_package_hash_valid(
+        prior
+    ):
+        reject("prior_package_invalid")
+        old_results = []
+    elif (
+        not expected_prior_artifact_hash
+        or prior.get("artifact_hash") != expected_prior_artifact_hash
+    ):
+        reject("prior_artifact_identity_mismatch")
+        old_results = []
+    elif (
+        prior.get("readiness_status") != "awaiting_review"
+        or prior.get("unsupported_factual_count") != 0
+        or prior.get("unresolved_factual_count") != 0
+    ):
+        reject("prior_validation_not_pass")
+        old_results = []
+    else:
+        identity = prior.get("validation_identity")
+        expected_validation_identity = {
+            "schema_version": "1.1",
+            "report_id": str(report_id or ""),
+            "source_id": str(source_id or ""),
+            "source_md5": str(source_md5 or ""),
+            "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
+            "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
+            "configuration_hash": str(configuration_hash or ""),
+            "policy_hash": str(policy_hash or ""),
+        }
+        if not isinstance(identity, dict) or any(
+            identity.get(key) != expected
+            for key, expected in expected_validation_identity.items()
+        ):
+            reject("validator_identity_incompatible")
+            old_results = []
+        else:
+            results_value = prior.get("results")
+            if not isinstance(results_value, list) or any(
+                not isinstance(result, dict)
+                or not isinstance(result.get("candidate"), dict)
+                for result in results_value
+            ):
+                reject("prior_package_invalid")
+                old_results = []
+            else:
+                factual = [
+                    result
+                    for result in results_value
+                    if result["candidate"].get("factual") is True
+                ]
+                semantic = [
+                    result
+                    for result in results_value
+                    if result.get("semantic_validator_used") is True
+                ]
+                unsupported = sum(
+                    result.get("status") == "unsupported" for result in factual
+                )
+                unresolved = sum(
+                    result.get("status") == "unresolved" for result in factual
+                )
+                semantic_execution_ids = sorted(
+                    {
+                        str(result.get("semantic_execution_identity") or "")
+                        for result in semantic
+                        if result.get("semantic_execution_identity")
+                    }
+                )
+                if (
+                    type(prior.get("unsupported_factual_count")) is not int
+                    or prior.get("unsupported_factual_count") != unsupported
+                    or type(prior.get("unresolved_factual_count")) is not int
+                    or prior.get("unresolved_factual_count") != unresolved
+                    or type(prior.get("semantic_validation_count")) is not int
+                    or prior.get("semantic_validation_count") != len(semantic)
+                    or prior.get("readiness_status")
+                    != (
+                        "not_publishable"
+                        if unsupported or unresolved
+                        else "awaiting_review"
+                    )
+                    or prior.get("semantic_execution_identities")
+                    != semantic_execution_ids
+                ):
+                    reject("prior_package_invalid")
+                    old_results = []
+                else:
+                    old_results = results_value
+
+    if old_results:
+        old_by_id: dict[str, list[dict]] = {}
+        for old_result in old_results:
+            old_candidate = old_result["candidate"]
+            claim_id = str(old_candidate.get("claim_id") or "")
+            if claim_id:
+                old_by_id.setdefault(claim_id, []).append(old_result)
+    else:
+        old_by_id = {}
+
+    current_by_id: dict[str, list[ClaimValidationResult]] = {}
+    for current_result in package.results:
+        current_by_id.setdefault(current_result.candidate.claim_id, []).append(
+            current_result
+        )
+
+    reused_results: list[ClaimSemanticGroundingResult] = []
+    reused_ids: set[str] = set()
+    for semantic_input in semantic_inputs:
+        candidate = semantic_input.candidate
+        claim_id = candidate.claim_id
+        old_matches = old_by_id.get(claim_id, [])
+        current_matches = current_by_id.get(claim_id, [])
+        if not old_results:
+            # Package-level fallback already has a precise reason.
+            continue
+        if not old_matches:
+            reject("new_claim")
+            continue
+        if len(old_matches) != 1 or len(current_matches) != 1:
+            reject("claim_identity_ambiguous")
+            continue
+
+        prior_result = old_matches[0]
+        current_result = current_matches[0]
+        prior_candidate = prior_result.get("candidate")
+        if not isinstance(prior_candidate, dict):
+            reject("prior_package_invalid")
+            continue
+        current_candidate = asdict(candidate)
+        if prior_candidate != current_candidate:
+            if (
+                prior_candidate.get("text_hash") != candidate.text_hash
+                or prior_candidate.get("text") != candidate.text
+            ):
+                reject("claim_identity_changed")
+            elif (
+                prior_candidate.get("evidence_references")
+                != current_candidate["evidence_references"]
+            ):
+                reject("evidence_identity_changed")
+            elif (
+                not prior_candidate.get("provenance_hash")
+                or not candidate.provenance_hash
+                or prior_candidate.get("provenance_hash") != candidate.provenance_hash
+            ):
+                reject("provenance_identity_changed")
+            else:
+                reject("claim_identity_changed")
+            continue
+        if (
+            not re.fullmatch(r"[0-9a-f]{64}", candidate.provenance_hash)
+            or current_result.deterministic_status
+            != prior_result.get("deterministic_status")
+            or _hash([asdict(check) for check in current_result.checks])
+            != _hash(prior_result.get("checks"))
+            or _hash(
+                asdict(current_result.protected_facts)
+                if current_result.protected_facts is not None
+                else None
+            )
+            != _hash(prior_result.get("protected_facts"))
+        ):
+            reject("deterministic_validation_changed")
+            continue
+        if (
+            prior_result.get("status") != "supported"
+            or prior_result.get("semantic_outcome") != "entailed"
+            or prior_result.get("semantic_validator_used") is not True
+            or prior_result.get("semantic_disagreement")
+        ):
+            reject("prior_result_not_supported")
+            continue
+        identity = prior_result.get("semantic_identity")
+        if not isinstance(identity, dict):
+            reject("semantic_identity_missing")
+            continue
+        expected_evidence_ids = [
+            reference.evidence_id for reference in candidate.evidence_references
+        ]
+        if (
+            identity.get("schema_version") != "1.1"
+            or identity.get("claim_id") != claim_id
+            or identity.get("claim_text_hash") != candidate.text_hash
+            or identity.get("evidence_ids") != expected_evidence_ids
+            or identity.get("evidence_hash") != semantic_input.evidence_hash
+            or identity.get("source_identity") != semantic_input.source_identity
+            or identity.get("retrieval_identity") != retrieval_identity
+            or str(prior_result.get("semantic_execution_identity") or "")
+            != identity.get("execution_identity")
+        ):
+            reject("evidence_identity_changed")
+            continue
+        current_prompt_content_hash = prompt_content_hash_by_claim_id.get(claim_id, "")
+        if not re.fullmatch(r"[0-9a-f]{64}", current_prompt_content_hash):
+            reject("semantic_identity_missing")
+            continue
+        if identity.get("prompt_content_hash") != current_prompt_content_hash:
+            reject("prompt_context_changed")
+            continue
+        if any(
+            (
+                identity.get("prompt_family") != prompt_family,
+                identity.get("execution_identity") != prompt_execution_identity,
+                identity.get("validator_version") != CLAIM_GROUNDING_VALIDATOR_VERSION,
+                identity.get("model_provider") != model_provider,
+                identity.get("model_name") != model_name,
+                identity.get("configuration_policy_identity")
+                != configuration_policy_identity,
+            )
+        ):
+            reject("validator_identity_incompatible")
+            continue
+        if not all(
+            re.fullmatch(r"[0-9a-f]{64}", str(identity.get(key) or ""))
+            for key in (
+                "prompt_content_hash",
+                "relevant_input_hash",
+                "retrieval_identity",
+            )
+        ):
+            reject("semantic_identity_missing")
+            continue
+
+        raw_protected_facts = prior_result.get("semantic_protected_facts")
+        if not isinstance(raw_protected_facts, dict):
+            reject("semantic_identity_missing")
+            continue
+        protected_facts = ProtectedFactComparison.from_payload(
+            raw_protected_facts.get("dimensions"),
+            proposition_status=str(
+                raw_protected_facts.get("proposition_status") or "unknown"
+            ),
+        )
+        reused_results.append(
+            ClaimSemanticGroundingResult(
+                schema_version="1.0",
+                outcome="entailed",
+                reason=str(prior_result.get("semantic_reason") or ""),
+                identity=ClaimSemanticValidationIdentity(
+                    schema_version="1.1",
+                    claim_id=str(identity["claim_id"]),
+                    claim_text_hash=str(identity["claim_text_hash"]),
+                    evidence_ids=list(identity["evidence_ids"]),
+                    evidence_hash=str(identity["evidence_hash"]),
+                    source_identity=str(identity["source_identity"]),
+                    prompt_family=str(identity["prompt_family"]),
+                    prompt_content_hash=str(identity["prompt_content_hash"]),
+                    execution_identity=str(identity["execution_identity"]),
+                    validator_version=str(identity["validator_version"]),
+                    model_provider=str(identity["model_provider"]),
+                    model_name=str(identity["model_name"]),
+                    configuration_policy_identity=str(
+                        identity["configuration_policy_identity"]
+                    ),
+                    relevant_input_hash=str(identity["relevant_input_hash"]),
+                    retrieval_identity=str(identity["retrieval_identity"]),
+                ),
+                protected_facts=protected_facts,
+                disagreement="",
+            )
+        )
+        reused_ids.add(claim_id)
+
+    if reused_results:
+        package = apply_retained_claim_semantic_results(
+            package,
+            [
+                semantic_input
+                for semantic_input in semantic_inputs
+                if semantic_input.candidate.claim_id in reused_ids
+            ],
+            reused_results,
+        )
+    remaining_inputs = [
+        semantic_input
+        for semantic_input in semantic_inputs
+        if semantic_input.candidate.claim_id not in reused_ids
+    ]
+    reused_count = len(reused_results)
+    telemetry: dict[str, object] = {
+        "total_candidate_claims": len(package.results),
+        "reused_validation_results": reused_count,
+        "newly_validated_claims": max(0, len(package.results) - reused_count),
+        "semantic_validation_calls_avoided": reused_count,
+        "reuse_fallback_reason_counts": fallback_reasons,
+    }
+    return package, remaining_inputs, telemetry
 
 
 def _source_index(
