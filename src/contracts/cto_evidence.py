@@ -1094,8 +1094,10 @@ def _comparison(
     )
 
 
-def parse_cto_evidence_run(payload: object) -> CTOEvidenceRun:
-    """Parse a strict declared-run manifest without accepting unknown fields."""
+def parse_cto_evidence_run(
+    payload: object, *, include_projection: bool = False
+) -> CTOEvidenceRun:
+    """Parse a declared run or its projected bundle representation."""
 
     item = _expect_mapping(
         payload,
@@ -1175,7 +1177,9 @@ def parse_cto_evidence_run(payload: object) -> CTOEvidenceRun:
             _criterion(part)
             for part in _expect_list(item.get("criteria", []), field_name="criteria")
         ),
-        comparison=_comparison(item.get("comparison")),
+        comparison=_comparison(
+            item.get("comparison"), include_projection=include_projection
+        ),
     )
     validate_cto_evidence_run(run)
     return run
@@ -1630,7 +1634,11 @@ def parse_cto_evidence_bundle(payload: object) -> CTOEvidenceBundle:
         generated_at_utc=_required_text(item, "generated_at_utc"),
         collector_repository_sha=_required_text(item, "collector_repository_sha"),
         mode=_required_text(item, "mode"),  # type: ignore[arg-type]
-        run=parse_cto_evidence_run(raw_run) if raw_run is not None else None,
+        run=(
+            parse_cto_evidence_run(raw_run, include_projection=True)
+            if raw_run is not None
+            else None
+        ),
         run_evidence=_run_evidence(raw_evidence) if raw_evidence is not None else None,
         historical_state=_historical_state(item.get("historical_state")),
         source_references=tuple(

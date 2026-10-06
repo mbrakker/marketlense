@@ -480,6 +480,7 @@ def test_comparison_records_delta_without_causal_claim(tmp_path: Path) -> None:
     assert projected.causal_attribution == "not_established"
     assert projected.metric_deltas[0].value == -3.0
     assert projected.limitations == ("Workload variance remains possible.",)
+    assert parse_cto_evidence_bundle(cto_evidence_bundle_payload(bundle)) == bundle
 
 
 def test_missing_source_is_incomplete_and_hash_mismatch_is_invalid(
