@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 from collections.abc import Callable, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, wait
 from copy import deepcopy
+from threading import Lock
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from src.contracts.artifact_generation import ArtifactRenderTask
@@ -80,6 +83,10 @@ ArtifactTaskRenderer = Callable[[ArtifactRenderTask], Dict[str, Any]]
 ArtifactStepExecutor = Callable[
     [Sequence[ArtifactRenderTask], ArtifactTaskRenderer, RunContext, str],
     Dict[str, Dict[str, Any]],
+]
+ArtifactTaskSubmitter = Callable[
+    [ArtifactRenderTask, ArtifactTaskRenderer, RunContext, str],
+    Future[Dict[str, Any]],
 ]
 
 
@@ -172,6 +179,48 @@ def _execute_artifact_tasks_serial(
     return {task.step_name: render_task(task) for task in tasks}
 
 
+def _collect_completed_artifact_tasks(
+    pending: Dict[str, Future],
+    completed: Dict[str, Dict[str, Any]],
+    *,
+    step_executor: Any,
+) -> List[str]:
+    """Collect one completion wave and cancel queued work on its first error."""
+    if not pending:
+        return []
+    done, _ = wait(tuple(pending.values()), return_when=FIRST_COMPLETED)
+    order = {
+        name: index
+        for index, name in enumerate(
+            (
+                "summary",
+                "insights_candidates",
+                "quotes",
+                "insights_final",
+                "expert_comment",
+                "linkedin_post",
+                "cover_semantics",
+            )
+        )
+    }
+    names = sorted(
+        (name for name, future in pending.items() if future in done),
+        key=lambda name: (order.get(name, len(order)), name),
+    )
+    for name in names:
+        future = pending.pop(name)
+        try:
+            completed[name] = future.result()
+        except Exception:
+            for queued in pending.values():
+                queued.cancel()
+            cancel_pending = getattr(step_executor, "cancel_pending", None)
+            if callable(cancel_pending):
+                cancel_pending()
+            raise
+    return names
+
+
 def _summary_prioritized_evidence_json(
     evidence_packs: Dict[str, Any], editorial_plan: Dict[str, Any]
 ) -> str:
@@ -257,6 +306,7 @@ def generate_artifacts(
         openai_client,
         scope="artifact_generator",
     )
+    artifact_generation_started_at = perf_counter()
     logger.info(
         log_event(
             ctx,
@@ -401,6 +451,15 @@ def generate_artifacts(
         "execution_time_ms": 0,
         "family_usage": {},
     }
+    family_state_lock = Lock()
+
+    def update_family_reuse(namespace: str, **fields: object) -> None:
+        with family_state_lock:
+            family_reuse[namespace].update(fields)
+
+    def record_family_output(namespace: str, payload: object) -> None:
+        with family_state_lock:
+            family_outputs[namespace] = payload
 
     def render_task(task: ArtifactRenderTask) -> Dict[str, Any]:
         payload_validator = None
@@ -440,6 +499,11 @@ def generate_artifacts(
             def payload_validator(payload: Dict[str, Any]) -> None:
                 validate_soft_copy_provenance_references(payload, task.ctx)
 
+        elif task.step_name == "cover_semantics":
+
+            def payload_validator(payload: Dict[str, Any]) -> None:
+                _validate_cover_semantics(payload.get("cover_semantics"), ctx=task.ctx)
+
         return _render_insights_candidates_or_defer_to_fallback(
             task,
             lambda current_task: resolve_or_render_family(
@@ -447,6 +511,11 @@ def generate_artifacts(
                 variables=current_task.variables,
                 ctx=current_task.ctx,
                 payload_validator=payload_validator,
+                repair_namespace=(
+                    "report_vs/artifacts/cover_semantics_repair"
+                    if current_task.step_name == "cover_semantics"
+                    else ""
+                ),
             ),
         )
 
@@ -503,11 +572,12 @@ def generate_artifacts(
         )
         model_provider = str(identity["model_provider"])
         model_policy_namespace = str(identity["model_policy_namespace"])
-        family_reuse[namespace] = identity
-        producing_prompt_identities[namespace] = dict(identity)
-        requested = family_reuse_telemetry["requested_families"]
-        assert isinstance(requested, list)
-        requested.append(namespace)
+        with family_state_lock:
+            family_reuse[namespace] = identity
+            producing_prompt_identities[namespace] = dict(identity)
+            requested = family_reuse_telemetry["requested_families"]
+            assert isinstance(requested, list)
+            requested.append(namespace)
         if source_identity_id and vector_provenance_verified:
             reuse = prompt_family_reuse_reader(
                 PromptFamilyReuseRequest(
@@ -549,36 +619,41 @@ def generate_artifacts(
             and retained_soft_copy is None
         ):
             reuse = None
-            family_reuse[namespace]["soft_copy_reuse_rejected"] = True
-            family_reuse[namespace]["soft_copy_reuse_rejection_reason"] = (
-                "soft_copy_provenance_missing"
+            update_family_reuse(
+                namespace,
+                soft_copy_reuse_rejected=True,
+                soft_copy_reuse_rejection_reason="soft_copy_provenance_missing",
             )
         if reuse is not None and reuse.reusable:
-            reused = family_reuse_telemetry["reused_families"]
-            assert isinstance(reused, list)
-            reused.append(namespace)
-            family_reuse_telemetry["model_calls_avoided"] = (
-                int(family_reuse_telemetry["model_calls_avoided"]) + 1
-            )
-            family_reuse[namespace]["decision"] = "reused"
-            family_reuse[namespace]["artifact_id"] = reuse.artifact_id
-            family_reuse[namespace]["output_hash"] = reuse.output_hash
+            with family_state_lock:
+                reused = family_reuse_telemetry["reused_families"]
+                assert isinstance(reused, list)
+                reused.append(namespace)
+                family_reuse_telemetry["model_calls_avoided"] = (
+                    int(family_reuse_telemetry["model_calls_avoided"]) + 1
+                )
+                family_reuse[namespace].update(
+                    decision="reused",
+                    artifact_id=reuse.artifact_id,
+                    output_hash=reuse.output_hash,
+                )
             public_output = (
                 retained_soft_copy.public_output
                 if retained_soft_copy is not None
                 else reuse.output_payload
             )
-            family_outputs[namespace] = reuse.output_payload
+            record_family_output(namespace, reuse.output_payload)
             if soft_copy_family and retained_soft_copy is not None:
-                soft_copy_claim_bindings[soft_copy_family] = [
-                    dict(binding) for binding in retained_soft_copy.claim_provenance
-                ]
-                soft_copy_prompt_identities[soft_copy_family] = dict(
-                    retained_soft_copy.producing_prompt_identity
-                )
-                soft_copy_generation_attempts[soft_copy_family] = (
-                    retained_soft_copy.generation_attempt
-                )
+                with family_state_lock:
+                    soft_copy_claim_bindings[soft_copy_family] = [
+                        dict(binding) for binding in retained_soft_copy.claim_provenance
+                    ]
+                    soft_copy_prompt_identities[soft_copy_family] = dict(
+                        retained_soft_copy.producing_prompt_identity
+                    )
+                    soft_copy_generation_attempts[soft_copy_family] = (
+                        retained_soft_copy.generation_attempt
+                    )
             logger.info(
                 log_event(
                     ctx,
@@ -605,20 +680,22 @@ def generate_artifacts(
                 else "source_identity_missing"
             )
         )
-        regenerated = family_reuse_telemetry["regenerated_families"]
-        reasons = family_reuse_telemetry["regeneration_reasons"]
-        assert isinstance(regenerated, list) and isinstance(reasons, dict)
-        regenerated.append(namespace)
-        reasons[namespace] = reason
+        with family_state_lock:
+            regenerated = family_reuse_telemetry["regenerated_families"]
+            reasons = family_reuse_telemetry["regeneration_reasons"]
+            assert isinstance(regenerated, list) and isinstance(reasons, dict)
+            regenerated.append(namespace)
+            reasons[namespace] = reason
         input_tokens = estimate_text_tokens(
             f"{prepared.system_prompt}\n{prepared.user_prompt}"
         )
-        family_reuse[namespace]["decision"] = "regenerated"
-        family_reuse[namespace]["regeneration_reason"] = reason
+        update_family_reuse(
+            namespace, decision="regenerated", regeneration_reason=reason
+        )
 
         def observe_response(response, elapsed_ms: float, mode: str) -> None:
             if mode != "primary":
-                family_reuse[namespace]["recovery_attempted"] = True
+                update_family_reuse(namespace, recovery_attempted=True)
             actual_input = int(getattr(response, "input_tokens", 0) or 0)
             actual_output = int(getattr(response, "output_tokens", 0) or 0)
             tool_calls = int(getattr(response, "tool_calls", 0) or 0)
@@ -629,42 +706,28 @@ def generate_artifacts(
                 tool_calls,
                 settings.model_pricing,
             )
-            usage = family_reuse_telemetry["family_usage"]
-            assert isinstance(usage, dict)
-            family_usage = usage.setdefault(
-                namespace,
-                {
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "estimated_cost_usd": 0.0,
-                    "actual_model_calls": 0,
-                    "execution_time_ms": 0,
-                    "expected_input_tokens": input_tokens,
-                },
-            )
-            assert isinstance(family_usage, dict)
-            family_usage["input_tokens"] += actual_input
-            family_usage["output_tokens"] += actual_output
-            family_usage["estimated_cost_usd"] = round(
-                float(family_usage["estimated_cost_usd"]) + cost, 8
-            )
-            family_usage["actual_model_calls"] += 1
-            family_usage["execution_time_ms"] += max(0, round(elapsed_ms))
-            family_reuse_telemetry["actual_model_calls"] = (
-                int(family_reuse_telemetry["actual_model_calls"]) + 1
-            )
-            family_reuse_telemetry["input_tokens"] = (
-                int(family_reuse_telemetry["input_tokens"]) + actual_input
-            )
-            family_reuse_telemetry["output_tokens"] = (
-                int(family_reuse_telemetry["output_tokens"]) + actual_output
-            )
-            family_reuse_telemetry["estimated_cost_usd"] = round(
-                float(family_reuse_telemetry["estimated_cost_usd"]) + cost, 8
-            )
-            family_reuse_telemetry["execution_time_ms"] = int(
-                family_reuse_telemetry["execution_time_ms"]
-            ) + max(0, round(elapsed_ms))
+            with family_state_lock:
+                usage = family_reuse_telemetry["family_usage"]
+                assert isinstance(usage, dict)
+                family_usage = usage.setdefault(
+                    namespace,
+                    {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "estimated_cost_usd": 0.0,
+                        "actual_model_calls": 0,
+                        "execution_time_ms": 0,
+                        "expected_input_tokens": input_tokens,
+                    },
+                )
+                assert isinstance(family_usage, dict)
+                family_usage["input_tokens"] += actual_input
+                family_usage["output_tokens"] += actual_output
+                family_usage["estimated_cost_usd"] = round(
+                    float(family_usage["estimated_cost_usd"]) + cost, 8
+                )
+                family_usage["actual_model_calls"] += 1
+                family_usage["execution_time_ms"] += max(0, round(elapsed_ms))
 
         rendered = render_artifact_json_model(
             namespace=namespace,
@@ -684,25 +747,30 @@ def generate_artifacts(
             prepared_prompt_bundle=prepared,
             response_observer=observe_response,
         )
-        family_outputs[namespace] = rendered.get(root_key)
+        rendered_family_output: object = rendered.get(root_key)
         if soft_copy_family:
             bindings = rendered.get("_soft_copy_claim_bindings")
-            soft_copy_claim_bindings[soft_copy_family] = (
+            claim_bindings = (
                 [dict(item) for item in bindings if isinstance(item, dict)]
                 if isinstance(bindings, list)
                 else []
             )
-            soft_copy_prompt_identities[soft_copy_family] = dict(identity)
-            soft_copy_generation_attempts[soft_copy_family] = max(
+            prompt_identity = dict(identity)
+            generation_attempt = max(
                 1, int(rendered.get("_soft_copy_generation_attempt") or 1)
             )
-            family_outputs[namespace] = SoftCopyPromptFamilyMaterialization(
+            rendered_family_output = SoftCopyPromptFamilyMaterialization(
                 schema_version=SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
                 public_output=rendered.get(root_key),
-                claim_provenance=soft_copy_claim_bindings[soft_copy_family],
-                producing_prompt_identity=soft_copy_prompt_identities[soft_copy_family],
-                generation_attempt=soft_copy_generation_attempts[soft_copy_family],
+                claim_provenance=claim_bindings,
+                producing_prompt_identity=prompt_identity,
+                generation_attempt=generation_attempt,
             ).to_payload()
+            with family_state_lock:
+                soft_copy_claim_bindings[soft_copy_family] = claim_bindings
+                soft_copy_prompt_identities[soft_copy_family] = prompt_identity
+                soft_copy_generation_attempts[soft_copy_family] = generation_attempt
+        record_family_output(namespace, rendered_family_output)
         return rendered
 
     logger.info(
@@ -897,12 +965,47 @@ def generate_artifacts(
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:quotes"),
         ),
     ]
-    stage_one_results = step_executor(
-        stage_one_tasks,
-        render_task,
-        ctx,
-        "stage_one",
+    submit_artifact_task = cast(
+        Optional[ArtifactTaskSubmitter],
+        getattr(step_executor, "submit_task", None),
     )
+    dependency_dag_enabled = submit_artifact_task is not None
+    dag_worker_limit = max(1, int(getattr(step_executor, "max_workers", 1)))
+    pending_artifact_tasks: Dict[str, Future] = {}
+    completed_artifact_tasks: Dict[str, Dict[str, Any]] = {}
+    if dependency_dag_enabled:
+
+        def submit_dag_task(task: ArtifactRenderTask, batch_name: str) -> None:
+            assert submit_artifact_task is not None
+            future = submit_artifact_task(task, render_task, ctx, batch_name)
+            pending_artifact_tasks[task.step_name] = future
+
+        quote_task = stage_one_tasks[2]
+        quote_submitted = False
+        first_stage_tasks = (
+            stage_one_tasks if dag_worker_limit >= 3 else stage_one_tasks[:2]
+        )
+        for task in first_stage_tasks:
+            submit_dag_task(task, "stage_one")
+        quote_submitted = len(first_stage_tasks) == len(stage_one_tasks)
+        while "insights_candidates" not in completed_artifact_tasks:
+            _collect_completed_artifact_tasks(
+                pending_artifact_tasks,
+                completed_artifact_tasks,
+                step_executor=step_executor,
+            )
+        stage_one_results = {
+            name: completed_artifact_tasks[name]
+            for name in ("summary", "insights_candidates", "quotes")
+            if name in completed_artifact_tasks
+        }
+    else:
+        stage_one_results = step_executor(
+            stage_one_tasks,
+            render_task,
+            ctx,
+            "stage_one",
+        )
 
     summary = normalize_artifact_summary(
         stage_one_results.get("summary", {}).get("summary")
@@ -965,23 +1068,25 @@ def generate_artifacts(
                 },
             )
         )
-    quotes_final = normalize_artifact_quotes(
-        stage_one_results.get("quotes", {}).get("quotes_final")
-    )
-    if not quotes_final:
-        quotes_final = fallback_artifact_quotes_from_candidates(
-            safe_evidence.get("quote_candidates")
+    quotes_final: List[Dict[str, Any]] = []
+    if not dependency_dag_enabled:
+        quotes_final = normalize_artifact_quotes(
+            stage_one_results.get("quotes", {}).get("quotes_final")
         )
-        if quotes_final:
-            logger.info(
-                log_event(
-                    ctx,
-                    role="generator",
-                    event="artifact_quotes_completed_from_retained_candidates",
-                    module=logger.name,
-                    fields={"quote_count": len(quotes_final)},
-                )
+        if not quotes_final:
+            quotes_final = fallback_artifact_quotes_from_candidates(
+                safe_evidence.get("quote_candidates")
             )
+            if quotes_final:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="artifact_quotes_completed_from_retained_candidates",
+                        module=logger.name,
+                        fields={"quote_count": len(quotes_final)},
+                    )
+                )
 
     insights_final_vars = {
         **base_vars,
@@ -994,12 +1099,33 @@ def generate_artifacts(
         normalize_required_evidence_references(payload)
         validate_required_evidence_references(payload, insights_final_ctx)
 
-    insights_final_result = resolve_or_render_family(
-        namespace="report_vs/artifacts/insights_final",
-        variables=insights_final_vars,
-        ctx=insights_final_ctx,
-        payload_validator=validate_final_insight_references,
-    )
+    insights_final_result: Dict[str, Any]
+    if dependency_dag_enabled:
+        insights_final_task = ArtifactRenderTask(
+            schema_version="1.0",
+            step_name="insights_final",
+            namespace="report_vs/artifacts/insights_final",
+            variables=insights_final_vars,
+            ctx=insights_final_ctx,
+        )
+        submit_dag_task(insights_final_task, "insights_final")
+        if not quote_submitted:
+            submit_dag_task(quote_task, "stage_one")
+            quote_submitted = True
+        while "insights_final" not in completed_artifact_tasks:
+            _collect_completed_artifact_tasks(
+                pending_artifact_tasks,
+                completed_artifact_tasks,
+                step_executor=step_executor,
+            )
+        insights_final_result = completed_artifact_tasks["insights_final"]
+    else:
+        insights_final_result = resolve_or_render_family(
+            namespace="report_vs/artifacts/insights_final",
+            variables=insights_final_vars,
+            ctx=insights_final_ctx,
+            payload_validator=validate_final_insight_references,
+        )
     insights_final = select_artifact_insights(
         final_insights=normalize_artifact_insights(
             insights_final_result.get("insights_final"), prefix="insight"
@@ -1007,34 +1133,169 @@ def generate_artifacts(
         candidate_insights=insights_candidates,
         editorial_plan=editorial_plan,
     )
-    cover_semantics_variables = {
-        **base_vars,
-        "summary_json": _dump_json(summary),
-        "insights_final_json": _dump_json(insights_final),
-        "categories_json": _dump_json(categories or []),
-        "region": _s(
-            safe_doc_map.get("region") or safe_doc_map.get("geography")
-        ).strip(),
-        "covered_period": _s(
-            safe_doc_map.get("covered_period")
-            or safe_doc_map.get("time_period")
-            or safe_doc_map.get("period")
-        ).strip(),
-    }
+    cover_insights_final_json = _dump_json(insights_final)
     cover_semantics_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics")
-    cover_semantics_result = resolve_or_render_family(
-        namespace="report_vs/artifacts/cover_semantics",
-        variables=cover_semantics_variables,
-        ctx=cover_semantics_ctx,
-        payload_validator=lambda payload: _validate_cover_semantics(
-            payload.get("cover_semantics"), ctx=cover_semantics_ctx
-        ),
-        repair_namespace="report_vs/artifacts/cover_semantics_repair",
-    )
-    cover_semantics = _validate_cover_semantics(
-        cover_semantics_result.get("cover_semantics"),
-        ctx=ctx,
-    )
+
+    def make_cover_semantics_task(summary_value: Dict[str, Any]) -> ArtifactRenderTask:
+        return ArtifactRenderTask(
+            schema_version="1.0",
+            step_name="cover_semantics",
+            namespace="report_vs/artifacts/cover_semantics",
+            variables={
+                **base_vars,
+                "summary_json": _dump_json(summary_value),
+                "insights_final_json": cover_insights_final_json,
+                "categories_json": _dump_json(categories or []),
+                "region": _s(
+                    safe_doc_map.get("region") or safe_doc_map.get("geography")
+                ).strip(),
+                "covered_period": _s(
+                    safe_doc_map.get("covered_period")
+                    or safe_doc_map.get("time_period")
+                    or safe_doc_map.get("period")
+                ).strip(),
+            },
+            ctx=cover_semantics_ctx,
+        )
+
+    cover_semantics_result: Dict[str, Any]
+    distribution_results: Dict[str, Dict[str, Any]] = {}
+    if dependency_dag_enabled:
+        # Soft-copy families consume a fully canonical, bound snapshot.  Work
+        # on local copies so the final package's normalization remains one
+        # deterministic pass over all artifact families.
+        distribution_candidates = deepcopy(insights_candidates)
+        distribution_insights = deepcopy(insights_final)
+        normalize_artifact_evidence_ids(
+            summary={},
+            insights_candidates=distribution_candidates,
+            insights_final=distribution_insights,
+            quotes_final=[],
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+            editorial_plan=editorial_plan,
+        )
+        bind_artifact_evidence_spans(
+            summary={},
+            insights_candidates=distribution_candidates,
+            insights_final=distribution_insights,
+            quotes_final=[],
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+        )
+        preserve_public_source_displays(
+            summary={},
+            insights_final=distribution_insights,
+            expert_comment="",
+            linkedin_post="",
+        )
+        metric_spine = derive_metric_spine_from_insights(
+            distribution_insights,
+            editorial_plan=editorial_plan,
+        )
+        metric_spine_json = _dump_json(metric_spine)
+        context_anchor_evidence_ids.clear()
+        context_anchor_evidence_ids.update(
+            soft_copy_context_evidence_anchors(
+                insights_final=distribution_insights,
+                metric_spine=metric_spine,
+            )
+        )
+        expert_synthesis_context = build_expert_synthesis_context(
+            editorial_plan=editorial_plan,
+            insights_final=distribution_insights,
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+        )
+        distribution_tasks = [
+            ArtifactRenderTask(
+                schema_version="1.0",
+                step_name="expert_comment",
+                namespace="report_vs/artifacts/expert_comment",
+                variables={
+                    "editorial_plan_json": editorial_plan_json,
+                    "expert_synthesis_context_json": _dump_json(
+                        expert_synthesis_context
+                    ),
+                    "metric_spine_json": metric_spine_json,
+                    "expert_domain": expert_domain,
+                },
+                ctx=child_context(ctx, task_id=f"{ctx.task_id}:expert_comment"),
+            ),
+            ArtifactRenderTask(
+                schema_version="1.0",
+                step_name="linkedin_post",
+                namespace="report_vs/artifacts/linkedin_post",
+                variables={
+                    "editorial_plan_json": editorial_plan_json,
+                    "doc_map_json": base_vars["doc_map_json"],
+                    "insights_final_json": _dump_json(distribution_insights),
+                    "metric_spine_json": metric_spine_json,
+                },
+                ctx=child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post"),
+            ),
+        ]
+        for task in distribution_tasks:
+            submit_dag_task(task, "distribution")
+
+        if "summary" in completed_artifact_tasks:
+            summary = normalize_artifact_summary(
+                completed_artifact_tasks["summary"].get("summary")
+            )
+        else:
+            while "summary" not in completed_artifact_tasks:
+                _collect_completed_artifact_tasks(
+                    pending_artifact_tasks,
+                    completed_artifact_tasks,
+                    step_executor=step_executor,
+                )
+            summary = normalize_artifact_summary(
+                completed_artifact_tasks["summary"].get("summary")
+            )
+        submit_dag_task(make_cover_semantics_task(summary), "cover_semantics")
+
+        while pending_artifact_tasks:
+            _collect_completed_artifact_tasks(
+                pending_artifact_tasks,
+                completed_artifact_tasks,
+                step_executor=step_executor,
+            )
+        stage_one_results = {
+            name: completed_artifact_tasks[name]
+            for name in ("summary", "insights_candidates", "quotes")
+        }
+        quotes_final = normalize_artifact_quotes(
+            stage_one_results.get("quotes", {}).get("quotes_final")
+        )
+        if not quotes_final:
+            quotes_final = fallback_artifact_quotes_from_candidates(
+                safe_evidence.get("quote_candidates")
+            )
+            if quotes_final:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="artifact_quotes_completed_from_retained_candidates",
+                        module=logger.name,
+                        fields={"quote_count": len(quotes_final)},
+                    )
+                )
+        distribution_results = {
+            name: completed_artifact_tasks[name]
+            for name in ("expert_comment", "linkedin_post")
+        }
+        cover_semantics_result = completed_artifact_tasks["cover_semantics"]
+        cover_semantics = _validate_cover_semantics(
+            cover_semantics_result.get("cover_semantics"),
+            ctx=ctx,
+        )
+    else:
+        cover_semantics_result = render_task(make_cover_semantics_task(summary))
+        cover_semantics = _validate_cover_semantics(
+            cover_semantics_result.get("cover_semantics"),
+            ctx=ctx,
+        )
     evidence_id_stats = normalize_artifact_evidence_ids(
         summary=summary,
         insights_candidates=insights_candidates,
@@ -1084,61 +1345,59 @@ def generate_artifacts(
         expert_comment="",
         linkedin_post="",
     )
-    metric_spine = derive_metric_spine_from_insights(
-        insights_final,
-        editorial_plan=editorial_plan,
-    )
-    metric_spine_json = _dump_json(metric_spine)
-    context_anchor_evidence_ids.clear()
-    context_anchor_evidence_ids.update(
-        soft_copy_context_evidence_anchors(
-            insights_final=insights_final,
-            metric_spine=metric_spine,
+    if not dependency_dag_enabled:
+        metric_spine = derive_metric_spine_from_insights(
+            insights_final,
+            editorial_plan=editorial_plan,
         )
-    )
-    expert_synthesis_context = build_expert_synthesis_context(
-        editorial_plan=editorial_plan,
-        insights_final=insights_final,
-        doc_map=safe_doc_map,
-        evidence_packs=safe_evidence,
-    )
+        metric_spine_json = _dump_json(metric_spine)
+        context_anchor_evidence_ids.clear()
+        context_anchor_evidence_ids.update(
+            soft_copy_context_evidence_anchors(
+                insights_final=insights_final,
+                metric_spine=metric_spine,
+            )
+        )
+        expert_synthesis_context = build_expert_synthesis_context(
+            editorial_plan=editorial_plan,
+            insights_final=insights_final,
+            doc_map=safe_doc_map,
+            evidence_packs=safe_evidence,
+        )
 
-    expert_ctx = child_context(ctx, task_id=f"{ctx.task_id}:expert_comment")
-    expert_vars = {
-        "editorial_plan_json": editorial_plan_json,
-        "expert_synthesis_context_json": _dump_json(expert_synthesis_context),
-        "metric_spine_json": metric_spine_json,
-        "expert_domain": expert_domain,
-    }
-
-    linkedin_ctx = child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post")
-    linkedin_vars = {
-        "editorial_plan_json": editorial_plan_json,
-        "doc_map_json": base_vars["doc_map_json"],
-        "insights_final_json": _dump_json(insights_final),
-        "metric_spine_json": metric_spine_json,
-    }
-    distribution_results = step_executor(
-        [
-            ArtifactRenderTask(
-                schema_version="1.0",
-                step_name="expert_comment",
-                namespace="report_vs/artifacts/expert_comment",
-                variables=expert_vars,
-                ctx=expert_ctx,
-            ),
-            ArtifactRenderTask(
-                schema_version="1.0",
-                step_name="linkedin_post",
-                namespace="report_vs/artifacts/linkedin_post",
-                variables=linkedin_vars,
-                ctx=linkedin_ctx,
-            ),
-        ],
-        render_task,
-        ctx,
-        "distribution",
-    )
+        distribution_results = step_executor(
+            [
+                ArtifactRenderTask(
+                    schema_version="1.0",
+                    step_name="expert_comment",
+                    namespace="report_vs/artifacts/expert_comment",
+                    variables={
+                        "editorial_plan_json": editorial_plan_json,
+                        "expert_synthesis_context_json": _dump_json(
+                            expert_synthesis_context
+                        ),
+                        "metric_spine_json": metric_spine_json,
+                        "expert_domain": expert_domain,
+                    },
+                    ctx=child_context(ctx, task_id=f"{ctx.task_id}:expert_comment"),
+                ),
+                ArtifactRenderTask(
+                    schema_version="1.0",
+                    step_name="linkedin_post",
+                    namespace="report_vs/artifacts/linkedin_post",
+                    variables={
+                        "editorial_plan_json": editorial_plan_json,
+                        "doc_map_json": base_vars["doc_map_json"],
+                        "insights_final_json": _dump_json(insights_final),
+                        "metric_spine_json": metric_spine_json,
+                    },
+                    ctx=child_context(ctx, task_id=f"{ctx.task_id}:linkedin_post"),
+                ),
+            ],
+            render_task,
+            ctx,
+            "distribution",
+        )
     expert_result = distribution_results.get("expert_comment", {})
     linkedin_result = distribution_results.get("linkedin_post", {})
     expert_comment = _s(expert_result.get("expert_comment"))
@@ -1161,6 +1420,76 @@ def generate_artifacts(
         expert_comment=expert_comment,
         linkedin_post=linkedin_post,
     )
+
+    family_order = tuple(_ARTIFACT_FAMILY_ROOTS)
+    family_reuse = {
+        family: family_reuse[family]
+        for family in family_order
+        if family in family_reuse
+    }
+    producing_prompt_identities = {
+        family: producing_prompt_identities[family]
+        for family in family_order
+        if family in producing_prompt_identities
+    }
+    family_outputs = {
+        family: family_outputs[family]
+        for family in family_order
+        if family in family_outputs
+    }
+    family_usage = family_reuse_telemetry["family_usage"]
+    assert isinstance(family_usage, dict)
+    family_reuse_telemetry["family_usage"] = {
+        family: family_usage[family]
+        for family in family_order
+        if family in family_usage
+    }
+    family_reuse_telemetry["requested_families"] = sorted(
+        family_reuse_telemetry["requested_families"]
+    )
+    family_reuse_telemetry["reused_families"] = sorted(
+        family_reuse_telemetry["reused_families"]
+    )
+    family_reuse_telemetry["regenerated_families"] = sorted(
+        family_reuse_telemetry["regenerated_families"]
+    )
+    reasons = family_reuse_telemetry["regeneration_reasons"]
+    assert isinstance(reasons, dict)
+    family_reuse_telemetry["regeneration_reasons"] = dict(sorted(reasons.items()))
+    usage_values = list(family_reuse_telemetry["family_usage"].values())
+    family_reuse_telemetry["model_calls_avoided"] = len(
+        family_reuse_telemetry["reused_families"]
+    )
+    family_reuse_telemetry["actual_model_calls"] = sum(
+        int(value["actual_model_calls"]) for value in usage_values
+    )
+    family_reuse_telemetry["input_tokens"] = sum(
+        int(value["input_tokens"]) for value in usage_values
+    )
+    family_reuse_telemetry["output_tokens"] = sum(
+        int(value["output_tokens"]) for value in usage_values
+    )
+    family_reuse_telemetry["estimated_cost_usd"] = round(
+        sum(float(value["estimated_cost_usd"]) for value in usage_values), 8
+    )
+    family_reuse_telemetry["execution_time_ms"] = sum(
+        int(value["execution_time_ms"]) for value in usage_values
+    )
+    soft_copy_claim_bindings = {
+        family: soft_copy_claim_bindings[family]
+        for family in _SOFT_COPY_NAMESPACES.values()
+        if family in soft_copy_claim_bindings
+    }
+    soft_copy_prompt_identities = {
+        family: soft_copy_prompt_identities[family]
+        for family in _SOFT_COPY_NAMESPACES.values()
+        if family in soft_copy_prompt_identities
+    }
+    soft_copy_generation_attempts = {
+        family: soft_copy_generation_attempts[family]
+        for family in _SOFT_COPY_NAMESPACES.values()
+        if family in soft_copy_generation_attempts
+    }
 
     artifacts_payload = assemble_artifacts_payload(
         report_id=report_id,
@@ -1186,19 +1515,7 @@ def generate_artifacts(
             "family_reuse": family_reuse,
             "producing_prompt_identities": producing_prompt_identities,
             "family_outputs": family_outputs,
-            "family_reuse_telemetry": {
-                **family_reuse_telemetry,
-                "requested_families": sorted(
-                    family_reuse_telemetry["requested_families"]
-                ),
-                "reused_families": sorted(family_reuse_telemetry["reused_families"]),
-                "regenerated_families": sorted(
-                    family_reuse_telemetry["regenerated_families"]
-                ),
-                "regeneration_reasons": dict(
-                    sorted(family_reuse_telemetry["regeneration_reasons"].items())
-                ),
-            },
+            "family_reuse_telemetry": family_reuse_telemetry,
         },
         soft_copy_claim_bindings=soft_copy_claim_bindings,
         soft_copy_prompt_identities=soft_copy_prompt_identities,
@@ -1221,6 +1538,10 @@ def generate_artifacts(
             module=logger.name,
             fields={
                 "report_id": report_id,
+                "generation_duration_ms": round(
+                    (perf_counter() - artifact_generation_started_at) * 1000,
+                    3,
+                ),
                 "topics": len(toc_topics),
                 "toc_entries": len(toc_bundle["toc_entries"]),
                 "insight_candidates": len(insights_candidates),

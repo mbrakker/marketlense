@@ -7,7 +7,8 @@ public orchestrator decides when artifact generation runs.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from threading import Lock
 from typing import Any, Dict
 
 from src.contracts.artifact_generation import ArtifactRenderTask
@@ -23,6 +24,111 @@ __all__ = [
 
 
 ArtifactTaskRenderer = Callable[[ArtifactRenderTask], Dict[str, Any]]
+
+
+class ArtifactStepTaskScheduler:
+    """Run dependency-ready artifact families on one bounded report pool."""
+
+    def __init__(self, settings) -> None:
+        self._settings = settings
+        self.max_workers, self.configured_workers, self.global_max = (
+            _artifact_batch_workers(settings, step_count=8)
+        )
+        self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
+        self._lock = Lock()
+        self._futures: list[Future] = []
+
+    def __call__(
+        self,
+        tasks: Sequence[ArtifactRenderTask],
+        render_task: ArtifactTaskRenderer,
+        ctx,
+        batch_name: str,
+    ) -> Dict[str, Dict[str, Any]]:
+        """Keep the original blocking batch interface for existing callers."""
+        return _execute_artifact_step_batch(
+            self._settings, tasks, render_task, ctx, batch_name
+        )
+
+    def submit_task(
+        self,
+        task: ArtifactRenderTask,
+        render_task: ArtifactTaskRenderer,
+        ctx,
+        batch_name: str,
+    ) -> Future[Dict[str, Any]]:
+        future = self._executor.submit(
+            self._render_task, task, render_task, ctx, batch_name
+        )
+        with self._lock:
+            self._futures.append(future)
+        return future
+
+    def cancel_pending(self) -> None:
+        with self._lock:
+            futures = tuple(self._futures)
+        for future in futures:
+            future.cancel()
+
+    def shutdown(self, *, wait: bool = True, cancel_futures: bool = True) -> None:
+        self._executor.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+    def __enter__(self) -> ArtifactStepTaskScheduler:
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        del exc_type, exc, traceback
+        self.shutdown()
+
+    @staticmethod
+    def _render_task(
+        task: ArtifactRenderTask,
+        render_task: ArtifactTaskRenderer,
+        ctx,
+        batch_name: str,
+    ) -> Dict[str, Any]:
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="artifact_step_dag_task_start",
+                module=logger.name,
+                fields={
+                    "batch_name": batch_name,
+                    "step": task.step_name,
+                },
+            )
+        )
+        try:
+            result = render_task(task)
+        except Exception as exc:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="orchestrator",
+                    event="artifact_step_failed",
+                    module=logger.name,
+                    fields={
+                        "batch_name": batch_name,
+                        "step": task.step_name,
+                        "error": str(exc),
+                    },
+                )
+            )
+            raise
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="artifact_step_dag_task_complete",
+                module=logger.name,
+                fields={
+                    "batch_name": batch_name,
+                    "step": task.step_name,
+                },
+            )
+        )
+        return result
 
 
 def _execute_artifact_step_batch(

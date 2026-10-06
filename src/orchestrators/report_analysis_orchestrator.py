@@ -46,6 +46,7 @@ from src.generators.report_generation_shared import (
     resolve_doc_map_primary_contributor,
 )
 from src.orchestrators._report_analysis_orchestrator.artifact_batches import (
+    ArtifactStepTaskScheduler,
     ArtifactTaskRenderer,
     _artifact_batch_workers,
     _execute_artifact_step_batch,
@@ -503,9 +504,7 @@ def run_report_analysis(
         try:
             retrieval_observer_supported = (
                 "retrieval_results_observer"
-                in inspect.signature(
-                    dependencies.generate_evidence_packs
-                ).parameters
+                in inspect.signature(dependencies.generate_evidence_packs).parameters
             )
         except (TypeError, ValueError):
             retrieval_observer_supported = False
@@ -986,34 +985,25 @@ def run_report_analysis(
     artifacts_payload: dict | None = None
     try:
         artifact_ctx = child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:artifacts")
-        artifact_kwargs["artifact_step_executor"] = (
-            lambda tasks, render_task, batch_ctx, batch_name: (
-                _execute_artifact_step_batch(
-                    runtime.settings,
-                    tasks,
-                    render_task,
-                    batch_ctx,
-                    batch_name,
-                )
+        with ArtifactStepTaskScheduler(runtime.settings) as artifact_executor:
+            artifact_kwargs["artifact_step_executor"] = artifact_executor
+            artifacts_payload = dependencies.generate_artifacts(
+                report_id=runtime.file.file_id,
+                report_name=runtime.report_name,
+                doc_map=artifact_doc_map,
+                evidence_packs=packs,
+                settings=runtime.settings,
+                vector_store_id=vector_state.vector_store_id,
+                vector_store_content_hash=vector_store_content_hash,
+                source_status=source.text_status,
+                categories=category_assignment.category_labels,
+                category_ids=category_assignment.categories,
+                ctx=artifact_ctx,
+                md5=runtime.md5,
+                publisher_name=runtime.publisher_name,
+                source_url=runtime.source_url,
+                **artifact_kwargs,
             )
-        )
-        artifacts_payload = dependencies.generate_artifacts(
-            report_id=runtime.file.file_id,
-            report_name=runtime.report_name,
-            doc_map=artifact_doc_map,
-            evidence_packs=packs,
-            settings=runtime.settings,
-            vector_store_id=vector_state.vector_store_id,
-            vector_store_content_hash=vector_store_content_hash,
-            source_status=source.text_status,
-            categories=category_assignment.category_labels,
-            category_ids=category_assignment.categories,
-            ctx=artifact_ctx,
-            md5=runtime.md5,
-            publisher_name=runtime.publisher_name,
-            source_url=runtime.source_url,
-            **artifact_kwargs,
-        )
         mode_evidence_paths["artifacts"] = pack_paths(
             runtime.settings.output_dir,
             runtime.file.file_id,
