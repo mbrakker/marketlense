@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -422,8 +423,31 @@ def test_store_pack_round_trips_long_validation_candidate_under_long_root(
     run_context, tmp_path: Path
 ) -> None:
     pack_name = "validation_regen_candidate_3_retained_claim_validation_candidate"
-    output_dir = tmp_path / ("realistic-isolated-run-root-" + "r" * 45)
     report_slug = "long-report-slug-for-a-frozen-reliability-cohort-validation-run"
+    base_output_dir = tmp_path / "realistic-isolated-run-root"
+    hashed_slug = hashlib.sha256(report_slug.encode("utf-8")).hexdigest()[:12]
+    uncompacted_path = (
+        base_output_dir / hashed_slug / "report_analysis" / f"{pack_name}.json"
+    )
+    padding_length = max(
+        1, WINDOWS_MAX_PATH_LENGTH - len(str(uncompacted_path.resolve())) - 1
+    )
+    assert padding_length < 255
+    output_dir = base_output_dir / ("r" * padding_length)
+    uncompacted_path = (
+        output_dir / hashed_slug / "report_analysis" / f"{pack_name}.json"
+    )
+    compact_path = (
+        output_dir
+        / hashed_slug
+        / "report_analysis"
+        / f"{hashlib.sha256(pack_name.encode('utf-8')).hexdigest()[:12]}.json"
+    )
+    assert len(str(uncompacted_path.resolve())) >= WINDOWS_MAX_PATH_LENGTH
+    assert len(str(compact_path.resolve())) < WINDOWS_MAX_PATH_LENGTH
+    assert (
+        atomic_write_temp_path_length(compact_path) <= WINDOWS_SAFE_ATOMIC_PATH_LENGTH
+    )
     request = AnalysisPackPathRequest(
         schema_version="1.0",
         output_dir=str(output_dir),
