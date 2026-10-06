@@ -1,0 +1,289 @@
+{
+  "schema_version": "1.0",
+  "benchmark_id": "grounding-concurrency-proof-20261006",
+  "objective": "Complete one frozen-five validation run for the grounding-concurrency changes on exact current HEAD; decide whether to accept the optimization.",
+  "tested_head": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
+  "implementation_commits": [
+    {
+      "sha": "6328b931a1fa0cd79db9227287037969b16a7232",
+      "scope": "Grounding batch parallelism and shared process-level limiter"
+    },
+    {
+      "sha": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
+      "scope": "Bounded retryable validation recovery and provider error telemetry"
+    }
+  ],
+  "manifest": {
+    "path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "report_count": 5
+  },
+  "run": {
+    "started_at_utc": "2026-10-06T05:13:48.794+00:00",
+    "all_reports_terminal_at_utc": "2026-10-06T05:30:50.935+00:00",
+    "cohort_wall_seconds": 1022.162,
+    "runner_measurement": "time.monotonic from runner entry through all reports reaching terminal state",
+    "isolated_fresh_state": true,
+    "run_directory_label": "ias-first-attempt-es5fr6aa",
+    "actual_cohort_runs": 1,
+    "settings": {
+      "max_parallel_workers": 3,
+      "max_jobs_per_queue": 3,
+      "max_total_jobs": 60,
+      "max_runtime_seconds": 1200,
+      "validation_grounding_global_max_in_flight": 5,
+      "validation_grounding_global_min_interval_ms": 250,
+      "wordpress_publish_enabled": false
+    },
+    "command_template": "python -u <temporary-runner>/run_cohort.py --manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --runs-root <isolated-run-root>/runs --log-dir <isolated-run-root>/logs --max-duration 1200",
+    "wrapper_sha256": "74260a7079779382a685194556fb73823fd8a201049a3e941925518fb86d51fa",
+    "setup_note": "An initial wrapper invocation stopped at import before runner startup because its temporary script lacked the repository on sys.path. It produced no cohort or provider calls. The corrected wrapper ran the one cohort recorded here."
+  },
+  "evidence_files": {
+    "retention": "Raw run outputs remain in the isolated temporary run directory and are not committed; hashes identify the inspected evidence files.",
+    "runner_result_sha256": "941e9a8750fde830e7a983e9898eca46949bf3696ba0c883cdef6556c9d559c6",
+    "structured_log_sha256": "48a4f8259dcf2a1ecdda743aa697dfbeca28de915c36b8c92eb8c6902d17fcdb",
+    "workflow_database_sha256": "bd6571fee90fe8f7a00e84a69eeeaaa214cba0d02e4868e742756ce71db967d9",
+    "usage_database_sha256": "acfd6886afa4bffba5cc84585f27b841676513192d84da1fde694ae5ea303129",
+    "reports_database_sha256": "42c105ad5c6c836516ec04483e4d2860f285f682512cc459033f811dee1e71f0"
+  },
+  "baseline": {
+    "artifact": "docs/quality/frozen-five-report-analysis-repair-path-20261005.json",
+    "cohort_wall_seconds": 1266.361,
+    "report_analysis_execution_seconds_total": 2451.388,
+    "report_analysis_execution_seconds_max": 661.75,
+    "report_analysis_queue_wait_seconds_total": 1014,
+    "provider_calls": 193,
+    "estimated_cost_usd": 0.398352,
+    "grounding_calls_or_batches": 36,
+    "automatic_repairs": 3,
+    "validation_pass_count": 5,
+    "publication_readiness_pass_count": 5,
+    "unsupported_retained_claim_count": 0,
+    "unresolved_retained_claim_count": 0
+  },
+  "observed": {
+    "cohort_wall_seconds": 1022.162,
+    "report_analysis_execution_seconds_total": 1830.36,
+    "report_analysis_execution_seconds_max": 460.719,
+    "report_analysis_execution_seconds_median": 403.266,
+    "report_analysis_queue_wait_seconds_total": 901,
+    "report_analysis_attempt_count": 5,
+    "per_report_wall_seconds": [
+      {
+        "publisher": "Adjust",
+        "report_id": "cohort-b638414df0b1fccea1cd",
+        "seconds": 587.182
+      },
+      {
+        "publisher": "Activate",
+        "report_id": "cohort-cbb6e7df67412186b8bc",
+        "seconds": 754.204
+      },
+      {
+        "publisher": "Capgemini Research Institute",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "seconds": 730.383
+      },
+      {
+        "publisher": "Reuters Institute",
+        "report_id": "cohort-4b763ae2286ca69fe8ac",
+        "seconds": 885.296
+      },
+      {
+        "publisher": "KPMG",
+        "report_id": "cohort-2acb4a56e14add5d7717",
+        "seconds": 1009.687
+      }
+    ],
+    "per_report_wall_measurement": "First source_ingest enqueue through the terminal workflow job effective completion; includes queue wait.",
+    "grounding_calls_or_batches": 28,
+    "grounding_retained_claim_total": 100,
+    "grounding_claims_per_batch": [
+      {
+        "publisher": "Adjust",
+        "retained_claims": 19,
+        "public_items": 35,
+        "batch_claim_counts": [4, 4, 4, 4, 3]
+      },
+      {
+        "publisher": "Activate",
+        "retained_claims": 15,
+        "public_items": 38,
+        "batch_claim_counts": [4, 4, 4, 3, 0]
+      },
+      {
+        "publisher": "Capgemini Research Institute",
+        "retained_claims": 21,
+        "public_items": 30,
+        "batch_claim_counts": [4, 4, 4, 4, 4, 1]
+      },
+      {
+        "publisher": "Reuters Institute",
+        "retained_claims": 23,
+        "public_items": 37,
+        "batch_claim_counts": [4, 4, 4, 4, 4, 3]
+      },
+      {
+        "publisher": "KPMG",
+        "retained_claims": 22,
+        "public_items": 29,
+        "batch_claim_counts": [4, 4, 4, 4, 4, 2]
+      }
+    ],
+    "grounding_claim_batch_method": "Derived from each grounding_batches_planned event and the observed code-owned limit of four retained claims per batch; public-item batching can create a trailing batch with zero retained claims.",
+    "grounding_limiter": {
+      "implementation_scope": "One process-level limiter keyed validation:grounding and shared across provider operations for grounding tasks.",
+      "configured_max_in_flight": 5,
+      "maximum_observed_process_wide_in_flight": 5,
+      "provider_call_started_events": 28,
+      "provider_call_finished_events": 28,
+      "unique_started_batch_tasks": 28,
+      "unique_finished_batch_tasks": 28,
+      "successful_finished_calls": 28,
+      "overlapping_report_job_count_max": 2,
+      "overlapping_grounding_calls_max": 5,
+      "grounding_limiter_wait_event_count": 22,
+      "accumulated_in_flight_wait_ms": 291298,
+      "accumulated_rate_interval_wait_ms": 9919,
+      "wait_measurement": "Accumulated per-call wait across concurrent requests, not wall-clock critical-path time.",
+      "verification": "Grounding events share one run_id and the same process-local limiter scope; calls overlapped across two report jobs and the observed process-wide counter peaked at five. This is not three independent groups of five calls."
+    },
+    "provider_calls": 170,
+    "provider_calls_by_stage": {
+      "admission_preflight": 10,
+      "artifact_cover_semantics_primary": 5,
+      "artifact_editorial_plan_primary": 5,
+      "artifact_expert_comment_primary": 5,
+      "artifact_insights_candidates_primary": 5,
+      "artifact_insights_final_primary": 5,
+      "artifact_linkedin_post_primary": 5,
+      "artifact_quotes_final_primary": 5,
+      "artifact_summary_primary": 5,
+      "category_fit": 5,
+      "category_fit_repair": 1,
+      "evidence_pack_primary": 30,
+      "figure_ranking": 43,
+      "taxonomy_primary": 5,
+      "validation_grounding_batch_01_primary": 5,
+      "validation_grounding_batch_02_primary": 5,
+      "validation_grounding_batch_03_primary": 5,
+      "validation_grounding_batch_04_primary": 5,
+      "validation_grounding_batch_05_primary": 5,
+      "validation_grounding_batch_06_primary": 3,
+      "validation_semantic_primary": 8
+    },
+    "input_tokens": 1685568,
+    "output_tokens": 309034,
+    "file_search_calls": 30,
+    "estimated_cost_usd": 0.393505,
+    "repair_metrics": {
+      "automatic_repair_dispositions": 3,
+      "repair_dispositions_by_report": {
+        "Adjust": 3
+      },
+      "repair_candidate_attempt_count": null,
+      "repair_candidate_latency_seconds": null,
+      "repair_candidate_metrics_limitation": "No regeneration_candidate_audit artifact or completed candidate timing record was retained for this run; the three targeted_repair stage dispositions are countable, but candidate attempt count and latency cannot be derived reliably.",
+      "structured_output_repair_provider_calls": 0,
+      "category_fit_repair_provider_calls": 1
+    },
+    "workflow_retry_count": 0,
+    "report_pipeline_retry_count": 1,
+    "validation_retry_recovery": {
+      "exercised": false,
+      "validation_retry_events": 0,
+      "validation_retry_exhausted_events": 0
+    },
+    "provider_error_telemetry": {
+      "provider_call_status_counts": {
+        "completed": 170
+      },
+      "provider_origin_failures": 0,
+      "http_429_count": 0,
+      "timeout_count": 0,
+      "retryable_internal_usage_projection_busy_events": 3,
+      "report_pipeline_retry_for_usage_projection_busy": 1,
+      "openai_usage_projection_finalize_deferred_events": 5,
+      "openai_usage_accounting_failed_events": 0
+    },
+    "quality": {
+      "admitted_reports": 5,
+      "final_validation_pass_count": 5,
+      "publication_readiness_pass_count": 4,
+      "unsupported_retained_claim_count": 0,
+      "unresolved_retained_claim_count": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "new_quality_waivers": 0,
+      "readiness_failure": {
+        "publisher": "Capgemini Research Institute",
+        "report_id": "cohort-81af3890cd84ece81ef1",
+        "terminal_failure_code": "publish_readiness_failed",
+        "rule_id": "publish_readiness.evidence_fidelity",
+        "surface": "rendered_html:evidence:research-methodology",
+        "readiness_detail": "audit_untrusted=13; rendered_untrusted=1",
+        "evidence_fidelity_status": "not_publishable",
+        "evidence_fidelity_unsupported_factual_count": 13,
+        "evidence_fidelity_unresolved_factual_count": 0,
+        "rendered_candidate_id": "evidence:findings:research-methodology",
+        "rendered_candidate_factual": true,
+        "rendered_candidate_evidence_references": [],
+        "deterministic_failure_reason": "missing_or_unknown_evidence_reference",
+        "retained_claim_validation_for_report": "pass with zero unsupported and zero unresolved retained claims",
+        "root_cause": "The report's evidence:findings package contained factual candidates without valid evidence references; the research-methodology candidate was also included in rendered HTML. The deterministic readiness gate detected one untrusted rendered item and blocked the report.",
+        "relationship_to_concurrency_change": "No telemetry links the missing evidence reference to the grounding concurrency cap. The grounding batches all completed successfully. This run cannot establish whether stochastic report content is causally related to the implementation commits."
+      }
+    }
+  },
+  "comparison": {
+    "cohort_wall_reduction_percent": 19.28,
+    "report_analysis_execution_total_reduction_percent": 25.34,
+    "report_analysis_execution_max_reduction_percent": 30.37,
+    "report_analysis_queue_wait_reduction_percent": 11.14,
+    "provider_call_reduction_percent": 11.92,
+    "grounding_call_reduction_percent": 22.22,
+    "estimated_cost_change_percent": -1.22,
+    "causal_attribution_limit": "These are single-cohort observations. Generated content and resulting call counts vary; provider request timing by family is unavailable, so the measured deltas do not isolate the concurrency change as the sole cause of the speedup."
+  },
+  "acceptance": {
+    "quality_mandatory": true,
+    "quality_result": "failed",
+    "failed_criteria": [
+      "Publication readiness was 4/5 instead of 5/5.",
+      "One untrusted factual evidence item was present in rendered HTML."
+    ],
+    "reliability_result": "grounding limiter and duplicate-execution checks passed; one readiness-blocked report prevents overall quality acceptance",
+    "performance_result": "material observed improvement; cohort wall reduced 19.28%, report_analysis total reduced 25.34%, max reduced 30.37%, and cost decreased 1.22%",
+    "decision": "Do not mark the optimization accepted for production promotion on this benchmark. Leave commits 6328b931 and f15ba3f5 in the current branch pending a separate evidence-fidelity correction and its required validation. Do not lower the shared cap: the observed quality failure is a missing evidence reference, and there is no evidence that cap=5 caused it or that a lower cap would fix it.",
+    "next_measured_bottleneck": "report_analysis remains the largest measured execution stage (1830.36 seconds total, 901 seconds queue wait). Within its provider-call volume, figure_ranking is highest at 43 calls, followed by evidence_pack_primary at 30. Per-family provider latency was not retained, so the next profiling step should add timing attribution before making another optimization."
+  },
+  "pre_benchmark_verification": {
+    "focused_tests": {
+      "command": "python -m pytest -q tests/test_llm_service.py tests/test_retained_claim_grounding.py tests/test_report_analysis_validation_fallback.py tests/test_report_analysis_orchestrator_decomposition.py tests/test_report_analysis_generator.py tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_claim_validation_generator.py tests/test_openai_chat_service.py tests/test_report_pipeline_orchestrator.py",
+      "result": "370 passed in 45.60s"
+    },
+    "public_quality_tests": {
+      "command": "python -m pytest -q tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py",
+      "result": "67 passed in 5.58s"
+    },
+    "public_quality_script": {
+      "command": "python scripts/ci/check_public_report_quality.py",
+      "result": "exit 0"
+    },
+    "ruff": {
+      "scope": "Python files changed from the parent of 6328b931 through tested HEAD",
+      "result": "Strict Ruff exited 1 on existing findings: 112 at tested HEAD versus 123 at the comparison revision; finding/rule/message/source-line comparison found zero new findings."
+    },
+    "diff_check": {
+      "command": "git diff --check 6328b931a1fa0cd79db9227287037969b16a7232^..HEAD",
+      "result": "passed with no output"
+    }
+  },
+  "limitations": [
+    "Only one fresh cohort was run, as required; no repeated run was used to seek a preferred result.",
+    "Repair candidate attempt count and latency were not retained by the run artifacts.",
+    "Per-provider-stage request timing was unavailable.",
+    "The initial wrapper import failure was corrected before the only cohort started and produced no provider calls."
+  ]
+}
