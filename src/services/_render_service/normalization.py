@@ -1196,14 +1196,12 @@ def _build_signal_cards(
             signal = _sanitize_public_prose(insight.get("text"))
             if not signal:
                 continue
-            brief = next(
-                (
-                    briefs_by_section.get(_s(section_id).casefold())
-                    for section_id in _coerce_list(insight.get("section_ids"))
-                    if briefs_by_section.get(_s(section_id).casefold())
-                ),
-                {},
-            )
+            brief: dict[str, Any] = {}
+            for section_id in _coerce_list(insight.get("section_ids")):
+                candidate_brief = briefs_by_section.get(_s(section_id).casefold())
+                if candidate_brief:
+                    brief = candidate_brief
+                    break
             role = _s(insight.get("coverage_role"))
             title = _pick_first_text(
                 brief.get("title"),

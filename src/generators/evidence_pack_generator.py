@@ -9,6 +9,7 @@ from typing import Dict, Optional, Tuple
 
 from src.contracts.analysis_family import AnalysisFamilyStatus
 from src.contracts.config import AppSettings
+from src.contracts.openai import OpenAIFileSearchResult
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     PromptFamilyMaterializationRequest,
@@ -649,9 +650,11 @@ def generate_evidence_packs(
             ctx=pack_contexts.get(pack_name, ctx),
             report_name=report_name,
         )
-    for pack_name, (request, materialization_ctx, always_materialize) in (
-        deferred_materializations.items()
-    ):
+    for pack_name, (
+        request,
+        materialization_ctx,
+        always_materialize,
+    ) in deferred_materializations.items():
         if always_materialize or results[pack_name] != request.output_payload:
             prompt_family_materializer(
                 replace(request, output_payload=results[pack_name]),
@@ -707,6 +710,7 @@ def _generate_pack(
             },
         )
     )
+
     def prepare_pack_prompt(retrieval_context_json: str):
         user_variables = dict(prompt_user_variables or {})
         if pack_name in {"scope", "methods", "limitations"}:
@@ -719,9 +723,7 @@ def _generate_pack(
             system_variables={},
             user_variables=user_variables,
             default_model=settings.openai_model,
-            retrieval_mode=(
-                "chat_json" if retrieval_context_json else "vector_store"
-            ),
+            retrieval_mode=("chat_json" if retrieval_context_json else "vector_store"),
         )
 
     prompt_bundle = prepare_pack_prompt(shared_retrieval_context_json)
@@ -799,13 +801,9 @@ def _generate_pack(
                 system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
                 user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
                 prompt_content_hash=prompt_bundle.prompt_content_hash,
-                prompt_dependency_manifest=asdict(
-                    prompt_bundle.dependency_manifest
-                ),
+                prompt_dependency_manifest=asdict(prompt_bundle.dependency_manifest),
                 execution_identity=prompt_bundle.execution_identity.execution_identity,
-                execution_identity_manifest=asdict(
-                    prompt_bundle.execution_identity
-                ),
+                execution_identity_manifest=asdict(prompt_bundle.execution_identity),
                 prompt_policy_version=prompt_bundle.prompt_content_hash,
                 model_name=prompt_bundle.resolved_model,
                 model_provider=str(prompt_bundle.execution_policy.policy.provider),
@@ -902,7 +900,7 @@ def _generate_pack(
     output_schema = provider_output_schema(schema_name)
 
     recovery_attempted = False
-    doc_map_retrieval_results = []
+    doc_map_retrieval_results: list[OpenAIFileSearchResult] = []
 
     def call_model(mode: str, original_response: str, schema_errors: str):
         nonlocal recovery_attempted, doc_map_retrieval_results
@@ -916,7 +914,7 @@ def _generate_pack(
         effective_retrieval_context = (
             shared_retrieval_context_json or doc_map_context_json
         )
-        request_vector_store_id = vector_store_id
+        request_vector_store_id: str | None = vector_store_id
         if effective_retrieval_context and (
             pack_name in {"scope", "methods", "limitations"}
             or (pack_name == "doc_map" and mode != "primary")

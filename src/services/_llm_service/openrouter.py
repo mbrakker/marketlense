@@ -194,7 +194,9 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         headers=headers,
         method="POST",
     )
+    provider_timing: ProviderCallTiming | None = None
     try:
+
         def _read_response() -> str:
             with urllib_request.urlopen(
                 http_request,
@@ -292,7 +294,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
             ctx=ctx,
             parse_status="not_validated",
             schema_validation_status="not_validated",
-        provider_timing=provider_timing,
+            provider_timing=provider_timing,
         )
         _finalize_openrouter_usage_accounting(
             accounting=accounting,
@@ -328,7 +330,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
             ctx=ctx,
             parse_status="not_validated",
             schema_validation_status="not_validated",
-        provider_timing=provider_timing,
+            provider_timing=provider_timing,
         )
         _finalize_openrouter_usage_accounting(
             accounting=accounting,
@@ -554,9 +556,7 @@ def _record_openrouter_usage_accounting(
                         ),
                         "limiter_wait_ms": provider_timing.limiter_wait_ms,
                         "in_flight_wait_ms": provider_timing.in_flight_wait_ms,
-                        "rate_spacing_wait_ms": (
-                            provider_timing.rate_spacing_wait_ms
-                        ),
+                        "rate_spacing_wait_ms": (provider_timing.rate_spacing_wait_ms),
                     }
                     if provider_timing is not None
                     else {}

@@ -2176,11 +2176,16 @@ def _active_repair_target(
         if len(matches) == 1:
             active_path = matches[0]
         elif len(matches) > 1 and family == "summary":
+
+            def claim_index(path: str) -> int:
+                match = re.search(r"\[claim_index=(\d+)\]$", path)
+                if match is None:
+                    raise ValueError("Summary claim path has no claim index")
+                return int(match.group(1))
+
             active_path = min(
                 matches,
-                key=lambda path: int(
-                    re.search(r"\[claim_index=(\d+)\]$", path).group(1)
-                ),
+                key=claim_index,
             )
         elif not matches and failed_claim:
             if family == "summary" and field in {
@@ -2753,9 +2758,7 @@ def _write_repair_path(value: Dict[str, Any], path: str, replacement: Any) -> bo
     return True
 
 
-def _preserve_soft_copy_claim_boundary(
-    text: str, index: int, replacement: str
-) -> str:
+def _preserve_soft_copy_claim_boundary(text: str, index: int, replacement: str) -> str:
     """Keep a repaired claim separate from its untouched following sentence."""
 
     spans = _soft_copy_sentence_spans(text)
@@ -3478,9 +3481,7 @@ def _summary_claim_repairs(
             return None
         grouped.setdefault(field, []).append(issue)
     exact_claim_ids = {
-        repair.claim.claim_id
-        for repairs in resolved.values()
-        for repair in repairs
+        repair.claim.claim_id for repairs in resolved.values() for repair in repairs
     }
     claim_ids: set[str] = set()
     for field, issues in grouped.items():
@@ -3830,26 +3831,17 @@ def _summary_claim_map_grounding_package(
 ) -> Dict[str, Any]:
     """Limit a claim-map repair to the source bindings on that exact row."""
 
-    claim_evidence_ids = _unique_strings(
-        [
-            *(
-                claim.get("evidence_ids")
-                if isinstance(claim.get("evidence_ids"), list)
-                else []
-            ),
-            claim.get("evidence_id"),
-            *(
-                span.get("evidence_id")
-                for span in (
-                    claim.get("source_spans")
-                    or claim.get("evidence_spans")
-                    or []
-                )
-                if isinstance(span, dict)
-            ),
-            *(evidence_id for issue in issues for evidence_id in issue.evidence_ids),
-        ]
-    )
+    claim_evidence_id_values: list[Any] = []
+    raw_claim_evidence_ids = claim.get("evidence_ids")
+    if isinstance(raw_claim_evidence_ids, list):
+        claim_evidence_id_values.extend(raw_claim_evidence_ids)
+    claim_evidence_id_values.append(claim.get("evidence_id"))
+    for span in claim.get("source_spans") or claim.get("evidence_spans") or []:
+        if isinstance(span, dict):
+            claim_evidence_id_values.append(span.get("evidence_id"))
+    for issue in issues:
+        claim_evidence_id_values.extend(issue.evidence_ids)
+    claim_evidence_ids = _unique_strings(claim_evidence_id_values)
     allowed_ids = {
         _normalized_evidence_id(evidence_id)
         for evidence_id in claim_evidence_ids
@@ -4309,8 +4301,10 @@ def _retire_removed_summary_claim_map_rows(
     removed_ids = set(removed_claim_ids)
     summary_map = repaired_summary.get("claim_evidence_map")
     original_map = original_summary.get("claim_evidence_map")
-    if not removed_ids or not isinstance(summary_map, list) or not isinstance(
-        original_map, list
+    if (
+        not removed_ids
+        or not isinstance(summary_map, list)
+        or not isinstance(original_map, list)
     ):
         return
     retained_claims = soft_copy_claim_provenance_from_payload(
@@ -4351,12 +4345,15 @@ def _retire_removed_summary_claim_map_rows(
     remove_indexes: set[int] = set()
     for removed_claim in removed_claims:
         evidence_ids = set(removed_claim.evidence_ids)
-        if sum(
-            1
-            for claim in retained_claims
-            if claim.artifact_family == "summary"
-            and set(claim.evidence_ids) == evidence_ids
-        ) != 1:
+        if (
+            sum(
+                1
+                for claim in retained_claims
+                if claim.artifact_family == "summary"
+                and set(claim.evidence_ids) == evidence_ids
+            )
+            != 1
+        ):
             continue
         matching_indexes = [
             index
@@ -4374,15 +4371,18 @@ def _retire_removed_summary_claim_map_rows(
             continue
         map_index = matching_indexes[0]
         map_claim_hash = hashlib.sha256(
-            _normalized_soft_copy_text(
-                _s(summary_map[map_index].get("claim"))
-            ).encode("utf-8")
+            _normalized_soft_copy_text(_s(summary_map[map_index].get("claim"))).encode(
+                "utf-8"
+            )
         ).hexdigest()
-        if any(
-            set(claim.evidence_ids) == evidence_ids
-            or claim.text_hash == map_claim_hash
-            for claim in public_claims
-        ) or tuple(sorted(evidence_ids)) in active_evidence_bindings:
+        if (
+            any(
+                set(claim.evidence_ids) == evidence_ids
+                or claim.text_hash == map_claim_hash
+                for claim in public_claims
+            )
+            or tuple(sorted(evidence_ids)) in active_evidence_bindings
+        ):
             continue
         remove_indexes.add(map_index)
     if remove_indexes:
@@ -4396,9 +4396,7 @@ def _retire_removed_summary_claim_map_rows(
             for raw in summary_map
         ]
         stable_ids_are_unique = bool(
-            stable_ids
-            and all(stable_ids)
-            and len(stable_ids) == len(set(stable_ids))
+            stable_ids and all(stable_ids) and len(stable_ids) == len(set(stable_ids))
         )
         for index in sorted(remove_indexes):
             selector = (
