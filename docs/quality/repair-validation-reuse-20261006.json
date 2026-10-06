@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "artifact_type": "single_report_targeted_repair_validation_reuse_proof",
-  "recorded_at_utc": "2026-10-06T11:24:36+00:00",
+  "recorded_at_utc": "2026-10-06T13:20:45+00:00",
   "implementation_commit": "6bf4cd48c404a061ba29c1879dca1416726d02cd",
   "objective_result": {
     "redundant_revalidation_proven": true,
@@ -208,6 +208,80 @@
       "interpretation": "This confirms end-to-end quality under the corrected gate, but it does not measure repair-path reuse because no targeted repair occurred."
     }
   ],
+  "repair_bearing_follow_up": {
+    "label": "single_isolated_kpmg_candidate_with_retained_reuse_telemetry",
+    "implementation_commit": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+    "run_root": "out/repair-reuse-proof-20261006-committed/frozen-reliability-lj3hn5x_",
+    "provider_profile": "out/repair-reuse-proof-20261006-committed/frozen-reliability-lj3hn5x_/provider_profile.json",
+    "report_id": "cohort-2acb4a56e14add5d7717",
+    "publisher": "KPMG",
+    "selection_reason": "Preselected from retained frozen-five evidence of targeted repairs; this was the only live candidate run in this follow-up.",
+    "fresh_isolated_state": true,
+    "cohort_size": 1,
+    "control_comparability": "No matched control was run. Earlier KPMG observations used different revisions and five-report cohort scheduling, so they are not a causal before/after comparison.",
+    "quality": {
+      "validation": "pass",
+      "publication_readiness": "pass",
+      "unsupported_retained_factual_claims": 0,
+      "unresolved_retained_factual_claims": 0,
+      "targeted_repairs": 3,
+      "operator_intervention": false,
+      "rule_waivers": 0,
+      "publication_writes": 0
+    },
+    "reuse_decisions": [
+      {
+        "pass": "initial_validation",
+        "total_candidate_claims": 26,
+        "reused_validation_results": 0,
+        "newly_validated_claims": 26,
+        "grounding_calls_avoided": 0,
+        "semantic_validation_calls_avoided": 0,
+        "reuse_fallback_reason_counts": {
+          "prior_package_missing": 1
+        }
+      },
+      {
+        "pass": "targeted_repair_candidate_validation_1",
+        "total_candidate_claims": 26,
+        "reused_validation_results": 0,
+        "newly_validated_claims": 26,
+        "grounding_calls_avoided": 0,
+        "semantic_validation_calls_avoided": 0,
+        "reuse_fallback_reason_counts": {
+          "prior_validation_not_pass": 1
+        }
+      }
+    ],
+    "summed_reuse_counters": {
+      "total_candidate_claims": 52,
+      "reused_validation_results": 0,
+      "newly_validated_claims": 52,
+      "grounding_calls_avoided": 0,
+      "semantic_validation_calls_avoided": 0,
+      "reuse_fallback_reason_counts": {
+        "prior_package_missing": 1,
+        "prior_validation_not_pass": 1
+      }
+    },
+    "validation_provider_calls": {
+      "grounding_calls": 12,
+      "semantic_validation_calls": 2,
+      "grounding_provider_active_wall_seconds": 107.423,
+      "grounding_exclusive_exposure_seconds": 11.542
+    },
+    "measurements": {
+      "report_wall_seconds": 497.653,
+      "report_analysis_wall_seconds": 397.138,
+      "report_analysis_provider_active_wall_seconds": 382.428,
+      "provider_active_wall_seconds_all_profiled_workflows": 421.119,
+      "provider_calls": 44,
+      "reasoning_tokens": 26235,
+      "estimated_cost_usd": 0.096065,
+      "max_provider_concurrency": 6
+    },
+    "identity_limit": "The retained decision event contains aggregate counters, not per-claim mappings. This run proves both passes validated 26 claims and that reuse failed closed for the recorded reasons; it does not establish how many claim identities overlapped between those passes."
+  },
   "reuse_contract": {
     "package_schema_version": "1.4",
     "semantic_execution_identity_schema_version": "1.1",
@@ -239,13 +313,15 @@
       "semantic validation calls avoided",
       "reuse fallback reason counts"
     ],
-    "event_retained_by_frozen_runner": false,
-    "limitation": "The frozen runner retains provider usage and workflow databases but not structured application log events. Therefore actual per-run reuse counters could not be recovered from these runs; provider call totals are reported separately and are not attributed solely to reuse."
+    "event_retained_by_frozen_runner": true,
+    "retention_scope": "The frozen runner temporarily captures only validation_claim_reuse_decided from market_lense.validation_generator, retaining required run/span metadata and the six bounded reuse counters; unrelated events and extra fields are discarded.",
+    "limitation": "The counters are aggregate per validation pass and do not map calls or decisions to individual claim IDs. Provider-call counts come from the canonical usage ledger and remain separately attributed."
   },
   "performance_conclusion": {
     "repair_bearing_comparison": "Control report_analysis was 388.688 s and repair-bearing candidate was 430.922 s (+42.234 s). Report wall was 483.348 s versus 512.148 s (+28.800 s). Grounding calls fell from 15 to 8 and grounding provider-active wall fell from 137.793 s to 118.260 s, but report-analysis provider-active wall increased from 372.275 s to 413.137 s. This run does not demonstrate a latency reduction.",
     "cost_comparison": "Control cost was $0.108506 and repair-bearing candidate cost was $0.090994. The corrected no-repair candidate cost $0.077599, but its different repair workload makes that result unsuitable as repair-path evidence.",
-    "decision": "Keep the safe reuse implementation because unchanged full-package revalidation was demonstrated and local correctness regressions pass. Do not claim a speedup from these runs."
+    "repair_bearing_follow_up": "The isolated KPMG candidate completed with three targeted repairs and passed validation/readiness, but recorded zero reused results and zero avoided calls. The initial pass had no prior package; the repair candidate failed the prior-validation pass gate, so full validation was the correct fail-closed behavior. It made 12 grounding and 2 semantic-validation provider calls. The 497.653 s report and 397.138 s report-analysis times are not compared as a speedup because no same-revision control was run.",
+    "decision": "Keep the safe reuse implementation because prior retained evidence demonstrates unchanged full-package revalidation and local correctness regressions pass. This follow-up confirms telemetry and fail-closed behavior on one repair-bearing report, but it does not prove a repair-path speedup."
   },
   "verification": {
     "focused_test_command": "python -m pytest tests/test_claim_validation_generator.py tests/test_retained_claim_grounding.py tests/test_claim_validation_source_pages.py tests/test_validation_generator.py tests/test_report_analysis_generator.py tests/test_publish_readiness_gate.py -q --tb=short",
@@ -263,5 +339,5 @@
     ],
     "type_gate": "Six existing errors remain only in untouched files: src/services/_render_service/normalization.py:1209; src/services/_llm_service/openrouter.py:210; src/generators/report_regeneration_generator.py:2182,3834; src/generators/evidence_pack_generator.py:905,924. Changed task files had no reported type errors; the baseline was not changed."
   },
-  "next_recommendation": "Retain the existing reuse-decision event in the frozen-run evidence path, without adding a telemetry service, then use a preselected frozen report known to repair for a single corrected candidate run. Compare claim-level reuse counters and provider intervals before concluding that repair-path latency improved."
+  "next_recommendation": "Inspect why the selected repair candidate had no passing prior package available to reuse. Use retained per-claim artifacts to verify whether a future preselected repair path can present a passing prior package; only then run a matched same-revision control/candidate comparison. Do not infer a speedup from this single candidate observation."
 }
