@@ -1,0 +1,267 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "single_report_targeted_repair_validation_reuse_proof",
+  "recorded_at_utc": "2026-10-06T11:24:36+00:00",
+  "implementation_commit": "6bf4cd48c404a061ba29c1879dca1416726d02cd",
+  "objective_result": {
+    "redundant_revalidation_proven": true,
+    "material_latency_reduction_proven": false,
+    "summary": "The baseline fully revalidated retained-claim packages after targeted repair, including 19 claim identities whose compared identity fields stayed unchanged across all three validation passes. Incremental reuse is implemented with fail-closed identity and prompt-context checks. The repair-bearing candidate used fewer grounding calls but had longer end-to-end latency; a corrected candidate passed quality but did not exercise repair."
+  },
+  "control": {
+    "profile": "docs/quality/provider-critical-path-profile-20261006.json",
+    "run_root": "out/provider-latency-profile-20261006/frozen-reliability-qv_70kak",
+    "implementation_commit": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+    "report_id": "cohort-81af3890cd84ece81ef1",
+    "publisher": "Capgemini Research Institute",
+    "fresh_isolated_state": true,
+    "quality": {
+      "validation": "pass",
+      "publication_readiness": "pass",
+      "unsupported_retained_factual_claims": 0,
+      "unresolved_retained_factual_claims": 0,
+      "targeted_repairs": 3,
+      "operator_intervention": false,
+      "rule_waivers": 0,
+      "publication_writes": 0
+    },
+    "measurements": {
+      "report_wall_seconds": 483.348,
+      "report_analysis_wall_seconds": 388.688,
+      "report_analysis_provider_active_wall_seconds": 372.275,
+      "provider_active_wall_seconds_all_profiled_workflows": 412.652,
+      "provider_calls": 47,
+      "grounding_provider_calls": 15,
+      "grounding_provider_active_wall_seconds": 137.793,
+      "grounding_exclusive_exposure_seconds": 8.946,
+      "semantic_provider_calls": 3,
+      "reasoning_tokens": 35614,
+      "estimated_cost_usd": 0.108506,
+      "max_provider_concurrency": 6
+    }
+  },
+  "comparison_controls": {
+    "frozen_cohort_manifest": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+    "report_id": "cohort-81af3890cd84ece81ef1",
+    "candidate_command": "python -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --runs-root out/repair-reuse-profile-20261006 --max-duration 1200 --report-ids cohort-81af3890cd84ece81ef1",
+    "same_model_prompt_reasoning_and_evidence": true,
+    "outer_parallelism": 3,
+    "grounding_max_in_flight": 5,
+    "grounding_min_interval_ms": 250,
+    "fresh_isolated_state_per_run": true,
+    "publication_write_count": 0,
+    "publication_readiness_mode": "readiness_only"
+  },
+  "baseline_validation_trace": {
+    "artifact_directory": "out/provider-latency-profile-20261006/frozen-reliability-qv_70kak/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-tc8upnwv/output/final-web-ver-1d9e64dd7425/report_analysis",
+    "passes": [
+      {
+        "pass": "initial",
+        "package_file": "validation_retained_claim_validation_candidate.json",
+        "claim_count": 23,
+        "package_hash": "3505da9aa8702ad81b77988dcb4cfabd7b59083b292b678d67996a98fec2aad1"
+      },
+      {
+        "pass": "targeted_repair_candidate_1",
+        "package_file": "validation_regen_candidate_1_retain-822c1ed88145.json",
+        "claim_count": 24,
+        "package_hash": "ee29b65fc7c11e0d7cbe954b9a9af924cda44283485b26e8efbe087c6fd2a3e6"
+      },
+      {
+        "pass": "targeted_repair_candidate_2",
+        "package_file": "validation_regen_candidate_2_retain-6de10a53f973.json",
+        "claim_count": 23,
+        "package_hash": "3505da9aa8702ad81b77988dcb4cfabd7b59083b292b678d67996a98fec2aad1"
+      }
+    ],
+    "unchanged_claim_ids_across_all_three_passes": [
+      "insight:build-control-into-ai-enabled-services:text",
+      "insight:consumer-boundaries-for-digital-assistants:text",
+      "insight:human-assistance-remains-important:text",
+      "insight:purchase-context-shapes-value:text",
+      "insight:selective-trade-down-with-performance-caution:text",
+      "soft_copy:expert_comment:186f48479fad4137",
+      "soft_copy:expert_comment:636669c6135915b6",
+      "soft_copy:expert_comment:c7145d5f8cd76195",
+      "soft_copy:expert_comment:dcad1211a3a3760b",
+      "soft_copy:linkedin_post:0554a3d0d64f8bdd",
+      "soft_copy:linkedin_post:5e3655f8826c534f",
+      "soft_copy:linkedin_post:65d8fd44356b2cbf",
+      "soft_copy:summary:2b8a9134797a3ca0",
+      "soft_copy:summary:5b9578ada6c161ea",
+      "soft_copy:summary:5f5b27c830e90136",
+      "soft_copy:summary:96a523b953ac7bd2",
+      "soft_copy:summary:a276f47ec308a7fb",
+      "soft_copy:summary:c374bdb91195137c",
+      "soft_copy:summary:ed3c67afc682016d"
+    ],
+    "changed_claim_ids": [
+      "summary_claim:1",
+      "summary_claim:2",
+      "summary_claim:3",
+      "summary_claim:4"
+    ],
+    "added_then_removed_claim_id": "summary_claim:5",
+    "compared_fields_available_in_legacy_packages": [
+      "claim_id",
+      "text_hash",
+      "source_family",
+      "kind",
+      "factual",
+      "evidence_references",
+      "affected_section",
+      "entity_id",
+      "protected_facts"
+    ],
+    "provider_call_trace": {
+      "grounding_namespace": "report_vs/validate/grounding",
+      "total_calls": 15,
+      "validation_passes": 3,
+      "calls_per_pass_inferred_from_five_batch_stages": 5,
+      "repeated_candidate_pass_calls": 10,
+      "calls_by_batch_stage": {
+        "validation_grounding_batch_01_primary": 3,
+        "validation_grounding_batch_02_primary": 3,
+        "validation_grounding_batch_03_primary": 3,
+        "validation_grounding_batch_04_primary": 3,
+        "validation_grounding_batch_05_primary": 3
+      },
+      "semantic_calls_by_stage": {
+        "validation_semantic_primary": 3
+      },
+      "batch_stages": [
+        "validation_grounding_batch_01_primary",
+        "validation_grounding_batch_02_primary",
+        "validation_grounding_batch_03_primary",
+        "validation_grounding_batch_04_primary",
+        "validation_grounding_batch_05_primary"
+      ],
+      "semantic_namespace_calls": 3,
+      "claim_to_request_payload_mapping_retained": false,
+      "interpretation_limit": "The retained profile records stage, request, and timing metadata but not rendered request bodies. It proves full-package validation repeated unchanged claim identities and that five grounding stages ran in each pass; it cannot establish that every one of the ten repair-pass requests was wholly redundant."
+    },
+    "legacy_identity_limit": "The baseline package predates provenance_hash and retrieval identity fields. The listed comparison uses all identity-bearing fields present in those artifacts. No legacy package is eligible for reuse by the new implementation; missing current identity fields trigger full validation."
+  },
+  "candidate_runs": [
+    {
+      "label": "repair_bearing_candidate_before_readiness_gate_fix",
+      "run_root": "out/repair-reuse-profile-20261006/frozen-reliability-dexu1hmm",
+      "implementation_commit": "bfa30fe099fa1619bcf848c4286f080377e292aa",
+      "automatic_targeted_repairs": 3,
+      "fresh_isolated_state": true,
+      "quality": {
+        "validation": "pass",
+        "publication_readiness": "fail",
+        "failed_rule": "publish_readiness.retained_claim_grounding",
+        "failure_detail": "package_invalid; unsupported_factual_count=0; unresolved_factual_count=0; semantic_execution_identity_invalid",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "operator_intervention": false,
+        "rule_waivers": 0,
+        "publication_writes": 0
+      },
+      "measurements": {
+        "report_wall_seconds": 512.148,
+        "report_analysis_wall_seconds": 430.922,
+        "report_analysis_provider_active_wall_seconds": 413.137,
+        "provider_active_wall_seconds_all_profiled_workflows": 446.152,
+        "provider_calls": 39,
+        "grounding_provider_calls": 8,
+        "grounding_provider_active_wall_seconds": 118.260,
+        "grounding_exclusive_exposure_seconds": 40.851,
+        "semantic_provider_calls": 2,
+        "reasoning_tokens": 37840,
+        "estimated_cost_usd": 0.090994,
+        "max_provider_concurrency": 6
+      },
+      "readiness_gate_correction": "Commit 6bf4cd48 accepts semantic execution identity schema 1.1 only when its retrieval identity is a valid SHA-256, while retaining schema 1.0 support. The candidate run itself remains recorded as readiness-failed under the then-current gate."
+    },
+    {
+      "label": "corrected_candidate_no_repair",
+      "run_root": "out/repair-reuse-profile-20261006/frozen-reliability-9pbnveu0",
+      "implementation_commit": "6bf4cd48c404a061ba29c1879dca1416726d02cd",
+      "automatic_targeted_repairs": 0,
+      "fresh_isolated_state": true,
+      "quality": {
+        "validation": "pass",
+        "publication_readiness": "pass",
+        "unsupported_retained_factual_claims": 0,
+        "unresolved_retained_factual_claims": 0,
+        "operator_intervention": false,
+        "rule_waivers": 0,
+        "publication_writes": 0
+      },
+      "measurements": {
+        "report_wall_seconds": 430.226,
+        "report_analysis_wall_seconds": 355.853,
+        "report_analysis_provider_active_wall_seconds": 345.618,
+        "provider_active_wall_seconds_all_profiled_workflows": 375.088,
+        "provider_calls": 33,
+        "grounding_provider_calls": 4,
+        "grounding_provider_active_wall_seconds": 58.494,
+        "grounding_exclusive_exposure_seconds": 12.352,
+        "semantic_provider_calls": 3,
+        "reasoning_tokens": 35637,
+        "estimated_cost_usd": 0.077599,
+        "max_provider_concurrency": 6
+      },
+      "interpretation": "This confirms end-to-end quality under the corrected gate, but it does not measure repair-path reuse because no targeted repair occurred."
+    }
+  ],
+  "reuse_contract": {
+    "package_schema_version": "1.4",
+    "semantic_execution_identity_schema_version": "1.1",
+    "identity_components": [
+      "canonical claim ID",
+      "exact claim text hash",
+      "classification",
+      "evidence IDs and references",
+      "source-pack identity",
+      "provenance and source-span hash",
+      "protected factual dimensions",
+      "report, source, validator, configuration, and policy identity",
+      "retrieval, model, prompt-family, and execution identity",
+      "exact rendered batch prompt content hash"
+    ],
+    "changed_or_ambiguous_claims": "Revalidate",
+    "new_claims": "Validate",
+    "removed_claims": "Do not carry prior results forward",
+    "missing_or_failed_identity_proof": "Fall back to full validation",
+    "final_package_and_readiness": "Merge deterministic reused and new results, then run the existing complete-package validation and readiness gates."
+  },
+  "telemetry": {
+    "decision_event": "validation_claim_reuse_decided",
+    "counters": [
+      "total candidate claims",
+      "reused validation results",
+      "newly validated claims",
+      "grounding calls avoided",
+      "semantic validation calls avoided",
+      "reuse fallback reason counts"
+    ],
+    "event_retained_by_frozen_runner": false,
+    "limitation": "The frozen runner retains provider usage and workflow databases but not structured application log events. Therefore actual per-run reuse counters could not be recovered from these runs; provider call totals are reported separately and are not attributed solely to reuse."
+  },
+  "performance_conclusion": {
+    "repair_bearing_comparison": "Control report_analysis was 388.688 s and repair-bearing candidate was 430.922 s (+42.234 s). Report wall was 483.348 s versus 512.148 s (+28.800 s). Grounding calls fell from 15 to 8 and grounding provider-active wall fell from 137.793 s to 118.260 s, but report-analysis provider-active wall increased from 372.275 s to 413.137 s. This run does not demonstrate a latency reduction.",
+    "cost_comparison": "Control cost was $0.108506 and repair-bearing candidate cost was $0.090994. The corrected no-repair candidate cost $0.077599, but its different repair workload makes that result unsuitable as repair-path evidence.",
+    "decision": "Keep the safe reuse implementation because unchanged full-package revalidation was demonstrated and local correctness regressions pass. Do not claim a speedup from these runs."
+  },
+  "verification": {
+    "focused_test_command": "python -m pytest tests/test_claim_validation_generator.py tests/test_retained_claim_grounding.py tests/test_claim_validation_source_pages.py tests/test_validation_generator.py tests/test_report_analysis_generator.py tests/test_publish_readiness_gate.py -q --tb=short",
+    "focused_test_result": "266 passed",
+    "additional_passing_checks": [
+      "python scripts/ci/check_contract_schemas.py",
+      "python scripts/ci/check_formatting.py",
+      "python scripts/ci/check_ruff_lint.py",
+      "python scripts/ci/check_architecture_imports.py",
+      "python scripts/ci/check_role_io_boundaries.py",
+      "python scripts/ci/check_service_boundary_map.py",
+      "python scripts/ci/check_bounded_logging.py",
+      "python scripts/ci/check_forbidden_patching.py",
+      "python scripts/ci/check_repository_hygiene.py"
+    ],
+    "type_gate": "Six existing errors remain only in untouched files: src/services/_render_service/normalization.py:1209; src/services/_llm_service/openrouter.py:210; src/generators/report_regeneration_generator.py:2182,3834; src/generators/evidence_pack_generator.py:905,924. Changed task files had no reported type errors; the baseline was not changed."
+  },
+  "next_recommendation": "Retain the existing reuse-decision event in the frozen-run evidence path, without adding a telemetry service, then use a preselected frozen report known to repair for a single corrected candidate run. Compare claim-level reuse counters and provider intervals before concluding that repair-path latency improved."
+}
