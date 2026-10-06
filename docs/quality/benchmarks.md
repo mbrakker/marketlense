@@ -55,6 +55,12 @@ prompt rendering, schema validation, and deterministic post-processing are
 outside that duration. This profile helper is evidence tooling, not a quality
 gate or an optimization selector.
 
+On Windows, keep the frozen-run `--runs-root` short (for example, `out/p`).
+Each member nests report-analysis artifacts beneath that root; report-slug
+compaction cannot compensate when the root itself leaves no room for the
+longest validation-package filename. A path that exceeds the supported limit
+can prevent repair candidates from being validated or promoted.
+
 CI also measures each existing standalone coverage, mutation,
 quality-regression, PDF, public-render, retained-LLM-routing,
 workflow-evidence, and prompt-fixture gate once.

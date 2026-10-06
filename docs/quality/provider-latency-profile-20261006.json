@@ -1,0 +1,3293 @@
+{
+  "cached_input_token_reported_call_count": 26,
+  "cached_input_tokens": 5496,
+  "estimated_cost_usd": 0.069508,
+  "groups_by_prompt_namespace": [
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 4,
+      "cached_input_tokens": 5496,
+      "call_count": 4,
+      "estimated_cost_usd": 0.013335,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 34284,
+      "limiter_wait_ms_total": 1492.0,
+      "output_tokens": 20805,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 50359.321,
+      "provider_elapsed_ms_median": 44611.72,
+      "provider_elapsed_ms_total": 171505.778,
+      "rate_spacing_wait_ms_total": 1492.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 4,
+      "reasoning_tokens": 4869,
+      "stages": [
+        "validation_grounding_batch_01_primary",
+        "validation_grounding_batch_02_primary",
+        "validation_grounding_batch_03_primary",
+        "validation_grounding_batch_04_primary"
+      ],
+      "timed_call_count": 4,
+      "tool_calls": 0,
+      "total_tokens": 55089,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "doc_map"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.013212,
+      "file_search_call_count": 3,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 26758,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 6073,
+      "prompt_namespace": "report_vs/doc_map",
+      "prompt_namespaces": [
+        "report_vs/doc_map"
+      ],
+      "provider_elapsed_ms_max": 72831.603,
+      "provider_elapsed_ms_median": 72831.603,
+      "provider_elapsed_ms_total": 72831.603,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 4397,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 3,
+      "total_tokens": 32831,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_candidates"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.004393,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14614,
+      "limiter_wait_ms_total": 496.0,
+      "output_tokens": 5864,
+      "prompt_namespace": "report_vs/artifacts/insights_candidates",
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_candidates"
+      ],
+      "provider_elapsed_ms_max": 55582.112,
+      "provider_elapsed_ms_median": 55582.112,
+      "provider_elapsed_ms_total": 55582.112,
+      "rate_spacing_wait_ms_total": 496.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 3799,
+      "stages": [
+        "artifact_insights_candidates_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 20478,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "figure_ranking"
+      ],
+      "cached_input_token_reported_call_count": 6,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.002028,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 4174,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 3223,
+      "prompt_namespace": "rank_candidates",
+      "prompt_namespaces": [
+        "rank_candidates"
+      ],
+      "provider_elapsed_ms_max": 9547.238,
+      "provider_elapsed_ms_median": 7865.699,
+      "provider_elapsed_ms_total": 43453.935,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 1657,
+      "stages": [
+        "figure_ranking"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 7397,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "summary"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003158,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14480,
+      "limiter_wait_ms_total": 248.0,
+      "output_tokens": 3419,
+      "prompt_namespace": "report_vs/artifacts/summary",
+      "prompt_namespaces": [
+        "report_vs/artifacts/summary"
+      ],
+      "provider_elapsed_ms_max": 39478.659,
+      "provider_elapsed_ms_median": 39478.659,
+      "provider_elapsed_ms_total": 39478.659,
+      "rate_spacing_wait_ms_total": 248.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2324,
+      "stages": [
+        "artifact_summary_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 17899,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "report"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.001824,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 10867,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1476,
+      "prompt_namespace": "rank_candidates/crop_refine",
+      "prompt_namespaces": [
+        "rank_candidates/crop_refine"
+      ],
+      "provider_elapsed_ms_max": 6123.291,
+      "provider_elapsed_ms_median": 5219.603,
+      "provider_elapsed_ms_total": 30668.463,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 953,
+      "stages": [
+        "admission_preflight"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 12343,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "findings"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.005599,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 18488,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 2500,
+      "prompt_namespace": "report_vs/evidence_packs/findings",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/findings"
+      ],
+      "provider_elapsed_ms_max": 30287.635,
+      "provider_elapsed_ms_median": 30287.635,
+      "provider_elapsed_ms_total": 30287.635,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1517,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 1,
+      "total_tokens": 20988,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002983,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 15767,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 2812,
+      "prompt_namespace": "report_vs/artifacts/insights_final",
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_final"
+      ],
+      "provider_elapsed_ms_max": 27741.7,
+      "provider_elapsed_ms_median": 27741.7,
+      "provider_elapsed_ms_total": 27741.7,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1764,
+      "stages": [
+        "artifact_insights_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 18579,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "expert_comment"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001695,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 3526,
+      "limiter_wait_ms_total": 247.0,
+      "output_tokens": 2685,
+      "prompt_namespace": "report_vs/artifacts/expert_comment",
+      "prompt_namespaces": [
+        "report_vs/artifacts/expert_comment"
+      ],
+      "provider_elapsed_ms_max": 22748.536,
+      "provider_elapsed_ms_median": 22748.536,
+      "provider_elapsed_ms_total": 22748.536,
+      "rate_spacing_wait_ms_total": 247.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2301,
+      "stages": [
+        "artifact_expert_comment_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 6211,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "linkedin_post"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.0013,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 6417,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1317,
+      "prompt_namespace": "report_vs/artifacts/linkedin_post",
+      "prompt_namespaces": [
+        "report_vs/artifacts/linkedin_post"
+      ],
+      "provider_elapsed_ms_max": 15517.433,
+      "provider_elapsed_ms_median": 15517.433,
+      "provider_elapsed_ms_total": 15517.433,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1061,
+      "stages": [
+        "artifact_linkedin_post_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 7734,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "category_fit"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001592,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 9281,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1327,
+      "prompt_namespace": "report_vs/context_category_fit",
+      "prompt_namespaces": [
+        "report_vs/context_category_fit"
+      ],
+      "provider_elapsed_ms_max": 14250.806,
+      "provider_elapsed_ms_median": 14250.806,
+      "provider_elapsed_ms_total": 14250.806,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 248,
+      "stages": [
+        "category_fit"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 10608,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "quote_candidates"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.004326,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13895,
+      "limiter_wait_ms_total": 242.0,
+      "output_tokens": 872,
+      "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/quote_candidates"
+      ],
+      "provider_elapsed_ms_max": 11016.425,
+      "provider_elapsed_ms_median": 11016.425,
+      "provider_elapsed_ms_total": 11016.425,
+      "rate_spacing_wait_ms_total": 242.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 325,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 1,
+      "total_tokens": 14767,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_semantic"
+      ],
+      "cached_input_token_reported_call_count": 3,
+      "cached_input_tokens": 0,
+      "call_count": 3,
+      "estimated_cost_usd": 0.000884,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 5828,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 602,
+      "prompt_namespace": "report_vs/validate/semantic",
+      "prompt_namespaces": [
+        "report_vs/validate/semantic"
+      ],
+      "provider_elapsed_ms_max": 4323.094,
+      "provider_elapsed_ms_median": 2347.38,
+      "provider_elapsed_ms_total": 8931.635,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 3,
+      "reasoning_tokens": 251,
+      "stages": [
+        "validation_semantic_primary"
+      ],
+      "timed_call_count": 3,
+      "tool_calls": 0,
+      "total_tokens": 6430,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "methods"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00212,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19211,
+      "limiter_wait_ms_total": 248.0,
+      "output_tokens": 398,
+      "prompt_namespace": "report_vs/evidence_packs/methods",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/methods"
+      ],
+      "provider_elapsed_ms_max": 7363.294,
+      "provider_elapsed_ms_median": 7363.294,
+      "provider_elapsed_ms_total": 7363.294,
+      "rate_spacing_wait_ms_total": 248.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 295,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19609,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "taxonomy"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00253,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 22336,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 592,
+      "prompt_namespace": "report_vs/taxonomy",
+      "prompt_namespaces": [
+        "report_vs/taxonomy"
+      ],
+      "provider_elapsed_ms_max": 6587.885,
+      "provider_elapsed_ms_median": 6587.885,
+      "provider_elapsed_ms_total": 6587.885,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 188,
+      "stages": [
+        "taxonomy_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 22928,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "editorial_plan"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001578,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13362,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 484,
+      "prompt_namespace": "report_vs/artifacts/editorial_plan",
+      "prompt_namespaces": [
+        "report_vs/artifacts/editorial_plan"
+      ],
+      "provider_elapsed_ms_max": 6224.626,
+      "provider_elapsed_ms_median": 6224.626,
+      "provider_elapsed_ms_total": 6224.626,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 242,
+      "stages": [
+        "artifact_editorial_plan_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13846,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "limitations"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002071,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19171,
+      "limiter_wait_ms_total": 495.0,
+      "output_tokens": 308,
+      "prompt_namespace": "report_vs/evidence_packs/limitations",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/limitations"
+      ],
+      "provider_elapsed_ms_max": 5380.056,
+      "provider_elapsed_ms_median": 5380.056,
+      "provider_elapsed_ms_total": 5380.056,
+      "rate_spacing_wait_ms_total": 495.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 217,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19479,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "scope"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002024,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19248,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 199,
+      "prompt_namespace": "report_vs/evidence_packs/scope",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/scope"
+      ],
+      "provider_elapsed_ms_max": 4296.439,
+      "provider_elapsed_ms_median": 4296.439,
+      "provider_elapsed_ms_total": 4296.439,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 75,
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19447,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "quotes_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001367,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13226,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 88,
+      "prompt_namespace": "report_vs/artifacts/quotes",
+      "prompt_namespaces": [
+        "report_vs/artifacts/quotes"
+      ],
+      "provider_elapsed_ms_max": 3325.705,
+      "provider_elapsed_ms_median": 3325.705,
+      "provider_elapsed_ms_total": 3325.705,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 67,
+      "stages": [
+        "artifact_quotes_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13314,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "cover_semantics"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001489,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14116,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 154,
+      "prompt_namespace": "report_vs/artifacts/cover_semantics",
+      "prompt_namespaces": [
+        "report_vs/artifacts/cover_semantics"
+      ],
+      "provider_elapsed_ms_max": 2713.642,
+      "provider_elapsed_ms_median": 2713.642,
+      "provider_elapsed_ms_total": 2713.642,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 69,
+      "stages": [
+        "artifact_cover_semantics_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 14270,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    }
+  ],
+  "groups_by_provider_elapsed": [
+    {
+      "artifact_families": [
+        "doc_map"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.013212,
+      "file_search_call_count": 3,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 26758,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 6073,
+      "prompt_namespace": "report_vs/doc_map",
+      "prompt_namespaces": [
+        "report_vs/doc_map"
+      ],
+      "provider_elapsed_ms_max": 72831.603,
+      "provider_elapsed_ms_median": 72831.603,
+      "provider_elapsed_ms_total": 72831.603,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 4397,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 3,
+      "total_tokens": 32831,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_candidates"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.004393,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14614,
+      "limiter_wait_ms_total": 496.0,
+      "output_tokens": 5864,
+      "prompt_namespace": "report_vs/artifacts/insights_candidates",
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_candidates"
+      ],
+      "provider_elapsed_ms_max": 55582.112,
+      "provider_elapsed_ms_median": 55582.112,
+      "provider_elapsed_ms_total": 55582.112,
+      "rate_spacing_wait_ms_total": 496.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 3799,
+      "stage": "artifact_insights_candidates_primary",
+      "stages": [
+        "artifact_insights_candidates_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 20478,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003181,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 6017,
+      "limiter_wait_ms_total": 746.0,
+      "output_tokens": 5489,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 50359.321,
+      "provider_elapsed_ms_median": 50359.321,
+      "provider_elapsed_ms_total": 50359.321,
+      "rate_spacing_wait_ms_total": 746.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2484,
+      "stage": "validation_grounding_batch_04_primary",
+      "stages": [
+        "validation_grounding_batch_04_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 11506,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00404,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 10697,
+      "limiter_wait_ms_total": 497.0,
+      "output_tokens": 6271,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 47013.196,
+      "provider_elapsed_ms_median": 47013.196,
+      "provider_elapsed_ms_total": 47013.196,
+      "rate_spacing_wait_ms_total": 497.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 849,
+      "stage": "validation_grounding_batch_03_primary",
+      "stages": [
+        "validation_grounding_batch_03_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 16968,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "figure_ranking"
+      ],
+      "cached_input_token_reported_call_count": 6,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.002028,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 4174,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 3223,
+      "prompt_namespace": "rank_candidates",
+      "prompt_namespaces": [
+        "rank_candidates"
+      ],
+      "provider_elapsed_ms_max": 9547.238,
+      "provider_elapsed_ms_median": 7865.699,
+      "provider_elapsed_ms_total": 43453.935,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 1657,
+      "stage": "figure_ranking",
+      "stages": [
+        "figure_ranking"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 7397,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003434,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 8512,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 5166,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 42210.244,
+      "provider_elapsed_ms_median": 42210.244,
+      "provider_elapsed_ms_total": 42210.244,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 914,
+      "stage": "validation_grounding_batch_01_primary",
+      "stages": [
+        "validation_grounding_batch_01_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13678,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "summary"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003158,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14480,
+      "limiter_wait_ms_total": 248.0,
+      "output_tokens": 3419,
+      "prompt_namespace": "report_vs/artifacts/summary",
+      "prompt_namespaces": [
+        "report_vs/artifacts/summary"
+      ],
+      "provider_elapsed_ms_max": 39478.659,
+      "provider_elapsed_ms_median": 39478.659,
+      "provider_elapsed_ms_total": 39478.659,
+      "rate_spacing_wait_ms_total": 248.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2324,
+      "stage": "artifact_summary_primary",
+      "stages": [
+        "artifact_summary_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 17899,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00268,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 9058,
+      "limiter_wait_ms_total": 249.0,
+      "output_tokens": 3879,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 31923.017,
+      "provider_elapsed_ms_median": 31923.017,
+      "provider_elapsed_ms_total": 31923.017,
+      "rate_spacing_wait_ms_total": 249.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 622,
+      "stage": "validation_grounding_batch_02_primary",
+      "stages": [
+        "validation_grounding_batch_02_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 12937,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "report"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.001824,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 10867,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1476,
+      "prompt_namespace": "rank_candidates/crop_refine",
+      "prompt_namespaces": [
+        "rank_candidates/crop_refine"
+      ],
+      "provider_elapsed_ms_max": 6123.291,
+      "provider_elapsed_ms_median": 5219.603,
+      "provider_elapsed_ms_total": 30668.463,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 953,
+      "stage": "admission_preflight",
+      "stages": [
+        "admission_preflight"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 12343,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "findings"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.005599,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 18488,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 2500,
+      "prompt_namespace": "report_vs/evidence_packs/findings",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/findings"
+      ],
+      "provider_elapsed_ms_max": 30287.635,
+      "provider_elapsed_ms_median": 30287.635,
+      "provider_elapsed_ms_total": 30287.635,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1517,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 1,
+      "total_tokens": 20988,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002983,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 15767,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 2812,
+      "prompt_namespace": "report_vs/artifacts/insights_final",
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_final"
+      ],
+      "provider_elapsed_ms_max": 27741.7,
+      "provider_elapsed_ms_median": 27741.7,
+      "provider_elapsed_ms_total": 27741.7,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1764,
+      "stage": "artifact_insights_final_primary",
+      "stages": [
+        "artifact_insights_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 18579,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "expert_comment"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001695,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 3526,
+      "limiter_wait_ms_total": 247.0,
+      "output_tokens": 2685,
+      "prompt_namespace": "report_vs/artifacts/expert_comment",
+      "prompt_namespaces": [
+        "report_vs/artifacts/expert_comment"
+      ],
+      "provider_elapsed_ms_max": 22748.536,
+      "provider_elapsed_ms_median": 22748.536,
+      "provider_elapsed_ms_total": 22748.536,
+      "rate_spacing_wait_ms_total": 247.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2301,
+      "stage": "artifact_expert_comment_primary",
+      "stages": [
+        "artifact_expert_comment_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 6211,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "linkedin_post"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.0013,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 6417,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1317,
+      "prompt_namespace": "report_vs/artifacts/linkedin_post",
+      "prompt_namespaces": [
+        "report_vs/artifacts/linkedin_post"
+      ],
+      "provider_elapsed_ms_max": 15517.433,
+      "provider_elapsed_ms_median": 15517.433,
+      "provider_elapsed_ms_total": 15517.433,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1061,
+      "stage": "artifact_linkedin_post_primary",
+      "stages": [
+        "artifact_linkedin_post_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 7734,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "category_fit"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001592,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 9281,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1327,
+      "prompt_namespace": "report_vs/context_category_fit",
+      "prompt_namespaces": [
+        "report_vs/context_category_fit"
+      ],
+      "provider_elapsed_ms_max": 14250.806,
+      "provider_elapsed_ms_median": 14250.806,
+      "provider_elapsed_ms_total": 14250.806,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 248,
+      "stage": "category_fit",
+      "stages": [
+        "category_fit"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 10608,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "quote_candidates"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.004326,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13895,
+      "limiter_wait_ms_total": 242.0,
+      "output_tokens": 872,
+      "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/quote_candidates"
+      ],
+      "provider_elapsed_ms_max": 11016.425,
+      "provider_elapsed_ms_median": 11016.425,
+      "provider_elapsed_ms_total": 11016.425,
+      "rate_spacing_wait_ms_total": 242.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 325,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 1,
+      "total_tokens": 14767,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_semantic"
+      ],
+      "cached_input_token_reported_call_count": 3,
+      "cached_input_tokens": 0,
+      "call_count": 3,
+      "estimated_cost_usd": 0.000884,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 5828,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 602,
+      "prompt_namespace": "report_vs/validate/semantic",
+      "prompt_namespaces": [
+        "report_vs/validate/semantic"
+      ],
+      "provider_elapsed_ms_max": 4323.094,
+      "provider_elapsed_ms_median": 2347.38,
+      "provider_elapsed_ms_total": 8931.635,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 3,
+      "reasoning_tokens": 251,
+      "stage": "validation_semantic_primary",
+      "stages": [
+        "validation_semantic_primary"
+      ],
+      "timed_call_count": 3,
+      "tool_calls": 0,
+      "total_tokens": 6430,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "methods"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00212,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19211,
+      "limiter_wait_ms_total": 248.0,
+      "output_tokens": 398,
+      "prompt_namespace": "report_vs/evidence_packs/methods",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/methods"
+      ],
+      "provider_elapsed_ms_max": 7363.294,
+      "provider_elapsed_ms_median": 7363.294,
+      "provider_elapsed_ms_total": 7363.294,
+      "rate_spacing_wait_ms_total": 248.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 295,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19609,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "taxonomy"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00253,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 22336,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 592,
+      "prompt_namespace": "report_vs/taxonomy",
+      "prompt_namespaces": [
+        "report_vs/taxonomy"
+      ],
+      "provider_elapsed_ms_max": 6587.885,
+      "provider_elapsed_ms_median": 6587.885,
+      "provider_elapsed_ms_total": 6587.885,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 188,
+      "stage": "taxonomy_primary",
+      "stages": [
+        "taxonomy_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 22928,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "editorial_plan"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001578,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13362,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 484,
+      "prompt_namespace": "report_vs/artifacts/editorial_plan",
+      "prompt_namespaces": [
+        "report_vs/artifacts/editorial_plan"
+      ],
+      "provider_elapsed_ms_max": 6224.626,
+      "provider_elapsed_ms_median": 6224.626,
+      "provider_elapsed_ms_total": 6224.626,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 242,
+      "stage": "artifact_editorial_plan_primary",
+      "stages": [
+        "artifact_editorial_plan_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13846,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "limitations"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002071,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19171,
+      "limiter_wait_ms_total": 495.0,
+      "output_tokens": 308,
+      "prompt_namespace": "report_vs/evidence_packs/limitations",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/limitations"
+      ],
+      "provider_elapsed_ms_max": 5380.056,
+      "provider_elapsed_ms_median": 5380.056,
+      "provider_elapsed_ms_total": 5380.056,
+      "rate_spacing_wait_ms_total": 495.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 217,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19479,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "scope"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002024,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 19248,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 199,
+      "prompt_namespace": "report_vs/evidence_packs/scope",
+      "prompt_namespaces": [
+        "report_vs/evidence_packs/scope"
+      ],
+      "provider_elapsed_ms_max": 4296.439,
+      "provider_elapsed_ms_median": 4296.439,
+      "provider_elapsed_ms_total": 4296.439,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 75,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 19447,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "quotes_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001367,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13226,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 88,
+      "prompt_namespace": "report_vs/artifacts/quotes",
+      "prompt_namespaces": [
+        "report_vs/artifacts/quotes"
+      ],
+      "provider_elapsed_ms_max": 3325.705,
+      "provider_elapsed_ms_median": 3325.705,
+      "provider_elapsed_ms_total": 3325.705,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 67,
+      "stage": "artifact_quotes_final_primary",
+      "stages": [
+        "artifact_quotes_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13314,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "cover_semantics"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001489,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14116,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 154,
+      "prompt_namespace": "report_vs/artifacts/cover_semantics",
+      "prompt_namespaces": [
+        "report_vs/artifacts/cover_semantics"
+      ],
+      "provider_elapsed_ms_max": 2713.642,
+      "provider_elapsed_ms_median": 2713.642,
+      "provider_elapsed_ms_total": 2713.642,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 69,
+      "stage": "artifact_cover_semantics_primary",
+      "stages": [
+        "artifact_cover_semantics_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 14270,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    }
+  ],
+  "groups_by_reasoning_effort": [
+    {
+      "artifact_families": [
+        "editorial_plan",
+        "figure_ranking",
+        "findings",
+        "limitations",
+        "linkedin_post",
+        "methods",
+        "quote_candidates",
+        "scope",
+        "summary",
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 16,
+      "cached_input_tokens": 5496,
+      "call_count": 18,
+      "estimated_cost_usd": 0.037539,
+      "file_search_call_count": 2,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 162730,
+      "limiter_wait_ms_total": 2725.0,
+      "output_tokens": 33525,
+      "prompt_namespaces": [
+        "rank_candidates",
+        "report_vs/artifacts/editorial_plan",
+        "report_vs/artifacts/linkedin_post",
+        "report_vs/artifacts/summary",
+        "report_vs/evidence_packs/findings",
+        "report_vs/evidence_packs/limitations",
+        "report_vs/evidence_packs/methods",
+        "report_vs/evidence_packs/quote_candidates",
+        "report_vs/evidence_packs/scope",
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 50359.321,
+      "provider_elapsed_ms_median": 9211.121,
+      "provider_elapsed_ms_total": 334524.28,
+      "rate_spacing_wait_ms_total": 2725.0,
+      "reasoning_effort": "medium",
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 18,
+      "reasoning_tokens": 12582,
+      "stages": [
+        "artifact_editorial_plan_primary",
+        "artifact_linkedin_post_primary",
+        "artifact_summary_primary",
+        "evidence_pack_primary",
+        "figure_ranking",
+        "validation_grounding_batch_01_primary",
+        "validation_grounding_batch_02_primary",
+        "validation_grounding_batch_03_primary",
+        "validation_grounding_batch_04_primary"
+      ],
+      "timed_call_count": 18,
+      "tool_calls": 2,
+      "total_tokens": 196255,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis",
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "doc_map",
+        "expert_comment",
+        "insights_candidates",
+        "insights_final",
+        "validation_semantic"
+      ],
+      "cached_input_token_reported_call_count": 6,
+      "cached_input_tokens": 0,
+      "call_count": 7,
+      "estimated_cost_usd": 0.023167,
+      "file_search_call_count": 3,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 66493,
+      "limiter_wait_ms_total": 743.0,
+      "output_tokens": 18036,
+      "prompt_namespaces": [
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/insights_candidates",
+        "report_vs/artifacts/insights_final",
+        "report_vs/doc_map",
+        "report_vs/validate/semantic"
+      ],
+      "provider_elapsed_ms_max": 72831.603,
+      "provider_elapsed_ms_median": 22748.536,
+      "provider_elapsed_ms_total": 187835.586,
+      "rate_spacing_wait_ms_total": 743.0,
+      "reasoning_effort": "high",
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 7,
+      "reasoning_tokens": 12512,
+      "stages": [
+        "artifact_expert_comment_primary",
+        "artifact_insights_candidates_primary",
+        "artifact_insights_final_primary",
+        "evidence_pack_primary",
+        "validation_semantic_primary"
+      ],
+      "timed_call_count": 7,
+      "tool_calls": 3,
+      "total_tokens": 84529,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "category_fit",
+        "cover_semantics",
+        "quotes_final",
+        "report",
+        "taxonomy"
+      ],
+      "cached_input_token_reported_call_count": 4,
+      "cached_input_tokens": 0,
+      "call_count": 10,
+      "estimated_cost_usd": 0.008802,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 69826,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 3637,
+      "prompt_namespaces": [
+        "rank_candidates/crop_refine",
+        "report_vs/artifacts/cover_semantics",
+        "report_vs/artifacts/quotes",
+        "report_vs/context_category_fit",
+        "report_vs/taxonomy"
+      ],
+      "provider_elapsed_ms_max": 14250.806,
+      "provider_elapsed_ms_median": 5219.603,
+      "provider_elapsed_ms_total": 57546.501,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 10,
+      "reasoning_tokens": 1525,
+      "stages": [
+        "admission_preflight",
+        "artifact_cover_semantics_primary",
+        "artifact_quotes_final_primary",
+        "category_fit",
+        "taxonomy_primary"
+      ],
+      "timed_call_count": 10,
+      "tool_calls": 0,
+      "total_tokens": 73463,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis",
+        "report_generation"
+      ]
+    }
+  ],
+  "groups_by_stage": [
+    {
+      "artifact_families": [
+        "doc_map",
+        "findings",
+        "limitations",
+        "methods",
+        "quote_candidates",
+        "scope"
+      ],
+      "cached_input_token_reported_call_count": 3,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.029352,
+      "file_search_call_count": 5,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 116771,
+      "limiter_wait_ms_total": 985.0,
+      "output_tokens": 10350,
+      "prompt_namespaces": [
+        "report_vs/doc_map",
+        "report_vs/evidence_packs/findings",
+        "report_vs/evidence_packs/limitations",
+        "report_vs/evidence_packs/methods",
+        "report_vs/evidence_packs/quote_candidates",
+        "report_vs/evidence_packs/scope"
+      ],
+      "provider_elapsed_ms_max": 72831.603,
+      "provider_elapsed_ms_median": 9189.859,
+      "provider_elapsed_ms_total": 131175.452,
+      "rate_spacing_wait_ms_total": 985.0,
+      "reasoning_efforts": [
+        "high",
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 6826,
+      "stage": "evidence_pack_primary",
+      "stages": [
+        "evidence_pack_primary"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 5,
+      "total_tokens": 127121,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_candidates"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.004393,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14614,
+      "limiter_wait_ms_total": 496.0,
+      "output_tokens": 5864,
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_candidates"
+      ],
+      "provider_elapsed_ms_max": 55582.112,
+      "provider_elapsed_ms_median": 55582.112,
+      "provider_elapsed_ms_total": 55582.112,
+      "rate_spacing_wait_ms_total": 496.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 3799,
+      "stage": "artifact_insights_candidates_primary",
+      "stages": [
+        "artifact_insights_candidates_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 20478,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003181,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 6017,
+      "limiter_wait_ms_total": 746.0,
+      "output_tokens": 5489,
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 50359.321,
+      "provider_elapsed_ms_median": 50359.321,
+      "provider_elapsed_ms_total": 50359.321,
+      "rate_spacing_wait_ms_total": 746.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2484,
+      "stage": "validation_grounding_batch_04_primary",
+      "stages": [
+        "validation_grounding_batch_04_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 11506,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00404,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 10697,
+      "limiter_wait_ms_total": 497.0,
+      "output_tokens": 6271,
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 47013.196,
+      "provider_elapsed_ms_median": 47013.196,
+      "provider_elapsed_ms_total": 47013.196,
+      "rate_spacing_wait_ms_total": 497.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 849,
+      "stage": "validation_grounding_batch_03_primary",
+      "stages": [
+        "validation_grounding_batch_03_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 16968,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "figure_ranking"
+      ],
+      "cached_input_token_reported_call_count": 6,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.002028,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 4174,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 3223,
+      "prompt_namespaces": [
+        "rank_candidates"
+      ],
+      "provider_elapsed_ms_max": 9547.238,
+      "provider_elapsed_ms_median": 7865.699,
+      "provider_elapsed_ms_total": 43453.935,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 1657,
+      "stage": "figure_ranking",
+      "stages": [
+        "figure_ranking"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 7397,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003434,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 8512,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 5166,
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 42210.244,
+      "provider_elapsed_ms_median": 42210.244,
+      "provider_elapsed_ms_total": 42210.244,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 914,
+      "stage": "validation_grounding_batch_01_primary",
+      "stages": [
+        "validation_grounding_batch_01_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13678,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "summary"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.003158,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14480,
+      "limiter_wait_ms_total": 248.0,
+      "output_tokens": 3419,
+      "prompt_namespaces": [
+        "report_vs/artifacts/summary"
+      ],
+      "provider_elapsed_ms_max": 39478.659,
+      "provider_elapsed_ms_median": 39478.659,
+      "provider_elapsed_ms_total": 39478.659,
+      "rate_spacing_wait_ms_total": 248.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2324,
+      "stage": "artifact_summary_primary",
+      "stages": [
+        "artifact_summary_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 17899,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_grounding"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 1832,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00268,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 9058,
+      "limiter_wait_ms_total": 249.0,
+      "output_tokens": 3879,
+      "prompt_namespaces": [
+        "report_vs/validate/grounding"
+      ],
+      "provider_elapsed_ms_max": 31923.017,
+      "provider_elapsed_ms_median": 31923.017,
+      "provider_elapsed_ms_total": 31923.017,
+      "rate_spacing_wait_ms_total": 249.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 622,
+      "stage": "validation_grounding_batch_02_primary",
+      "stages": [
+        "validation_grounding_batch_02_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 12937,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "report"
+      ],
+      "cached_input_token_reported_call_count": 0,
+      "cached_input_tokens": 0,
+      "call_count": 6,
+      "estimated_cost_usd": 0.001824,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 10867,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1476,
+      "prompt_namespaces": [
+        "rank_candidates/crop_refine"
+      ],
+      "provider_elapsed_ms_max": 6123.291,
+      "provider_elapsed_ms_median": 5219.603,
+      "provider_elapsed_ms_total": 30668.463,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 6,
+      "reasoning_tokens": 953,
+      "stage": "admission_preflight",
+      "stages": [
+        "admission_preflight"
+      ],
+      "timed_call_count": 6,
+      "tool_calls": 0,
+      "total_tokens": 12343,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_generation"
+      ]
+    },
+    {
+      "artifact_families": [
+        "insights_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.002983,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 15767,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 2812,
+      "prompt_namespaces": [
+        "report_vs/artifacts/insights_final"
+      ],
+      "provider_elapsed_ms_max": 27741.7,
+      "provider_elapsed_ms_median": 27741.7,
+      "provider_elapsed_ms_total": 27741.7,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1764,
+      "stage": "artifact_insights_final_primary",
+      "stages": [
+        "artifact_insights_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 18579,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "expert_comment"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001695,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 3526,
+      "limiter_wait_ms_total": 247.0,
+      "output_tokens": 2685,
+      "prompt_namespaces": [
+        "report_vs/artifacts/expert_comment"
+      ],
+      "provider_elapsed_ms_max": 22748.536,
+      "provider_elapsed_ms_median": 22748.536,
+      "provider_elapsed_ms_total": 22748.536,
+      "rate_spacing_wait_ms_total": 247.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 2301,
+      "stage": "artifact_expert_comment_primary",
+      "stages": [
+        "artifact_expert_comment_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 6211,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "linkedin_post"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.0013,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 6417,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1317,
+      "prompt_namespaces": [
+        "report_vs/artifacts/linkedin_post"
+      ],
+      "provider_elapsed_ms_max": 15517.433,
+      "provider_elapsed_ms_median": 15517.433,
+      "provider_elapsed_ms_total": 15517.433,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 1061,
+      "stage": "artifact_linkedin_post_primary",
+      "stages": [
+        "artifact_linkedin_post_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 7734,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "category_fit"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001592,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 9281,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 1327,
+      "prompt_namespaces": [
+        "report_vs/context_category_fit"
+      ],
+      "provider_elapsed_ms_max": 14250.806,
+      "provider_elapsed_ms_median": 14250.806,
+      "provider_elapsed_ms_total": 14250.806,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 248,
+      "stage": "category_fit",
+      "stages": [
+        "category_fit"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 10608,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "validation_semantic"
+      ],
+      "cached_input_token_reported_call_count": 3,
+      "cached_input_tokens": 0,
+      "call_count": 3,
+      "estimated_cost_usd": 0.000884,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 5828,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 602,
+      "prompt_namespaces": [
+        "report_vs/validate/semantic"
+      ],
+      "provider_elapsed_ms_max": 4323.094,
+      "provider_elapsed_ms_median": 2347.38,
+      "provider_elapsed_ms_total": 8931.635,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "high"
+      ],
+      "reasoning_token_reported_call_count": 3,
+      "reasoning_tokens": 251,
+      "stage": "validation_semantic_primary",
+      "stages": [
+        "validation_semantic_primary"
+      ],
+      "timed_call_count": 3,
+      "tool_calls": 0,
+      "total_tokens": 6430,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "taxonomy"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.00253,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 22336,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 592,
+      "prompt_namespaces": [
+        "report_vs/taxonomy"
+      ],
+      "provider_elapsed_ms_max": 6587.885,
+      "provider_elapsed_ms_median": 6587.885,
+      "provider_elapsed_ms_total": 6587.885,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 188,
+      "stage": "taxonomy_primary",
+      "stages": [
+        "taxonomy_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 22928,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "editorial_plan"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001578,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13362,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 484,
+      "prompt_namespaces": [
+        "report_vs/artifacts/editorial_plan"
+      ],
+      "provider_elapsed_ms_max": 6224.626,
+      "provider_elapsed_ms_median": 6224.626,
+      "provider_elapsed_ms_total": 6224.626,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "medium"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 242,
+      "stage": "artifact_editorial_plan_primary",
+      "stages": [
+        "artifact_editorial_plan_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13846,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "quotes_final"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001367,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 13226,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 88,
+      "prompt_namespaces": [
+        "report_vs/artifacts/quotes"
+      ],
+      "provider_elapsed_ms_max": 3325.705,
+      "provider_elapsed_ms_median": 3325.705,
+      "provider_elapsed_ms_total": 3325.705,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 67,
+      "stage": "artifact_quotes_final_primary",
+      "stages": [
+        "artifact_quotes_final_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 13314,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    },
+    {
+      "artifact_families": [
+        "cover_semantics"
+      ],
+      "cached_input_token_reported_call_count": 1,
+      "cached_input_tokens": 0,
+      "call_count": 1,
+      "estimated_cost_usd": 0.001489,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 14116,
+      "limiter_wait_ms_total": 0.0,
+      "output_tokens": 154,
+      "prompt_namespaces": [
+        "report_vs/artifacts/cover_semantics"
+      ],
+      "provider_elapsed_ms_max": 2713.642,
+      "provider_elapsed_ms_median": 2713.642,
+      "provider_elapsed_ms_total": 2713.642,
+      "rate_spacing_wait_ms_total": 0.0,
+      "reasoning_efforts": [
+        "low"
+      ],
+      "reasoning_token_reported_call_count": 1,
+      "reasoning_tokens": 69,
+      "stage": "artifact_cover_semantics_primary",
+      "stages": [
+        "artifact_cover_semantics_primary"
+      ],
+      "timed_call_count": 1,
+      "tool_calls": 0,
+      "total_tokens": 14270,
+      "untimed_call_count": 0,
+      "workflows": [
+        "report_analysis"
+      ]
+    }
+  ],
+  "in_flight_wait_ms_total": 0.0,
+  "input_tokens": 299049,
+  "limiter_wait_ms_total": 3468.0,
+  "output_tokens": 55198,
+  "profiling_run": {
+    "created_at_utc": "2026-10-06T08:40:48+00:00",
+    "critical_path_interpretation": [
+      {
+        "inference": "Largest measured family elapsed; four calls and medium effort are observed. The profile does not isolate reasoning as the cause.",
+        "observed": "4 calls; 171.506s aggregate, 50.359s max; ['medium'] effort; 4,869 reasoning tokens.",
+        "primary_classification": "provider reasoning/model execution",
+        "prompt_namespace": "report_vs/validate/grounding",
+        "rank": 1
+      },
+      {
+        "inference": "Context and tool volume are plausible contributors; request timing does not separate model time from tool processing.",
+        "observed": "One high-effort call; 72.832s; 26,758 input tokens; 3 File Search calls.",
+        "primary_classification": "large context and provider tool work",
+        "prompt_namespace": "report_vs/doc_map",
+        "rank": 2
+      },
+      {
+        "inference": "High effort and reported reasoning coincide with elapsed time but are not causal proof.",
+        "observed": "One high-effort call; 55.582s; 3,799 reasoning tokens.",
+        "primary_classification": "provider reasoning/model execution",
+        "prompt_namespace": "report_vs/artifacts/insights_candidates",
+        "rank": 3
+      }
+    ],
+    "live_run_source_commit_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39",
+    "provider_timing_interpretation": {
+      "cached_input_token_reported_call_count": 26,
+      "cached_input_tokens": 5496,
+      "estimated_cost_usd": 0.069508,
+      "in_flight_wait_ms_total": 0.0,
+      "input_tokens": 299049,
+      "interpretation": "Provider elapsed is the sum of per-request external-call durations. It can exceed report wall time when provider calls overlap; it is not a critical-path duration. Limiter waits are recorded separately and excluded from provider elapsed.",
+      "limiter_wait_ms_total": 3468.0,
+      "limiter_wait_share_of_aggregate_provider_elapsed_percent": 0.598,
+      "output_tokens": 55198,
+      "provider_call_count_report_analysis_stages": 29,
+      "provider_call_status_counts": {
+        "completed": 35
+      },
+      "provider_elapsed_ms_total_all_stages": 579906.367,
+      "provider_elapsed_ms_total_report_analysis_stages": 549237.904,
+      "provider_elapsed_seconds_total_all_stages": 579.906,
+      "provider_elapsed_seconds_total_report_analysis_stages": 549.238,
+      "rate_spacing_wait_ms_total": 3468.0,
+      "reasoning_token_reported_call_count": 35,
+      "reasoning_tokens": 26619,
+      "timed_provider_calls": 35,
+      "total_provider_calls": 35,
+      "total_tokens": 354247,
+      "untimed_provider_calls": 0
+    },
+    "quality_outcome": {
+      "final_state": "awaiting_review",
+      "interpretation": "Validation and publication readiness pass with zero unresolved or unsupported retained claims. Awaiting review is expected because publication was disabled.",
+      "public_editorial_quality_hard_fail_count": 0,
+      "public_editorial_quality_publishable": true,
+      "public_editorial_quality_status": "pass",
+      "publication_readiness": "pass",
+      "report_analysis_store_path_reproduction": {
+        "long_root_compacted_destination_length": 261,
+        "pack_name": "validation_regen_candidate_3_retained_claim_validation_candidate",
+        "service_error_code": "analysis_pack_path_too_long",
+        "short_root_atomic_temp_path_length": 224,
+        "short_root_compacted_destination_length": 259,
+        "supported_windows_max_path_length": 260
+      },
+      "runner_process_exit_code": 0,
+      "targeted_repairs": 0,
+      "terminal_failure_code": "",
+      "unresolved_retained_factual_claims": 0,
+      "unsupported_retained_factual_claims": 0,
+      "validation": "pass",
+      "validation_error_count": 0,
+      "validation_info_count": 1,
+      "validation_warning_count": 5
+    },
+    "request_attribution_coverage": {
+      "fields": {
+        "artifact_family": {
+          "missing": 0,
+          "present": 35
+        },
+        "cached_input_tokens": {
+          "missing": 9,
+          "present": 26
+        },
+        "in_flight_wait_ms": {
+          "missing": 0,
+          "present": 35
+        },
+        "input_tokens": {
+          "missing": 0,
+          "present": 35
+        },
+        "limiter_wait_ms": {
+          "missing": 0,
+          "present": 35
+        },
+        "model": {
+          "missing": 0,
+          "present": 35
+        },
+        "output_tokens": {
+          "missing": 0,
+          "present": 35
+        },
+        "prompt_namespace": {
+          "missing": 0,
+          "present": 35
+        },
+        "provider_call_status": {
+          "missing": 0,
+          "present": 35
+        },
+        "provider_elapsed_ms": {
+          "missing": 0,
+          "present": 35
+        },
+        "provider_operation": {
+          "missing": 0,
+          "present": 35
+        },
+        "rate_spacing_wait_ms": {
+          "missing": 0,
+          "present": 35
+        },
+        "reasoning_effort": {
+          "missing": 0,
+          "present": 35
+        },
+        "reasoning_tokens": {
+          "missing": 0,
+          "present": 35
+        },
+        "repair_attempt": {
+          "missing": 0,
+          "present": 35
+        },
+        "report_id": {
+          "missing": 0,
+          "present": 35
+        },
+        "request_id": {
+          "missing": 0,
+          "present": 35
+        },
+        "stage": {
+          "missing": 0,
+          "present": 35
+        },
+        "tool_calls": {
+          "missing": 0,
+          "present": 35
+        },
+        "total_tokens": {
+          "missing": 0,
+          "present": 35
+        },
+        "workflow": {
+          "missing": 0,
+          "present": 35
+        }
+      },
+      "file_search_call_count_explicitly_recorded_events": 3,
+      "ledger_event_count": 35,
+      "provider_error_detail": "No provider request failed in the successful live run; failed-call elapsed/error/status/retryability are covered by focused unit tests.",
+      "repair_attempt_counts": {
+        "0": 35
+      }
+    },
+    "retained_evidence": {
+      "cohort_result_sha256": "cf98551466a924bbd83a14c456290c73004e5ba329b1d294ced540a21bc352fb",
+      "failed_cohort_result_sha256": "5bfd12c7d9bdb7a13ce074805e538a03e483177e776f202fc39b20c597ee807e",
+      "raw_prompts_and_source_extracts_included": false,
+      "reports_db_sha256": "2f88498ee6a6943b5ad13886061913c8b96dab4b2387f710615268e2192e784b",
+      "run_directory": "out/p/frozen-reliability-dlz3lydx",
+      "usage_db_sha256": "e47de1a5b93ac07d6bf9bced900778e9ba208cbc94a25262f9c5afd6ba5e5938",
+      "workflow_db_sha256": "e297bd1900a053a880b6b2c3a4c9af5c0c7784b4af28d420995e9f9651418b11"
+    },
+    "root_cause_and_resolution": {
+      "corrective_action": "Reran the same report, commit, settings, and fresh-isolated workflow with --runs-root out/p. The report-analysis store wrote and validated the retained-claim package; final validation passed. No production prompt, model, concurrency, cache, or validator behavior changed.",
+      "failed_run_attempted_repairs": 3,
+      "failed_run_directory": "out/provider-latency-profile-20261006/frozen-reliability-_bt8y_ed",
+      "failed_run_failure_code": "validation_failed",
+      "failed_run_git_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39",
+      "failed_run_repair_audits": [
+        {
+          "attempt": 1,
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REGENERATE_ITEM",
+          "validation_issues": [
+            "validation:validation"
+          ],
+          "validation_status": "fail"
+        },
+        {
+          "attempt": 2,
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REBIND_EVIDENCE",
+          "validation_issues": [
+            "validation:validation"
+          ],
+          "validation_status": "fail"
+        },
+        {
+          "attempt": 3,
+          "promotion_outcome": "rolled_back",
+          "repair_action": "REMOVE_CLAIM",
+          "validation_issues": [
+            "validation:validation"
+          ],
+          "validation_status": "fail"
+        }
+      ],
+      "failed_run_validation": "fail",
+      "failure_class": "isolated-run path length, not unsupported evidence or a production validator defect",
+      "first_failed_run_metrics": {
+        "cost_usd": 0.119267,
+        "provider_calls": 54,
+        "report_analysis_seconds": 562.349,
+        "wall_seconds": 646.411
+      },
+      "preflight_dirty_tree_retry": "One invocation under the short root stopped at clean-SHA preflight before report execution; the successful run used clean SHA bf10ac8870f37ea0dc410b41dcb5ba9c52562e39.",
+      "reproduction": {
+        "long_root_compacted_destination_length": 261,
+        "pack_name": "validation_regen_candidate_3_retained_claim_validation_candidate",
+        "service_error_code": "analysis_pack_path_too_long",
+        "short_root_atomic_temp_path_length": 224,
+        "short_root_compacted_destination_length": 259,
+        "supported_windows_max_path_length": 260
+      }
+    },
+    "run_command": "python -u scripts/quality/run_frozen_reliability_cohort.py --sources-manifest docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json --runs-root out/p --max-duration 1200 --report-ids cohort-81af3890cd84ece81ef1",
+    "schema_version": "1.1",
+    "scope": {
+      "cohort_size": 1,
+      "effective_report_analysis_settings": {
+        "grounding_global_max_in_flight": 5,
+        "grounding_global_min_interval_ms": 250,
+        "max_jobs_per_queue": 3,
+        "max_parallel_workers": 3,
+        "max_total_jobs": 60,
+        "queue_controls": {
+          "publication_readiness": {
+            "configured_workers": 5,
+            "enabled": true,
+            "max_attempts": 3
+          },
+          "report_analysis": {
+            "configured_workers": 5,
+            "enabled": true,
+            "max_attempts": 2
+          },
+          "report_render": {
+            "configured_workers": 5,
+            "enabled": true,
+            "max_attempts": 3
+          },
+          "report_selection": {
+            "configured_workers": 5,
+            "enabled": true,
+            "max_attempts": 3
+          },
+          "source_ingest": {
+            "configured_workers": 5,
+            "enabled": true,
+            "max_attempts": 3
+          },
+          "wordpress_publish": {
+            "configured_workers": 5,
+            "enabled": false,
+            "max_attempts": 3
+          }
+        },
+        "supervisor_enabled": true,
+        "worker_batches_enabled": true
+      },
+      "isolated_fresh_state": true,
+      "manifest_path": "docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json",
+      "manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+      "publication_disabled": true,
+      "publisher": "Capgemini Research Institute",
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "report_name": "Final Web Version Report Consumer Trends 2026",
+      "source_commit_matches_live_run": true,
+      "source_content_md5": "81af3890cd84ece81ef16e1aabda8027",
+      "source_domain": "www.capgemini.com",
+      "source_path": "out/browser_downloads/www.capgemini.com/c3d75e99ed7c/Final-Web-Version-Report-Consumer-Trends-2026.pdf",
+      "source_sha256": "612f362e1bff3c307e4db4aed38414f7b3ac85dd5cba4742ef78625cd225ef3e"
+    },
+    "single_next_optimization_recommendation": {
+      "evidence": "The family led at 171.506s across 4 calls; total limiter wait was 3.468s and in-flight wait was zero.",
+      "implemented": false,
+      "recommendation": "Run a quality-gated A/B that lowers reasoning effort only for report_vs/validate/grounding; keep prompts, batch sizes, concurrency, caching, and validators fixed, and adopt only if latency falls without any increase in unresolved or unsupported claims."
+    },
+    "workflow": {
+      "automatic_repair_count": 0,
+      "final_state": "awaiting_review",
+      "measured_queue_wait_seconds_all_stages": 0,
+      "publication_write_count": 0,
+      "queue_wait_by_stage_seconds": {
+        "publication_readiness": 0.0,
+        "report_analysis": 0.0,
+        "report_render": 0.0,
+        "report_selection": 0.0,
+        "source_ingest": 0.0
+      },
+      "report_analysis_execution_seconds": 300.682,
+      "report_analysis_queue_wait_seconds": 0.0,
+      "report_wall_clock_seconds": 407.518,
+      "wordpress_publish_attempt_count": 0,
+      "workflow_attempt_count": 1,
+      "workflow_retry_count": 0
+    }
+  },
+  "provider_call_status_counts": {
+    "completed": 35
+  },
+  "provider_elapsed_ms_total": 579906.367,
+  "rate_spacing_wait_ms_total": 3468.0,
+  "reasoning_token_reported_call_count": 35,
+  "reasoning_tokens": 26619,
+  "report_id": "cohort-81af3890cd84ece81ef1",
+  "schema_version": "1.0",
+  "slowest_provider_calls": [
+    {
+      "artifact_family": "doc_map",
+      "cached_input_tokens": null,
+      "estimated_cost_usd": 0.013212,
+      "file_search_call_count": 3,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 26758,
+      "ledger_rowid": 13,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 6073,
+      "prompt_namespace": "report_vs/doc_map",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 72831.603,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "responses.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "high",
+      "reasoning_tokens": 4397,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "resp_0bd7b7adc828646b006ac4b27e51c487d2a605232059b776f5",
+      "stage": "evidence_pack_primary",
+      "timestamp_utc": "2026-10-06T08:35:19.017400+00:00",
+      "tool_calls": 3,
+      "total_tokens": 32831,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "insights_candidates",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.004393,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 14614,
+      "ledger_rowid": 26,
+      "limiter_wait_ms": 496.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 5864,
+      "prompt_namespace": "report_vs/artifacts/insights_candidates",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 55582.112,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 496.0,
+      "reasoning_effort": "high",
+      "reasoning_tokens": 3799,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuwnbbrcR71ciOpiFIVPTcpQzmv6",
+      "stage": "artifact_insights_candidates_primary",
+      "timestamp_utc": "2026-10-06T08:37:16.327182+00:00",
+      "tool_calls": 0,
+      "total_tokens": 20478,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "validation_grounding",
+      "cached_input_tokens": 1832,
+      "estimated_cost_usd": 0.003181,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 6017,
+      "ledger_rowid": 35,
+      "limiter_wait_ms": 746.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 5489,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 50359.321,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 746.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 2484,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuybRCmaWMktTw5reYoNON5u4PVH",
+      "stage": "validation_grounding_batch_04_primary",
+      "timestamp_utc": "2026-10-06T08:39:03.115822+00:00",
+      "tool_calls": 0,
+      "total_tokens": 11506,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "validation_grounding",
+      "cached_input_tokens": 1832,
+      "estimated_cost_usd": 0.00404,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 10697,
+      "ledger_rowid": 34,
+      "limiter_wait_ms": 497.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 6271,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 47013.196,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 497.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 849,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuyaFs0qO1QzuFtR5EUmEerDlFYT",
+      "stage": "validation_grounding_batch_03_primary",
+      "timestamp_utc": "2026-10-06T08:38:59.561800+00:00",
+      "tool_calls": 0,
+      "total_tokens": 16968,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "validation_grounding",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.003434,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 8512,
+      "ledger_rowid": 33,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 5166,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 42210.244,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 914,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuyarFSrJTZQ7RHNU6rqyBSe0jY1",
+      "stage": "validation_grounding_batch_01_primary",
+      "timestamp_utc": "2026-10-06T08:38:54.195189+00:00",
+      "tool_calls": 0,
+      "total_tokens": 13678,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "summary",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.003158,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 14480,
+      "ledger_rowid": 25,
+      "limiter_wait_ms": 248.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 3419,
+      "prompt_namespace": "report_vs/artifacts/summary",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 39478.659,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 248.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 2324,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuwmFVEBRp9Tdbc7DgOvsRJjU5Zq",
+      "stage": "artifact_summary_primary",
+      "timestamp_utc": "2026-10-06T08:36:59.991856+00:00",
+      "tool_calls": 0,
+      "total_tokens": 17899,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "validation_grounding",
+      "cached_input_tokens": 1832,
+      "estimated_cost_usd": 0.00268,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 9058,
+      "ledger_rowid": 32,
+      "limiter_wait_ms": 249.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 3879,
+      "prompt_namespace": "report_vs/validate/grounding",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 31923.017,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 249.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 622,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuyaZZ1AStDwa94hAnBULlj9xnW7",
+      "stage": "validation_grounding_batch_02_primary",
+      "timestamp_utc": "2026-10-06T08:38:44.168659+00:00",
+      "tool_calls": 0,
+      "total_tokens": 12937,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "findings",
+      "cached_input_tokens": null,
+      "estimated_cost_usd": 0.005599,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 18488,
+      "ledger_rowid": 19,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 2500,
+      "prompt_namespace": "report_vs/evidence_packs/findings",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 30287.635,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "responses.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 1517,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "resp_0c65cc27cd28b02e006ac4b2c8699c87d2a347e8a9ce48d46c",
+      "stage": "evidence_pack_primary",
+      "timestamp_utc": "2026-10-06T08:35:50.498361+00:00",
+      "tool_calls": 1,
+      "total_tokens": 20988,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "insights_final",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.002983,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 15767,
+      "ledger_rowid": 27,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 2812,
+      "prompt_namespace": "report_vs/artifacts/insights_final",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 27741.7,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "high",
+      "reasoning_tokens": 1764,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuxhWUjTZA1VsTd4Q844wDAfscHM",
+      "stage": "artifact_insights_final_primary",
+      "timestamp_utc": "2026-10-06T08:37:44.496681+00:00",
+      "tool_calls": 0,
+      "total_tokens": 18579,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "expert_comment",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.001695,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 3526,
+      "ledger_rowid": 30,
+      "limiter_wait_ms": 247.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 2685,
+      "prompt_namespace": "report_vs/artifacts/expert_comment",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 22748.536,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 247.0,
+      "reasoning_effort": "high",
+      "reasoning_tokens": 2301,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuyCIAHLuz2gu9VHKBFS7tyd4eT4",
+      "stage": "artifact_expert_comment_primary",
+      "timestamp_utc": "2026-10-06T08:38:11.078561+00:00",
+      "tool_calls": 0,
+      "total_tokens": 6211,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "linkedin_post",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.0013,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 6417,
+      "ledger_rowid": 29,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 1317,
+      "prompt_namespace": "report_vs/artifacts/linkedin_post",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 15517.433,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 1061,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuyCPXTbSmQjEd6GsM3Aof0k2Oec",
+      "stage": "artifact_linkedin_post_primary",
+      "timestamp_utc": "2026-10-06T08:38:03.597307+00:00",
+      "tool_calls": 0,
+      "total_tokens": 7734,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "category_fit",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.001592,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 9281,
+      "ledger_rowid": 22,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 1327,
+      "prompt_namespace": "report_vs/context_category_fit",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 14250.806,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "low",
+      "reasoning_tokens": 248,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVuwPxzDO2HVCXLmqz6OIB7tVZUBF",
+      "stage": "category_fit",
+      "timestamp_utc": "2026-10-06T08:36:11.397627+00:00",
+      "tool_calls": 0,
+      "total_tokens": 10608,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "quote_candidates",
+      "cached_input_tokens": null,
+      "estimated_cost_usd": 0.004326,
+      "file_search_call_count": 1,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 13895,
+      "ledger_rowid": 18,
+      "limiter_wait_ms": 242.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 872,
+      "prompt_namespace": "report_vs/evidence_packs/quote_candidates",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 11016.425,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "responses.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 242.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 325,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "resp_0ef6a98d6504dc50006ac4b2c887d087d280df68b20db1a3ab",
+      "stage": "evidence_pack_primary",
+      "timestamp_utc": "2026-10-06T08:35:31.441237+00:00",
+      "tool_calls": 1,
+      "total_tokens": 14767,
+      "workflow": "report_analysis"
+    },
+    {
+      "artifact_family": "figure_ranking",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.000451,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 732,
+      "ledger_rowid": 4,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 756,
+      "prompt_namespace": "rank_candidates",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 9547.238,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 459,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVutqiuzw38tsUNmBxOdRTkyhX74U",
+      "stage": "figure_ranking",
+      "timestamp_utc": "2026-10-06T08:33:27.913885+00:00",
+      "tool_calls": 0,
+      "total_tokens": 1488,
+      "workflow": "report_generation"
+    },
+    {
+      "artifact_family": "figure_ranking",
+      "cached_input_tokens": 0,
+      "estimated_cost_usd": 0.000438,
+      "file_search_call_count": 0,
+      "in_flight_wait_ms": 0.0,
+      "input_tokens": 915,
+      "ledger_rowid": 2,
+      "limiter_wait_ms": 0.0,
+      "model": "gpt-6-luna",
+      "output_tokens": 694,
+      "prompt_namespace": "rank_candidates",
+      "provider": "openai",
+      "provider_call_status": "completed",
+      "provider_elapsed_ms": 8875.004,
+      "provider_error_type": null,
+      "provider_http_status": null,
+      "provider_operation": "chat.completions.create",
+      "provider_retryable": null,
+      "rate_spacing_wait_ms": 0.0,
+      "reasoning_effort": "medium",
+      "reasoning_tokens": 371,
+      "repair_attempt": 0,
+      "report_id": "cohort-81af3890cd84ece81ef1",
+      "request_id": "chatcmpl-EVutjF7dEXh3KNqm5y9oWTtlF4E0n",
+      "stage": "figure_ranking",
+      "timestamp_utc": "2026-10-06T08:33:19.233180+00:00",
+      "tool_calls": 0,
+      "total_tokens": 1609,
+      "workflow": "report_generation"
+    }
+  ],
+  "timed_call_count": 35,
+  "total_tokens": 354247,
+  "untimed_call_count": 0,
+  "usage_event_count": 35
+}
