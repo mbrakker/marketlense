@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import logging
 import sqlite3
 import subprocess
 import tempfile
@@ -13,12 +14,14 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from statistics import median
+from types import TracebackType
 from typing import Any
 
 import yaml
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
+from src.contracts.logging import REQUIRED_LOG_EVENT_FIELDS
 from src.contracts.llm_usage import LLMUsageRunSummaryRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_store import (
@@ -67,6 +70,182 @@ from src.services.workflow_queue_service import (
 )
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
+
+_VALIDATION_REUSE_LOGGER_NAME = "market_lense.validation_generator"
+_VALIDATION_REUSE_EVENT_NAME = "validation_claim_reuse_decided"
+_VALIDATION_REUSE_COUNTER_FIELDS = (
+    "total_candidate_claims",
+    "reused_validation_results",
+    "newly_validated_claims",
+    "grounding_calls_avoided",
+    "semantic_validation_calls_avoided",
+)
+
+
+def _reuse_event_payload(record: logging.LogRecord) -> dict[str, Any] | None:
+    if record.name != _VALIDATION_REUSE_LOGGER_NAME:
+        return None
+    try:
+        payload = json.loads(record.getMessage())
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("event") != _VALIDATION_REUSE_EVENT_NAME:
+        return None
+    if payload.get("module") != _VALIDATION_REUSE_LOGGER_NAME:
+        return None
+    return payload
+
+
+class _PreserveValidationLoggerFilter(logging.Filter):
+    """Only enable the target INFO event when INFO was previously disabled."""
+
+    def __init__(self, previous_effective_level: int) -> None:
+        super().__init__()
+        self._previous_effective_level = previous_effective_level
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno >= self._previous_effective_level:
+            return (
+                record.levelno != logging.INFO
+                or _reuse_event_payload(record) is not None
+            )
+        return (
+            record.levelno == logging.INFO and _reuse_event_payload(record) is not None
+        )
+
+
+class _ValidationReuseDecisionHandler(logging.Handler):
+    """Retain only bounded claim-reuse counters from the existing log event."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(level=logging.INFO)
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._stream = self.path.open("w", encoding="utf-8", newline="\n")
+        self.event_count = 0
+        self.invalid_event_count = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        payload = _reuse_event_payload(record)
+        if payload is None:
+            return
+        raw_fields = payload.get("fields")
+        if not REQUIRED_LOG_EVENT_FIELDS.issubset(payload) or not isinstance(
+            raw_fields, dict
+        ):
+            self.invalid_event_count += 1
+            return
+        fields: dict[str, Any] = {}
+        for name in _VALIDATION_REUSE_COUNTER_FIELDS:
+            value = raw_fields.get(name)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                self.invalid_event_count += 1
+                return
+            fields[name] = value
+        fallback_counts = raw_fields.get("reuse_fallback_reason_counts")
+        if not isinstance(fallback_counts, dict):
+            self.invalid_event_count += 1
+            return
+        fields["reuse_fallback_reason_counts"] = {
+            str(reason): count
+            for reason, count in sorted(
+                fallback_counts.items(), key=lambda item: str(item[0])
+            )
+            if isinstance(reason, str)
+            and reason.strip()
+            and len(reason) <= 120
+            and isinstance(count, int)
+            and not isinstance(count, bool)
+            and count >= 0
+        }
+        retained = {name: payload[name] for name in REQUIRED_LOG_EVENT_FIELDS}
+        retained["fields"] = fields
+        try:
+            self._stream.write(
+                json.dumps(retained, sort_keys=True, separators=(",", ":")) + "\n"
+            )
+            self._stream.flush()
+            self.event_count += 1
+        except (OSError, TypeError, ValueError):
+            self.invalid_event_count += 1
+
+    def close(self) -> None:
+        try:
+            self._stream.close()
+        finally:
+            super().close()
+
+
+class _ValidationReuseEventCapture:
+    """Temporarily retain one safe structured event in a frozen run directory."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.handler: _ValidationReuseDecisionHandler | None = None
+        self.logger = logging.getLogger(_VALIDATION_REUSE_LOGGER_NAME)
+        self.previous_level = self.logger.level
+        self.previous_effective_level = self.logger.getEffectiveLevel()
+        self.filter: _PreserveValidationLoggerFilter | None = None
+
+    def __enter__(self) -> _ValidationReuseDecisionHandler:
+        self.handler = _ValidationReuseDecisionHandler(self.path)
+        self.logger.addHandler(self.handler)
+        if self.previous_effective_level > logging.INFO:
+            self.filter = _PreserveValidationLoggerFilter(self.previous_effective_level)
+            self.logger.addFilter(self.filter)
+            self.logger.setLevel(logging.INFO)
+        return self.handler
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        if self.handler is not None:
+            self.logger.removeHandler(self.handler)
+            self.handler.close()
+        if self.filter is not None:
+            self.logger.removeFilter(self.filter)
+        self.logger.setLevel(self.previous_level)
+
+
+def _validation_reuse_telemetry_summary(
+    path: Path, handler: _ValidationReuseDecisionHandler
+) -> dict[str, Any]:
+    events: list[dict[str, Any]] = []
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                events.append(event)
+    totals = {name: 0 for name in _VALIDATION_REUSE_COUNTER_FIELDS}
+    fallback_totals: dict[str, int] = {}
+    for event in events:
+        fields = event.get("fields")
+        if not isinstance(fields, dict):
+            continue
+        for name in _VALIDATION_REUSE_COUNTER_FIELDS:
+            value = fields.get(name)
+            if isinstance(value, int) and not isinstance(value, bool):
+                totals[name] += value
+        reasons = fields.get("reuse_fallback_reason_counts")
+        if isinstance(reasons, dict):
+            for reason, count in reasons.items():
+                if isinstance(reason, str) and isinstance(count, int):
+                    fallback_totals[reason] = fallback_totals.get(reason, 0) + count
+    return {
+        "artifact_path": path.name,
+        "event_count": len(events),
+        "invalid_event_count": handler.invalid_event_count,
+        "totals_across_validation_passes": totals,
+        "reuse_fallback_reason_counts": dict(sorted(fallback_totals.items())),
+    }
 
 
 @dataclass(frozen=True)
@@ -372,11 +551,7 @@ def _collect_frozen_cohort_queue_timing_evidence(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='published'"
         ).fetchone()
         publish_records = (
-            int(
-                conn.execute(
-                    "SELECT COUNT(*) FROM published"
-                ).fetchone()[0]
-            )
+            int(conn.execute("SELECT COUNT(*) FROM published").fetchone()[0])
             if published
             else 0
         )
@@ -654,6 +829,8 @@ def run_frozen_cohort_once(
     run_started_at_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     started_at = time.monotonic()
     run = prepare_isolated_canary_run(runs_root=runs_root)
+    reuse_events_path = run.root / "validation_claim_reuse_decisions.jsonl"
+    reuse_event_handler: _ValidationReuseDecisionHandler | None = None
     results = [_empty_result(run, started_at) for _ in sources]
     cohort_metrics: dict[str, Any] = {
         "cost_usd": None,
@@ -750,15 +927,16 @@ def run_frozen_cohort_once(
             root_workflow_id = str(queue_submission.root_workflow_id)
             for result in results:
                 result["workflow_root_id"] = root_workflow_id
-            _drain_report_paths(
-                state_db=settings.state_db,
-                usage_db_path=settings.usage_db_path,
-                config_path=run.config_path,
-                report_ids=tuple(str(result["report_id"]) for result in results),
-                root_workflow_id=root_workflow_id,
-                ctx=ctx,
-                max_duration_seconds=max_duration_seconds,
-            )
+            with _ValidationReuseEventCapture(reuse_events_path) as reuse_event_handler:
+                _drain_report_paths(
+                    state_db=settings.state_db,
+                    usage_db_path=settings.usage_db_path,
+                    config_path=run.config_path,
+                    report_ids=tuple(str(result["report_id"]) for result in results),
+                    root_workflow_id=root_workflow_id,
+                    ctx=ctx,
+                    max_duration_seconds=max_duration_seconds,
+                )
             terminal_observed_monotonic = time.monotonic()
             terminal_observed_at_utc = datetime.now(timezone.utc).isoformat(
                 timespec="milliseconds"
@@ -849,6 +1027,12 @@ def run_frozen_cohort_once(
             if not result["terminal_failure_code"]:
                 result["terminal_failure_code"] = "frozen_cohort_runner_defect"
     finally:
+        if reuse_event_handler is not None and reuse_events_path.is_file():
+            cohort_metrics["validation_reuse_telemetry"] = (
+                _validation_reuse_telemetry_summary(
+                    reuse_events_path, reuse_event_handler
+                )
+            )
         cohort_metrics["duration_seconds"] = (
             round(terminal_observed_monotonic - started_at, 3)
             if terminal_observed_monotonic is not None
@@ -1397,9 +1581,7 @@ def _read_result(
         "bounded_automatic_repair": (
             automatic_repair_count > 0
             or workflow_retry_count > 0
-            or any(
-                report_output_dir.rglob("regeneration_candidate_audit_*.json")
-            )
+            or any(report_output_dir.rglob("regeneration_candidate_audit_*.json"))
         ),
         "automatic_repair_count": automatic_repair_count,
         "repair_disposition_counts": repair_disposition_counts,
@@ -1866,9 +2048,7 @@ def summarize_frozen_cohort_results(
         if item.get("admission_outcome", "admitted") == "admitted"
     ]
     workflow_denominator = max(1, len(admitted))
-    costs = [
-        float(item["cost"]) for item in results if item.get("cost") is not None
-    ]
+    costs = [float(item["cost"]) for item in results if item.get("cost") is not None]
     durations = [
         float(item["total_duration_seconds"])
         for item in results
@@ -1922,9 +2102,7 @@ def summarize_frozen_cohort_results(
         ),
         "failure_code_pareto": pareto,
         "mean_cost": (
-            round(sum(costs) / denominator, 6)
-            if len(costs) == count
-            else "unavailable"
+            round(sum(costs) / denominator, 6) if len(costs) == count else "unavailable"
         ),
         "median_cost": (
             round(median(costs), 6) if len(costs) == count else "unavailable"
@@ -1964,14 +2142,10 @@ def summarize_frozen_cohort_results(
                     "operator_intervention_count", "unavailable"
                 ),
                 "mean_cost": (
-                    summary["mean_cost"]
-                    if per_report_attribution
-                    else "unavailable"
+                    summary["mean_cost"] if per_report_attribution else "unavailable"
                 ),
                 "median_cost": (
-                    summary["median_cost"]
-                    if per_report_attribution
-                    else "unavailable"
+                    summary["median_cost"] if per_report_attribution else "unavailable"
                 ),
                 "mean_duration_seconds": (
                     summary["mean_duration_seconds"]

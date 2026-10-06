@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import sqlite3
 from pathlib import Path
 
 from scripts.quality.ias_live_canary_runner import (
+    _ValidationReuseEventCapture,
     _read_failure_diagnostic,
+    _validation_reuse_telemetry_summary,
     run_first_attempt_canary,
     summarize_frozen_cohort_results,
 )
@@ -19,6 +22,7 @@ from tests._test_validation_queue_lineage._shared import (
     _full_chain_chat_response_factory,
     _full_chain_response_factory,
 )
+from src.utils.logging import log_event, new_run_context
 
 
 def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) -> None:
@@ -32,6 +36,69 @@ def test_cohort_member_missing_source_has_typed_terminal_result(tmp_path: Path) 
     assert result["workflow_attempt_count"] == 0
     assert result["terminal_failure_code"] == "frozen_cohort_source_missing"
     assert Path(result["run_directory"]).joinpath("result.json").is_file()
+
+
+def test_validation_reuse_capture_retains_only_bounded_decision_counters(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "validation_claim_reuse_decisions.jsonl"
+    logger = logging.getLogger("market_lense.validation_generator")
+    prior_level = logger.level
+    context = new_run_context(task_id="reuse-capture-test")
+
+    with _ValidationReuseEventCapture(event_path) as handler:
+        logger.info(
+            log_event(
+                context,
+                role="generator",
+                event="prompt_rendered_identity",
+                module="market_lense.validation_generator",
+                fields={"prompt_content_hash": "not-the-target-event"},
+            )
+        )
+        logger.info(
+            log_event(
+                context,
+                role="generator",
+                event="validation_claim_reuse_decided",
+                module="market_lense.validation_generator",
+                fields={
+                    "total_candidate_claims": 2,
+                    "reused_validation_results": 1,
+                    "newly_validated_claims": 1,
+                    "grounding_calls_avoided": 1,
+                    "semantic_validation_calls_avoided": 1,
+                    "reuse_fallback_reason_counts": {"new_claim": 1},
+                    "claim_text": "private claim content must not be retained",
+                },
+            )
+        )
+
+    lines = event_path.read_text(encoding="utf-8").splitlines()
+    assert logger.level == prior_level
+    assert handler.event_count == 1
+    assert len(lines) == 1
+    assert "private claim content" not in lines[0]
+    event = json.loads(lines[0])
+    assert event["event"] == "validation_claim_reuse_decided"
+    assert event["fields"] == {
+        "total_candidate_claims": 2,
+        "reused_validation_results": 1,
+        "newly_validated_claims": 1,
+        "grounding_calls_avoided": 1,
+        "semantic_validation_calls_avoided": 1,
+        "reuse_fallback_reason_counts": {"new_claim": 1},
+    }
+    summary = _validation_reuse_telemetry_summary(event_path, handler)
+    assert summary["event_count"] == 1
+    assert summary["totals_across_validation_passes"] == {
+        "total_candidate_claims": 2,
+        "reused_validation_results": 1,
+        "newly_validated_claims": 1,
+        "grounding_calls_avoided": 1,
+        "semantic_validation_calls_avoided": 1,
+    }
+    assert summary["reuse_fallback_reason_counts"] == {"new_claim": 1}
 
 
 def test_failure_diagnostic_uses_retained_validation_finding_without_source_text(
@@ -548,6 +615,13 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     manifest = tmp_path / "cohort.json"
     manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
     captured: list[dict[str, object]] = []
+    reuse_telemetry = {
+        "artifact_path": "validation_claim_reuse_decisions.jsonl",
+        "event_count": 1,
+        "invalid_event_count": 0,
+        "totals_across_validation_passes": {"reused_validation_results": 2},
+        "reuse_fallback_reason_counts": {},
+    }
 
     def run_once(**kwargs):
         captured.append(kwargs)
@@ -575,6 +649,7 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
                 "output_tokens": 10 * (index + 1),
                 "cost_usd": 0.1 * (index + 1),
                 "duration_seconds": 12.0 * (index + 1),
+                "validation_reuse_telemetry": reuse_telemetry,
                 "bounded_automatic_repair": False,
                 "operator_intervention_count": 0,
             },
@@ -594,6 +669,10 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     assert len({str(call["runs_root"]) for call in captured}) == 2
     assert [report["report_id"] for report in result["reports"]] == report_ids
     assert all(
+        report["validation_reuse_telemetry"] == reuse_telemetry
+        for report in result["reports"]
+    )
+    assert all(
         report["metric_attribution"] == "per_report_isolated_workflow"
         for report in result["reports"]
     )
@@ -609,6 +688,10 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     )
     assert retained["git_sha"] == "a" * 40
     assert retained["cohort_size"] == 2
+    assert all(
+        report["validation_reuse_telemetry"] == reuse_telemetry
+        for report in retained["reports"]
+    )
 
 
 def test_cohort_summary_retains_batch_metrics_only_at_cohort_scope() -> None:

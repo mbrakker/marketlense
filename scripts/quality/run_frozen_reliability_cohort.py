@@ -107,9 +107,7 @@ def run_frozen_reliability_cohort(
         )
         report_results = list(execution["reports"])
         if len(report_results) != 1:
-            raise RuntimeError(
-                f"Isolated frozen report execution omitted {report_id}"
-            )
+            raise RuntimeError(f"Isolated frozen report execution omitted {report_id}")
         git_sha = str(execution.get("git_sha") or "")
         if len(git_sha) != 40 or any(
             character not in "0123456789abcdef" for character in git_sha
@@ -129,9 +127,16 @@ def run_frozen_reliability_cohort(
                 "output_tokens": metrics.get("output_tokens"),
                 "cost": metrics.get("cost_usd"),
                 "total_duration_seconds": metrics.get("duration_seconds"),
-                "bounded_automatic_repair": metrics.get(
-                    "bounded_automatic_repair"
+                **(
+                    {
+                        "validation_reuse_telemetry": metrics[
+                            "validation_reuse_telemetry"
+                        ]
+                    }
+                    if isinstance(metrics.get("validation_reuse_telemetry"), dict)
+                    else {}
                 ),
+                "bounded_automatic_repair": metrics.get("bounded_automatic_repair"),
                 "operator_intervention": (
                     bool(metrics["operator_intervention_count"])
                     if metrics.get("operator_intervention_count") is not None
@@ -268,9 +273,7 @@ def main() -> int:
         "--report-ids",
         nargs="+",
         default=None,
-        help=(
-            "Optional stable report IDs to run; defaults to every manifest member"
-        ),
+        help=("Optional stable report IDs to run; defaults to every manifest member"),
     )
     parser.add_argument("--preflight-only", action="store_true")
     args = parser.parse_args()
