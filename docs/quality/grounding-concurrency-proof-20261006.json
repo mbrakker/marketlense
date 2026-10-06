@@ -1,8 +1,9 @@
 {
   "schema_version": "1.0",
   "benchmark_id": "grounding-concurrency-proof-20261006",
-  "objective": "Complete one frozen-five validation run for the grounding-concurrency changes on exact current HEAD; decide whether to accept the optimization.",
-  "tested_head": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
+  "objective": "Revalidate the grounding concurrency optimization after the evidence-fidelity lifecycle fix using exactly one frozen-five cohort on exact committed HEAD; decide whether to accept.",
+  "pre_fix_tested_head": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
+  "tested_head": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
   "implementation_commits": [
     {
       "sha": "6328b931a1fa0cd79db9227287037969b16a7232",
@@ -11,6 +12,10 @@
     {
       "sha": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
       "scope": "Bounded retryable validation recovery and provider error telemetry"
+    },
+    {
+      "sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+      "scope": "Evidence-fidelity filtering now precedes canonical pack persistence and prompt-family materialization; typed source-pack evidence references are preserved in claim ledgers."
     }
   ],
   "manifest": {
@@ -18,7 +23,7 @@
     "sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
     "report_count": 5
   },
-  "run": {
+  "pre_fix_run": {
     "started_at_utc": "2026-10-06T05:13:48.794+00:00",
     "all_reports_terminal_at_utc": "2026-10-06T05:30:50.935+00:00",
     "cohort_wall_seconds": 1022.162,
@@ -39,13 +44,107 @@
     "wrapper_sha256": "74260a7079779382a685194556fb73823fd8a201049a3e941925518fb86d51fa",
     "setup_note": "An initial wrapper invocation stopped at import before runner startup because its temporary script lacked the repository on sys.path. It produced no cohort or provider calls. The corrected wrapper ran the one cohort recorded here."
   },
-  "evidence_files": {
+  "run": {
+    "started_at_utc": "2026-10-06T06:27:01.026+00:00",
+    "all_reports_terminal_at_utc": "2026-10-06T06:43:51.332+00:00",
+    "cohort_wall_seconds": 1010.327,
+    "runner_measurement": "Runner monotonic time from entry through all reports reaching terminal state.",
+    "isolated_fresh_state": true,
+    "run_directory_label": "ias-first-attempt-1d7uqzox",
+    "actual_cohort_runs": 1,
+    "runner_entrypoint": "scripts.quality.ias_live_canary_runner.run_frozen_cohort_once",
+    "tested_head": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+    "max_duration_seconds": 1200,
+    "settings": {
+      "max_parallel_workers": 3,
+      "max_jobs_per_queue": 3,
+      "max_total_jobs": 60,
+      "validation_grounding_global_max_in_flight": 5,
+      "validation_grounding_global_min_interval_ms": 250,
+      "wordpress_publish_enabled": false,
+      "publication_write_count": 0
+    },
+    "max_observed_running_jobs_by_queue": {
+      "source_ingest": 3,
+      "report_selection": 3,
+      "report_analysis": 3,
+      "report_render": 1,
+      "publication_readiness": 1
+    },
+    "setup_note": "An initial wrapper invocation stopped before runner startup because its temporary script lacked the repository on sys.path; it produced no cohort or provider calls. The corrected wrapper ran the single recorded cohort."
+  },
+  "pre_fix_evidence_files": {
     "retention": "Raw run outputs remain in the isolated temporary run directory and are not committed; hashes identify the inspected evidence files.",
     "runner_result_sha256": "941e9a8750fde830e7a983e9898eca46949bf3696ba0c883cdef6556c9d559c6",
     "structured_log_sha256": "48a4f8259dcf2a1ecdda743aa697dfbeca28de915c36b8c92eb8c6902d17fcdb",
     "workflow_database_sha256": "bd6571fee90fe8f7a00e84a69eeeaaa214cba0d02e4868e742756ce71db967d9",
     "usage_database_sha256": "acfd6886afa4bffba5cc84585f27b841676513192d84da1fde694ae5ea303129",
     "reports_database_sha256": "42c105ad5c6c836516ec04483e4d2860f285f682512cc459033f811dee1e71f0"
+  },
+  "evidence_files": {
+    "retention": "Raw outputs remain in the isolated ignored tmp run directory; SHA-256 values identify inspected runner result, state databases, and fidelity artifacts.",
+    "runner_result_sha256": "92983367deec8032f867cfe99e9cab42b3b99346819bf4c6dd5909111c23c969",
+    "workflow_database_sha256": "11bd0e158aca6a538ed14306186355a817aee9188fc80dce1e39e16d7ff812a4",
+    "usage_database_sha256": "7bde1c90229a5b9f71514f9b55b18fea2d6b185fde8d9d239778969bc14940c0",
+    "reports_database_sha256": "4193485e99ab10fdbe4ed26e0004f17a95472cd19ea62d60306a1092820d601b",
+    "frozen_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+    "evidence_fidelity_artifacts": [
+      {
+        "output_directory": "d8ca0bf6efb9c703343867f6df0f26a2553aa78f-pdf",
+        "rejected_factual_candidates_retained_in_audit": 11,
+        "rejected_candidate_ids_in_canonical_findings": 0,
+        "rejected_candidate_ids_in_reusable_findings_materialization": 0,
+        "exact_rejected_candidate_text_matches_in_html": 0,
+        "evidence_fidelity_sha256": "0782a3e433ce667579be6d91e64d3e19d99ee522e197c97208bd12d452567f68",
+        "canonical_findings_sha256": "772e895c99e86b90db833340a10652b340e58f1f94211b419ecb4cf64d510915",
+        "reusable_findings_materialization_sha256": "a053f524ae05d2d553be446bc00df995a7abd2fe9a2755ea06f2e557bb847e16",
+        "rendered_html_sha256": "1d304fadf96f9fa78d49d2ab4e9e2689053f339800237a201833ae2fb648e017"
+      },
+      {
+        "output_directory": "final-web-version-report-consumer-trends-2026-pdf",
+        "rejected_factual_candidates_retained_in_audit": 10,
+        "rejected_candidate_ids_in_canonical_findings": 0,
+        "rejected_candidate_ids_in_reusable_findings_materialization": 0,
+        "exact_rejected_candidate_text_matches_in_html": 0,
+        "evidence_fidelity_sha256": "b8fe73b895761c4b57e149e7a83c18cf5ec3aa5ce9da768b4825a539674f5705",
+        "canonical_findings_sha256": "5efa5f6d9c729c3d7d5b1050719dbc6ef94c684093c55cd2be7ac25abc324915",
+        "reusable_findings_materialization_sha256": "e02cb95f4cc1cef0ecb288af05980302bd5afd2b174874d026c37ae0c2437fb8",
+        "rendered_html_sha256": "a51cd0f5746da4d8ed6bcde75787f7b425b629a800dd4e219360f15f05fd96a4"
+      },
+      {
+        "output_directory": "kpmg-2026-global-ma-outlook-pdf",
+        "rejected_factual_candidates_retained_in_audit": 13,
+        "rejected_candidate_ids_in_canonical_findings": 0,
+        "rejected_candidate_ids_in_reusable_findings_materialization": 0,
+        "exact_rejected_candidate_text_matches_in_html": 0,
+        "evidence_fidelity_sha256": "5a6c754f0f9448a1967f41d9d3f6474dbcd3d3f8015a58358434b0c0b1033e35",
+        "canonical_findings_sha256": "be18126b55dd4092ca3d49e16bbe5aa8c4b8a4aea7fd1f64e41fa11530e105d3",
+        "reusable_findings_materialization_sha256": "bf7a81d6a3c7369ba78595bad9b3329f6f150011a1abd3b404d66da3fe069893",
+        "rendered_html_sha256": "65ad6631feeaecb9ef437dbed5c6423a840c20b9c4d613ae6a7cca32aefc9947"
+      },
+      {
+        "output_directory": "mobile-app-trends-2026-pdf",
+        "rejected_factual_candidates_retained_in_audit": 17,
+        "rejected_candidate_ids_in_canonical_findings": 0,
+        "rejected_candidate_ids_in_reusable_findings_materialization": 0,
+        "exact_rejected_candidate_text_matches_in_html": 0,
+        "evidence_fidelity_sha256": "86bb1d50b3d642f56cca480b89bd8558ed7b790b5cf136fcfe23c41bfa2d7984",
+        "canonical_findings_sha256": "2d01793d10452f52001e6c43ffe93cc46be428de20437c7eb66afab50f220215",
+        "reusable_findings_materialization_sha256": "c5c82fa123f8e23d95f2dd570427552eb577e64c9a6e5d98bb618b6dfe95d38a",
+        "rendered_html_sha256": "a1269345de2cc04c422f9c3e220d8b913fb808f4c5e828553e29384f29bfd319"
+      },
+      {
+        "output_directory": "trends-and-predictions-2026-pdf",
+        "rejected_factual_candidates_retained_in_audit": 14,
+        "rejected_candidate_ids_in_canonical_findings": 0,
+        "rejected_candidate_ids_in_reusable_findings_materialization": 0,
+        "exact_rejected_candidate_text_matches_in_html": 0,
+        "evidence_fidelity_sha256": "5c3b2f30d1a1a500d01679b9b81fefa4c949c9d9361ead5eb9b6e024b3d3da28",
+        "canonical_findings_sha256": "2d01793d10452f52001e6c43ffe93cc46be428de20437c7eb66afab50f220215",
+        "reusable_findings_materialization_sha256": "c5c82fa123f8e23d95f2dd570427552eb577e64c9a6e5d98bb618b6dfe95d38a",
+        "rendered_html_sha256": "3d31408edf5f6266337e51a7e750c191e7f47ad048c813c70127d8af08522c3e"
+      }
+    ]
   },
   "baseline": {
     "artifact": "docs/quality/frozen-five-report-analysis-repair-path-20261005.json",
@@ -62,7 +161,7 @@
     "unsupported_retained_claim_count": 0,
     "unresolved_retained_claim_count": 0
   },
-  "observed": {
+  "pre_fix_observed": {
     "cohort_wall_seconds": 1022.162,
     "report_analysis_execution_seconds_total": 1830.36,
     "report_analysis_execution_seconds_max": 460.719,
@@ -236,7 +335,62 @@
       }
     }
   },
-  "comparison": {
+  "observed": {
+    "cohort_wall_seconds": 1010.327,
+    "report_analysis_execution_seconds_total": 1736.637,
+    "report_analysis_execution_seconds_max": 378.228,
+    "report_analysis_execution_seconds_median": 344.921,
+    "report_analysis_queue_wait_seconds_total": 824.0,
+    "report_analysis_attempt_count": 5,
+    "provider_calls": 167,
+    "provider_calls_completed": 167,
+    "provider_origin_failures": 0,
+    "http_429_count": 0,
+    "timeout_count": 0,
+    "file_search_calls": 25,
+    "input_tokens": 1561378,
+    "output_tokens": 313309,
+    "estimated_cost_usd": 0.36732,
+    "grounding_calls_or_batches": 31,
+    "grounding_unique_task_ids": 31,
+    "grounding_duplicate_task_count": 0,
+    "grounding_reports_with_calls": 5,
+    "grounding_completed_calls": 31,
+    "grounding_provider_origin_failures": 0,
+    "grounding_http_429_count": 0,
+    "grounding_timeout_count": 0,
+    "grounding_limiter": {
+      "configured_max_in_flight": 5,
+      "configured_min_interval_ms": 250,
+      "maximum_observed_process_wide_in_flight_this_run": null,
+      "current_run_overlap_telemetry": "unavailable; artifacts retain provider completion events but not per-call start/finish or limiter-counter events",
+      "latest_pre_fix_directly_observed_peak": 5,
+      "latest_pre_fix_overlap_max": 5,
+      "limiter_implementation_changed_by_fix": false
+    },
+    "automatic_repair_count": 3,
+    "structured_output_repair_provider_calls": 1,
+    "workflow_retry_count": 0,
+    "quality": {
+      "reports": 5,
+      "final_validation_pass_count": 5,
+      "publication_readiness_pass_count": 5,
+      "unsupported_retained_claim_count": 0,
+      "unresolved_retained_claim_count": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "new_quality_waivers": 0,
+      "final_state_awaiting_review_count": 5
+    },
+    "report_analysis_stage": {
+      "execution_seconds_total": 1736.637,
+      "execution_seconds_max": 378.228,
+      "queue_wait_seconds_total": 824.0
+    },
+    "provider_request_timing": "unavailable",
+    "prompt_family_elapsed_time": "unavailable"
+  },
+  "pre_fix_comparison": {
     "cohort_wall_reduction_percent": 19.28,
     "report_analysis_execution_total_reduction_percent": 25.34,
     "report_analysis_execution_max_reduction_percent": 30.37,
@@ -246,7 +400,33 @@
     "estimated_cost_change_percent": -1.22,
     "causal_attribution_limit": "These are single-cohort observations. Generated content and resulting call counts vary; provider request timing by family is unavailable, so the measured deltas do not isolate the concurrency change as the sole cause of the speedup."
   },
-  "acceptance": {
+  "comparison": {
+    "reference_tested_head": "f15ba3f5bb9b63d47cf901874e24edb765adc191",
+    "versus_latest_pre_fix_reference": {
+      "cohort_wall_change_percent": -1.16,
+      "report_analysis_execution_total_change_percent": -5.12,
+      "report_analysis_execution_max_change_percent": -17.9,
+      "report_analysis_queue_wait_change_percent": -8.55,
+      "provider_call_change_percent": -1.76,
+      "grounding_call_change_percent": 10.71,
+      "estimated_cost_change_percent": -6.65,
+      "thresholds_percent": {
+        "cohort_wall_regression": 10,
+        "report_analysis_regression": 10,
+        "cost_increase": 5
+      },
+      "thresholds_triggered": false
+    },
+    "versus_original_baseline": {
+      "cohort_wall_reduction_percent": 20.22,
+      "report_analysis_execution_total_reduction_percent": 29.16,
+      "report_analysis_execution_max_reduction_percent": 42.84,
+      "provider_call_reduction_percent": 13.47,
+      "estimated_cost_reduction_percent": 7.79,
+      "causal_attribution_limit": "Single-cohort measurements; provider timing by stage/family is unavailable, so these deltas do not isolate grounding concurrency as the sole cause."
+    }
+  },
+  "pre_fix_acceptance": {
     "quality_mandatory": true,
     "quality_result": "failed",
     "failed_criteria": [
@@ -258,7 +438,28 @@
     "decision": "Do not mark the optimization accepted for production promotion on this benchmark. Leave commits 6328b931 and f15ba3f5 in the current branch pending a separate evidence-fidelity correction and its required validation. Do not lower the shared cap: the observed quality failure is a missing evidence reference, and there is no evidence that cap=5 caused it or that a lower cap would fix it.",
     "next_measured_bottleneck": "report_analysis remains the largest measured execution stage (1830.36 seconds total, 901 seconds queue wait). Within its provider-call volume, figure_ranking is highest at 43 calls, followed by evidence_pack_primary at 30. Per-family provider latency was not retained, so the next profiling step should add timing attribution before making another optimization."
   },
-  "pre_benchmark_verification": {
+  "acceptance": {
+    "tested_head": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+    "quality_result": "passed",
+    "quality_criteria": {
+      "validation": "5/5 passed",
+      "publication_readiness": "5/5 passed",
+      "unsupported_retained_claims": 0,
+      "unresolved_retained_claims": 0,
+      "filtered_candidate_ids_in_canonical_findings": 0,
+      "filtered_candidate_ids_in_reusable_materializations": 0,
+      "filtered_candidate_text_in_rendered_html": 0,
+      "operator_interventions": 0,
+      "publication_writes": 0,
+      "new_quality_waivers": 0
+    },
+    "evidence_fidelity_lifecycle": "Across five reports, 65 unsupported factual candidates remained in audit records; none reappeared by ID in canonical findings or reusable findings materializations, and no rejected candidate text appeared in rendered HTML.",
+    "grounding_regression_protection": "31 unique grounding tasks completed across all five reports without duplicate task ids or provider errors/429s/timeouts. The pre-fix run directly observed a process-wide peak of 5 with active overlap. The follow-up did not retain per-call start/finish or limiter-counter telemetry, so its peak cannot be independently recomputed.",
+    "performance_result": "No specified regression threshold was triggered versus the latest pre-fix reference; wall time, report-analysis total and max, provider calls, and cost all decreased. Performance remains materially improved versus the original baseline.",
+    "decision": "Accept the grounding optimization after the evidence-fidelity correction and retain the shared grounding cap at 5. Do not do more outer-concurrency work.",
+    "next_measured_bottleneck": "Add minimal provider request start/finish timing by report-analysis stage and prompt family. Current report_analysis execution was 1736.637 seconds with 824 seconds queue wait, but provider_request_timing and prompt_family_elapsed_time are unavailable; do not rank figure_ranking or evidence packs from call counts alone."
+  },
+  "pre_fix_verification": {
     "focused_tests": {
       "command": "python -m pytest -q tests/test_llm_service.py tests/test_retained_claim_grounding.py tests/test_report_analysis_validation_fallback.py tests/test_report_analysis_orchestrator_decomposition.py tests/test_report_analysis_generator.py tests/test_report_regeneration_generator.py tests/test_regeneration_candidate.py tests/test_claim_validation_generator.py tests/test_openai_chat_service.py tests/test_report_pipeline_orchestrator.py",
       "result": "370 passed in 45.60s"
@@ -280,10 +481,36 @@
       "result": "passed with no output"
     }
   },
-  "limitations": [
+  "verification": {
+    "focused_tests": {
+      "command": "pytest -q tests/test_evidence_pack_generator.py tests/test_claim_validation_generator.py tests/test_claim_validation_source_pages.py tests/test_prompt_family_materialization.py tests/test_prompt_family_minimal_execution.py tests/test_artifact_generator.py tests/test_render_service_artifacts.py tests/test_publish_readiness_gate.py tests/test_report_analysis_generator.py -k \"not test_render_includes_artifact_sections\"",
+      "result": "352 passed, 1 deselected in 16.17s"
+    },
+    "unfiltered_renderer_test": {
+      "test": "tests/test_render_service_artifacts.py::test_render_includes_artifact_sections",
+      "result": "Failed and failed again on isolated rerun. Its fixture module and production renderer were unchanged by this fix; the parent revision was not rerun, so baseline attribution is not proven."
+    },
+    "ruff": {
+      "scope": "All changed Python source and test files in the evidence-fidelity fix commit.",
+      "result": "All checks passed."
+    },
+    "diff_check": {
+      "command": "git diff --check",
+      "result": "Passed with no output for the benchmark-evidence diff."
+    },
+    "cohort": "Exactly one frozen-five cohort ran on exact committed source/test HEAD a1f2affcb4dd7e58ef5af831914edfd27e96ebbc using fresh isolated state.",
+    "scope_guard": "No grounding concurrency, model, prompt, reasoning-effort, validation-threshold, or outer-concurrency changes were included."
+  },
+  "pre_fix_limitations": [
     "Only one fresh cohort was run, as required; no repeated run was used to seek a preferred result.",
     "Repair candidate attempt count and latency were not retained by the run artifacts.",
     "Per-provider-stage request timing was unavailable.",
     "The initial wrapper import failure was corrected before the only cohort started and produced no provider calls."
+  ],
+  "limitations": [
+    "Only one fresh frozen-five cohort was run; no repeated run was used to seek a preferred result.",
+    "This follow-up artifact set does not retain per-call provider start/finish events or limiter counters; current-run process-wide grounding peak and overlap are unavailable. The immediate pre-fix benchmark directly recorded peak 5 and active overlap.",
+    "Per-provider-stage and prompt-family request timing is unavailable; minimal timing attribution is the next profiling task.",
+    "The renderer artifact-section test fails in isolation, but its test module and production renderer were unchanged; parent-baseline attribution was not established."
   ]
 }
