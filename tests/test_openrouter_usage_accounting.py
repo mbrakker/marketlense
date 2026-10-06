@@ -4,6 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.error import HTTPError
 
 import pytest
 
@@ -99,6 +100,51 @@ def test_openrouter_chat_json_records_provider_usage_to_sqlite(
     assert row["output_tokens"] == 7
     assert row["total_tokens"] == 18
     assert row["provider_decision"] == "openrouter_fallback"
+    metadata = json.loads(row["metadata_json"])
+    assert metadata["provider_operation"] == "chat.completions.http"
+    assert metadata["provider_elapsed_ms"] >= 0
+    assert metadata["limiter_wait_ms"] == 0
+
+
+def test_openrouter_provider_failure_records_one_timed_failed_usage_row(
+    external_boundary_mocks_only,
+    tmp_path: Path,
+) -> None:
+    def _urlopen(request, timeout):
+        raise HTTPError(request.full_url, 503, "unavailable", {}, None)
+
+    external_boundary_mocks_only.setattr(openrouter.urllib_request, "urlopen", _urlopen)
+    request = SimpleNamespace(
+        openrouter_api_key="secret",
+        model="openai/gpt-5-mini",
+        system_prompt="system",
+        user_prompt="user",
+        timeout_seconds=30.0,
+        cost_ledger_path=str(tmp_path / "ledger.jsonl"),
+        cost_daily_path=str(tmp_path / "daily.json"),
+        usage_db_path=str(tmp_path / "usage.sqlite"),
+        model_pricing={},
+        report_id="report-1",
+        prompt_namespace="openrouter/test",
+    )
+
+    with pytest.raises(AppError) as caught:
+        openrouter.openrouter_chat_json(request, _ctx())
+
+    assert caught.value.code == "openrouter_chat_failed"
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("select * from llm_usage_events").fetchall()
+    assert len(rows) == 1
+    row = rows[0]
+    metadata = json.loads(row["metadata_json"])
+    assert row["provider_call_status"] == "failed"
+    assert row["report_id"] == "report-1"
+    assert metadata["provider_elapsed_ms"] >= 0
+    assert metadata["provider_error_type"] == "HTTPError"
+    assert metadata["provider_http_status"] == 503
+    assert metadata["provider_retryable"] is True
+    assert metadata["provider_error_code"] == "openrouter_chat_failed"
 
 
 def test_cached_input_pricing_and_unpriced_governance_are_not_zero_cost() -> None:

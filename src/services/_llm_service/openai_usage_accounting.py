@@ -11,6 +11,7 @@ from src.contracts.openai import (
 )
 from src.contracts.run_context import RunContext
 from src.services import openai_accounting_service
+from src.services._llm_service.provider_timing import ProviderCallTiming
 from src.utils.model_resolver import effective_sampling_controls
 
 
@@ -59,6 +60,12 @@ def record_usage_accounting(
     call_ordinal: int | None = None,
     parse_status: str = "not_applicable",
     schema_validation_status: str = "not_applicable",
+    provider_timing: ProviderCallTiming | None = None,
+    provider_call_status: str | None = None,
+    error_stage: str = "",
+    error_code: str = "",
+    provider_error_code: str = "",
+    provider_retryable: bool | None = None,
 ) -> OpenAIUsageAccountingResponse:
     source = source_request
     cache_decision = "not_applicable"
@@ -101,7 +108,14 @@ def record_usage_accounting(
             cost_ledger_path=cost_ledger_path,
             cost_daily_path=cost_daily_path,
             model_pricing=model_pricing or {},
-            request_id=request_id,
+            request_id=(
+                request_id
+                or (
+                    provider_timing.provider_request_id
+                    if provider_timing is not None
+                    else None
+                )
+            ),
             provider=provider,
             action=action
             or _semantic_usage_action(step_name=step_name, source_request=source),
@@ -186,6 +200,13 @@ def record_usage_accounting(
                 or ctx.producer_commit_sha
                 or "workspace"
             ),
+            provider_call_status=(
+                provider_call_status
+                or (provider_timing.provider_call_status if provider_timing else "")
+                or "completed"
+            ),
+            error_stage=error_stage,
+            error_code=error_code,
             repair_attempt=max(
                 0,
                 int(
@@ -237,6 +258,41 @@ def record_usage_accounting(
                         "vector_store_id": str(vector_store_id or "").strip(),
                     }
                     if file_search_call_count is not None
+                    else {}
+                ),
+                **(
+                    {
+                        "provider_operation": provider_timing.operation,
+                        "provider_elapsed_ms": provider_timing.provider_elapsed_ms,
+                        "limiter_wait_ms": provider_timing.limiter_wait_ms,
+                        "in_flight_wait_ms": provider_timing.in_flight_wait_ms,
+                        "rate_spacing_wait_ms": (
+                            provider_timing.rate_spacing_wait_ms
+                        ),
+                    }
+                    if provider_timing is not None
+                    else {}
+                ),
+                **(
+                    {"provider_error_type": provider_timing.provider_error_type}
+                    if provider_timing is not None
+                    and provider_timing.provider_error_type
+                    else {}
+                ),
+                **(
+                    {"provider_http_status": provider_timing.provider_http_status}
+                    if provider_timing is not None
+                    and provider_timing.provider_http_status is not None
+                    else {}
+                ),
+                **(
+                    {"provider_retryable": bool(provider_retryable)}
+                    if provider_retryable is not None
+                    else {}
+                ),
+                **(
+                    {"provider_error_code": provider_error_code}
+                    if provider_error_code
                     else {}
                 ),
             },

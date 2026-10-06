@@ -7,6 +7,11 @@ from src.services._llm_service.openai_client import (
 )
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
+from src.services._llm_service.provider_accounting import record_failed_provider_call
+from src.services._llm_service.provider_timing import (
+    provider_timing_from_exception,
+    timed_provider_request,
+)
 
 
 def _embedding_vectors_from_response(resp: Any) -> list[list[float]]:
@@ -112,10 +117,13 @@ def openai_create_embeddings(
             timeout_seconds=request.timeout_seconds,
             operation="embedding_create",
         )
-        resp = client.embeddings.create(
-            model=request.model,
-            input=inputs,
-            dimensions=request.dimensions,
+        resp, provider_timing = timed_provider_request(
+            operation="embeddings.create",
+            call=lambda: client.embeddings.create(
+                model=request.model,
+                input=inputs,
+                dimensions=request.dimensions,
+            ),
         )
     except AppError:
         raise
@@ -124,6 +132,15 @@ def openai_create_embeddings(
             exc,
             default_code="openai_embedding_request_failed",
             default_message="OpenAI embedding request failed",
+        )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_embeddings",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
         )
         raise AppError(
             code=code,
@@ -158,6 +175,7 @@ def openai_create_embeddings(
         model_pricing=request.model_pricing,
         request_id=str(request_id) if request_id else None,
         source_request=request,
+        provider_timing=provider_timing,
         parse_status="not_applicable",
         schema_validation_status="not_validated",
     )

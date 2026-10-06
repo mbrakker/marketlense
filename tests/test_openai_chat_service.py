@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -217,9 +218,11 @@ def test_openai_chat_json_delegates_usage_accounting(
     external_boundary_mocks_only, tmp_path
 ) -> None:
     captured_accounting = []
+    captured_provider_requests = []
 
     class _FakeChatCompletions:
         def create(self, **kwargs):
+            captured_provider_requests.append(dict(kwargs))
             usage = SimpleNamespace(
                 prompt_tokens=12,
                 completion_tokens=5,
@@ -275,8 +278,69 @@ def test_openai_chat_json_delegates_usage_accounting(
     assert accounting_request.cache_decision == "provider_hit"
     assert accounting_request.tool_calls == 0
     assert accounting_request.request_id == "chat_1"
+    assert accounting_request.provider_call_status == "completed"
+    assert accounting_request.extra["provider_operation"] == "chat.completions.create"
+    assert accounting_request.extra["provider_elapsed_ms"] >= 0
+    assert accounting_request.extra["limiter_wait_ms"] == 0
+    assert len(captured_provider_requests) == 1
+    assert captured_provider_requests[0] == {
+        "model": "gpt-6-luna",
+        "messages": [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "user"},
+        ],
+        "response_format": {"type": "json_object"},
+        "reasoning_effort": "high",
+    }
     assert accounting_request.cost_ledger_path == str(tmp_path / "ledger.jsonl")
     assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_openai_chat_json_keeps_unreported_reasoning_tokens_missing(
+    external_boundary_mocks_only, tmp_path
+) -> None:
+    captured_accounting = []
+
+    class _Chat:
+        def create(self, **kwargs):
+            return SimpleNamespace(
+                id="chat_without_reasoning_usage",
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=4,
+                    completion_tokens=2,
+                    total_tokens=6,
+                ),
+            )
+
+    class _Client:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=_Chat())
+
+    def _record_usage(request, _ctx):
+        captured_accounting.append(request)
+        return OpenAIUsageAccountingResponse(
+            schema_version="1.0",
+            recorded=True,
+            estimated_cost_usd=0.0,
+            ledger_path=request.cost_ledger_path,
+            daily_path=request.cost_daily_path,
+        )
+
+    external_boundary_mocks_only.setattr(svc.openai_legacy, "OpenAI", _Client)
+    external_boundary_mocks_only.setattr(
+        openai_accounting_service, "record_usage", _record_usage
+    )
+
+    result = svc.openai_chat_json(
+        replace(_chat_request(tmp_path), reasoning_effort="high"), _ctx()
+    )
+
+    assert result.parsed_json == {"ok": True}
+    assert captured_accounting[0].reasoning_effort == "high"
+    assert captured_accounting[0].reasoning_tokens is None
 
 
 def test_openai_chat_json_records_semantic_artifact_action(
@@ -608,6 +672,19 @@ def test_openai_chat_json_maps_provider_failure_to_typed_app_error(
     assert_app_error(exc_info.value, code="openai_chat_failed", retryable=True)
     assert exc_info.value.context["provider_error_type"] == "_ProviderUnavailable"
     assert exc_info.value.context["http_status"] == 503
+    with sqlite3.connect(tmp_path / "usage.sqlite") as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("select * from llm_usage_events").fetchall()
+    assert len(rows) == 1
+    row = rows[0]
+    metadata = json.loads(row["metadata_json"])
+    assert row["provider_call_status"] == "failed"
+    assert metadata["provider_operation"] == "chat.completions.create"
+    assert metadata["provider_elapsed_ms"] >= 0
+    assert metadata["provider_error_type"] == "_ProviderUnavailable"
+    assert metadata["provider_http_status"] == 503
+    assert metadata["provider_retryable"] is True
+    assert metadata["provider_error_code"] == "openai_chat_failed"
 
 
 def test_openai_chat_json_maps_content_filter_to_non_retryable_refusal(

@@ -21,6 +21,11 @@ from src.services._llm_service.openai_shared import (
     enforce_daily_spend_guardrail,
 )
 from src.services._llm_service.policy import logger
+from src.services._llm_service.provider_timing import (
+    ProviderCallTiming,
+    provider_timing_from_exception,
+    timed_provider_request,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -190,12 +195,57 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         method="POST",
     )
     try:
-        with urllib_request.urlopen(
-            http_request,
-            timeout=float(getattr(request, "timeout_seconds", None) or 60.0),
-        ) as response:
-            raw_text = response.read().decode("utf-8")
+        def _read_response() -> str:
+            with urllib_request.urlopen(
+                http_request,
+                timeout=float(getattr(request, "timeout_seconds", None) or 60.0),
+            ) as response:
+                return response.read().decode("utf-8")
+
+        raw_text, provider_timing = timed_provider_request(
+            operation="chat.completions.http",
+            call=_read_response,
+        )
     except (urllib_error.URLError, TimeoutError, OSError) as exc:
+        provider_timing = provider_timing_from_exception(exc)
+        if provider_timing is not None:
+            failed_result = OpenAIResponseResult(
+                schema_version="1.0",
+                text="",
+                parsed_json=None,
+                input_tokens=None,
+                output_tokens=None,
+                tool_calls=0,
+                model=model,
+                total_tokens=None,
+            )
+            try:
+                _record_openrouter_usage_accounting(
+                    request=request,
+                    result=failed_result,
+                    ctx=ctx,
+                    parse_status="not_applicable",
+                    schema_validation_status="not_applicable",
+                    provider_timing=provider_timing,
+                    provider_call_status="failed",
+                    error_code="openrouter_chat_failed",
+                    provider_retryable=True,
+                )
+            except Exception as accounting_exc:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="llm_provider_failure_accounting_failed",
+                        module=logger.name,
+                        fields={
+                            "operation": provider_timing.operation,
+                            "step_name": "openrouter_chat_json",
+                            "error_code": "openrouter_chat_failed",
+                            "accounting_error_type": type(accounting_exc).__name__,
+                        },
+                    )
+                )
         raise AppError(
             code="openrouter_chat_failed",
             message="OpenRouter chat request failed",
@@ -242,6 +292,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
             ctx=ctx,
             parse_status="not_validated",
             schema_validation_status="not_validated",
+        provider_timing=provider_timing,
         )
         _finalize_openrouter_usage_accounting(
             accounting=accounting,
@@ -277,6 +328,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
             ctx=ctx,
             parse_status="not_validated",
             schema_validation_status="not_validated",
+        provider_timing=provider_timing,
         )
         _finalize_openrouter_usage_accounting(
             accounting=accounting,
@@ -309,6 +361,7 @@ def openrouter_chat_json(request: Any, ctx: RunContext) -> OpenAIResponseResult:
         ctx=ctx,
         parse_status="valid",
         schema_validation_status="not_validated",
+        provider_timing=provider_timing,
     )
     _finalize_openrouter_usage_accounting(
         accounting=accounting,
@@ -341,6 +394,10 @@ def _record_openrouter_usage_accounting(
     ctx: RunContext,
     parse_status: str,
     schema_validation_status: str,
+    provider_timing: ProviderCallTiming | None = None,
+    provider_call_status: str = "completed",
+    error_code: str = "",
+    provider_retryable: bool | None = None,
 ) -> OpenAIUsageAccountingResponse:
     cache_decision = "not_applicable"
     if hasattr(request, "response_cache_enabled"):
@@ -366,7 +423,14 @@ def _record_openrouter_usage_accounting(
                 getattr(request, "cost_daily_path", "") or "./out/cost-daily.json"
             ),
             model_pricing=getattr(request, "model_pricing", None) or {},
-            request_id=result.request_id,
+            request_id=(
+                result.request_id
+                or (
+                    provider_timing.provider_request_id
+                    if provider_timing is not None
+                    else None
+                )
+            ),
             provider="openrouter",
             action="openrouter_chat_json",
             usage_db_path=str(
@@ -406,6 +470,7 @@ def _record_openrouter_usage_accounting(
             temperature=getattr(request, "temperature", None),
             seed=getattr(request, "seed", None),
             timeout_seconds=getattr(request, "timeout_seconds", None),
+            provider_call_status=provider_call_status,
             parse_status=parse_status,
             schema_validation_status=schema_validation_status,
             workflow=str(
@@ -477,6 +542,37 @@ def _record_openrouter_usage_accounting(
                     or os.getenv("OPENROUTER_HTTP_REFERER", "").strip()
                 ),
                 "schema_name": str(getattr(request, "schema_name", "") or ""),
+                **(
+                    {
+                        "provider_operation": provider_timing.operation,
+                        "provider_elapsed_ms": provider_timing.provider_elapsed_ms,
+                        "limiter_wait_ms": provider_timing.limiter_wait_ms,
+                        "in_flight_wait_ms": provider_timing.in_flight_wait_ms,
+                        "rate_spacing_wait_ms": (
+                            provider_timing.rate_spacing_wait_ms
+                        ),
+                    }
+                    if provider_timing is not None
+                    else {}
+                ),
+                **(
+                    {"provider_error_type": provider_timing.provider_error_type}
+                    if provider_timing is not None
+                    and provider_timing.provider_error_type
+                    else {}
+                ),
+                **(
+                    {"provider_http_status": provider_timing.provider_http_status}
+                    if provider_timing is not None
+                    and provider_timing.provider_http_status is not None
+                    else {}
+                ),
+                **(
+                    {"provider_retryable": bool(provider_retryable)}
+                    if provider_retryable is not None
+                    else {}
+                ),
+                **({"provider_error_code": error_code} if error_code else {}),
             },
         ),
         ctx,

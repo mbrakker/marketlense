@@ -38,6 +38,23 @@ infers cache or cost data from test duration. Use
 before/after run artifacts. It only proves a speed improvement when the profile
 matches and neither quality nor estimated cost regresses.
 
+## Per-call provider latency profile
+
+`scripts/quality/profile_provider_calls.py` reads the existing LLM usage ledger
+for one report and groups calls by prompt namespace, stage, and reasoning
+effort. It reports provider elapsed time separately from measured in-flight
+and rate-spacing waits, preserves untimed historical rows as untimed, and lists
+the slowest individual calls without retaining prompts or responses.
+
+```powershell
+python scripts/quality/profile_provider_calls.py --usage-db <isolated-run>/state/llm_usage.sqlite --report-id <ledger-report-id> --output-json docs/quality/provider-latency-profile.json
+```
+
+`provider_elapsed_ms` covers only the outbound SDK or HTTP request. Queue wait,
+prompt rendering, schema validation, and deterministic post-processing are
+outside that duration. This profile helper is evidence tooling, not a quality
+gate or an optimization selector.
+
 CI also measures each existing standalone coverage, mutation,
 quality-regression, PDF, public-render, retained-LLM-routing,
 workflow-evidence, and prompt-fixture gate once.

@@ -7,6 +7,7 @@ from typing import Callable, TypeVar
 
 from src.contracts.llm import LLMClientPolicy
 from src.contracts.run_context import RunContext
+from src.services._llm_service.provider_timing import limiter_wait_scope
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -180,7 +181,8 @@ def _with_rate_limit(
         share_grounding_across_operations=is_grounding_task,
     )
     if limiter is None:
-        return call()
+        with limiter_wait_scope(in_flight_wait_ms=0, rate_spacing_wait_ms=0):
+            return call()
 
     wait_started = monotonic_fn()
     limiter.semaphore.acquire()
@@ -236,7 +238,11 @@ def _with_rate_limit(
             )
         succeeded = False
         try:
-            result = call()
+            with limiter_wait_scope(
+                in_flight_wait_ms=in_flight_wait_ms,
+                rate_spacing_wait_ms=rate_wait_ms,
+            ):
+                result = call()
             succeeded = True
             return result
         finally:
@@ -435,8 +441,12 @@ def _execute_with_policy(
                 "legacy_configured_retries": policy.retries,
                 "rate_limit_max_in_flight": policy.rate_limit_max_in_flight,
                 "rate_limit_min_interval_ms": policy.rate_limit_min_interval_ms,
-                "circuit_breaker_failure_threshold": policy.circuit_breaker_failure_threshold,
-                "circuit_breaker_recovery_seconds": policy.circuit_breaker_recovery_seconds,
+                "circuit_breaker_failure_threshold": (
+                    policy.circuit_breaker_failure_threshold
+                ),
+                "circuit_breaker_recovery_seconds": (
+                    policy.circuit_breaker_recovery_seconds
+                ),
             },
         )
     )

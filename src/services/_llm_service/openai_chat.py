@@ -13,6 +13,12 @@ from src.services._llm_service.context_compaction import (
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
+from src.services._llm_service.provider_accounting import record_failed_provider_call
+from src.services._llm_service.provider_timing import (
+    ProviderCallTiming,
+    provider_timing_from_exception,
+    timed_provider_request,
+)
 from src.utils.model_resolver import effective_sampling_controls
 
 
@@ -25,6 +31,7 @@ class _ChatCompletionRun:
     total_tokens: int | None
     cached_input_tokens: int | None
     reasoning_tokens: int | None = None
+    provider_timing: ProviderCallTiming | None = None
 
 
 def _chat_completion_model_kwargs(
@@ -94,10 +101,16 @@ def _legacy_chat_completion_call(
             payload_args["max_completion_tokens"] = max_output_tokens
         try:
             payload_args["response_format"] = response_format
-            resp = legacy_openai.ChatCompletion.create(**payload_args)
+            resp, provider_timing = timed_provider_request(
+                operation="chat.completions.create",
+                call=lambda: legacy_openai.ChatCompletion.create(**payload_args),
+            )
         except TypeError:
             payload_args.pop("response_format", None)
-            resp = legacy_openai.ChatCompletion.create(**payload_args)
+            resp, provider_timing = timed_provider_request(
+                operation="chat.completions.create",
+                call=lambda: legacy_openai.ChatCompletion.create(**payload_args),
+            )
         payload = resp["choices"][0]["message"]["content"]
         usage = resp.get("usage") or {}
         prompt_tokens_details = usage.get("prompt_tokens_details") or {}
@@ -110,6 +123,7 @@ def _legacy_chat_completion_call(
             total_tokens=usage.get("total_tokens"),
             cached_input_tokens=prompt_tokens_details.get("cached_tokens"),
             reasoning_tokens=completion_tokens_details.get("reasoning_tokens"),
+            provider_timing=provider_timing,
         )
     finally:
         if had_timeout_attr:
@@ -166,7 +180,10 @@ def _modern_chat_completion_call(
     )
     if max_output_tokens is not None:
         payload_args["max_completion_tokens"] = max_output_tokens
-    resp = client.chat.completions.create(**payload_args)
+    resp, provider_timing = timed_provider_request(
+        operation="chat.completions.create",
+        call=lambda: client.chat.completions.create(**payload_args),
+    )
     usage = getattr(resp, "usage", None)
     prompt_tokens_details = (
         getattr(usage, "prompt_tokens_details", None) if usage is not None else None
@@ -188,6 +205,7 @@ def _modern_chat_completion_call(
         else None,
         cached_input_tokens=getattr(prompt_tokens_details, "cached_tokens", None),
         reasoning_tokens=getattr(completion_tokens_details, "reasoning_tokens", None),
+        provider_timing=provider_timing,
     )
 
 
@@ -295,6 +313,15 @@ def analyze_report(
             default_code="openai_request_failed",
             default_message="OpenAI request failed",
         )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_analyze",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
+        )
         raise AppError(
             code=code,
             message=message,
@@ -321,6 +348,7 @@ def analyze_report(
         model_pricing=request.model_pricing,
         request_id=request_id,
         source_request=request,
+        provider_timing=run.provider_timing,
         parse_status="not_validated",
         schema_validation_status="not_validated",
     )
@@ -485,7 +513,9 @@ def openai_chat_json(
             "seed": request.seed,
             "max_output_tokens": request.max_output_tokens,
             "response_format": str(response_format.get("type") or "json_object"),
-            "structured_output_schema_identity": request.structured_output_schema_identity,
+            "structured_output_schema_identity": (
+                request.structured_output_schema_identity
+            ),
         },
     )
     if cache_spec is not None:
@@ -525,6 +555,15 @@ def openai_chat_json(
             default_code="openai_chat_failed",
             default_message="OpenAI chat request failed",
         )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_chat_json",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
+        )
         raise AppError(
             code=code,
             message=message,
@@ -552,6 +591,7 @@ def openai_chat_json(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        provider_timing=getattr(run, "provider_timing", None),
         parse_status="valid" if metadata.parsed_json is not None else "invalid",
         schema_validation_status="not_applicable",
     )
@@ -729,7 +769,10 @@ def openai_chat_json_with_images(
                     },
                 )
             )
-        resp = client.responses.create(**payload_args)
+        resp, provider_timing = timed_provider_request(
+            operation="responses.create",
+            call=lambda: client.responses.create(**payload_args),
+        )
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
@@ -737,6 +780,15 @@ def openai_chat_json_with_images(
             exc,
             default_code="openai_chat_images_failed",
             default_message="OpenAI JSON+images request failed",
+        )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_chat_json_with_images",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
         )
         logger.info(
             log_event(
@@ -777,6 +829,7 @@ def openai_chat_json_with_images(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        provider_timing=provider_timing,
         parse_status="valid" if metadata.parsed_json is not None else "invalid",
         schema_validation_status="not_applicable",
     )

@@ -4,6 +4,11 @@ from __future__ import annotations
 from src.services._llm_service.openai_shared import *
 from src.services._llm_service.openai_shared import enforce_daily_spend_guardrail
 from src.services._llm_service.openai_client import *
+from src.services._llm_service.provider_accounting import record_failed_provider_call
+from src.services._llm_service.provider_timing import (
+    provider_timing_from_exception,
+    timed_provider_request,
+)
 
 
 def _coerce_pdf_ocr_pages(payload: dict | None) -> list[PdfOcrPageText]:
@@ -106,10 +111,10 @@ def openai_ocr_pdf(
             timeout_seconds=request.timeout_seconds,
             operation="ocr_pdf",
         )
-        response_args: dict[str, Any] = dict(
-            model=request.model,
-            instructions=request.system_prompt,
-            input=[
+        response_args: dict[str, Any] = {
+            "model": request.model,
+            "instructions": request.system_prompt,
+            "input": [
                 {
                     "role": "user",
                     "content": [
@@ -124,11 +129,14 @@ def openai_ocr_pdf(
                     ],
                 }
             ],
-            text={"format": OPENAI_OCR_RESPONSE_FORMAT},
-        )
+            "text": {"format": OPENAI_OCR_RESPONSE_FORMAT},
+        }
         if request.reasoning_effort:
             response_args["reasoning"] = {"effort": request.reasoning_effort}
-        resp = client.responses.create(**response_args)
+        resp, provider_timing = timed_provider_request(
+            operation="responses.create",
+            call=lambda: client.responses.create(**response_args),
+        )
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
@@ -136,6 +144,15 @@ def openai_ocr_pdf(
             exc,
             default_code="openai_ocr_request_failed",
             default_message="OpenAI OCR request failed",
+        )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_ocr_pdf",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
         )
         logger.info(
             log_event(
@@ -179,6 +196,7 @@ def openai_ocr_pdf(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        provider_timing=provider_timing,
         parse_status="not_validated",
         schema_validation_status="not_validated",
     )
@@ -367,7 +385,10 @@ def openai_respond_with_vector_store(
             timeout_seconds=request.timeout_seconds,
             operation="response_vector_store",
         )
-        resp = client.responses.create(**payload_args)
+        resp, provider_timing = timed_provider_request(
+            operation="responses.create",
+            call=lambda: client.responses.create(**payload_args),
+        )
     except AppError:
         raise
     except OPENAI_REQUEST_EXCEPTIONS as exc:
@@ -375,6 +396,15 @@ def openai_respond_with_vector_store(
             exc,
             default_code="openai_response_failed",
             default_message="OpenAI responses request failed",
+        )
+        record_failed_provider_call(
+            ctx=ctx,
+            step_name="openai_response_vector_store",
+            model=request.model,
+            source_request=request,
+            provider_timing=provider_timing_from_exception(exc),
+            error_code=code,
+            retryable=retryable,
         )
         logger.info(
             log_event(
@@ -429,6 +459,7 @@ def openai_respond_with_vector_store(
         model_pricing=request.model_pricing,
         request_id=metadata.request_id,
         source_request=request,
+        provider_timing=provider_timing,
         parse_status=("valid" if metadata.parsed_json is not None else "invalid"),
         schema_validation_status="not_validated",
     )

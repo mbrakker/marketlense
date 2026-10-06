@@ -15,6 +15,7 @@ import pytest
 from src.contracts.llm import LLMClientPolicy, LLMProviderOperations
 from src.contracts.run_context import RunContext
 from src.services import llm_service
+from src.services._llm_service.provider_timing import timed_provider_request
 from src.utils.errors import AppError
 
 
@@ -388,6 +389,41 @@ def test_rate_limit_is_shared_by_separately_built_clients_in_one_process(
         and event.get("fields", {}).get("scope") == "validation"
     ]
     assert any(event["fields"]["in_flight_wait_ms"] > 0 for event in waits)
+
+
+def test_provider_timing_keeps_policy_limiter_wait_out_of_elapsed_time() -> None:
+    now = {"value": 100.0}
+
+    def sleep(seconds: float) -> None:
+        now["value"] += seconds
+
+    def provider_call(_request, _ctx):
+        _, timing = timed_provider_request(
+            operation="chat.completions.create",
+            call=lambda: "provider response",
+        )
+        return timing
+
+    client = llm_service.build_client_from_callables(
+        policy=LLMClientPolicy(
+            schema_version="1.0",
+            scope="provider-timing-limiter-separation",
+            rate_limit_max_in_flight=1,
+            rate_limit_min_interval_ms=50,
+            circuit_breaker_failure_threshold=0,
+            circuit_breaker_recovery_seconds=0.0,
+        ),
+        openai_chat_json=provider_call,
+        sleep_fn=sleep,
+        monotonic_fn=lambda: now["value"],
+    )
+
+    first = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+    second = client.openai_chat_json(SimpleNamespace(model="gpt-5-mini"), _ctx())
+
+    assert first.limiter_wait_ms == 0
+    assert 49 <= second.rate_spacing_wait_ms <= 50
+    assert second.provider_elapsed_ms < 50
 
 
 def test_grounding_rate_limit_is_shared_across_provider_operations() -> None:
