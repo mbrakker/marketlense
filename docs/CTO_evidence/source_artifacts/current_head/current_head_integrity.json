@@ -1,0 +1,38 @@
+{
+  "measurements": {
+    "focused_tests_failed": 0,
+    "focused_tests_passed": 2342,
+    "focused_tests_skipped": 0,
+    "focused_tests_total": 2342,
+    "queue_approved_readiness_count": 1,
+    "queue_evidence_passed": 1,
+    "queue_exact_head_verified": 1,
+    "queue_external_provider_calls": 0,
+    "queue_materialised_outbox_count": 2,
+    "queue_recorded_effects": 0,
+    "queue_schema_version": 15,
+    "queue_status_budget_deferred": 1,
+    "queue_status_pending": 3,
+    "queue_status_retry_wait": 1,
+    "queue_status_succeeded": 1,
+    "queue_transition_budget_deferred": 1,
+    "queue_transition_leased": 4,
+    "queue_transition_pending": 7,
+    "queue_transition_retry_wait": 1,
+    "queue_transition_running": 3,
+    "queue_transition_succeeded": 1,
+    "queue_wordpress_writes": 0
+  },
+  "schema_version": "1.0",
+  "subjects": [
+    {
+      "identity_sha256": "e93c23a88928ced7bf1d5960432be03848408295d62d7543984fe99199919088",
+      "outcome": "passed"
+    },
+    {
+      "identity_sha256": "07d843e27c8b4a17e48349b4ecdabfd387d6f0f36991d28e1cb805b691841196",
+      "outcome": "passed"
+    }
+  ],
+  "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+}

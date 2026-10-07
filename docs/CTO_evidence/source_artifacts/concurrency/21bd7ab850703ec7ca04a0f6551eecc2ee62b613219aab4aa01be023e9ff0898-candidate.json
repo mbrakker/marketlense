@@ -1,0 +1,97 @@
+{
+  "acceptance": {
+    "decision": "Accept the grounding optimization after the evidence-fidelity correction and retain the shared groun",
+    "performance_result": "No specified regression threshold was triggered versus the latest pre-fix reference; wall time, repo",
+    "quality_criteria": {
+      "filtered_candidate_ids_in_canonical_findings": 0,
+      "filtered_candidate_ids_in_reusable_materializations": 0,
+      "filtered_candidate_text_in_rendered_html": 0,
+      "new_quality_waivers": 0,
+      "operator_interventions": 0,
+      "publication_readiness": "5/5 passed",
+      "publication_writes": 0,
+      "unresolved_retained_claims": 0,
+      "unsupported_retained_claims": 0,
+      "validation": "5/5 passed"
+    },
+    "quality_result": "passed"
+  },
+  "limitations": [
+    "Candidate-side counters only; pre-fix comparison fields are excluded."
+  ],
+  "observed": {
+    "automatic_repair_count": 3,
+    "cohort_wall_seconds": 1010.327,
+    "estimated_cost_usd": 0.36732,
+    "file_search_calls": 25,
+    "grounding_calls_or_batches": 31,
+    "grounding_completed_calls": 31,
+    "grounding_duplicate_task_count": 0,
+    "grounding_http_429_count": 0,
+    "grounding_limiter": {
+      "configured_max_in_flight": 5,
+      "configured_min_interval_ms": 250,
+      "latest_pre_fix_directly_observed_peak": 5,
+      "latest_pre_fix_overlap_max": 5,
+      "limiter_implementation_changed_by_fix": false
+    },
+    "grounding_provider_origin_failures": 0,
+    "grounding_reports_with_calls": 5,
+    "grounding_timeout_count": 0,
+    "grounding_unique_task_ids": 31,
+    "http_429_count": 0,
+    "input_tokens": 1561378,
+    "output_tokens": 313309,
+    "provider_calls": 167,
+    "provider_calls_completed": 167,
+    "provider_origin_failures": 0,
+    "quality": {
+      "final_state_awaiting_review_count": 5,
+      "final_validation_pass_count": 5,
+      "new_quality_waivers": 0,
+      "operator_interventions": 0,
+      "publication_readiness_pass_count": 5,
+      "publication_writes": 0,
+      "reports": 5,
+      "unresolved_retained_claim_count": 0,
+      "unsupported_retained_claim_count": 0
+    },
+    "report_analysis_attempt_count": 5,
+    "report_analysis_execution_seconds_max": 378.228,
+    "report_analysis_execution_seconds_median": 344.921,
+    "report_analysis_execution_seconds_total": 1736.637,
+    "report_analysis_queue_wait_seconds_total": 824.0,
+    "report_analysis_stage": {
+      "execution_seconds_max": 378.228,
+      "execution_seconds_total": 1736.637,
+      "queue_wait_seconds_total": 824.0
+    },
+    "structured_output_repair_provider_calls": 1,
+    "timeout_count": 0,
+    "workflow_retry_count": 0
+  },
+  "run": {
+    "actual_cohort_runs": 1,
+    "cohort_wall_seconds": 1010.327,
+    "isolated_fresh_state": true,
+    "max_duration_seconds": 1200,
+    "max_observed_running_jobs_by_queue": {
+      "publication_readiness": 1,
+      "report_analysis": 3,
+      "report_render": 1,
+      "report_selection": 3,
+      "source_ingest": 3
+    },
+    "settings": {
+      "max_jobs_per_queue": 3,
+      "max_parallel_workers": 3,
+      "max_total_jobs": 60,
+      "publication_write_count": 0,
+      "validation_grounding_global_max_in_flight": 5,
+      "validation_grounding_global_min_interval_ms": 250,
+      "wordpress_publish_enabled": false
+    }
+  },
+  "schema_version": "1.0",
+  "tested_head": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc"
+}

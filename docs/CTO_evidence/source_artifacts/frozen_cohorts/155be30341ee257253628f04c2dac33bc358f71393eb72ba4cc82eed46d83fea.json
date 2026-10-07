@@ -1,0 +1,174 @@
+{
+  "cohort_metrics": {
+    "cost_usd": 1.035915,
+    "duration_seconds": 5544.482,
+    "input_tokens": 6194695,
+    "model_provider_calls": 590,
+    "operator_intervention_count": 0,
+    "output_tokens": 856988
+  },
+  "cohort_size": 20,
+  "git_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99",
+  "reports": [
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-a327f8882533b6391cc3fc6fe8097f2fc79e637b6d2521d401d7eddb0dedf047",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": true,
+      "publication_readiness": "pass",
+      "report_id": "subject-2fe8156059f502cbf86e0951ba1fdce8d36d5c643e6136b51560a3046e151d93",
+      "terminal_failure_code": "",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-f5c85de1f12b3ffa1894f7d0d732438b3e26c64c047149b360f75fed7757b0f4",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-aac4dc9365ab1d7f749b2398664787a1959770347d69f4d292ed91c6a5a768bf",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-b74e2f5dd27855f6d399b5a7d1c577efa3a789d42a1baea688c3b0444a3de722",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-038e7b0d097d86d5ff6c0c0e9c73cadad6c9fbd180f0b4e49a9eb1469a24ca58",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-66fb4508f80b292fc995c7f0fef438dc6278d0a8afb3c77f946310898b396c5b",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-a66d8f545ec51adb6756da201158a1c07ce08b6004d3a94f11f61c9b3b0533b3",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-5a8a87e86c720766f241efa06bfe7ed15199b0f4eb2521ce6e49a231f32120b3",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-40d33c43c49a1acb6694ac84fdc7110cf2ef48d25ba8009ad7316e36bcbd9dab",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-cd3f5cc0fb16a125f83ab3cd2212f58a907b064471ef4b82480a73096ebed0de",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-371283eac5d2cbc57ed58e8163b5f4b22bc4a4ad03e78fd03268cdd7713d9221",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-c3b6114dca3ebe222f40d159fbb622b1813abc2254ebea7b3fda818d83446ec2",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-1e7c5a150e44b0773b3ef42a0fc7f612a99686f803f10b84a9c6c817c2bce4cb",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-075cfa6141bb6035b0ffd11c5bf10e0785516c79126ded810c7f4b52de45dee1",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-845a4778f64bba36262eee1a014de745d32248bd6f463265a02a823466fe6201",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-e87dbefdc5faa5498687a205ff77291af2da0e6afa50e2b6a5139c831aae9693",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-bd600c5308fb68b1ccfbddfc7615b5014cbbb521696ce734bf3b1cbd0f02a6ea",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-a13248b98e090fdc200f5d4bd73a70f60d314140d0e139f86fc32b656eb86c0b",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-583e43501954746e178eea2d0b4a507c6fba396f4153f4c436fd149241ad57da",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    }
+  ],
+  "schema_version": "1.0",
+  "summary": {
+    "admitted_report_count": 20,
+    "cohort_admission_rate": 1.0,
+    "cohort_bounded_automatic_repair": true,
+    "cohort_cost_usd": 1.035915,
+    "cohort_duration_seconds": 5544.482,
+    "cohort_input_tokens": 6194695,
+    "cohort_model_provider_calls": 590,
+    "cohort_output_tokens": 856988,
+    "first_attempt_awaiting_review_rate": 0.05,
+    "missing_terminal_report_count": 0,
+    "operator_intervention_count": 0,
+    "publication_readiness_rate": 0.05,
+    "report_count": 20,
+    "terminal_outcome_complete": true,
+    "typed_terminal_rate": 1.0,
+    "workflow_denominator": 20,
+    "workflow_failure_rate": 0.95
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "source_integrity",
+    "visual_quality"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/visual-crop-qa-20261006/cto_evidence_bundle.json",
+  "bundle_sha256": "b2833c5c42e581c9d21067e274e809ef21de9b890015f80b974017000459d914",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "incomplete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/visual-crop-qa-20261006/run_manifest.json",
+  "manifest_sha256": "b0acab40064d2ee5295cf7ca815df7584ff17fec3be6c53830ed25635cb4364d",
+  "metric_count": 29,
+  "missing_evidence_classes": [
+    "source_visual_artifacts"
+  ],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 38574,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "source_integrity",
+    "source_visual_artifacts",
+    "visual_quality"
+  ],
+  "run_id": "visual-crop-qa-20261006",
+  "run_type": "visual_crop_qa",
+  "schema_version": "1.0",
+  "source_count": 3,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/5bb11842f9a2182dacf7fd51d6bd87a335f99c1323e4c95a1af94c86473d6485.qa.json",
+      "role": "run",
+      "sha256": "47e5b1fd898008c8805f199ee4513b1f18bcf258b2f04fb2622161dfbf8c4873",
+      "source_id": "crop_sidecar_001",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "verified": true
+    },
+    {
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/ce9076984fb5368820ff6c370be158824269cbcc95d9efa18d560756f168eaad.qa.json",
+      "role": "run",
+      "sha256": "19ce0b8bf38068bedb369be100a7e2310a71745119d4dd4f68735a5935d4daea",
+      "source_id": "crop_sidecar_002",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "verified": true
+    },
+    {
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/ea7b7632e77be4e2787f2f4f4f4515099d3938eee9ea2ff4e2b161b204b5dd59.qa.json",
+      "role": "run",
+      "sha256": "58ae1ccd752e6a35355990cda097937524cd521dde901a90e5016d43fa65213b",
+      "source_id": "crop_sidecar_003",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 3,
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+  "unavailable_metric_count": 21
+}

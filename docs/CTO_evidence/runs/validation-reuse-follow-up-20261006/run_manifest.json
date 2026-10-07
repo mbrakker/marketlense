@@ -1,0 +1,44 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": false,
+  "objective": "Retained single repair-bearing follow-up reuse telemetry; aggregate only.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "reuse",
+    "resource_usage",
+    "performance",
+    "provider_timing",
+    "quality"
+  ],
+  "run_id": "validation-reuse-follow-up-20261006",
+  "run_type": "validation_reuse_follow_up",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/validation-reuse-benchmark/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/validation_reuse/e3c9e8cb805fb683fbd61f5a2b821d7efa345cf5131c90a2040db76e5b9935e3-repair-follow-up.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "becaedbc8173a835ac1891e5e607e901cb0ba4ad1f70bac534e050c459d126ca",
+      "source_id": "reuse_follow_up",
+      "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+    }
+  ],
+  "stages_in_scope": [
+    "validation",
+    "repair"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [],
+  "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+}

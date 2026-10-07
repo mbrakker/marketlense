@@ -1,0 +1,88 @@
+{
+  "cohort_metrics": {
+    "cost_usd": 0.391438,
+    "duration_seconds": 3746.366,
+    "input_tokens": 1838415,
+    "model_provider_calls": 219,
+    "operator_intervention_count": 0,
+    "output_tokens": 430388
+  },
+  "cohort_size": 7,
+  "git_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18",
+  "reports": [
+    {
+      "awaiting_review": true,
+      "publication_readiness": "pass",
+      "report_id": "subject-aac4dc9365ab1d7f749b2398664787a1959770347d69f4d292ed91c6a5a768bf",
+      "terminal_failure_code": "",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-038e7b0d097d86d5ff6c0c0e9c73cadad6c9fbd180f0b4e49a9eb1469a24ca58",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-5a8a87e86c720766f241efa06bfe7ed15199b0f4eb2521ce6e49a231f32120b3",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "fail"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-40d33c43c49a1acb6694ac84fdc7110cf2ef48d25ba8009ad7316e36bcbd9dab",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-371283eac5d2cbc57ed58e8163b5f4b22bc4a4ad03e78fd03268cdd7713d9221",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-1e7c5a150e44b0773b3ef42a0fc7f612a99686f803f10b84a9c6c817c2bce4cb",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-bd600c5308fb68b1ccfbddfc7615b5014cbbb521696ce734bf3b1cbd0f02a6ea",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    }
+  ],
+  "schema_version": "1.0",
+  "summary": {
+    "admitted_report_count": 7,
+    "bounded_repair_rate": 0.14285714285714285,
+    "cohort_admission_rate": 1.0,
+    "cohort_bounded_automatic_repair": true,
+    "cohort_cost_usd": 0.391438,
+    "cohort_duration_seconds": 3746.366,
+    "cohort_input_tokens": 1838415,
+    "cohort_model_provider_calls": 219,
+    "cohort_output_tokens": 430388,
+    "first_attempt_awaiting_review_rate": 0.14285714285714285,
+    "mean_cost": 0.05592,
+    "mean_duration_seconds": 535.195,
+    "median_cost": 0.05577,
+    "median_duration_seconds": 540.004,
+    "missing_terminal_report_count": 0,
+    "operator_intervention_count": 0,
+    "publication_readiness_rate": 0.14285714285714285,
+    "report_count": 7,
+    "terminal_outcome_complete": true,
+    "typed_terminal_rate": 1.0,
+    "workflow_denominator": 7,
+    "workflow_failure_rate": 0.8571428571428571
+  }
+}

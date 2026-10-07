@@ -1,0 +1,43 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": false,
+  "objective": "Retained artifact scheduling candidate metrics; no baseline delta is asserted.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "performance",
+    "resource_usage",
+    "provider_timing",
+    "quality"
+  ],
+  "run_id": "artifact-dag-candidate-20261006",
+  "run_type": "artifact_dag_candidate",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/artifact-dag-benchmark/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/artifact_dag/521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049-candidate.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+      "source_id": "artifact_dag_candidate",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    }
+  ],
+  "stages_in_scope": [
+    "artifact_generation",
+    "report_analysis"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [],
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+}

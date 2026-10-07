@@ -1,0 +1,42 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": true,
+  "objective": "Retained publication attempt outcomes; actual writes, authenticated readback, and replay idempotency remain unproven.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "external_actions",
+    "side_effects",
+    "authenticated_readback",
+    "idempotency"
+  ],
+  "run_id": "wordpress-publication-attempt-20260811",
+  "run_type": "wordpress_publication_attempt",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/wordpress-publication-evidence/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/wordpress/d469fb17109f93c5b6ab1130fcaa8f8b1c7e0d7268803c99e17ee9ed06f575b8-publication.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "a3eedf1db6571a6572e35fae9cdfe8f07bc24743e8075a9c38b4306148be4b40",
+      "source_id": "wordpress_evidence",
+      "tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb"
+    }
+  ],
+  "stages_in_scope": [
+    "publication"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [],
+  "tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb"
+}

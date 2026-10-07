@@ -1,0 +1,118 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [
+    {
+      "criterion_id": "focused_tests_no_failures",
+      "description": "No failures in the focused CTO, contract, queue, recovery, and idempotency tests.",
+      "expected_value": 0,
+      "metric_id": "current_head_evidence.focused_tests_failed",
+      "operator": "eq",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "testing"
+    },
+    {
+      "criterion_id": "focused_tests_executed",
+      "description": "The focused current-HEAD suite executed passing cases.",
+      "expected_value": 0,
+      "metric_id": "current_head_evidence.focused_tests_passed",
+      "operator": "gt",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "testing"
+    },
+    {
+      "criterion_id": "workflow_queue_passed",
+      "description": "Deterministic workflow queue evidence completed without failures.",
+      "expected_value": 1,
+      "metric_id": "current_head_evidence.queue_evidence_passed",
+      "operator": "eq",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "workflow_queue"
+    },
+    {
+      "criterion_id": "workflow_queue_exact_head",
+      "description": "Workflow queue evidence started and ended on the declared repository SHA.",
+      "expected_value": 1,
+      "metric_id": "current_head_evidence.queue_exact_head_verified",
+      "operator": "eq",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "workflow_queue"
+    },
+    {
+      "criterion_id": "no_external_provider_calls",
+      "description": "The deterministic queue run made no external provider calls.",
+      "expected_value": 0,
+      "metric_id": "current_head_evidence.queue_external_provider_calls",
+      "operator": "eq",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "workflow_queue"
+    },
+    {
+      "criterion_id": "no_wordpress_writes",
+      "description": "The deterministic queue run made no WordPress writes.",
+      "expected_value": 0,
+      "metric_id": "current_head_evidence.queue_wordpress_writes",
+      "operator": "eq",
+      "required": true,
+      "schema_version": "1.0",
+      "stage": "workflow_queue"
+    }
+  ],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": false,
+  "objective": "Focused exact-HEAD CTO contract/projector and workflow queue/recovery/idempotency verification.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "outcomes",
+    "measurements"
+  ],
+  "run_id": "current-head-integrity-20261007",
+  "run_type": "current_head_integrity",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/generic-metrics/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "source_id": "current_head_evidence",
+      "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+    }
+  ],
+  "stages_in_scope": [
+    "testing",
+    "workflow_queue",
+    "validation",
+    "idempotency"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "e93c23a88928ced7bf1d5960432be03848408295d62d7543984fe99199919088",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "07d843e27c8b4a17e48349b4ecdabfd387d6f0f36991d28e1cb805b691841196",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    }
+  ],
+  "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+}

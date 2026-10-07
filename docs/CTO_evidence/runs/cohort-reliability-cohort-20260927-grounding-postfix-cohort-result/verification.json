@@ -1,0 +1,66 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding-postfix-cohort-result/cto_evidence_bundle.json",
+  "bundle_sha256": "6155c30e48aa9788fc1e50de7c709de5b90c1674600f9bce5c2bdc3bdf36407d",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding-postfix-cohort-result/run_manifest.json",
+  "manifest_sha256": "d07ef5d9c96cd033f2f59eb976958dc7c969f8942fbf1f4c58d95d0bf064240d",
+  "metric_count": 153,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 85727,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+  "run_type": "frozen_reliability_cohort",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/155be30341ee257253628f04c2dac33bc358f71393eb72ba4cc82eed46d83fea.json",
+      "role": "run",
+      "sha256": "76a2d41e3aa05eff3b9d9ec000dcdeec285226947aae4341e9e7963683ce17c9",
+      "source_id": "cohort_result",
+      "tested_repository_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 20,
+  "tested_repository_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99",
+  "unavailable_metric_count": 140
+}

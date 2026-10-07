@@ -1,0 +1,67 @@
+{
+  "implementation_commit": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+  "repair_bearing_follow_up": {
+    "cohort_size": 1,
+    "fresh_isolated_state": true,
+    "measurements": {
+      "estimated_cost_usd": 0.096065,
+      "max_provider_concurrency": 6,
+      "provider_active_wall_seconds_all_profiled_workflows": 421.119,
+      "provider_calls": 44,
+      "reasoning_tokens": 26235,
+      "report_analysis_provider_active_wall_seconds": 382.428,
+      "report_analysis_wall_seconds": 397.138,
+      "report_wall_seconds": 497.653
+    },
+    "quality": {
+      "operator_intervention": false,
+      "publication_readiness": "pass",
+      "publication_writes": 0,
+      "rule_waivers": 0,
+      "targeted_repairs": 3,
+      "unresolved_retained_factual_claims": 0,
+      "unsupported_retained_factual_claims": 0,
+      "validation": "pass"
+    },
+    "reuse_decisions": [
+      {
+        "grounding_calls_avoided": 0,
+        "newly_validated_claims": 26,
+        "reuse_fallback_reason_counts": {
+          "prior_package_missing": 1
+        },
+        "reused_validation_results": 0,
+        "semantic_validation_calls_avoided": 0,
+        "total_candidate_claims": 26
+      },
+      {
+        "grounding_calls_avoided": 0,
+        "newly_validated_claims": 26,
+        "reuse_fallback_reason_counts": {
+          "prior_validation_not_pass": 1
+        },
+        "reused_validation_results": 0,
+        "semantic_validation_calls_avoided": 0,
+        "total_candidate_claims": 26
+      }
+    ],
+    "summed_reuse_counters": {
+      "grounding_calls_avoided": 0,
+      "newly_validated_claims": 52,
+      "reuse_fallback_reason_counts": {
+        "prior_package_missing": 1,
+        "prior_validation_not_pass": 1
+      },
+      "reused_validation_results": 0,
+      "semantic_validation_calls_avoided": 0,
+      "total_candidate_claims": 52
+    },
+    "validation_provider_calls": {
+      "grounding_calls": 12,
+      "grounding_exclusive_exposure_seconds": 11.542,
+      "grounding_provider_active_wall_seconds": 107.423,
+      "semantic_validation_calls": 2
+    }
+  },
+  "schema_version": "1.0"
+}

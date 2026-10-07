@@ -1,0 +1,795 @@
+{
+  "inventory_scope": "Repository-retained adapter-shaped producer artifacts, locally available untracked inputs used in publicized derivatives, and explicit unsupported/historical-only candidates.",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "evidence_classes_supported_by_retained_fields": [
+        "acquisition",
+        "attempt_history",
+        "outcomes",
+        "resource_usage",
+        "performance"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/acquisition/8757c559483fb12a352a41d79eb6dd70e07902fc4973cc43a6dc9ac8887efeff.json",
+      "included_source_sha256": "d2957ad6ca832b3020b2aa6d085697b1830a4dc1a87568b2314fa674974fd3c4",
+      "included_source_tested_repository_shas": [
+        "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+      ],
+      "limitation": "Byte-identical duplicate; canonical source is inventoried once.",
+      "manifest_tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "producer_format": "marketlense/acquisition-projection/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "supporting",
+      "source_path": "docs/CTO_evidence/browser_acquisition_final_validation_20260823_233620/baseline_evidence/previous_23_of_30/sanitized_projection/acquisition_evidence_projection.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "8757c559483fb12a352a41d79eb6dd70e07902fc4973cc43a6dc9ac8887efeff",
+      "subject_count": 30
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+      "evidence_classes_supported_by_retained_fields": [
+        "acquisition",
+        "attempt_history",
+        "outcomes",
+        "resource_usage",
+        "performance"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/acquisition/e608c8d46fccec78ac4a67b738d04c1a4565aff88aa5c235b44c3ab4a059fc84.json",
+      "included_source_sha256": "1424226bc91d86ca80833d13a3e12019cf7b0406eef8d8c7fa88a63d6d64098d",
+      "included_source_tested_repository_shas": [
+        "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333"
+      ],
+      "limitation": "Historical browser acquisition; not current-HEAD evidence.",
+      "manifest_tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+      "producer_format": "marketlense/acquisition-projection/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/CTO_evidence/browser_acquisition_final_validation_20260823_233620/previous_vs_current_projection/acquisition_evidence_projection.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "e608c8d46fccec78ac4a67b738d04c1a4565aff88aa5c235b44c3ab4a059fc84",
+      "subject_count": 30
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+      "evidence_classes_supported_by_retained_fields": [
+        "acquisition",
+        "attempt_history",
+        "outcomes",
+        "resource_usage",
+        "performance"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/acquisition/ad0e8a21ca139aa2a69485063b1a6bbe081334eb1a280f6550df14a8f2b40f49.json",
+      "included_source_sha256": "2465f58a19d397d42fadd1715ac0312b6c5de3923da50bf65f34f9dfe737832d",
+      "included_source_tested_repository_shas": [
+        "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333"
+      ],
+      "limitation": "Historical browser acquisition; not current-HEAD evidence.",
+      "manifest_tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+      "producer_format": "marketlense/acquisition-projection/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/CTO_evidence/browser_acquisition_final_validation_20260823_233620/sanitized_projection/acquisition_evidence_projection.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "ad0e8a21ca139aa2a69485063b1a6bbe081334eb1a280f6550df14a8f2b40f49",
+      "subject_count": 30
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "evidence_classes_supported_by_retained_fields": [
+        "acquisition",
+        "attempt_history",
+        "outcomes",
+        "resource_usage",
+        "performance"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/acquisition/8757c559483fb12a352a41d79eb6dd70e07902fc4973cc43a6dc9ac8887efeff.json",
+      "included_source_sha256": "d2957ad6ca832b3020b2aa6d085697b1830a4dc1a87568b2314fa674974fd3c4",
+      "included_source_tested_repository_shas": [
+        "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+      ],
+      "limitation": "Historical browser acquisition; not current-HEAD evidence.",
+      "manifest_tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "producer_format": "marketlense/acquisition-projection/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/CTO_evidence/browser_acquisition_initial30_final_20260823_175952/sanitized_projection/acquisition_evidence_projection.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "8757c559483fb12a352a41d79eb6dd70e07902fc4973cc43a6dc9ac8887efeff",
+      "subject_count": 30
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "evidence_classes_supported_by_retained_fields": [
+        "performance",
+        "resource_usage",
+        "provider_timing",
+        "quality",
+        "side_effects"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/artifact_dag/521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049-candidate.json",
+      "included_source_sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+      "included_source_tested_repository_shas": [
+        "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+      ],
+      "limitation": "Original comparison unusable: implementation.base_commit conflicts with before.implementation_commit. Candidate-only metrics retained; no delta or causal attribution.",
+      "manifest_tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "producer_format": "marketlense/artifact-dag-benchmark/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "candidate",
+      "source_path": "docs/quality/artifact-dag-latency-benchmark-20261006.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049",
+      "source_sha_binding_details": {
+        "baseline_conflict": true,
+        "before_implementation_commit": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+        "candidate_implementation_commit": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+        "declared_base_commit": "bc2831654c0539a47e0e3e98f2424a33858ec152"
+      },
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+      "evidence_classes_supported_by_retained_fields": [
+        "concurrency",
+        "performance",
+        "resource_usage",
+        "provider_timing",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/concurrency/21bd7ab850703ec7ca04a0f6551eecc2ee62b613219aab4aa01be023e9ff0898-candidate.json",
+      "included_source_sha256": "3df0e5eb9278ac2aee90102f7d99f452342d8641f33e5401c0d76addf1b3f34a",
+      "included_source_tested_repository_shas": [
+        "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc"
+      ],
+      "limitation": "Original artifact mixes pre-fix/current data and lacks role-aware selection; candidate-only derivative used, so no comparison is claimed.",
+      "manifest_tested_repository_sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+      "producer_format": "marketlense/concurrency-proof/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "candidate",
+      "source_path": "docs/quality/grounding-concurrency-proof-20261006.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "21bd7ab850703ec7ca04a0f6551eecc2ee62b613219aab4aa01be023e9ff0898",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "visual_quality",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/crop_qa/5bb11842f9a2182dacf7fd51d6bd87a335f99c1323e4c95a1af94c86473d6485.qa.json",
+      "included_source_sha256": "47e5b1fd898008c8805f199ee4513b1f18bcf258b2f04fb2622161dfbf8c4873",
+      "included_source_tested_repository_shas": [
+        "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+      ],
+      "limitation": "Original sidecar was untracked under out; derivative preserves structured QA only. Associated PNGs were not retained, so artifact-byte totals are zero/unavailable.",
+      "manifest_tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "producer_format": "marketlense/crop-qa-sidecar/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "sha_binding_source": "Prior local crop-QA projection manifest; original sidecar has no embedded repository SHA.",
+      "source_path": "out/artifact-dag-benchmark-20261006/frozen-reliability-epsu9vh_/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-m9r0oxk9/output/1d9e64dd7425/slices/1d9e64dd7425-chart-18-0.png.qa.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "5bb11842f9a2182dacf7fd51d6bd87a335f99c1323e4c95a1af94c86473d6485",
+      "subject_count": 1
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "visual_quality",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/crop_qa/ce9076984fb5368820ff6c370be158824269cbcc95d9efa18d560756f168eaad.qa.json",
+      "included_source_sha256": "19ce0b8bf38068bedb369be100a7e2310a71745119d4dd4f68735a5935d4daea",
+      "included_source_tested_repository_shas": [
+        "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+      ],
+      "limitation": "Original sidecar was untracked under out; derivative preserves structured QA only. Associated PNGs were not retained, so artifact-byte totals are zero/unavailable.",
+      "manifest_tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "producer_format": "marketlense/crop-qa-sidecar/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "sha_binding_source": "Prior local crop-QA projection manifest; original sidecar has no embedded repository SHA.",
+      "source_path": "out/artifact-dag-benchmark-20261006/frozen-reliability-epsu9vh_/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-m9r0oxk9/output/1d9e64dd7425/slices/1d9e64dd7425-chart-26-0.png.qa.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "ce9076984fb5368820ff6c370be158824269cbcc95d9efa18d560756f168eaad",
+      "subject_count": 1
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "visual_quality",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/crop_qa/ea7b7632e77be4e2787f2f4f4f4515099d3938eee9ea2ff4e2b161b204b5dd59.qa.json",
+      "included_source_sha256": "58ae1ccd752e6a35355990cda097937524cd521dde901a90e5016d43fa65213b",
+      "included_source_tested_repository_shas": [
+        "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+      ],
+      "limitation": "Original sidecar was untracked under out; derivative preserves structured QA only. Associated PNGs were not retained, so artifact-byte totals are zero/unavailable.",
+      "manifest_tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "producer_format": "marketlense/crop-qa-sidecar/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "sha_binding_source": "Prior local crop-QA projection manifest; original sidecar has no embedded repository SHA.",
+      "source_path": "out/artifact-dag-benchmark-20261006/frozen-reliability-epsu9vh_/members/cohort-81af3890cd84ece81ef1/ias-first-attempt-m9r0oxk9/output/1d9e64dd7425/slices/1d9e64dd7425-chart-37-0.png.qa.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "ea7b7632e77be4e2787f2f4f4f4515099d3938eee9ea2ff4e2b161b204b5dd59",
+      "subject_count": 1
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909",
+      "evidence_classes_supported_by_retained_fields": [
+        "human_quality",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/editorial_review/958c7d4c1fd182fe03c556b0acba84752f30089f2124e5792acf264c6d1614db-public.json",
+      "included_source_sha256": "89196c0f45aeb7dd31e180578c5c738197b1146565d755d8bc1f72ab57a1a27f",
+      "included_source_tested_repository_shas": [
+        "56628ad76f861e14698ee027ada653f4f32de909"
+      ],
+      "limitation": "Original review input was untracked under out; publicized source keeps only final-HTML hashes and numeric scores. Rubric and reviewer attribution are unavailable.",
+      "manifest_tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909",
+      "producer_format": "marketlense/editorial-review/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "out/p6_editorial_acceptance/batch_02/rerun_20260901_human_review.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "958c7d4c1fd182fe03c556b0acba84752f30089f2124e5792acf264c6d1614db",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "comparison_endpoints": {
+        "baseline_repository_sha": "f70871ace4ec36827192955334217649496f4ed7",
+        "candidate_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0"
+      },
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "comparison",
+        "outcomes",
+        "resource_usage",
+        "performance",
+        "quality",
+        "side_effects"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/file_search/e86e50641e9a3b1e93d731cb10ddac5e5530eb84461116f9c0c3f900637db908-comparison.json",
+      "included_source_sha256": "30e5a1f4b32755a24f7f85698c985c4f8bb202cc2c6abbc4d275e36e39b11478",
+      "included_source_tested_repository_shas": [
+        "be70355a28b8f58d517768420024fd3baf92dde0",
+        "f70871ace4ec36827192955334217649496f4ed7"
+      ],
+      "limitation": "Explicit baseline/candidate endpoints; deltas are candidate minus baseline and do not establish causality.",
+      "manifest_comparison_endpoint_shas": [
+        "be70355a28b8f58d517768420024fd3baf92dde0",
+        "f70871ace4ec36827192955334217649496f4ed7"
+      ],
+      "producer_format": "marketlense/file-search-reduction/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "baseline_candidate_comparison",
+      "source_path": "docs/quality/file-search-call-reduction-20261003/evidence.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "e86e50641e9a3b1e93d731cb10ddac5e5530eb84461116f9c0c3f900637db908",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/44811b0dd5ca1225ddbd9b12eeff9d0fba6d2f1e993f72010746247159984a7f.json",
+      "included_source_sha256": "2da0ac230edebb6ff44302427bc629828879ce66742cca7f6a6ef679eca09334",
+      "included_source_tested_repository_shas": [
+        "06e58098a6a8199ed374b966a66b55d99b7a6e18"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/ias-per-report-timeout-20261002/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "44811b0dd5ca1225ddbd9b12eeff9d0fba6d2f1e993f72010746247159984a7f",
+      "subject_count": 7
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "bfab37bbd1e4c194c027f14dd54817fb61f940a6",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/76ef832413833957572a195888954bdfb38687ebc7c4cfea975b574c4c2f2b6c.json",
+      "included_source_sha256": "af19e3b9e9d9db595f7a40b478fb084cc6a51976d3c83724ce4b02ba22f93775",
+      "included_source_tested_repository_shas": [
+        "bfab37bbd1e4c194c027f14dd54817fb61f940a6"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "bfab37bbd1e4c194c027f14dd54817fb61f940a6",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20260914-bfab37bb/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "76ef832413833957572a195888954bdfb38687ebc7c4cfea975b574c4c2f2b6c",
+      "subject_count": 20
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "c89c545d649a2852f4602b8ddbfa4c09a8c39e18",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/ec2c5fa35c36dd14841d85e4b81157c957fa36d3be11a2ce40498d83db73c2f3.json",
+      "included_source_sha256": "90ece8fb8c548fced1088415af50f711d5a5c2082e75db0ad7e164a2cbbbefc5",
+      "included_source_tested_repository_shas": [
+        "c89c545d649a2852f4602b8ddbfa4c09a8c39e18"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "c89c545d649a2852f4602b8ddbfa4c09a8c39e18",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20260919-a21-final/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "ec2c5fa35c36dd14841d85e4b81157c957fa36d3be11a2ce40498d83db73c2f3",
+      "subject_count": 20
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/f45047b8343f18192783e26e8d42ffa2524d18c90fdd33d09e945e404902b5ee.json",
+      "included_source_sha256": "75653a80291f16fb75297090cbc01fe32dc26de22e679ca693e7102ea37e69e3",
+      "included_source_tested_repository_shas": [
+        "89b4fc4c1159499806ed16993d76f3684fe3412e"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20260920-a21-final/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "f45047b8343f18192783e26e8d42ffa2524d18c90fdd33d09e945e404902b5ee",
+      "subject_count": 20
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/9be431aed086136bfc1428e311dbdf8976192e2ccc1970b3e6033db970ce8e65.json",
+      "included_source_sha256": "5f55a6e98d50a4ddfddea305d8528d3ceef31046c747fb82261c2c9761c18988",
+      "included_source_tested_repository_shas": [
+        "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20260927-grounding/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "9be431aed086136bfc1428e311dbdf8976192e2ccc1970b3e6033db970ce8e65",
+      "subject_count": 20
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/155be30341ee257253628f04c2dac33bc358f71393eb72ba4cc82eed46d83fea.json",
+      "included_source_sha256": "76a2d41e3aa05eff3b9d9ec000dcdeec285226947aae4341e9e7963683ce17c9",
+      "included_source_tested_repository_shas": [
+        "55cd01815d9744153539a60fdb2afe4d86e0fb99"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20260927-grounding/postfix_cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "155be30341ee257253628f04c2dac33bc358f71393eb72ba4cc82eed46d83fea",
+      "subject_count": 20
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "5fe10a5da22fbbd0776ddf2700d7ee5edf7de70c",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/26b1412dc2ecb7f81fb383d7a5998fdc934cd008d9d8ecb318f72b97b83aec2b.json",
+      "included_source_sha256": "6eb40ffea89a509d21cb479c93188b788531b43375d68c4bc7008c7053f0dc98",
+      "included_source_tested_repository_shas": [
+        "5fe10a5da22fbbd0776ddf2700d7ee5edf7de70c"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "5fe10a5da22fbbd0776ddf2700d7ee5edf7de70c",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20261001-batch3-finalization/before_cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "26b1412dc2ecb7f81fb383d7a5998fdc934cd008d9d8ecb318f72b97b83aec2b",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "11ca2ce3e73cfc56741a140da52eba82b1882068",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/a2498b3c11c73a4d3c6f50a2cfd1336dcac1776b236b03deae39caf9bc488ff5.json",
+      "included_source_sha256": "cb01c3c18d7806e3402ceaad3ad48911cbeebaf88cc2e8d8d158cd5866c8f5fa",
+      "included_source_tested_repository_shas": [
+        "11ca2ce3e73cfc56741a140da52eba82b1882068"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "11ca2ce3e73cfc56741a140da52eba82b1882068",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20261001-batch3-finalization/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "a2498b3c11c73a4d3c6f50a2cfd1336dcac1776b236b03deae39caf9bc488ff5",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4.json",
+      "included_source_sha256": "9fefe2045c3b1472ac46dd36fc12417d856f9c2b152096eccaad0b0f2411afc1",
+      "included_source_tested_repository_shas": [
+        "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20261001-batch3-finalization/report-agnostic-prompt-repair-20261001/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "365c342ba3ffe2cb3b2c8a90fb71938ae9738cf6",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/b6802e8519ee972548c750bfd323309385600acde1e5ab01953ccb567a5802fb.json",
+      "included_source_sha256": "4b9feda2a030ee83117bbe239aee01af616d794c0513e942ec95b618f1626e85",
+      "included_source_tested_repository_shas": [
+        "365c342ba3ffe2cb3b2c8a90fb71938ae9738cf6"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "365c342ba3ffe2cb3b2c8a90fb71938ae9738cf6",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20261001-next-five/before_cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "b6802e8519ee972548c750bfd323309385600acde1e5ab01953ccb567a5802fb",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "469c13c15d0d654f60c04a84bb97bf7ee44d1de0",
+      "evidence_classes_supported_by_retained_fields": [
+        "outcomes",
+        "quality",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/043bfd0f86dec3880a7c5c9850958ded6d832a49429c8e1043b8ac8f133d6839.json",
+      "included_source_sha256": "bd024d97dc86b5a21706cd9d7d7c7dc4229a07ac10bea24e11ecb87c09983bf1",
+      "included_source_tested_repository_shas": [
+        "469c13c15d0d654f60c04a84bb97bf7ee44d1de0"
+      ],
+      "limitation": "Historical production-queue evidence; per-subject resource attribution and typed attempt events are not retained.",
+      "manifest_tested_repository_sha": "469c13c15d0d654f60c04a84bb97bf7ee44d1de0",
+      "producer_format": "marketlense/frozen-cohort-result/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/reliability-cohort-20261001-next-five/cohort_result.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "043bfd0f86dec3880a7c5c9850958ded6d832a49429c8e1043b8ac8f133d6839",
+      "subject_count": 5
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "evidence_classes_supported_by_retained_fields": [
+        "measurements",
+        "outcomes"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_tested_repository_shas": [
+        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+      ],
+      "limitation": "Current-HEAD focused verification; queue evidence uses deterministic temporary SQLite, not production proof.",
+      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "producer_format": "marketlense/generic-metrics/1.0",
+      "publicization": "deterministic_summary_derived_from_pytest_junit_and_workflow_queue_json",
+      "role": "run",
+      "source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "subject_count": 2
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+      "evidence_classes_supported_by_retained_fields": [
+        "provider_timing",
+        "critical_path",
+        "resource_usage",
+        "performance",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/provider_profiles/7d0070daab49f089375ce3539a6a38f389a4d1ac5a1f149dcca5a996078f8430-critical-path.json",
+      "included_source_sha256": "30023a98146c3cad85a3bff1ef99a2e1cae961612b45932f4199c0cea8fb6ba5",
+      "included_source_tested_repository_shas": [
+        "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57"
+      ],
+      "limitation": "Single historical report; no current-HEAD provider timing.",
+      "manifest_tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+      "producer_format": "marketlense/provider-critical-path-profile/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/provider-critical-path-profile-20261006.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "7d0070daab49f089375ce3539a6a38f389a4d1ac5a1f149dcca5a996078f8430",
+      "subject_count": 1
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39",
+      "evidence_classes_supported_by_retained_fields": [
+        "provider_timing",
+        "resource_usage"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/provider_profiles/17849c477dc3f1a327c0e8cf8349c01f032b1c55ac16b11152641eea696f1164-latency.json",
+      "included_source_sha256": "e1cf19335692f5ad0eac2a4e23fd7e0deb6461db3ec7251ae3c6ee299ce9302e",
+      "included_source_tested_repository_shas": [
+        "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39"
+      ],
+      "limitation": "Aggregate provider work is not total report wall time; no current-HEAD provider profile is retained.",
+      "manifest_tested_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39",
+      "producer_format": "marketlense/provider-latency-profile/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/quality/provider-latency-profile-20261006.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "17849c477dc3f1a327c0e8cf8349c01f032b1c55ac16b11152641eea696f1164",
+      "subject_count": 1
+    },
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "historical_resource_usage"
+      ],
+      "included_source_path": null,
+      "included_source_sha256": null,
+      "included_source_tested_repository_shas": [],
+      "limitation": "Historical telemetry has no tested-run SHA and is excluded from declared-run metrics.",
+      "producer_format": "marketlense/runtime-telemetry/1.0",
+      "publicization": "existing_historical_snapshot",
+      "role": "historical_supporting_state",
+      "snapshot_repository_sha": "ef0da57423d1ec039c148b378a5f110b5f11ee8e",
+      "source_path": "docs/CTO_evidence/reliability_full_20260810_62d021b3b57440eb8113ff5d5e105578/runtime_telemetry.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "da8f57299d4bda0031e4258b199815a0372ef010db268ed8f0606bd0614f3803",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "historical_resource_usage"
+      ],
+      "included_source_path": null,
+      "included_source_sha256": null,
+      "included_source_tested_repository_shas": [],
+      "limitation": "Historical telemetry has no tested-run SHA and is excluded from declared-run metrics.",
+      "producer_format": "marketlense/runtime-telemetry/1.0",
+      "publicization": "existing_historical_snapshot",
+      "role": "historical_supporting_state",
+      "snapshot_repository_sha": "56e09a30f96ef2482b496b217049c59d7d7e0def",
+      "source_path": "docs/CTO_evidence/reliability_full_20260812_507aa72521514a27a98edf8ed85244aa/runtime_telemetry.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "1377015f16da8f2a634de8e2e0360eb670d01133dcb5f929111e017f5ee44192",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "historical_resource_usage"
+      ],
+      "included_source_path": null,
+      "included_source_sha256": null,
+      "included_source_tested_repository_shas": [],
+      "limitation": "Historical telemetry has no tested-run SHA and is excluded from declared-run metrics.",
+      "producer_format": "marketlense/runtime-telemetry/1.0",
+      "publicization": "existing_historical_snapshot",
+      "role": "historical_supporting_state",
+      "snapshot_repository_sha": "c6036f7ff9cb5edf841f8794afbf8e13b62b7161",
+      "source_path": "docs/CTO_evidence/remediation_full_20260720/runtime_telemetry.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "a8d3539ead01fa6057c08a6a145b46d805871b7737eea91646754163c8e2f887",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "historical_resource_usage"
+      ],
+      "included_source_path": null,
+      "included_source_sha256": null,
+      "included_source_tested_repository_shas": [],
+      "limitation": "Historical telemetry has no tested-run SHA and is excluded from declared-run metrics.",
+      "producer_format": "marketlense/runtime-telemetry/1.0",
+      "publicization": "existing_historical_snapshot",
+      "role": "historical_supporting_state",
+      "snapshot_repository_sha": "23fec7388553041aabcc3e1e0775abb559c6695d",
+      "source_path": "docs/CTO_evidence/runtime_telemetry.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "6bf4cd48c404a061ba29c1879dca1416726d02cd",
+      "evidence_classes_supported_by_retained_fields": [
+        "reuse",
+        "resource_usage",
+        "performance",
+        "provider_timing",
+        "quality"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/validation_reuse/e3c9e8cb805fb683fbd61f5a2b821d7efa345cf5131c90a2040db76e5b9935e3-repair-follow-up.json",
+      "included_source_sha256": "becaedbc8173a835ac1891e5e607e901cb0ba4ad1f70bac534e050c459d126ca",
+      "included_source_tested_repository_shas": [
+        "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+      ],
+      "limitation": "Root artifact mixes commits; derivative selects one follow-up SHA. Aggregate counters lack subject/claim mappings; speedup is not established. Root SHA is 6bf4cd48; only the nested follow-up at 1ec67ff is selected for the run.",
+      "manifest_tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+      "producer_format": "marketlense/validation-reuse-benchmark/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "candidate",
+      "selected_candidate_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+      "source_path": "docs/quality/repair-validation-reuse-20261006.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "e3c9e8cb805fb683fbd61f5a2b821d7efa345cf5131c90a2040db76e5b9935e3",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+      "evidence_classes_supported_by_retained_fields": [
+        "external_actions",
+        "side_effects"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/wordpress/d469fb17109f93c5b6ab1130fcaa8f8b1c7e0d7268803c99e17ee9ed06f575b8-publication.json",
+      "included_source_sha256": "a3eedf1db6571a6572e35fae9cdfe8f07bc24743e8075a9c38b4306148be4b40",
+      "included_source_tested_repository_shas": [
+        "0bdd91998e39a796ec958c43518ca2827e99faeb"
+      ],
+      "limitation": "Readback count is zero/not completed; actual writes unavailable; repeat publication was not run, so idempotency remains unavailable.",
+      "manifest_tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+      "producer_format": "marketlense/wordpress-publication-evidence/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "run",
+      "source_path": "docs/CTO_evidence/reliability_full_20260811_aa4b36f3ab714a29bbd7b081d291b09e/publication_subset_addendum.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "d469fb17109f93c5b6ab1130fcaa8f8b1c7e0d7268803c99e17ee9ed06f575b8",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "focused_test_result"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_tested_repository_shas": [
+        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+      ],
+      "limitation": "JUnit source is a new focused verification run; sanitized summary is the retained canonical generic artifact.",
+      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "producer_format": "pytest-junit-xml/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "supporting",
+      "source_path": "out/cto_evidence_current_head_tests.xml",
+      "source_retained_in_repository": false,
+      "source_sha256": "82a9730db933b96686c2305c18f8d6c3735c3d79eed9ce5fe1282a4844fa477c",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": false,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "concurrency_claim_only"
+      ],
+      "included_source_path": null,
+      "included_source_sha256": null,
+      "included_source_tested_repository_shas": [],
+      "limitation": "Commit field and concurrency field names are not recognized by the canonical adapter; exact SHA-bound evidence unavailable.",
+      "producer_format": "unsupported_by_current_concurrency_adapter",
+      "publicization": "not_included",
+      "role": "supporting",
+      "source_path": "docs/quality/frozen-five-same-queue-dispatch-benchmark-20261004.json",
+      "source_retained_in_repository": true,
+      "source_sha256": "14f6444b0f62e484b1d7ebb5edd302ab51d6c27f54f321bb7b7da15a3b3921d3",
+      "subject_count": null
+    },
+    {
+      "canonical_declared_run_eligible": true,
+      "embedded_tested_repository_sha": null,
+      "evidence_classes_supported_by_retained_fields": [
+        "queue_transitions",
+        "readiness",
+        "side_effects"
+      ],
+      "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_tested_repository_shas": [
+        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+      ],
+      "limitation": "Deterministic temporary SQLite only; no production queue or external publication proof.",
+      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "producer_format": "workflow-queue-evidence/1.0",
+      "publicization": "deterministic_minimized_derivative",
+      "role": "supporting",
+      "source_path": "out/cto_evidence_pack_workflow_queue.json",
+      "source_retained_in_repository": false,
+      "source_sha256": "52a8e940b9af78371cea812df17e0ef9b9815f60ea460471becb64e027f83232",
+      "subject_count": null
+    }
+  ]
+}

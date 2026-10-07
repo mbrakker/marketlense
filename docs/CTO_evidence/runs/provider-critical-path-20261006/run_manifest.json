@@ -1,0 +1,52 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Retained provider critical-path and wall-clock exposure for one historical report.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "provider_timing",
+    "critical_path",
+    "resource_usage",
+    "performance",
+    "quality"
+  ],
+  "run_id": "provider-critical-path-20261006",
+  "run_type": "provider_critical_path_profile",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/provider-critical-path-profile/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/provider_profiles/7d0070daab49f089375ce3539a6a38f389a4d1ac5a1f149dcca5a996078f8430-critical-path.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "30023a98146c3cad85a3bff1ef99a2e1cae961612b45932f4199c0cea8fb6ba5",
+      "source_id": "critical_path",
+      "tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57"
+    }
+  ],
+  "stages_in_scope": [
+    "provider_calls",
+    "report_analysis"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    }
+  ],
+  "tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57"
+}

@@ -1,0 +1,1383 @@
+{
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "completeness": "complete",
+  "disposition": "not_evaluated",
+  "executive_summary": {
+    "avoided_provider_call_count": null,
+    "completeness": "complete",
+    "disposition": "not_evaluated",
+    "external_actions": [],
+    "historical_metric_count": 41,
+    "key_metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.artifact_generation_wall_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 91151.589
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "artifact_dag_candidate.after.report_analysis_provider_active_wall_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 321192.83
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.report_analysis_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 332.17
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.report_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 433.138
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.estimated_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.077608
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.provider_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 35
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 312340
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 59061
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 29212
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.total_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 371401
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.unresolved_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.unsupported_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.publication_queue_jobs",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.publication_rows",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      }
+    ],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest."
+    ],
+    "mode": "declared_run",
+    "objective": "Retained artifact scheduling candidate metrics; no baseline delta is asserted.",
+    "outcomes": [],
+    "quality_dimensions": [],
+    "recovery_attempt_count": null,
+    "required_criteria": {
+      "fail_count": 0,
+      "insufficient_evidence_count": 0,
+      "not_evaluated_count": 0,
+      "pass_count": 0,
+      "schema_version": "1.0"
+    },
+    "reused_validation_count": null,
+    "run_id": "artifact-dag-candidate-20261006",
+    "run_type": "artifact_dag_candidate",
+    "schema_version": "1.0",
+    "subject_count": 0,
+    "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+  },
+  "generated_at_utc": "2026-10-07T06:25:25.920762+00:00",
+  "historical_state": {
+    "limitations": [
+      "Historical SQLite and artifact totals are context only and are not attributed to any declared workload run."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.acquisition_by_publisher_and_route",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.acquired_report_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_sessions",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_steps",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 13
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 499.767
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.page_loads",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.screenshots",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 7
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.plan_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 40
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.planned_reusable_artifact_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_by_llm_scope_and_artifact_family.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.published_workflow_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.successful_publication_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.acceptance_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.938657
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.accepted_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 811
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 864
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_qa_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_refinement_file_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 323
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.deferred_work_age_and_completion",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.mean_open_queue_age_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 9818955.445
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.embedded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2642
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.durable_embedding_already_satisfied",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.embedding_completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.human_editorial_quality_ratings",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.minimal_plan_actual_call_divergence",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 856
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_incidence_among_llm_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0.143938
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 1.0
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.public_page_performance_and_errors",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.human_intervention_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.875
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.recurrence_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.125
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.operator_action_required",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 42
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.terminal",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.failure_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.111111
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.mean_latency_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 5041.889
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.succeeded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      }
+    ],
+    "schema_version": "1.0",
+    "source_ids": [
+      "historical_runtime_telemetry"
+    ],
+    "status": "available"
+  },
+  "limitations": [
+    "Producer run timestamps were not retained in the declared manifest."
+  ],
+  "mode": "declared_run",
+  "run": {
+    "comparison": null,
+    "configuration_identities": [],
+    "criteria": [],
+    "ended_at_utc": null,
+    "external_side_effects_enabled": false,
+    "objective": "Retained artifact scheduling candidate metrics; no baseline delta is asserted.",
+    "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+    "producer_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+    "required_evidence_classes": [
+      "exact_repository_sha",
+      "source_integrity",
+      "performance",
+      "resource_usage",
+      "provider_timing",
+      "quality"
+    ],
+    "run_id": "artifact-dag-candidate-20261006",
+    "run_type": "artifact_dag_candidate",
+    "schema_version": "1.0",
+    "sources": [
+      {
+        "byte_count": null,
+        "format_id": "marketlense/artifact-dag-benchmark/1.0",
+        "observed_sha256": null,
+        "path": "docs/CTO_evidence/source_artifacts/artifact_dag/521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049-candidate.json",
+        "producer": "retained_marketlense_evidence",
+        "role": "run",
+        "schema_version": "1.0",
+        "sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+        "source_id": "artifact_dag_candidate",
+        "status": "declared",
+        "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+      }
+    ],
+    "stages_in_scope": [
+      "artifact_generation",
+      "report_analysis"
+    ],
+    "stages_out_of_scope": [
+      "external_publication"
+    ],
+    "started_at_utc": null,
+    "subjects": [],
+    "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+  },
+  "run_evidence": {
+    "attempt_history_status": "unavailable",
+    "attempts": [],
+    "comparison": null,
+    "criteria": [],
+    "external_actions": [],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.artifact_generation_wall_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 91151.589
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.cover_semantics_vs_expert_comment",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4082.573
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.cover_semantics_vs_linkedin_post",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4082.573
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.insights_candidates_vs_quotes",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4559.848
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.insights_final_vs_quotes",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.insights_final_vs_unfinished_summary",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 32009.789
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.summary_vs_insights_candidates",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 29314.488
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.artifact_task_overlap_ms.summary_vs_quotes",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4559.848
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.estimated_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.077608
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 312340
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.max_provider_concurrency",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "workers",
+        "value": 6
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 59061
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.provider_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 35
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.publication_queue_jobs",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.publication_rows",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 29212
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Non-provider residual is separate from provider elapsed work.",
+        "metric_id": "artifact_dag_candidate.after.report_analysis_non_provider_residual_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 10977.17
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "artifact_dag_candidate.after.report_analysis_provider_active_wall_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 321192.83
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.report_analysis_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 332.17
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "artifact_dag_candidate.after.report_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 433.138
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.rule_waivers",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.total_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 371401
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.unresolved_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "artifact_dag_candidate.after.unsupported_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "artifact_dag_candidate"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 0
+      }
+    ],
+    "outcomes": [],
+    "quality_dimensions": [],
+    "reuse_decisions": [],
+    "reuse_evidence_status": "unavailable",
+    "schema_version": "1.0",
+    "subjects": []
+  },
+  "schema_version": "1.0",
+  "source_references": [
+    {
+      "byte_count": 1556,
+      "format_id": "marketlense/cto-evidence-run-manifest/1.0",
+      "observed_sha256": "0dedf1e42a3415d7ddbba41dbbf1c1fcd4f1433128dbc7165d49cf6707649282",
+      "path": "docs/CTO_evidence/runs/artifact-dag-candidate-20261006/run_manifest.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "0dedf1e42a3415d7ddbba41dbbf1c1fcd4f1433128dbc7165d49cf6707649282",
+      "source_id": "run_manifest",
+      "status": "verified",
+      "tested_repository_sha": null
+    },
+    {
+      "byte_count": 1266,
+      "format_id": "marketlense/artifact-dag-benchmark/1.0",
+      "observed_sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+      "path": "docs/CTO_evidence/source_artifacts/artifact_dag/521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049-candidate.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+      "source_id": "artifact_dag_candidate",
+      "status": "verified",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    },
+    {
+      "byte_count": 34998,
+      "format_id": "marketlense/runtime-telemetry/1.0",
+      "observed_sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "path": "docs/CTO_evidence/runtime_telemetry.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "source_id": "historical_runtime_telemetry",
+      "status": "verified",
+      "tested_repository_sha": null
+    }
+  ]
+}

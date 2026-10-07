@@ -1,0 +1,68 @@
+{
+  "available_evidence_classes": [
+    "concurrency",
+    "exact_repository_sha",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/grounding-concurrency-candidate-20261006/cto_evidence_bundle.json",
+  "bundle_sha256": "0304d8dd076f6c365e94d0ce3866d66a152e92333b3ab2bd8f1f956bfe2fa71b",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/grounding-concurrency-candidate-20261006/run_manifest.json",
+  "manifest_sha256": "13343be30e6e3b1450c34c6801d73a3ecd86f93efcdd8f89bd04a38dfecfb375",
+  "metric_count": 67,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 55124,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "concurrency",
+    "exact_repository_sha",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "grounding-concurrency-candidate-20261006",
+  "run_type": "concurrency_candidate",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/concurrency/21bd7ab850703ec7ca04a0f6551eecc2ee62b613219aab4aa01be023e9ff0898-candidate.json",
+      "role": "run",
+      "sha256": "3df0e5eb9278ac2aee90102f7d99f452342d8641f33e5401c0d76addf1b3f34a",
+      "source_id": "concurrency_candidate",
+      "tested_repository_sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 0,
+  "tested_repository_sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc",
+  "unavailable_metric_count": 0
+}

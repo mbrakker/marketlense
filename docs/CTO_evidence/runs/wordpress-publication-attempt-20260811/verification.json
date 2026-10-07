@@ -1,0 +1,67 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "external_actions",
+    "side_effects",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/wordpress-publication-attempt-20260811/cto_evidence_bundle.json",
+  "bundle_sha256": "bb55d7bb9fcc9bd4aa6571c7a500184ea61004e34c724b3fbfb7bd5b7a1f369d",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "incomplete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/wordpress-publication-attempt-20260811/run_manifest.json",
+  "manifest_sha256": "7181fb86fdcbb9684b5bebf1f7c6dca06d93e7ab48a8f5f6f607a47e2263e21a",
+  "metric_count": 7,
+  "missing_evidence_classes": [
+    "authenticated_readback",
+    "idempotency"
+  ],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 25724,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "authenticated_readback",
+    "exact_repository_sha",
+    "external_actions",
+    "idempotency",
+    "side_effects",
+    "source_integrity"
+  ],
+  "run_id": "wordpress-publication-attempt-20260811",
+  "run_type": "wordpress_publication_attempt",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/wordpress/d469fb17109f93c5b6ab1130fcaa8f8b1c7e0d7268803c99e17ee9ed06f575b8-publication.json",
+      "role": "run",
+      "sha256": "a3eedf1db6571a6572e35fae9cdfe8f07bc24743e8075a9c38b4306148be4b40",
+      "source_id": "wordpress_evidence",
+      "tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 0,
+  "tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+  "unavailable_metric_count": 1
+}

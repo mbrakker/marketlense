@@ -1,0 +1,69 @@
+{
+  "cohort_metrics": {
+    "cost_usd": 0.366703,
+    "duration_seconds": 2809.573,
+    "input_tokens": 1804228,
+    "model_provider_calls": 193,
+    "operator_intervention_count": 0,
+    "output_tokens": 393169
+  },
+  "cohort_size": 5,
+  "git_sha": "365c342ba3ffe2cb3b2c8a90fb71938ae9738cf6",
+  "reports": [
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-a327f8882533b6391cc3fc6fe8097f2fc79e637b6d2521d401d7eddb0dedf047",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": true,
+      "publication_readiness": "pass",
+      "report_id": "subject-2fe8156059f502cbf86e0951ba1fdce8d36d5c643e6136b51560a3046e151d93",
+      "terminal_failure_code": "",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": true,
+      "publication_readiness": "pass",
+      "report_id": "subject-aac4dc9365ab1d7f749b2398664787a1959770347d69f4d292ed91c6a5a768bf",
+      "terminal_failure_code": "",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": true,
+      "publication_readiness": "pass",
+      "report_id": "subject-b74e2f5dd27855f6d399b5a7d1c577efa3a789d42a1baea688c3b0444a3de722",
+      "terminal_failure_code": "",
+      "validation": "pass"
+    },
+    {
+      "awaiting_review": false,
+      "publication_readiness": "fail",
+      "report_id": "subject-66fb4508f80b292fc995c7f0fef438dc6278d0a8afb3c77f946310898b396c5b",
+      "terminal_failure_code": "terminal_failure",
+      "validation": "pass"
+    }
+  ],
+  "schema_version": "1.0",
+  "summary": {
+    "admitted_report_count": 5,
+    "cohort_admission_rate": 1.0,
+    "cohort_bounded_automatic_repair": true,
+    "cohort_cost_usd": 0.366703,
+    "cohort_duration_seconds": 2809.573,
+    "cohort_input_tokens": 1804228,
+    "cohort_model_provider_calls": 193,
+    "cohort_output_tokens": 393169,
+    "first_attempt_awaiting_review_rate": 0.6,
+    "missing_terminal_report_count": 0,
+    "operator_intervention_count": 0,
+    "publication_readiness_rate": 0.6,
+    "report_count": 5,
+    "terminal_outcome_complete": true,
+    "typed_terminal_rate": 1.0,
+    "workflow_denominator": 5,
+    "workflow_failure_rate": 0.4
+  }
+}

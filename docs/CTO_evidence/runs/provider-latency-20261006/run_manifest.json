@@ -1,0 +1,49 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Retained provider usage and latency aggregates for one historical report.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "provider_timing",
+    "resource_usage"
+  ],
+  "run_id": "provider-latency-20261006",
+  "run_type": "provider_latency_profile",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/provider-latency-profile/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/provider_profiles/17849c477dc3f1a327c0e8cf8349c01f032b1c55ac16b11152641eea696f1164-latency.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "e1cf19335692f5ad0eac2a4e23fd7e0deb6461db3ec7251ae3c6ee299ce9302e",
+      "source_id": "provider_latency",
+      "tested_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39"
+    }
+  ],
+  "stages_in_scope": [
+    "provider_calls",
+    "report_analysis"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    }
+  ],
+  "tested_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39"
+}

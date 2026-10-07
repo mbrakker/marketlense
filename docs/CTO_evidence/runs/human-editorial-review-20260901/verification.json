@@ -1,0 +1,69 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "human_quality",
+    "immutable_subjects",
+    "quality",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/human-editorial-review-20260901/cto_evidence_bundle.json",
+  "bundle_sha256": "b58b487b2cd31cdbf14346e50ee5b598f9991df9a3fb188182e271caf6108956",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "incomplete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/human-editorial-review-20260901/run_manifest.json",
+  "manifest_sha256": "7a8ec83007a888197eb4780b5f8ca99a19a7ca5b8ab8cd1defa6ae5e63fed274",
+  "metric_count": 48,
+  "missing_evidence_classes": [
+    "reviewer_attribution",
+    "rubric_identity"
+  ],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 46649,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "human_quality",
+    "immutable_subjects",
+    "quality",
+    "reviewer_attribution",
+    "rubric_identity",
+    "source_integrity"
+  ],
+  "run_id": "human-editorial-review-20260901",
+  "run_type": "human_editorial_review",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/editorial_review/958c7d4c1fd182fe03c556b0acba84752f30089f2124e5792acf264c6d1614db-public.json",
+      "role": "run",
+      "sha256": "89196c0f45aeb7dd31e180578c5c738197b1146565d755d8bc1f72ab57a1a27f",
+      "source_id": "editorial_review",
+      "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 5,
+  "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909",
+  "unavailable_metric_count": 35
+}

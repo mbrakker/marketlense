@@ -1,0 +1,913 @@
+{
+  "autonomous_mvp_assessment": {
+    "blocking_gaps": [
+      "Authenticated WordPress readback and repeat-publication idempotency are unavailable.",
+      "Current HEAD has no full report end-to-end factual-quality and publication-readiness evaluation.",
+      "Performance and provider timing evidence is historical; no current-HEAD matched performance benchmark is retained."
+    ],
+    "blocks_autonomous_mvp_assessment": true,
+    "status": "blocked"
+  },
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "coverage_matrix": {
+    "acquisition": {
+      "basis": "Three distinct historical acquisition projections with hashed candidate aliases.",
+      "limitation": "No current-HEAD acquisition run; one source is a byte-identical alias and is not duplicated.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "acquisition-final30",
+        "acquisition-initial30",
+        "acquisition-previous-current"
+      ]
+    },
+    "concurrency": {
+      "basis": "Historical candidate-side concurrency counters and artifact overlap metrics.",
+      "limitation": "Mixed pre-fix/current source is reduced to candidate-only; no causal before/after claim.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "grounding-concurrency-candidate-20261006",
+        "artifact-dag-candidate-20261006",
+        "provider-critical-path-20261006"
+      ]
+    },
+    "correctness_validation": {
+      "basis": "Historical frozen cohort outcomes plus current-HEAD focused contract, projector, queue, recovery, and idempotency tests.",
+      "limitation": "No current-HEAD full report end-to-end cohort.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "current-head-integrity-20261007"
+      ]
+    },
+    "critical_path": {
+      "basis": "One historical provider critical-path profile is retained.",
+      "limitation": "One report only; not current-HEAD evidence.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "provider-critical-path-20261006"
+      ]
+    },
+    "current_head_full_end_to_end": {
+      "basis": "Current-HEAD verification covers focused tests and deterministic queue/recovery/idempotency evidence.",
+      "limitation": "No current-HEAD full product run was performed.",
+      "status": "not_evaluated",
+      "supporting_run_ids": [
+        "current-head-integrity-20261007"
+      ]
+    },
+    "current_head_provider_cost": {
+      "basis": "Current-HEAD deterministic queue verification made zero external provider calls.",
+      "limitation": "This verification run did not invoke providers, so provider cost is not applicable to it.",
+      "status": "not_applicable",
+      "supporting_run_ids": [
+        "current-head-integrity-20261007"
+      ]
+    },
+    "editorial_review": {
+      "basis": "Five hashed final-HTML subjects have numeric human review scores.",
+      "limitation": "Reviewer attribution and versioned rubric are unavailable; bundle is incomplete.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "human-editorial-review-20260901"
+      ]
+    },
+    "exact_repository_sha": {
+      "basis": "Every canonical run/candidate source has a declared SHA, projector binding, verified source hash, and exact_repository_sha evidence class.",
+      "limitation": "Historical SHA bindings identify historical code; only current-head-integrity is current HEAD.",
+      "status": "proven",
+      "supporting_run_ids": [
+        "acquisition-final30",
+        "acquisition-initial30",
+        "acquisition-previous-current",
+        "artifact-dag-candidate-20261006",
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "current-head-integrity-20261007",
+        "file-search-comparison-20261003",
+        "grounding-concurrency-candidate-20261006",
+        "human-editorial-review-20260901",
+        "provider-critical-path-20261006",
+        "provider-latency-20261006",
+        "validation-reuse-follow-up-20261006",
+        "visual-crop-qa-20261006",
+        "wordpress-publication-attempt-20260811"
+      ]
+    },
+    "factual_quality_controls": {
+      "basis": "Historical cohort quality outcomes and retained human scores.",
+      "limitation": "No current-HEAD full report factual-quality evaluation; reviewer rubric is unavailable.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "human-editorial-review-20260901"
+      ]
+    },
+    "idempotency_readback": {
+      "basis": "The WordPress bundle explicitly records readback not completed and repeat publication not run.",
+      "limitation": "No authenticated readback or zero-write replay proves publication idempotency.",
+      "status": "unavailable",
+      "supporting_run_ids": [
+        "wordpress-publication-attempt-20260811"
+      ]
+    },
+    "immutable_subject_coverage": {
+      "basis": "Hashed immutable subjects are present in cohort, acquisition, File Search, and editorial runs.",
+      "limitation": "Some aggregate profiles and side-effect runs have no per-subject identity.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "acquisition-final30",
+        "acquisition-initial30",
+        "acquisition-previous-current",
+        "file-search-comparison-20261003",
+        "human-editorial-review-20260901"
+      ]
+    },
+    "performance": {
+      "basis": "Historical cohort totals and candidate-side artifact-DAG metrics; File Search comparison is SHA-pinned.",
+      "limitation": "No matched performance benchmark on current HEAD; artifact-DAG baseline conflict prevents a delta.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "artifact-dag-candidate-20261006",
+        "file-search-comparison-20261003"
+      ]
+    },
+    "production_publication_run": {
+      "basis": "The retained historical WordPress addendum records an incomplete attempt.",
+      "limitation": "No new production publication workload was run.",
+      "status": "not_evaluated",
+      "supporting_run_ids": [
+        "wordpress-publication-attempt-20260811"
+      ]
+    },
+    "provider_timing": {
+      "basis": "Historical provider timing and critical-path observations.",
+      "limitation": "Provider profiles are historical and do not establish current-HEAD end-to-end latency.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "provider-latency-20261006",
+        "provider-critical-path-20261006",
+        "grounding-concurrency-candidate-20261006"
+      ]
+    },
+    "publication_readiness": {
+      "basis": "Historical readiness outcomes and deterministic local queue approval.",
+      "limitation": "No production publication readiness run with authenticated external readback.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "current-head-integrity-20261007",
+        "wordpress-publication-attempt-20260811"
+      ]
+    },
+    "publication_side_effects": {
+      "basis": "Historical WordPress attempt outcomes plus zero writes in deterministic local queue validation.",
+      "limitation": "Actual WordPress writes are unavailable without authenticated readback.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "wordpress-publication-attempt-20260811",
+        "current-head-integrity-20261007"
+      ]
+    },
+    "resource_usage_cost": {
+      "basis": "Historical aggregate usage/cost measurements from typed retained sources.",
+      "limitation": "Per-subject cost attribution is incomplete in several cohorts; no current-HEAD full-run cost evidence.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "cohort-ias-per-report-timeout-20261002",
+        "cohort-reliability-cohort-20260914-bfab37bb",
+        "cohort-reliability-cohort-20260919-a21-final",
+        "cohort-reliability-cohort-20260920-a21-final",
+        "cohort-reliability-cohort-20260927-grounding",
+        "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+        "cohort-reliability-cohort-20261001-batch3-finalization",
+        "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+        "cohort-reliability-cohort-20261001-next-five",
+        "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+        "cohort-report-agnostic-prompt-repair-20261001",
+        "provider-latency-20261006",
+        "provider-critical-path-20261006",
+        "grounding-concurrency-candidate-20261006",
+        "validation-reuse-follow-up-20261006",
+        "acquisition-final30",
+        "acquisition-initial30",
+        "acquisition-previous-current"
+      ]
+    },
+    "retry_attempt_history": {
+      "basis": "Historical acquisition attempt rows and current queue/recovery behavior tests.",
+      "limitation": "No current-HEAD per-report product retry history.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "acquisition-final30",
+        "acquisition-initial30",
+        "acquisition-previous-current",
+        "current-head-integrity-20261007"
+      ]
+    },
+    "reuse": {
+      "basis": "Historical repair-bearing follow-up counters are retained and SHA-bound.",
+      "limitation": "Counters show zero reuse and no immutable subject/claim mapping; speedup is not established.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "validation-reuse-follow-up-20261006"
+      ]
+    },
+    "visual_qa": {
+      "basis": "Three historical deterministic final crop-QA sidecars.",
+      "limitation": "Associated PNGs were not retained; visual artifact bytes are unavailable.",
+      "status": "partial",
+      "supporting_run_ids": [
+        "visual-crop-qa-20261006"
+      ]
+    }
+  },
+  "current_head": {
+    "completeness": "complete",
+    "criteria_results": [
+      {
+        "actual_value": 0,
+        "criterion_id": "focused_tests_no_failures",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 2342,
+        "criterion_id": "focused_tests_executed",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "gt",
+        "required": true
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "workflow_queue_passed",
+        "disposition": "pass",
+        "expected_value": 1,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "workflow_queue_exact_head",
+        "disposition": "pass",
+        "expected_value": 1,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 0,
+        "criterion_id": "no_external_provider_calls",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 0,
+        "criterion_id": "no_wordpress_writes",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "eq",
+        "required": true
+      }
+    ],
+    "disposition": "pass",
+    "run_id": "current-head-integrity-20261007",
+    "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+  },
+  "evidence_inventory_path": "docs/CTO_evidence/evidence_inventory.json",
+  "evidence_inventory_sha256": "56ceed3c5a44d18b445ea9e4e323b6f30d106ba76a7015c67f4b743aa31d356f",
+  "historical_telemetry_count": 4,
+  "run_count": 24,
+  "runs": [
+    {
+      "bundle_path": "docs/CTO_evidence/runs/acquisition-final30/cto_evidence_bundle.json",
+      "bundle_sha256": "2d19ff63d71dee25085f7da25704f9ba6c221fca6a683f04026e62e3333a1e45",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "acquisition",
+        "attempt_history",
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "performance",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/acquisition-final30/run_manifest.json",
+      "manifest_sha256": "67c0c390f90503b63c9f9634f5cf31ea2b445140748aa5c7082ca2d3cc53b05f",
+      "run_id": "acquisition-final30",
+      "run_type": "acquisition_projection",
+      "source_count": 1,
+      "subject_count": 30,
+      "tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/acquisition-initial30/cto_evidence_bundle.json",
+      "bundle_sha256": "aa63694a1944b9058911e8143354c1306c5bb5dcf1ec51c56f480c29bbf8f03b",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "acquisition",
+        "attempt_history",
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "performance",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/acquisition-initial30/run_manifest.json",
+      "manifest_sha256": "2a2b85b29ce4ca68a3b7c967c172fb28e95889191394df1f4fc6294e19ae0f07",
+      "run_id": "acquisition-initial30",
+      "run_type": "acquisition_projection",
+      "source_count": 1,
+      "subject_count": 30,
+      "tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/acquisition-previous-current/cto_evidence_bundle.json",
+      "bundle_sha256": "9a288c650233ba6dbf9b68a426a7f6f8381cce3be32db9ae78bb015d81456922",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "acquisition",
+        "attempt_history",
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "performance",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/acquisition-previous-current/run_manifest.json",
+      "manifest_sha256": "d1b3de15ca0a6158324108d336552fd8ce877ce02c9a857732b29831323299fc",
+      "run_id": "acquisition-previous-current",
+      "run_type": "acquisition_projection",
+      "source_count": 1,
+      "subject_count": 30,
+      "tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/artifact-dag-candidate-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "fcdab868d21c85321d87cf7af1e767df3a63041641a532e2c95d0c83d23fc410",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "performance",
+        "provider_timing",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/artifact-dag-candidate-20261006/run_manifest.json",
+      "manifest_sha256": "0dedf1e42a3415d7ddbba41dbbf1c1fcd4f1433128dbc7165d49cf6707649282",
+      "run_id": "artifact-dag-candidate-20261006",
+      "run_type": "artifact_dag_candidate",
+      "source_count": 1,
+      "subject_count": 0,
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-ias-per-report-timeout-20261002/cto_evidence_bundle.json",
+      "bundle_sha256": "a69a62c3d8797526026f66040df7b62a5529c5fbb523d2c53ab7810b77e0c9e1",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-ias-per-report-timeout-20261002/run_manifest.json",
+      "manifest_sha256": "2d1e4de86d9670b43eecf46b14170be9646c3768a3156818aabaffd956d40231",
+      "run_id": "cohort-ias-per-report-timeout-20261002",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 7,
+      "tested_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260914-bfab37bb/cto_evidence_bundle.json",
+      "bundle_sha256": "08015860ad0ed55fc979cd69026c41502c96d36c56424232f2588698b3bdd88f",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260914-bfab37bb/run_manifest.json",
+      "manifest_sha256": "8882582e0a15e10eef567920adac1effaf95a49060db87ad4557c76852832c1c",
+      "run_id": "cohort-reliability-cohort-20260914-bfab37bb",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 20,
+      "tested_repository_sha": "bfab37bbd1e4c194c027f14dd54817fb61f940a6"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260919-a21-final/cto_evidence_bundle.json",
+      "bundle_sha256": "99a3538cf00d8aca6530013724a7ff5440415a7f2d64ad9f146202f5ea44ffc0",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260919-a21-final/run_manifest.json",
+      "manifest_sha256": "a4258c5ad5e3f7f9adaa427eceedd1e091ce937cdc4ef78b5861c2c8a4265cab",
+      "run_id": "cohort-reliability-cohort-20260919-a21-final",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 20,
+      "tested_repository_sha": "c89c545d649a2852f4602b8ddbfa4c09a8c39e18"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260920-a21-final/cto_evidence_bundle.json",
+      "bundle_sha256": "02cbb544c96978d0181359451b2db86427cf0a449b117afc7eed6847999a82a6",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260920-a21-final/run_manifest.json",
+      "manifest_sha256": "b21d6697211a4054dd20b4f947026dadc66bc733cd9675347b174d2affb5e441",
+      "run_id": "cohort-reliability-cohort-20260920-a21-final",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 20,
+      "tested_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding/cto_evidence_bundle.json",
+      "bundle_sha256": "005a0725f26a1a00a9e4dae8c84866c940ea60b55d843400be73c96095c024d9",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding/run_manifest.json",
+      "manifest_sha256": "508c0d3428a8c9becc7c3b1c8358d5d6ef8607e188499696dd9514de85c9d812",
+      "run_id": "cohort-reliability-cohort-20260927-grounding",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 20,
+      "tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding-postfix-cohort-result/cto_evidence_bundle.json",
+      "bundle_sha256": "6155c30e48aa9788fc1e50de7c709de5b90c1674600f9bce5c2bdc3bdf36407d",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding-postfix-cohort-result/run_manifest.json",
+      "manifest_sha256": "d07ef5d9c96cd033f2f59eb976958dc7c969f8942fbf1f4c58d95d0bf064240d",
+      "run_id": "cohort-reliability-cohort-20260927-grounding-postfix-cohort-result",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 20,
+      "tested_repository_sha": "55cd01815d9744153539a60fdb2afe4d86e0fb99"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-batch3-finalization/cto_evidence_bundle.json",
+      "bundle_sha256": "07371c7310022cf85cec0e8bb89421933a67767503a508312ee4c543e205a569",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-batch3-finalization/run_manifest.json",
+      "manifest_sha256": "90f1eee869948cca4424ca23285a31f34b3f9e9983479680f965e81fe51417e0",
+      "run_id": "cohort-reliability-cohort-20261001-batch3-finalization",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "11ca2ce3e73cfc56741a140da52eba82b1882068"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result/cto_evidence_bundle.json",
+      "bundle_sha256": "b0ce18a2e0e1752aa04f0a06f0ea44875d11e8cfd125622cc5bde43a6e7268dd",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result/run_manifest.json",
+      "manifest_sha256": "eca33e617971f4db8e7e9ea47c610e3327bdaac28f56358e4e9dd007114dfdfd",
+      "run_id": "cohort-reliability-cohort-20261001-batch3-finalization-before-cohort-result",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "5fe10a5da22fbbd0776ddf2700d7ee5edf7de70c"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-next-five/cto_evidence_bundle.json",
+      "bundle_sha256": "a530814b746d90d4169ff08ffc7f57bfbd5344f2fef870eaaa654117978fab88",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-next-five/run_manifest.json",
+      "manifest_sha256": "2dc2933b0b0af1d6b33ec0dd558cb86087155d5b4bb408e8e7fe681e20c259f0",
+      "run_id": "cohort-reliability-cohort-20261001-next-five",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "469c13c15d0d654f60c04a84bb97bf7ee44d1de0"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-next-five-before-cohort-result/cto_evidence_bundle.json",
+      "bundle_sha256": "eca64b13c1e9579f0228e67dc53c59f62563abfce2a5f3427af9180e2571d582",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20261001-next-five-before-cohort-result/run_manifest.json",
+      "manifest_sha256": "ff757ed0d6932282a437eefab385d2d8b55876348d2d6702d8e8a53efe6cb981",
+      "run_id": "cohort-reliability-cohort-20261001-next-five-before-cohort-result",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "365c342ba3ffe2cb3b2c8a90fb71938ae9738cf6"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/cohort-report-agnostic-prompt-repair-20261001/cto_evidence_bundle.json",
+      "bundle_sha256": "b096c0fb636053aebf3a37855a9de0e55e9572bb6c804928d0f513fc186570c9",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/cohort-report-agnostic-prompt-repair-20261001/run_manifest.json",
+      "manifest_sha256": "5b03e8b106b4202c1d1ece6c71520619229303c91a3eda214699bd34e560b043",
+      "run_id": "cohort-report-agnostic-prompt-repair-20261001",
+      "run_type": "frozen_reliability_cohort",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
+      "bundle_sha256": "d3ed6893e37decd0153296b3b299bfbf56fe6917977606c2201efccde5206c54",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "pass",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "measurements",
+        "outcomes",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
+      "manifest_sha256": "bedaea0e6c2fa3d7f5c8de054c4fcbf13bc710fdb07f1e76dbc48167dc0dda31",
+      "run_id": "current-head-integrity-20261007",
+      "run_type": "current_head_integrity",
+      "source_count": 1,
+      "subject_count": 2,
+      "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/cto_evidence_bundle.json",
+      "bundle_sha256": "7c96014fc0f534a127fc24f36386c2897fe42b7b3f598c66fb74d83e69c75c62",
+      "comparison_status": "compatible",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "comparison",
+        "exact_repository_sha",
+        "immutable_subjects",
+        "outcomes",
+        "performance",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/run_manifest.json",
+      "manifest_sha256": "09d3919ab5508cf3295f8e5ba0ee8fb1a61d043cc0b2fc5e6c8ed896ba9acf93",
+      "run_id": "file-search-comparison-20261003",
+      "run_type": "file_search_reduction_comparison",
+      "source_count": 2,
+      "subject_count": 5,
+      "tested_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/grounding-concurrency-candidate-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "0304d8dd076f6c365e94d0ce3866d66a152e92333b3ab2bd8f1f956bfe2fa71b",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "concurrency",
+        "exact_repository_sha",
+        "performance",
+        "provider_timing",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/grounding-concurrency-candidate-20261006/run_manifest.json",
+      "manifest_sha256": "13343be30e6e3b1450c34c6801d73a3ecd86f93efcdd8f89bd04a38dfecfb375",
+      "run_id": "grounding-concurrency-candidate-20261006",
+      "run_type": "concurrency_candidate",
+      "source_count": 1,
+      "subject_count": 0,
+      "tested_repository_sha": "a1f2affcb4dd7e58ef5af831914edfd27e96ebbc"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/human-editorial-review-20260901/cto_evidence_bundle.json",
+      "bundle_sha256": "b58b487b2cd31cdbf14346e50ee5b598f9991df9a3fb188182e271caf6108956",
+      "comparison_status": "not_applicable",
+      "completeness": "incomplete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [
+        "reviewer_attribution",
+        "rubric_identity"
+      ],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "human_quality",
+        "immutable_subjects",
+        "quality",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/human-editorial-review-20260901/run_manifest.json",
+      "manifest_sha256": "7a8ec83007a888197eb4780b5f8ca99a19a7ca5b8ab8cd1defa6ae5e63fed274",
+      "run_id": "human-editorial-review-20260901",
+      "run_type": "human_editorial_review",
+      "source_count": 1,
+      "subject_count": 5,
+      "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/provider-critical-path-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "023db8608f006b32edc5b79569329b4f0006d031a02408bc348928eb40e565a3",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "critical_path",
+        "exact_repository_sha",
+        "immutable_subjects",
+        "performance",
+        "provider_timing",
+        "quality",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/provider-critical-path-20261006/run_manifest.json",
+      "manifest_sha256": "26005be279dbc0ad842d7fed236acc57d56dfcb0d2d0d94621e125d6396c6f32",
+      "run_id": "provider-critical-path-20261006",
+      "run_type": "provider_critical_path_profile",
+      "source_count": 1,
+      "subject_count": 1,
+      "tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/provider-latency-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "a7baba3b84958400def4437a1d372249beb250209de48c29d4314f04eed97787",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "provider_timing",
+        "resource_usage",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/provider-latency-20261006/run_manifest.json",
+      "manifest_sha256": "22df1bc380f877bb5098efc9f28626bd50cac4adcd1c58bbe7551b790de34cee",
+      "run_id": "provider-latency-20261006",
+      "run_type": "provider_latency_profile",
+      "source_count": 1,
+      "subject_count": 1,
+      "tested_repository_sha": "bf10ac8870f37ea0dc410b41dcb5ba9c52562e39"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/validation-reuse-follow-up-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "c95d8691d0ce4eee9f2703c8e6ea0f6d807907955585b3c012eb4328e7a1acc4",
+      "comparison_status": "not_applicable",
+      "completeness": "complete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "performance",
+        "provider_timing",
+        "quality",
+        "resource_usage",
+        "reuse",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/validation-reuse-follow-up-20261006/run_manifest.json",
+      "manifest_sha256": "afa33b63368f562972bdbf724ba04ca9ea8047bfb4a4f90077aa6d1cc775bf35",
+      "run_id": "validation-reuse-follow-up-20261006",
+      "run_type": "validation_reuse_follow_up",
+      "source_count": 1,
+      "subject_count": 0,
+      "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/visual-crop-qa-20261006/cto_evidence_bundle.json",
+      "bundle_sha256": "b2833c5c42e581c9d21067e274e809ef21de9b890015f80b974017000459d914",
+      "comparison_status": "not_applicable",
+      "completeness": "incomplete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [
+        "source_visual_artifacts"
+      ],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "immutable_subjects",
+        "source_integrity",
+        "visual_quality"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/visual-crop-qa-20261006/run_manifest.json",
+      "manifest_sha256": "b0acab40064d2ee5295cf7ca815df7584ff17fec3be6c53830ed25635cb4364d",
+      "run_id": "visual-crop-qa-20261006",
+      "run_type": "visual_crop_qa",
+      "source_count": 3,
+      "subject_count": 3,
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    },
+    {
+      "bundle_path": "docs/CTO_evidence/runs/wordpress-publication-attempt-20260811/cto_evidence_bundle.json",
+      "bundle_sha256": "bb55d7bb9fcc9bd4aa6571c7a500184ea61004e34c724b3fbfb7bd5b7a1f369d",
+      "comparison_status": "not_applicable",
+      "completeness": "incomplete",
+      "disposition": "not_evaluated",
+      "evidence_classes_missing": [
+        "authenticated_readback",
+        "idempotency"
+      ],
+      "evidence_classes_proven": [
+        "exact_repository_sha",
+        "external_actions",
+        "side_effects",
+        "source_integrity"
+      ],
+      "manifest_path": "docs/CTO_evidence/runs/wordpress-publication-attempt-20260811/run_manifest.json",
+      "manifest_sha256": "7181fb86fdcbb9684b5bebf1f7c6dca06d93e7ab48a8f5f6f607a47e2263e21a",
+      "run_id": "wordpress-publication-attempt-20260811",
+      "run_type": "wordpress_publication_attempt",
+      "source_count": 1,
+      "subject_count": 0,
+      "tested_repository_sha": "0bdd91998e39a796ec958c43518ca2827e99faeb"
+    }
+  ],
+  "schema_version": "1.0"
+}

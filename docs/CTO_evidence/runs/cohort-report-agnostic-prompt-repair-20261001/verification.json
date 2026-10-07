@@ -1,0 +1,66 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/cohort-report-agnostic-prompt-repair-20261001/cto_evidence_bundle.json",
+  "bundle_sha256": "b096c0fb636053aebf3a37855a9de0e55e9572bb6c804928d0f513fc186570c9",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/cohort-report-agnostic-prompt-repair-20261001/run_manifest.json",
+  "manifest_sha256": "5b03e8b106b4202c1d1ece6c71520619229303c91a3eda214699bd34e560b043",
+  "metric_count": 47,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 42516,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "cohort-report-agnostic-prompt-repair-20261001",
+  "run_type": "frozen_reliability_cohort",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/a57721fece77e599317fd6178ac924a8a36e2c2a076315481925e71989df14c4.json",
+      "role": "run",
+      "sha256": "9fefe2045c3b1472ac46dd36fc12417d856f9c2b152096eccaad0b0f2411afc1",
+      "source_id": "cohort_result",
+      "tested_repository_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 5,
+  "tested_repository_sha": "eae746de7a6595b6dbddfcc69d7ad9ca8b26d2b6",
+  "unavailable_metric_count": 35
+}

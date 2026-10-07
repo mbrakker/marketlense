@@ -1,0 +1,170 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Measure A21 readiness, terminal outcomes, and aggregate resource use for the frozen 20-report production-queue cohort.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage"
+  ],
+  "run_id": "cohort-reliability-cohort-20260920-a21-final",
+  "run_type": "frozen_reliability_cohort",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/frozen-cohort-result/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/f45047b8343f18192783e26e8d42ffa2524d18c90fdd33d09e945e404902b5ee.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "75653a80291f16fb75297090cbc01fe32dc26de22e679ca693e7102ea37e69e3",
+      "source_id": "cohort_result",
+      "tested_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e"
+    }
+  ],
+  "stages_in_scope": [
+    "source_ingest",
+    "report_selection",
+    "report_analysis",
+    "report_render",
+    "validation",
+    "publication_readiness"
+  ],
+  "stages_out_of_scope": [
+    "new_discovery",
+    "source_acquisition",
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "16ac87d5011df0ef9ddd4948410b2b3adbda5f2a1850339e87821ab8a5bd6629",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    },
+    {
+      "identity_sha256": "21bddea378d890df77f4b114563a81c0e9691753d50d45baa8903109eb7345cd",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-003"
+    },
+    {
+      "identity_sha256": "27239ab3cca5f61cb0caef7f4ed84d26c8f403cea235f4c09f60e0010be980e2",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-004"
+    },
+    {
+      "identity_sha256": "3e861de796521161d386742739fdcd83b116d3a862de49cccb538c751fdbe8b6",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-005"
+    },
+    {
+      "identity_sha256": "3f5e18ef8546161da2213c392b49586cbb9ed7b2f96b801204a0cae230a79330",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-006"
+    },
+    {
+      "identity_sha256": "5006f1a53ec64c7aed1f9f2e110379a9edf2df63329df9e10909376830704b31",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-007"
+    },
+    {
+      "identity_sha256": "64d17b6e31e62bb0c2b603cf4cfaab57be21ad0a5dca73953a6bf9ffdb4d275a",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-008"
+    },
+    {
+      "identity_sha256": "7095c9b7414e1fd3a0436bddd415fc85ae862917f985a8cd9ad6f6640ad27a1a",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-009"
+    },
+    {
+      "identity_sha256": "7f0e3b9ffc786e846b62c6869da0bc3fbb7abd32d7207867014465857d562426",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-010"
+    },
+    {
+      "identity_sha256": "8527a50aa8694c64363c0c4569c81d162bcde2bad8b1aef450a22ae72b3588f2",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-011"
+    },
+    {
+      "identity_sha256": "8619dac0f7dbaa9f8c599715e3eda8e1535cbd431e110b6bfe62333f2941fe5e",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-012"
+    },
+    {
+      "identity_sha256": "a308c7b4178bc77cc1fe26b6746fbc02d20e1ff13bf51e7c4d6de234c4826066",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-013"
+    },
+    {
+      "identity_sha256": "a599c350f281a2ff395f2b2ac4125c092964d2b86816821bb38c29d68079d8de",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-014"
+    },
+    {
+      "identity_sha256": "b03c30eb9a5bebb63b6ec701c2feecbabd3ec9dd8428aa20736e789b8cdd88fa",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-015"
+    },
+    {
+      "identity_sha256": "b85bfee38ae2df0bfcf15a0e7def93a47a7ec6fae4e3a9c45a090d257edf05a0",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-016"
+    },
+    {
+      "identity_sha256": "bd483afecfc1acd48fec9b0b38c6a62a1089185d3126282b58f360e220f1fb95",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-017"
+    },
+    {
+      "identity_sha256": "ca1215830866cc5b65951982c9e756bd0cd8a283d44fd2f03bf41478545de906",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-018"
+    },
+    {
+      "identity_sha256": "dd9c83fd428526530d31ca6dcf14300502e00eba12dfd82c3aeed919b2511c12",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-019"
+    },
+    {
+      "identity_sha256": "efc82461e9171b6058a2c42efb1f6cd58d16c3dcb4804059faaccce3c138c9dc",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-020"
+    }
+  ],
+  "tested_repository_sha": "89b4fc4c1159499806ed16993d76f3684fe3412e"
+}

@@ -1,0 +1,93 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Replay the seven timeout-affected reports separately through the production queue to publication readiness.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "outcomes",
+    "quality",
+    "resource_usage"
+  ],
+  "run_id": "cohort-ias-per-report-timeout-20261002",
+  "run_type": "frozen_reliability_cohort",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/frozen-cohort-result/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/44811b0dd5ca1225ddbd9b12eeff9d0fba6d2f1e993f72010746247159984a7f.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "2da0ac230edebb6ff44302427bc629828879ce66742cca7f6a6ef679eca09334",
+      "source_id": "cohort_result",
+      "tested_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18"
+    }
+  ],
+  "stages_in_scope": [
+    "source_ingest",
+    "report_selection",
+    "report_analysis",
+    "report_render",
+    "validation",
+    "publication_readiness"
+  ],
+  "stages_out_of_scope": [
+    "new_discovery",
+    "source_acquisition",
+    "external_publication",
+    "full_frozen_cohort"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "16ac87d5011df0ef9ddd4948410b2b3adbda5f2a1850339e87821ab8a5bd6629",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "21bddea378d890df77f4b114563a81c0e9691753d50d45baa8903109eb7345cd",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    },
+    {
+      "identity_sha256": "7f0e3b9ffc786e846b62c6869da0bc3fbb7abd32d7207867014465857d562426",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-003"
+    },
+    {
+      "identity_sha256": "8527a50aa8694c64363c0c4569c81d162bcde2bad8b1aef450a22ae72b3588f2",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-004"
+    },
+    {
+      "identity_sha256": "8619dac0f7dbaa9f8c599715e3eda8e1535cbd431e110b6bfe62333f2941fe5e",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-005"
+    },
+    {
+      "identity_sha256": "b03c30eb9a5bebb63b6ec701c2feecbabd3ec9dd8428aa20736e789b8cdd88fa",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-006"
+    },
+    {
+      "identity_sha256": "dd9c83fd428526530d31ca6dcf14300502e00eba12dfd82c3aeed919b2511c12",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-007"
+    }
+  ],
+  "tested_repository_sha": "06e58098a6a8199ed374b966a66b55d99b7a6e18"
+}

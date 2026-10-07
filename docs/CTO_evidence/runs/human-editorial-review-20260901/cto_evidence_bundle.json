@@ -1,0 +1,1911 @@
+{
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "completeness": "incomplete",
+  "disposition": "not_evaluated",
+  "executive_summary": {
+    "avoided_provider_call_count": null,
+    "completeness": "incomplete",
+    "disposition": "not_evaluated",
+    "external_actions": [],
+    "historical_metric_count": 41,
+    "key_metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 5
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.analytical_depth.mean",
+        "numerator": 43.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.7
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.commercial_relevance.mean",
+        "numerator": 45.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.1
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.completeness.mean",
+        "numerator": 43.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.7
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.editorial_clarity.mean",
+        "numerator": 45.0,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.0
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.evidence_selection.mean",
+        "numerator": 45.0,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.0
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.expert_credibility_human_feel.mean",
+        "numerator": 44.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.9
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.factual_fidelity.mean",
+        "numerator": 47.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.5
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.insight_specificity.mean",
+        "numerator": 45.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.1
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.linkedin_quality.mean",
+        "numerator": 45.7,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.14
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.narrative_structure.mean",
+        "numerator": 44.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "quality.human_editorial.reviewed_subject_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 5
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.weighted_100.mean",
+        "numerator": 450.8,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 90.16
+      }
+    ],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Reviewer attribution and a versioned rubric are not retained with this review corpus.",
+      "Required evidence class reviewer_attribution is unavailable from retained authoritative sources.",
+      "Required evidence class rubric_identity is unavailable from retained authoritative sources."
+    ],
+    "mode": "declared_run",
+    "objective": "Retained human review scores for five generated HTML artifacts; rubric and reviewer attribution unavailable.",
+    "outcomes": [],
+    "quality_dimensions": [
+      {
+        "dimension": "human_editorial",
+        "metric_ids": [
+          "quality.human_editorial.analytical_depth.mean",
+          "quality.human_editorial.commercial_relevance.mean",
+          "quality.human_editorial.completeness.mean",
+          "quality.human_editorial.editorial_clarity.mean",
+          "quality.human_editorial.evidence_selection.mean",
+          "quality.human_editorial.expert_credibility_human_feel.mean",
+          "quality.human_editorial.factual_fidelity.mean",
+          "quality.human_editorial.insight_specificity.mean",
+          "quality.human_editorial.linkedin_quality.mean",
+          "quality.human_editorial.narrative_structure.mean",
+          "quality.human_editorial.weighted_100.mean",
+          "quality.human_editorial.reviewed_subject_count"
+        ],
+        "reviewed_subject_count": 5,
+        "reviewer_attribution": "unavailable",
+        "rubric_id": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed"
+      }
+    ],
+    "recovery_attempt_count": null,
+    "required_criteria": {
+      "fail_count": 0,
+      "insufficient_evidence_count": 0,
+      "not_evaluated_count": 0,
+      "pass_count": 0,
+      "schema_version": "1.0"
+    },
+    "reused_validation_count": null,
+    "run_id": "human-editorial-review-20260901",
+    "run_type": "human_editorial_review",
+    "schema_version": "1.0",
+    "subject_count": 5,
+    "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909"
+  },
+  "generated_at_utc": "2026-10-07T06:25:26.070696+00:00",
+  "historical_state": {
+    "limitations": [
+      "Historical SQLite and artifact totals are context only and are not attributed to any declared workload run."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.acquisition_by_publisher_and_route",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.acquired_report_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_sessions",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_steps",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 13
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 499.767
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.page_loads",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.screenshots",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 7
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.plan_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 40
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.planned_reusable_artifact_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_by_llm_scope_and_artifact_family.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.published_workflow_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.successful_publication_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.acceptance_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.938657
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.accepted_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 811
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 864
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_qa_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_refinement_file_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 323
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.deferred_work_age_and_completion",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.mean_open_queue_age_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 9818955.445
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.embedded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2642
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.durable_embedding_already_satisfied",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.embedding_completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.human_editorial_quality_ratings",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.minimal_plan_actual_call_divergence",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 856
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_incidence_among_llm_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0.143938
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 1.0
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.public_page_performance_and_errors",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.human_intervention_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.875
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.recurrence_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.125
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.operator_action_required",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 42
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.terminal",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.failure_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.111111
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.mean_latency_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 5041.889
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.succeeded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      }
+    ],
+    "schema_version": "1.0",
+    "source_ids": [
+      "historical_runtime_telemetry"
+    ],
+    "status": "available"
+  },
+  "limitations": [
+    "Producer run timestamps were not retained in the declared manifest.",
+    "Reviewer attribution and a versioned rubric are not retained with this review corpus.",
+    "Required evidence class reviewer_attribution is unavailable from retained authoritative sources.",
+    "Required evidence class rubric_identity is unavailable from retained authoritative sources."
+  ],
+  "mode": "declared_run",
+  "run": {
+    "comparison": null,
+    "configuration_identities": [],
+    "criteria": [],
+    "ended_at_utc": null,
+    "external_side_effects_enabled": null,
+    "objective": "Retained human review scores for five generated HTML artifacts; rubric and reviewer attribution unavailable.",
+    "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+    "producer_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909",
+    "required_evidence_classes": [
+      "exact_repository_sha",
+      "source_integrity",
+      "immutable_subjects",
+      "human_quality",
+      "quality",
+      "reviewer_attribution",
+      "rubric_identity"
+    ],
+    "run_id": "human-editorial-review-20260901",
+    "run_type": "human_editorial_review",
+    "schema_version": "1.0",
+    "sources": [
+      {
+        "byte_count": null,
+        "format_id": "marketlense/editorial-review/1.0",
+        "observed_sha256": null,
+        "path": "docs/CTO_evidence/source_artifacts/editorial_review/958c7d4c1fd182fe03c556b0acba84752f30089f2124e5792acf264c6d1614db-public.json",
+        "producer": "retained_marketlense_evidence",
+        "role": "run",
+        "schema_version": "1.0",
+        "sha256": "89196c0f45aeb7dd31e180578c5c738197b1146565d755d8bc1f72ab57a1a27f",
+        "source_id": "editorial_review",
+        "status": "declared",
+        "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909"
+      }
+    ],
+    "stages_in_scope": [
+      "editorial_review"
+    ],
+    "stages_out_of_scope": [
+      "external_publication"
+    ],
+    "started_at_utc": null,
+    "subjects": [
+      {
+        "identity_sha256": "29a4f229ef2cb59fef2834e813f59ce9cd105e6912394e1321a58ca812958851",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-001",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "5a6e3f1a0d6c88311271108e97ca342ac51c5cebf550a8fe7ac99844f969e7c0",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-002",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8a559fdbe13db452f2d4174138bc114a7da5f84e6903f4b2b5b2031747cf7cb9",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-003",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8bba92e957f753b17981de29d982db98f48d067c346a32d4b017094e64ad151b",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-004",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "c513b06455948db3cb350632bbc2cc67f79cc2aa0702197e3eab73eb77072b22",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-005",
+        "terminal_outcome": null
+      }
+    ],
+    "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909"
+  },
+  "run_evidence": {
+    "attempt_history_status": "not_applicable",
+    "attempts": [],
+    "comparison": null,
+    "criteria": [],
+    "external_actions": [],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Reviewer attribution and a versioned rubric are not retained with this review corpus.",
+      "Required evidence class reviewer_attribution is unavailable from retained authoritative sources.",
+      "Required evidence class rubric_identity is unavailable from retained authoritative sources."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.analytical_depth.mean",
+        "numerator": 43.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.7
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.commercial_relevance.mean",
+        "numerator": 45.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.1
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.completeness.mean",
+        "numerator": 43.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.7
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.editorial_clarity.mean",
+        "numerator": 45.0,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.0
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.evidence_selection.mean",
+        "numerator": 45.0,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.0
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.expert_credibility_human_feel.mean",
+        "numerator": 44.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.9
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.factual_fidelity.mean",
+        "numerator": 47.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.5
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.insight_specificity.mean",
+        "numerator": 45.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.1
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.linkedin_quality.mean",
+        "numerator": 45.7,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 9.14
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.narrative_structure.mean",
+        "numerator": 44.5,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 8.9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "quality.human_editorial.reviewed_subject_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 5
+      },
+      {
+        "denominator": 5,
+        "limitations": [],
+        "measurement_semantics": "Arithmetic mean of retained reviewer scores; rubric scale remains producer-defined.",
+        "metric_id": "quality.human_editorial.weighted_100.mean",
+        "numerator": 450.8,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "score",
+        "value": 90.16
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 5
+      }
+    ],
+    "outcomes": [],
+    "quality_dimensions": [
+      {
+        "dimension": "human_editorial",
+        "metric_ids": [
+          "quality.human_editorial.analytical_depth.mean",
+          "quality.human_editorial.commercial_relevance.mean",
+          "quality.human_editorial.completeness.mean",
+          "quality.human_editorial.editorial_clarity.mean",
+          "quality.human_editorial.evidence_selection.mean",
+          "quality.human_editorial.expert_credibility_human_feel.mean",
+          "quality.human_editorial.factual_fidelity.mean",
+          "quality.human_editorial.insight_specificity.mean",
+          "quality.human_editorial.linkedin_quality.mean",
+          "quality.human_editorial.narrative_structure.mean",
+          "quality.human_editorial.weighted_100.mean",
+          "quality.human_editorial.reviewed_subject_count"
+        ],
+        "reviewed_subject_count": 5,
+        "reviewer_attribution": "unavailable",
+        "rubric_id": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "editorial_review"
+        ],
+        "status": "observed"
+      }
+    ],
+    "reuse_decisions": [],
+    "reuse_evidence_status": "unavailable",
+    "schema_version": "1.0",
+    "subjects": [
+      {
+        "identity_sha256": "29a4f229ef2cb59fef2834e813f59ce9cd105e6912394e1321a58ca812958851",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-001",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "5a6e3f1a0d6c88311271108e97ca342ac51c5cebf550a8fe7ac99844f969e7c0",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-002",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8a559fdbe13db452f2d4174138bc114a7da5f84e6903f4b2b5b2031747cf7cb9",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-003",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8bba92e957f753b17981de29d982db98f48d067c346a32d4b017094e64ad151b",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-004",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "c513b06455948db3cb350632bbc2cc67f79cc2aa0702197e3eab73eb77072b22",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-005",
+        "terminal_outcome": null
+      }
+    ]
+  },
+  "schema_version": "1.0",
+  "source_references": [
+    {
+      "byte_count": 2595,
+      "format_id": "marketlense/cto-evidence-run-manifest/1.0",
+      "observed_sha256": "7a8ec83007a888197eb4780b5f8ca99a19a7ca5b8ab8cd1defa6ae5e63fed274",
+      "path": "docs/CTO_evidence/runs/human-editorial-review-20260901/run_manifest.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "7a8ec83007a888197eb4780b5f8ca99a19a7ca5b8ab8cd1defa6ae5e63fed274",
+      "source_id": "run_manifest",
+      "status": "verified",
+      "tested_repository_sha": null
+    },
+    {
+      "byte_count": 2837,
+      "format_id": "marketlense/editorial-review/1.0",
+      "observed_sha256": "89196c0f45aeb7dd31e180578c5c738197b1146565d755d8bc1f72ab57a1a27f",
+      "path": "docs/CTO_evidence/source_artifacts/editorial_review/958c7d4c1fd182fe03c556b0acba84752f30089f2124e5792acf264c6d1614db-public.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "89196c0f45aeb7dd31e180578c5c738197b1146565d755d8bc1f72ab57a1a27f",
+      "source_id": "editorial_review",
+      "status": "verified",
+      "tested_repository_sha": "56628ad76f861e14698ee027ada653f4f32de909"
+    },
+    {
+      "byte_count": 34998,
+      "format_id": "marketlense/runtime-telemetry/1.0",
+      "observed_sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "path": "docs/CTO_evidence/runtime_telemetry.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "source_id": "historical_runtime_telemetry",
+      "status": "verified",
+      "tested_repository_sha": null
+    }
+  ]
+}

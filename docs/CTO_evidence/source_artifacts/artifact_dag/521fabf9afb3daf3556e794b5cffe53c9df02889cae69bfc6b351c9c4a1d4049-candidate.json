@@ -1,0 +1,35 @@
+{
+  "after": {
+    "artifact_generation_wall_ms": 91151.589,
+    "artifact_task_overlap_ms": {
+      "cover_semantics_vs_expert_comment": 4082.573,
+      "cover_semantics_vs_linkedin_post": 4082.573,
+      "insights_candidates_vs_quotes": 4559.848,
+      "insights_final_vs_quotes": 0,
+      "insights_final_vs_unfinished_summary": 32009.789,
+      "summary_vs_insights_candidates": 29314.488,
+      "summary_vs_quotes": 4559.848
+    },
+    "estimated_cost_usd": 0.077608,
+    "input_tokens": 312340,
+    "max_provider_concurrency": 6,
+    "output_tokens": 59061,
+    "provider_call_count": 35,
+    "publication_queue_jobs": 0,
+    "publication_readiness": "pass",
+    "publication_rows": 0,
+    "reasoning_tokens": 29212,
+    "report_analysis_non_provider_residual_ms": 10977.17,
+    "report_analysis_provider_active_wall_ms": 321192.83,
+    "report_analysis_wall_seconds": 332.17,
+    "report_wall_seconds": 433.138,
+    "rule_waivers": 0,
+    "terminal_state": "awaiting_review",
+    "total_tokens": 371401,
+    "unresolved_retained_factual_claims": 0,
+    "unsupported_retained_factual_claims": 0,
+    "validation": "pass"
+  },
+  "schema_version": "1.0",
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+}

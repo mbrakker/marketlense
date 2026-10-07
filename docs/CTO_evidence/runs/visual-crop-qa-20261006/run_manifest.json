@@ -1,0 +1,80 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Retained final crop-QA sidecars; associated source images are not included.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "visual_quality",
+    "source_visual_artifacts"
+  ],
+  "run_id": "visual-crop-qa-20261006",
+  "run_type": "visual_crop_qa",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/crop-qa-sidecar/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/5bb11842f9a2182dacf7fd51d6bd87a335f99c1323e4c95a1af94c86473d6485.qa.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "47e5b1fd898008c8805f199ee4513b1f18bcf258b2f04fb2622161dfbf8c4873",
+      "source_id": "crop_sidecar_001",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    },
+    {
+      "format_id": "marketlense/crop-qa-sidecar/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/ce9076984fb5368820ff6c370be158824269cbcc95d9efa18d560756f168eaad.qa.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "19ce0b8bf38068bedb369be100a7e2310a71745119d4dd4f68735a5935d4daea",
+      "source_id": "crop_sidecar_002",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    },
+    {
+      "format_id": "marketlense/crop-qa-sidecar/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/crop_qa/ea7b7632e77be4e2787f2f4f4f4515099d3938eee9ea2ff4e2b161b204b5dd59.qa.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "58ae1ccd752e6a35355990cda097937524cd521dde901a90e5016d43fa65213b",
+      "source_id": "crop_sidecar_003",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+    }
+  ],
+  "stages_in_scope": [
+    "visual_qa"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "33c9c00f4d1e9c818e55991da885ba2306fcbfa9a0a0bbc420c3209c82436bed",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "620b7aa26610a65249faf7e01f04de54938c905df8c1bd995368c2cd1e79c057",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    },
+    {
+      "identity_sha256": "e8f15cc24ea467d7f36a695c49077e6f8a4cfc3becf78d7cdb0eab2f3b604668",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-003"
+    }
+  ],
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+}

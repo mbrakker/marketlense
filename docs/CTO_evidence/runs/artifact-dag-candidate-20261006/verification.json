@@ -1,0 +1,66 @@
+{
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/artifact-dag-candidate-20261006/cto_evidence_bundle.json",
+  "bundle_sha256": "fcdab868d21c85321d87cf7af1e767df3a63041641a532e2c95d0c83d23fc410",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/artifact-dag-candidate-20261006/run_manifest.json",
+  "manifest_sha256": "0dedf1e42a3415d7ddbba41dbbf1c1fcd4f1433128dbc7165d49cf6707649282",
+  "metric_count": 25,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 36309,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "artifact-dag-candidate-20261006",
+  "run_type": "artifact_dag_candidate",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/artifact_dag/521fabf9afb3daf3556e794b5cffe53c9df02889cae69bfc6b351c9c4a1d4049-candidate.json",
+      "role": "run",
+      "sha256": "70e88c6105b66ef550d41fbec20fb4fd512af83885f4814bb9ecdecd7f9ff949",
+      "source_id": "artifact_dag_candidate",
+      "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 0,
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d",
+  "unavailable_metric_count": 0
+}

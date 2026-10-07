@@ -1,0 +1,226 @@
+{
+  "comparison": null,
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": null,
+  "objective": "Retained browser acquisition attempts with opaque candidate identities.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "outcomes",
+    "attempt_history",
+    "acquisition",
+    "resource_usage",
+    "performance"
+  ],
+  "run_id": "acquisition-initial30",
+  "run_type": "acquisition_projection",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/acquisition-projection/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/acquisition/8757c559483fb12a352a41d79eb6dd70e07902fc4973cc43a6dc9ac8887efeff.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "d2957ad6ca832b3020b2aa6d085697b1830a4dc1a87568b2314fa674974fd3c4",
+      "source_id": "acquisition",
+      "tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+    }
+  ],
+  "stages_in_scope": [
+    "discovery",
+    "acquisition"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "01109b8551134e637dd3606791cb7e237e98bb851d8e3c4d0173328117216102",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "0a46cbe7f3992cadfe239b872541626d280279f286573da827cf217aaa030316",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    },
+    {
+      "identity_sha256": "10c6c8078820bab53283b74f4a3de6a403ce7732305d92cbf65224f50c2c24e8",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-003"
+    },
+    {
+      "identity_sha256": "158d187f23454971c63532bbb08045c8888eda1cf8159a12cfb81ef891f5d812",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-004"
+    },
+    {
+      "identity_sha256": "1875e95f1a65f7c3b992d56cbb5a3c3bf180146a270d07e9029a8e9dd683ad8e",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-005"
+    },
+    {
+      "identity_sha256": "2550527fdcf9af43bb4c81f50e5abc530af70799886aa18928a3108dc1c1f65b",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-006"
+    },
+    {
+      "identity_sha256": "28b5775517191c53294f2c59e44bab6a912f86d76dc7d2ac1c353cf753bbd850",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-007"
+    },
+    {
+      "identity_sha256": "2e603dd4a46368b08a3d25a1e5246b1f8a22fb781e06239a6b53ba703b5a45d2",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-008"
+    },
+    {
+      "identity_sha256": "43faaa52abe672d31f28a5476744ff7d09d3f372915702c33bc2212a65de183e",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-009"
+    },
+    {
+      "identity_sha256": "470e8266c94ab10976d84e836f9c6ff3a5533b4abe1b25deef320d5db0809086",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-010"
+    },
+    {
+      "identity_sha256": "583c4720f67e3da97d85d0af3f4ea2fa0bf00b0bfeb94fea052e6faef5e9d899",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-011"
+    },
+    {
+      "identity_sha256": "59873dbdd9ba27e9e2fb0cb7fdc78b3c0aac5dddf1159ad8f410b4c0eefd7ba4",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-012"
+    },
+    {
+      "identity_sha256": "5a6374c41684e3176d2eca8d9d32e5a96cafea0e48298b1938fa8cedacd1a13a",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-013"
+    },
+    {
+      "identity_sha256": "5f8c25d549eabd51d4354e93c8a9be3627024c211d3e01d724507e5127499a3e",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-014"
+    },
+    {
+      "identity_sha256": "60011287c2ea552e8317a2ad913276995544b9427717450c6db37f4d5c6ee4ba",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-015"
+    },
+    {
+      "identity_sha256": "61d171e6a16c9f6e094242fd58bd8686501e673e4889b35c0df2c7b671671e67",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-016"
+    },
+    {
+      "identity_sha256": "6fc9c0886360492c31fefa71e66d00c08e2b69107ba492be1fd5f31280c42b83",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-017"
+    },
+    {
+      "identity_sha256": "748ee698688df5df5a5475a15ba8b95a431ba499f00229ad01469c2a2c244bfa",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-018"
+    },
+    {
+      "identity_sha256": "82861f4d367110123cc84ed54dffd0cf3757e3240a452cdce840080703746644",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-019"
+    },
+    {
+      "identity_sha256": "898153abff26485bd72fb5e93879b61330f4c80cf45a843807049894bd5f28bc",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-020"
+    },
+    {
+      "identity_sha256": "9090b62099e84c2e2d3015f7bc5d4dfc8f1725729c4cdb9a19ed51d8b1e39217",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-021"
+    },
+    {
+      "identity_sha256": "9d815040d9b16f7f8430cffa3b4650bc16d95157884d0e8bf4e66d011a4903e3",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-022"
+    },
+    {
+      "identity_sha256": "a1242c2b9ca90d51b99ac35181d5b9f6c78a5b7c1b79d2c966cf7a20febb3ffa",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-023"
+    },
+    {
+      "identity_sha256": "acd4bd4d556aba7226676d2fec3dbe286d691e2ecb7bf19a70ae456474e8d1a4",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-024"
+    },
+    {
+      "identity_sha256": "b62e4a9ccb4336307d4e0031848d81d19d429814cceb3e4a656638e5b5eaf841",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-025"
+    },
+    {
+      "identity_sha256": "c6f22d979bb5063c9221f8f66bd584562d0029498c6c0df42298304fbd454458",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-026"
+    },
+    {
+      "identity_sha256": "c9b59b5ab1ed0995bca6946ce51a39fa7dd639b84599d15d3f0c748b723d138d",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-027"
+    },
+    {
+      "identity_sha256": "dedae9c21aa3c851ce6720a732a1789838054459902c591c511a8599bab8ea06",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-028"
+    },
+    {
+      "identity_sha256": "e17a21cff57559e4513a6ae7d3268d83faaa74cc0b6075f72b2877bbc525a3f5",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-029"
+    },
+    {
+      "identity_sha256": "f4fc76ab1064a1c636f88a713ad416f341a6651fea8eb9bba5345ab9719374d8",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-030"
+    }
+  ],
+  "tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+}

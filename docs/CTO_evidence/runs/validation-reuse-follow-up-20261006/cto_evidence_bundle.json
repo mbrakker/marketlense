@@ -1,0 +1,1567 @@
+{
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "completeness": "complete",
+  "disposition": "not_evaluated",
+  "executive_summary": {
+    "avoided_provider_call_count": 0,
+    "completeness": "complete",
+    "disposition": "not_evaluated",
+    "external_actions": [],
+    "historical_metric_count": 41,
+    "key_metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.provider_active_wall_seconds_all_profiled_workflows",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 421.119
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_analysis_provider_active_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 382.428
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_analysis_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 397.138
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 497.653
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_provider_active_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 107.423
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.estimated_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.096065
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.avoided_grounding_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 44
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.grounding_calls_avoided",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 12
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared exclusive provider exposure; semantics are retained from its profiler.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_exclusive_exposure_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 11.542
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.semantic_validation_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 26235
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.avoided_semantic_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.reused_validations",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "validations",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.operator_intervention",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": false
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.publication_writes",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.rule_waivers",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.targeted_repairs",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      }
+    ],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Producer reuse rows are aggregate and do not retain immutable subject identities."
+    ],
+    "mode": "declared_run",
+    "objective": "Retained single repair-bearing follow-up reuse telemetry; aggregate only.",
+    "outcomes": [],
+    "quality_dimensions": [],
+    "recovery_attempt_count": null,
+    "required_criteria": {
+      "fail_count": 0,
+      "insufficient_evidence_count": 0,
+      "not_evaluated_count": 0,
+      "pass_count": 0,
+      "schema_version": "1.0"
+    },
+    "reused_validation_count": 0,
+    "run_id": "validation-reuse-follow-up-20261006",
+    "run_type": "validation_reuse_follow_up",
+    "schema_version": "1.0",
+    "subject_count": 0,
+    "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+  },
+  "generated_at_utc": "2026-10-07T06:25:25.986181+00:00",
+  "historical_state": {
+    "limitations": [
+      "Historical SQLite and artifact totals are context only and are not attributed to any declared workload run."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.acquisition_by_publisher_and_route",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.acquired_report_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_sessions",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_steps",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 13
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 499.767
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.page_loads",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.screenshots",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 7
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.plan_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 40
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.planned_reusable_artifact_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_by_llm_scope_and_artifact_family.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.published_workflow_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.successful_publication_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.acceptance_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.938657
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.accepted_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 811
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 864
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_qa_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_refinement_file_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 323
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.deferred_work_age_and_completion",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.mean_open_queue_age_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 9818955.445
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.embedded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2642
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.durable_embedding_already_satisfied",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.embedding_completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.human_editorial_quality_ratings",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.minimal_plan_actual_call_divergence",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 856
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_incidence_among_llm_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0.143938
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 1.0
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.public_page_performance_and_errors",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.human_intervention_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.875
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.recurrence_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.125
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.operator_action_required",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 42
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.terminal",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.failure_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.111111
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.mean_latency_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 5041.889
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.succeeded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      }
+    ],
+    "schema_version": "1.0",
+    "source_ids": [
+      "historical_runtime_telemetry"
+    ],
+    "status": "available"
+  },
+  "limitations": [
+    "Producer run timestamps were not retained in the declared manifest.",
+    "Producer reuse rows are aggregate and do not retain immutable subject identities."
+  ],
+  "mode": "declared_run",
+  "run": {
+    "comparison": null,
+    "configuration_identities": [],
+    "criteria": [],
+    "ended_at_utc": null,
+    "external_side_effects_enabled": false,
+    "objective": "Retained single repair-bearing follow-up reuse telemetry; aggregate only.",
+    "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+    "producer_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49",
+    "required_evidence_classes": [
+      "exact_repository_sha",
+      "source_integrity",
+      "reuse",
+      "resource_usage",
+      "performance",
+      "provider_timing",
+      "quality"
+    ],
+    "run_id": "validation-reuse-follow-up-20261006",
+    "run_type": "validation_reuse_follow_up",
+    "schema_version": "1.0",
+    "sources": [
+      {
+        "byte_count": null,
+        "format_id": "marketlense/validation-reuse-benchmark/1.0",
+        "observed_sha256": null,
+        "path": "docs/CTO_evidence/source_artifacts/validation_reuse/e3c9e8cb805fb683fbd61f5a2b821d7efa345cf5131c90a2040db76e5b9935e3-repair-follow-up.json",
+        "producer": "retained_marketlense_evidence",
+        "role": "run",
+        "schema_version": "1.0",
+        "sha256": "becaedbc8173a835ac1891e5e607e901cb0ba4ad1f70bac534e050c459d126ca",
+        "source_id": "reuse_follow_up",
+        "status": "declared",
+        "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+      }
+    ],
+    "stages_in_scope": [
+      "validation",
+      "repair"
+    ],
+    "stages_out_of_scope": [
+      "external_publication"
+    ],
+    "started_at_utc": null,
+    "subjects": [],
+    "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+  },
+  "run_evidence": {
+    "attempt_history_status": "partial",
+    "attempts": [],
+    "comparison": null,
+    "criteria": [],
+    "external_actions": [],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Producer reuse rows are aggregate and do not retain immutable subject identities."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.avoided_grounding_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.avoided_semantic_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.new_validations",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "validations",
+        "value": 52
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "reuse.reused_validations",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "validations",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.cohort_size",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.fresh_isolated_state",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": true
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.estimated_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.096065
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.max_provider_concurrency",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "workers",
+        "value": 6
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.provider_active_wall_seconds_all_profiled_workflows",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 421.119
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 44
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 26235
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_analysis_provider_active_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 382.428
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_analysis_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 397.138
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared wall-clock duration.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.measurements.report_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 497.653
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.operator_intervention",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": false
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.publication_writes",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.rule_waivers",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.targeted_repairs",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.unresolved_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.quality.unsupported_retained_factual_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.grounding_calls_avoided",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.newly_validated_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 52
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.reuse_fallback_reason_counts.prior_package_missing",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.reuse_fallback_reason_counts.prior_validation_not_pass",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.reused_validation_results",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.semantic_validation_calls_avoided",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.summed_reuse_counters.total_candidate_claims",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 52
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 12
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared exclusive provider exposure; semantics are retained from its profiler.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_exclusive_exposure_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 11.542
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared union of active provider intervals; not summed provider work.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.grounding_provider_active_wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 107.423
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "reuse_follow_up.repair_bearing_follow_up.validation_provider_calls.semantic_validation_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Declared immutable subject denominator; historical state is excluded.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "reuse_follow_up"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 0
+      }
+    ],
+    "outcomes": [],
+    "quality_dimensions": [],
+    "reuse_decisions": [],
+    "reuse_evidence_status": "partial",
+    "schema_version": "1.0",
+    "subjects": []
+  },
+  "schema_version": "1.0",
+  "source_references": [
+    {
+      "byte_count": 1563,
+      "format_id": "marketlense/cto-evidence-run-manifest/1.0",
+      "observed_sha256": "afa33b63368f562972bdbf724ba04ca9ea8047bfb4a4f90077aa6d1cc775bf35",
+      "path": "docs/CTO_evidence/runs/validation-reuse-follow-up-20261006/run_manifest.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "afa33b63368f562972bdbf724ba04ca9ea8047bfb4a4f90077aa6d1cc775bf35",
+      "source_id": "run_manifest",
+      "status": "verified",
+      "tested_repository_sha": null
+    },
+    {
+      "byte_count": 2173,
+      "format_id": "marketlense/validation-reuse-benchmark/1.0",
+      "observed_sha256": "becaedbc8173a835ac1891e5e607e901cb0ba4ad1f70bac534e050c459d126ca",
+      "path": "docs/CTO_evidence/source_artifacts/validation_reuse/e3c9e8cb805fb683fbd61f5a2b821d7efa345cf5131c90a2040db76e5b9935e3-repair-follow-up.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "becaedbc8173a835ac1891e5e607e901cb0ba4ad1f70bac534e050c459d126ca",
+      "source_id": "reuse_follow_up",
+      "status": "verified",
+      "tested_repository_sha": "1ec67ff185bf2333780f3f8905320df1ab0e5e49"
+    },
+    {
+      "byte_count": 34998,
+      "format_id": "marketlense/runtime-telemetry/1.0",
+      "observed_sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "path": "docs/CTO_evidence/runtime_telemetry.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "source_id": "historical_runtime_telemetry",
+      "status": "verified",
+      "tested_repository_sha": null
+    }
+  ]
+}

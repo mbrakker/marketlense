@@ -1,0 +1,86 @@
+{
+  "reports": [
+    {
+      "reviewed_final_html_sha256": "5a6e3f1a0d6c88311271108e97ca342ac51c5cebf550a8fe7ac99844f969e7c0",
+      "scores": {
+        "analytical_depth": 8.5,
+        "commercial_relevance": 9.0,
+        "completeness": 8.0,
+        "editorial_clarity": 9.0,
+        "evidence_selection": 8.5,
+        "expert_credibility_human_feel": 8.5,
+        "factual_fidelity": 9.5,
+        "insight_specificity": 9.0,
+        "linkedin_quality": 8.9,
+        "narrative_structure": 8.5,
+        "weighted_100": 87.8
+      }
+    },
+    {
+      "reviewed_final_html_sha256": "29a4f229ef2cb59fef2834e813f59ce9cd105e6912394e1321a58ca812958851",
+      "scores": {
+        "analytical_depth": 9.0,
+        "commercial_relevance": 9.0,
+        "completeness": 9.5,
+        "editorial_clarity": 9.5,
+        "evidence_selection": 9.5,
+        "expert_credibility_human_feel": 9.5,
+        "factual_fidelity": 9.5,
+        "insight_specificity": 9.5,
+        "linkedin_quality": 9.3,
+        "narrative_structure": 9.5,
+        "weighted_100": 93.6
+      }
+    },
+    {
+      "reviewed_final_html_sha256": "8a559fdbe13db452f2d4174138bc114a7da5f84e6903f4b2b5b2031747cf7cb9",
+      "scores": {
+        "analytical_depth": 9.0,
+        "commercial_relevance": 9.0,
+        "completeness": 8.5,
+        "editorial_clarity": 9.0,
+        "evidence_selection": 9.0,
+        "expert_credibility_human_feel": 9.0,
+        "factual_fidelity": 9.5,
+        "insight_specificity": 9.5,
+        "linkedin_quality": 9.2,
+        "narrative_structure": 9.0,
+        "weighted_100": 91.1
+      }
+    },
+    {
+      "reviewed_final_html_sha256": "c513b06455948db3cb350632bbc2cc67f79cc2aa0702197e3eab73eb77072b22",
+      "scores": {
+        "analytical_depth": 8.5,
+        "commercial_relevance": 9.5,
+        "completeness": 8.5,
+        "editorial_clarity": 8.5,
+        "evidence_selection": 9.0,
+        "expert_credibility_human_feel": 9.0,
+        "factual_fidelity": 9.5,
+        "insight_specificity": 9.0,
+        "linkedin_quality": 9.2,
+        "narrative_structure": 8.5,
+        "weighted_100": 89.4
+      }
+    },
+    {
+      "reviewed_final_html_sha256": "8bba92e957f753b17981de29d982db98f48d067c346a32d4b017094e64ad151b",
+      "scores": {
+        "analytical_depth": 8.5,
+        "commercial_relevance": 9.0,
+        "completeness": 9.0,
+        "editorial_clarity": 9.0,
+        "evidence_selection": 9.0,
+        "expert_credibility_human_feel": 8.5,
+        "factual_fidelity": 9.5,
+        "insight_specificity": 8.5,
+        "linkedin_quality": 9.1,
+        "narrative_structure": 9.0,
+        "weighted_100": 88.9
+      }
+    }
+  ],
+  "reviewed_producer_build_identity": "56628ad76f861e14698ee027ada653f4f32de909",
+  "schema_version": "1.0"
+}

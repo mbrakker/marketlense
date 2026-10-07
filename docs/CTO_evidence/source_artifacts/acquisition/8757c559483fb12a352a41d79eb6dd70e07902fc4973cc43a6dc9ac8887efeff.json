@@ -1,0 +1,361 @@
+{
+  "attempts": [
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-7dfb8ad8d1be13d0096520f3f65bd77948e38ee605021ae4cbb87e32c43265a1",
+      "cost_usd": 0.0,
+      "duration_seconds": 37.747,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-3c069deb43e7ca3d9137f42a1e22abdc8cf1568d48a79de3aee9f1bcd459c871",
+      "cost_usd": 0.0,
+      "duration_seconds": 24.682,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-de4076050b2864aa28f6f965955b0b61b53b3f7d10361febf7f6da897a4ad30b",
+      "cost_usd": 0.0,
+      "duration_seconds": 12.069,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-7b471cf0fb4d2791c9639a314ec9772456d4995c912c1c2c2590c166c2a6f80b",
+      "cost_usd": 0.0,
+      "duration_seconds": 9.42,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-9df603127fa5bcfeb65a9cdb2bd020ee1e824661f3c171c078de013187edc1a7",
+      "cost_usd": 0.0,
+      "duration_seconds": 28.824,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-a9ac0bb1a568b901b4aee31b1e81ee6f277b092364a760f05d22ca661283a9a4",
+      "cost_usd": 0.0,
+      "duration_seconds": 6.231,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-84eee94e5609f7c7fb6fe9a24026531fb6d04f7243e3aad7330d0e743a4aba10",
+      "cost_usd": 0.0,
+      "duration_seconds": 9.52,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 4,
+      "browser_launches": 1,
+      "candidate_id": "candidate-fc7a229dd84a75adb2800e0933e6e0a0fd1bc213677df5cde5ac8a08a6f1db4c",
+      "cost_usd": 0.039054,
+      "duration_seconds": 319.7,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-59d81b15d422aab4aad5852076f38cac7ca50d7ff7666f74eb45ea6a596470e9",
+      "cost_usd": 0.0,
+      "duration_seconds": 21.769,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 5,
+      "browser_launches": 1,
+      "candidate_id": "candidate-9c8dab0f4fdb890af783427a359e904b29995edf28fafc3ce478ab276ee87bc5",
+      "cost_usd": 0.035591,
+      "duration_seconds": 295.923,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-0014d92c421c43bbe273d1393cf65ef14eaf42b03b14dc5960b87a573cccef78",
+      "cost_usd": 0.0,
+      "duration_seconds": 10.016,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-52116df0a75b4b0e4fea75055fa951516e139fa5adfc3229518714fd28f10f0e",
+      "cost_usd": 0.0,
+      "duration_seconds": 26.218,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-589ca2698d1bd9d0566ec141163f83cedfa8efbe59d4fe4a9f32fe2c1a13ad42",
+      "cost_usd": 0.0,
+      "duration_seconds": 11.714,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-fc1adda0f989401787a6bcb1a7a6a4a2127235a682ebe7213bab1ad4c4285ae6",
+      "cost_usd": 0.0,
+      "duration_seconds": 23.652,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-6e1481e8085995fd4d50f4d47dfe72aeaf349e8151cf49a97e9e05b4cecff13e",
+      "cost_usd": 0.0,
+      "duration_seconds": 10.159,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-a89ac5894ebd17211d6c25b9b347547f145470e1934a8539445aec6fab1ec4f2",
+      "cost_usd": 0.0,
+      "duration_seconds": 15.283,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-0688f0bfe3b1276973957c3084ee013ce7c17b35cd77569373d760f4b1ea6c67",
+      "cost_usd": 0.0,
+      "duration_seconds": 12.403,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-336b7290e11ec44e5da2b126cc37b99cbcd90ff70749cb5cbc071d9121fc859b",
+      "cost_usd": 0.0,
+      "duration_seconds": 10.51,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-1483b265808ee3c732204abfc6d0b09257c57d1b983fe0eccbda042995c00dae",
+      "cost_usd": 0.0,
+      "duration_seconds": 9.384,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-19e4bda34c0a155e7ea5a0d81817114fcd83f00a24421db9260592942cb39843",
+      "cost_usd": 0.0,
+      "duration_seconds": 5.466,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-503b8f9b4c2095e67769ae1c31aef7822a93f709f0083eaef93634846bd4689a",
+      "cost_usd": 0.0,
+      "duration_seconds": 5.699,
+      "mailbox_reads": 1,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-2d945d1dbfb314ad4aaef72257a3f4cd7d36113f29a47c2f7b923540339658e0",
+      "cost_usd": 0.0,
+      "duration_seconds": 13.398,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 8,
+      "browser_launches": 1,
+      "candidate_id": "candidate-3f884a7a695e29c23452d7d0afa598fc3a66361899ef1a9362f2c68526d4d002",
+      "cost_usd": 0.039031,
+      "duration_seconds": 228.17,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-5f913a2987e054982d747e3138405996c8c81a339111a389bc39a468bbbacb3f",
+      "cost_usd": 0.0,
+      "duration_seconds": 8.263,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-643d6d73893e9a46175be621e7e7816a281c3b7f9d1871f01bb38d5e3f5e48ba",
+      "cost_usd": 0.0,
+      "duration_seconds": 14.527,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-fb3ddf113bced39f4160e998bdd1ef52c63027d832ecedd2a9af73b292c933c8",
+      "cost_usd": 0.0,
+      "duration_seconds": 20.905,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-1cf36c7bed4aba97f6cb364e97b903673312a98ff8bb446f483ce54596b8b7f2",
+      "cost_usd": 0.0,
+      "duration_seconds": 11.049,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-27e083bcb42ed8c5a1271bc7105fb6c0e0e88bcf3bf190710e5664ec1ebd53c9",
+      "cost_usd": 0.0,
+      "duration_seconds": 9.908,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 0,
+      "candidate_id": "candidate-64443d458842434293ac3c3c928a1071c3b065533b61a37b5436c5fddbe48771",
+      "cost_usd": 0.0,
+      "duration_seconds": 9.011,
+      "mailbox_reads": 0,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": true
+    },
+    {
+      "agent_calls": 0,
+      "browser_launches": 1,
+      "candidate_id": "candidate-d32687af08809cbb0e54c93549f799f896563cbb8c0ebe7c1f496213e01e20cd",
+      "cost_usd": 0.0,
+      "duration_seconds": 16.877,
+      "mailbox_reads": 1,
+      "tested_commit": "b463da172bf11a05d453ac64c0e1616a8f2e52b6",
+      "verified_artifact": false
+    }
+  ],
+  "before_after": {
+    "baseline": {
+      "acquisition_success_rate": 0.1,
+      "agent_calls": 23,
+      "agent_reports": 5,
+      "attempted_reports": 30,
+      "browser_launches": 21,
+      "cached_input_tokens": 173440,
+      "drive_persisted": 12,
+      "duration_seconds": 5970.49,
+      "input_tokens": 455391,
+      "mailbox_reads": 16,
+      "output_tokens": 26039,
+      "total_cost_usd": 0.126904,
+      "verified_acquisitions": 3
+    },
+    "change": {
+      "acquisition_success_rate": 0.666667,
+      "agent_calls": -6.0,
+      "agent_reports": -2.0,
+      "attempted_reports": 0.0,
+      "browser_launches": -11.0,
+      "cached_input_tokens": -38912.0,
+      "drive_persisted": 11.0,
+      "duration_seconds": -4731.993,
+      "input_tokens": -80436.0,
+      "mailbox_reads": -14.0,
+      "output_tokens": -936.0,
+      "total_cost_usd": -0.013228,
+      "verified_acquisitions": 20.0
+    },
+    "current": {
+      "acquisition_success_rate": 0.766667,
+      "agent_calls": 17,
+      "agent_reports": 3,
+      "attempted_reports": 30,
+      "browser_launches": 10,
+      "cached_input_tokens": 134528,
+      "drive_persisted": 23,
+      "duration_seconds": 1238.497,
+      "input_tokens": 374955,
+      "mailbox_reads": 2,
+      "output_tokens": 25103,
+      "total_cost_usd": 0.113676,
+      "verified_acquisitions": 23
+    }
+  },
+  "consistency": {
+    "baseline_candidate_count": 30,
+    "candidate_sets_match": true,
+    "current_candidate_count": 30,
+    "current_failures_match_metrics": true,
+    "expected_current_hash_matches": true,
+    "remaining_failure_count": 7
+  },
+  "schema_version": "1.0",
+  "tested_repository_sha": "b463da172bf11a05d453ac64c0e1616a8f2e52b6"
+}

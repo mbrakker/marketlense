@@ -1,0 +1,3809 @@
+{
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "completeness": "complete",
+  "disposition": "not_evaluated",
+  "executive_summary": {
+    "avoided_provider_call_count": null,
+    "completeness": "complete",
+    "disposition": "not_evaluated",
+    "external_actions": [],
+    "historical_metric_count": 41,
+    "key_metrics": [
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 20
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 5131.846
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.998643
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 574
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 5900816
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 823384
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "quality.publication_readiness_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio",
+        "value": 0.0
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "quality.validation_terminal_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio",
+        "value": 1.0
+      }
+    ],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Per-subject calls, tokens, cost, and duration are not attributed in the retained cohort result.",
+      "Workflow attempt counts are aggregate and do not preserve typed first-attempt and recovery events."
+    ],
+    "mode": "declared_run",
+    "objective": "Measure the 20-report grounding cohort readiness and terminal outcomes.",
+    "outcomes": [
+      {
+        "count": 20,
+        "outcome": "terminal_failure",
+        "schema_version": "1.0"
+      }
+    ],
+    "quality_dimensions": [],
+    "recovery_attempt_count": null,
+    "required_criteria": {
+      "fail_count": 0,
+      "insufficient_evidence_count": 0,
+      "not_evaluated_count": 0,
+      "pass_count": 0,
+      "schema_version": "1.0"
+    },
+    "reused_validation_count": null,
+    "run_id": "cohort-reliability-cohort-20260927-grounding",
+    "run_type": "frozen_reliability_cohort",
+    "schema_version": "1.0",
+    "subject_count": 20,
+    "tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+  },
+  "generated_at_utc": "2026-10-07T06:25:25.664495+00:00",
+  "historical_state": {
+    "limitations": [
+      "Historical SQLite and artifact totals are context only and are not attributed to any declared workload run."
+    ],
+    "metrics": [
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.acquisition_by_publisher_and_route",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.acquired_report_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_sessions",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.browser_steps",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 13
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 499.767
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.page_loads",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.browser_per_acquired_report.screenshots",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 7
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.plan_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 40
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cache_and_reuse_by_artifact_family.planned_reusable_artifact_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_by_llm_scope_and_artifact_family.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.execution_plan_cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.published_workflow_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.cost_per_acquired_and_published_report.successful_publication_observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.acceptance_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.938657
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.accepted_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 811
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_candidate_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 864
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_qa_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.crop_qa.crop_refinement_file_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 323
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.deferred_work_age_and_completion",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.mean_open_queue_age_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 9818955.445
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.embedded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.queue_status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2642
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.durable_embedding_already_satisfied",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.embedding_queue_and_avoided_reembedding.transition_reason_counts.embedding_completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.human_editorial_quality_ratings",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.minimal_plan_actual_call_divergence",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_call_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 856
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_incidence_among_llm_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 0.143938
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.ocr_incidence_and_success.ocr_success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 1.0
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No scalar historical value was retained for this metric group."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "historical.public_page_performance_and_errors",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "unavailable",
+        "subject_id": null,
+        "unit": "unavailable",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.human_intervention_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.875
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.recurrence_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.125
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.operator_action_required",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 42
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.pending",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.status_counts.terminal",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 4
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.remediation_outcomes.success_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.failure_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "ratio_or_delta",
+        "value": 0.111111
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.mean_latency_ms",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "milliseconds",
+        "value": 5041.889
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.observation_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 9
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.completed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 8
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Historical accumulated system state; excluded from all run denominators and totals.",
+        "metric_id": "historical.wordpress_publication.outcome_counts.succeeded",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "historical_runtime_telemetry"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      }
+    ],
+    "schema_version": "1.0",
+    "source_ids": [
+      "historical_runtime_telemetry"
+    ],
+    "status": "available"
+  },
+  "limitations": [
+    "Producer run timestamps were not retained in the declared manifest.",
+    "Per-subject calls, tokens, cost, and duration are not attributed in the retained cohort result.",
+    "Workflow attempt counts are aggregate and do not preserve typed first-attempt and recovery events."
+  ],
+  "mode": "declared_run",
+  "run": {
+    "comparison": null,
+    "configuration_identities": [],
+    "criteria": [],
+    "ended_at_utc": null,
+    "external_side_effects_enabled": null,
+    "objective": "Measure the 20-report grounding cohort readiness and terminal outcomes.",
+    "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+    "producer_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9",
+    "required_evidence_classes": [
+      "exact_repository_sha",
+      "source_integrity",
+      "immutable_subjects",
+      "outcomes",
+      "quality",
+      "resource_usage"
+    ],
+    "run_id": "cohort-reliability-cohort-20260927-grounding",
+    "run_type": "frozen_reliability_cohort",
+    "schema_version": "1.0",
+    "sources": [
+      {
+        "byte_count": null,
+        "format_id": "marketlense/frozen-cohort-result/1.0",
+        "observed_sha256": null,
+        "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/9be431aed086136bfc1428e311dbdf8976192e2ccc1970b3e6033db970ce8e65.json",
+        "producer": "retained_marketlense_evidence",
+        "role": "run",
+        "schema_version": "1.0",
+        "sha256": "5f55a6e98d50a4ddfddea305d8528d3ceef31046c747fb82261c2c9761c18988",
+        "source_id": "cohort_result",
+        "status": "declared",
+        "tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+      }
+    ],
+    "stages_in_scope": [
+      "source_ingest",
+      "report_selection",
+      "report_analysis",
+      "report_render",
+      "validation",
+      "publication_readiness"
+    ],
+    "stages_out_of_scope": [
+      "new_discovery",
+      "source_acquisition",
+      "external_publication"
+    ],
+    "started_at_utc": null,
+    "subjects": [
+      {
+        "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-001",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "16ac87d5011df0ef9ddd4948410b2b3adbda5f2a1850339e87821ab8a5bd6629",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-002",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "21bddea378d890df77f4b114563a81c0e9691753d50d45baa8903109eb7345cd",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-003",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "27239ab3cca5f61cb0caef7f4ed84d26c8f403cea235f4c09f60e0010be980e2",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-004",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "3e861de796521161d386742739fdcd83b116d3a862de49cccb538c751fdbe8b6",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-005",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "3f5e18ef8546161da2213c392b49586cbb9ed7b2f96b801204a0cae230a79330",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-006",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "5006f1a53ec64c7aed1f9f2e110379a9edf2df63329df9e10909376830704b31",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-007",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "64d17b6e31e62bb0c2b603cf4cfaab57be21ad0a5dca73953a6bf9ffdb4d275a",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-008",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "7095c9b7414e1fd3a0436bddd415fc85ae862917f985a8cd9ad6f6640ad27a1a",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-009",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "7f0e3b9ffc786e846b62c6869da0bc3fbb7abd32d7207867014465857d562426",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-010",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8527a50aa8694c64363c0c4569c81d162bcde2bad8b1aef450a22ae72b3588f2",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-011",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "8619dac0f7dbaa9f8c599715e3eda8e1535cbd431e110b6bfe62333f2941fe5e",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-012",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "a308c7b4178bc77cc1fe26b6746fbc02d20e1ff13bf51e7c4d6de234c4826066",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-013",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "a599c350f281a2ff395f2b2ac4125c092964d2b86816821bb38c29d68079d8de",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-014",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "b03c30eb9a5bebb63b6ec701c2feecbabd3ec9dd8428aa20736e789b8cdd88fa",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-015",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "b85bfee38ae2df0bfcf15a0e7def93a47a7ec6fae4e3a9c45a090d257edf05a0",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-016",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "bd483afecfc1acd48fec9b0b38c6a62a1089185d3126282b58f360e220f1fb95",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-017",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "ca1215830866cc5b65951982c9e756bd0cd8a283d44fd2f03bf41478545de906",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-018",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "dd9c83fd428526530d31ca6dcf14300502e00eba12dfd82c3aeed919b2511c12",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-019",
+        "terminal_outcome": null
+      },
+      {
+        "identity_sha256": "efc82461e9171b6058a2c42efb1f6cd58d16c3dcb4804059faaccce3c138c9dc",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-020",
+        "terminal_outcome": null
+      }
+    ],
+    "tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+  },
+  "run_evidence": {
+    "attempt_history_status": "partial",
+    "attempts": [],
+    "comparison": null,
+    "criteria": [],
+    "external_actions": [],
+    "limitations": [
+      "Producer run timestamps were not retained in the declared manifest.",
+      "Per-subject calls, tokens, cost, and duration are not attributed in the retained cohort result.",
+      "Workflow attempt counts are aggregate and do not preserve typed first-attempt and recovery events."
+    ],
+    "metrics": [
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "operator.intervention_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 0
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "outcomes.admitted_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 20
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "",
+        "metric_id": "outcomes.terminal_failure.count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 20
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 5131.846
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "quality.publication_readiness_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio",
+        "value": 0.0
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "quality.validation_terminal_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio",
+        "value": 1.0
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "reliability.workflow_failure_rate",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "ratio",
+        "value": 1.0
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "USD",
+        "value": 0.998643
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 5900816
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "tokens",
+        "value": 823384
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": 20,
+        "limitations": [],
+        "measurement_semantics": "Cohort total is retained, but per-subject attribution is unavailable.",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "partial",
+        "subject_id": null,
+        "unit": "calls",
+        "value": 574
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "The retained cohort result does not attribute this total to each subject."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-001",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-002",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-003",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-004",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-005",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-006",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-007",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-008",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-009",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-010",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-011",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-012",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-013",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-014",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-015",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-016",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-017",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-018",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-019",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-020",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-declared cohort outcome.",
+        "metric_id": "subjects.denominator",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "cohort_result"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects",
+        "value": 20
+      }
+    ],
+    "outcomes": [
+      {
+        "count": 20,
+        "outcome": "terminal_failure",
+        "schema_version": "1.0"
+      }
+    ],
+    "quality_dimensions": [],
+    "reuse_decisions": [],
+    "reuse_evidence_status": "unavailable",
+    "schema_version": "1.0",
+    "subjects": [
+      {
+        "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-001",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "16ac87d5011df0ef9ddd4948410b2b3adbda5f2a1850339e87821ab8a5bd6629",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-002",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "21bddea378d890df77f4b114563a81c0e9691753d50d45baa8903109eb7345cd",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-003",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "27239ab3cca5f61cb0caef7f4ed84d26c8f403cea235f4c09f60e0010be980e2",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-004",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "3e861de796521161d386742739fdcd83b116d3a862de49cccb538c751fdbe8b6",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-005",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "3f5e18ef8546161da2213c392b49586cbb9ed7b2f96b801204a0cae230a79330",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-006",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "5006f1a53ec64c7aed1f9f2e110379a9edf2df63329df9e10909376830704b31",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-007",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "64d17b6e31e62bb0c2b603cf4cfaab57be21ad0a5dca73953a6bf9ffdb4d275a",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-008",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "7095c9b7414e1fd3a0436bddd415fc85ae862917f985a8cd9ad6f6640ad27a1a",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-009",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "7f0e3b9ffc786e846b62c6869da0bc3fbb7abd32d7207867014465857d562426",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-010",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "8527a50aa8694c64363c0c4569c81d162bcde2bad8b1aef450a22ae72b3588f2",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-011",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "8619dac0f7dbaa9f8c599715e3eda8e1535cbd431e110b6bfe62333f2941fe5e",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-012",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "a308c7b4178bc77cc1fe26b6746fbc02d20e1ff13bf51e7c4d6de234c4826066",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-013",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "a599c350f281a2ff395f2b2ac4125c092964d2b86816821bb38c29d68079d8de",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-014",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "b03c30eb9a5bebb63b6ec701c2feecbabd3ec9dd8428aa20736e789b8cdd88fa",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-015",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "b85bfee38ae2df0bfcf15a0e7def93a47a7ec6fae4e3a9c45a090d257edf05a0",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-016",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "bd483afecfc1acd48fec9b0b38c6a62a1089185d3126282b58f360e220f1fb95",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-017",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "ca1215830866cc5b65951982c9e756bd0cd8a283d44fd2f03bf41478545de906",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-018",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "dd9c83fd428526530d31ca6dcf14300502e00eba12dfd82c3aeed919b2511c12",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-019",
+        "terminal_outcome": "terminal_failure"
+      },
+      {
+        "identity_sha256": "efc82461e9171b6058a2c42efb1f6cd58d16c3dcb4804059faaccce3c138c9dc",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-020",
+        "terminal_outcome": "terminal_failure"
+      }
+    ]
+  },
+  "schema_version": "1.0",
+  "source_references": [
+    {
+      "byte_count": 5727,
+      "format_id": "marketlense/cto-evidence-run-manifest/1.0",
+      "observed_sha256": "508c0d3428a8c9becc7c3b1c8358d5d6ef8607e188499696dd9514de85c9d812",
+      "path": "docs/CTO_evidence/runs/cohort-reliability-cohort-20260927-grounding/run_manifest.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "508c0d3428a8c9becc7c3b1c8358d5d6ef8607e188499696dd9514de85c9d812",
+      "source_id": "run_manifest",
+      "status": "verified",
+      "tested_repository_sha": null
+    },
+    {
+      "byte_count": 6298,
+      "format_id": "marketlense/frozen-cohort-result/1.0",
+      "observed_sha256": "5f55a6e98d50a4ddfddea305d8528d3ceef31046c747fb82261c2c9761c18988",
+      "path": "docs/CTO_evidence/source_artifacts/frozen_cohorts/9be431aed086136bfc1428e311dbdf8976192e2ccc1970b3e6033db970ce8e65.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "run",
+      "schema_version": "1.0",
+      "sha256": "5f55a6e98d50a4ddfddea305d8528d3ceef31046c747fb82261c2c9761c18988",
+      "source_id": "cohort_result",
+      "status": "verified",
+      "tested_repository_sha": "8a05e2d25a7bc23192b297324fc40df7e4ba37a9"
+    },
+    {
+      "byte_count": 34998,
+      "format_id": "marketlense/runtime-telemetry/1.0",
+      "observed_sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "path": "docs/CTO_evidence/runtime_telemetry.json",
+      "producer": "cto_review_collector",
+      "role": "supporting",
+      "schema_version": "1.0",
+      "sha256": "9125dca40c53bd023fa8bfb9f0d07cf99ca1e1da786cfc8d569fbd273e2ff7c4",
+      "source_id": "historical_runtime_telemetry",
+      "status": "verified",
+      "tested_repository_sha": null
+    }
+  ]
+}

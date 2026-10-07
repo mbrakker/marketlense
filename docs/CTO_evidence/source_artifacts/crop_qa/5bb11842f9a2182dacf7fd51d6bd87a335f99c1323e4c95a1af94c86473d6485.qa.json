@@ -1,0 +1,25 @@
+{
+  "accepted": true,
+  "candidate_id": "candidate-fdcf5522e88f6ef2fe1138a8a39b8b04dd97f86fd3abf85ea8b5253d9e2a1ef0",
+  "candidate_type": "chart",
+  "mode": "publication_strict",
+  "qa": {
+    "accepted": true,
+    "defect_labels": [],
+    "detectors": {
+      "chart_completeness": {
+        "confidence": 0.0584
+      },
+      "table_boundary": {
+        "confidence": 0.0
+      },
+      "visual_card_boundary": {
+        "confidence": 0.0584
+      }
+    },
+    "total_score": 0.8199
+  },
+  "render_dpi": 216,
+  "schema_version": "1.0",
+  "tested_repository_sha": "39e5f42386dec1fa008928355c3b95c5f3765a9d"
+}

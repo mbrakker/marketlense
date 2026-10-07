@@ -1,0 +1,116 @@
+{
+  "comparison": {
+    "baseline_identity": [
+      {
+        "key": "workload",
+        "schema_version": "1.0",
+        "value": "file_search_call_reduction"
+      }
+    ],
+    "baseline_repository_sha": "f70871ace4ec36827192955334217649496f4ed7",
+    "baseline_selector": "cohorts.baseline.metrics",
+    "baseline_source_id": "file_search_baseline",
+    "candidate_identity": [
+      {
+        "key": "workload",
+        "schema_version": "1.0",
+        "value": "file_search_call_reduction"
+      }
+    ],
+    "candidate_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0",
+    "candidate_selector": "cohorts.candidate.metrics",
+    "candidate_source_id": "file_search_candidate",
+    "changed_variables": [
+      "file_search_implementation"
+    ],
+    "comparison_id": "file-search-before-after",
+    "invariants": [],
+    "limitations": [
+      "Candidate minus baseline deltas are descriptive; causal attribution is not established."
+    ],
+    "schema_version": "1.0"
+  },
+  "configuration_identities": [],
+  "criteria": [],
+  "ended_at_utc": null,
+  "external_side_effects_enabled": false,
+  "objective": "Retained File Search baseline/candidate cohort and call-count comparison.",
+  "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
+  "producer_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0",
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "source_integrity",
+    "immutable_subjects",
+    "comparison",
+    "outcomes",
+    "resource_usage",
+    "performance",
+    "quality"
+  ],
+  "run_id": "file-search-comparison-20261003",
+  "run_type": "file_search_reduction_comparison",
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "format_id": "marketlense/file-search-reduction/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/file_search/e86e50641e9a3b1e93d731cb10ddac5e5530eb84461116f9c0c3f900637db908-comparison.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "baseline",
+      "schema_version": "1.0",
+      "sha256": "30e5a1f4b32755a24f7f85698c985c4f8bb202cc2c6abbc4d275e36e39b11478",
+      "source_id": "file_search_baseline",
+      "tested_repository_sha": "f70871ace4ec36827192955334217649496f4ed7"
+    },
+    {
+      "format_id": "marketlense/file-search-reduction/1.0",
+      "path": "docs/CTO_evidence/source_artifacts/file_search/e86e50641e9a3b1e93d731cb10ddac5e5530eb84461116f9c0c3f900637db908-comparison.json",
+      "producer": "retained_marketlense_evidence",
+      "role": "candidate",
+      "schema_version": "1.0",
+      "sha256": "30e5a1f4b32755a24f7f85698c985c4f8bb202cc2c6abbc4d275e36e39b11478",
+      "source_id": "file_search_candidate",
+      "tested_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0"
+    }
+  ],
+  "stages_in_scope": [
+    "evidence_search",
+    "validation"
+  ],
+  "stages_out_of_scope": [
+    "external_publication"
+  ],
+  "started_at_utc": null,
+  "subjects": [
+    {
+      "identity_sha256": "0fb2c0215aeb230c717b3c4a28bb5349c7c00d7d9b64d740b4cb8d7881ac1a99",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-001"
+    },
+    {
+      "identity_sha256": "27239ab3cca5f61cb0caef7f4ed84d26c8f403cea235f4c09f60e0010be980e2",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-002"
+    },
+    {
+      "identity_sha256": "a599c350f281a2ff395f2b2ac4125c092964d2b86816821bb38c29d68079d8de",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-003"
+    },
+    {
+      "identity_sha256": "b03c30eb9a5bebb63b6ec701c2feecbabd3ec9dd8428aa20736e789b8cdd88fa",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-004"
+    },
+    {
+      "identity_sha256": "efc82461e9171b6058a2c42efb1f6cd58d16c3dcb4804059faaccce3c138c9dc",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-005"
+    }
+  ],
+  "tested_repository_sha": "be70355a28b8f58d517768420024fd3baf92dde0"
+}

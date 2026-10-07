@@ -1,0 +1,86 @@
+{
+  "cohorts": {
+    "baseline": {
+      "git_sha": "f70871ace4ec36827192955334217649496f4ed7",
+      "metrics": {
+        "duration_seconds": 2818.888,
+        "estimated_non_file_search_model_cost_usd": 0.354575,
+        "file_search_calls": 49,
+        "file_search_cost_usd": 0.1225,
+        "file_search_unit_cost_usd": 0.0025,
+        "input_tokens": 1837877,
+        "model_provider_calls": 206,
+        "output_tokens": 369596,
+        "total_estimated_cost_usd": 0.477075
+      }
+    },
+    "candidate": {
+      "git_sha": "be70355a28b8f58d517768420024fd3baf92dde0",
+      "metrics": {
+        "duration_seconds": 2583.722,
+        "estimated_non_file_search_model_cost_usd": 0.337258,
+        "file_search_calls": 33,
+        "file_search_cost_usd": 0.0825,
+        "file_search_unit_cost_usd": 0.0025,
+        "input_tokens": 1873502,
+        "model_provider_calls": 187,
+        "output_tokens": 309163,
+        "total_estimated_cost_usd": 0.419758
+      }
+    }
+  },
+  "publication_side_effects": {
+    "approval_records": 0,
+    "publish_enabled_all_runs": false,
+    "publish_or_wordpress_outbox_jobs": 0,
+    "published_records": 0
+  },
+  "report_comparison": [
+    {
+      "baseline_file_search_calls": 12,
+      "candidate_file_search_calls": 8,
+      "publication_readiness": "pass",
+      "report_id": "subject-a327f8882533b6391cc3fc6fe8097f2fc79e637b6d2521d401d7eddb0dedf047",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass"
+    },
+    {
+      "baseline_file_search_calls": 11,
+      "candidate_file_search_calls": 8,
+      "publication_readiness": "pass",
+      "report_id": "subject-2fe8156059f502cbf86e0951ba1fdce8d36d5c643e6136b51560a3046e151d93",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass"
+    },
+    {
+      "baseline_file_search_calls": 9,
+      "candidate_file_search_calls": 6,
+      "publication_readiness": "pass",
+      "report_id": "subject-aac4dc9365ab1d7f749b2398664787a1959770347d69f4d292ed91c6a5a768bf",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass"
+    },
+    {
+      "baseline_file_search_calls": 9,
+      "candidate_file_search_calls": 6,
+      "publication_readiness": "pass",
+      "report_id": "subject-b74e2f5dd27855f6d399b5a7d1c577efa3a789d42a1baea688c3b0444a3de722",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass"
+    },
+    {
+      "baseline_file_search_calls": 8,
+      "candidate_file_search_calls": 5,
+      "publication_readiness": "pass",
+      "report_id": "subject-66fb4508f80b292fc995c7f0fef438dc6278d0a8afb3c77f946310898b396c5b",
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0,
+      "validation": "pass"
+    }
+  ],
+  "schema_version": "1.0"
+}

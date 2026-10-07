@@ -1,0 +1,70 @@
+{
+  "available_evidence_classes": [
+    "critical_path",
+    "exact_repository_sha",
+    "immutable_subjects",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/provider-critical-path-20261006/cto_evidence_bundle.json",
+  "bundle_sha256": "023db8608f006b32edc5b79569329b4f0006d031a02408bc348928eb40e565a3",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/provider-critical-path-20261006/run_manifest.json",
+  "manifest_sha256": "26005be279dbc0ad842d7fed236acc57d56dfcb0d2d0d94621e125d6396c6f32",
+  "metric_count": 90,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 62940,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "critical_path",
+    "exact_repository_sha",
+    "immutable_subjects",
+    "performance",
+    "provider_timing",
+    "quality",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "provider-critical-path-20261006",
+  "run_type": "provider_critical_path_profile",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/provider_profiles/7d0070daab49f089375ce3539a6a38f389a4d1ac5a1f149dcca5a996078f8430-critical-path.json",
+      "role": "run",
+      "sha256": "30023a98146c3cad85a3bff1ef99a2e1cae961612b45932f4199c0cea8fb6ba5",
+      "source_id": "critical_path",
+      "tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 1,
+  "tested_repository_sha": "9b3b3c39c5a4eb5bf1cf38e24df687c21b25ea57",
+  "unavailable_metric_count": 7
+}

@@ -1,0 +1,70 @@
+{
+  "available_evidence_classes": [
+    "acquisition",
+    "attempt_history",
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "performance",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "bundle_path": "docs/CTO_evidence/runs/acquisition-previous-current/cto_evidence_bundle.json",
+  "bundle_sha256": "9a288c650233ba6dbf9b68a426a7f6f8381cce3be32db9ae78bb015d81456922",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
+  "criteria_results": [],
+  "disposition": "not_evaluated",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/acquisition-previous-current/run_manifest.json",
+  "manifest_sha256": "d1b3de15ca0a6158324108d336552fd8ce877ce02c9a857732b29831323299fc",
+  "metric_count": 413,
+  "missing_evidence_classes": [],
+  "privacy_bounded_content_scan": {
+    "bundle_bytes": 185388,
+    "checks": {
+      "absolute_paths": true,
+      "bundle_byte_bound": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "emails": true,
+      "raw_content_fields": true,
+      "source_identity_values": true,
+      "urls": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "status": "passed"
+  },
+  "required_evidence_classes": [
+    "acquisition",
+    "attempt_history",
+    "exact_repository_sha",
+    "immutable_subjects",
+    "outcomes",
+    "performance",
+    "resource_usage",
+    "source_integrity"
+  ],
+  "run_id": "acquisition-previous-current",
+  "run_type": "acquisition_projection",
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/acquisition/e608c8d46fccec78ac4a67b738d04c1a4565aff88aa5c235b44c3ab4a059fc84.json",
+      "role": "run",
+      "sha256": "1424226bc91d86ca80833d13a3e12019cf7b0406eef8d8c7fa88a63d6d64098d",
+      "source_id": "acquisition",
+      "tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 30,
+  "tested_repository_sha": "69f55aa4ed1afd167e2c8f27e2ee4d7488c65333",
+  "unavailable_metric_count": 210
+}

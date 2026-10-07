@@ -1,0 +1,23 @@
+{
+  "producer_commit": "0bdd91998e39a796ec958c43518ca2827e99faeb",
+  "publication_attempt": {
+    "blocked_count": 5,
+    "created_count": 6,
+    "outcome_counts": {
+      "error": 5,
+      "published": 6
+    }
+  },
+  "readback": {
+    "authenticated_full_readback_verified_count": 0,
+    "status": "not_completed"
+  },
+  "repeat_publication": {
+    "actual_writes": null,
+    "status": "not_run"
+  },
+  "schema_version": "1.0",
+  "scope": {
+    "authorized_publication_subset_size": 11
+  }
+}
