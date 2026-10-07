@@ -284,12 +284,12 @@ def test_ingest_cache_uses_only_source_bound_sidecar(
     sidecar_path.write_text(
         json.dumps(
             {
-                "schema_version": "1.0",
+                "schema_version": "2.0",
                 "file_id": sidecar_file_id,
                 "name": "file-1.pdf",
                 "md5": sidecar_md5_value,
                 "size_bytes": cache_stat.st_size,
-                "mtime_utc": cache_stat.st_mtime,
+                "mtime_ns": cache_stat.st_mtime_ns,
             }
         ),
         encoding="utf-8",

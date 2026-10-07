@@ -484,6 +484,7 @@ def _resolve_cached_pdf(
             file_id=runtime.file.file_id,
             size_bytes=stat_resp.size_bytes,
             mtime_utc=stat_resp.mtime_utc,
+            mtime_ns=stat_resp.mtime_ns,
         ),
         file_ctx,
     )
@@ -537,6 +538,7 @@ def _resolve_cached_pdf(
                     md5=runtime.md5,
                     size_bytes=stat_resp.size_bytes,
                     mtime_utc=stat_resp.mtime_utc,
+                    mtime_ns=stat_resp.mtime_ns,
                 ),
                 file_ctx,
             )
@@ -660,6 +662,7 @@ def _download_pdf_for_processing(
             md5=runtime.md5,
             size_bytes=stat_resp.size_bytes,
             mtime_utc=stat_resp.mtime_utc,
+            mtime_ns=stat_resp.mtime_ns,
         ),
         file_ctx,
     )
@@ -739,6 +742,7 @@ def _ensure_runtime_md5(
             md5=runtime.md5,
             size_bytes=md5_stat.size_bytes,
             mtime_utc=md5_stat.mtime_utc,
+            mtime_ns=md5_stat.mtime_ns,
         ),
         file_ctx,
     )

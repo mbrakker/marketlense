@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import sys
 import time
@@ -24,7 +25,6 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.lock_service")
-LOCK_FILE_EXCEPTIONS = (OSError, json.JSONDecodeError, TypeError, ValueError)
 DEFAULT_LOCK_TTL_SECONDS = 7200.0
 
 
@@ -67,20 +67,94 @@ def _owner_pid_is_alive(pid: int) -> bool:
 
 def _read_lock(path: str) -> Optional[LockInfo]:
     file_path = Path(path)
-    if not file_path.exists():
-        return None
     try:
-        data = json.loads(file_path.read_text(encoding="utf-8"))
-        return LockInfo(
-            schema_version="1.0",
-            lock_path=path,
-            owner_id=str(data.get("owner_id", "")),
-            pid=int(data.get("pid", -1)),
-            created_at=float(data.get("created_at", 0.0)),
-            ttl_seconds=float(data.get("ttl_seconds", DEFAULT_LOCK_TTL_SECONDS)),
-        )
-    except LOCK_FILE_EXCEPTIONS:
+        raw_payload = file_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return None
+    except UnicodeDecodeError as exc:
+        raise _corrupt_lock_error(path, "invalid_encoding", cause=exc) from exc
+    except OSError as exc:
+        raise AppError(
+            code="lock_file_read_failed",
+            message="Failed to read the existing lock file",
+            cause=exc,
+            retryable=False,
+            context={"lock_path": path},
+        ) from exc
+    try:
+        data = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise _corrupt_lock_error(path, "invalid_json", cause=exc) from exc
+    if not isinstance(data, dict):
+        raise _corrupt_lock_error(path, "invalid_payload_shape")
+
+    owner_id = data.get("owner_id")
+    pid = data.get("pid")
+    created_at = data.get("created_at")
+    ttl_seconds = data.get("ttl_seconds", DEFAULT_LOCK_TTL_SECONDS)
+    if not isinstance(owner_id, str) or not owner_id.strip():
+        raise _corrupt_lock_error(path, "invalid_owner_id")
+    if type(pid) is not int or pid <= 0:
+        raise _corrupt_lock_error(path, "invalid_pid")
+    if (
+        isinstance(created_at, bool)
+        or not isinstance(created_at, (int, float))
+        or not math.isfinite(created_at)
+        or created_at < 0
+    ):
+        raise _corrupt_lock_error(path, "invalid_created_at")
+    if (
+        isinstance(ttl_seconds, bool)
+        or not isinstance(ttl_seconds, (int, float))
+        or not math.isfinite(ttl_seconds)
+        or ttl_seconds < 0
+    ):
+        raise _corrupt_lock_error(path, "invalid_ttl_seconds")
+    return LockInfo(
+        schema_version="1.0",
+        lock_path=path,
+        owner_id=owner_id,
+        pid=pid,
+        created_at=float(created_at),
+        ttl_seconds=float(ttl_seconds),
+    )
+
+
+def _corrupt_lock_error(
+    path: str, reason: str, *, cause: Exception | None = None
+) -> AppError:
+    return AppError(
+        code="lock_file_corrupt",
+        message="Existing lock file is malformed; inspect it before recovery",
+        cause=cause,
+        retryable=False,
+        severity="error",
+        context={"lock_path": path, "reason": reason},
+    )
+
+
+def _remove_created_lock_file(
+    lock_path: Path, identity: tuple[int, int] | None, ctx: RunContext
+) -> None:
+    if identity is None:
+        return
+    try:
+        current = lock_path.stat(follow_symlinks=False)
+        if (int(current.st_dev), int(current.st_ino)) != identity:
+            return
+        lock_path.unlink()
+    except FileNotFoundError:
+        return
+    except OSError:
+        logger.warning(
+            log_event(
+                ctx,
+                role="service",
+                event="lock_partial_file_cleanup_failed",
+                module=logger.name,
+                fields={"lock_path": str(lock_path)},
+            )
+        )
 
 
 def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
@@ -191,8 +265,12 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
             conflict=existing,
         )
 
+    fd: int | None = None
+    created_identity: tuple[int, int] | None = None
     try:
         fd = os.open(request.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        created_stat = os.fstat(fd)
+        created_identity = (int(created_stat.st_dev), int(created_stat.st_ino))
         payload = {
             "owner_id": request.owner_id,
             "pid": request.pid,
@@ -200,11 +278,10 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         }
         if requested_ttl is not None:
             payload["ttl_seconds"] = requested_ttl
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(payload, fh, ensure_ascii=True)
-        except (OSError, TypeError, ValueError):
-            raise
+        handle = os.fdopen(fd, "w", encoding="utf-8")
+        fd = None
+        with handle as fh:
+            json.dump(payload, fh, ensure_ascii=True)
     except FileExistsError:
         conflict = _read_lock(request.lock_path)
         logger.info(
@@ -227,6 +304,12 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
             conflict=conflict,
         )
     except (OSError, ValueError, TypeError) as exc:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        _remove_created_lock_file(lock_path, created_identity, ctx)
         raise AppError(
             code="lock_acquire_failed",
             message=f"Failed to acquire lock at {request.lock_path}",

@@ -694,9 +694,7 @@ def _soft_copy_claim_provenance_payload(
             for binding in declared or []:
                 if not isinstance(binding, dict):
                     continue
-                normalized_claim = " ".join(
-                    str(binding.get("claim") or "").split()
-                )
+                normalized_claim = " ".join(str(binding.get("claim") or "").split())
                 final_sentence = final_sentence_by_normalized.get(normalized_claim)
                 if not final_sentence:
                     continue
@@ -2009,8 +2007,7 @@ def finalize_regeneration_candidate_artifacts(
             raise AppError(
                 code="regeneration_deterministic_projection_failed",
                 message=(
-                    "Final soft-copy provenance could not be rebuilt "
-                    "deterministically"
+                    "Final soft-copy provenance could not be rebuilt deterministically"
                 ),
                 retryable=False,
                 context={
@@ -2592,7 +2589,7 @@ def _log_topic_brief_mapping_audit(
     )
     unmapped_count = sum(
         status_counts.get(status, 0)
-        for status in ("identity_mismatch", "unknown_section")
+        for status in ("identity_mismatch", "unknown_section", "ambiguous_section")
     )
     logger.info(
         log_event(

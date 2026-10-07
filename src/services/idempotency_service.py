@@ -57,8 +57,8 @@ def _conn(db_path: str):
             context={"db_path": db_path},
         ) from exc
     try:
-        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.executescript(DDL)
         conn.commit()
@@ -309,6 +309,7 @@ def record_outcome(
     try:
         with _conn(request.db_path) as conn:
             conn.row_factory = sqlite3.Row
+            conn.execute("BEGIN IMMEDIATE")
             existing_row = conn.execute(
                 """
                 SELECT scope, idempotency_key, input_checksum, outcome_json,

@@ -58,6 +58,12 @@ configured TTL. This prevents a terminated local ingest process from blocking
 a safe retry for the full lock window without stealing a lock held by a running
 process.
 
+If an existing lock file is malformed or has invalid owner fields, ingest
+returns `lock_file_corrupt` and leaves the file in place for diagnosis. Verify
+that no live owner holds the lock before removing it manually. A failed new
+lock write cleans up its partial file only while the acquiring process still
+owns that exact file.
+
 ## Frozen-cohort configuration provenance recovery
 
 When a frozen cohort rejects replay because its configuration hash cannot be

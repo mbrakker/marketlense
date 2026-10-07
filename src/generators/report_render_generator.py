@@ -107,9 +107,7 @@ def _render_build_provenance(
         "source_md5": str(runtime.md5 or "unknown"),
         "artifact_hash": artifact_hash or "unknown",
         "generation_profile": str(
-            runtime.execution_plan_intent
-            or runtime.ctx.configuration_hash
-            or "unknown"
+            runtime.execution_plan_intent or runtime.ctx.configuration_hash or "unknown"
         ),
         "generated_at_utc": utc_now_iso(),
     }
@@ -397,8 +395,7 @@ def _resolved_report_title(
     source_title = str(getattr(source_resolution, "title", "") or "").strip()
     citation_title = (
         _source_grounded_citation_title(analysis, source_title)
-        if str(getattr(source_resolution, "candidate_source", "") or "")
-        == "filename"
+        if str(getattr(source_resolution, "candidate_source", "") or "") == "filename"
         else ""
     )
     if citation_title:
@@ -513,9 +510,7 @@ def _build_metadata_upsert_request(
         title=_resolved_report_title(runtime, source, analysis),
         file_name=runtime.file_name,
         publisher=(
-            _resolved_public_publisher(runtime, analysis)
-            or payload.publisher
-            or None
+            _resolved_public_publisher(runtime, analysis) or payload.publisher or None
         ),
         taxonomy=payload.taxonomy,
         categories=payload.categories,
@@ -1041,11 +1036,14 @@ def render_report_output(
                 message="Grounded cover semantics are required for report cards",
                 retryable=False,
             )
+        cover_artifacts = {
+            key: value for key, value in artifacts_payload.items() if key != "_cache"
+        }
         fingerprint = build_cover_fingerprint(
             CoverFingerprintProjectionRequest(
                 schema_version="1.0",
                 file_id=runtime.file.file_id,
-                artifact_hash=sha256_json(artifacts_payload),
+                artifact_hash=sha256_json(cover_artifacts),
                 region=cover_region or "",
                 cover_semantics=cover_semantics,
             )
@@ -1115,9 +1113,7 @@ def render_report_output(
                     tldr_compact=str(summary.get("card_tldr_compact") or ""),
                     tldr_standard=str(summary.get("tldr") or ""),
                     insights_final=_artifact_insights(artifacts_payload),
-                    summary_abstained=family_is_abstained(
-                        artifacts_payload, "summary"
-                    ),
+                    summary_abstained=family_is_abstained(artifacts_payload, "summary"),
                     fingerprint=fingerprint,
                     covers=_relative_cover_assets(
                         cover_assets,

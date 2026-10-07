@@ -304,15 +304,23 @@ class WriteBytesResponse:
 
 @dataclass(frozen=True)
 class AppendBytesRequest:
-    schema_version: str = field(metadata={"doc": "Append-bytes request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Append-bytes request schema version."}
+    )
     path: str = field(metadata={"doc": "Filesystem path to append."})
-    content: bytes = field(metadata={"doc": "Binary content appended atomically under the service lock."})
-    make_parents: bool = field(default=True, metadata={"doc": "Create parent directories if needed."})
+    content: bytes = field(
+        metadata={"doc": "Binary content appended atomically under the service lock."}
+    )
+    make_parents: bool = field(
+        default=True, metadata={"doc": "Create parent directories if needed."}
+    )
 
 
 @dataclass(frozen=True)
 class AppendBytesResponse:
-    schema_version: str = field(metadata={"doc": "Append-bytes response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Append-bytes response schema version."}
+    )
     path: str = field(metadata={"doc": "Filesystem path appended."})
     bytes_appended: int = field(metadata={"doc": "Number of bytes appended."})
     md5: str = field(metadata={"doc": "MD5 checksum of the appended content."})
@@ -451,6 +459,10 @@ class FileStatResponse:
     )
     md5: Optional[str] = field(
         default=None, metadata={"doc": "MD5 checksum when computed."}
+    )
+    mtime_ns: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Last modified time in epoch nanoseconds when available."},
     )
 
 

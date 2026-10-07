@@ -17,8 +17,8 @@ class FileCacheMd5SidecarRecord:
     size_bytes: int = field(
         metadata={"doc": "Cached PDF size in bytes at sidecar write time."}
     )
-    mtime_utc: int = field(
-        metadata={"doc": "Cached PDF modified time rounded to epoch seconds."}
+    mtime_ns: int = field(
+        metadata={"doc": "Cached PDF modification time in epoch nanoseconds."}
     )
 
 
@@ -37,9 +37,13 @@ class FileCacheMd5SidecarResolveRequest:
         metadata={"doc": "Observed cached PDF size in bytes, if available."}
     )
     mtime_utc: Optional[float] = field(
+        metadata={"doc": "Legacy diagnostic timestamp; never used as a cache identity."}
+    )
+    mtime_ns: Optional[int] = field(
+        default=None,
         metadata={
-            "doc": "Observed cached PDF modified time in epoch seconds, if available."
-        }
+            "doc": "Exact observed cached PDF modification time in epoch nanoseconds."
+        },
     )
 
 
@@ -100,7 +104,11 @@ class FileCacheMd5SidecarWriteRequest:
     )
     mtime_utc: Optional[float] = field(
         default=None,
-        metadata={"doc": "Cached PDF modified time in epoch seconds at write time."},
+        metadata={"doc": "Legacy diagnostic timestamp; never persisted as identity."},
+    )
+    mtime_ns: Optional[int] = field(
+        default=None,
+        metadata={"doc": "Exact cached PDF modification time in epoch nanoseconds."},
     )
 
 

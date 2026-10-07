@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -241,3 +243,67 @@ def test_lookup_fails_closed_when_both_persisted_identity_fields_are_missing(
             "SELECT scope,idempotency_key FROM orchestrator_idempotency"
         ).fetchone()
     assert retained_identity == ("", "")
+
+
+def test_concurrent_conflicting_checksums_are_serialized_before_upsert(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "idempotency.sqlite")
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope="publish_html",
+            idempotency_key="setup",
+            input_checksum="setup-checksum",
+            outcome_payload={},
+            artifact_references={},
+        ),
+        _ctx(),
+    )
+
+    def record_conflict(key: str, checksum: str, barrier: threading.Barrier):
+        barrier.wait(timeout=5)
+        try:
+            idempotency_service.record_outcome(
+                OrchestratorIdempotencyRecordRequest(
+                    schema_version="1.0",
+                    db_path=db_path,
+                    scope="publish_html",
+                    idempotency_key=key,
+                    input_checksum=checksum,
+                    outcome_payload={"input": checksum},
+                    artifact_references={},
+                ),
+                _ctx(),
+            )
+        except AppError as exc:
+            return ("error", exc.code)
+        return ("written", checksum)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        for index in range(20):
+            key = f"report:{index}"
+            barrier = threading.Barrier(2)
+            futures = [
+                executor.submit(record_conflict, key, "checksum-a", barrier),
+                executor.submit(record_conflict, key, "checksum-b", barrier),
+            ]
+            outcomes = [future.result(timeout=10) for future in futures]
+
+            assert sum(result[0] == "written" for result in outcomes) == 1
+            assert (
+                sum(
+                    result[0] == "error"
+                    and result[1] == "idempotency_checksum_mismatch"
+                    for result in outcomes
+                )
+                == 1
+            ), outcomes
+            with sqlite3.connect(db_path) as conn:
+                stored_checksum = conn.execute(
+                    "SELECT input_checksum FROM orchestrator_idempotency "
+                    "WHERE scope=? AND idempotency_key=?",
+                    ("publish_html", key),
+                ).fetchone()[0]
+            assert stored_checksum in {"checksum-a", "checksum-b"}

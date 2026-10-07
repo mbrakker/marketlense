@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from typing import Any, Dict, List, Optional
 
 from src.generators.artifact_normalization import (
@@ -32,8 +33,8 @@ TOPIC_TOKEN_STOPWORDS = {
 TOPIC_BRIEF_MAX_KEY_POINTS = 4
 TOPIC_SECTION_MATCH_MIN_SCORE = 35
 TOPIC_SECTION_REASSIGN_MARGIN = 8
-TOPIC_BRIEF_MAPPING_VERSION = "3"
-TOC_STRUCTURE_VERSION = "1"
+TOPIC_BRIEF_MAPPING_VERSION = "4"
+TOC_STRUCTURE_VERSION = "2"
 TOC_EXCLUDED_TITLE_MARKERS = (
     "about the author",
     "about the authors",
@@ -57,18 +58,25 @@ TOC_EXCLUDED_TITLE_MARKERS = (
 
 
 def _normalize_topic_lookup_text(value: Any) -> str:
-    text = _s(value).strip().lower()
+    text = unicodedata.normalize("NFC", _s(value).strip()).casefold()
     if not text:
         return ""
-    collapsed = re.sub(r"[^a-z0-9]+", " ", text)
+    collapsed = "".join(
+        char if char.isalnum() or unicodedata.category(char).startswith("M") else " "
+        for char in text
+    )
     collapsed = re.sub(r"\bgen\s*ai\b", "generative ai", collapsed)
     return re.sub(r"\s+", " ", collapsed).strip()
 
 
+def _normalize_topic_identity(value: Any) -> str:
+    return unicodedata.normalize("NFC", _s(value).strip()).casefold()
+
+
 def _normalize_topic_token(token: str) -> str:
     clean = _normalize_topic_lookup_text(token)
-    if not clean:
-        return ""
+    if not clean or not clean.isascii():
+        return clean
     if clean.endswith("ies") and len(clean) > 4:
         return f"{clean[:-3]}y"
     if clean.endswith("s") and len(clean) > 3 and not clean.endswith("ss"):
@@ -159,7 +167,7 @@ def _dedupe_toc_display_titles(entries: List[Dict[str, Any]]) -> List[Dict[str, 
         label = _s(entry.get("display_title")).strip()
         if not label:
             continue
-        key = label.casefold()
+        key = _normalize_topic_identity(label)
         counts[key] = counts.get(key, 0) + 1
     normalized: List[Dict[str, Any]] = []
     fallback_counts: Dict[str, int] = {}
@@ -172,7 +180,7 @@ def _dedupe_toc_display_titles(entries: List[Dict[str, Any]]) -> List[Dict[str, 
         key = display_title.casefold()
         if counts.get(key, 0) > 1:
             display_title = section_title
-        display_key = display_title.casefold()
+        display_key = _normalize_topic_identity(display_title)
         fallback_counts[display_key] = fallback_counts.get(display_key, 0) + 1
         if fallback_counts[display_key] > 1:
             display_title = f"{display_title} ({updated.get('order')})"
@@ -279,7 +287,7 @@ def _doc_map_sections_for_topics(doc_map: Dict[str, Any]) -> List[Dict[str, Any]
                 "key_points": key_points,
                 "pages": pages,
                 "title_norm": _normalize_topic_lookup_text(title),
-                "id_norm": _normalize_topic_lookup_text(section_id),
+                "id_norm": _normalize_topic_identity(section_id),
                 "title_tokens": _topic_tokens(title),
                 "context_norm": _normalize_topic_lookup_text(context_text),
                 "context_tokens": _topic_tokens(context_text),
@@ -304,6 +312,7 @@ def _topic_token_overlap_score(
 def _topic_match_score(
     *,
     topic_norm: str,
+    topic_identity: str,
     topic_tokens: List[str],
     section: Dict[str, Any],
 ) -> int:
@@ -311,7 +320,9 @@ def _topic_match_score(
     title_norm = _s(section.get("title_norm")).strip()
     id_norm = _s(section.get("id_norm")).strip()
     context_norm = _s(section.get("context_norm")).strip()
-    if topic_norm and (topic_norm == title_norm or topic_norm == id_norm):
+    if topic_norm and topic_norm == title_norm:
+        score += 120
+    elif topic_identity and topic_identity == id_norm:
         score += 120
     elif topic_norm and (
         (topic_norm in title_norm and title_norm)
@@ -340,19 +351,25 @@ def _best_topic_section_match(
     if not sections:
         return None, 0
     topic_norm = _normalize_topic_lookup_text(topic)
+    topic_identity = _normalize_topic_identity(topic)
     tokens = _topic_tokens(topic)
-    best_section: Optional[Dict[str, Any]] = None
     best_score = -1
+    best_sections: list[Dict[str, Any]] = []
     for section in sections:
         score = _topic_match_score(
             topic_norm=topic_norm,
+            topic_identity=topic_identity,
             topic_tokens=tokens,
             section=section,
         )
         if score > best_score:
             best_score = score
-            best_section = section
-    return best_section, max(best_score, 0)
+            best_sections = [section]
+        elif score == best_score:
+            best_sections.append(section)
+    if len(best_sections) != 1:
+        return None, max(best_score, 0)
+    return best_sections[0], max(best_score, 0)
 
 
 def _select_topic_section(
@@ -447,25 +464,28 @@ def _resolve_attached_topic_section(
         return None, ""
     section_id = _s(topic_brief.get("section_id")).strip()
     section_title = _s(topic_brief.get("section_title")).strip()
-    by_id = {
-        _s(section.get("section_id")).strip(): section
+    id_matches = [
+        section
         for section in sections
-        if _s(section.get("section_id")).strip()
-    }
-    by_title = {
-        _s(section.get("title_norm")).strip(): section
-        for section in sections
-        if _s(section.get("title_norm")).strip()
-    }
-    section_from_id = by_id.get(section_id) if section_id else None
+        if _s(section.get("section_id")).strip() == section_id
+    ]
     title_norm = _normalize_topic_lookup_text(section_title)
-    section_from_title = by_title.get(title_norm) if title_norm else None
-    if section_from_id and section_from_title and section_from_id != section_from_title:
-        return None, "identity_mismatch"
-    if section_from_id:
+    title_matches = [
+        section
+        for section in sections
+        if _s(section.get("title_norm")).strip() == title_norm and title_norm
+    ]
+    if section_id:
+        if len(id_matches) != 1:
+            return None, "ambiguous" if id_matches else "unknown"
+        section_from_id = id_matches[0]
+        if len(title_matches) == 1 and title_matches[0] != section_from_id:
+            return None, "identity_mismatch"
         return section_from_id, "id"
-    if section_from_title:
-        return section_from_title, "title"
+    if len(title_matches) > 1:
+        return None, "ambiguous"
+    if title_matches:
+        return title_matches[0], "title"
     if section_id or section_title:
         return None, "unknown"
     return None, ""
@@ -496,16 +516,20 @@ def audit_topic_brief_mappings(
         if attached_section is not None:
             current_score = _topic_match_score(
                 topic_norm=_normalize_topic_lookup_text(topic),
+                topic_identity=_normalize_topic_identity(topic),
                 topic_tokens=_topic_tokens(topic),
                 section=attached_section,
             )
         status = "ok"
         if attached_source == "identity_mismatch":
             status = "identity_mismatch"
+        elif attached_source == "ambiguous":
+            status = "ambiguous_section"
         elif attached_source == "unknown":
             status = "unknown_section"
         elif (
-            attached_section is not None
+            attached_source != "id"
+            and attached_section is not None
             and current_score < TOPIC_SECTION_MATCH_MIN_SCORE
         ):
             status = "low_confidence"
@@ -739,7 +763,7 @@ def audit_toc_artifacts(
 
 def build_topic_briefs(
     *,
-    toc_topics: List[str],
+    toc_topics: List[Any],
     doc_map: Dict[str, Any],
     summary: Dict[str, Any],
     insights_final: List[Dict[str, Any]],
@@ -749,10 +773,25 @@ def build_topic_briefs(
     sections = _doc_map_sections_for_topics(doc_map)
     expanded: List[Dict[str, Any]] = []
     for raw_topic in toc_topics:
-        topic = _s(raw_topic).strip()
+        topic_entry = raw_topic if isinstance(raw_topic, dict) else {}
+        topic = _s(
+            topic_entry.get("topic")
+            or topic_entry.get("display_title")
+            or topic_entry.get("section_title")
+            or raw_topic
+        ).strip()
         if not topic:
             continue
-        section = _select_topic_section(topic=topic, sections=sections)
+        attached_section, attached_source = _resolve_attached_topic_section(
+            topic_brief=topic_entry,
+            sections=sections,
+        )
+        if attached_section is not None:
+            section = attached_section
+        elif attached_source in {"unknown", "ambiguous", "identity_mismatch"}:
+            section = None
+        else:
+            section = _select_topic_section(topic=topic, sections=sections)
         section_summary = _s(section.get("summary")).strip() if section else ""
         raw_section_points = section.get("key_points") if section else []
         section_points: list[Any] = (
@@ -785,8 +824,16 @@ def build_topic_briefs(
                 "topic": topic,
                 "summary": summary_text,
                 "key_points": key_points,
-                "section_id": _s(section.get("section_id")).strip() if section else "",
-                "section_title": _s(section.get("title")).strip() if section else "",
+                "section_id": (
+                    _s(section.get("section_id")).strip()
+                    if section
+                    else _s(topic_entry.get("section_id")).strip()
+                ),
+                "section_title": (
+                    _s(section.get("title")).strip()
+                    if section
+                    else _s(topic_entry.get("section_title")).strip()
+                ),
                 "pages": section.get("pages") if section else [],
             }
         )

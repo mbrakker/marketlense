@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
@@ -686,8 +687,7 @@ def source_backed_summary_claim_bindings(
                     *[
                         _s(span.get("evidence_id")).strip()
                         for span in claim.get("evidence_spans") or []
-                        if isinstance(span, dict)
-                        and _span_is_safe_summary_source(span)
+                        if isinstance(span, dict) and _span_is_safe_summary_source(span)
                     ],
                 ]
                 if evidence_id
@@ -1630,7 +1630,7 @@ def normalize_artifact_topics(value: Any) -> List[str]:
         text = _s(item).strip()
         if not text:
             continue
-        text_key = text.casefold()
+        text_key = unicodedata.normalize("NFC", text).casefold()
         if text_key in seen:
             continue
         seen.add(text_key)
@@ -1664,8 +1664,10 @@ def normalize_artifact_toc_entries(value: Any) -> List[Dict[str, Any]]:
         order_raw = item.get("order")
         order = int(order_raw) if isinstance(order_raw, int) else idx + 1
         dedupe_key = (
-            section_id.casefold() if section_id else "",
-            display_title.casefold() if display_title else section_title.casefold(),
+            unicodedata.normalize("NFC", section_id).casefold() if section_id else "",
+            unicodedata.normalize(
+                "NFC", display_title if display_title else section_title
+            ).casefold(),
         )
         if dedupe_key in seen_keys and any(dedupe_key):
             continue
@@ -2236,7 +2238,9 @@ def fallback_artifact_quotes_from_candidates(
     candidates = (
         quote_candidates_pack.get("quote_candidates")
         if isinstance(quote_candidates_pack, dict)
-        else quote_candidates_pack if isinstance(quote_candidates_pack, list) else []
+        else quote_candidates_pack
+        if isinstance(quote_candidates_pack, list)
+        else []
     )
     if not isinstance(candidates, list):
         return []

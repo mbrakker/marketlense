@@ -112,6 +112,7 @@ def test_file_cache_service_roundtrips_local_sidecar(tmp_path):
             md5="0123456789abcdef0123456789abcdef",
             size_bytes=stat.st_size,
             mtime_utc=stat.st_mtime,
+            mtime_ns=stat.st_mtime_ns,
         ),
         _ctx(),
     )
@@ -122,6 +123,7 @@ def test_file_cache_service_roundtrips_local_sidecar(tmp_path):
             file_id="integration-file",
             size_bytes=stat.st_size,
             mtime_utc=stat.st_mtime,
+            mtime_ns=stat.st_mtime_ns,
         ),
         _ctx(),
     )

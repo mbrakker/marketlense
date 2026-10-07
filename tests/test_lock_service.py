@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import logging
 from pathlib import Path
 
 import pytest
@@ -163,3 +164,67 @@ def test_acquire_lock_reclaims_a_dead_local_owner_before_ttl_expiry(
     assert acquired.acquired is True
     assert acquired.lock is not None
     assert acquired.lock.owner_id == "replacement-owner"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "{",
+        "[]",
+        "null",
+        "{}",
+        '{"owner_id":"private-lock-marker","pid":1,"created_at":NaN}',
+    ],
+)
+def test_acquire_lock_fails_closed_on_corrupt_existing_lock(
+    payload: str, tmp_path: Path, caplog
+) -> None:
+    lock_path = tmp_path / "ingest.lock"
+    lock_path.write_text(payload, encoding="utf-8")
+    caplog.set_level(logging.INFO)
+
+    with pytest.raises(AppError) as exc_info:
+        acquire_lock(
+            LockAcquireRequest(
+                schema_version="1.0",
+                lock_path=str(lock_path),
+                owner_id="replacement-owner",
+                pid=os.getpid(),
+                ttl_seconds=3600,
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "lock_file_corrupt"
+    assert exc_info.value.retryable is False
+    assert "private-lock-marker" not in str(exc_info.value)
+    assert "private-lock-marker" not in str(exc_info.value.context)
+    assert "private-lock-marker" not in caplog.text
+    assert lock_path.read_text(encoding="utf-8") == payload
+
+
+def test_failed_initial_lock_write_removes_only_the_created_file(
+    tmp_path: Path, external_boundary_mocks_only
+) -> None:
+    lock_path = tmp_path / "ingest.lock"
+
+    def fail_fdopen(fd: int, *args, **kwargs):
+        os.close(fd)
+        raise OSError("simulated lock write setup failure")
+
+    external_boundary_mocks_only.setattr(lock_service.os, "fdopen", fail_fdopen)
+
+    with pytest.raises(AppError) as exc_info:
+        acquire_lock(
+            LockAcquireRequest(
+                schema_version="1.0",
+                lock_path=str(lock_path),
+                owner_id="owner-1",
+                pid=os.getpid(),
+                ttl_seconds=3600,
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "lock_acquire_failed"
+    assert lock_path.exists() is False

@@ -16,12 +16,11 @@ from src.contracts.file_cache import (
     FileCacheMd5SidecarWriteResponse,
 )
 from src.contracts.run_context import RunContext
-from src.utils.coercion import coerce_float
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.file_cache_service")
-MD5_SIDECAR_SCHEMA_VERSION = "1.0"
+MD5_SIDECAR_SCHEMA_VERSION = "2.0"
 MD5_SIDECAR_SUFFIX = ".md5.json"
 _MD5_RX = re.compile(r"^[0-9a-fA-F]{32}$")
 
@@ -43,6 +42,7 @@ def resolve_md5_sidecar(
                 "sidecar_path": sidecar_path,
                 "size_bytes": request.size_bytes,
                 "mtime_utc": request.mtime_utc,
+                "mtime_ns": request.mtime_ns,
             },
         )
     )
@@ -109,7 +109,7 @@ def resolve_md5_sidecar(
             reason="invalid_payload",
             ctx=ctx,
         )
-    observed_mtime = _normalize_mtime(request.mtime_utc)
+    observed_mtime_ns = _normalize_mtime_ns(request.mtime_ns)
     if request.size_bytes is None:
         return _resolve_response(
             request=request,
@@ -132,7 +132,7 @@ def resolve_md5_sidecar(
             reason="size_mismatch",
             ctx=ctx,
         )
-    if observed_mtime is None:
+    if observed_mtime_ns is None:
         return _resolve_response(
             request=request,
             sidecar_path=sidecar_path,
@@ -143,7 +143,7 @@ def resolve_md5_sidecar(
             reason="mtime_missing",
             ctx=ctx,
         )
-    if record.mtime_utc != observed_mtime:
+    if record.mtime_ns != observed_mtime_ns:
         return _resolve_response(
             request=request,
             sidecar_path=sidecar_path,
@@ -184,12 +184,17 @@ def write_md5_sidecar(
                 "md5": request.md5 or "",
                 "size_bytes": request.size_bytes,
                 "mtime_utc": request.mtime_utc,
+                "mtime_ns": request.mtime_ns,
             },
         )
     )
-    normalized_mtime = _normalize_mtime(request.mtime_utc)
+    normalized_mtime_ns = _normalize_mtime_ns(request.mtime_ns)
     normalized_md5 = _normalize_md5(request.md5)
-    if normalized_md5 is None or request.size_bytes is None or normalized_mtime is None:
+    if (
+        normalized_md5 is None
+        or request.size_bytes is None
+        or normalized_mtime_ns is None
+    ):
         response = FileCacheMd5SidecarWriteResponse(
             schema_version="1.0",
             cache_path=request.cache_path,
@@ -227,7 +232,7 @@ def write_md5_sidecar(
         name=str(request.file_name or "").strip(),
         md5=normalized_md5,
         size_bytes=int(request.size_bytes),
-        mtime_utc=normalized_mtime,
+        mtime_ns=normalized_mtime_ns,
     )
     path = Path(sidecar_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -307,8 +312,8 @@ def _record_from_payload(
         size_bytes = int(str(payload.get("size_bytes")))
     except (TypeError, ValueError):
         return None
-    normalized_mtime = _normalize_mtime(payload.get("mtime_utc"))
-    if normalized_mtime is None:
+    normalized_mtime_ns = _normalize_mtime_ns(payload.get("mtime_ns"))
+    if normalized_mtime_ns is None:
         return None
     return FileCacheMd5SidecarRecord(
         schema_version=schema_version,
@@ -316,7 +321,7 @@ def _record_from_payload(
         name=str(payload.get("name") or "").strip(),
         md5=normalized_md5,
         size_bytes=size_bytes,
-        mtime_utc=normalized_mtime,
+        mtime_ns=normalized_mtime_ns,
     )
 
 
@@ -354,7 +359,7 @@ def _resolve_response(
     if record is not None:
         fields["record_md5"] = record.md5
         fields["record_size_bytes"] = record.size_bytes
-        fields["record_mtime_utc"] = record.mtime_utc
+        fields["record_mtime_ns"] = record.mtime_ns
     if extra_fields:
         fields.update(extra_fields)
     logger.info(
@@ -389,10 +394,7 @@ def _normalize_md5(value: object) -> str | None:
     return token.lower()
 
 
-def _normalize_mtime(value: object) -> int | None:
-    if value is None:
+def _normalize_mtime_ns(value: object) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
         return None
-    try:
-        return int(coerce_float(value))
-    except (TypeError, ValueError):
-        return None
+    return value

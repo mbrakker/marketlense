@@ -53,6 +53,69 @@ def test_render_embeds_immutable_build_provenance_comment(tmp_path: Path) -> Non
     assert "generated_at_utc: 2026-09-09T12:00:00+00:00" in html
 
 
+def test_render_preserves_multilingual_topic_text_and_source_pages(
+    tmp_path: Path,
+) -> None:
+    response = render_report(
+        RenderRequest(
+            schema_version="1.0",
+            data={
+                "title": "Market study",
+                "artifacts": {
+                    "toc_entries": [
+                        {
+                            "section_id": "ru-market",
+                            "section_title": "Рост рынка",
+                            "display_title": "Рост рынка",
+                            "summary": "Рынок вырос на 12%.",
+                            "pages": [3],
+                            "order": 1,
+                        },
+                        {
+                            "section_id": "zh-market",
+                            "section_title": "市场增长",
+                            "display_title": "市场增长",
+                            "summary": "市场增长了。",
+                            "pages": [5],
+                            "order": 2,
+                        },
+                    ],
+                    "toc_topics_expanded": [
+                        {
+                            "topic": "Рост рынка",
+                            "section_id": "ru-market",
+                            "section_title": "Рост рынка",
+                            "summary": "Рынок вырос на 12%.",
+                            "pages": [3],
+                        },
+                        {
+                            "topic": "市场增长",
+                            "section_id": "zh-market",
+                            "section_title": "市场增长",
+                            "summary": "市场增长了。",
+                            "pages": [5],
+                        },
+                    ],
+                },
+            },
+            doc_name="multilingual-market-study.pdf",
+            file_id="multilingual-market-study",
+            out_dir=str(tmp_path),
+            preview_png=None,
+        ),
+        _ctx(),
+    )
+
+    html = Path(response.html_path).read_text(encoding="utf-8")
+
+    assert "Рост рынка" in html
+    assert "Рынок вырос на 12%." in html
+    assert "Pages: 3" in html
+    assert "市场增长" in html
+    assert "市场增长了。" in html
+    assert "Pages: 5" in html
+
+
 def test_public_title_and_meta_description_are_bounded_editorial_prose() -> None:
     assert (
         _normalize_public_title("Retail_Trends_2026_2026.pdf...")

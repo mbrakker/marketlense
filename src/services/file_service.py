@@ -1249,6 +1249,7 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
             size_bytes=None,
             mtime_utc=None,
             md5=None,
+            mtime_ns=None,
         )
         logger.info(
             log_event(
@@ -1291,6 +1292,7 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         size_bytes=stat.st_size,
         mtime_utc=stat.st_mtime,
         md5=md5,
+        mtime_ns=stat.st_mtime_ns,
     )
     logger.info(
         log_event(
@@ -1305,6 +1307,7 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
                 "is_dir": response.is_dir,
                 "size_bytes": response.size_bytes,
                 "mtime_utc": response.mtime_utc,
+                "mtime_ns": response.mtime_ns,
                 "md5": response.md5,
             },
         )

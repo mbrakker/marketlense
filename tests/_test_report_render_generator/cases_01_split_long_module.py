@@ -502,6 +502,66 @@ def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
     assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
 
 
+def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_changes(
+    tmp_path,
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    baseline = _analysis(runtime, source, selection)
+    generated_covers = []
+    html_path = Path(tmp_path / "out" / "report.html")
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=lambda req, ctx: (
+            generated_covers.append(req)
+            or [
+                SimpleNamespace(
+                    status="generated", assets=_cover_assets(runtime), error=None
+                )
+            ]
+        ),
+        write_report_card_manifest=lambda req, ctx: SimpleNamespace(
+            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+        ),
+    )
+    preview = render_preview_asset(runtime, source, deps)
+    payloads = [
+        {**baseline.artifacts_payload, "_cache": {"hit": False}},
+        {**baseline.artifacts_payload, "_cache": {"hit": True, "elapsed_ms": 17}},
+        {
+            **baseline.artifacts_payload,
+            "insights_final": [
+                {"text": "A changed first finding."},
+                baseline.artifacts_payload["insights_final"][1],
+            ],
+            "_cache": {"hit": True, "elapsed_ms": 17},
+        },
+    ]
+
+    for artifacts_payload in payloads:
+        render_report_output(
+            runtime,
+            source,
+            selection,
+            replace(baseline, artifacts_payload=artifacts_payload),
+            deps,
+            preview_resp=preview,
+        )
+
+    seeds = [request.reports[0].fingerprint.seed for request in generated_covers]
+    assert len(seeds) == 3
+    assert seeds[0] == seeds[1]
+    assert seeds[2] != seeds[1]
+
+
 def test_render_omits_ambiguous_retained_cover_period_before_card_generation(tmp_path):
     runtime = _runtime(tmp_path, md5="md5")
     source = _source(runtime)

@@ -1621,9 +1621,7 @@ def submit_preselected_frozen_validation_cohort(
         deps=IngestBatchDependencies.default(),
         root_ctx=root_ctx,
     )
-    decisions_by_file_id = {
-        str(item["file_id"]): item for item in admission_decisions
-    }
+    decisions_by_file_id = {str(item["file_id"]): item for item in admission_decisions}
     decisions = tuple(
         _admission_decision_from_payload(decisions_by_file_id[file.file_id])
         for file in files
@@ -2549,6 +2547,7 @@ def _prefetch_cached_pdf(
                 md5=md5,
                 size_bytes=stat_resp.size_bytes,
                 mtime_utc=stat_resp.mtime_utc,
+                mtime_ns=stat_resp.mtime_ns,
             ),
             prefetch_ctx,
         )
@@ -2564,6 +2563,7 @@ def _prefetch_cached_pdf(
                 file_id=file.file_id,
                 size_bytes=stat_resp.size_bytes,
                 mtime_utc=stat_resp.mtime_utc,
+                mtime_ns=stat_resp.mtime_ns,
             ),
             prefetch_ctx,
         )

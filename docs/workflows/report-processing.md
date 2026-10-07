@@ -19,6 +19,11 @@ with the same stable insight IDs, then applies the normal candidate validators
 to the resulting artifact. Evidence IDs do not make repeated public claims
 distinct, and candidate content cannot bypass grounding or semantic validation.
 
+Table-of-contents topic briefs preserve Unicode text and supplied section IDs.
+Title-only matches bind to pages only when the normalized section title is
+unique; ambiguous headings retain the topic without borrowing another
+section's pages.
+
 Regeneration-attempt lineage is part of the retained analysis checkpoint. A
 resume preserves each candidate artifact location, candidate audit location,
 and promotion outcome, so render/readiness evaluates the artifact that the
@@ -40,6 +45,9 @@ The manifest is persisted with a compact target-hash and random-token temporary
 filename and atomic replacement. The shorter name keeps deeply nested isolated
 output paths within the supported Windows path limit while retaining per-target
 write serialization and stale temporary-file cleanup.
+Deterministic cover seeds hash the semantic artifact payload without its
+`_cache` execution telemetry, so cache hits and misses do not alter cover
+identity while content changes still do.
 
 PDF previews, refinements, and crop regions keep fingerprint sidecars beside
 their rendered artifacts. Crop artifact filenames and, when a deep workspace
@@ -83,11 +91,14 @@ global text may be a legitimate truncation of page-level text and is not
 required to equal a page-text concatenation. Invalid cached PDF page counts,
 contents-page positions, or confidence values are also regenerated through the
 canonical PDF services.
-The cached-PDF MD5 sidecar is reusable only when schema version `1.0`, the
-exact Drive file ID, observed byte size, and observed modification time match
-the request. Missing, legacy, unsupported, or foreign-identity sidecars are
-cache misses; ingest recomputes the checksum from the local bytes and repairs
-the sidecar with an atomic replacement.
+The cached-PDF MD5 sidecar is reusable only when schema version `2.0`, the
+exact Drive file ID, observed byte size, and exact observed modification time
+in epoch nanoseconds match the request. Missing, second-granularity legacy,
+unsupported, or foreign-identity sidecars are cache misses; when the exact
+timestamp is unavailable, ingest recomputes the checksum from local bytes
+without reusing or writing a sidecar. Otherwise ingest repairs the sidecar
+with an atomic replacement. Filesystem stat identity does not detect a change
+that deliberately preserves all observed metadata.
 Pipeline checkpoints apply that rule at their own canonical path boundary. If
 the normal pipeline, file, and stage hierarchy would exceed the same atomic
 write budget, both writer and reader deterministically use a compact,

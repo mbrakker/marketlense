@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -1164,15 +1165,25 @@ def _build_signal_cards(
     insights: list[dict[str, Any]] | None = None,
     prefer_key_points: bool = False,
 ) -> list[dict[str, Any]]:
+    brief_title_matches: dict[str, list[dict[str, Any]]] = {}
+    brief_section_matches: dict[str, list[dict[str, Any]]] = {}
+    for item in topic_briefs:
+        title = _s(item.get("title"))
+        if title:
+            title_key = unicodedata.normalize("NFC", title).casefold()
+            brief_title_matches.setdefault(title_key, []).append(item)
+        section_id = _s(item.get("section_id")).strip()
+        if section_id:
+            brief_section_matches.setdefault(section_id, []).append(item)
     briefs_by_title = {
-        _s(item.get("title")).casefold(): item
-        for item in topic_briefs
-        if _s(item.get("title"))
+        key: matches[0]
+        for key, matches in brief_title_matches.items()
+        if len(matches) == 1
     }
     briefs_by_section = {
-        _s(item.get("section_id")).casefold(): item
-        for item in topic_briefs
-        if _s(item.get("section_id"))
+        key: matches[0]
+        for key, matches in brief_section_matches.items()
+        if len(matches) == 1
     }
     has_structured_insights = any(
         _s(item.get("evidence_id"))
@@ -1198,7 +1209,7 @@ def _build_signal_cards(
                 continue
             brief: dict[str, Any] = {}
             for section_id in _coerce_list(insight.get("section_ids")):
-                candidate_brief = briefs_by_section.get(_s(section_id).casefold())
+                candidate_brief = briefs_by_section.get(_s(section_id).strip())
                 if candidate_brief:
                     brief = candidate_brief
                     break
@@ -1228,7 +1239,8 @@ def _build_signal_cards(
     cards = []
     source_labels = topics or [_s(tag) for tag in tags if _s(tag)]
     for label in source_labels[:6]:
-        brief = briefs_by_title.get(_s(label).casefold(), {})
+        title_key = unicodedata.normalize("NFC", _s(label)).casefold()
+        brief = briefs_by_title.get(title_key, {})
         summary = _s(brief.get("summary"))
         points = [
             _s(point) for point in _coerce_list(brief.get("key_points")) if _s(point)

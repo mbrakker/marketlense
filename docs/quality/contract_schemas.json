@@ -21253,7 +21253,7 @@
         "md5": {
           "type": "string"
         },
-        "mtime_utc": {
+        "mtime_ns": {
           "type": "integer"
         },
         "name": {
@@ -21272,7 +21272,7 @@
         "name",
         "md5",
         "size_bytes",
-        "mtime_utc"
+        "mtime_ns"
       ],
       "type": "object"
     },
@@ -21284,6 +21284,16 @@
         },
         "file_id": {
           "type": "string"
+        },
+        "mtime_ns": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "mtime_utc": {
           "anyOf": [
@@ -21393,6 +21403,16 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mtime_ns": {
+          "anyOf": [
+            {
+              "type": "integer"
             },
             {
               "type": "null"
@@ -21852,6 +21872,16 @@
           "anyOf": [
             {
               "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mtime_ns": {
+          "anyOf": [
+            {
+              "type": "integer"
             },
             {
               "type": "null"
