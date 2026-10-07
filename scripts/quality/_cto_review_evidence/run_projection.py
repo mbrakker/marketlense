@@ -46,25 +46,118 @@ FORMAT_ACQUISITION = "marketlense/acquisition-projection/1.0"
 FORMAT_CROP_QA = "marketlense/crop-qa-sidecar/1.0"
 FORMAT_HUMAN_REVIEW = "marketlense/editorial-review/1.0"
 FORMAT_WORDPRESS = "marketlense/wordpress-publication-evidence/1.0"
-_NUMERIC_FORMAT_EVIDENCE_CLASSES = {
-    FORMAT_ARTIFACT_DAG: frozenset(
-        {"performance", "provider_timing", "resource_usage", "quality", "side_effects"}
-    ),
-    FORMAT_PROVIDER_PROFILE: frozenset(
-        {"performance", "provider_timing", "resource_usage"}
-    ),
-    FORMAT_PROVIDER_CRITICAL_PATH: frozenset(
-        {"performance", "provider_timing", "resource_usage", "quality"}
-    ),
-    FORMAT_CONCURRENCY: frozenset(
-        {"performance", "provider_timing", "resource_usage", "concurrency", "quality"}
-    ),
-    FORMAT_REUSE: frozenset({"performance", "resource_usage", "quality"}),
-    FORMAT_FILE_SEARCH: frozenset(
-        {"performance", "resource_usage", "quality", "side_effects"}
-    ),
-    FORMAT_ACQUISITION: frozenset({"performance", "resource_usage"}),
-}
+_PERFORMANCE_FIELDS = frozenset(
+    {
+        "duration_seconds",
+        "duration_ms",
+        "wall_seconds",
+        "wall_ms",
+        "report_wall_seconds",
+        "report_wall_clock_seconds",
+        "report_analysis_wall_seconds",
+        "report_analysis_execution_seconds",
+        "report_analysis_execution_seconds_total",
+        "report_analysis_execution_seconds_max",
+        "report_analysis_execution_seconds_median",
+        "cohort_wall_seconds",
+        "artifact_generation_wall_ms",
+        "latency_ms",
+    }
+)
+_PROVIDER_TIMING_FIELDS = frozenset(
+    {
+        "provider_elapsed_ms_total",
+        "provider_elapsed_seconds_total",
+        "provider_active_wall_ms",
+        "report_analysis_provider_active_wall_ms",
+        "artifact_primary_family_provider_interval_envelope_ms",
+        "artifact_family_provider_interval_overlap_ms",
+        "in_flight_wait_ms_total",
+        "limiter_wait_ms_total",
+        "rate_spacing_wait_ms_total",
+        "queue_wait_ms_total",
+        "queue_wait_seconds_total",
+        "report_analysis_queue_wait_seconds_total",
+        "report_analysis_non_provider_residual_ms",
+        "report_wall_non_provider_residual_ms",
+        "grounding_exclusive_exposure_seconds",
+        "grounding_provider_active_wall_seconds",
+    }
+)
+_RESOURCE_USAGE_FIELDS = frozenset(
+    {
+        "provider_call_count",
+        "provider_calls",
+        "model_provider_calls",
+        "grounding_provider_calls",
+        "file_search_calls",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "reasoning_tokens",
+        "estimated_cost_usd",
+        "file_search_cost_usd",
+        "total_estimated_cost_usd",
+        "usage_event_count",
+        "cached_input_tokens",
+        "timed_call_count",
+        "untimed_call_count",
+        "grounding_calls_or_batches",
+        "provider_calls_completed",
+        "provider_origin_failures",
+        "grounding_completed_calls",
+        "grounding_unique_task_ids",
+        "grounding_duplicate_task_count",
+        "grounding_reports_with_calls",
+        "http_429_count",
+        "timeout_count",
+    }
+)
+_QUALITY_FIELDS = frozenset(
+    {
+        "validation",
+        "publication_readiness",
+        "public_editorial_quality_before",
+        "public_editorial_quality_after",
+        "quality_result",
+        "unsupported_retained_factual_claims",
+        "unresolved_retained_factual_claims",
+        "unsupported_factual_count",
+        "unresolved_factual_count",
+        "unsupported_retained_claim_count",
+        "unresolved_retained_claim_count",
+        "validation_pass_count",
+        "final_validation_pass_count",
+        "publication_readiness_pass_count",
+        "new_quality_waivers",
+        "rule_waivers",
+    }
+)
+_SIDE_EFFECT_FIELDS = frozenset(
+    {
+        "publication_write_count",
+        "publication_queue_job_count",
+        "publication_queue_jobs",
+        "publication_rows",
+        "publication_approval_rows",
+        "actual_writes",
+        "published_records",
+        "publish_or_wordpress_outbox_jobs",
+        "approval_records",
+    }
+)
+_CONCURRENCY_FIELDS = frozenset(
+    {
+        "max_provider_concurrency",
+        "report_analysis_max_provider_concurrency",
+        "max_observed_running_jobs_by_queue",
+        "artifact_task_overlap_ms",
+        "artifact_family_provider_interval_overlap_ms",
+        "worker_count",
+        "workers",
+        "overlap_ms",
+    }
+)
 
 _METRIC_KEY_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.:-]{0,127}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -569,10 +662,19 @@ def _project_source(source: _LoadedSource, run: CTOEvidenceRun) -> _SourceProjec
         result = _project_numeric(
             payload, source.reference, roots=("before", "after", "comparison", "report")
         )
+        _qualify_numeric_evidence(
+            result,
+            {
+                key: payload[key]
+                for key in ("before", "after", "comparison", "report")
+                if key in payload
+            },
+        )
         result.limitations.extend(_producer_limitations(fmt, payload))
         return result
     if fmt == FORMAT_PROVIDER_PROFILE:
         result = _project_numeric(payload, source.reference)
+        _qualify_numeric_evidence(result, payload)
         _bind_single_subject(result, run, payload.get("report_id"))
         result.limitations.append(
             "Summed provider elapsed time is aggregate work; it is not the report "
@@ -582,6 +684,7 @@ def _project_source(source: _LoadedSource, run: CTOEvidenceRun) -> _SourceProjec
         return result
     if fmt == FORMAT_PROVIDER_CRITICAL_PATH:
         result = _project_numeric(payload, source.reference)
+        _qualify_numeric_evidence(result, payload)
         profile = payload.get("provider_profile")
         report_id = profile.get("report_id") if isinstance(profile, dict) else None
         _bind_single_subject(result, run, report_id)
@@ -593,6 +696,7 @@ def _project_source(source: _LoadedSource, run: CTOEvidenceRun) -> _SourceProjec
         return result
     if fmt == FORMAT_CONCURRENCY:
         result = _project_numeric(payload, source.reference)
+        _qualify_numeric_evidence(result, payload)
         if not run.subjects and isinstance(payload.get("manifest"), dict):
             manifest = payload["manifest"]
             if _nonnegative_int(manifest.get("report_count")):
@@ -750,10 +854,89 @@ def _project_numeric(
         )
     if result.metrics:
         result.available_classes.add("measurements")
-        result.available_classes.update(
-            _NUMERIC_FORMAT_EVIDENCE_CLASSES.get(source.format_id, ())
-        )
     return result
+
+
+def _qualify_numeric_evidence(projection: _SourceProjection, payload: object) -> None:
+    """Grant classes only for known typed fields retained by the adapter."""
+
+    if _has_numeric_field(payload, _PERFORMANCE_FIELDS):
+        projection.available_classes.add("performance")
+    if _has_numeric_field(payload, _PROVIDER_TIMING_FIELDS):
+        projection.available_classes.add("provider_timing")
+    if _has_numeric_field(payload, _RESOURCE_USAGE_FIELDS):
+        projection.available_classes.add("resource_usage")
+    if _has_typed_field(
+        payload,
+        _QUALITY_FIELDS,
+        lambda value: (
+            _quality_status_is_evidence(value) or _nonnegative_evidence_number(value)
+        ),
+    ):
+        projection.available_classes.add("quality")
+    if _has_numeric_field(payload, _SIDE_EFFECT_FIELDS):
+        projection.available_classes.add("side_effects")
+    if _has_numeric_field(payload, _CONCURRENCY_FIELDS):
+        projection.available_classes.add("concurrency")
+
+
+def _has_numeric_field(value: object, field_names: frozenset[str]) -> bool:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if key in field_names and _contains_nonnegative_number(nested):
+                return True
+            if _has_numeric_field(nested, field_names):
+                return True
+    elif isinstance(value, list):
+        return any(_has_numeric_field(item, field_names) for item in value)
+    return False
+
+
+def _has_typed_field(
+    value: object,
+    field_names: frozenset[str],
+    is_evidence: Callable[[object], bool],
+) -> bool:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if key in field_names and is_evidence(nested):
+                return True
+            if _has_typed_field(nested, field_names, is_evidence):
+                return True
+    elif isinstance(value, list):
+        return any(_has_typed_field(item, field_names, is_evidence) for item in value)
+    return False
+
+
+def _nonnegative_evidence_number(value: object) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and value >= 0
+    )
+
+
+def _quality_status_is_evidence(value: object) -> bool:
+    return isinstance(value, str) and value.strip().casefold() in {
+        "pass",
+        "passed",
+        "fail",
+        "failed",
+        "ready",
+        "not_ready",
+        "awaiting_review",
+    }
+
+
+def _contains_nonnegative_number(value: object) -> bool:
+    if _nonnegative_evidence_number(value):
+        return True
+    if isinstance(value, dict):
+        return any(_contains_nonnegative_number(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_nonnegative_number(item) for item in value)
+    return False
 
 
 def _bind_single_subject(
@@ -978,6 +1161,7 @@ def _project_reuse(
     payload: dict[str, Any], source: CTOEvidenceSourceReference, run: CTOEvidenceRun
 ) -> _SourceProjection:
     result = _project_numeric(payload, source)
+    _qualify_numeric_evidence(result, payload)
     counters: dict[str, int] = {}
     follow_up = payload.get("repair_bearing_follow_up")
     if isinstance(follow_up, dict):
@@ -1039,6 +1223,14 @@ def _project_file_search(
 ) -> _SourceProjection:
     result = _project_numeric(
         payload, source, roots=("cohorts", "publication_side_effects")
+    )
+    _qualify_numeric_evidence(
+        result,
+        {
+            key: payload[key]
+            for key in ("cohorts", "publication_side_effects", "report_comparison")
+            if key in payload
+        },
     )
     cohorts = payload.get("cohorts")
     if isinstance(cohorts, dict) and all(
@@ -1134,6 +1326,14 @@ def _project_acquisition(
     payload: dict[str, Any], source: CTOEvidenceSourceReference, run: CTOEvidenceRun
 ) -> _SourceProjection:
     result = _project_numeric(payload, source, roots=("before_after", "consistency"))
+    _qualify_numeric_evidence(
+        result,
+        {
+            key: payload[key]
+            for key in ("before_after", "consistency")
+            if key in payload
+        },
+    )
     if isinstance(payload.get("before_after"), dict):
         result.available_classes.add("acquisition")
     attempts = payload.get("attempts")
@@ -1265,6 +1465,13 @@ def _project_acquisition(
             for metric in result.metrics
         ):
             result.available_classes.add("resource_usage")
+        if any(
+            metric.metric_id.startswith("performance.acquisition.")
+            and metric.status in {"observed", "partial"}
+            and metric.value is not None
+            for metric in result.metrics
+        ):
+            result.available_classes.add("performance")
     result.outcome_counts.update(Counter(result.subject_outcomes.values()))
     result.available_classes.add("outcomes")
     result.available_classes.add("attempt_history")

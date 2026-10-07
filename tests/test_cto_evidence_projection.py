@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 
 from scripts.quality._cto_review_evidence.run_projection import (
+    FORMAT_ARTIFACT_DAG,
+    FORMAT_CONCURRENCY,
     FORMAT_GENERIC,
     FORMAT_PROVIDER_PROFILE,
     FORMAT_REUSE,
@@ -650,6 +652,194 @@ def test_provider_profile_binds_only_the_declared_hashed_report_subject(
     assert any(item.subject_id == "subject-1" for item in profile_metrics)
     assert any(item.subject_id is None for item in profile_metrics)
     assert report_id not in json.dumps(cto_evidence_bundle_payload(bundle))
+
+
+def test_sparse_artifact_dag_duration_only_proves_performance(
+    tmp_path: Path,
+) -> None:
+    source = _source(
+        tmp_path / "repo" / "evidence" / "dag.json",
+        format_id=FORMAT_ARTIFACT_DAG,
+        payload={
+            "implementation": {"base_commit": BASELINE_SHA, "dag_commit": RUN_SHA},
+            "before": {"duration_seconds": 12.0},
+            "after": {"duration_seconds": 8.0},
+        },
+    )
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(
+            sources=[source],
+            required=[
+                "performance",
+                "provider_timing",
+                "resource_usage",
+                "quality",
+                "side_effects",
+            ],
+        ),
+    )
+
+    assert bundle.completeness == "incomplete"
+    assert bundle.run_evidence is not None
+    metrics = {item.metric_id: item.value for item in bundle.run_evidence.metrics}
+    assert metrics["run_metrics.before.duration_seconds"] == 12.0
+    assert metrics["run_metrics.after.duration_seconds"] == 8.0
+    for evidence_class in (
+        "provider_timing",
+        "resource_usage",
+        "quality",
+        "side_effects",
+    ):
+        assert any(
+            f"Required evidence class {evidence_class} is unavailable" in item
+            for item in bundle.limitations
+        )
+    assert not any(
+        "Required evidence class performance is unavailable" in item
+        for item in bundle.limitations
+    )
+
+
+@pytest.mark.parametrize(
+    ("evidence", "evidence_class"),
+    [
+        (
+            {"after": {"report_analysis_provider_active_wall_ms": 4.0}},
+            "provider_timing",
+        ),
+        (
+            {
+                "after": {
+                    "provider_call_count": 2,
+                    "total_tokens": 150,
+                    "estimated_cost_usd": 0.25,
+                }
+            },
+            "resource_usage",
+        ),
+        ({"after": {"validation": "pass", "publication_readiness": "pass"}}, "quality"),
+        ({"report": {"publication_write_count": 0}}, "side_effects"),
+    ],
+)
+def test_artifact_dag_grants_classes_from_typed_retained_evidence(
+    tmp_path: Path,
+    evidence: dict[str, object],
+    evidence_class: str,
+) -> None:
+    payload: dict[str, object] = {
+        "implementation": {"base_commit": BASELINE_SHA, "dag_commit": RUN_SHA},
+        "before": {"duration_seconds": 12.0},
+        "after": {"duration_seconds": 8.0},
+    }
+    payload.update(evidence)
+    source = _source(
+        tmp_path / "repo" / "evidence" / "dag.json",
+        format_id=FORMAT_ARTIFACT_DAG,
+        payload=payload,
+    )
+
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(sources=[source], required=[evidence_class]),
+    )
+
+    assert bundle.completeness == "complete"
+    assert not any(
+        f"Required evidence class {evidence_class} is unavailable" in item
+        for item in bundle.limitations
+    )
+
+
+def test_sparse_provider_profile_does_not_claim_resource_usage(
+    tmp_path: Path,
+) -> None:
+    report_id = "fixture-provider-report"
+    source = _source(
+        tmp_path / "repo" / "evidence" / "provider.json",
+        format_id=FORMAT_PROVIDER_PROFILE,
+        payload={
+            "report_id": report_id,
+            "provider_elapsed_ms_total": 700,
+            "provider_active_wall_ms": 420,
+            "report_wall_clock_seconds": 8.0,
+        },
+    )
+
+    manifest = _run_manifest(
+        sources=[source], required=["provider_timing", "resource_usage"]
+    )
+    subjects = manifest["subjects"]
+    assert isinstance(subjects, list) and isinstance(subjects[0], dict)
+    subjects[0]["identity_sha256"] = hashlib.sha256(
+        report_id.encode("utf-8")
+    ).hexdigest()
+    _, bundle = _project(tmp_path, manifest)
+
+    assert bundle.completeness == "incomplete"
+    assert any(
+        "Required evidence class resource_usage is unavailable" in item
+        for item in bundle.limitations
+    )
+    assert not any(
+        "Required evidence class provider_timing is unavailable" in item
+        for item in bundle.limitations
+    )
+
+
+def test_sparse_concurrency_artifact_does_not_claim_concurrency_from_duration(
+    tmp_path: Path,
+) -> None:
+    source = _source(
+        tmp_path / "repo" / "evidence" / "concurrency.json",
+        format_id=FORMAT_CONCURRENCY,
+        payload={
+            "tested_head": RUN_SHA,
+            "observed": {"cohort_wall_seconds": 3.0},
+        },
+    )
+
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(sources=[source], required=["performance", "concurrency"]),
+    )
+
+    assert bundle.completeness == "incomplete"
+    assert any(
+        "Required evidence class concurrency is unavailable" in item
+        for item in bundle.limitations
+    )
+    assert not any(
+        "Required evidence class performance is unavailable" in item
+        for item in bundle.limitations
+    )
+
+
+def test_concurrency_artifact_qualifies_from_worker_evidence(
+    tmp_path: Path,
+) -> None:
+    source = _source(
+        tmp_path / "repo" / "evidence" / "concurrency.json",
+        format_id=FORMAT_CONCURRENCY,
+        payload={
+            "tested_head": RUN_SHA,
+            "observed": {
+                "cohort_wall_seconds": 3.0,
+                "max_observed_running_jobs_by_queue": {"grounding": 2},
+            },
+        },
+    )
+
+    _, bundle = _project(
+        tmp_path,
+        _run_manifest(sources=[source], required=["performance", "concurrency"]),
+    )
+
+    assert bundle.completeness == "complete"
+    assert not any(
+        "Required evidence class concurrency is unavailable" in item
+        for item in bundle.limitations
+    )
 
 
 def test_aggregate_reuse_counters_are_summarized_without_fake_subject_rows(
