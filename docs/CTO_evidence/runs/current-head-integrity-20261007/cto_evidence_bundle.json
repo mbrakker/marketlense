@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at_utc": "2026-10-07T19:53:12.384191+00:00",
+  "generated_at_utc": "2026-10-07T20:50:45.166549+00:00",
   "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
   "mode": "declared_run",
   "run": {
@@ -8,10 +8,10 @@
     "run_id": "current-head-integrity-20261007",
     "run_type": "current_head_integrity",
     "objective": "Verify Prompt 2 policy-gated autonomous publication tests, default pytest, and exact-head CI; check sandbox access and package eligibility, recording the live run as blocked if no package passes current readiness.",
-    "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
-    "producer_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
-    "started_at_utc": "2026-10-07T19:25:15Z",
-    "ended_at_utc": "2026-10-07T19:53:12Z",
+    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+    "producer_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+    "started_at_utc": "2026-10-07T20:15:23Z",
+    "ended_at_utc": "2026-10-07T20:40:28Z",
     "subjects": [
       {
         "schema_version": "1.0",
@@ -52,7 +52,7 @@
       "authenticated_wordpress_readback"
     ],
     "external_side_effects_enabled": false,
-    "operator_intervention_policy": "The autonomous approval path was verified by isolated tests and deterministic CI queue evidence. Authenticated sandbox preflight passed, but no live approval, publication, human intervention, readback, or replay was attempted because no current fully ready immutable package was available.",
+    "operator_intervention_policy": "The policy-gated approval path passed focused and full tests, exact-head CI, and deterministic temporary-SQLite queue evidence. Authenticated sandbox preflight passed. Live publication, readback, and replay remain blocked because no current immutable package has passing readiness and complete retained artifacts; no new approval, outbox event, WordPress write, or human intervention was attempted.",
     "sources": [
       {
         "schema_version": "1.0",
@@ -60,8 +60,8 @@
         "producer": "marketlense_ci_and_pytest_verification",
         "format_id": "marketlense/generic-metrics/1.0",
         "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-        "sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
-        "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+        "sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+        "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
         "role": "run",
         "status": "declared",
         "byte_count": null,
@@ -283,7 +283,7 @@
         "schema_version": "1.0",
         "metric_id": "current_head_evidence.ci_default_pytest_duration_seconds",
         "status": "observed",
-        "value": 289.28,
+        "value": 340.9,
         "unit": "seconds",
         "source_ids": [
           "current_head_evidence"
@@ -390,6 +390,21 @@
         "status": "observed",
         "value": 1,
         "unit": "value",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "limitations": [],
+        "numerator": null,
+        "denominator": null,
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "subject_id": null
+      },
+      {
+        "schema_version": "1.0",
+        "metric_id": "current_head_evidence.ci_mutation_target_count",
+        "status": "observed",
+        "value": 17,
+        "unit": "subjects_or_count",
         "source_ids": [
           "current_head_evidence"
         ],
@@ -583,7 +598,7 @@
         "schema_version": "1.0",
         "metric_id": "current_head_evidence.local_default_pytest_duration_seconds",
         "status": "observed",
-        "value": 423.78,
+        "value": 398.02,
         "unit": "seconds",
         "source_ids": [
           "current_head_evidence"
@@ -645,6 +660,36 @@
         "status": "observed",
         "value": 6796,
         "unit": "value",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "limitations": [],
+        "numerator": null,
+        "denominator": null,
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "subject_id": null
+      },
+      {
+        "schema_version": "1.0",
+        "metric_id": "current_head_evidence.local_pytest_telemetry_record_count",
+        "status": "observed",
+        "value": 6819,
+        "unit": "subjects_or_count",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "limitations": [],
+        "numerator": null,
+        "denominator": null,
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "subject_id": null
+      },
+      {
+        "schema_version": "1.0",
+        "metric_id": "current_head_evidence.local_pytest_telemetry_wrapper_duration_ms",
+        "status": "observed",
+        "value": 408453,
+        "unit": "milliseconds",
         "source_ids": [
           "current_head_evidence"
         ],
@@ -2160,12 +2205,12 @@
       "producer": "cto_review_collector",
       "format_id": "marketlense/cto-evidence-run-manifest/1.0",
       "path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-      "sha256": "009ce2ed1cbac4e08b08692cb607bc77c174ff4b605a64d800f1fa1a5c000701",
+      "sha256": "769b6e3e6d9b5c5bec857ab11443d6e2e7a0878a455ab010c019dbac9e83b665",
       "tested_repository_sha": null,
       "role": "supporting",
       "status": "verified",
-      "byte_count": 7537,
-      "observed_sha256": "009ce2ed1cbac4e08b08692cb607bc77c174ff4b605a64d800f1fa1a5c000701"
+      "byte_count": 7646,
+      "observed_sha256": "769b6e3e6d9b5c5bec857ab11443d6e2e7a0878a455ab010c019dbac9e83b665"
     },
     {
       "schema_version": "1.0",
@@ -2173,12 +2218,12 @@
       "producer": "marketlense_ci_and_pytest_verification",
       "format_id": "marketlense/generic-metrics/1.0",
       "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
-      "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+      "sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
       "role": "run",
       "status": "verified",
-      "byte_count": 7373,
-      "observed_sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8"
+      "byte_count": 9513,
+      "observed_sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a"
     },
     {
       "schema_version": "1.0",
@@ -2202,7 +2247,7 @@
     "run_id": "current-head-integrity-20261007",
     "run_type": "current_head_integrity",
     "objective": "Verify Prompt 2 policy-gated autonomous publication tests, default pytest, and exact-head CI; check sandbox access and package eligibility, recording the live run as blocked if no package passes current readiness.",
-    "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
     "subject_count": 3,
     "required_criteria": {
       "schema_version": "1.0",
@@ -2238,7 +2283,7 @@
         "schema_version": "1.0",
         "metric_id": "current_head_evidence.ci_default_pytest_duration_seconds",
         "status": "observed",
-        "value": 289.28,
+        "value": 340.9,
         "unit": "seconds",
         "source_ids": [
           "current_head_evidence"
@@ -2253,8 +2298,23 @@
         "schema_version": "1.0",
         "metric_id": "current_head_evidence.local_default_pytest_duration_seconds",
         "status": "observed",
-        "value": 423.78,
+        "value": 398.02,
         "unit": "seconds",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "limitations": [],
+        "numerator": null,
+        "denominator": null,
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "subject_id": null
+      },
+      {
+        "schema_version": "1.0",
+        "metric_id": "current_head_evidence.local_pytest_telemetry_wrapper_duration_ms",
+        "status": "observed",
+        "value": 408453,
+        "unit": "milliseconds",
         "source_ids": [
           "current_head_evidence"
         ],

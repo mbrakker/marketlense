@@ -284,7 +284,7 @@
   },
   "current_head": {
     "ci_run_attempt": 1,
-    "ci_run_id": "37674339035",
+    "ci_run_id": "37680618452",
     "completeness": "complete",
     "criteria_results": [
       {
@@ -393,14 +393,14 @@
       }
     ],
     "default_pytest": {
-      "duration_seconds": 289.28,
+      "duration_seconds": 340.9,
       "failed": 0,
       "passed": 6796,
       "pytest_exit_code": 0,
       "skipped": 0,
       "telemetry_record_count": 6820,
-      "telemetry_sha256": "b894edc36e3775a7a95564e41f9578c2f052a073b50e9fddd4b0c6b3f4b87178",
-      "terminal_summary": "6796 passed in 289.28s"
+      "telemetry_sha256": "b7ecda23f7e4bf3b92834fab8a7ddffdf0825d8056e84b52505816e0fbc5253a",
+      "terminal_summary": "6796 passed in 340.90s"
     },
     "disposition": "pass",
     "run_id": "current-head-integrity-20261007",
@@ -421,15 +421,18 @@
       "queue_scan": {
         "awaiting_review_count": 8,
         "eligible_package_count": 0,
+        "lineage_artifact_references_present": 0,
         "package_artifact_references_present": 0,
         "prior_approved_count": 1,
         "read_only": true,
         "readiness_record_count": 9,
+        "required_asset_ready_record_count": 9,
         "source": "state/index.sqlite",
         "unexpired_readiness_artifact_count": 1,
         "unexpired_readiness_status_counts": {
           "fail": 1
-        }
+        },
+        "validation_artifact_references_present": 0
       },
       "status": "blocked",
       "target_role": "sandbox",
@@ -444,13 +447,14 @@
         "ml_source_publication_date"
       ],
       "wordpress_write_count": 0,
+      "wordpress_write_count_scope": "current verification attempt only; historical local publication records are reported separately",
       "write_attempted": false
     },
-    "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
     "wordpress_staging_rest_gate": "skipped"
   },
   "evidence_inventory_path": "docs/CTO_evidence/evidence_inventory.json",
-  "evidence_inventory_sha256": "e4dc1bc5ae5a0c8dc93afd967d8f5a19136ca9dbde7c093d4ffc96bda07eb21a",
+  "evidence_inventory_sha256": "d3d4cba85912651ad25ee5d0102f766757905641b36c751e6a8dcbc14629b630",
   "historical_telemetry_count": 4,
   "run_count": 24,
   "runs": [
@@ -807,7 +811,7 @@
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-      "bundle_sha256": "23fc9c08d27ec8382fb4b453ec4e6f3ffb3c0c92dc88f1ff419cfb8fe9a8be4d",
+      "bundle_sha256": "75dfdc6f8c89416456774f14f2595614987f5bf77504918199abcf95f57032e3",
       "comparison_status": "not_applicable",
       "completeness": "complete",
       "disposition": "pass",
@@ -820,12 +824,12 @@
         "source_integrity"
       ],
       "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-      "manifest_sha256": "009ce2ed1cbac4e08b08692cb607bc77c174ff4b605a64d800f1fa1a5c000701",
+      "manifest_sha256": "769b6e3e6d9b5c5bec857ab11443d6e2e7a0878a455ab010c019dbac9e83b665",
       "run_id": "current-head-integrity-20261007",
       "run_type": "current_head_integrity",
       "source_count": 1,
       "subject_count": 3,
-      "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
+      "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/cto_evidence_bundle.json",
