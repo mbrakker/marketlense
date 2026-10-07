@@ -253,7 +253,7 @@ def _safe_validation_retry_context(error: AppError) -> dict[str, str | float]:
         safe["next_action"] = next_action
     for field in ("retry_after_seconds", "defer_seconds"):
         raw_value = context.get(field)
-        if isinstance(raw_value, bool):
+        if isinstance(raw_value, bool) or not isinstance(raw_value, (int, float, str)):
             continue
         try:
             delay = float(raw_value)

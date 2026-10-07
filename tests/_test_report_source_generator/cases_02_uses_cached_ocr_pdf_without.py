@@ -148,6 +148,8 @@ def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
     )
     model_a1 = "gpt-5-mini"
     model_a2 = "gpt-4.1-mini"
+    model_a3 = "gpt-4.1"
+    missing_checksum_paths: set[str] = set()
     runtime_a1 = replace(
         base_runtime,
         settings=replace(base_runtime.settings, pdf_text_ocr_model=model_a1),
@@ -185,7 +187,11 @@ def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
             return SimpleNamespace(
                 exists=artifact_exists,
                 is_file=artifact_exists,
-                md5=artifact_md5_by_path.get(req.path),
+                md5=(
+                    None
+                    if req.path in missing_checksum_paths
+                    else artifact_md5_by_path.get(req.path)
+                ),
             )
         return SimpleNamespace(
             exists=artifact_exists,
@@ -218,7 +224,7 @@ def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
 
     def _openai_ocr_pdf(req, ctx):
         ocr_calls.append(req.model)
-        version = "A1" if req.model == model_a1 else "A2"
+        version = {model_a1: "A1", model_a2: "A2", model_a3: "A3"}[req.model]
         page_text = f"recognized OCR page {version}"
         return SimpleNamespace(
             schema_version="1.0",
@@ -233,9 +239,11 @@ def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
     def _render_text_pdf(req, ctx):
         rendered_text = f"Rendered OCR PDF text for {req.pages[0].text}. " * 5
         artifact_text_by_path[req.output_path] = rendered_text
-        artifact_md5_by_path[req.output_path] = (
-            "artifact-" + req.pages[0].text.rsplit(" ", 1)[-1]
-        )
+        version = req.pages[0].text.rsplit(" ", 1)[-1]
+        if version == "A3":
+            missing_checksum_paths.add(req.output_path)
+        else:
+            artifact_md5_by_path[req.output_path] = "artifact-" + version
         return PdfTextRenderResponse(
             schema_version="1.0",
             output_path=req.output_path,
@@ -337,6 +345,32 @@ def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
         for event in ocr_text_cache_events
     )
     assert legacy_text not in caplog.text
+
+    before_missing_checksum = set(cache_root.glob("ocr_text_*.json"))
+    runtime_a3 = replace(
+        runtime_a1,
+        settings=replace(runtime_a1.settings, pdf_text_ocr_model=model_a3),
+    )
+    state_a3 = prepare_report_source(
+        runtime_a3, deps, ocr_openai_client=_ocr_client(deps)
+    )
+    after_missing_checksum = set(cache_root.glob("ocr_text_*.json"))
+
+    assert "recognized OCR page A3" in state_a3.text_response.pages[0].text
+    assert ocr_calls == [model_a1, model_a2, model_a3]
+    assert len(text_extraction_paths) == 3
+    assert native_text_extractions == 1
+    assert after_missing_checksum == before_missing_checksum
+    assert not (cache_root / "ocr_text_.json").exists()
+    missing_identity_misses = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.report_generator"
+        and json.loads(record.message)["event"] == "text_cache_miss"
+        and json.loads(record.message)["fields"].get("cache_miss_reason")
+        == "identity_unavailable"
+    ]
+    assert missing_identity_misses
 
 
 def test_prepare_report_source_runs_single_openai_ocr_model(

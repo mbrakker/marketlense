@@ -469,38 +469,7 @@ def run_semantic_validation(
     except AppError as exc:
         if exc.code in {"semantic_input_ids_invalid", "semantic_verdicts_incomplete"}:
             return _semantic_error_outcome(exc)
-        if exc.retryable:
-            logger.info(
-                log_event(
-                    semantic_ctx,
-                    role="generator",
-                    event="semantic_retryable_error_propagated",
-                    module=LOGGER_NAME,
-                    fields={"code": exc.code, "message": exc.message},
-                )
-            )
-            raise
-        logger.info(
-            log_event(
-                semantic_ctx,
-                role="generator",
-                event="semantic_validation_failed",
-                module=LOGGER_NAME,
-                fields={"code": exc.code, "message": exc.message},
-            )
-        )
-        return SemanticCheckOutcome(
-            metric_support={},
-            quote_support={},
-            issues=[
-                issue(
-                    rule_id=RULE_ID,
-                    message=f"Semantic validation failed: {exc.message}",
-                    severity="warning",
-                    section="semantic",
-                )
-            ],
-        )
+        raise
 
 
 def semantic_payload(insights: Sequence[dict], quotes: Sequence[dict]) -> dict:

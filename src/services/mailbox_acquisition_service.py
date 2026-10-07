@@ -860,7 +860,7 @@ def _materialize_zip_pdfs(
                 retryable=False,
             )
 
-        pdf_members = []
+        pdf_members: list[tuple[zipfile.ZipInfo, str]] = []
         output_names: set[str] = set()
         declared_total_bytes = 0
         for member in members:

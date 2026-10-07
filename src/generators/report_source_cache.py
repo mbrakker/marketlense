@@ -176,7 +176,7 @@ def write_report_source_cache(
     ctx: RunContext,
     dependencies: ReportSourceDependencies,
 ) -> None:
-    if not binding.enabled or not binding.cache_path:
+    if not binding.enabled or not binding.cache_path or not binding.cache_key:
         return
     write_cache_json(
         Path(binding.cache_path),

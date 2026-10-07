@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from ._split_support_cases_01_validation_flags_metric_and_quote import *  # noqa: F401,F403
 
 
@@ -27,6 +28,7 @@ def test_validation_flags_metric_and_quote_mismatches(tmp_path):
             artifacts=artifacts,
             evidence_packs={},
             vector_store_id=None,
+            validation_mode="inline_deterministic",
         ),
         settings,
         _ctx(),
@@ -61,6 +63,7 @@ def test_validation_blocks_more_than_doubled_when_evidence_only_doubles(tmp_path
             artifacts=artifacts,
             evidence_packs={},
             vector_store_id=None,
+            validation_mode="inline_deterministic",
         ),
         _settings(tmp_path),
         _ctx(),
@@ -157,6 +160,7 @@ def test_validation_uses_retained_source_text_for_ordered_period_value_pairs(
             },
             evidence_packs={},
             source_text=fixture["source_ordered_text"],
+            validation_mode="inline_deterministic",
         ),
         _settings(tmp_path),
         _ctx(),
@@ -217,7 +221,9 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
                 "id": "i1",
                 "text": "Revenue grew year over year",
                 "evidence_id": "e1",
-                "evidence": "The company reported ten percent year-over-year revenue growth.",
+                "evidence": (
+                    "The company reported ten percent year-over-year revenue growth."
+                ),
                 "metric": {"value": "10%", "unit": "%", "timeframe": "2024"},
             },
         ],
@@ -237,7 +243,10 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
             "findings": [
                 {
                     "id": "e1",
-                    "evidence": "The company reported ten percent year-over-year revenue growth.",
+                    "evidence": (
+                        "The company reported ten percent year-over-year revenue "
+                        "growth."
+                    ),
                 }
             ]
         },
@@ -272,7 +281,10 @@ def test_validation_accepts_paraphrased_metrics_and_quotes(tmp_path):
         "unsupported": [],
         "checks": [
             {
-                "item_id": "retained_claim:7cabb7fe2be9624f33ad15d82e0598f56a5dc508fe84fa8ec68423a3f83364c6",
+                "item_id": (
+                    "retained_claim:7cabb7fe2be9624f33ad15d82e0598f"
+                    "56a5dc508fe84fa8ec68423a3f83364c6"
+                ),
                 "section": "insights:i1.text",
                 "text": "Revenue grew year over year",
                 "classification": "factual_claim",
@@ -709,4 +721,4 @@ def test_artifact_quality_keeps_us_abbreviation_with_its_opening_sentence(tmp_pa
     )
 
 
-from .cases_01_split_long_module import *  # noqa: F401,F403
+from .cases_01_split_long_module import *  # noqa: F401,F403,E402
