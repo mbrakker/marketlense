@@ -86,9 +86,11 @@ def test_retry_on_retryable_app_error(
                 exists=False,
                 size_bytes=None,
                 mtime_utc=None,
+                mtime_ns=None,
                 md5=None,
             )
         payload = path.read_bytes()
+        stat = path.stat()
         md5 = (
             hashlib.md5(payload).hexdigest()
             if getattr(req, "compute_md5", False)
@@ -97,7 +99,8 @@ def test_retry_on_retryable_app_error(
         return SimpleNamespace(
             exists=True,
             size_bytes=len(payload),
-            mtime_utc=path.stat().st_mtime,
+            mtime_utc=stat.st_mtime,
+            mtime_ns=stat.st_mtime_ns,
             md5=md5,
         )
 
