@@ -11,8 +11,11 @@ def test_project_supervisor_configuration_defaults_to_three_workers() -> None:
 
     assert settings.supervisor.max_parallel_workers == 3
     assert settings.supervisor.max_jobs_per_queue == 3
+    assert settings.supervisor.max_total_jobs == 60
     assert settings.supervisor.max_runtime_seconds == 1200
     assert settings.supervisor.lease_seconds == 180
+    assert settings.supervisor.enabled is False
+    assert settings.supervisor.worker_batches_enabled is False
 
 
 def test_project_supervisor_configuration_allows_five_worker_override(

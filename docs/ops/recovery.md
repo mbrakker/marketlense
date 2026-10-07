@@ -8,7 +8,7 @@
 2. Confirm the failure category and whether it is retryable; do not repeat permanent failures without fixing the prerequisite.
 3. Inspect the execution plan, preflight output, and relevant retained checkpoint before launching another side effect. A missing, stale, corrupt, or lineage-free checkpoint is a blocker, not a resume target.
 4. Confirm idempotency evidence before publication, Drive-family, email-request, or any other external write. If proof is missing, keep the record in `operator_action_required`.
-5. Use the smallest safe restart or explicit workflow command after correcting the cause. The base configuration keeps recovery gated; the reviewed `autonomous_mvp` overlay enables only the documented finite allowlist and does not authorize unbounded retries or unknown-error recovery.
+5. Use the smallest safe restart or explicit workflow command after correcting the cause. The base configuration keeps supervisor execution gated; the reviewed `autonomous_mvp` overlay enables bounded queue batches and only the documented finite recovery allowlist. It does not authorize unbounded retries or unknown-error recovery. Follow the [autonomous-MVP runbook](autonomous-mvp.md) for one-shot invocation and status handling.
 6. Resolve or supersede the durable remediation record when the operator action is complete; do not delete historical retry logs.
 
 If an idempotency lookup returns `idempotency_record_corrupt` or
@@ -179,10 +179,11 @@ the command output; they are never silently discarded or guessed into another
 workflow.
 
 The reviewed `autonomous_mvp` overlay activates the bounded legacy reaper for
-the finite adapter inventory below. It does not alter the queue's normal
-`budget_deferred` lifecycle and it does not enable normal queue-worker batches.
-Do not run it alongside a migration of the same legacy record; use the
-canonical queue controls, retry state, and remediation flow for all new work.
+the finite adapter inventory below and enables normal work through the same
+supervisor's bounded worker batches. It does not alter the queue's normal
+`budget_deferred` lifecycle. Do not run it alongside a migration of the same
+legacy record; use the canonical queue controls, retry state, and remediation
+flow for all new work.
 
 | Durable recovery source | Workflow / scope | Automatic action | Fail-closed result |
 | --- | --- | --- | --- |

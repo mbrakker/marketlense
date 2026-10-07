@@ -137,29 +137,34 @@ def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pas
     state_db = str(tmp_path / "downstream-same-pass.sqlite")
     _set_queue_concurrency(state_db, "source_ingest", 3)
     _set_queue_concurrency(state_db, "report_selection", 3)
+    source_submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="source_ingest",
+        job_type="source_ingest.v1",
+        payload=SourceIngestPayload(
+            source_identity_id="source-1",
+            input_reference="snapshot:source-1",
+            input_content_hash="source-hash-1",
+            report_id="report-1",
+        ),
+        idempotency_key="same-pass:source-ingest",
+        deduplication_scope="supervisor-same-pass",
+    )
     source_job, _ = enqueue_workflow_job(
         state_db,
-        WorkflowJobSubmission(
-            schema_version="1.0",
-            queue_name="source_ingest",
-            job_type="source_ingest.v1",
-            payload=SourceIngestPayload(
-                source_identity_id="source-1",
-                input_reference="snapshot:source-1",
-                input_content_hash="source-hash-1",
-                report_id="report-1",
-            ),
-            idempotency_key="same-pass:source-ingest",
-            deduplication_scope="supervisor-same-pass",
-        ),
+        source_submission,
         _ctx(),
         now_utc="2026-08-11T00:00:00+00:00",
     )
     selection_was_idle = Event()
     selection_executed = Event()
     selection_worker_ids: list[str] = []
+    selection_job_ids: list[str] = []
+    effective_side_effects: list[str] = []
+    recovery_calls: list[str] = []
 
     def ingest(job, _payload, _ctx):
+        effective_side_effects.append(f"source_ingest:{job.job_id}")
         assert selection_was_idle.wait(timeout=10)
         return WorkflowQueueHandlerResult(
             result=SourceIngestResult(
@@ -185,8 +190,10 @@ def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pas
             ],
         )
 
-    def select(_job, _payload, _ctx):
+    def select(job, _payload, _ctx):
         selection_executed.set()
+        effective_side_effects.append(f"report_selection:{job.job_id}")
+        selection_job_ids.append(job.job_id)
         return WorkflowQueueHandlerResult(
             result=ReportSelectionResult(
                 output_reference="selected:report-1",
@@ -231,15 +238,37 @@ def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pas
         run_worker=dependencies.run_worker,
         reconcile=dependencies.reconcile,
         queue_health=dependencies.queue_health,
+        reap_deferred_work=lambda *_args: recovery_calls.append("deferred") or 0,
+        reap_remediation=lambda *_args: recovery_calls.append("remediation") or 0,
     )
 
-    result = run_supervisor_once(
-        _request(
-            max_parallel_workers=3,
-            max_total_jobs=3,
-            max_jobs_per_queue=3,
-            state_db=state_db,
+    base_supervisor = config_service.load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path="src/config/app.yaml"),
+        _ctx(),
+    ).supervisor
+    autonomous_supervisor = config_service.load_workflow_control_settings(
+        ConfigLoadRequest(
+            schema_version="1.0", path="src/config/app.autonomous_mvp.yaml"
         ),
+        _ctx(),
+    ).supervisor
+    settings = replace(
+        base_supervisor,
+        enabled=autonomous_supervisor.enabled,
+        deferred_work_enabled=autonomous_supervisor.deferred_work_enabled,
+        remediation_enabled=autonomous_supervisor.remediation_enabled,
+        worker_batches_enabled=autonomous_supervisor.worker_batches_enabled,
+    )
+    request = SupervisorRunRequest(
+        schema_version="1.0",
+        state_db=state_db,
+        usage_db_path="usage.sqlite",
+        worker_id="supervisor-autonomous-profile",
+        now_utc="2026-08-11T00:00:00Z",
+        settings=settings,
+    )
+    result = run_supervisor_once(
+        request,
         _ctx(),
         dependencies=dependencies,
     )
@@ -247,8 +276,32 @@ def test_parallel_supervisor_dispatches_materialized_downstream_work_in_same_pas
     assert selection_was_idle.is_set()
     assert selection_executed.is_set()
     assert result.completed_job_count == 2
+    assert result.completed_job_count <= settings.max_total_jobs
+    assert settings.max_total_jobs == 60
+    assert settings.max_runtime_seconds == 1200
+    assert settings.lease_seconds == 180
+    assert recovery_calls == ["deferred", "remediation"]
     assert get_workflow_job(state_db, source_job.job_id, _ctx()).status == "succeeded"
     assert len(selection_worker_ids) == 1
+
+    replayed_source, created = enqueue_workflow_job(
+        state_db,
+        source_submission,
+        _ctx(),
+        now_utc="2026-08-11T00:00:03+00:00",
+    )
+    replay = run_supervisor_once(request, _ctx(), dependencies=dependencies)
+
+    assert replayed_source.job_id == source_job.job_id
+    assert created is False
+    assert replay.status == "healthy"
+    assert replay.completed_job_count == 0
+    assert effective_side_effects == [
+        f"source_ingest:{source_job.job_id}",
+        f"report_selection:{selection_job_ids[0]}",
+    ]
+    assert len(list_workflow_job_attempts(state_db, source_job.job_id, _ctx())) == 1
+    assert len(list_workflow_job_attempts(state_db, selection_job_ids[0], _ctx())) == 1
 
 
 def test_materialized_downstream_queue_gets_spare_slot_before_other_queue_backlog() -> (

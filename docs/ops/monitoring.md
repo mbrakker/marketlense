@@ -12,6 +12,9 @@ Use the CLI trace view to reconstruct a run:
 python -m src.cli trace-run --run-id <run_id> --log-path logs/market_lense_YYYY-MM-DD.log
 ```
 
+For autonomous-MVP supervisor exit codes, queue-health interpretation, and
+recovery follow-up, use the [autonomous-MVP runbook](autonomous-mvp.md).
+
 Use `--trace-id` for a trace-scoped view. Start with the run ID before narrowing to a task so parent-span context is retained. The Streamlit cockpit exposes run registry, dead-letter, log, storage, and cost views for operator workflows.
 
 ## Performance telemetry

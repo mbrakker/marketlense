@@ -36,7 +36,7 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def test_autonomous_mvp_overlay_enables_only_bounded_recovery_controls() -> None:
+def test_autonomous_mvp_overlay_enables_bounded_recovery_and_worker_controls() -> None:
     settings = config_service.load_workflow_control_settings(
         ConfigLoadRequest(
             schema_version="1.0",
@@ -48,7 +48,7 @@ def test_autonomous_mvp_overlay_enables_only_bounded_recovery_controls() -> None
     assert settings.supervisor.enabled is True
     assert settings.supervisor.deferred_work_enabled is True
     assert settings.supervisor.remediation_enabled is True
-    assert settings.supervisor.worker_batches_enabled is False
+    assert settings.supervisor.worker_batches_enabled is True
     assert settings.deferred_work_reaper.execution_enabled is True
     assert settings.deferred_work_reaper.max_records_per_run == 2
     assert settings.remediation_reaper.execution_enabled is True

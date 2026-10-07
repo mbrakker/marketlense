@@ -1,17 +1,17 @@
 schema_version: "1.0"
 
-# Explicit operational overlay for the autonomous MVP. It enables only the
-# already allowlisted, one-shot recovery adapters; the external host still owns
-# invocation cadence through `supervise-workflows --once`.
+# Explicit operational overlay for the autonomous MVP. It enables bounded
+# normal queue batches plus the already allowlisted, one-shot recovery adapters;
+# the external host still owns invocation cadence through `supervise-workflows --once`.
 workflow_control:
   supervisor:
     schema_version: "1.0"
     enabled: true
     deferred_work_enabled: true
     remediation_enabled: true
-    # Recovery handoffs are durable; existing worker processes retain ownership
-    # of normal queue execution and its workflow-specific budgets.
-    worker_batches_enabled: false
+    # Existing queue controls, leases, fairness and workflow budgets remain
+    # authoritative for normal work claimed by the supervisor.
+    worker_batches_enabled: true
   remediation_reaper:
     schema_version: "1.0"
     execution_enabled: true

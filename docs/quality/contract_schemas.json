@@ -25697,6 +25697,26 @@
       ],
       "type": "object"
     },
+    "src.contracts.mailbox_acquisition.MailboxAttachmentFailure": {
+      "additionalProperties": false,
+      "properties": {
+        "attachment_index": {
+          "type": "integer"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "attachment_index",
+        "error_code"
+      ],
+      "type": "object"
+    },
     "src.contracts.mailbox_acquisition.MailboxAttachmentMaterializeRequest": {
       "additionalProperties": false,
       "properties": {
@@ -25730,6 +25750,12 @@
         "artifacts": {
           "items": {
             "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAttachmentArtifact"
+          },
+          "type": "array"
+        },
+        "failures": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAttachmentFailure"
           },
           "type": "array"
         },
