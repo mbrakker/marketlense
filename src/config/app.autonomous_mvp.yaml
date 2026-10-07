@@ -4,6 +4,12 @@ schema_version: "1.0"
 # normal queue batches plus the already allowlisted, one-shot recovery adapters;
 # the external host still owns invocation cadence through `supervise-workflows --once`.
 workflow_control:
+  # This explicit operator profile enables automatic approval only for packages
+  # that pass the immutable package and canonical readiness checks.
+  autonomous_publication_policy:
+    schema_version: "1.0"
+    enabled: true
+    policy_id: "autonomous_mvp_publication_v1"
   supervisor:
     schema_version: "1.0"
     enabled: true

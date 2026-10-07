@@ -981,8 +981,12 @@ workflow_queues:
 workflow_control:
   schema_version: "1.0"
   # Typed operational profiles compose the existing queue budgets, preflight
-  # contracts and model-policy tiers. They never enable a reaper or bypass
-  # validation/publication approval.
+  # contracts and model-policy tiers. Publication auto-approval is configured
+  # separately and remains disabled in the base profile.
+  autonomous_publication_policy:
+    schema_version: "1.0"
+    enabled: false
+    policy_id: "autonomous_mvp_publication_v1"
   run_profiles:
     safe_default:
       intended_outcome: "conservative cached-first execution"

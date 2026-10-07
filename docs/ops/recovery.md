@@ -98,7 +98,9 @@ durable attempt count once, and finishes as `resolved`, `deferred`, or typed
 it does not leave a recovery row stranded in `retrying`. Targeted local report
 repair does not need a publication idempotency key; the only WordPress action
 is the GET-only lookup. Publication writes still require their existing
-idempotency proof and human approval.
+idempotency proof and the checksum-bound publication approval. Human approval
+is the default; the explicit autonomous-MVP policy may create the same approval
+only for a clean, current ready package.
 
 Run one approved, feature-gated pass with:
 

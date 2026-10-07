@@ -360,8 +360,28 @@ class RunProfileDefinition:
     human_publication_approval_required: bool = field(
         default=True,
         metadata={
-            "doc": "Invariant: profiles cannot bypass human publication approval."
+            "doc": (
+                "Run profiles preserve manual approval unless the separate explicit "
+                "autonomous-publication policy is enabled."
+            )
         },
+    )
+
+
+@dataclass(frozen=True)
+class AutonomousPublicationPolicy:
+    """Explicit opt-in policy for queue approval of fully ready packages."""
+
+    schema_version: str = field(
+        default="1.0", metadata={"doc": "Autonomous-publication policy schema version."}
+    )
+    enabled: bool = field(
+        default=False,
+        metadata={"doc": "Whether fully ready queue packages may be auto-approved."},
+    )
+    policy_id: str = field(
+        default="autonomous_mvp_publication_v1",
+        metadata={"doc": "Stable auditable identity recorded on automatic approvals."},
     )
 
 
@@ -435,6 +455,15 @@ class WorkflowControlSettings:
     run_profiles: dict[str, RunProfileDefinition] = field(
         default_factory=dict,
         metadata={"doc": "Typed operating profiles by stable profile name."},
+    )
+    autonomous_publication_policy: AutonomousPublicationPolicy = field(
+        default_factory=AutonomousPublicationPolicy,
+        metadata={
+            "doc": (
+                "Separate explicit policy for automatic approval of fully ready "
+                "packages; disabled by default."
+            )
+        },
     )
     available_budget_profile_refs: list[str] = field(
         default_factory=list,
@@ -625,7 +654,9 @@ class PipelineExecutionPlan:
     )
     checkpoints: list[str] = field(
         metadata={
-            "doc": "Checkpoint outputs available for resume or expected from the workflow."
+            "doc": (
+                "Checkpoint outputs available for resume or expected from the workflow."
+            )
         }
     )
     expected_artifacts: list[str] = field(
@@ -821,7 +852,10 @@ class RunHealthGateInput:
     thresholds: dict[str, float | int] = field(
         default_factory=dict,
         metadata={
-            "doc": "Optional workflow-specific limits for spend, retry exhaustion, validation, crop rejection, latency, and benchmark regressions."
+            "doc": (
+                "Optional workflow-specific limits for spend, retry exhaustion, "
+                "validation, crop rejection, latency, and benchmark regressions."
+            )
         },
     )
 
@@ -901,7 +935,10 @@ class AutonomousRunSupervisorPlan:
     )
     selected_action: str = field(
         metadata={
-            "doc": "Selected action: start, resume, repair, retry, defer, publish, notify, dead_letter, or skip_duplicate."
+            "doc": (
+                "Selected action: start, resume, repair, retry, defer, publish, "
+                "notify, dead_letter, or skip_duplicate."
+            )
         }
     )
     workflow: str = field(metadata={"doc": "Workflow being supervised."})

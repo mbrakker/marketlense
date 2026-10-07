@@ -179,7 +179,7 @@ Use the generated [configuration reference](../generated/configuration-reference
 
 Use `python -m src.cli plan <intent> --profile <name>` to inspect a selection before execution. Plan output includes the profile name, deterministic hash, bounded effective selections, and a separate recommendation; a recommendation never changes the selected profile. CLI and UI resolve through the same typed resolver. A profile is resolved after the existing base-and-overlay configuration load: an explicit CLI/UI profile wins, otherwise the legacy-safe `safe_default` is selected; the environment/local overlays only determine the available profile definitions. Explicit bounded per-run overrides win over profile values. Unknown profiles, unknown queue-budget references, secret-like fields, unsupported override keys, incompatible workflows, and unbounded `repair_failed` targets fail before provider I/O.
 
-Profiles cannot disable validation, evidence checks, human publication approval, the supervisor, remediation reaping, or deferred-work reaping. Roll back selection by omitting `--profile` or the UI profile field; retained hashes remain readable in plans and run records.
+Run profiles themselves cannot disable validation, evidence checks, the supervisor, remediation reaping, or deferred-work reaping. Human publication approval remains the base behavior. The separate `workflow_control.autonomous_publication_policy` is disabled in `app.yaml` and is enabled only by the explicit `autonomous_mvp` overlay; run-profile selection alone cannot enable it. Roll back selection by omitting the environment profile or UI profile field; this stops new automatic approvals while retained hashes remain readable in plans and run records.
 
 ## Side-effect budget authority
 

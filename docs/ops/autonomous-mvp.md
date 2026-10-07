@@ -39,7 +39,21 @@ recovery adapters. Its recovery reapers each process at most two records per
 pass with their existing 60-second record leases. Normal queue work retains
 durable queue enable/pause/emergency-stop controls, attempt limits, workflow
 budgets, leases, round-robin fairness, idempotency, and validation. Publication
-still requires the existing checksum-bound human approval.
+uses the separate `workflow_control.autonomous_publication_policy` enabled by
+this explicit overlay. It auto-approves only packages whose required assets are
+`ready`, retained validation is a clean pass, current package bytes match the
+checksum, and publication validation uses `block` mode. Reports require signed,
+unexpired readiness and zero unsupported or unresolved factual claims;
+Briefings require issue-free validation; Signals require the retained approved
+evidence status and explicit no-override provenance. The current Signal
+candidate path sets `override_publishability`, so its packages remain in human
+review. Warning/review/hold/repair outcomes, overrides, stale packages,
+or incomplete evidence remain unapproved. The actor and approval note retain
+policy, configuration, source validation, and package checksum identity. The
+same durable approval ledger, outbox, worker, WordPress idempotency, and
+authenticated readback remain in the path. Returning to the base profile stops
+new automatic approvals; already approved outbox jobs remain subject to the
+`wordpress_publish` queue controls.
 
 The overlay does not retune supervisor limits. With committed base values,
 one pass allows at most three global workers and up to three active worker slots

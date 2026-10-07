@@ -5,6 +5,7 @@ from typing import Sequence
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.run_context import RunContext
 from src.contracts.workflow_control import (
+    AutonomousPublicationPolicy,
     ConcurrencyLimit,
     DeferredWorkReaperSettings,
     RemediationReaperSettings,
@@ -86,6 +87,9 @@ def load_workflow_control_settings(
             ),
             concurrency=_parse_concurrency(raw_control.get("concurrency")),
         ),
+        autonomous_publication_policy=_parse_autonomous_publication_policy(
+            raw_control.get("autonomous_publication_policy")
+        ),
         available_budget_profile_refs=_available_budget_profile_refs(
             data.get("workflow_queues")
         ),
@@ -117,6 +121,42 @@ def load_workflow_control_settings(
         )
     )
     return settings
+
+
+def _parse_autonomous_publication_policy(
+    raw_policy: object,
+) -> AutonomousPublicationPolicy:
+    definition = _mapping(raw_policy)
+    unknown_fields = sorted(
+        set(definition) - {"schema_version", "enabled", "policy_id"}
+    )
+    if unknown_fields:
+        raise AppError(
+            code="workflow_autonomous_publication_policy_invalid_field",
+            message="Autonomous publication policy contains unsupported fields",
+            retryable=False,
+            context={"unknown_fields": unknown_fields},
+        )
+    schema_version = str(definition.get("schema_version") or "1.0")
+    if schema_version != "1.0":
+        raise AppError(
+            code="workflow_autonomous_publication_policy_version_unsupported",
+            message="Autonomous publication policy schema version is unsupported",
+            retryable=False,
+            context={"schema_version": schema_version},
+        )
+    policy_id = _key(definition.get("policy_id") or "autonomous_mvp_publication_v1")
+    if not policy_id:
+        raise AppError(
+            code="workflow_autonomous_publication_policy_invalid",
+            message="Autonomous publication policy requires a stable policy identity",
+            retryable=False,
+        )
+    return AutonomousPublicationPolicy(
+        schema_version=schema_version,
+        enabled=_to_bool(definition.get("enabled"), False),
+        policy_id=policy_id,
+    )
 
 
 _RUN_PROFILE_SECRET_TOKENS = ("secret", "token", "password", "api_key", "credential")

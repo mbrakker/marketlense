@@ -263,6 +263,7 @@ def _signal_candidate_handler(
                     "max_source_reports": downstream_max_source_reports,
                     "minimum_evidence_items": minimum_evidence_items,
                     "minimum_source_reports": minimum_source_reports,
+                    "override_publishability": True,
                     "publisher_filters": requested_publisher_filters,
                     "topic": topic,
                     "source_report_ids": group.source_report_ids,
@@ -456,7 +457,12 @@ def _signal_generation_handler(
             input_reference=package_path,
             input_content_hash=package.artifact_sha256,
             processing_version=payload.processing_version,
-            attributes={"config_path": config_path},
+            attributes={
+                "config_path": config_path,
+                "override_publishability": _boolean_attribute(
+                    payload, "override_publishability", True
+                ),
+            },
         ),
         idempotency_key=_digest("signal-cover", package.artifact_sha256),
         deduplication_scope="signal-package-cover",

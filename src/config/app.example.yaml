@@ -148,6 +148,11 @@ workflow_queues:
   wordpress_publish: {enabled: true, max_workers: 1, max_attempts: 3, lease_seconds: 900, maximum_pending: 100, maximum_fanout: 10, budget_profile: publishing}
 
 workflow_control:
+  # Manual approval is the default; the explicit autonomous-MVP overlay opts in.
+  autonomous_publication_policy:
+    schema_version: "1.0"
+    enabled: false
+    policy_id: "autonomous_mvp_publication_v1"
   supervisor:
     # The feature gate remains off until queue health and recovery evidence are reviewed.
     enabled: false

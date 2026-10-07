@@ -393,7 +393,12 @@ def _briefing_generation_handler(
             input_content_hash=package.artifact_sha256,
             processing_version=payload.processing_version,
             prompt_policy_version=payload.prompt_policy_version,
-            attributes={"config_path": config_path},
+            attributes={
+                "config_path": config_path,
+                "override_publishability": _boolean_attribute(
+                    payload, "override_publishability", False
+                ),
+            },
         ),
         idempotency_key=_digest("briefing-cover", package.artifact_sha256),
         deduplication_scope="briefing-package-cover",

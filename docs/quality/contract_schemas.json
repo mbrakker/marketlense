@@ -48878,6 +48878,22 @@
       ],
       "type": "object"
     },
+    "src.contracts.workflow_control.AutonomousPublicationPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "policy_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
     "src.contracts.workflow_control.AutonomousRunSupervisorExecution": {
       "additionalProperties": false,
       "properties": {
@@ -50840,6 +50856,9 @@
     "src.contracts.workflow_control.WorkflowControlSettings": {
       "additionalProperties": false,
       "properties": {
+        "autonomous_publication_policy": {
+          "$ref": "#/$defs/src.contracts.workflow_control.AutonomousPublicationPolicy"
+        },
         "available_budget_profile_refs": {
           "items": {
             "type": "string"

@@ -25,16 +25,38 @@ Every `PublishOutcome` retains an ordered, persisted transaction proof alongside
 
 A bounded release canary must separately verify a created post through authenticated `context=edit` REST readback, then repeat the exact package with zero requested and actual post writes. Its readback checks post ID, post type, status, report/file identity, raw-content checksum, canonical URL, Open Graph URL when WordPress exposes it, source-attribution metadata, taxonomy assignments, featured/card media associations, and the prior captured rendered-content hash when supported. The first verified readback captures the rendered hash; later idempotent readbacks must match it. Candidates with a matching idempotency record remain eligible for authenticated lookup/readback, but skip taxonomy resolution as well as post mutation, because an `ensure` request may itself write. This verification is permitted only against an explicitly configured sandbox target.
 
-Queue-driven Report, Signal, and Briefing publication is approval-gated. Report
-rendering writes the canonical readiness decision, then records one immutable
-readiness package containing the exact HTML and readiness references. Signal and
-Briefing generation persist source-linked packages, and `cover_generation`
-freezes their mandatory card assets. `publication_readiness` records
-`awaiting_review`; an explicit approval writes one `wordpress_publish` outbox
-event. The Report worker rechecks approval and the two-surface package checksum,
-then calls the existing report publisher with exactly that one candidate and
-readiness reference. It never scans `output_dir`. A cohort manifest resolves
-only admitted Report members before candidate construction.
+Queue-driven Report, Signal, and Briefing publication retains human approval as
+the default. Report rendering writes the canonical readiness decision, then
+records one immutable readiness package containing the exact HTML and readiness
+references. Signal and Briefing generation persist source-linked packages, and
+`cover_generation` freezes their mandatory card assets. `publication_readiness`
+records immutable readiness before any approval. The ordinary configuration
+leaves the package at `awaiting_review`; a human approval writes one
+`wordpress_publish` outbox event through `approve_publication_package()`.
+
+The explicit `workflow_control.autonomous_publication_policy` setting is enabled
+only in `app.autonomous_mvp.yaml`. With that overlay selected, the readiness
+worker may call the same approval service for a package only when required
+assets are `ready`, the current package checksum matches, and its retained
+validation is a complete pass: Report readiness is signed, unexpired, and
+grounded with zero unsupported/unresolved factual claims; Briefing validation
+has no issues or missing evidence and carries explicit no-override provenance;
+Signal validation must remain `approved` and also carry explicit no-override
+provenance. The current Signal candidate path sets `override_publishability`,
+so those Signal packages remain in human review. Publish validation must use
+`block` mode. Warnings,
+review/hold/repair outcomes, unsupported or unresolved factual claims, stale
+artifacts, override paths, and changed package bytes stay in manual review or
+hold. The actor ID contains the policy identity and hashes of the effective
+policy/configuration; the approval row binds it to the exact package checksum.
+No `PublishPolicyInput` confidence or editorial-risk values are synthesized
+when they are absent from a queue package.
+
+The existing `wordpress_publish` worker rechecks the approval ID, package
+checksum, and retained bytes, then uses the canonical publisher and its
+idempotent write/readback path. The Report worker supplies exactly one candidate
+and its readiness reference; it never scans `output_dir`. A cohort manifest
+resolves only admitted Report members before candidate construction.
 
 `publish-wp --cohort-manifest <path>` is an all-or-nothing publication binding,
 not a best-effort filter. Before the first WordPress schema, taxonomy, lookup,

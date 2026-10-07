@@ -28,7 +28,11 @@ from src.contracts.browser_download import (
     ReportDownloadDriveUpload,
     ReportDownloadOrchestratorRequest,
 )
-from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.config import (
+    AppSettings,
+    ConfigLoadRequest,
+    IngestSettingsBuildRequest,
+)
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
 from src.contracts.cross_report_analysis import (
     CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
@@ -36,10 +40,13 @@ from src.contracts.cross_report_analysis import (
     CrossReportAnalysisRequest,
     CrossReportProjectedDataReadRequest,
     CrossReportPublishPackage,
+    CrossReportValidationResult,
+    validate_cross_report_contract,
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import ReadBytesRequest, WriteBytesRequest
 from src.contracts.mailbox_acquisition import MailReportAcquisitionRequest
+from src.contracts.publish import PublishSettings
 from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_budget import BudgetOverrideContext
@@ -59,6 +66,10 @@ from src.contracts.wordpress_intelligence_projection import (
     WordPressIntelligenceSourceReadRequest,
     WordPressIntelligenceSyncRequest,
 )
+from src.contracts.workflow_control import (
+    AutonomousPublicationPolicy,
+    WorkflowControlSettings,
+)
 from src.contracts.workflow_queue import (
     AnalyticsProjectionPayload,
     AnalyticsProjectionResult,
@@ -74,6 +85,7 @@ from src.contracts.workflow_queue import (
     MailboxDeliveryResult,
     MaintenancePayload,
     PublicationReadinessPayload,
+    PublicationReadinessRecord,
     PublicationReadinessResult,
     PublisherDiscoveryPayload,
     PublisherDiscoveryResult,
@@ -101,6 +113,7 @@ from src.contracts.workflow_queue import (
     WorkflowStageResult,
 )
 from src.generators.cover_image_generator import generate_cover_images
+from src.generators.publish_readiness_generator import verify_publish_readiness
 from src.orchestrators._report_analysis_orchestrator.manifest import (
     record_validation_manifest_stage,
 )
@@ -149,9 +162,11 @@ from src.services.config_service import (
     load_publish_settings,
     load_publisher_inventory_settings,
     load_settings,
+    load_workflow_control_settings,
 )
 from src.services.file_service import read_bytes, write_bytes
 from src.services.workflow_queue_service import (
+    approve_publication_package,
     freeze_briefing_opportunity,
     publication_approval_is_valid,
     record_publication_readiness,
@@ -165,6 +180,239 @@ from src.utils.wp_auth import build_auth_header
 from .shared import WorkflowQueueHandlerResult, _boolean_attribute, _digest
 
 logger = logging.getLogger("market_lense.workflow_queue_publishing")
+
+
+def _publication_override_requested(payload: PublicationReadinessPayload) -> bool:
+    for raw_key, value in payload.attributes.items():
+        key = str(raw_key).casefold()
+        if "override" in key or key.startswith("force_publish"):
+            if isinstance(value, list):
+                if value:
+                    return True
+            elif value not in (False, None, "", 0):
+                return True
+    return False
+
+
+def _contract_payload_sha256(value: object) -> str:
+    encoded = json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _automatic_publication_evidence(
+    job: WorkflowJob,
+    payload: PublicationReadinessPayload,
+    readiness: PublicationReadinessRecord,
+    app_settings: AppSettings,
+    publish_settings: PublishSettings,
+    ctx: RunContext,
+) -> tuple[bool, str, str, str, str]:
+    """Return a fail-closed decision from current immutable validation artifacts."""
+    if readiness.readiness_status != "awaiting_review":
+        return False, "readiness_not_awaiting_review", "", "", ""
+    if readiness.required_asset_status != "ready":
+        return False, "required_assets_not_ready", "", "", ""
+    if readiness.entity_type != payload.entity_type:
+        return False, "readiness_entity_type_mismatch", "", "", ""
+    if readiness.package_reference != payload.entity_package_reference:
+        return False, "readiness_package_reference_mismatch", "", "", ""
+    if readiness.validation_reference != payload.validation_reference:
+        return False, "readiness_validation_reference_mismatch", "", "", ""
+    if readiness.lineage_reference != payload.lineage_reference:
+        return False, "readiness_lineage_reference_mismatch", "", "", ""
+    if payload.package_checksum != readiness.package_checksum:
+        return False, "readiness_checksum_mismatch", "", "", ""
+    if (
+        payload.entity_type in {"briefing", "signal"}
+        and "override_publishability" not in payload.attributes
+    ):
+        return False, "override_provenance_missing", "", "", ""
+    if _publication_override_requested(payload):
+        return False, "operator_override_path", "", "", ""
+
+    if (
+        str(getattr(publish_settings, "validation_policy", "")).strip().casefold()
+        != "block"
+    ):
+        return False, "publish_validation_warning_policy", "", "", ""
+
+    source_configuration_hash = ""
+    source_policy_hash = ""
+    try:
+        if payload.entity_type == "report":
+            from src.generators.publish_readiness_generator import (
+                parse_publish_readiness_payload,
+            )
+            from src.orchestrators._publish_orchestrator.routing import (
+                report_publish_package_checksum,
+            )
+
+            current_checksum = report_publish_package_checksum(
+                html_path=payload.entity_package_reference,
+                readiness_reference=payload.validation_reference,
+                ctx=ctx,
+            )
+            if current_checksum != payload.package_checksum:
+                return False, "report_package_checksum_stale", "", "", ""
+            html_response = read_bytes(
+                ReadBytesRequest(
+                    schema_version="1.0", path=payload.entity_package_reference
+                ),
+                ctx,
+            )
+            validation_response = read_bytes(
+                ReadBytesRequest(
+                    schema_version="1.0", path=payload.validation_reference
+                ),
+                ctx,
+            )
+            raw_readiness = json.loads(validation_response.content.decode("utf-8"))
+            report_readiness = parse_publish_readiness_payload(raw_readiness)
+            if (
+                report_readiness.status != "pass"
+                or not report_readiness.rule_results
+                or any(item.status != "pass" for item in report_readiness.rule_results)
+            ):
+                return False, "report_readiness_not_fully_passed", "", "", ""
+            claim_rule = next(
+                (
+                    item
+                    for item in report_readiness.rule_results
+                    if item.rule_id == "publish_readiness.retained_claim_grounding"
+                ),
+                None,
+            )
+            claim_counts = {
+                key: value.strip()
+                for item in (claim_rule.detail.split(";") if claim_rule else [])
+                if "=" in item
+                for key, value in [item.strip().split("=", 1)]
+            }
+            if (
+                claim_rule is None
+                or claim_counts.get("unsupported_factual_count") != "0"
+                or claim_counts.get("unresolved_factual_count") != "0"
+            ):
+                return False, "claim_grounding_not_proven_zero", "", "", ""
+            ingest_settings = build_ingest_settings(
+                IngestSettingsBuildRequest(
+                    schema_version="1.0", app_settings=app_settings
+                ),
+                ctx,
+            )
+            verification = verify_publish_readiness(
+                artifact=report_readiness,
+                report_id=job.report_id or report_readiness.report_id,
+                final_html=html_response.content.decode("utf-8"),
+                configuration_hash=ctx.configuration_hash
+                or admission_configuration_hash(ingest_settings),
+                policy_hash=ctx.policy_hash or admission_policy_hash(ingest_settings),
+                producer_revision=ctx.producer_commit_sha,
+            )
+            if verification.status != "pass":
+                return False, "report_readiness_stale_or_invalid", "", "", ""
+            source_configuration_hash = report_readiness.configuration_hash
+            source_policy_hash = report_readiness.policy_hash
+            return (
+                True,
+                "fully_ready_report",
+                source_configuration_hash,
+                source_policy_hash,
+                hashlib.sha256(validation_response.content).hexdigest(),
+            )
+
+        package = _cross_report_package_from_artifact(
+            payload.entity_package_reference, ctx
+        )
+        if (
+            package.target_route != f"wordpress:ml_{payload.entity_type}"
+            or package.artifact_sha256 != payload.package_checksum
+            or _package_checksum(package) != payload.package_checksum
+        ):
+            return False, "cross_report_package_checksum_or_route_invalid", "", "", ""
+        validation_response = read_bytes(
+            ReadBytesRequest(schema_version="1.0", path=payload.validation_reference),
+            ctx,
+        )
+        if payload.entity_type == "briefing":
+            artifact = json.loads(validation_response.content.decode("utf-8"))
+            raw_validation = (
+                artifact.get("validation_result")
+                if isinstance(artifact, dict)
+                else None
+            )
+            if not isinstance(raw_validation, dict):
+                return False, "briefing_validation_missing", "", "", ""
+            validation = CrossReportValidationResult(**raw_validation)
+            validate_cross_report_contract(validation)
+            if (
+                validation.status != "pass"
+                or not validation.passed
+                or validation.issues
+                or validation.missing_evidence_ids
+                or validation.metric_normalization_violations
+                or package.validation_sha256
+                != _contract_payload_sha256(asdict(validation))
+                or package.machine_metadata.get("validation_status") != "pass"
+            ):
+                return False, "briefing_validation_not_fully_passed", "", "", ""
+            source_configuration_hash = str(artifact.get("config_fingerprint") or "")
+            source_policy_hash = str(artifact.get("policy_hash") or "")
+        elif payload.entity_type == "signal":
+            source_package = _cross_report_package_from_artifact(
+                payload.validation_reference, ctx
+            )
+            validation_status = str(
+                source_package.machine_metadata.get("signal_validation_status") or ""
+            )
+            if (
+                source_package.target_route != "wordpress:ml_signal"
+                or source_package.artifact_sha256 != _package_checksum(source_package)
+                or validation_status != "approved"
+                or source_package.validation_sha256
+                != _digest("signal-validation", validation_status)
+                or package.validation_sha256
+                != _digest("signal-validation", validation_status)
+            ):
+                return False, "signal_validation_not_approved", "", "", ""
+            source_configuration_hash = str(
+                source_package.machine_metadata.get("configuration_hash") or ""
+            )
+            source_policy_hash = str(
+                source_package.machine_metadata.get("policy_hash") or ""
+            )
+        else:
+            return False, "unsupported_publication_entity", "", "", ""
+        return (
+            True,
+            "fully_ready_cross_report_package",
+            source_configuration_hash,
+            source_policy_hash,
+            hashlib.sha256(validation_response.content).hexdigest(),
+        )
+    except AppError as exc:
+        if exc.retryable:
+            raise
+        return False, "retained_validation_invalid", "", "", ""
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return False, "retained_validation_invalid", "", "", ""
+
+
+def _automatic_publication_identity(
+    policy: AutonomousPublicationPolicy,
+    app: AppSettings,
+    publish_settings: PublishSettings,
+    control_settings: WorkflowControlSettings,
+) -> tuple[str, str]:
+    policy_hash = admission_configuration_hash(policy)
+    config_hash = _contract_payload_sha256(
+        {
+            "app": admission_configuration_hash(app),
+            "publish": admission_configuration_hash(publish_settings),
+            "workflow_control": admission_configuration_hash(control_settings),
+        }
+    )
+    return policy_hash, config_hash
 
 
 def _publication_readiness_handler(
@@ -359,13 +607,130 @@ def _publication_readiness_handler(
             parent_attempt_number=payload.validation_parent_attempt_number,
             entity_terminal=False,
         )
+    result_readiness_status = readiness_record.readiness_status
+    control_settings = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=config_path), ctx
+    )
+    auto_policy = control_settings.autonomous_publication_policy
+    if auto_policy.enabled and readiness_record.readiness_status == "awaiting_review":
+        publish_settings = load_publish_settings(
+            ConfigLoadRequest(schema_version="1.0", path=config_path), ctx
+        )
+        (
+            eligible,
+            reason,
+            source_configuration_hash,
+            source_policy_hash,
+            source_validation_hash,
+        ) = _automatic_publication_evidence(
+            job,
+            payload,
+            readiness_record,
+            app,
+            publish_settings,
+            ctx,
+        )
+        policy_hash = ""
+        configuration_hash = ""
+        if eligible:
+            policy_hash, configuration_hash = _automatic_publication_identity(
+                auto_policy,
+                app,
+                publish_settings,
+                control_settings,
+            )
+            target_site_value = payload.attributes.get("target_site", "default")
+            target_site = (
+                target_site_value.strip()
+                if isinstance(target_site_value, str)
+                else "default"
+            ) or "default"
+            publish_payload = WordPressPublishPayload(
+                schema_version=payload.schema_version,
+                input_reference=(
+                    payload.input_reference or payload.entity_package_reference
+                ),
+                input_content_hash=payload.input_content_hash
+                or payload.package_checksum,
+                required_artifact_references=payload.required_artifact_references,
+                processing_version=payload.processing_version,
+                prompt_policy_version=payload.prompt_policy_version,
+                validation_run_id=payload.validation_run_id,
+                cohort_id=payload.cohort_id,
+                validation_attempt_number=payload.validation_attempt_number,
+                validation_parent_attempt_number=payload.validation_parent_attempt_number,
+                attributes=dict(payload.attributes),
+                entity_type=payload.entity_type,
+                entity_package_reference=payload.entity_package_reference,
+                package_checksum=payload.package_checksum,
+                readiness_reference=payload.validation_reference,
+                target_site=target_site,
+            )
+            root_workflow_id = job.root_workflow_id or (
+                f"publication:{payload.package_checksum[:20]}"
+            )
+            publish_submission = WorkflowJobSubmission(
+                schema_version="1.0",
+                queue_name="wordpress_publish",
+                job_type="wordpress_publish.v1",
+                payload=publish_payload,
+                idempotency_key=(
+                    f"{target_site}:{payload.entity_type}:{payload.package_checksum}"
+                ),
+                deduplication_scope="wordpress-publish-package",
+                root_workflow_id=root_workflow_id,
+                parent_job_id=job.job_id,
+                trigger_event_id=job.trigger_event_id or job.job_id,
+                correlation_id=job.correlation_id or root_workflow_id,
+                entity_type=payload.entity_type,
+                entity_id=job.entity_id or payload.package_checksum,
+                publisher_id=job.publisher_id,
+                source_identity_id=job.source_identity_id,
+                report_id=job.report_id,
+                priority=job.priority,
+                budget_profile=job.budget_profile or "publishing",
+                execution_plan_hash=job.execution_plan_hash,
+            )
+            actor_id = f"{auto_policy.policy_id}:{policy_hash}:{configuration_hash}"
+            note = (
+                f"policy_sha256={policy_hash}; config_sha256={configuration_hash}; "
+                f"source_config_sha256={source_configuration_hash}; "
+                f"source_policy_sha256={source_policy_hash}; "
+                f"source_validation_sha256={source_validation_hash}; "
+                f"package_sha256={payload.package_checksum}"
+            )
+            approve_publication_package(
+                app.state_db,
+                package_checksum=payload.package_checksum,
+                actor_id=actor_id,
+                note=note,
+                publish_submission=publish_submission,
+                ctx=ctx,
+            )
+            result_readiness_status = "approved"
+        logger.info(
+            log_event(
+                ctx,
+                role="orchestrator",
+                event="workflow_queue_publication_auto_approval_decision",
+                module=logger.name,
+                fields={
+                    "decision": "approved" if eligible else "manual_review",
+                    "reason": reason,
+                    "policy_id": auto_policy.policy_id,
+                    "policy_hash": policy_hash,
+                    "configuration_hash": configuration_hash,
+                    "package_checksum": payload.package_checksum,
+                },
+            )
+        )
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
             output_reference=readiness_record.package_reference,
             output_content_hash=readiness_record.package_checksum,
             execution_plan_hash=job.execution_plan_hash,
-            output_verified=readiness_record.readiness_status == "awaiting_review",
-            summary={"readiness_status": readiness_record.readiness_status},
+            output_verified=result_readiness_status in {"awaiting_review", "approved"},
+            summary={"readiness_status": result_readiness_status},
         )
     )
 
@@ -622,7 +987,10 @@ def _wordpress_publish_handler(
                 "target_route": package.target_route,
             },
         )
-    if package.artifact_sha256 != payload.package_checksum:
+    if (
+        package.artifact_sha256 != payload.package_checksum
+        or _package_checksum(package) != payload.package_checksum
+    ):
         raise AppError(
             code="workflow_queue_publish_package_checksum_mismatch",
             message="Approved package checksum does not match the retained entity package",
@@ -882,6 +1250,13 @@ def _cover_generation_handler(
         )
     )
     final_package = _persist_queue_publish_package(final_package, final_path, ctx)
+    readiness_attributes: dict[str, str | int | bool | list[str]] = {
+        "config_path": config_path
+    }
+    if "override_publishability" in payload.attributes:
+        readiness_attributes["override_publishability"] = _boolean_attribute(
+            payload, "override_publishability", False
+        )
     readiness_submission = WorkflowJobSubmission(
         schema_version="1.0",
         queue_name="publication_readiness",
@@ -896,7 +1271,7 @@ def _cover_generation_handler(
             input_reference=final_path,
             input_content_hash=final_package.artifact_sha256,
             processing_version=payload.processing_version,
-            attributes={"config_path": config_path},
+            attributes=readiness_attributes,
         ),
         idempotency_key=_digest(
             "publication-readiness", payload.entity_type, final_package.artifact_sha256

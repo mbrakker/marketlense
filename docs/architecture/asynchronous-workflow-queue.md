@@ -148,11 +148,14 @@ upserts a report record with a distinct report ID, and then derives content and
 processing-version idempotency. This prevents a mirror URL from creating a
 second ingest job and prevents a reused retained Drive ID from being silently
 rebound to new bytes. Email-gated sources enqueue mailbox delivery instead of calling it in memory.
-`publication_readiness` records immutable readiness; the explicit
-`queue-approve-publication --yes` command creates only a WordPress outbox
-event, never a WordPress write. `--dry-run` carries a no-write instruction to
-that durable job so the real publish preflight can be validated without
-enabling live publication.
+`publication_readiness` records immutable readiness. Human approval remains the
+default: `queue-approve-publication --yes` calls the canonical approval service
+and creates only a WordPress outbox event, never a WordPress write. The explicit
+`workflow_control.autonomous_publication_policy` setting in the selected
+`autonomous_mvp` overlay permits the readiness handler to call that same service
+for a fully ready immutable package. `--dry-run` still carries a no-write
+instruction to the durable job so the real publish preflight can be validated
+without enabling live publication.
 
 ## Briefing fan-in
 
@@ -184,19 +187,35 @@ sequenceDiagram
   participant D as durable review state
   participant O as workflow_outbox
   participant W as wordpress_publish worker
-  R->>D: immutable package checksum -> awaiting_review
+  R->>D: immutable package checksum -> awaiting_review / not_publishable
   Note over D: no WordPress write
-  D->>D: actor approves checksum
+  alt explicit autonomous policy + complete current readiness
+    D->>D: policy actor approves exact checksum
+  else default/manual path
+    D->>D: human approves exact checksum
+  end
   D->>O: one deduplicated wordpress_publish event
   O->>W: materialised job
   W->>D: recheck approval + package checksum
   W->>W: preflight, idempotent write, readback
 ```
 
-Approval is bound to a package checksum. A changed package is a different
-readiness record and has no inherited approval. Rejection does not enqueue
-publication. Live WordPress execution remains feature-gated by existing
-publication policy.
+Approval is bound to a package checksum. An automatic actor also carries the
+policy ID and effective policy/configuration hashes; the approval note retains
+source validation identities. Automatic approval requires `ready` required
+assets, a fresh matching package checksum, blocking publication validation, and
+clean family-specific evidence: signed, unexpired Report readiness with zero
+unsupported/unresolved factual claims; issue-free Briefing validation; or an
+approved Signal evidence package. Warnings, review/hold/repair decisions,
+override paths, and incomplete or stale evidence do not auto-approve. The queue
+does not fill missing confidence values to invoke `evaluate_publish_policy()`.
+
+A changed package is a different readiness record and has no inherited
+approval. Rejection does not enqueue publication. Human and automatic paths
+both call `approve_publication_package()`; the WordPress worker continues to
+call `publication_approval_is_valid()`, verify the current package bytes, and
+use the same idempotent publisher with authenticated readback. Live execution
+remains subject to the existing target and publication gates.
 
 ## Lease and retry lifecycle
 
