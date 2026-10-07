@@ -3,71 +3,43 @@
     "attempt": 1,
     "codeql": {
       "conclusion": "success",
-      "repository_commit_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
-      "run_id": "37680618766"
+      "repository_commit_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
+      "run_id": "37696738765"
     },
-    "completed_at_utc": "2026-10-07T20:40:28Z",
     "conclusion": "success",
     "coverage_gate": "passed",
     "default_pytest": {
-      "duration_seconds": 340.9,
+      "duration_seconds": 196.29,
       "failed": 0,
-      "passed": 6796,
+      "passed": 6812,
       "pytest_exit_code": 0,
       "skipped": 0,
-      "telemetry_record_count": 6820,
-      "telemetry_sha256": "b7ecda23f7e4bf3b92834fab8a7ddffdf0825d8056e84b52505816e0fbc5253a",
-      "terminal_summary": "6796 passed in 340.90s"
+      "telemetry_record_count": 6836,
+      "telemetry_sha256": "f64e402f95aeebd1dce671af9afd76d68df77399425fc543fda246471d9f2959"
     },
-    "mutation_gate": {
-      "below_threshold_target_count": 0,
-      "minimum_default_score": 50.0,
-      "passed": true,
-      "target_count": 17
-    },
-    "pdf_candidate_benchmark": {
-      "baseline_median_seconds": 1.15,
-      "observed_median_seconds": 1.059067,
-      "passed": true,
-      "prior_attempts": [
-        {
-          "attempt": 1,
-          "release_review_passed": false,
-          "runtime_delta_percent": 31.177913,
-          "warning_median_seconds": 1.508546
-        },
-        {
-          "attempt": 2,
-          "release_review_passed": false,
-          "runtime_delta_percent": 29.000522,
-          "warning_median_seconds": 1.483506
-        }
-      ],
-      "runtime_delta_percent": -7.907217,
-      "warning_count": 0
-    },
+    "mutation_below_threshold_target_count": 0,
+    "mutation_gate": "passed",
+    "mutation_target_count": 17,
     "release_evidence": {
       "issue_count": 0,
       "manifest_passed": true,
-      "manifest_sha256": "f6156215cfb2a95bbeb5163bd85452ae9fe731cf6c7c7507ab80f824c5c1fb6b",
+      "manifest_sha256": "6a7169ce660b14f1db157b9e62dc63ac2ad11bd9d41866c865e43c50e0676e92",
       "review_passed": true,
-      "review_sha256": "92ea8fcde260440aa44290900461bf0fd4f9c1c1e08e1186d3859798ce05decc"
+      "review_sha256": "6bef8a4fb465533d185848db89bb8b96ac8f736b4b67229c202331f6cdf3b209"
     },
-    "release_evidence_bundle": {
-      "artifact_id": 11509972612,
+    "release_evidence_artifact": {
+      "artifact_id": 11515784109,
       "retention_days": 14,
-      "sha256": "f3b08052fc70869cb26c423a9207b9ca99ba354229870aab40596e6f5f031bbf"
+      "size_bytes": 374737
     },
-    "repository_commit_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
-    "run_id": "37680618452",
-    "started_at_utc": "2026-10-07T20:15:23Z",
+    "repository_commit_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
+    "run_id": "37696738821",
     "wordpress_staging_rest_gate": "skipped",
-    "wordpress_staging_rest_gate_reason": "Dedicated WP_STAGING_* variables were not configured; the operator-designated WP_SITE_URL sandbox endpoint passed a separate authenticated read-only preflight.",
+    "wordpress_staging_rest_gate_reason": "Dedicated WP_STAGING_* variables were not configured; a separately designated sandbox WP_SITE_URL was used for live verification.",
     "workflow_queue": {
       "approval_count": 1,
-      "evidence_sha256": "be699a398f13141656aad7702799e96bd638859943bdbb8e6213e6704139ecf5",
+      "evidence_sha256": "077c782467b37a9849698108c59f73cae0e1546f32b49100174d942e29d8d16e",
       "exact_head_verified": true,
-      "external_provider_call_count": 0,
       "outbox_status_counts": {
         "materialised": 2
       },
@@ -76,171 +48,249 @@
       "readiness_counts": {
         "approved": 1
       },
-      "recorded_effect_count": 0,
       "wordpress_write_count": 0
     }
   },
   "focused_autonomous_publication_tests": {
+    "command": "pytest tests/test_autonomous_publication_approval.py tests/test_publish_orchestrator.py tests/test_workflow_queue_registry.py tests/test_workflow_queue_worker_failures.py -q",
     "failed": 0,
-    "human_approval_used": false,
-    "module": "tests/test_autonomous_publication_approval.py",
-    "passed": 23,
-    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+    "passed": 78,
+    "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
   },
   "local_full_default_pytest": {
+    "duration_seconds": 417.27,
     "failed": 0,
-    "passed": 6795,
-    "reported_duration_seconds": 398.02,
+    "passed": 6811,
+    "pytest_exit_code": 0,
     "skipped": 1,
-    "telemetry_record_count": 6819,
-    "telemetry_sha256": "34a8420d5505192d41d64652f898768b621c5a28e323924f087469aab787a326",
-    "temp_root": "short Windows pytest basetemp; production artifact path bound unchanged",
-    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+    "telemetry_record_count": 6835,
+    "telemetry_sha256": "a1c2da3258539733326fdefaa50e4e372783d9a27d1dc52c26e3a704ab8b7440",
+    "temporary_root": "short Windows pytest temporary root; production path bound unchanged"
   },
   "measurements": {
     "ci_coverage_gate_passed": 1,
-    "ci_default_pytest_duration_seconds": 340.9,
+    "ci_default_pytest_duration_seconds": 196.29,
     "ci_default_pytest_exit_code": 0,
     "ci_default_pytest_failed": 0,
-    "ci_default_pytest_passed": 6796,
+    "ci_default_pytest_passed": 6812,
     "ci_default_pytest_skipped": 0,
-    "ci_default_pytest_total": 6796,
+    "ci_default_pytest_total": 6812,
     "ci_full_run_passed": 1,
     "ci_mutation_gate_passed": 1,
     "ci_mutation_target_count": 17,
+    "ci_queue_outbox_status_materialised": 2,
+    "ci_queue_readiness_approved": 1,
+    "ci_queue_status_budget_deferred": 1,
+    "ci_queue_status_pending": 3,
+    "ci_queue_status_retry_wait": 1,
+    "ci_queue_status_succeeded": 1,
+    "ci_queue_transition_budget_deferred": 1,
+    "ci_queue_transition_leased": 4,
+    "ci_queue_transition_pending": 7,
+    "ci_queue_transition_retry_wait": 1,
+    "ci_queue_transition_running": 3,
+    "ci_queue_transition_succeeded": 1,
     "ci_release_evidence_issue_count": 0,
     "ci_release_evidence_passed": 1,
-    "ci_test_telemetry_record_count": 6820,
-    "ci_wordpress_staging_rest_gate_skipped": 1,
-    "ci_workflow_queue_approval_count": 1,
-    "ci_workflow_queue_exact_head": 1,
-    "ci_workflow_queue_materialised_outbox_count": 2,
     "ci_workflow_queue_passed": 1,
-    "ci_workflow_queue_wordpress_writes": 0,
     "focused_tests_failed": 0,
-    "focused_tests_passed": 23,
-    "focused_tests_total": 23,
-    "local_default_pytest_duration_seconds": 398.02,
+    "focused_tests_passed": 78,
+    "focused_tests_total": 78,
+    "local_default_pytest_duration_seconds": 417.27,
     "local_default_pytest_failed": 0,
-    "local_default_pytest_passed": 6795,
+    "local_default_pytest_passed": 6811,
     "local_default_pytest_skipped": 1,
-    "local_default_pytest_total": 6796,
-    "local_pytest_telemetry_record_count": 6819,
-    "local_pytest_telemetry_wrapper_duration_ms": 408453,
+    "local_default_pytest_total": 6812,
     "queue_approved_readiness_count": 1,
     "queue_evidence_passed": 1,
     "queue_exact_head_verified": 1,
     "queue_external_provider_calls": 0,
     "queue_materialised_outbox_count": 2,
-    "queue_outbox_status_materialised": 2,
-    "queue_readiness_approved": 1,
     "queue_recorded_effects": 0,
     "queue_schema_version": 15,
-    "queue_status_budget_deferred": 1,
-    "queue_status_pending": 3,
-    "queue_status_retry_wait": 1,
-    "queue_status_succeeded": 1,
-    "queue_transition_budget_deferred": 1,
-    "queue_transition_leased": 4,
-    "queue_transition_pending": 7,
-    "queue_transition_retry_wait": 1,
-    "queue_transition_running": 3,
-    "queue_transition_succeeded": 1,
-    "queue_wordpress_writes": 0
+    "queue_wordpress_writes": 0,
+    "sandbox_auto_approval_count": 1,
+    "sandbox_effective_wordpress_write_count": 1,
+    "sandbox_final_head_fresh_create_observed": 0,
+    "sandbox_final_head_replay_effective_writes": 0,
+    "sandbox_full_authenticated_readback_verified": 1,
+    "sandbox_human_publication_approval_used": 0,
+    "sandbox_operator_requeue_required": 1,
+    "sandbox_outbox_publish_event_count": 1
   },
   "outcomes": {
-    "success": 3
+    "success": 4
   },
-  "preexisting_local_persistence_snapshot": {
-    "approval_actor_matches_autonomous_policy_count": 0,
-    "approval_record_count": 1,
-    "approval_record_created_at_utc": "2026-07-18T19:18:24+00:00",
-    "lineage_reference_present_count": 0,
-    "matching_succeeded_wordpress_job_count": 1,
-    "observed_at_utc": "2026-10-07T20:45:13Z",
-    "package_reference_present_count": 0,
-    "publication_readiness_record_count": 9,
-    "published_record_counts_by_post_type": {
-      "ml_report": 46,
-      "posts": 12
-    },
-    "read_only": true,
-    "readiness_status_counts": {
-      "approved": 1,
-      "awaiting_review": 8
-    },
-    "scope_note": "These records predate this verification and were not created or replayed by it; the persisted approval actor did not match the autonomous policy actor prefix.",
-    "source": "state/index.sqlite",
-    "validation_reference_present_count": 0,
-    "wordpress_publish_job_succeeded_count": 1,
-    "wordpress_publish_outbox_materialised_count": 1
+  "publication_readback_root_cause": {
+    "cause": "run_publish read back a newly created report only when cohort_manifest existed; queued report publication supplies report_readiness_references.",
+    "minimal_fix_commit": "62b12c79aae6e39fe6c1c41ce3f5ef785a350c92",
+    "repair": "The create path now performs authenticated readback for cohort_manifest or report_readiness_references; success and 404 fail-closed cases are tested."
+  },
+  "pytest_failure_root_cause": {
+    "cause": "The SimpleNamespace FileStatResponse fake omitted mtime_ns, so production raised AttributeError before reaching the retry assertion.",
+    "failing_test": "tests/test_orchestrator_retry.py::test_retry_on_retryable_app_error",
+    "first_failing_ci_sha": "62b12c79aae6e39fe6c1c41ce3f5ef785a350c92",
+    "minimal_fix_commit": "94ab4e632b2279af74b921dcdae3a3400e35f240",
+    "repair": "The fake supplies mtime_ns=None for a missing file and real st_mtime_ns for an existing file; no assertion, validation, threshold, or CI setting was weakened."
   },
   "sandbox_publication_verification": {
-    "approval_ledger_mutated": false,
-    "authenticated_preflight_attempted": true,
-    "authenticated_preflight_status": "passed",
-    "authenticated_readback_attempted": false,
-    "automatic_approval_attempted": false,
-    "http_status": 200,
-    "human_approval_used": false,
-    "identical_package_replay_attempted": false,
-    "missing_prerequisites": [
-      "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
-    ],
-    "outbox_event_added": false,
-    "post_type": "ml_report",
-    "queue_scan": {
-      "awaiting_review_count": 8,
-      "eligible_package_count": 0,
-      "lineage_artifact_references_present": 0,
-      "package_artifact_references_present": 0,
-      "prior_approved_count": 1,
-      "read_only": true,
-      "readiness_record_count": 9,
-      "required_asset_ready_record_count": 9,
-      "source": "state/index.sqlite",
-      "unexpired_readiness_artifact_count": 1,
-      "unexpired_readiness_status_counts": {
-        "fail": 1
-      },
-      "validation_artifact_references_present": 0
+    "approval": {
+      "action": "approved",
+      "actor_id": "autonomous_mvp_publication_v1:5ee6f650befca4e89d6e296def7517bbeccf5ae4f86edf3350f718b1661fc656:72c6fae2be2dd23e5e56486704f71276774d1d6b999658592418379e05742ce6",
+      "approval_count_for_checksum": 1,
+      "approval_id_sha256": "1ade1dd58100a017a503db4156efed04c31cc99019c83672884877fe47a1c29b",
+      "configuration_sha256": "72c6fae2be2dd23e5e56486704f71276774d1d6b999658592418379e05742ce6",
+      "created_at_utc": "2026-10-07T22:17:05+00:00",
+      "human_publication_approval_used": false,
+      "package_checksum_sha256": "c26698606793e52ea12e6ee392ccdbe9121ac7c8f1b34c2f1c330bb4228fb55d",
+      "policy_sha256": "5ee6f650befca4e89d6e296def7517bbeccf5ae4f86edf3350f718b1661fc656",
+      "source_configuration_sha256": "263b2f9c69124b7bcf1e6b977bb1d54651c02281e3bba924e801adaf6a2825ae",
+      "source_policy_sha256": "b7743c06f02b644720c2541b317e4adac7093c5f6c522f9078080becd0cdc3e7",
+      "source_validation_sha256": "8661fc8616855b615d72ea3414cb69afe0fea0cb7766f44ee0c2cf7c4296908a"
     },
-    "status": "blocked",
+    "authenticated_readback": {
+      "all_required_checks_verified": true,
+      "checks": [
+        {
+          "name": "post_id",
+          "status": "verified"
+        },
+        {
+          "name": "report_file_identity",
+          "status": "verified"
+        },
+        {
+          "name": "canonical_url",
+          "status": "verified"
+        },
+        {
+          "name": "post_type",
+          "status": "verified"
+        },
+        {
+          "name": "status",
+          "status": "verified"
+        },
+        {
+          "name": "content_checksum",
+          "status": "verified"
+        },
+        {
+          "name": "source_attribution",
+          "status": "verified"
+        },
+        {
+          "name": "metadata",
+          "status": "verified"
+        },
+        {
+          "name": "taxonomy_assignments",
+          "status": "verified"
+        },
+        {
+          "name": "media_associations",
+          "status": "verified"
+        },
+        {
+          "name": "open_graph_url",
+          "status": "not_exposed"
+        },
+        {
+          "name": "final_rendered_content_hash",
+          "status": "verified"
+        }
+      ],
+      "expected_content_checksum_matched": true,
+      "expected_content_sha256": "401c922b542ccc5c1c333ec2a608727ec43eb2559fe43c84fb0d2b8e5861d05f",
+      "metadata_verified": true,
+      "observed_content_sha256": "401c922b542ccc5c1c333ec2a608727ec43eb2559fe43c84fb0d2b8e5861d05f",
+      "post_found": true,
+      "post_id": 2009,
+      "repository_commit_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
+    },
+    "exact_head_fresh_create_observed": false,
+    "human_publication_approval_required": false,
+    "machine_evidence_sha256": "7b88f8c9d69a66e8ca32887338f38f7b5956e88b5b8bb7479a8d091cbbbc01ef",
+    "outbox": {
+      "matching_publish_events": 1,
+      "materialised_job_count": 1,
+      "status": "materialised"
+    },
+    "package": {
+      "configuration_sha256": "263b2f9c69124b7bcf1e6b977bb1d54651c02281e3bba924e801adaf6a2825ae",
+      "created_at_utc": "2026-10-07T22:16:24.949362+00:00",
+      "expires_at_utc": "2026-10-08T22:16:24.949362+00:00",
+      "final_html_sha256": "1ffcf935033cedef0c99c966e3a1de98dcfcd0d276abecafbc9ed9222f93e749",
+      "override_attributes_present": false,
+      "package_checksum_sha256": "c26698606793e52ea12e6ee392ccdbe9121ac7c8f1b34c2f1c330bb4228fb55d",
+      "policy_sha256": "b7743c06f02b644720c2541b317e4adac7093c5f6c522f9078080becd0cdc3e7",
+      "readiness_artifact_sha256": "87c3af760fa7865ec4b0c4bb85db8bb4033f61fa2edf4aaaff3ed87c14d28a21",
+      "readiness_rule_count": 16,
+      "readiness_rule_counts": {
+        "pass": 16
+      },
+      "readiness_status": "pass",
+      "report_validation_severity": "warning",
+      "report_validation_status": "pass",
+      "report_validation_warning_issue_count": 4,
+      "unresolved_factual_count": 0,
+      "unsupported_factual_count": 0
+    },
+    "production_write_performed": false,
+    "source_report_identity_sha256": "1ff9dc926c16e40f3f595ad18ca0bac8da7877c21f5d05a21e4c450b66f72d1c",
+    "status": "verified_with_final_head_replay",
+    "target_host_sha256": "3e737e575e14896d2f3c4065e68715e4ab721ec8a0a78cc67663c318df568a23",
     "target_role": "sandbox",
-    "target_selection": "operator-designated WP_SITE_URL",
-    "validation_policy": "block",
-    "verified_meta_keys": [
-      "ml_file_id",
-      "ml_content_sha256",
-      "ml_source_title",
-      "ml_source_url",
-      "ml_source_note",
-      "ml_source_publication_date"
-    ],
-    "wordpress_write_count": 0,
-    "wordpress_write_count_scope": "current verification attempt only; historical local publication records are reported separately",
-    "write_attempted": false
+    "target_scheme": "http",
+    "timeline_note": "The sandbox draft was first created on pre-fix code SHA 1997e34. Its queue attempt dead-lettered because the report create path skipped authenticated readback. After the readback fix and green exact-head CI, the same package was operationally requeued and replayed on the final SHA; the worker validated the approval/checksum, authenticated readback succeeded, and the replay made zero additional writes. A fresh authenticated readback using the persisted exact content/metadata expectation verified every required check. No human publication approval was used; the operational requeue was required to recover the pre-fix dead letter.",
+    "wordpress_artifact": {
+      "effective_create_count": 1,
+      "post_id": 2009,
+      "post_type": "ml_report",
+      "replay_effective_write_count": 0,
+      "status": "draft",
+      "total_effective_write_count": 1
+    },
+    "worker": {
+      "attempt_count": 2,
+      "final_head_replay_attempt": {
+        "approval_ledger_revalidated": true,
+        "authenticated_readback_verified": true,
+        "effective_writes": 0,
+        "outcome": "succeeded"
+      },
+      "final_head_replay_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
+      "initial_attempt": {
+        "authenticated_readback_verified": false,
+        "effective_writes": 1,
+        "error_code": "workflow_queue_output_unverified",
+        "outcome": "dead_letter"
+      },
+      "initial_write_repository_sha": "1997e34f3558301f11d9ca7b5f78a7dc7c1a8835",
+      "job_id_sha256": "7fdf8ca603d7e477660a77928e3259526920ce258658e5917a4714cff5018aa0",
+      "operator_queue_requeue_required": true,
+      "status": "succeeded",
+      "wordpress_publish_job_count": 1
+    }
   },
   "schema_version": "1.0",
   "subjects": [
     {
-      "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+      "identity_sha256": "cdf6c3e3d75e0224404e39bf5a0b17e7ca82a74ba9f0a00a1e091399b54bfc15",
       "outcome": "success"
     },
     {
-      "identity_sha256": "63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+      "identity_sha256": "dc132a9877b8eb4149ffcdb474b16611cb298858d1c900e0fcfe6e96fa4d678e",
       "outcome": "success"
     },
     {
-      "identity_sha256": "de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+      "identity_sha256": "0e9ee39d443c643c6b78816a9290ba78ed5f806a04735ca491a24d30d2dcbfeb",
+      "outcome": "success"
+    },
+    {
+      "identity_sha256": "ba9349b9caa7ad66105b71dc9069da5b97065162c9595b962ca03940329c3d1a",
       "outcome": "success"
     }
   ],
-  "test_fixture_repair": {
-    "repair": "The fake provider now selects each expected response by the existing batch task ID. Production batch concurrency and claim coverage assertions remain active.",
-    "root_cause": "The concurrent grounding test supplied batch-specific responses through a shared FIFO. Thread scheduling could assign one batch's response to another batch, producing intermittent coverage failures.",
-    "test_only": true,
-    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
-  },
-  "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+  "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
 }

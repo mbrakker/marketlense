@@ -1,9 +1,9 @@
 {
   "autonomous_mvp_assessment": {
     "blocking_gaps": [
-      "Authenticated sandbox WordPress write/readback/replay remains unverified because no current immutable, fully ready package artifact was available.",
-      "Current HEAD has no full report end-to-end factual-quality and publication-readiness evaluation.",
-      "Performance and provider timing evidence is historical; no current-HEAD matched performance benchmark is retained."
+      "Exact-head focused/full tests and CI pass. One Google Drive report received one autonomous sandbox approval and one draft create; the initial create was on pre-fix SHA 1997e34 and needed operational requeue. Exact-final-HEAD replay/readback passed with zero additional writes. A fresh create on final HEAD is not claimed.",
+      "Current HEAD has no new end-to-end report-generation/factual-quality cohort.",
+      "Performance and provider timing remain historical; no current-HEAD matched benchmark is retained."
     ],
     "blocks_autonomous_mvp_assessment": true,
     "status": "blocked"
@@ -31,8 +31,8 @@
       ]
     },
     "correctness_validation": {
-      "basis": "Current-HEAD Prompt 2 autonomous-approval tests, the full default pytest suite, and exact-head CI all passed; deterministic queue evidence is also retained.",
-      "limitation": "No current-HEAD full report end-to-end cohort.",
+      "basis": "Current-HEAD focused tests (78 passed), local default suite (6,811 passed, 1 skipped), and exact-head CI (6,812 passed) passed.",
+      "limitation": "No new full report-generation/factual-quality cohort was run on final HEAD.",
       "status": "partial",
       "supporting_run_ids": [
         "cohort-ias-per-report-timeout-20261002",
@@ -58,8 +58,8 @@
       ]
     },
     "current_head_full_end_to_end": {
-      "basis": "Current-HEAD verification covers focused tests and deterministic queue/recovery/idempotency evidence.",
-      "limitation": "No current-HEAD full product run was performed.",
+      "basis": "Exact-head CI and worker replay/readback passed.",
+      "limitation": "No new report create occurred on final HEAD; the first draft create was on 1997e34 and its job needed operational requeue.",
       "status": "not_evaluated",
       "supporting_run_ids": [
         "current-head-integrity-20261007"
@@ -82,8 +82,8 @@
       ]
     },
     "exact_repository_sha": {
-      "basis": "Every canonical run/candidate source has a declared SHA, projector binding, verified source hash, and exact_repository_sha evidence class.",
-      "limitation": "Historical SHA bindings identify historical code; only current-head-integrity is current HEAD.",
+      "basis": "Focused/local tests, GitHub CI, CodeQL, final-head queue replay, and authenticated readback bind to 94ab4e632b2279af74b921dcdae3a3400e35f240.",
+      "limitation": "The first external WordPress create occurred on pre-fix SHA 1997e34.",
       "status": "proven",
       "supporting_run_ids": [
         "acquisition-final30",
@@ -132,8 +132,8 @@
       ]
     },
     "idempotency_readback": {
-      "basis": "The WordPress bundle explicitly records readback not completed and repeat publication not run.",
-      "limitation": "No sandbox authenticated readback or identical-package live replay was performed because no eligible current package was available.",
+      "basis": "Exact-final-HEAD identical-package replay made zero writes; canonical authenticated readback matched expected content checksum and metadata.",
+      "limitation": "Operational requeue recovered the pre-fix dead letter; no human publication approval was used.",
       "status": "unavailable",
       "supporting_run_ids": [
         "wordpress-publication-attempt-20260811"
@@ -201,8 +201,8 @@
       ]
     },
     "publication_readiness": {
-      "basis": "Current-HEAD tests cover the policy-gated readiness and fail-closed approval paths; no live package was published.",
-      "limitation": "Authenticated sandbox publication and readback remain blocked because no current immutable, fully ready package artifact is available.",
+      "basis": "The sandbox package passed all 16 canonical readiness rules with zero unresolved or unsupported factual claims; its approval was bound to package checksum and policy/config identity.",
+      "limitation": "The package and initial create predate final HEAD; only replay/readback ran on final HEAD and needed operational requeue.",
       "status": "partial",
       "supporting_run_ids": [
         "cohort-ias-per-report-timeout-20261002",
@@ -221,8 +221,8 @@
       ]
     },
     "publication_side_effects": {
-      "basis": "The exact-head CI queue evidence records one approval and two materialized outbox rows in deterministic temporary SQLite, with zero WordPress writes.",
-      "limitation": "This is not production proof; no sandbox WordPress write or authenticated readback was performed.",
+      "basis": "Exactly one sandbox draft create is retained; exact-final-HEAD worker replay reports zero extra writes.",
+      "limitation": "Initial create predates the readback fix; a fresh final-HEAD create is not claimed. No production write occurred.",
       "status": "partial",
       "supporting_run_ids": [
         "wordpress-publication-attempt-20260811",
@@ -283,8 +283,7 @@
     }
   },
   "current_head": {
-    "ci_run_attempt": 1,
-    "ci_run_id": "37680618452",
+    "ci_run_id": "37696738821",
     "completeness": "complete",
     "criteria_results": [
       {
@@ -296,7 +295,7 @@
         "required": true
       },
       {
-        "actual_value": 23,
+        "actual_value": 78,
         "criterion_id": "focused_tests_executed",
         "disposition": "pass",
         "expected_value": 0,
@@ -312,7 +311,7 @@
         "required": true
       },
       {
-        "actual_value": 6795,
+        "actual_value": 6811,
         "criterion_id": "local_full_suite_executed",
         "disposition": "pass",
         "expected_value": 0,
@@ -328,7 +327,7 @@
         "required": true
       },
       {
-        "actual_value": 6796,
+        "actual_value": 6812,
         "criterion_id": "ci_default_suite_executed",
         "disposition": "pass",
         "expected_value": 0,
@@ -393,68 +392,32 @@
       }
     ],
     "default_pytest": {
-      "duration_seconds": 340.9,
+      "duration_seconds": 196.29,
       "failed": 0,
-      "passed": 6796,
+      "passed": 6812,
       "pytest_exit_code": 0,
       "skipped": 0,
-      "telemetry_record_count": 6820,
-      "telemetry_sha256": "b7ecda23f7e4bf3b92834fab8a7ddffdf0825d8056e84b52505816e0fbc5253a",
-      "terminal_summary": "6796 passed in 340.90s"
+      "telemetry_record_count": 6836,
+      "telemetry_sha256": "f64e402f95aeebd1dce671af9afd76d68df77399425fc543fda246471d9f2959"
     },
     "disposition": "pass",
     "run_id": "current-head-integrity-20261007",
     "sandbox_publication_verification": {
-      "approval_ledger_mutated": false,
-      "authenticated_preflight_attempted": true,
-      "authenticated_preflight_status": "passed",
-      "authenticated_readback_attempted": false,
-      "automatic_approval_attempted": false,
-      "http_status": 200,
-      "human_approval_used": false,
-      "identical_package_replay_attempted": false,
-      "missing_prerequisites": [
-        "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
-      ],
-      "outbox_event_added": false,
-      "post_type": "ml_report",
-      "queue_scan": {
-        "awaiting_review_count": 8,
-        "eligible_package_count": 0,
-        "lineage_artifact_references_present": 0,
-        "package_artifact_references_present": 0,
-        "prior_approved_count": 1,
-        "read_only": true,
-        "readiness_record_count": 9,
-        "required_asset_ready_record_count": 9,
-        "source": "state/index.sqlite",
-        "unexpired_readiness_artifact_count": 1,
-        "unexpired_readiness_status_counts": {
-          "fail": 1
-        },
-        "validation_artifact_references_present": 0
-      },
-      "status": "blocked",
-      "target_role": "sandbox",
-      "target_selection": "operator-designated WP_SITE_URL",
-      "validation_policy": "block",
-      "verified_meta_keys": [
-        "ml_file_id",
-        "ml_content_sha256",
-        "ml_source_title",
-        "ml_source_url",
-        "ml_source_note",
-        "ml_source_publication_date"
-      ],
-      "wordpress_write_count": 0,
-      "wordpress_write_count_scope": "current verification attempt only; historical local publication records are reported separately",
-      "write_attempted": false
+      "approval_actor": "autonomous_mvp_publication_v1:5ee6f650befca4e89d6e296def7517bbeccf5ae4f86edf3350f718b1661fc656:72c6fae2be2dd23e5e56486704f71276774d1d6b999658592418379e05742ce6",
+      "approval_count": 1,
+      "authenticated_readback_all_checks_verified": true,
+      "effective_wordpress_writes": 1,
+      "final_head_replay_effective_writes": 0,
+      "fresh_create_on_final_head_observed": false,
+      "operator_queue_requeue_required": true,
+      "outbox_event_count": 1,
+      "package_checksum_sha256": "c26698606793e52ea12e6ee392ccdbe9121ac7c8f1b34c2f1c330bb4228fb55d",
+      "status": "verified_with_final_head_replay"
     },
-    "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
-    "wordpress_staging_rest_gate": "skipped"
+    "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
   },
   "evidence_inventory_path": "docs/CTO_evidence/evidence_inventory.json",
-  "evidence_inventory_sha256": "d3d4cba85912651ad25ee5d0102f766757905641b36c751e6a8dcbc14629b630",
+  "evidence_inventory_sha256": "49a224a6020f88f8e759fed2667b8756fb810ed4360ae5518d312ea2d6910ae1",
   "historical_telemetry_count": 4,
   "run_count": 24,
   "runs": [
@@ -811,7 +774,7 @@
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-      "bundle_sha256": "75dfdc6f8c89416456774f14f2595614987f5bf77504918199abcf95f57032e3",
+      "bundle_sha256": "c79170852a7004bedfd1c62e82000340c4859fde9169774dc3344236a54e8487",
       "comparison_status": "not_applicable",
       "completeness": "complete",
       "disposition": "pass",
@@ -824,12 +787,12 @@
         "source_integrity"
       ],
       "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-      "manifest_sha256": "769b6e3e6d9b5c5bec857ab11443d6e2e7a0878a455ab010c019dbac9e83b665",
+      "manifest_sha256": "6bf1646b24631ee1c92236f3c29a1b3b84e3dcc754cc1ebc539a782a62bde079",
       "run_id": "current-head-integrity-20261007",
       "run_type": "current_head_integrity",
       "source_count": 1,
-      "subject_count": 3,
-      "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+      "subject_count": 4,
+      "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/cto_evidence_bundle.json",

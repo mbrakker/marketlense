@@ -7,7 +7,7 @@
     "source_integrity"
   ],
   "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-  "bundle_sha256": "75dfdc6f8c89416456774f14f2595614987f5bf77504918199abcf95f57032e3",
+  "bundle_sha256": "c79170852a7004bedfd1c62e82000340c4859fde9169774dc3344236a54e8487",
   "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
   "comparison_status": "not_applicable",
   "completeness": "complete",
@@ -22,7 +22,7 @@
       "required": true
     },
     {
-      "actual_value": 23,
+      "actual_value": 78,
       "criterion_id": "focused_tests_executed",
       "disposition": "pass",
       "expected_value": 0,
@@ -38,7 +38,7 @@
       "required": true
     },
     {
-      "actual_value": 6795,
+      "actual_value": 6811,
       "criterion_id": "local_full_suite_executed",
       "disposition": "pass",
       "expected_value": 0,
@@ -54,7 +54,7 @@
       "required": true
     },
     {
-      "actual_value": 6796,
+      "actual_value": 6812,
       "criterion_id": "ci_default_suite_executed",
       "disposition": "pass",
       "expected_value": 0,
@@ -121,11 +121,11 @@
   "disposition": "pass",
   "errors": [],
   "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-  "manifest_sha256": "769b6e3e6d9b5c5bec857ab11443d6e2e7a0878a455ab010c019dbac9e83b665",
-  "metric_count": 72,
+  "manifest_sha256": "6bf1646b24631ee1c92236f3c29a1b3b84e3dcc754cc1ebc539a782a62bde079",
+  "metric_count": 79,
   "missing_evidence_classes": [],
   "privacy_bounded_content_scan": {
-    "bundle_bytes": 62088,
+    "bundle_bytes": 65560,
     "checks": {
       "absolute_paths": true,
       "bundle_byte_bound": true,
@@ -149,6 +149,18 @@
   ],
   "run_id": "current-head-integrity-20261007",
   "run_type": "current_head_integrity",
+  "sandbox_publication_verification": {
+    "approval_actor": "autonomous_mvp_publication_v1:5ee6f650befca4e89d6e296def7517bbeccf5ae4f86edf3350f718b1661fc656:72c6fae2be2dd23e5e56486704f71276774d1d6b999658592418379e05742ce6",
+    "approval_count": 1,
+    "authenticated_readback_all_checks_verified": true,
+    "effective_wordpress_writes": 1,
+    "final_head_replay_effective_writes": 0,
+    "fresh_create_on_final_head_observed": false,
+    "operator_queue_requeue_required": true,
+    "outbox_event_count": 1,
+    "package_checksum_sha256": "c26698606793e52ea12e6ee392ccdbe9121ac7c8f1b34c2f1c330bb4228fb55d",
+    "status": "verified_with_final_head_replay"
+  },
   "schema_version": "1.0",
   "source_count": 1,
   "source_sha_verification": "passed",
@@ -156,14 +168,14 @@
     {
       "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
       "role": "run",
-      "sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
       "source_id": "current_head_evidence",
-      "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+      "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
       "verified": true
     }
   ],
   "status": "passed",
-  "subject_count": 3,
-  "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
-  "unavailable_metric_count": 21
+  "subject_count": 4,
+  "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
+  "unavailable_metric_count": 28
 }

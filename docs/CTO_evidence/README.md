@@ -1,6 +1,6 @@
 # CTO evidence pack
 
-Prompt 2 code/test HEAD verified: `c98cfb02f69ca428c9a42796f99510d7974a072a`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
+Prompt 2 code/test HEAD verified: `94ab4e632b2279af74b921dcdae3a3400e35f240`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
 
 Run-scoped metrics remain separate in each bundle. `complete` means the manifest-required evidence classes were present; it does not mean the workload passed a product-level acceptance test. Historical runs are never relabeled as current-HEAD evidence.
 
@@ -9,7 +9,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | Evidence area | Status | Limitation |
 |---|---|---|
 | correctness validation | **partial** | No current-HEAD full report end-to-end cohort. |
-| publication readiness | **partial** | Policy-gated readiness and fail-closed paths pass current-HEAD tests; live sandbox publication/readback is blocked because no current immutable, fully ready package artifact is available. |
+| publication readiness | **partial** | Package readiness passed 16/16 rules with zero unsupported/unresolved factual counts; the artifact predates final HEAD. |
 | factual quality controls | **partial** | No current-HEAD full report factual-quality evaluation; reviewer rubric is unavailable. |
 | performance | **partial** | No matched performance benchmark on current HEAD; artifact-DAG baseline conflict prevents a delta. |
 | provider timing | **partial** | Provider profiles are historical and do not establish current-HEAD end-to-end latency. |
@@ -21,11 +21,11 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | acquisition | **partial** | No current-HEAD acquisition run; one source is a byte-identical alias and is not duplicated. |
 | visual qa | **partial** | Associated PNGs were not retained; visual artifact bytes are unavailable. |
 | editorial review | **partial** | Reviewer attribution and versioned rubric are unavailable; bundle is incomplete. |
-| publication side effects | **partial** | No sandbox WordPress write or authenticated readback was performed; production credentials were not used. |
-| idempotency readback | **unavailable** | No sandbox authenticated readback or identical-package live replay was performed. |
+| publication side effects | **partial** | One sandbox draft create is retained from pre-fix SHA 1997e34; exact-final-HEAD replay/readback succeeded with zero extra writes. |
+| idempotency readback | **proven** | Exact-final-HEAD replay made zero writes and authenticated readback matched content/metadata; operational requeue recovered the earlier dead letter. |
 | immutable subject coverage | **partial** | Some aggregate profiles and side-effect runs have no per-subject identity. |
 | exact repository sha | **proven** | Historical SHA bindings identify historical code; only current-head-integrity is current HEAD. |
-| current head full end to end | **not_evaluated** | No current-HEAD full product run was performed. |
+| current head full end to end | **partial** | Exact-head CI and replay/readback passed; a fresh post create on final HEAD was not observed. |
 | current head provider cost | **not_applicable** | This verification run did not invoke providers, so provider cost is not applicable to it. |
 | production publication run | **not_evaluated** | No new production publication workload was run. |
 
@@ -48,7 +48,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | `cohort-reliability-cohort-20261001-next-five` | `469c13c15d0d` | 5 | complete / not_evaluated | — | `a530814b746d90d4169ff08ffc7f57bfbd5344f2fef870eaaa654117978fab88` |
 | `cohort-reliability-cohort-20261001-next-five-before-cohort-result` | `365c342ba3ff` | 5 | complete / not_evaluated | — | `eca64b13c1e9579f0228e67dc53c59f62563abfce2a5f3427af9180e2571d582` |
 | `cohort-report-agnostic-prompt-repair-20261001` | `eae746de7a65` | 5 | complete / not_evaluated | — | `b096c0fb636053aebf3a37855a9de0e55e9572bb6c804928d0f513fc186570c9` |
-| `current-head-integrity-20261007` | `c98cfb02f69c` | 3 | complete / pass | — | `75dfdc6f8c89416456774f14f2595614987f5bf77504918199abcf95f57032e3` |
+| `current-head-integrity-20261007` | `94ab4e632b22` | 4 | complete / pass | — | `c79170852a7004bedfd1c62e82000340c4859fde9169774dc3344236a54e8487` |
 | `file-search-comparison-20261003` | `be70355a28b8` | 5 | complete / not_evaluated | — | `7c96014fc0f534a127fc24f36386c2897fe42b7b3f598c66fb74d83e69c75c62` |
 | `grounding-concurrency-candidate-20261006` | `a1f2affcb4dd` | 0 | complete / not_evaluated | — | `0304d8dd076f6c365e94d0ce3866d66a152e92333b3ab2bd8f1f956bfe2fa71b` |
 | `human-editorial-review-20260901` | `56628ad76f86` | 5 | incomplete / not_evaluated | reviewer_attribution, rubric_identity | `b58b487b2cd31cdbf14346e50ee5b598f9991df9a3fb188182e271caf6108956` |
@@ -60,20 +60,20 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 
 ## Current-HEAD evidence
 
-Prompt 2 code/test HEAD `c98cfb02f69ca428c9a42796f99510d7974a072a` passed 23 focused autonomous-publication tests and the full local default suite with 6,795 passed, 1 skipped, and 0 failed in 398.02 seconds using 8 xdist workers and a short Windows pytest base directory. The first Windows run with pytest's default long temporary root failed the deep figure-path test because the resulting output root left too little room under the existing 240-character artifact-path safety bound; that exact test passed alone and the short-root full suite passed. No path limit, validation, or coverage behavior was changed.
+Prompt 2 code/test HEAD `94ab4e632b2279af74b921dcdae3a3400e35f240` passed the focused autonomous-publication and WordPress queue/readback tests (78 passed), the local default suite (6,811 passed, 1 skipped, 0 failed), and GitHub CI run `37696738821` (6,812 passed, 0 skipped, 0 failed). Coverage, mutation, release-evidence, architecture/boundary/docs/schema/WordPress gates and CodeQL run `37696738765` passed. The optional dedicated `WP_STAGING_*` CI gate was skipped; the operator-designated sandbox was separately exercised.
 
-The exact-head GitHub CI run `37680618452` passed: pytest reported 6,796 passed in 340.90 seconds with 0 skips; formatting, lint, typing, architecture/boundary/docs/schema/WordPress gates, coverage, all 17 mutation targets, retained quality checks, and release review passed with 0 issues. CodeQL run `37680618766` also passed on this SHA. The CI pytest telemetry retains 6,820 test records. The deterministic queue artifact SHA-256 is `be699a398f13141656aad7702799e96bd638859943bdbb8e6213e6704139ecf5` and records one approval, two materialized outbox rows, zero provider calls, zero recorded effects, and zero WordPress writes in temporary SQLite; it is not live publication proof. The optional WordPress staging REST CI gate was skipped because dedicated `WP_STAGING_*` variables were not configured.
+A report package retrieved from Google Drive passed all 16 publication-readiness rules with zero unresolved or unsupported factual claims. One autonomous policy actor approved the exact package checksum and policy/config identity; one approval and one durable WordPress outbox event were retained. The sandbox contains one `ml_report` draft and one effective WordPress create.
 
-CI exposed an intermittent race in the concurrent grounding test fake: its shared FIFO could assign a batch-specific response to the wrong concurrently scheduled batch. The fake now selects by batch task ID in this code/test HEAD; production grounding, readiness, publication, and approval paths were unchanged. The earlier Prompt 2 CI failures on `87add22` were separately fixed in `0060137`: tests had inherited local WordPress write settings, one grounding fake lacked its semantic payload, and a ZIP ratio assertion depended on exact zlib output.
+The initial create happened on pre-fix SHA `1997e34f3558301f11d9ca7b5f78a7dc7c1a8835`; the worker dead-lettered because the queue report create path skipped authenticated readback. Commit `62b12c79` fixed that path. After exact-head CI passed, the same package was operationally requeued and replayed on final code SHA `94ab4e63`; the worker revalidated approval/checksum, authenticated readback succeeded, and the replay made zero additional WordPress writes. A fresh authenticated readback using the persisted exact content/metadata expectation verified every required check. No human publication approval or production write occurred. The operational requeue was required to recover the pre-fix dead letter, so this does not prove a no-intervention first attempt or a fresh post create on final HEAD.
 
-Authenticated read-only preflight against the operator-designated sandbox `WP_SITE_URL` passed with HTTP 200 and the required `ml_report` metadata fields. The current read-only queue scan found nine persisted readiness records (eight awaiting review, one historical approval), zero package/validation/lineage artifacts, and zero eligible packages; the only unexpired readiness artifact is marked `fail`. The local persistent ledger also contains one older approval whose actor does not match the autonomous policy prefix, one materialized `wordpress_publish` outbox event, and one succeeded worker record matching that approval checksum, all dated 2026-07-18; it was not part of this verification. The local publication registry has 46 `ml_report` and 12 `posts` rows. No new approval, outbox event, WordPress write, human approval, authenticated readback, or identical-package replay was attempted because no current immutable package passed readiness with complete retained artifacts.
+The first CI failure after the readback fix was a stale `SimpleNamespace` FileStat test fake that omitted `mtime_ns`; production raised `AttributeError` before reaching the retry assertion. The fake now supplies the complete response contract. No test, validation, readiness, checksum, approval, idempotency, or CI gate was weakened.
 ## Provenance and privacy
 
 `evidence_inventory.json` records source paths, original/source hashes, embedded SHA claims, manifest-bound SHA endpoints, field-supported classes, publicized derivatives, and limitations. Raw report/publisher identifiers, local absolute paths, report content, private URLs, and provider request IDs are excluded from canonical source derivatives and bundles. Some crop-QA and editorial inputs were locally retained under ignored `out/` before this pack; their publicized derivatives and original hashes are now committed, while the original inputs were not repository-retained.
 
 ## Remaining autonomous-MVP gaps
 
-The evidence does not establish sandbox WordPress writes, authenticated readback, or replay idempotency. Sandbox REST authentication passed, but no eligible current ready package with retained immutable artifacts was available for a queue publication run. It also lacks current-HEAD end-to-end factual-quality/publication evidence and current-HEAD performance/provider timing. These gaps still block an evidence-based autonomous MVP assessment.
+The sandbox evidence establishes one policy-approved draft create, exact-checksum approval, authenticated content/metadata readback, and zero-write identical-package replay. The initial create occurred before the final readback fix and required operational requeue; a fresh create on final HEAD is not claimed. Current-HEAD full report generation/factual-quality, performance, and provider-timing evidence also remain incomplete, so the broader autonomous MVP assessment remains blocked.
 
 ## Verification
 

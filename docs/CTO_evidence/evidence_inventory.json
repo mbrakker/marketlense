@@ -538,25 +538,25 @@
     },
     {
       "canonical_declared_run_eligible": true,
-      "embedded_tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+      "embedded_tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
       "evidence_classes_supported_by_retained_fields": [
         "measurements",
         "outcomes"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "included_source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
       "included_source_tested_repository_shas": [
-        "c98cfb02f69ca428c9a42796f99510d7974a072a"
+        "94ab4e632b2279af74b921dcdae3a3400e35f240"
       ],
-      "limitation": "Exact-head focused tests, local and CI default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+      "limitation": "Exact-head focused/full tests and CI pass. One Google Drive report received one autonomous sandbox approval and one draft create; the initial create was on pre-fix SHA 1997e34 and needed operational requeue. Exact-final-HEAD replay/readback passed with zero additional writes. A fresh create on final HEAD is not claimed.",
+      "manifest_tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
       "producer_format": "marketlense/generic-metrics/1.0",
-      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
+      "publicization": "deterministic_exact_head_tests_ci_and_sanitized_sandbox_publication_summary",
       "role": "run",
       "source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
       "source_retained_in_repository": false,
-      "source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
-      "subject_count": 3
+      "source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
+      "subject_count": 4
     },
     {
       "canonical_declared_run_eligible": true,
@@ -736,19 +736,19 @@
         "focused_test_result"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "included_source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
       "included_source_tested_repository_shas": [
-        "c98cfb02f69ca428c9a42796f99510d7974a072a"
+        "94ab4e632b2279af74b921dcdae3a3400e35f240"
       ],
-      "limitation": "Exact-head focused tests, local and CI default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+      "limitation": "Exact-head focused/full tests and CI pass. One Google Drive report received one autonomous sandbox approval and one draft create; the initial create was on pre-fix SHA 1997e34 and needed operational requeue. Exact-final-HEAD replay/readback passed with zero additional writes. A fresh create on final HEAD is not claimed.",
+      "manifest_tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
       "producer_format": "pytest-junit-xml/1.0",
-      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
+      "publicization": "deterministic_exact_head_tests_ci_and_sanitized_sandbox_publication_summary",
       "role": "supporting",
       "source_path": "out/cto_evidence_current_head_tests.xml",
       "source_retained_in_repository": false,
-      "source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
-      "subject_count": 3
+      "source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
+      "subject_count": 4
     },
     {
       "canonical_declared_run_eligible": false,
@@ -777,19 +777,19 @@
         "side_effects"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "included_source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
       "included_source_tested_repository_shas": [
-        "c98cfb02f69ca428c9a42796f99510d7974a072a"
+        "94ab4e632b2279af74b921dcdae3a3400e35f240"
       ],
-      "limitation": "Exact-head focused tests, local and CI default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+      "limitation": "Exact-head focused/full tests and CI pass. One Google Drive report received one autonomous sandbox approval and one draft create; the initial create was on pre-fix SHA 1997e34 and needed operational requeue. Exact-final-HEAD replay/readback passed with zero additional writes. A fresh create on final HEAD is not claimed.",
+      "manifest_tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
       "producer_format": "workflow-queue-evidence/1.0",
-      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
+      "publicization": "deterministic_exact_head_tests_ci_and_sanitized_sandbox_publication_summary",
       "role": "supporting",
       "source_path": "out/cto_evidence_pack_workflow_queue.json",
       "source_retained_in_repository": false,
-      "source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
-      "subject_count": 3
+      "source_sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
+      "subject_count": 4
     }
   ]
 }

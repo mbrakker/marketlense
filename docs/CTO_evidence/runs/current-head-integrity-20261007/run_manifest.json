@@ -4,7 +4,7 @@
   "criteria": [
     {
       "criterion_id": "focused_tests_no_failures",
-      "description": "Focused autonomous-publication approval tests have no failures.",
+      "description": "Focused autonomous-publication and queue/worker tests have no failures.",
       "expected_value": 0,
       "metric_id": "current_head_evidence.focused_tests_failed",
       "operator": "eq",
@@ -14,7 +14,7 @@
     },
     {
       "criterion_id": "focused_tests_executed",
-      "description": "Focused autonomous-publication approval tests executed successfully.",
+      "description": "Focused autonomous-publication and queue/worker tests executed successfully.",
       "expected_value": 0,
       "metric_id": "current_head_evidence.focused_tests_passed",
       "operator": "gt",
@@ -84,7 +84,7 @@
     },
     {
       "criterion_id": "ci_release_evidence_passed",
-      "description": "Exact-head release evidence manifest and review passed without issues.",
+      "description": "Exact-head CI release manifest and review passed without issues.",
       "expected_value": 1,
       "metric_id": "current_head_evidence.ci_release_evidence_passed",
       "operator": "eq",
@@ -104,7 +104,7 @@
     },
     {
       "criterion_id": "workflow_queue_exact_head",
-      "description": "Workflow queue evidence started and ended on the declared repository SHA.",
+      "description": "Workflow queue evidence is bound to the declared repository SHA.",
       "expected_value": 1,
       "metric_id": "current_head_evidence.queue_exact_head_verified",
       "operator": "eq",
@@ -114,7 +114,7 @@
     },
     {
       "criterion_id": "no_external_provider_calls",
-      "description": "The deterministic queue evidence made no external provider calls.",
+      "description": "Deterministic temporary-SQLite queue evidence made no provider calls.",
       "expected_value": 0,
       "metric_id": "current_head_evidence.queue_external_provider_calls",
       "operator": "eq",
@@ -124,7 +124,7 @@
     },
     {
       "criterion_id": "no_wordpress_writes",
-      "description": "The deterministic temporary-SQLite queue evidence made no WordPress writes.",
+      "description": "Deterministic temporary-SQLite queue evidence made no WordPress writes.",
       "expected_value": 0,
       "metric_id": "current_head_evidence.queue_wordpress_writes",
       "operator": "eq",
@@ -133,11 +133,11 @@
       "stage": "workflow_queue"
     }
   ],
-  "ended_at_utc": "2026-10-07T20:40:28Z",
-  "external_side_effects_enabled": false,
-  "objective": "Verify Prompt 2 policy-gated autonomous publication tests, default pytest, and exact-head CI; check sandbox access and package eligibility, recording the live run as blocked if no package passes current readiness.",
-  "operator_intervention_policy": "The policy-gated approval path passed focused and full tests, exact-head CI, and deterministic temporary-SQLite queue evidence. Authenticated sandbox preflight passed. Live publication, readback, and replay remain blocked because no current immutable package has passing readiness and complete retained artifacts; no new approval, outbox event, WordPress write, or human intervention was attempted.",
-  "producer_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a",
+  "ended_at_utc": "2026-10-07T22:59:11Z",
+  "external_side_effects_enabled": true,
+  "objective": "Verify Prompt 2 policy-gated autonomous publication on exact code HEAD: focused/full tests, exact-head CI, approval/outbox records, sandbox replay and authenticated readback; retain the pre-fix initial-write chronology.",
+  "operator_intervention_policy": "No human publication approval was used. The first sandbox create occurred on pre-fix SHA 1997e34 and dead-lettered because create readback was missing. After the readback fix and green exact-head CI, the same package was operationally requeued and replayed on final HEAD with zero additional writes and verified readback. A fresh post create on final HEAD is not claimed.",
+  "producer_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240",
   "required_evidence_classes": [
     "exact_repository_sha",
     "source_integrity",
@@ -152,49 +152,60 @@
     {
       "format_id": "marketlense/generic-metrics/1.0",
       "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "producer": "marketlense_ci_and_pytest_verification",
+      "producer": "marketlense_ci_pytest_and_sandbox_publication_verification",
       "role": "run",
       "schema_version": "1.0",
-      "sha256": "c55167afe5b54cdbf29592e218aa6699e4d16baa66164f2bafaf78d38b170f0a",
+      "sha256": "b428b634aacce584bf26f9b336e4f5e3d986b5db99a7b5c8bbc979f1ef444550",
       "source_id": "current_head_evidence",
-      "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+      "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
     }
   ],
   "stages_in_scope": [
     "approval_policy",
     "testing",
     "workflow_queue",
-    "validation",
+    "publication_readiness",
+    "live_sandbox_publication",
+    "authenticated_wordpress_readback",
     "idempotency",
     "ci"
   ],
   "stages_out_of_scope": [
-    "live_sandbox_publication",
-    "authenticated_wordpress_readback"
+    "production_publication",
+    "current_head_fresh_report_generation",
+    "performance",
+    "provider_timing"
   ],
-  "started_at_utc": "2026-10-07T20:15:23Z",
+  "started_at_utc": "2026-10-07T22:31:24Z",
   "subjects": [
     {
-      "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+      "identity_sha256": "cdf6c3e3d75e0224404e39bf5a0b17e7ca82a74ba9f0a00a1e091399b54bfc15",
       "immutable": true,
       "schema_version": "1.0",
-      "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+      "subject_id": "subject-cdf6c3e3d75e0224404e39bf5a0b17e7ca82a74ba9f0a00a1e091399b54bfc15",
       "terminal_outcome": "success"
     },
     {
-      "identity_sha256": "63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+      "identity_sha256": "dc132a9877b8eb4149ffcdb474b16611cb298858d1c900e0fcfe6e96fa4d678e",
       "immutable": true,
       "schema_version": "1.0",
-      "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+      "subject_id": "subject-dc132a9877b8eb4149ffcdb474b16611cb298858d1c900e0fcfe6e96fa4d678e",
       "terminal_outcome": "success"
     },
     {
-      "identity_sha256": "de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+      "identity_sha256": "0e9ee39d443c643c6b78816a9290ba78ed5f806a04735ca491a24d30d2dcbfeb",
       "immutable": true,
       "schema_version": "1.0",
-      "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+      "subject_id": "subject-0e9ee39d443c643c6b78816a9290ba78ed5f806a04735ca491a24d30d2dcbfeb",
+      "terminal_outcome": "success"
+    },
+    {
+      "identity_sha256": "ba9349b9caa7ad66105b71dc9069da5b97065162c9595b962ca03940329c3d1a",
+      "immutable": true,
+      "schema_version": "1.0",
+      "subject_id": "subject-ba9349b9caa7ad66105b71dc9069da5b97065162c9595b962ca03940329c3d1a",
       "terminal_outcome": "success"
     }
   ],
-  "tested_repository_sha": "c98cfb02f69ca428c9a42796f99510d7974a072a"
+  "tested_repository_sha": "94ab4e632b2279af74b921dcdae3a3400e35f240"
 }
