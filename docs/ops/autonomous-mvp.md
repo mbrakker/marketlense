@@ -42,11 +42,14 @@ budgets, leases, round-robin fairness, idempotency, and validation. Publication
 still requires the existing checksum-bound human approval.
 
 The overlay does not retune supervisor limits. With committed base values,
-one pass allows at most three global workers, three candidates per queue, 60
-non-idle jobs, 1,200 seconds of runtime, and a 180-second supervisor lease.
-The effective application configuration remains authoritative if an operator
-has changed those base values. A successful worker can expose downstream work
-to the same pass while job, runtime, and durable queue limits allow it.
+one pass allows at most three global workers and up to three active worker slots
+per queue, with a 60-job total cap. The 1,200-second runtime limit stops new
+dispatch; the supervisor waits for already active workers to finish, so total
+wall-clock time can exceed that cutoff. The supervisor lease is 180 seconds
+and is renewed while the pass runs. The effective application configuration
+remains authoritative if an operator has changed those base values. A
+successful worker can expose downstream work to the same pass while job,
+runtime, and durable queue limits allow it.
 
 ## Interpret the result and check health
 
