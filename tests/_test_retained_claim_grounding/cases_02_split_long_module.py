@@ -86,17 +86,34 @@ def test_large_grounding_inventory_is_split_without_losing_claim_coverage(
         claim_entries[4:8],
         claim_entries[8:],
     )
-    responses = [
-        {
-            "unsupported": [],
-            "checks": [
-                _grounding_check(item["item_id"], item["text"], "entailed")
-                for item in group
-            ],
-        }
-        for group in groups
-    ]
-    model_client = FakeOpenAI(*responses)
+
+    class BatchAwareOpenAI:
+        def __init__(self) -> None:
+            self.requests: list[tuple[str, str, str]] = []
+
+        def openai_chat_json(self, req, ctx):
+            task_id = str(getattr(ctx, "task_id", ""))
+            batch_index = int(task_id.rsplit(":batch:", 1)[1].split(":", 1)[0])
+            expected_claims = groups[batch_index - 1]
+            response_payload = {
+                "unsupported": [],
+                "checks": [
+                    _grounding_check(item["item_id"], item["text"], "entailed")
+                    for item in expected_claims
+                ],
+            }
+            self.requests.append(("chat", req.model, task_id))
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(response_payload),
+                parsed_json=response_payload,
+                input_tokens=0,
+                output_tokens=0,
+                tool_calls=0,
+                model=req.model,
+            )
+
+    model_client = BatchAwareOpenAI()
     captured_packages: list[ClaimValidationPackage] = []
 
     issues = run_grounding_check(
