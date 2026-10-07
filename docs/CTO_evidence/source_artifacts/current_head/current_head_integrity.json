@@ -1,36 +1,59 @@
 {
   "ci_verification": {
-    "attempt": 1,
+    "attempt": 3,
     "conclusion": "success",
-    "coverage_gate": "passed",
+    "repository_commit_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+    "run_id": "37664282492",
+    "started_at_utc": "2026-10-07T18:56:40Z",
+    "completed_at_utc": "2026-10-07T19:18:33Z",
     "default_pytest": {
-      "duration_seconds": 274.68,
+      "duration_seconds": 387.9,
       "failed": 0,
-      "passed": 6796,
+      "passed": 6820,
       "pytest_exit_code": 0,
       "skipped": 0,
-      "telemetry_sha256": "f3189f877f426bf70aaf8728804792b75a7a4733017558f1984d6e1584c1387a"
+      "telemetry_sha256": "b5e5a74fbf395dec9be125d6a7662efcd7b82093eab1330aacefffd2f31c1d6c"
     },
+    "coverage_gate": "passed",
     "mutation_gate": "passed",
     "release_evidence": {
       "issue_count": 0,
       "manifest_passed": true,
-      "manifest_sha256": "7a26a38ade4fc0e89659921653bc53a41254e0461ca9e50bce2fd29275796b42",
+      "manifest_sha256": "4665c0d2046577f459937e8bf8af9aef8d2dcd2c1f396c14c56fe89822589909",
       "review_passed": true,
-      "review_sha256": "daf76288a4f559b04a7a6b42f316d11d8593072efed74ab5d2e452023c612da9"
+      "review_sha256": "126071fce453b46b8e21e9780e6e96f0b1f396967c07a541ba3462044adb2f00"
     },
     "release_evidence_bundle": {
-      "artifact_id": 11501796730,
+      "artifact_id": 11506100493,
       "retention_days": 14,
-      "sha256": "587a5863407d02160ec8663dbe3483d5b81b33ca789273a9d09ba6854bc199a1"
+      "sha256": "c67a530ce2a2e92fa8012285d116bdd485de35ce6688e73afd1a65419fb03841"
     },
-    "repository_commit_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
-    "run_id": "37660224676",
+    "pdf_candidate_benchmark": {
+      "passed": true,
+      "warning_count": 0,
+      "baseline_median_seconds": 1.15,
+      "observed_median_seconds": 1.383539,
+      "runtime_delta_percent": 20.307739,
+      "prior_attempts": [
+        {
+          "attempt": 1,
+          "release_review_passed": false,
+          "warning_median_seconds": 1.508546,
+          "runtime_delta_percent": 31.177913
+        },
+        {
+          "attempt": 2,
+          "release_review_passed": false,
+          "warning_median_seconds": 1.483506,
+          "runtime_delta_percent": 29.000522
+        }
+      ]
+    },
     "wordpress_staging_rest_gate": "skipped",
-    "wordpress_staging_rest_gate_reason": "No sandbox staging credentials were configured.",
+    "wordpress_staging_rest_gate_reason": "Dedicated WP_STAGING_* CI variables were not configured; the operator-designated WP_SITE_URL sandbox endpoint passed a separate authenticated read-only preflight.",
     "workflow_queue": {
       "approval_count": 1,
-      "evidence_sha256": "598e7ebe06b8a877283fa56c16419786e9184a1bb021f26652bc5f7178b4de73",
+      "evidence_sha256": "f1f3d070912f87e27782568da9a8967109a9d04507ca6dffd0d92e69bb0400c9",
       "exact_head_verified": true,
       "outbox_status_counts": {
         "materialised": 2
@@ -40,14 +63,17 @@
       "readiness_counts": {
         "approved": 1
       },
-      "wordpress_write_count": 0
+      "wordpress_write_count": 0,
+      "external_provider_call_count": 0,
+      "recorded_effect_count": 0
     }
   },
   "focused_autonomous_publication_tests": {
     "failed": 0,
     "human_approval_used": false,
     "module": "tests/test_autonomous_publication_approval.py",
-    "passed": 23
+    "passed": 23,
+    "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
   },
   "local_full_default_pytest": {
     "failed": 0,
@@ -55,16 +81,17 @@
     "reported_duration_seconds": 423.78,
     "skipped": 1,
     "telemetry_sha256": "db469136bf8fea4e9c0d27d680971010098b3bfdcc6c3ba9898614e0d7c460e2",
-    "temp_root": "short Windows pytest temp root; production artifact path bound unchanged"
+    "temp_root": "short Windows pytest temp root; production artifact path bound unchanged",
+    "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
   },
   "measurements": {
     "ci_coverage_gate_passed": 1,
-    "ci_default_pytest_duration_seconds": 274.68,
+    "ci_default_pytest_duration_seconds": 387.9,
     "ci_default_pytest_exit_code": 0,
     "ci_default_pytest_failed": 0,
-    "ci_default_pytest_passed": 6796,
+    "ci_default_pytest_passed": 6820,
     "ci_default_pytest_skipped": 0,
-    "ci_default_pytest_total": 6796,
+    "ci_default_pytest_total": 6820,
     "ci_full_run_passed": 1,
     "ci_mutation_gate_passed": 1,
     "ci_release_evidence_issue_count": 0,
@@ -98,20 +125,56 @@
     "queue_transition_retry_wait": 1,
     "queue_transition_running": 3,
     "queue_transition_succeeded": 1,
-    "queue_wordpress_writes": 0
+    "queue_wordpress_writes": 0,
+    "ci_workflow_queue_exact_head": 1,
+    "ci_workflow_queue_approval_count": 1,
+    "ci_workflow_queue_materialised_outbox_count": 2,
+    "ci_workflow_queue_wordpress_writes": 0
   },
   "outcomes": {
     "success": 3
   },
   "sandbox_publication_verification": {
+    "status": "blocked",
+    "target_role": "sandbox",
+    "target_selection": "operator-designated WP_SITE_URL",
+    "authenticated_preflight_attempted": true,
+    "authenticated_preflight_status": "passed",
+    "http_status": 200,
+    "post_type": "ml_report",
+    "validation_policy": "block",
+    "verified_meta_keys": [
+      "ml_file_id",
+      "ml_content_sha256",
+      "ml_source_title",
+      "ml_source_url",
+      "ml_source_note",
+      "ml_source_publication_date"
+    ],
+    "queue_scan": {
+      "source": "state/index.sqlite",
+      "read_only": true,
+      "readiness_record_count": 9,
+      "awaiting_review_count": 8,
+      "prior_approved_count": 1,
+      "package_artifact_references_present": 0,
+      "eligible_package_count": 0,
+      "unexpired_readiness_artifact_count": 1,
+      "unexpired_readiness_status_counts": {
+        "fail": 1
+      }
+    },
+    "automatic_approval_attempted": false,
+    "approval_ledger_mutated": false,
+    "outbox_event_added": false,
+    "write_attempted": false,
+    "wordpress_write_count": 0,
     "authenticated_readback_attempted": false,
     "identical_package_replay_attempted": false,
+    "human_approval_used": false,
     "missing_prerequisites": [
-      "No sandbox-designated WordPress endpoint and matching test credentials are configured; the configured local WordPress profile is identified as production and was not used.",
-      "The read-only queue prerequisite scan found no eligible immutable, fully ready package for a sandbox publication run."
-    ],
-    "status": "blocked",
-    "write_attempted": false
+      "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
+    ]
   },
   "schema_version": "1.0",
   "subjects": [
@@ -128,5 +191,5 @@
       "outcome": "success"
     }
   ],
-  "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
+  "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
 }

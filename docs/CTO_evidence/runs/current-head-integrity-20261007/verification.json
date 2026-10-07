@@ -1,145 +1,27 @@
 {
-  "available_evidence_classes": [
-    "exact_repository_sha",
-    "immutable_subjects",
-    "measurements",
-    "outcomes",
-    "source_integrity"
-  ],
-  "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-  "bundle_sha256": "890518fe415c99748434a2499707e4484b9d3b26acc61c0e19e626cbf6e91b32",
+  "schema_version": "1.0",
+  "run_id": "current-head-integrity-20261007",
+  "run_type": "current_head_integrity",
+  "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
   "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
-  "comparison_status": "not_applicable",
-  "completeness": "complete",
-  "contract_parse_roundtrip": "passed",
-  "criteria_results": [
+  "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
+  "manifest_sha256": "da5045b17a0ff210bf52453d57e1051387ee5e9d0c05b045c91413c5f5edb104",
+  "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
+  "bundle_sha256": "55635ac4656547e118bf0c13791643dd4037e93b9d1ac3ad3eb610eedd1a2d91",
+  "source_sha_verification": "passed",
+  "sources": [
     {
-      "actual_value": 0,
-      "criterion_id": "focused_tests_no_failures",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 23,
-      "criterion_id": "focused_tests_executed",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "gt",
-      "required": true
-    },
-    {
-      "actual_value": 0,
-      "criterion_id": "local_full_suite_no_failures",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 6795,
-      "criterion_id": "local_full_suite_executed",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "gt",
-      "required": true
-    },
-    {
-      "actual_value": 0,
-      "criterion_id": "ci_default_suite_no_failures",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 6796,
-      "criterion_id": "ci_default_suite_executed",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "gt",
-      "required": true
-    },
-    {
-      "actual_value": 1,
-      "criterion_id": "ci_coverage_gate_passed",
-      "disposition": "pass",
-      "expected_value": 1,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 1,
-      "criterion_id": "ci_mutation_gate_passed",
-      "disposition": "pass",
-      "expected_value": 1,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 1,
-      "criterion_id": "ci_release_evidence_passed",
-      "disposition": "pass",
-      "expected_value": 1,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 1,
-      "criterion_id": "ci_workflow_queue_passed",
-      "disposition": "pass",
-      "expected_value": 1,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 1,
-      "criterion_id": "workflow_queue_exact_head",
-      "disposition": "pass",
-      "expected_value": 1,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 0,
-      "criterion_id": "no_external_provider_calls",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "eq",
-      "required": true
-    },
-    {
-      "actual_value": 0,
-      "criterion_id": "no_wordpress_writes",
-      "disposition": "pass",
-      "expected_value": 0,
-      "operator": "eq",
-      "required": true
+      "source_id": "current_head_evidence",
+      "role": "run",
+      "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
+      "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+      "verified": true
     }
   ],
+  "contract_parse_roundtrip": "passed",
+  "completeness": "complete",
   "disposition": "pass",
-  "errors": [],
-  "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-  "manifest_sha256": "0d91cbe1b7a41729fdc769ee5210c9632fe53a09ccb283d5fd2a01cf41c33425",
-  "metric_count": 64,
-  "missing_evidence_classes": [],
-  "privacy_bounded_content_scan": {
-    "bundle_bytes": 58454,
-    "checks": {
-      "absolute_paths": true,
-      "bundle_byte_bound": true,
-      "credentials": true,
-      "database_connection_strings": true,
-      "emails": true,
-      "raw_content_fields": true,
-      "source_identity_values": true,
-      "urls": true
-    },
-    "identity_match_count": 0,
-    "raw_content_field_count": 0,
-    "status": "passed"
-  },
   "required_evidence_classes": [
     "exact_repository_sha",
     "immutable_subjects",
@@ -147,34 +29,184 @@
     "outcomes",
     "source_integrity"
   ],
-  "run_id": "current-head-integrity-20261007",
-  "run_type": "current_head_integrity",
-  "sandbox_publication_verification": {
-    "authenticated_readback_attempted": false,
-    "identical_package_replay_attempted": false,
-    "missing_prerequisites": [
-      "No sandbox-designated WordPress endpoint and matching test credentials are configured; the configured local WordPress profile is identified as production and was not used.",
-      "The read-only queue prerequisite scan found no eligible immutable, fully ready package for a sandbox publication run."
-    ],
-    "status": "blocked",
-    "write_attempted": false
-  },
-  "schema_version": "1.0",
-  "source_count": 1,
-  "source_sha_verification": "passed",
-  "sources": [
+  "available_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "measurements",
+    "outcomes",
+    "source_integrity"
+  ],
+  "missing_evidence_classes": [],
+  "criteria_results": [
     {
-      "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "role": "run",
-      "sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
-      "source_id": "current_head_evidence",
-      "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
-      "verified": true
+      "criterion_id": "focused_tests_no_failures",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 0,
+      "actual_value": 0
+    },
+    {
+      "criterion_id": "focused_tests_executed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "gt",
+      "expected_value": 0,
+      "actual_value": 23
+    },
+    {
+      "criterion_id": "local_full_suite_no_failures",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 0,
+      "actual_value": 0
+    },
+    {
+      "criterion_id": "local_full_suite_executed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "gt",
+      "expected_value": 0,
+      "actual_value": 6795
+    },
+    {
+      "criterion_id": "ci_default_suite_no_failures",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 0,
+      "actual_value": 0
+    },
+    {
+      "criterion_id": "ci_default_suite_executed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "gt",
+      "expected_value": 0,
+      "actual_value": 6820
+    },
+    {
+      "criterion_id": "ci_coverage_gate_passed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 1,
+      "actual_value": 1
+    },
+    {
+      "criterion_id": "ci_mutation_gate_passed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 1,
+      "actual_value": 1
+    },
+    {
+      "criterion_id": "ci_release_evidence_passed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 1,
+      "actual_value": 1
+    },
+    {
+      "criterion_id": "ci_workflow_queue_passed",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 1,
+      "actual_value": 1
+    },
+    {
+      "criterion_id": "workflow_queue_exact_head",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 1,
+      "actual_value": 1
+    },
+    {
+      "criterion_id": "no_external_provider_calls",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 0,
+      "actual_value": 0
+    },
+    {
+      "criterion_id": "no_wordpress_writes",
+      "disposition": "pass",
+      "required": true,
+      "operator": "eq",
+      "expected_value": 0,
+      "actual_value": 0
     }
   ],
-  "status": "passed",
   "subject_count": 3,
-  "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
+  "metric_count": 68,
+  "source_count": 1,
+  "comparison_status": "not_applicable",
   "unavailable_metric_count": 21,
+  "privacy_bounded_content_scan": {
+    "status": "passed",
+    "checks": {
+      "absolute_paths": true,
+      "emails": true,
+      "urls": true,
+      "credentials": true,
+      "database_connection_strings": true,
+      "source_identity_values": true,
+      "raw_content_fields": true,
+      "bundle_byte_bound": true
+    },
+    "identity_match_count": 0,
+    "raw_content_field_count": 0,
+    "bundle_bytes": 60004
+  },
+  "status": "passed",
+  "errors": [],
+  "sandbox_publication_verification": {
+    "status": "blocked",
+    "target_role": "sandbox",
+    "target_selection": "operator-designated WP_SITE_URL",
+    "authenticated_preflight_attempted": true,
+    "authenticated_preflight_status": "passed",
+    "http_status": 200,
+    "post_type": "ml_report",
+    "validation_policy": "block",
+    "verified_meta_keys": [
+      "ml_file_id",
+      "ml_content_sha256",
+      "ml_source_title",
+      "ml_source_url",
+      "ml_source_note",
+      "ml_source_publication_date"
+    ],
+    "queue_scan": {
+      "source": "state/index.sqlite",
+      "read_only": true,
+      "readiness_record_count": 9,
+      "awaiting_review_count": 8,
+      "prior_approved_count": 1,
+      "package_artifact_references_present": 0,
+      "eligible_package_count": 0,
+      "unexpired_readiness_artifact_count": 1,
+      "unexpired_readiness_status_counts": {
+        "fail": 1
+      }
+    },
+    "automatic_approval_attempted": false,
+    "approval_ledger_mutated": false,
+    "outbox_event_added": false,
+    "write_attempted": false,
+    "wordpress_write_count": 0,
+    "authenticated_readback_attempted": false,
+    "identical_package_replay_attempted": false,
+    "human_approval_used": false,
+    "missing_prerequisites": [
+      "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
+    ]
+  },
   "wordpress_staging_rest_gate": "skipped"
 }

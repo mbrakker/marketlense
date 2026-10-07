@@ -283,139 +283,172 @@
     }
   },
   "current_head": {
-    "ci_run_id": "37660224676",
+    "ci_run_id": "37664282492",
     "completeness": "complete",
     "criteria_results": [
       {
-        "actual_value": 0,
         "criterion_id": "focused_tests_no_failures",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 0
       },
       {
-        "actual_value": 23,
         "criterion_id": "focused_tests_executed",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "gt",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 23
       },
       {
-        "actual_value": 0,
         "criterion_id": "local_full_suite_no_failures",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 0
       },
       {
-        "actual_value": 6795,
         "criterion_id": "local_full_suite_executed",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "gt",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 6795
       },
       {
-        "actual_value": 0,
         "criterion_id": "ci_default_suite_no_failures",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 0
       },
       {
-        "actual_value": 6796,
         "criterion_id": "ci_default_suite_executed",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "gt",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 6820
       },
       {
-        "actual_value": 1,
         "criterion_id": "ci_coverage_gate_passed",
         "disposition": "pass",
-        "expected_value": 1,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 1,
+        "actual_value": 1
       },
       {
-        "actual_value": 1,
         "criterion_id": "ci_mutation_gate_passed",
         "disposition": "pass",
-        "expected_value": 1,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 1,
+        "actual_value": 1
       },
       {
-        "actual_value": 1,
         "criterion_id": "ci_release_evidence_passed",
         "disposition": "pass",
-        "expected_value": 1,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 1,
+        "actual_value": 1
       },
       {
-        "actual_value": 1,
         "criterion_id": "ci_workflow_queue_passed",
         "disposition": "pass",
-        "expected_value": 1,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 1,
+        "actual_value": 1
       },
       {
-        "actual_value": 1,
         "criterion_id": "workflow_queue_exact_head",
         "disposition": "pass",
-        "expected_value": 1,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 1,
+        "actual_value": 1
       },
       {
-        "actual_value": 0,
         "criterion_id": "no_external_provider_calls",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 0
       },
       {
-        "actual_value": 0,
         "criterion_id": "no_wordpress_writes",
         "disposition": "pass",
-        "expected_value": 0,
+        "required": true,
         "operator": "eq",
-        "required": true
+        "expected_value": 0,
+        "actual_value": 0
       }
     ],
     "default_pytest": {
-      "duration_seconds": 274.68,
+      "duration_seconds": 387.9,
       "failed": 0,
-      "passed": 6796,
+      "passed": 6820,
       "pytest_exit_code": 0,
       "skipped": 0,
-      "telemetry_sha256": "f3189f877f426bf70aaf8728804792b75a7a4733017558f1984d6e1584c1387a"
+      "telemetry_sha256": "b5e5a74fbf395dec9be125d6a7662efcd7b82093eab1330aacefffd2f31c1d6c"
     },
     "disposition": "pass",
     "run_id": "current-head-integrity-20261007",
     "sandbox_publication_verification": {
+      "status": "blocked",
+      "target_role": "sandbox",
+      "target_selection": "operator-designated WP_SITE_URL",
+      "authenticated_preflight_attempted": true,
+      "authenticated_preflight_status": "passed",
+      "http_status": 200,
+      "post_type": "ml_report",
+      "validation_policy": "block",
+      "verified_meta_keys": [
+        "ml_file_id",
+        "ml_content_sha256",
+        "ml_source_title",
+        "ml_source_url",
+        "ml_source_note",
+        "ml_source_publication_date"
+      ],
+      "queue_scan": {
+        "source": "state/index.sqlite",
+        "read_only": true,
+        "readiness_record_count": 9,
+        "awaiting_review_count": 8,
+        "prior_approved_count": 1,
+        "package_artifact_references_present": 0,
+        "eligible_package_count": 0,
+        "unexpired_readiness_artifact_count": 1,
+        "unexpired_readiness_status_counts": {
+          "fail": 1
+        }
+      },
+      "automatic_approval_attempted": false,
+      "approval_ledger_mutated": false,
+      "outbox_event_added": false,
+      "write_attempted": false,
+      "wordpress_write_count": 0,
       "authenticated_readback_attempted": false,
       "identical_package_replay_attempted": false,
+      "human_approval_used": false,
       "missing_prerequisites": [
-        "No sandbox-designated WordPress endpoint and matching test credentials are configured; the configured local WordPress profile is identified as production and was not used.",
-        "The read-only queue prerequisite scan found no eligible immutable, fully ready package for a sandbox publication run."
-      ],
-      "status": "blocked",
-      "write_attempted": false
+        "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
+      ]
     },
-    "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
-    "wordpress_staging_rest_gate": "skipped"
+    "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+    "wordpress_staging_rest_gate": "skipped",
+    "ci_run_attempt": 3
   },
   "evidence_inventory_path": "docs/CTO_evidence/evidence_inventory.json",
-  "evidence_inventory_sha256": "83ca7bd30e52d5add33a062f0731a89b096b4deb0efddc6370b2b89190594488",
+  "evidence_inventory_sha256": "57b8fec23cbf875f55d6d9b3ebfc125114fc757bf67af1d385188a4ffdfcd771",
   "historical_telemetry_count": 4,
   "run_count": 24,
   "runs": [
@@ -772,7 +805,7 @@
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-      "bundle_sha256": "890518fe415c99748434a2499707e4484b9d3b26acc61c0e19e626cbf6e91b32",
+      "bundle_sha256": "55635ac4656547e118bf0c13791643dd4037e93b9d1ac3ad3eb610eedd1a2d91",
       "comparison_status": "not_applicable",
       "completeness": "complete",
       "disposition": "pass",
@@ -785,12 +818,12 @@
         "source_integrity"
       ],
       "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-      "manifest_sha256": "0d91cbe1b7a41729fdc769ee5210c9632fe53a09ccb283d5fd2a01cf41c33425",
+      "manifest_sha256": "da5045b17a0ff210bf52453d57e1051387ee5e9d0c05b045c91413c5f5edb104",
       "run_id": "current-head-integrity-20261007",
       "run_type": "current_head_integrity",
       "source_count": 1,
       "subject_count": 3,
-      "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
+      "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/cto_evidence_bundle.json",

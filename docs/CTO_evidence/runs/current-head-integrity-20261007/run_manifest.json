@@ -133,11 +133,11 @@
       "stage": "workflow_queue"
     }
   ],
-  "ended_at_utc": null,
+  "ended_at_utc": "2026-10-07T19:18:33Z",
   "external_side_effects_enabled": false,
-  "objective": "Verify Prompt 2 policy-gated autonomous publication tests, the full default pytest suite, and exact-head CI; record live sandbox publication as blocked when prerequisites are unavailable.",
-  "operator_intervention_policy": "Automated approval behavior is verified by the focused isolated tests. No live WordPress write or human approval was attempted; sandbox prerequisites were unavailable.",
-  "producer_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
+  "objective": "Verify Prompt 2 policy-gated autonomous publication tests, default pytest, and exact-head CI; check sandbox access and package eligibility, recording the live run as blocked if no package passes current readiness.",
+  "operator_intervention_policy": "The autonomous approval path was verified by isolated tests and deterministic CI queue evidence. Authenticated sandbox preflight passed, but no live approval, publication, human intervention, readback, or replay was attempted because no current fully ready immutable package was available.",
+  "producer_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
   "required_evidence_classes": [
     "exact_repository_sha",
     "source_integrity",
@@ -155,9 +155,9 @@
       "producer": "marketlense_ci_and_pytest_verification",
       "role": "run",
       "schema_version": "1.0",
-      "sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
+      "sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
       "source_id": "current_head_evidence",
-      "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
+      "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
     }
   ],
   "stages_in_scope": [
@@ -172,7 +172,7 @@
     "live_sandbox_publication",
     "authenticated_wordpress_readback"
   ],
-  "started_at_utc": null,
+  "started_at_utc": "2026-10-07T18:56:40Z",
   "subjects": [
     {
       "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
@@ -196,5 +196,5 @@
       "terminal_outcome": "success"
     }
   ],
-  "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
+  "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
 }
