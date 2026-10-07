@@ -1,7 +1,7 @@
 {
   "autonomous_mvp_assessment": {
     "blocking_gaps": [
-      "Authenticated WordPress readback and repeat-publication idempotency are unavailable.",
+      "Authenticated sandbox WordPress write/readback/replay remains unverified: no sandbox-designated target, matching test credentials, or eligible ready package was available.",
       "Current HEAD has no full report end-to-end factual-quality and publication-readiness evaluation.",
       "Performance and provider timing evidence is historical; no current-HEAD matched performance benchmark is retained."
     ],
@@ -31,7 +31,7 @@
       ]
     },
     "correctness_validation": {
-      "basis": "Historical frozen cohort outcomes plus current-HEAD focused contract, projector, queue, recovery, and idempotency tests.",
+      "basis": "Current-HEAD Prompt 2 autonomous-approval tests, the full default pytest suite, and exact-head CI all passed; deterministic queue evidence is also retained.",
       "limitation": "No current-HEAD full report end-to-end cohort.",
       "status": "partial",
       "supporting_run_ids": [
@@ -133,7 +133,7 @@
     },
     "idempotency_readback": {
       "basis": "The WordPress bundle explicitly records readback not completed and repeat publication not run.",
-      "limitation": "No authenticated readback or zero-write replay proves publication idempotency.",
+      "limitation": "No sandbox authenticated readback or identical-package live replay was performed because sandbox publication prerequisites were unavailable.",
       "status": "unavailable",
       "supporting_run_ids": [
         "wordpress-publication-attempt-20260811"
@@ -201,8 +201,8 @@
       ]
     },
     "publication_readiness": {
-      "basis": "Historical readiness outcomes and deterministic local queue approval.",
-      "limitation": "No production publication readiness run with authenticated external readback.",
+      "basis": "Current-HEAD tests cover the policy-gated readiness and fail-closed approval paths; no live package was published.",
+      "limitation": "Authenticated sandbox publication and readback remain blocked because the sandbox endpoint, test credentials, and an eligible ready package were unavailable.",
       "status": "partial",
       "supporting_run_ids": [
         "cohort-ias-per-report-timeout-20261002",
@@ -221,8 +221,8 @@
       ]
     },
     "publication_side_effects": {
-      "basis": "Historical WordPress attempt outcomes plus zero writes in deterministic local queue validation.",
-      "limitation": "Actual WordPress writes are unavailable without authenticated readback.",
+      "basis": "The exact-head CI queue evidence records one approval and two materialized outbox rows in deterministic temporary SQLite, with zero WordPress writes.",
+      "limitation": "This is not production proof; no sandbox WordPress write or authenticated readback was performed.",
       "status": "partial",
       "supporting_run_ids": [
         "wordpress-publication-attempt-20260811",
@@ -283,6 +283,7 @@
     }
   },
   "current_head": {
+    "ci_run_id": "37660224676",
     "completeness": "complete",
     "criteria_results": [
       {
@@ -294,7 +295,7 @@
         "required": true
       },
       {
-        "actual_value": 2342,
+        "actual_value": 23,
         "criterion_id": "focused_tests_executed",
         "disposition": "pass",
         "expected_value": 0,
@@ -302,8 +303,64 @@
         "required": true
       },
       {
+        "actual_value": 0,
+        "criterion_id": "local_full_suite_no_failures",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 6795,
+        "criterion_id": "local_full_suite_executed",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "gt",
+        "required": true
+      },
+      {
+        "actual_value": 0,
+        "criterion_id": "ci_default_suite_no_failures",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 6796,
+        "criterion_id": "ci_default_suite_executed",
+        "disposition": "pass",
+        "expected_value": 0,
+        "operator": "gt",
+        "required": true
+      },
+      {
         "actual_value": 1,
-        "criterion_id": "workflow_queue_passed",
+        "criterion_id": "ci_coverage_gate_passed",
+        "disposition": "pass",
+        "expected_value": 1,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_mutation_gate_passed",
+        "disposition": "pass",
+        "expected_value": 1,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_release_evidence_passed",
+        "disposition": "pass",
+        "expected_value": 1,
+        "operator": "eq",
+        "required": true
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_workflow_queue_passed",
         "disposition": "pass",
         "expected_value": 1,
         "operator": "eq",
@@ -334,12 +391,31 @@
         "required": true
       }
     ],
+    "default_pytest": {
+      "duration_seconds": 274.68,
+      "failed": 0,
+      "passed": 6796,
+      "pytest_exit_code": 0,
+      "skipped": 0,
+      "telemetry_sha256": "f3189f877f426bf70aaf8728804792b75a7a4733017558f1984d6e1584c1387a"
+    },
     "disposition": "pass",
     "run_id": "current-head-integrity-20261007",
-    "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+    "sandbox_publication_verification": {
+      "authenticated_readback_attempted": false,
+      "identical_package_replay_attempted": false,
+      "missing_prerequisites": [
+        "No sandbox-designated WordPress endpoint and matching test credentials are configured; the configured local WordPress profile is identified as production and was not used.",
+        "The read-only queue prerequisite scan found no eligible immutable, fully ready package for a sandbox publication run."
+      ],
+      "status": "blocked",
+      "write_attempted": false
+    },
+    "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
+    "wordpress_staging_rest_gate": "skipped"
   },
   "evidence_inventory_path": "docs/CTO_evidence/evidence_inventory.json",
-  "evidence_inventory_sha256": "56ceed3c5a44d18b445ea9e4e323b6f30d106ba76a7015c67f4b743aa31d356f",
+  "evidence_inventory_sha256": "83ca7bd30e52d5add33a062f0731a89b096b4deb0efddc6370b2b89190594488",
   "historical_telemetry_count": 4,
   "run_count": 24,
   "runs": [
@@ -696,7 +772,7 @@
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-      "bundle_sha256": "d3ed6893e37decd0153296b3b299bfbf56fe6917977606c2201efccde5206c54",
+      "bundle_sha256": "890518fe415c99748434a2499707e4484b9d3b26acc61c0e19e626cbf6e91b32",
       "comparison_status": "not_applicable",
       "completeness": "complete",
       "disposition": "pass",
@@ -709,12 +785,12 @@
         "source_integrity"
       ],
       "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-      "manifest_sha256": "bedaea0e6c2fa3d7f5c8de054c4fcbf13bc710fdb07f1e76dbc48167dc0dda31",
+      "manifest_sha256": "0d91cbe1b7a41729fdc769ee5210c9632fe53a09ccb283d5fd2a01cf41c33425",
       "run_id": "current-head-integrity-20261007",
       "run_type": "current_head_integrity",
       "source_count": 1,
-      "subject_count": 2,
-      "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+      "subject_count": 3,
+      "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
     },
     {
       "bundle_path": "docs/CTO_evidence/runs/file-search-comparison-20261003/cto_evidence_bundle.json",

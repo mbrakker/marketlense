@@ -538,25 +538,25 @@
     },
     {
       "canonical_declared_run_eligible": true,
-      "embedded_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "embedded_tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
       "evidence_classes_supported_by_retained_fields": [
         "measurements",
         "outcomes"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
       "included_source_tested_repository_shas": [
-        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+        "0060137ca3c8cd819087113e46b04d95f3fbea83"
       ],
-      "limitation": "Current-HEAD focused verification; queue evidence uses deterministic temporary SQLite, not production proof.",
-      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "limitation": "Exact-head autonomous-publication tests, full default pytest, and CI are retained; authenticated sandbox write/readback/replay is blocked because no sandbox target, test credentials, or eligible ready package was available.",
+      "manifest_tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
       "producer_format": "marketlense/generic-metrics/1.0",
-      "publicization": "deterministic_summary_derived_from_pytest_junit_and_workflow_queue_json",
+      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "run",
       "source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
       "source_retained_in_repository": false,
-      "source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
-      "subject_count": 2
+      "source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
+      "subject_count": 3
     },
     {
       "canonical_declared_run_eligible": true,
@@ -736,19 +736,19 @@
         "focused_test_result"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
       "included_source_tested_repository_shas": [
-        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+        "0060137ca3c8cd819087113e46b04d95f3fbea83"
       ],
-      "limitation": "JUnit source is a new focused verification run; sanitized summary is the retained canonical generic artifact.",
-      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "limitation": "Exact-head autonomous-publication tests, full default pytest, and CI are retained; authenticated sandbox write/readback/replay is blocked because no sandbox target, test credentials, or eligible ready package was available.",
+      "manifest_tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
       "producer_format": "pytest-junit-xml/1.0",
-      "publicization": "deterministic_minimized_derivative",
+      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "supporting",
       "source_path": "out/cto_evidence_current_head_tests.xml",
       "source_retained_in_repository": false,
-      "source_sha256": "82a9730db933b96686c2305c18f8d6c3735c3d79eed9ce5fe1282a4844fa477c",
-      "subject_count": null
+      "source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
+      "subject_count": 3
     },
     {
       "canonical_declared_run_eligible": false,
@@ -777,19 +777,19 @@
         "side_effects"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "included_source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
       "included_source_tested_repository_shas": [
-        "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+        "0060137ca3c8cd819087113e46b04d95f3fbea83"
       ],
-      "limitation": "Deterministic temporary SQLite only; no production queue or external publication proof.",
-      "manifest_tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+      "limitation": "Exact-head autonomous-publication tests, full default pytest, and CI are retained; authenticated sandbox write/readback/replay is blocked because no sandbox target, test credentials, or eligible ready package was available.",
+      "manifest_tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
       "producer_format": "workflow-queue-evidence/1.0",
-      "publicization": "deterministic_minimized_derivative",
+      "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "supporting",
       "source_path": "out/cto_evidence_pack_workflow_queue.json",
       "source_retained_in_repository": false,
-      "source_sha256": "52a8e940b9af78371cea812df17e0ef9b9815f60ea460471becb64e027f83232",
-      "subject_count": null
+      "source_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
+      "subject_count": 3
     }
   ]
 }

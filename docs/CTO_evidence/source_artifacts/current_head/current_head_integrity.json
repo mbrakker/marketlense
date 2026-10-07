@@ -1,14 +1,91 @@
 {
+  "ci_verification": {
+    "attempt": 1,
+    "conclusion": "success",
+    "coverage_gate": "passed",
+    "default_pytest": {
+      "duration_seconds": 274.68,
+      "failed": 0,
+      "passed": 6796,
+      "pytest_exit_code": 0,
+      "skipped": 0,
+      "telemetry_sha256": "f3189f877f426bf70aaf8728804792b75a7a4733017558f1984d6e1584c1387a"
+    },
+    "mutation_gate": "passed",
+    "release_evidence": {
+      "issue_count": 0,
+      "manifest_passed": true,
+      "manifest_sha256": "7a26a38ade4fc0e89659921653bc53a41254e0461ca9e50bce2fd29275796b42",
+      "review_passed": true,
+      "review_sha256": "daf76288a4f559b04a7a6b42f316d11d8593072efed74ab5d2e452023c612da9"
+    },
+    "release_evidence_bundle": {
+      "artifact_id": 11501796730,
+      "retention_days": 14,
+      "sha256": "587a5863407d02160ec8663dbe3483d5b81b33ca789273a9d09ba6854bc199a1"
+    },
+    "repository_commit_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
+    "run_id": "37660224676",
+    "wordpress_staging_rest_gate": "skipped",
+    "wordpress_staging_rest_gate_reason": "No sandbox staging credentials were configured.",
+    "workflow_queue": {
+      "approval_count": 1,
+      "evidence_sha256": "598e7ebe06b8a877283fa56c16419786e9184a1bb021f26652bc5f7178b4de73",
+      "exact_head_verified": true,
+      "outbox_status_counts": {
+        "materialised": 2
+      },
+      "passed": true,
+      "production_proof": "not_provided_deterministic_temporary_sqlite_only",
+      "readiness_counts": {
+        "approved": 1
+      },
+      "wordpress_write_count": 0
+    }
+  },
+  "focused_autonomous_publication_tests": {
+    "failed": 0,
+    "human_approval_used": false,
+    "module": "tests/test_autonomous_publication_approval.py",
+    "passed": 23
+  },
+  "local_full_default_pytest": {
+    "failed": 0,
+    "passed": 6795,
+    "reported_duration_seconds": 423.78,
+    "skipped": 1,
+    "telemetry_sha256": "db469136bf8fea4e9c0d27d680971010098b3bfdcc6c3ba9898614e0d7c460e2",
+    "temp_root": "short Windows pytest temp root; production artifact path bound unchanged"
+  },
   "measurements": {
+    "ci_coverage_gate_passed": 1,
+    "ci_default_pytest_duration_seconds": 274.68,
+    "ci_default_pytest_exit_code": 0,
+    "ci_default_pytest_failed": 0,
+    "ci_default_pytest_passed": 6796,
+    "ci_default_pytest_skipped": 0,
+    "ci_default_pytest_total": 6796,
+    "ci_full_run_passed": 1,
+    "ci_mutation_gate_passed": 1,
+    "ci_release_evidence_issue_count": 0,
+    "ci_release_evidence_passed": 1,
+    "ci_wordpress_staging_rest_gate_skipped": 1,
+    "ci_workflow_queue_passed": 1,
     "focused_tests_failed": 0,
-    "focused_tests_passed": 2342,
-    "focused_tests_skipped": 0,
-    "focused_tests_total": 2342,
+    "focused_tests_passed": 23,
+    "focused_tests_total": 23,
+    "local_default_pytest_duration_seconds": 423.78,
+    "local_default_pytest_failed": 0,
+    "local_default_pytest_passed": 6795,
+    "local_default_pytest_skipped": 1,
+    "local_default_pytest_total": 6796,
     "queue_approved_readiness_count": 1,
     "queue_evidence_passed": 1,
     "queue_exact_head_verified": 1,
     "queue_external_provider_calls": 0,
     "queue_materialised_outbox_count": 2,
+    "queue_outbox_status_materialised": 2,
+    "queue_readiness_approved": 1,
     "queue_recorded_effects": 0,
     "queue_schema_version": 15,
     "queue_status_budget_deferred": 1,
@@ -23,16 +100,33 @@
     "queue_transition_succeeded": 1,
     "queue_wordpress_writes": 0
   },
+  "outcomes": {
+    "success": 3
+  },
+  "sandbox_publication_verification": {
+    "authenticated_readback_attempted": false,
+    "identical_package_replay_attempted": false,
+    "missing_prerequisites": [
+      "No sandbox-designated WordPress endpoint and matching test credentials are configured; the configured local WordPress profile is identified as production and was not used.",
+      "The read-only queue prerequisite scan found no eligible immutable, fully ready package for a sandbox publication run."
+    ],
+    "status": "blocked",
+    "write_attempted": false
+  },
   "schema_version": "1.0",
   "subjects": [
     {
-      "identity_sha256": "e93c23a88928ced7bf1d5960432be03848408295d62d7543984fe99199919088",
-      "outcome": "passed"
+      "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+      "outcome": "success"
     },
     {
-      "identity_sha256": "07d843e27c8b4a17e48349b4ecdabfd387d6f0f36991d28e1cb805b691841196",
-      "outcome": "passed"
+      "identity_sha256": "63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+      "outcome": "success"
+    },
+    {
+      "identity_sha256": "de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+      "outcome": "success"
     }
   ],
-  "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+  "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
 }

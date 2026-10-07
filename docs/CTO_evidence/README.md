@@ -1,6 +1,6 @@
 # CTO evidence pack
 
-Current-HEAD verification: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
+Prompt 2 code HEAD verified: `0060137ca3c8cd819087113e46b04d95f3fbea83`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
 
 Run-scoped metrics remain separate in each bundle. `complete` means the manifest-required evidence classes were present; it does not mean the workload passed a product-level acceptance test. Historical runs are never relabeled as current-HEAD evidence.
 
@@ -9,7 +9,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | Evidence area | Status | Limitation |
 |---|---|---|
 | correctness validation | **partial** | No current-HEAD full report end-to-end cohort. |
-| publication readiness | **partial** | No production publication readiness run with authenticated external readback. |
+| publication readiness | **partial** | Policy-gated readiness and fail-closed paths pass current-HEAD tests; live sandbox publication/readback is blocked by missing sandbox prerequisites. |
 | factual quality controls | **partial** | No current-HEAD full report factual-quality evaluation; reviewer rubric is unavailable. |
 | performance | **partial** | No matched performance benchmark on current HEAD; artifact-DAG baseline conflict prevents a delta. |
 | provider timing | **partial** | Provider profiles are historical and do not establish current-HEAD end-to-end latency. |
@@ -21,8 +21,8 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | acquisition | **partial** | No current-HEAD acquisition run; one source is a byte-identical alias and is not duplicated. |
 | visual qa | **partial** | Associated PNGs were not retained; visual artifact bytes are unavailable. |
 | editorial review | **partial** | Reviewer attribution and versioned rubric are unavailable; bundle is incomplete. |
-| publication side effects | **partial** | Actual WordPress writes are unavailable without authenticated readback. |
-| idempotency readback | **unavailable** | No authenticated readback or zero-write replay proves publication idempotency. |
+| publication side effects | **partial** | No sandbox WordPress write or authenticated readback was performed; production credentials were not used. |
+| idempotency readback | **unavailable** | No sandbox authenticated readback or identical-package live replay was performed. |
 | immutable subject coverage | **partial** | Some aggregate profiles and side-effect runs have no per-subject identity. |
 | exact repository sha | **proven** | Historical SHA bindings identify historical code; only current-head-integrity is current HEAD. |
 | current head full end to end | **not_evaluated** | No current-HEAD full product run was performed. |
@@ -48,7 +48,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | `cohort-reliability-cohort-20261001-next-five` | `469c13c15d0d` | 5 | complete / not_evaluated | — | `a530814b746d90d4169ff08ffc7f57bfbd5344f2fef870eaaa654117978fab88` |
 | `cohort-reliability-cohort-20261001-next-five-before-cohort-result` | `365c342ba3ff` | 5 | complete / not_evaluated | — | `eca64b13c1e9579f0228e67dc53c59f62563abfce2a5f3427af9180e2571d582` |
 | `cohort-report-agnostic-prompt-repair-20261001` | `eae746de7a65` | 5 | complete / not_evaluated | — | `b096c0fb636053aebf3a37855a9de0e55e9572bb6c804928d0f513fc186570c9` |
-| `current-head-integrity-20261007` | `e3ba5c76765f` | 2 | complete / pass | — | `d3ed6893e37decd0153296b3b299bfbf56fe6917977606c2201efccde5206c54` |
+| `current-head-integrity-20261007` | `0060137ca3c8` | 3 | complete / pass | — | `890518fe415c99748434a2499707e4484b9d3b26acc61c0e19e626cbf6e91b32` |
 | `file-search-comparison-20261003` | `be70355a28b8` | 5 | complete / not_evaluated | — | `7c96014fc0f534a127fc24f36386c2897fe42b7b3f598c66fb74d83e69c75c62` |
 | `grounding-concurrency-candidate-20261006` | `a1f2affcb4dd` | 0 | complete / not_evaluated | — | `0304d8dd076f6c365e94d0ce3866d66a152e92333b3ab2bd8f1f956bfe2fa71b` |
 | `human-editorial-review-20260901` | `56628ad76f86` | 5 | incomplete / not_evaluated | reviewer_attribution, rubric_identity | `b58b487b2cd31cdbf14346e50ee5b598f9991df9a3fb188182e271caf6108956` |
@@ -60,7 +60,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 
 ## Current-HEAD evidence
 
-The current-HEAD run passed six required criteria across 2,342 focused CTO, contract, queue, recovery, and idempotency tests plus deterministic workflow queue evidence. Queue evidence used temporary SQLite, made zero provider calls and zero WordPress writes, and is not production proof. No report-generation cohort or external publication run was repeated.
+The Prompt 2 code HEAD `0060137ca3c8cd819087113e46b04d95f3fbea83` passed the 23 focused autonomous-publication approval tests, the local full default suite (6,795 passed, 1 skipped, 0 failed), and GitHub Actions run `37660224676` (6,796 passed, 0 skipped, 0 failed; all required CI gates passed; the WordPress staging REST gate was skipped because sandbox credentials were unavailable). The retained exact-head queue evidence records one approval and two materialized outbox rows in deterministic temporary SQLite, with zero provider calls and zero WordPress writes; it is not production proof. The live sandbox publication/write/readback/replay verification is blocked: no sandbox-designated WordPress target, matching test credentials, or eligible ready package was available, and production credentials were not used.
 
 ## Provenance and privacy
 
@@ -68,7 +68,7 @@ The current-HEAD run passed six required criteria across 2,342 focused CTO, cont
 
 ## Remaining autonomous-MVP gaps
 
-The evidence does not establish authenticated WordPress writes, readback, or replay idempotency. It also lacks current-HEAD end-to-end factual-quality/publication evidence and current-HEAD performance/provider timing. These gaps still block an evidence-based autonomous MVP assessment.
+The evidence does not establish authenticated sandbox WordPress writes, readback, or replay idempotency. Live verification is blocked because no sandbox-designated target, matching test credentials, or eligible ready package was available. It also lacks current-HEAD end-to-end factual-quality/publication evidence and current-HEAD performance/provider timing. These gaps still block an evidence-based autonomous MVP assessment.
 
 ## Verification
 

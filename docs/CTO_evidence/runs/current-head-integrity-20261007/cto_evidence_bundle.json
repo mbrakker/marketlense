@@ -22,7 +22,37 @@
         "status": "observed",
         "subject_id": null,
         "unit": "subjects",
-        "value": 2
+        "value": 3
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 274.68
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 423.78
       },
       {
         "denominator": null,
@@ -53,17 +83,32 @@
         "subject_id": null,
         "unit": "subjects_or_count",
         "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.queue_readiness_approved",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
       }
     ],
     "limitations": [
       "Producer run timestamps were not retained in the declared manifest."
     ],
     "mode": "declared_run",
-    "objective": "Focused exact-HEAD CTO contract/projector and workflow queue/recovery/idempotency verification.",
+    "objective": "Verify Prompt 2 policy-gated autonomous publication tests, the full default pytest suite, and exact-head CI; record live sandbox publication as blocked when prerequisites are unavailable.",
     "outcomes": [
       {
-        "count": 2,
-        "outcome": "passed",
+        "count": 3,
+        "outcome": "success",
         "schema_version": "1.0"
       }
     ],
@@ -73,17 +118,17 @@
       "fail_count": 0,
       "insufficient_evidence_count": 0,
       "not_evaluated_count": 0,
-      "pass_count": 6,
+      "pass_count": 13,
       "schema_version": "1.0"
     },
     "reused_validation_count": null,
     "run_id": "current-head-integrity-20261007",
     "run_type": "current_head_integrity",
     "schema_version": "1.0",
-    "subject_count": 2,
-    "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+    "subject_count": 3,
+    "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
   },
-  "generated_at_utc": "2026-10-07T06:25:26.089007+00:00",
+  "generated_at_utc": "2026-10-07T18:05:39.619126+00:00",
   "historical_state": {
     "limitations": [
       "Historical SQLite and artifact totals are context only and are not attributed to any declared workload run."
@@ -732,7 +777,7 @@
       {
         "actual_value": null,
         "criterion_id": "focused_tests_no_failures",
-        "description": "No failures in the focused CTO, contract, queue, recovery, and idempotency tests.",
+        "description": "Focused autonomous-publication approval tests have no failures.",
         "disposition": "not_evaluated",
         "expected_value": 0,
         "metric_id": "current_head_evidence.focused_tests_failed",
@@ -744,7 +789,7 @@
       {
         "actual_value": null,
         "criterion_id": "focused_tests_executed",
-        "description": "The focused current-HEAD suite executed passing cases.",
+        "description": "Focused autonomous-publication approval tests executed successfully.",
         "disposition": "not_evaluated",
         "expected_value": 0,
         "metric_id": "current_head_evidence.focused_tests_passed",
@@ -755,11 +800,95 @@
       },
       {
         "actual_value": null,
-        "criterion_id": "workflow_queue_passed",
-        "description": "Deterministic workflow queue evidence completed without failures.",
+        "criterion_id": "local_full_suite_no_failures",
+        "description": "Local full default pytest suite completed without failures.",
+        "disposition": "not_evaluated",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.local_default_pytest_failed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "testing"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "local_full_suite_executed",
+        "description": "Local full default pytest suite executed passing tests.",
+        "disposition": "not_evaluated",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.local_default_pytest_passed",
+        "operator": "gt",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "testing"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_default_suite_no_failures",
+        "description": "Exact-head CI default pytest suite completed without failures.",
+        "disposition": "not_evaluated",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.ci_default_pytest_failed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_default_suite_executed",
+        "description": "Exact-head CI default pytest suite executed passing tests.",
+        "disposition": "not_evaluated",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.ci_default_pytest_passed",
+        "operator": "gt",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_coverage_gate_passed",
+        "description": "Exact-head CI coverage gate passed.",
         "disposition": "not_evaluated",
         "expected_value": 1,
-        "metric_id": "current_head_evidence.queue_evidence_passed",
+        "metric_id": "current_head_evidence.ci_coverage_gate_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_mutation_gate_passed",
+        "description": "Exact-head CI mutation gate passed.",
+        "disposition": "not_evaluated",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_mutation_gate_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_release_evidence_passed",
+        "description": "Exact-head release evidence manifest and review passed without issues.",
+        "disposition": "not_evaluated",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_release_evidence_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": null,
+        "criterion_id": "ci_workflow_queue_passed",
+        "description": "Exact-head deterministic workflow queue evidence passed.",
+        "disposition": "not_evaluated",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_workflow_queue_passed",
         "operator": "eq",
         "required": true,
         "schema_version": "1.0",
@@ -780,7 +909,7 @@
       {
         "actual_value": null,
         "criterion_id": "no_external_provider_calls",
-        "description": "The deterministic queue run made no external provider calls.",
+        "description": "The deterministic queue evidence made no external provider calls.",
         "disposition": "not_evaluated",
         "expected_value": 0,
         "metric_id": "current_head_evidence.queue_external_provider_calls",
@@ -792,7 +921,7 @@
       {
         "actual_value": null,
         "criterion_id": "no_wordpress_writes",
-        "description": "The deterministic queue run made no WordPress writes.",
+        "description": "The deterministic temporary-SQLite queue evidence made no WordPress writes.",
         "disposition": "not_evaluated",
         "expected_value": 0,
         "metric_id": "current_head_evidence.queue_wordpress_writes",
@@ -804,9 +933,9 @@
     ],
     "ended_at_utc": null,
     "external_side_effects_enabled": false,
-    "objective": "Focused exact-HEAD CTO contract/projector and workflow queue/recovery/idempotency verification.",
-    "operator_intervention_policy": "Retained producer evidence is authoritative; unmeasured intervention is not inferred.",
-    "producer_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+    "objective": "Verify Prompt 2 policy-gated autonomous publication tests, the full default pytest suite, and exact-head CI; record live sandbox publication as blocked when prerequisites are unavailable.",
+    "operator_intervention_policy": "Automated approval behavior is verified by the focused isolated tests. No live WordPress write or human approval was attempted; sandbox prerequisites were unavailable.",
+    "producer_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83",
     "required_evidence_classes": [
       "exact_repository_sha",
       "source_integrity",
@@ -823,44 +952,55 @@
         "format_id": "marketlense/generic-metrics/1.0",
         "observed_sha256": null,
         "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-        "producer": "retained_marketlense_evidence",
+        "producer": "marketlense_ci_and_pytest_verification",
         "role": "run",
         "schema_version": "1.0",
-        "sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+        "sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
         "source_id": "current_head_evidence",
         "status": "declared",
-        "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+        "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
       }
     ],
     "stages_in_scope": [
+      "approval_policy",
       "testing",
       "workflow_queue",
       "validation",
-      "idempotency"
+      "idempotency",
+      "ci"
     ],
     "stages_out_of_scope": [
-      "external_publication"
+      "live_sandbox_publication",
+      "authenticated_wordpress_readback"
     ],
     "started_at_utc": null,
     "subjects": [
       {
-        "identity_sha256": "e93c23a88928ced7bf1d5960432be03848408295d62d7543984fe99199919088",
+        "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "immutable": true,
         "schema_version": "1.0",
         "source_identity_sha256": null,
-        "subject_id": "subject-001",
-        "terminal_outcome": null
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+        "terminal_outcome": "success"
       },
       {
-        "identity_sha256": "07d843e27c8b4a17e48349b4ecdabfd387d6f0f36991d28e1cb805b691841196",
+        "identity_sha256": "63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "immutable": true,
         "schema_version": "1.0",
         "source_identity_sha256": null,
-        "subject_id": "subject-002",
-        "terminal_outcome": null
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+        "terminal_outcome": "success"
+      },
+      {
+        "identity_sha256": "de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "terminal_outcome": "success"
       }
     ],
-    "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+    "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
   },
   "run_evidence": {
     "attempt_history_status": "unavailable",
@@ -870,7 +1010,7 @@
       {
         "actual_value": 0,
         "criterion_id": "focused_tests_no_failures",
-        "description": "No failures in the focused CTO, contract, queue, recovery, and idempotency tests.",
+        "description": "Focused autonomous-publication approval tests have no failures.",
         "disposition": "pass",
         "expected_value": 0,
         "metric_id": "current_head_evidence.focused_tests_failed",
@@ -880,9 +1020,9 @@
         "stage": "testing"
       },
       {
-        "actual_value": 2342,
+        "actual_value": 23,
         "criterion_id": "focused_tests_executed",
-        "description": "The focused current-HEAD suite executed passing cases.",
+        "description": "Focused autonomous-publication approval tests executed successfully.",
         "disposition": "pass",
         "expected_value": 0,
         "metric_id": "current_head_evidence.focused_tests_passed",
@@ -892,12 +1032,96 @@
         "stage": "testing"
       },
       {
+        "actual_value": 0,
+        "criterion_id": "local_full_suite_no_failures",
+        "description": "Local full default pytest suite completed without failures.",
+        "disposition": "pass",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.local_default_pytest_failed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "testing"
+      },
+      {
+        "actual_value": 6795,
+        "criterion_id": "local_full_suite_executed",
+        "description": "Local full default pytest suite executed passing tests.",
+        "disposition": "pass",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.local_default_pytest_passed",
+        "operator": "gt",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "testing"
+      },
+      {
+        "actual_value": 0,
+        "criterion_id": "ci_default_suite_no_failures",
+        "description": "Exact-head CI default pytest suite completed without failures.",
+        "disposition": "pass",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.ci_default_pytest_failed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": 6796,
+        "criterion_id": "ci_default_suite_executed",
+        "description": "Exact-head CI default pytest suite executed passing tests.",
+        "disposition": "pass",
+        "expected_value": 0,
+        "metric_id": "current_head_evidence.ci_default_pytest_passed",
+        "operator": "gt",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
         "actual_value": 1,
-        "criterion_id": "workflow_queue_passed",
-        "description": "Deterministic workflow queue evidence completed without failures.",
+        "criterion_id": "ci_coverage_gate_passed",
+        "description": "Exact-head CI coverage gate passed.",
         "disposition": "pass",
         "expected_value": 1,
-        "metric_id": "current_head_evidence.queue_evidence_passed",
+        "metric_id": "current_head_evidence.ci_coverage_gate_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_mutation_gate_passed",
+        "description": "Exact-head CI mutation gate passed.",
+        "disposition": "pass",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_mutation_gate_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_release_evidence_passed",
+        "description": "Exact-head release evidence manifest and review passed without issues.",
+        "disposition": "pass",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_release_evidence_passed",
+        "operator": "eq",
+        "required": true,
+        "schema_version": "1.0",
+        "stage": "ci"
+      },
+      {
+        "actual_value": 1,
+        "criterion_id": "ci_workflow_queue_passed",
+        "description": "Exact-head deterministic workflow queue evidence passed.",
+        "disposition": "pass",
+        "expected_value": 1,
+        "metric_id": "current_head_evidence.ci_workflow_queue_passed",
         "operator": "eq",
         "required": true,
         "schema_version": "1.0",
@@ -918,7 +1142,7 @@
       {
         "actual_value": 0,
         "criterion_id": "no_external_provider_calls",
-        "description": "The deterministic queue run made no external provider calls.",
+        "description": "The deterministic queue evidence made no external provider calls.",
         "disposition": "pass",
         "expected_value": 0,
         "metric_id": "current_head_evidence.queue_external_provider_calls",
@@ -930,7 +1154,7 @@
       {
         "actual_value": 0,
         "criterion_id": "no_wordpress_writes",
-        "description": "The deterministic queue run made no WordPress writes.",
+        "description": "The deterministic temporary-SQLite queue evidence made no WordPress writes.",
         "disposition": "pass",
         "expected_value": 0,
         "metric_id": "current_head_evidence.queue_wordpress_writes",
@@ -949,6 +1173,201 @@
         "denominator": null,
         "limitations": [],
         "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_coverage_gate_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 274.68
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_exit_code",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_failed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 6796
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_skipped",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_default_pytest_total",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 6796
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_full_run_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_mutation_gate_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_release_evidence_issue_count",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "subjects_or_count",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_release_evidence_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_wordpress_staging_rest_gate_skipped",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.ci_workflow_queue_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
         "metric_id": "current_head_evidence.focused_tests_failed",
         "numerator": null,
         "schema_version": "1.0",
@@ -973,22 +1392,7 @@
         "status": "observed",
         "subject_id": null,
         "unit": "value",
-        "value": 2342
-      },
-      {
-        "denominator": null,
-        "limitations": [],
-        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
-        "metric_id": "current_head_evidence.focused_tests_skipped",
-        "numerator": null,
-        "schema_version": "1.0",
-        "source_ids": [
-          "current_head_evidence"
-        ],
-        "status": "observed",
-        "subject_id": null,
-        "unit": "value",
-        "value": 0
+        "value": 23
       },
       {
         "denominator": null,
@@ -1003,7 +1407,82 @@
         "status": "observed",
         "subject_id": null,
         "unit": "value",
-        "value": 2342
+        "value": 23
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_duration_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "seconds",
+        "value": 423.78
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_failed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 0
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_passed",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 6795
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_skipped",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.local_default_pytest_total",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 6796
       },
       {
         "denominator": null,
@@ -1079,6 +1558,36 @@
         "subject_id": null,
         "unit": "subjects_or_count",
         "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.queue_outbox_status_materialised",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 2
+      },
+      {
+        "denominator": null,
+        "limitations": [],
+        "measurement_semantics": "Producer-retained scalar measurement; no stronger causal interpretation is added.",
+        "metric_id": "current_head_evidence.queue_readiness_approved",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "observed",
+        "subject_id": null,
+        "unit": "value",
+        "value": 1
       },
       {
         "denominator": null,
@@ -1279,7 +1788,7 @@
         "denominator": null,
         "limitations": [],
         "measurement_semantics": "",
-        "metric_id": "outcomes.passed.count",
+        "metric_id": "outcomes.success.count",
         "numerator": null,
         "schema_version": "1.0",
         "source_ids": [
@@ -1288,7 +1797,7 @@
         "status": "observed",
         "subject_id": null,
         "unit": "subjects",
-        "value": 2
+        "value": 3
       },
       {
         "denominator": null,
@@ -1303,7 +1812,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "seconds",
         "value": null
       },
@@ -1320,7 +1829,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.queue_wait_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "seconds",
         "value": null
       },
@@ -1337,7 +1863,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "seconds",
         "value": null
       },
@@ -1354,7 +1880,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "seconds",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "performance.wall_seconds",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "seconds",
         "value": null
       },
@@ -1371,7 +1914,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "USD",
         "value": null
       },
@@ -1388,7 +1931,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "USD",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.cost_usd",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "USD",
         "value": null
       },
@@ -1405,7 +1965,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "tokens",
         "value": null
       },
@@ -1422,7 +1982,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.input_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "tokens",
         "value": null
       },
@@ -1439,7 +2016,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "tokens",
         "value": null
       },
@@ -1456,7 +2033,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.output_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "tokens",
         "value": null
       },
@@ -1473,7 +2067,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "calls",
         "value": null
       },
@@ -1490,7 +2084,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "calls",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.provider_calls",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "calls",
         "value": null
       },
@@ -1507,7 +2118,7 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-001",
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "unit": "tokens",
         "value": null
       },
@@ -1524,7 +2135,24 @@
           "current_head_evidence"
         ],
         "status": "unavailable",
-        "subject_id": "subject-002",
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "unit": "tokens",
+        "value": null
+      },
+      {
+        "denominator": null,
+        "limitations": [
+          "No authoritative per-subject value is retained."
+        ],
+        "measurement_semantics": "",
+        "metric_id": "resource.reasoning_tokens",
+        "numerator": null,
+        "schema_version": "1.0",
+        "source_ids": [
+          "current_head_evidence"
+        ],
+        "status": "unavailable",
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "unit": "tokens",
         "value": null
       },
@@ -1541,13 +2169,13 @@
         "status": "observed",
         "subject_id": null,
         "unit": "subjects",
-        "value": 2
+        "value": 3
       }
     ],
     "outcomes": [
       {
-        "count": 2,
-        "outcome": "passed",
+        "count": 3,
+        "outcome": "success",
         "schema_version": "1.0"
       }
     ],
@@ -1557,50 +2185,58 @@
     "schema_version": "1.0",
     "subjects": [
       {
-        "identity_sha256": "e93c23a88928ced7bf1d5960432be03848408295d62d7543984fe99199919088",
+        "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
         "immutable": true,
         "schema_version": "1.0",
         "source_identity_sha256": null,
-        "subject_id": "subject-001",
-        "terminal_outcome": "passed"
+        "subject_id": "subject-e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
+        "terminal_outcome": "success"
       },
       {
-        "identity_sha256": "07d843e27c8b4a17e48349b4ecdabfd387d6f0f36991d28e1cb805b691841196",
+        "identity_sha256": "63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
         "immutable": true,
         "schema_version": "1.0",
         "source_identity_sha256": null,
-        "subject_id": "subject-002",
-        "terminal_outcome": "passed"
+        "subject_id": "subject-63cd4d67f3e96a95fdb9378867a6f818b1a7361ba903510baa5c106fff04da32",
+        "terminal_outcome": "success"
+      },
+      {
+        "identity_sha256": "de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "immutable": true,
+        "schema_version": "1.0",
+        "source_identity_sha256": null,
+        "subject_id": "subject-de5e3992326e4756a3af0d165c931baa43b698ecb7cda52ea667de81075e4baf",
+        "terminal_outcome": "success"
       }
     ]
   },
   "schema_version": "1.0",
   "source_references": [
     {
-      "byte_count": 4120,
+      "byte_count": 7353,
       "format_id": "marketlense/cto-evidence-run-manifest/1.0",
-      "observed_sha256": "bedaea0e6c2fa3d7f5c8de054c4fcbf13bc710fdb07f1e76dbc48167dc0dda31",
+      "observed_sha256": "0d91cbe1b7a41729fdc769ee5210c9632fe53a09ccb283d5fd2a01cf41c33425",
       "path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
       "producer": "cto_review_collector",
       "role": "supporting",
       "schema_version": "1.0",
-      "sha256": "bedaea0e6c2fa3d7f5c8de054c4fcbf13bc710fdb07f1e76dbc48167dc0dda31",
+      "sha256": "0d91cbe1b7a41729fdc769ee5210c9632fe53a09ccb283d5fd2a01cf41c33425",
       "source_id": "run_manifest",
       "status": "verified",
       "tested_repository_sha": null
     },
     {
-      "byte_count": 1225,
+      "byte_count": 4832,
       "format_id": "marketlense/generic-metrics/1.0",
-      "observed_sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "observed_sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
       "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "producer": "retained_marketlense_evidence",
+      "producer": "marketlense_ci_and_pytest_verification",
       "role": "run",
       "schema_version": "1.0",
-      "sha256": "564e12336e4953f7ea2ba5c0c6e949d067e44068ac5e882b0393a41e4b2bbc2e",
+      "sha256": "f18ab97c5b1dd244daa743fadb91e8e358b0dbb44ff15e8336b7b52b20a99cd2",
       "source_id": "current_head_evidence",
       "status": "verified",
-      "tested_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b"
+      "tested_repository_sha": "0060137ca3c8cd819087113e46b04d95f3fbea83"
     },
     {
       "byte_count": 34998,
