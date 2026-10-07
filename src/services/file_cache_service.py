@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import tempfile
 from dataclasses import asdict
 from pathlib import Path
 
@@ -229,8 +231,15 @@ def write_md5_sidecar(
     )
     path = Path(sidecar_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path: Path | None = None
     try:
-        path.write_text(json.dumps(asdict(record), ensure_ascii=True), encoding="utf-8")
+        file_descriptor, temp_name = tempfile.mkstemp(
+            prefix=".tmp-write-", dir=path.parent, text=True
+        )
+        temp_path = Path(temp_name)
+        with os.fdopen(file_descriptor, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(asdict(record), ensure_ascii=True))
+        os.replace(temp_path, path)
     except OSError as exc:
         raise AppError(
             code="md5_sidecar_write_failed",
@@ -239,6 +248,20 @@ def write_md5_sidecar(
             retryable=False,
             context={"cache_path": request.cache_path, "sidecar_path": sidecar_path},
         ) from exc
+    finally:
+        if temp_path is not None:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="md5_sidecar_temporary_file_cleanup_failed",
+                        module=logger.name,
+                        fields={"sidecar_path": sidecar_path},
+                    )
+                )
     response = FileCacheMd5SidecarWriteResponse(
         schema_version="1.0",
         cache_path=request.cache_path,
@@ -269,6 +292,14 @@ def _record_from_payload(
     payload: dict,
     request_file_id: str,
 ) -> FileCacheMd5SidecarRecord | None:
+    schema_version = str(payload.get("schema_version") or "").strip()
+    file_id = str(payload.get("file_id") or "").strip()
+    if (
+        schema_version != MD5_SIDECAR_SCHEMA_VERSION
+        or not file_id
+        or file_id != str(request_file_id or "").strip()
+    ):
+        return None
     normalized_md5 = _normalize_md5(payload.get("md5"))
     if normalized_md5 is None:
         return None
@@ -280,8 +311,8 @@ def _record_from_payload(
     if normalized_mtime is None:
         return None
     return FileCacheMd5SidecarRecord(
-        schema_version=str(payload.get("schema_version") or MD5_SIDECAR_SCHEMA_VERSION),
-        file_id=str(payload.get("file_id") or request_file_id).strip(),
+        schema_version=schema_version,
+        file_id=file_id,
         name=str(payload.get("name") or "").strip(),
         md5=normalized_md5,
         size_bytes=size_bytes,

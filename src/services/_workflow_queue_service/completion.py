@@ -371,11 +371,13 @@ def requeue_workflow_job(
                 retryable=False,
             )
         _payload_from_json(job.queue_name, job.payload_json)
+        granted_max_attempts = max(job.max_attempts, job.attempt_count + 1)
         conn.execute(
             """UPDATE workflow_jobs SET status='pending',available_at_utc=?,updated_at_utc=?,
+            max_attempts=?,
             lease_owner='',lease_expires_at_utc='',heartbeat_at_utc='',error_code='',
             error_message_summary='',error_retryable=0,terminal_reason='',remediation_id='' WHERE job_id=?""",
-            (now, now, job_id),
+            (now, now, granted_max_attempts, job_id),
         )
         _record_transition(
             conn,
@@ -385,6 +387,7 @@ def requeue_workflow_job(
             reason="operator_requeue",
             actor=actor,
             now_utc=now,
+            details={"granted_max_attempts": granted_max_attempts},
         )
         result = conn.execute(
             f"SELECT {_JOB_COLUMNS} FROM workflow_jobs WHERE job_id=?", (job_id,)

@@ -233,6 +233,13 @@ def _select_diverse_sources(
     list[CrossReportSelectedSourceReport], list[CrossReportSourceReportCandidate]
 ]:
     remaining = list(ranked_candidates)
+    base_scores = {
+        candidate.report_id: candidate.total_score for candidate in ranked_candidates
+    }
+    base_reasons = {
+        candidate.report_id: list(candidate.selection_reasons)
+        for candidate in ranked_candidates
+    }
     selected: list[CrossReportSelectedSourceReport] = []
     rejected: list[CrossReportSourceReportCandidate] = []
     selected_publishers: set[str] = set()
@@ -257,9 +264,11 @@ def _select_diverse_sources(
                 replace(
                     candidate,
                     diversity_score=diversity_score,
-                    total_score=round(candidate.total_score + diversity_score, 6),
+                    total_score=round(
+                        base_scores[candidate.report_id] + diversity_score, 6
+                    ),
                     selection_reasons=[
-                        *candidate.selection_reasons,
+                        *base_reasons[candidate.report_id],
                         *(
                             ["publisher_diversity"]
                             if diversity_score > 0

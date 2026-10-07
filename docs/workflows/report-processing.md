@@ -69,6 +69,11 @@ PDF cache paths use the same safety budget for both the final destination and
 the unique atomic-write temporary file. Deep isolated runs compact the cache
 directory and key filename together, so neither `os.replace` target exceeds
 the supported Windows path length.
+The cached-PDF MD5 sidecar is reusable only when schema version `1.0`, the
+exact Drive file ID, observed byte size, and observed modification time match
+the request. Missing, legacy, unsupported, or foreign-identity sidecars are
+cache misses; ingest recomputes the checksum from the local bytes and repairs
+the sidecar with an atomic replacement.
 Pipeline checkpoints apply that rule at their own canonical path boundary. If
 the normal pipeline, file, and stage hierarchy would exceed the same atomic
 write budget, both writer and reader deterministically use a compact,

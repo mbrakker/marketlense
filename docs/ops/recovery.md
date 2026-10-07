@@ -11,6 +11,12 @@
 5. Use the smallest safe restart or explicit workflow command after correcting the cause. The base configuration keeps recovery gated; the reviewed `autonomous_mvp` overlay enables only the documented finite allowlist and does not authorize unbounded retries or unknown-error recovery.
 6. Resolve or supersede the durable remediation record when the operator action is complete; do not delete historical retry logs.
 
+If an idempotency lookup returns `idempotency_record_corrupt` or
+`publish_idempotency_outcome_invalid`, preserve the stored row and stop replay
+before the external step. Do not delete or overwrite the record to make the
+workflow run; restore or repair its provenance through the owning recovery
+procedure before attempting another side effect.
+
 ## Structured-output recovery effectiveness
 
 The canonical structured-output service emits one bounded
@@ -217,6 +223,10 @@ python -m src.cli queue-materialize-outbox
 Pause a queue with a reason before an incident investigation. Drain mode stops
 new claims while preserving durable work. `queue-requeue --yes` is only for a
 blocked or dead-letter job after its retained input and idempotency proof have
-been checked; it never resets product-domain state. See [asynchronous workflow
+been checked; it never resets product-domain state or attempt history. When the
+automatic allowance is exhausted, that explicit action grants one additional
+attempt. The reaper returns an expired running attempt to pending only while
+automatic attempts remain; final-attempt expiry is recorded as dead-letter.
+See [asynchronous workflow
 queue](../architecture/asynchronous-workflow-queue.md) for the state machine
 and approval-to-publication rules.

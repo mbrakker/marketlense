@@ -13,6 +13,13 @@ metric whose value already contains its display unit may have an empty separate
 unit field; this remains a valid cross-report input and is never assigned a
 guessed unit.
 
+Source reports are ranked from relevance, evidence density, and recency. Each
+selection round adds a `0.75` diversity bonus once to publishers not yet
+represented, starting from the unchanged base score; the same-publisher reason
+is used once a publisher has been selected. Ties are resolved by score,
+case-folded publisher, report date, and report ID. Candidate order does not
+change the selected sources or decision reasons.
+
 The WordPress publication target for a Briefing is `wordpress:ml_briefing`.
 
 Queue-driven Briefings are formed only from a durable opportunity with a frozen

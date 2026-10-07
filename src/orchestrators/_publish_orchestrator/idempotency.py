@@ -32,6 +32,7 @@ from src.orchestrators._publish_orchestrator.models import (
 )
 from src.services import idempotency_service
 from src.services.report_store_service import get_artifact_lineage_for_storage
+from src.utils.errors import AppError
 
 
 def _publish_idempotency_key(*, file_id: str, post_type: str) -> str:
@@ -90,18 +91,37 @@ def _lookup_publish_idempotency(
     )
     if not lookup.found or lookup.record is None:
         return None
-    payload = dict(lookup.record.outcome_payload or {})
-    expectation = payload.get("readback_expectation")
-    if isinstance(expectation, dict):
-        payload["readback_expectation"] = WordPressPostReadExpectation(**expectation)
-    checks = payload.get("readback_checks")
-    if isinstance(checks, list):
-        payload["readback_checks"] = [
-            WordPressPostReadCheck(**check)
-            for check in checks
-            if isinstance(check, dict)
-        ]
-    return PublishOutcome(**payload)
+    try:
+        payload = dict(lookup.record.outcome_payload)
+        if "readback_expectation" in payload:
+            expectation = payload["readback_expectation"]
+            if not isinstance(expectation, dict):
+                raise ValueError("readback_expectation must be an object")
+            payload["readback_expectation"] = WordPressPostReadExpectation(
+                **expectation
+            )
+        if "readback_checks" in payload:
+            checks = payload["readback_checks"]
+            if not isinstance(checks, list) or any(
+                not isinstance(check, dict) for check in checks
+            ):
+                raise ValueError("readback_checks must be a list of objects")
+            payload["readback_checks"] = [
+                WordPressPostReadCheck(**check) for check in checks
+            ]
+        return PublishOutcome(**payload)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise AppError(
+            code="publish_idempotency_outcome_invalid",
+            message="Persisted publish outcome does not match its supported schema",
+            cause=exc,
+            retryable=False,
+            severity="error",
+            context={
+                "scope": _PUBLISH_IDEMPOTENCY_SCOPE,
+                "reason": "persisted_outcome_schema_mismatch",
+            },
+        ) from exc
 
 
 def _record_publish_idempotency(

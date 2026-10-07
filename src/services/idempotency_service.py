@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -97,20 +98,58 @@ def _validate_request_fields(
 
 
 def _row_to_record(row: sqlite3.Row) -> OrchestratorIdempotencyRecord:
-    outcome_payload = json.loads(str(row["outcome_json"] or "{}"))
-    artifact_references = json.loads(str(row["artifact_refs_json"] or "{}"))
+    try:
+        outcome_payload = json.loads(row["outcome_json"])
+    except (TypeError, ValueError) as exc:
+        raise _corrupt_record_error(row, "outcome_json", cause=exc) from exc
     if not isinstance(outcome_payload, dict):
-        outcome_payload = {}
-    if not isinstance(artifact_references, dict):
-        artifact_references = {}
+        raise _corrupt_record_error(row, "outcome_json")
+
+    try:
+        artifact_references = json.loads(row["artifact_refs_json"])
+    except (TypeError, ValueError) as exc:
+        raise _corrupt_record_error(row, "artifact_refs_json", cause=exc) from exc
+    if not isinstance(artifact_references, dict) or any(
+        not isinstance(key, str) or not key.strip() for key in artifact_references
+    ):
+        raise _corrupt_record_error(row, "artifact_refs_json")
+
+    identity: dict[str, str] = {}
+    for field in ("scope", "idempotency_key", "input_checksum", "recorded_at_utc"):
+        value = row[field]
+        if not isinstance(value, str) or not value.strip():
+            raise _corrupt_record_error(row, field)
+        identity[field] = value
     return OrchestratorIdempotencyRecord(
         schema_version="1.0",
-        scope=str(row["scope"] or ""),
-        idempotency_key=str(row["idempotency_key"] or ""),
-        input_checksum=str(row["input_checksum"] or ""),
+        scope=identity["scope"],
+        idempotency_key=identity["idempotency_key"],
+        input_checksum=identity["input_checksum"],
         outcome_payload=outcome_payload,
         artifact_references=artifact_references,
-        recorded_at_utc=str(row["recorded_at_utc"] or ""),
+        recorded_at_utc=identity["recorded_at_utc"],
+    )
+
+
+def _corrupt_record_error(
+    row: sqlite3.Row, invalid_field: str, *, cause: Exception | None = None
+) -> AppError:
+    idempotency_key_hash = hashlib.sha256(
+        str(row["idempotency_key"] or "").encode("utf-8")
+    ).hexdigest()[:16]
+    return AppError(
+        code="idempotency_record_corrupt",
+        message=(
+            "Persisted orchestrator idempotency outcome failed integrity validation"
+        ),
+        cause=cause,
+        retryable=False,
+        severity="error",
+        context={
+            "scope": str(row["scope"] or ""),
+            "idempotency_key_sha256_prefix": idempotency_key_hash,
+            "invalid_field": invalid_field,
+        },
     )
 
 
@@ -149,6 +188,20 @@ def get_outcome(
                 """,
                 (request.scope, request.idempotency_key),
             ).fetchone()
+            if row is None:
+                # Do not treat a retained row with missing identity as proof of absence.
+                row = conn.execute(
+                    """
+                    SELECT scope, idempotency_key, input_checksum, outcome_json,
+                           artifact_refs_json, recorded_at_utc
+                    FROM orchestrator_idempotency
+                    WHERE (idempotency_key=? AND TRIM(scope)='')
+                       OR (scope=? AND TRIM(idempotency_key)='')
+                       OR (TRIM(scope)='' AND TRIM(idempotency_key)='')
+                    LIMIT 1
+                    """,
+                    (request.idempotency_key, request.scope),
+                ).fetchone()
     except sqlite3.Error as exc:
         raise AppError(
             code="idempotency_lookup_failed",

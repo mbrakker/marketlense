@@ -139,26 +139,61 @@ def release_expired_workflow_leases(
     with _state_conn(state_db, ctx) as conn:
         conn.execute("BEGIN IMMEDIATE")
         rows = conn.execute(
-            "SELECT job_id,status FROM workflow_jobs WHERE status IN ('leased','running') "
+            "SELECT job_id,status,attempt_count,max_attempts,lease_owner "
+            "FROM workflow_jobs WHERE status IN ('leased','running') "
             "AND lease_expires_at_utc<>'' AND lease_expires_at_utc<=? ORDER BY job_id",
             (now,),
         ).fetchall()
-        for job_id, status in rows:
-            conn.execute(
-                """UPDATE workflow_jobs SET status='pending',available_at_utc=?,lease_owner='',
-                lease_expires_at_utc='',heartbeat_at_utc='',updated_at_utc=?,
-                error_code='workflow_queue_lease_expired',error_message_summary='Lease expired before completion',
-                error_retryable=1 WHERE job_id=? AND status=?""",
-                (now, now, job_id, status),
+        for job_id, status, attempt_count, max_attempts, lease_owner in rows:
+            running = str(status) == "running"
+            exhausted = running and int(attempt_count) >= int(max_attempts)
+            target = "dead_letter" if exhausted else "pending"
+            error_code = (
+                "workflow_queue_attempts_exhausted"
+                if exhausted
+                else "workflow_queue_lease_expired"
             )
+            terminal_reason = "lease_expired_attempts_exhausted" if exhausted else ""
+            conn.execute(
+                """UPDATE workflow_jobs SET status=?,available_at_utc=?,lease_owner='',
+                lease_expires_at_utc='',heartbeat_at_utc='',updated_at_utc=?,
+                completed_at_utc=CASE WHEN ?='dead_letter' THEN ? ELSE completed_at_utc END,
+                error_code=?,error_message_summary='Lease expired before completion',
+                error_retryable=?,terminal_reason=? WHERE job_id=? AND status=?""",
+                (
+                    target,
+                    now,
+                    now,
+                    target,
+                    now,
+                    error_code,
+                    0 if exhausted else 1,
+                    terminal_reason,
+                    job_id,
+                    status,
+                ),
+            )
+            if running:
+                conn.execute(
+                    """UPDATE workflow_job_attempts SET completed_at_utc=?,
+                    outcome='lease_expired',error_code='workflow_queue_lease_expired'
+                    WHERE job_id=? AND attempt_number=? AND worker_id=?
+                    AND completed_at_utc=''""",
+                    (now, job_id, attempt_count, lease_owner),
+                )
             _record_transition(
                 conn,
                 job_id=str(job_id),
                 from_status=str(status),
-                to_status="pending",
+                to_status=target,
                 reason="lease_expired",
                 actor=actor,
                 now_utc=now,
+                details={
+                    "attempt_count": int(attempt_count),
+                    "max_attempts": int(max_attempts),
+                    "terminal_reason": terminal_reason,
+                },
             )
             released.append(str(job_id))
         conn.commit()

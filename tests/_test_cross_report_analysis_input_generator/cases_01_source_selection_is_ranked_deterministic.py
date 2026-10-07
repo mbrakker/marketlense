@@ -1,6 +1,7 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import random
 from pathlib import Path
 
 from ._shared import *  # noqa: F401,F403
@@ -113,6 +114,113 @@ def test_source_selection_is_ranked_deterministic_and_diverse(
         if event["event"] == "cross_report_source_selection_complete"
     ][0]
     assert complete["fields"]["selected_report_ids"] == ["report-c", "report-b"]
+
+
+def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) -> None:
+    candidates = [
+        _candidate(
+            "a-first",
+            publisher="Publisher A",
+            report_date="2026-05-30",
+            evidence_count=10,
+        ),
+        _candidate(
+            "z-second",
+            publisher="Publisher A",
+            report_date="2026-05-30",
+            evidence_count=10,
+        ),
+        _candidate(
+            "b-independent",
+            publisher="Publisher B",
+            report_date="2026-05-30",
+            evidence_count=8,
+        ),
+        _candidate(
+            "c-independent",
+            publisher="Publisher C",
+            report_date="2026-05-30",
+            evidence_count=2,
+        ),
+        _candidate(
+            "d-independent",
+            publisher="Publisher D",
+            report_date="2026-05-01",
+            evidence_count=2,
+        ),
+    ]
+    expected_ids = [
+        "a-first",
+        "b-independent",
+        "z-second",
+        "c-independent",
+    ]
+    expected_diversity_reasons = [
+        "publisher_diversity",
+        "publisher_diversity",
+        "same_publisher_already_selected",
+        "publisher_diversity",
+    ]
+
+    baseline = None
+    for seed in range(10):
+        shuffled = list(candidates)
+        random.Random(seed).shuffle(shuffled)
+        result = select_cross_report_source_reports(
+            _request(max_source_reports=4), _projected_data(shuffled), run_context
+        )
+        observed = [
+            (source.report_id, tuple(source.selection_reasons))
+            for source in result.selected_sources
+        ]
+        assert [report_id for report_id, _ in observed] == expected_ids
+        assert {
+            candidate.report_id: candidate.total_score
+            for candidate in result.ranked_candidates
+        } == {
+            "a-first": 4.5,
+            "z-second": 4.5,
+            "b-independent": 4.3,
+            "c-independent": 3.7,
+            "d-independent": 2.7,
+        }
+        assert [
+            next(
+                reason
+                for reason in reasons
+                if reason
+                in {
+                    "publisher_diversity",
+                    "same_publisher_already_selected",
+                }
+            )
+            for _, reasons in observed
+        ] == expected_diversity_reasons
+        assert all(
+            sum(
+                reason
+                in {
+                    "publisher_diversity",
+                    "same_publisher_already_selected",
+                }
+                for reason in reasons
+            )
+            == 1
+            for _, reasons in observed
+        )
+        rejected = {
+            candidate.report_id: candidate for candidate in result.rejected_candidates
+        }
+        assert set(rejected) == {"d-independent"}
+        rejected_reasons = rejected["d-independent"].selection_reasons
+        assert rejected["d-independent"].total_score == 3.45
+        assert rejected["d-independent"].diversity_score == 0.75
+        assert rejected_reasons.count("publisher_diversity") == 1
+        assert "same_publisher_already_selected" not in rejected_reasons
+        if baseline is None:
+            baseline = observed
+        else:
+            assert observed == baseline
 
 
 def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None:
@@ -737,6 +845,7 @@ def test_theme_variety_downranks_recent_repetition_through_file_service(
 
 __all__ = [
     "test_source_selection_is_ranked_deterministic_and_diverse",
+    "test_diversity_bonus_is_recomputed_from_base_scores_each_round",
     "test_source_selection_honors_max_report_cap_and_filters",
     "test_source_selection_honors_category_id_filters_when_label_differs",
     "test_source_selection_normalizes_whitespace_dates",

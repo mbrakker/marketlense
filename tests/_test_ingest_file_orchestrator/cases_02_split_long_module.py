@@ -1,10 +1,19 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
     _SplitPath(__file__).resolve().parent.parent / "test_ingest_file_orchestrator.py"
 )
+
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from src.services import file_cache_service, file_service
 
 from ._split_support_test_ingest_file_orchestrator import *  # noqa: F401,F403
 
@@ -241,3 +250,89 @@ def test_existing_md5_path_unchanged_without_rehash(ingest_settings, run_context
     assert result.outcome.status == "processed"
     assert pipeline_md5["value"] == "drive-md5"
     assert compute_md5_calls["count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("sidecar_file_id", "sidecar_md5", "expected_hash_calls"),
+    [
+        pytest.param("file-1", "source", 0, id="valid-source-bound-sidecar"),
+        pytest.param("foreign-file", "foreign", 1, id="foreign-sidecar-rehashed"),
+    ],
+)
+def test_ingest_cache_uses_only_source_bound_sidecar(
+    tmp_path,
+    ingest_settings,
+    run_context,
+    sidecar_file_id: str,
+    sidecar_md5: str,
+    expected_hash_calls: int,
+) -> None:
+    settings = replace(
+        ingest_settings,
+        cache_dir=str(tmp_path / "cache"),
+        output_dir=str(tmp_path / "out"),
+        vector_store_keep=True,
+    )
+    cache_path = Path(settings.cache_dir) / "file-1.pdf"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    pdf_bytes = b"%PDF-1.4\n%%EOF\n"
+    cache_path.write_bytes(pdf_bytes)
+    source_md5 = hashlib.md5(pdf_bytes).hexdigest()
+    cache_stat = cache_path.stat()
+    sidecar_md5_value = source_md5 if sidecar_md5 == "source" else "f" * 32
+    sidecar_path = Path(f"{cache_path}.md5.json")
+    sidecar_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "file_id": sidecar_file_id,
+                "name": "file-1.pdf",
+                "md5": sidecar_md5_value,
+                "size_bytes": cache_stat.st_size,
+                "mtime_utc": cache_stat.st_mtime,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    hash_calls = []
+    download_calls = []
+
+    def _file_stat(request, ctx):
+        if request.compute_md5:
+            hash_calls.append(request.path)
+        return file_service.file_stat(request, ctx)
+
+    dependencies = _base_dependencies(
+        file_stat_fn=_file_stat,
+        run_report_pipeline_fn=lambda current_file, _cache_path, _settings, md5, _ctx: (
+            _outcome(current_file, md5)
+        ),
+        write_md5_sidecar_fn=file_cache_service.write_md5_sidecar,
+        download_pdf_to_path_fn=lambda request, _ctx: (
+            download_calls.append(request.output_path)
+            or DriveDownloadToPathResponse(
+                schema_version="1.0",
+                file=request.file,
+                output_path=request.output_path,
+                md5=None,
+                size=len(pdf_bytes),
+            )
+        ),
+    )
+    dependencies = replace(
+        dependencies,
+        resolve_md5_sidecar=file_cache_service.resolve_md5_sidecar,
+    )
+
+    result = run_ingest_file(
+        _drive_file(md5_checksum=source_md5), 0, settings, run_context, dependencies
+    )
+
+    assert result.outcome.status == "processed"
+    assert result.outcome.md5 == source_md5
+    assert len(hash_calls) == expected_hash_calls
+    assert download_calls == []
+    repaired_sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    assert repaired_sidecar["file_id"] == "file-1"
+    assert repaired_sidecar["md5"] == source_md5

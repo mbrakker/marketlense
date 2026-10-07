@@ -4,6 +4,8 @@ import json
 import logging
 from pathlib import Path
 
+import pytest
+
 from src.contracts.file_cache import (
     FileCacheMd5SidecarResolveRequest,
     FileCacheMd5SidecarWriteRequest,
@@ -136,6 +138,48 @@ def test_resolve_md5_sidecar_returns_miss_on_stat_mismatch(tmp_path: Path) -> No
     assert response.reason == "size_mismatch"
     assert response.resolved_md5 is None
     assert response.record is not None
+
+
+@pytest.mark.parametrize(
+    "identity_fields",
+    [
+        pytest.param({"file_id": "file-2"}, id="foreign-file-id"),
+        pytest.param({"file_id": ""}, id="missing-file-id"),
+        pytest.param({"schema_version": "99.0"}, id="unsupported-schema"),
+    ],
+)
+def test_resolve_md5_sidecar_rejects_foreign_or_unsupported_records(
+    tmp_path: Path, identity_fields: dict[str, str]
+) -> None:
+    cache_path = tmp_path / "cached.pdf"
+    cache_path.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    stat = cache_path.stat()
+    payload = {
+        "schema_version": "1.0",
+        "file_id": "file-1",
+        "name": "cached.pdf",
+        "md5": "abcdefabcdefabcdefabcdefabcdefab",
+        "size_bytes": stat.st_size,
+        "mtime_utc": int(stat.st_mtime),
+    }
+    payload.update(identity_fields)
+    Path(f"{cache_path}.md5.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    response = resolve_md5_sidecar(
+        FileCacheMd5SidecarResolveRequest(
+            schema_version="1.0",
+            cache_path=str(cache_path),
+            file_id="file-1",
+            size_bytes=stat.st_size,
+            mtime_utc=stat.st_mtime,
+        ),
+        _ctx(),
+    )
+
+    assert response.hit is False
+    assert response.reason == "invalid_payload"
+    assert response.resolved_md5 is None
+    assert response.record is None
 
 
 def test_write_md5_sidecar_returns_incomplete_metadata_without_write(

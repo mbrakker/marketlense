@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 
 import pytest
 
@@ -11,6 +12,7 @@ from src.contracts.idempotency import (
 )
 from src.contracts.run_context import RunContext
 from src.services import idempotency_service
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
@@ -107,3 +109,135 @@ def test_idempotency_service_rejects_checksum_mismatch(
         code="idempotency_checksum_mismatch",
         retryable=False,
     )
+
+
+@pytest.mark.parametrize(
+    ("column", "corrupt_value"),
+    [
+        pytest.param("outcome_json", "{malformed-private-payload", id="bad-json"),
+        pytest.param("outcome_json", '["private-outcome-marker"]', id="array-outcome"),
+        pytest.param("outcome_json", '"scalar"', id="scalar-outcome"),
+        pytest.param("artifact_refs_json", "[]", id="array-artifact-references"),
+        pytest.param("scope", "", id="missing-scope"),
+        pytest.param("idempotency_key", "", id="missing-idempotency-key"),
+        pytest.param("input_checksum", "", id="missing-input-identity"),
+        pytest.param("recorded_at_utc", "", id="missing-record-time"),
+    ],
+)
+def test_lookup_fails_closed_on_corrupt_persisted_records(
+    tmp_path, column: str, corrupt_value: str
+) -> None:
+    db_path = str(tmp_path / "idempotency.sqlite")
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope="publish_html",
+            idempotency_key="report:1",
+            input_checksum="checksum-1",
+            outcome_payload={"status": "published"},
+            artifact_references={"post_id": 42},
+        ),
+        _ctx(),
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            f"UPDATE orchestrator_idempotency SET {column}=? "
+            "WHERE scope=? AND idempotency_key=?",
+            (corrupt_value, "publish_html", "report:1"),
+        )
+
+    with pytest.raises(AppError) as exc_info:
+        idempotency_service.get_outcome(
+            OrchestratorIdempotencyGetRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                scope="publish_html",
+                idempotency_key="report:1",
+                input_checksum="checksum-1",
+            ),
+            _ctx(),
+        )
+
+    error = exc_info.value
+    assert error.code == "idempotency_record_corrupt"
+    assert error.retryable is False
+    assert "private-outcome-marker" not in str(error)
+    assert "private-outcome-marker" not in json.dumps(error.context)
+    with sqlite3.connect(db_path) as conn:
+        retained_value = conn.execute(
+            f"SELECT {column} FROM orchestrator_idempotency"
+        ).fetchone()[0]
+    assert retained_value == corrupt_value
+
+
+def test_empty_persisted_outcome_objects_remain_valid(tmp_path) -> None:
+    db_path = str(tmp_path / "idempotency.sqlite")
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope="test_empty_allowed",
+            idempotency_key="empty-outcome",
+            input_checksum="checksum-empty",
+            outcome_payload={},
+            artifact_references={},
+        ),
+        _ctx(),
+    )
+
+    lookup = idempotency_service.get_outcome(
+        OrchestratorIdempotencyGetRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope="test_empty_allowed",
+            idempotency_key="empty-outcome",
+            input_checksum="checksum-empty",
+        ),
+        _ctx(),
+    )
+
+    assert lookup.found is True
+    assert lookup.record is not None
+    assert lookup.record.outcome_payload == {}
+    assert lookup.record.artifact_references == {}
+
+
+def test_lookup_fails_closed_when_both_persisted_identity_fields_are_missing(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "idempotency.sqlite")
+    idempotency_service.record_outcome(
+        OrchestratorIdempotencyRecordRequest(
+            schema_version="1.0",
+            db_path=db_path,
+            scope="publish_html",
+            idempotency_key="report:1",
+            input_checksum="checksum-1",
+            outcome_payload={"status": "published"},
+            artifact_references={},
+        ),
+        _ctx(),
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("UPDATE orchestrator_idempotency SET scope='',idempotency_key=''")
+
+    with pytest.raises(AppError) as exc_info:
+        idempotency_service.get_outcome(
+            OrchestratorIdempotencyGetRequest(
+                schema_version="1.0",
+                db_path=db_path,
+                scope="publish_html",
+                idempotency_key="report:1",
+                input_checksum="checksum-1",
+            ),
+            _ctx(),
+        )
+
+    assert exc_info.value.code == "idempotency_record_corrupt"
+    assert exc_info.value.retryable is False
+    with sqlite3.connect(db_path) as conn:
+        retained_identity = conn.execute(
+            "SELECT scope,idempotency_key FROM orchestrator_idempotency"
+        ).fetchone()
+    assert retained_identity == ("", "")

@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.utils.errors import AppError
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -46,6 +48,53 @@ def test_publish_runs_when_processed(
     assert publish_row is not None
     assert publish_row.wp_post_id == 10
     assert publish_row.wp_post_url == "https://example.com/post/10"
+
+
+def test_corrupt_persisted_publish_outcome_blocks_replay_writes(
+    publish_settings_factory, run_context, wordpress_http
+) -> None:
+    settings = publish_settings_factory(validation_policy="warn")
+    _write_html(settings.output_dir, "report.html", "Drive fileId: file123")
+    _record_processed(settings.state_db, "file123", run_context)
+    wordpress_http.add_json(
+        "GET",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=200,
+        payload=[],
+    )
+    wordpress_http.add_json(
+        "POST",
+        "https://example.com/wp-json/wp/v2/ml_report",
+        status_code=201,
+        payload={"id": 10, "link": "https://example.com/post/10", "status": "publish"},
+    )
+
+    first = orch.run_publish(settings, limit=1)
+    assert first[0].status == "published"
+    initial_post_writes = len(
+        wordpress_http.calls_for("POST", "https://example.com/wp-json/wp/v2/ml_report")
+    )
+    with sqlite3.connect(settings.state_db) as conn:
+        conn.execute(
+            "UPDATE orchestrator_idempotency SET outcome_json='{}' "
+            "WHERE scope=? AND idempotency_key=?",
+            ("publish_orchestrator.publish_html", "ml_report:file123"),
+        )
+
+    with pytest.raises(AppError) as exc_info:
+        orch.run_publish(settings, limit=1)
+
+    assert exc_info.value.code == "publish_idempotency_outcome_invalid"
+    assert exc_info.value.retryable is False
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "POST", "https://example.com/wp-json/wp/v2/ml_report"
+            )
+        )
+        == initial_post_writes
+        == 1
+    )
 
 
 def test_publish_can_force_draft_for_review(
@@ -961,6 +1010,7 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
 
 __all__ = [
     "test_publish_runs_when_processed",
+    "test_corrupt_persisted_publish_outcome_blocks_replay_writes",
     "test_publish_routes_report_by_embedded_entity_metadata",
     "test_publish_routes_signal_by_embedded_entity_metadata",
     "test_publish_uses_explicit_html_paths_over_output_listing",

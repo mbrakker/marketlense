@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 
@@ -24,9 +26,11 @@ from src.services.workflow_queue_service import (
     get_workflow_job,
     get_workflow_queue_control,
     heartbeat_workflow_job,
+    list_workflow_job_attempts,
     materialize_workflow_outbox,
     record_publication_readiness,
     release_expired_workflow_leases,
+    requeue_workflow_job,
     set_workflow_queue_control,
     start_workflow_job,
     upsert_briefing_opportunity,
@@ -165,6 +169,147 @@ def test_heartbeat_and_expired_lease_reject_stale_completion(tmp_path) -> None:
     assert error.value.code == "workflow_queue_status_invalid"
 
 
+def test_expired_running_lease_closes_attempt_and_terminalizes_exhaustion(
+    tmp_path,
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db, replace(_submission(key="lease-expiry"), max_attempts=2), _ctx()
+    )
+
+    first_claim = claim_next_workflow_job(
+        db,
+        "publisher_discovery",
+        "worker-1",
+        _ctx(),
+        now_utc="2026-07-18T00:00:01+00:00",
+    )
+    assert first_claim is not None
+    start_workflow_job(
+        db, job.job_id, "worker-1", _ctx(), now_utc="2026-07-18T00:00:02+00:00"
+    )
+    expired_first = release_expired_workflow_leases(
+        db, _ctx(), now_utc="2026-07-19T00:00:00+00:00"
+    )
+    after_first = get_workflow_job(db, job.job_id, _ctx())
+    first_attempt = list_workflow_job_attempts(db, job.job_id, _ctx())[0]
+
+    assert expired_first == [job.job_id]
+    assert after_first.status == "pending"
+    assert after_first.attempt_count == 1
+    assert first_attempt.completed_at_utc == "2026-07-19T00:00:00+00:00"
+    assert first_attempt.outcome == "lease_expired"
+    assert first_attempt.error_code == "workflow_queue_lease_expired"
+    assert (
+        release_expired_workflow_leases(db, _ctx(), now_utc="2026-07-19T00:00:00+00:00")
+        == []
+    )
+
+    second_claim = claim_next_workflow_job(
+        db,
+        "publisher_discovery",
+        "worker-2",
+        _ctx(),
+        now_utc="2026-07-19T00:00:01+00:00",
+    )
+    assert second_claim is not None and second_claim.job_id == job.job_id
+    start_workflow_job(
+        db, job.job_id, "worker-2", _ctx(), now_utc="2026-07-19T00:00:02+00:00"
+    )
+
+    expired_final = release_expired_workflow_leases(
+        db, _ctx(), now_utc="2026-07-20T00:00:00+00:00"
+    )
+    terminal = get_workflow_job(db, job.job_id, _ctx())
+    attempts = list_workflow_job_attempts(db, job.job_id, _ctx())
+    assert expired_final == [job.job_id]
+    assert terminal.status == "dead_letter"
+    assert terminal.error_code == "workflow_queue_attempts_exhausted"
+    assert terminal.terminal_reason == "lease_expired_attempts_exhausted"
+    assert [attempt.attempt_number for attempt in attempts] == [1, 2]
+    assert [attempt.outcome for attempt in attempts] == [
+        "lease_expired",
+        "lease_expired",
+    ]
+
+
+def test_expired_lease_before_start_does_not_consume_an_attempt(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db, replace(_submission(key="lease-before-start"), max_attempts=1), _ctx()
+    )
+    claimed = claim_next_workflow_job(
+        db,
+        "publisher_discovery",
+        "worker-1",
+        _ctx(),
+        now_utc="2026-07-18T00:00:01+00:00",
+    )
+    assert claimed is not None and claimed.job_id == job.job_id
+
+    released = release_expired_workflow_leases(
+        db, _ctx(), now_utc="2026-07-19T00:00:00+00:00"
+    )
+    pending = get_workflow_job(db, job.job_id, _ctx())
+    assert released == [job.job_id]
+    assert pending.status == "pending"
+    assert pending.attempt_count == 0
+    assert list_workflow_job_attempts(db, job.job_id, _ctx()) == []
+
+
+def test_expired_worker_attempt_is_reclaimed_and_completed_by_restarted_worker(
+    tmp_path,
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db, replace(_submission(key="worker-restart"), max_attempts=2), _ctx()
+    )
+    first = _start(db, job.job_id, worker_id="worker-before-crash")
+
+    released = release_expired_workflow_leases(
+        db, _ctx(), now_utc="2026-07-19T00:00:00+00:00"
+    )
+    assert released == [job.job_id]
+
+    claimed = claim_next_workflow_job(
+        db,
+        "publisher_discovery",
+        "worker-after-restart",
+        _ctx(),
+        now_utc="2026-07-19T00:00:01+00:00",
+    )
+    assert claimed is not None and claimed.job_id == first.job_id
+    second = start_workflow_job(
+        db,
+        job.job_id,
+        "worker-after-restart",
+        _ctx(),
+        now_utc="2026-07-19T00:00:02+00:00",
+    )
+    completed = complete_workflow_job(
+        db,
+        job.job_id,
+        "worker-after-restart",
+        WorkflowStageResult(
+            output_reference="recovered-output",
+            output_content_hash="recovered-hash",
+            output_verified=True,
+        ),
+        [],
+        _ctx(),
+        now_utc="2026-07-19T00:00:03+00:00",
+    )
+
+    attempts = list_workflow_job_attempts(db, job.job_id, _ctx())
+    assert second.attempt_count == 2
+    assert completed.status == "succeeded"
+    assert [attempt.worker_id for attempt in attempts] == [
+        "worker-before-crash",
+        "worker-after-restart",
+    ]
+    assert [attempt.outcome for attempt in attempts] == ["lease_expired", "succeeded"]
+
+
 def test_retry_budget_defer_cancel_and_explicit_requeue(tmp_path) -> None:
     db = str(tmp_path / "state.sqlite")
     job, _ = enqueue_workflow_job(db, _submission(key="retry"), _ctx())
@@ -185,6 +330,79 @@ def test_retry_budget_defer_cancel_and_explicit_requeue(tmp_path) -> None:
     pending_job, _ = enqueue_workflow_job(db, _submission(key="cancel"), _ctx())
     cancelled = cancel_workflow_job(db, pending_job.job_id, "operator", _ctx())
     assert cancelled.status == "cancelled"
+
+
+def test_explicit_requeue_grants_one_bounded_attempt_and_preserves_history(
+    tmp_path,
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    job, _ = enqueue_workflow_job(
+        db, replace(_submission(key="requeue-once"), max_attempts=1), _ctx()
+    )
+    first = _start(db, job.job_id)
+    failed = fail_workflow_job(
+        db,
+        first.job_id,
+        "worker-1",
+        AppError("worker_failed", "first attempt failed", retryable=False),
+        _ctx(),
+        now_utc="2026-07-18T00:00:03+00:00",
+    )
+    assert failed.status == "dead_letter"
+
+    requeued = requeue_workflow_job(
+        db, job.job_id, "operator", _ctx(), now_utc="2026-07-18T00:00:04+00:00"
+    )
+    assert requeued.status == "pending"
+    assert requeued.attempt_count == 1
+    assert requeued.max_attempts == 2
+    with pytest.raises(AppError) as repeated:
+        requeue_workflow_job(
+            db,
+            job.job_id,
+            "operator",
+            _ctx(),
+            now_utc="2026-07-18T00:00:04+00:00",
+        )
+    assert repeated.value.code == "workflow_queue_requeue_invalid"
+
+    claimed = claim_next_workflow_job(
+        db,
+        "publisher_discovery",
+        "worker-2",
+        _ctx(),
+        now_utc="2026-07-18T00:00:05+00:00",
+    )
+    assert claimed is not None and claimed.job_id == job.job_id
+    second = start_workflow_job(
+        db,
+        job.job_id,
+        "worker-2",
+        _ctx(),
+        now_utc="2026-07-18T00:00:06+00:00",
+    )
+    terminal = fail_workflow_job(
+        db,
+        second.job_id,
+        "worker-2",
+        AppError("worker_failed_again", "second attempt failed", retryable=False),
+        _ctx(),
+        now_utc="2026-07-18T00:00:07+00:00",
+    )
+
+    attempts = list_workflow_job_attempts(db, job.job_id, _ctx())
+    assert terminal.status == "dead_letter"
+    assert terminal.attempt_count == terminal.max_attempts == 2
+    assert [attempt.attempt_number for attempt in attempts] == [1, 2]
+    assert [attempt.outcome for attempt in attempts] == ["dead_letter", "dead_letter"]
+    with sqlite3.connect(db) as conn:
+        details = conn.execute(
+            "SELECT details_json FROM workflow_job_transitions "
+            "WHERE job_id=? AND reason='operator_requeue'",
+            (job.job_id,),
+        ).fetchone()
+    assert details is not None
+    assert json.loads(details[0]) == {"granted_max_attempts": 2}
 
 
 def test_pause_and_depth_controls_prevent_claim_or_unbounded_enqueue(tmp_path) -> None:

@@ -206,6 +206,8 @@ stateDiagram-v2
   pending --> leased: atomic due claim
   leased --> running: worker start / attempt audit
   leased --> pending: lease expires before start
+  running --> pending: lease expires, automatic attempts remain
+  running --> dead_letter: lease expires on final attempt
   running --> succeeded: output verified
   running --> retry_wait: bounded retryable error
   running --> budget_deferred: canonical budget decision
@@ -221,7 +223,13 @@ stateDiagram-v2
 
 A heartbeat extends only the owning unexpired lease. Completion and failure SQL
 updates require the worker ID and unexpired lease, so a stale worker cannot
-commit an external outcome after recovery has released its job.
+commit an external outcome after recovery has released its job. Reaping a lease
+before worker start returns the job to `pending` without consuming an attempt.
+Reaping a running lease closes that attempt as `lease_expired`; remaining
+automatic attempts return to `pending`, while expiry on the final allowed
+attempt becomes `dead_letter` with `lease_expired_attempts_exhausted`. The
+reaper preserves external-effect evidence and does not infer that an external
+write did not happen.
 
 ## Outbox and reconciliation
 
@@ -268,6 +276,11 @@ python -m src.cli workflow-worker --queue publisher_discovery --limit 1
 bounded; an external supervisor decides recurrence. Queue health exposes status
 counts, ages, expired leases, runtime estimates, attempts, and pending outbox
 work without retaining prompts, source text, credentials, or raw provider data.
+An explicit requeue preserves the lifetime attempt count and audit rows. If the
+automatic allowance is exhausted, it grants one additional attempt and records
+the new allowance on the `operator_requeue` transition; a repeated requeue while
+the job is pending is rejected. Operators must verify retained input and
+idempotency proof before authorizing that attempt.
 
 ## Provider-wait overlap
 
