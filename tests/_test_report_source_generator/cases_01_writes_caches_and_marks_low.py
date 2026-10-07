@@ -150,6 +150,10 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
                 "pages_extracted": 2,
                 "char_count": 11,
                 "text_density": 5.5,
+                "pages": [
+                    {"page_number": 1, "text": "cached body from page one"},
+                    {"page_number": 2, "text": "page two content"},
+                ],
             }
         ),
         encoding="utf-8",
@@ -190,6 +194,7 @@ def test_prepare_report_source_uses_cached_source_phase_payloads(
     assert state.text_response.text == "cached body"
     assert state.text_response.pages_extracted == 2
     assert state.text_response.char_count == 11
+    assert [page.page_number for page in state.text_response.pages] == [1, 2]
 
 
 def test_prepare_report_source_ignores_stale_source_cache_keys(
@@ -525,7 +530,10 @@ def test_prepare_report_source_uses_ocr_for_weak_native_text_even_when_any_text_
                         text="ocr recovered text two",
                     ),
                 ],
-                raw_text='{"pages":[{"page_number":1,"text":"ocr recovered text"},{"page_number":2,"text":"ocr recovered text two"}]}',
+                raw_text=(
+                    '{"pages":[{"page_number":1,"text":"ocr recovered text"},'
+                    '{"page_number":2,"text":"ocr recovered text two"}]}'
+                ),
                 model=req.model,
                 request_id="req_weak_native",
             )

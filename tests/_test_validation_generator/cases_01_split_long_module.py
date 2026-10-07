@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from ._split_support_cases_01_validation_flags_metric_and_quote import *  # noqa: F401,F403
 
 
@@ -42,7 +43,17 @@ def test_commentary_numbers_allowed_when_in_report_or_evidence(tmp_path):
         }
     }
     fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
+        semantic_payload={
+            "metrics": [],
+            "quotes": [
+                {
+                    "id": "f1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "The requested quote matches the cited evidence.",
+                }
+            ],
+        },
         grounding_payload={"unsupported": []},
     )
     analysis_store = FakeAnalysisStore()
@@ -87,7 +98,9 @@ def test_validation_allows_interpretation_and_recommendation_in_allowed_sections
                 "evidence_id": "e1",
             }
         ],
-        "expert_comment": "This likely indicates teams should prioritize cross-platform governance.",
+        "expert_comment": (
+            "This likely indicates teams should prioritize cross-platform governance."
+        ),
         "linkedin_post": "Recommendation: focus on governance and phased rollout.",
     }
     _set_test_soft_copy_provenance(
@@ -101,12 +114,32 @@ def test_validation_allows_interpretation_and_recommendation_in_allowed_sections
         "findings": {"findings": [{"id": "e1", "evidence": "Baseline metric is 42%"}]}
     }
     fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
+        semantic_payload={
+            "metrics": [
+                {
+                    "id": "i1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported.",
+                }
+            ],
+            "quotes": [
+                {
+                    "id": "q1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported.",
+                }
+            ],
+        },
         grounding_payload={
             "unsupported": [
                 {
                     "section": "expert_comment",
-                    "text": "This likely indicates teams should prioritize cross-platform governance.",
+                    "text": (
+                        "This likely indicates teams should prioritize "
+                        "cross-platform governance."
+                    ),
                     "classification": "prescriptive_recommendation",
                     "violation_type": "non_fatal_interpretation",
                     "reason": "Recommendation extends beyond evidence details.",
@@ -145,7 +178,9 @@ def test_validation_fails_on_report_directive_misattribution(tmp_path):
                 "evidence": "Baseline metric is 42%",
             }
         ],
-        "expert_comment": "The report instructs brands to double investment immediately.",
+        "expert_comment": (
+            "The report instructs brands to double investment immediately."
+        ),
     }
     fake_openai = FakeOpenAI(
         semantic_payload={"metrics": [], "quotes": []},
@@ -153,7 +188,9 @@ def test_validation_fails_on_report_directive_misattribution(tmp_path):
             "unsupported": [
                 {
                     "section": "expert_comment",
-                    "text": "The report instructs brands to double investment immediately.",
+                    "text": (
+                        "The report instructs brands to double investment immediately."
+                    ),
                     "reason": "No directive exists in source report.",
                 }
             ]
@@ -201,15 +238,22 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
                 "evidence_id": "e1",
             }
         ],
-        "expert_comment": "Market size is >10 in annual USD billions and conversion reached 37.0.",
-        "linkedin_post": "Leaders should plan around >10 USD bn scale and a 37.0 conversion baseline.",
+        "expert_comment": (
+            "Market size is >10 in annual USD billions and conversion reached 37.0."
+        ),
+        "linkedin_post": (
+            "Leaders should plan around >10 USD bn scale and a 37.0 "
+            "conversion baseline."
+        ),
     }
     evidence_packs = {
         "findings": {
             "findings": [
                 {
                     "id": "e1",
-                    "evidence": "Revenue is more than $10B while conversion reached 37%.",
+                    "evidence": (
+                        "Revenue is more than $10B while conversion reached 37%."
+                    ),
                 }
             ]
         }
@@ -222,7 +266,24 @@ def test_validation_number_matching_normalizes_percent_and_billions(tmp_path):
         },
     )
     fake_openai = FakeOpenAI(
-        semantic_payload={"metrics": [], "quotes": []},
+        semantic_payload={
+            "metrics": [
+                {
+                    "id": "i1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported.",
+                }
+            ],
+            "quotes": [
+                {
+                    "id": "q1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported.",
+                }
+            ],
+        },
         grounding_payload={"unsupported": []},
     )
     result = validate_report(

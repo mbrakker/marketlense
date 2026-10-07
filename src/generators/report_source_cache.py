@@ -93,6 +93,25 @@ def load_report_source_cache(
     adapt_payload: Callable[[dict[str, object]], Optional[T]],
 ) -> ReportSourceCacheLoadResult[T]:
     if not binding.enabled or not binding.cache_path or not binding.cache_key:
+        logger.info(
+            log_event(
+                ctx,
+                role="generator",
+                event=f"{binding.phase}_cache_miss",
+                module=logger.name,
+                fields={
+                    "file_id": binding.file_id,
+                    "cache_key": binding.cache_key,
+                    "cache_miss_reason": (
+                        "cache_disabled"
+                        if not binding.enabled
+                        else "identity_unavailable"
+                        if not binding.cache_key
+                        else "cache_path_unavailable"
+                    ),
+                },
+            )
+        )
         return ReportSourceCacheLoadResult(
             schema_version="1.0",
             status="cache_disabled",
@@ -101,6 +120,9 @@ def load_report_source_cache(
         )
 
     cached = read_cache_json(Path(binding.cache_path), ctx, dependencies)
+    cache_miss_reason = "no_cached_entry"
+    if cached is not None and cached.get("key") != binding.cache_key:
+        cache_miss_reason = "cache_key_mismatch"
     if cached and cached.get("key") == binding.cache_key:
         adapted = adapt_payload(cached)
         if adapted is not None:
@@ -112,6 +134,7 @@ def load_report_source_cache(
                     module=logger.name,
                     fields={
                         "file_id": binding.file_id,
+                        "cache_key": binding.cache_key,
                         "cache_path": binding.cache_path,
                     },
                 )
@@ -122,6 +145,7 @@ def load_report_source_cache(
                 cache_hit=True,
                 value=adapted,
             )
+        cache_miss_reason = "cached_payload_invalid"
 
     logger.info(
         log_event(
@@ -131,7 +155,9 @@ def load_report_source_cache(
             module=logger.name,
             fields={
                 "file_id": binding.file_id,
+                "cache_key": binding.cache_key,
                 "cache_path": binding.cache_path,
+                "cache_miss_reason": cache_miss_reason,
             },
         )
     )
@@ -166,6 +192,7 @@ def write_report_source_cache(
             module=logger.name,
             fields={
                 "file_id": binding.file_id,
+                "cache_key": binding.cache_key,
                 "cache_path": binding.cache_path,
             },
         )

@@ -8,50 +8,40 @@ __file__ = str(
 )
 
 import json
-
 from dataclasses import replace
-
 from pathlib import Path
-
 from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.prompts import PromptLoadRequest
-
 from src.contracts.drive import DriveFile
-
-from src.contracts.pdf_ocr import PdfOcrChunk, PdfOcrSplitResponse
-
+from src.contracts.pdf_ocr import (
+    PdfOcrChunk,
+    PdfOcrSplitResponse,
+    PdfTextRenderResponse,
+)
 from src.contracts.pdf_text import (
-    PdfTextPage,
     PdfTextExtractResponse,
+    PdfTextPage,
     PdfTextSample,
     PdfTextSampleResponse,
 )
-
 from src.contracts.pdf_utils import PdfInfoResponse
-
+from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_generation import ReportRuntimeState
-
 from src.contracts.run_context import RunContext
-
 from src.generators.report_generation_dependencies import ReportSourceDependencies
-
 from src.generators.report_generation_shared import (
     contents_cache_key,
     derive_title,
+    ocr_text_cache_key,
     pdf_info_cache_key,
     report_slug,
     text_cache_key,
 )
-
 from src.generators.report_source_generator import prepare_report_source
-
 from src.services import prompt_service
-
 from src.utils.cache_utils import sha256_json
-
 from src.utils.errors import AppError
 
 

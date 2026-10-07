@@ -69,6 +69,20 @@ PDF cache paths use the same safety budget for both the final destination and
 the unique atomic-write temporary file. Deep isolated runs compact the cache
 directory and key filename together, so neither `os.replace` target exceeds
 the supported Windows path length.
+Native extracted text remains keyed by the original source MD5 and extraction
+limits. OCR-derived text is keyed by the verified checksum of the rendered OCR
+PDF, extraction limits, and extractor generation; a legacy OCR-text entry
+misses after this identity transition. If the rendered artifact has no verified
+checksum, extraction runs without OCR-text cache reuse. Cache events record the
+hashed key and hit or miss reason without source text.
+Text cache schema `2.0` requires one valid page record for each extracted page,
+with ordered page numbers inside the source range and an exact global character
+count. A `1.0` text cache remains compatible only when it includes complete,
+valid page records; a legacy cache without page spans is regenerated. The
+global text may be a legitimate truncation of page-level text and is not
+required to equal a page-text concatenation. Invalid cached PDF page counts,
+contents-page positions, or confidence values are also regenerated through the
+canonical PDF services.
 The cached-PDF MD5 sidecar is reusable only when schema version `1.0`, the
 exact Drive file ID, observed byte size, and observed modification time match
 the request. Missing, legacy, unsupported, or foreign-identity sidecars are
@@ -171,6 +185,15 @@ publish-readiness creation, and retains only the analysis artifacts and
 candidate audits for diagnosis. A rejected regeneration candidate therefore
 cannot be rendered as a public package or replace the artifact/validation pair
 from which the next bounded attempt is planned.
+
+Report-analysis validation makes one bounded local retry for execution errors.
+If the required validator still returns a retryable `AppError`, the orchestrator
+preserves its safe error code and cause identity and returns it to the durable
+workflow queue for its configured bounded retry. It does not turn that failure
+into an ordinary failed content report. Completed unsupported-content results
+remain validation findings and do not trigger queue retries. Nonretryable
+execution errors and unexpected exceptions remain fail-closed with a stable
+`validation_execution` issue and no raw exception text in the diagnostic.
 
 Before a regeneration candidate can be promoted, the deterministic candidate
 gate checks changed factual soft-copy claims against their selected retained
@@ -349,6 +372,13 @@ An accepted email request has no artifact to hash, so its telemetry status is
 `provisional` until mailbox delivery retains and verifies the attachment; it
 is never treated as a resolved or cohort-eligible report merely because the
 form submission succeeded.
+Mailbox ZIP materialization enforces code-owned caps of 25 MiB per attachment,
+500 archive members, 16 MiB per member, 32 MiB total uncompressed data, 100 PDF
+members, and a 100:1 compression ratio. It checks declared metadata before
+decompression, streams PDF output under hard byte limits, validates the full
+archive before writing, and atomically publishes each extracted PDF. A rejected
+attachment returns a stable indexed candidate failure and does not suppress a
+valid sibling attachment.
 
 Before a Drive duplicate is acquired, ingest resolves the existing canonical
 source identity from the Drive MD5 and checks the canonical report store for a
@@ -670,8 +700,12 @@ state.
 The same pre-call retained-family check is applied at the owning generator for
 the document map, every enabled evidence pack, taxonomy, context-category fit,
 each figure caption, semantic validation, and grounding validation. A reused
-payload is still normalized and schema-validated before it reaches the normal
-grounding, semantic, editorial, rendering, and publish-readiness gates. The
+semantic payload must contain exactly one verdict for each requested metric and
+non-empty quote; incomplete or mismatched retained results are regenerated,
+and incomplete fresh results block validation before materialization. Empty
+semantic requests are recorded as not applicable. Reused payloads are still
+normalized and schema-validated before they reach the normal grounding,
+semantic, editorial, rendering, and publish-readiness gates. The
 former composite evidence/taxonomy/validation cache files are not compatible
 proof for these independent families; absent source or vector-content identity,
 or any mismatch in prompt, schema, model policy, configuration, input, output,

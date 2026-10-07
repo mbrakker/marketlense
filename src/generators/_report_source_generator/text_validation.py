@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: F401,F403,F405,F821
+from src.contracts.files import FileStatRequest
 from src.contracts.pdf_context import PdfContext
 from src.contracts.pdf_ocr import PdfOcrFallbackResponse
 from src.contracts.pdf_text import (
@@ -206,14 +207,33 @@ def _load_validated_ocr_text(
     runtime: ReportRuntimeState,
     *,
     analysis_pdf_path: str,
+    source_page_count: int,
     ocr_result: PdfOcrFallbackResponse,
     dependencies: ReportSourceDependencies,
-) -> tuple[PdfTextExtractResponse, TextStatus, _NativeTextValidationResult]:
+) -> tuple[
+    PdfTextExtractResponse,
+    TextStatus,
+    _NativeTextValidationResult,
+    str | None,
+]:
+    artifact_stat = dependencies.file_stat(
+        FileStatRequest(
+            schema_version="1.0",
+            path=analysis_pdf_path,
+            compute_md5=True,
+        ),
+        child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:ocr_artifact_hash"),
+    )
+    analysis_artifact_md5 = (
+        artifact_stat.md5 if artifact_stat.exists and artifact_stat.is_file else None
+    )
     rendered_text_resp, rendered_text_status = _load_text(
         runtime,
         analysis_pdf_path=analysis_pdf_path,
+        source_page_count=source_page_count,
         pdf_context_for_tasks=None,
         cache_prefix="ocr_text",
+        analysis_artifact_md5=analysis_artifact_md5,
         dependencies=dependencies,
     )
     text_resp, text_status = _select_ocr_text_response(
@@ -227,7 +247,7 @@ def _load_validated_ocr_text(
         ocr_result=ocr_result,
         text_status=text_status,
     )
-    return text_resp, text_status, ocr_validation
+    return text_resp, text_status, ocr_validation, analysis_artifact_md5
 
 
 def _density_confidence_score(

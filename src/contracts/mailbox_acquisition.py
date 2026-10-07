@@ -122,6 +122,25 @@ class MailboxAttachmentMaterializeResponse:
     artifacts: list[MailboxAttachmentArtifact] = field(
         metadata={"doc": "Materialized PDF artifacts."}
     )
+    failures: list["MailboxAttachmentFailure"] = field(
+        default_factory=list,
+        metadata={"doc": "Typed attachment-candidate failures, keyed by input index."},
+    )
+
+
+@dataclass(frozen=True)
+class MailboxAttachmentFailure:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox attachment failure schema version."}
+    )
+    attachment_index: int = field(
+        metadata={
+            "doc": "Zero-based candidate index within the materialization request."
+        }
+    )
+    error_code: str = field(
+        metadata={"doc": "Stable non-retryable attachment validation error code."}
+    )
 
 
 @dataclass(frozen=True)
@@ -157,7 +176,9 @@ class MailboxSearchRequest:
     )
     poll_number: int = field(
         default=0,
-        metadata={"doc": "One-based logical polling attempt for idempotent accounting."},
+        metadata={
+            "doc": "One-based logical polling attempt for idempotent accounting."
+        },
     )
 
 
@@ -214,7 +235,10 @@ class MailReportAcquisitionRequest:
     requested_after_utc: Optional[str] = field(
         default=None,
         metadata={
-            "doc": "Optional UTC request watermark; messages received before this instant are ignored."
+            "doc": (
+                "Optional UTC request watermark; messages received before this instant "
+                "are ignored."
+            )
         },
     )
     seen_provider_message_ids: list[str] = field(
@@ -224,7 +248,10 @@ class MailReportAcquisitionRequest:
     workflow_request_id: int = field(
         default=0,
         metadata={
-            "doc": "Optional durable workflow-control mail request ID used for request-scoped candidate suppression."
+            "doc": (
+                "Optional durable workflow-control mail request ID used for "
+                "request-scoped candidate suppression."
+            )
         },
     )
 
@@ -256,7 +283,10 @@ class MailReportAcquisitionResult:
     acquisition_result_taxonomy: str = field(
         default="",
         metadata={
-            "doc": "Fine-grained acquisition taxonomy such as mailbox_attachment_pdf or mailbox_body_pdf_link."
+            "doc": (
+                "Fine-grained acquisition taxonomy such as mailbox_attachment_pdf "
+                "or mailbox_body_pdf_link."
+            )
         },
     )
     seen_provider_message_ids: list[str] = field(

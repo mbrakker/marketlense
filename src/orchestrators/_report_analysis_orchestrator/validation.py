@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import math
 import re
 from copy import deepcopy
 from dataclasses import asdict, replace
@@ -222,6 +223,47 @@ def _accepts_keyword(callable_obj, keyword: str) -> bool:
     )
 
 
+def _validation_error_identity(error: Exception) -> tuple[str, str, str]:
+    """Return bounded, non-content identity fields for validation failures."""
+    error_code = (
+        str(error.code)
+        if isinstance(error, AppError)
+        and re.fullmatch(r"[a-z0-9_.-]{1,80}", str(error.code or ""))
+        else "validation_unexpected_error"
+    )
+    cause = error.cause if isinstance(error, AppError) and error.cause else error
+    cause_code = ""
+    if isinstance(cause, AppError):
+        if re.fullmatch(r"[a-z0-9_.-]{1,80}", str(cause.code or "")):
+            cause_code = str(cause.code)
+        cause = cause.cause or cause
+    cause_type = re.sub(r"[^A-Za-z0-9_.-]", "", type(cause).__name__)[:80]
+    return error_code, cause_code, cause_type or "Exception"
+
+
+def _safe_validation_retry_context(error: AppError) -> dict[str, str | float]:
+    """Preserve recognized retry policy without copying arbitrary error context."""
+    context = error.context if isinstance(error.context, dict) else {}
+    safe: dict[str, str | float] = {}
+    decision = str(context.get("retry_decision") or "").strip().lower()
+    if decision in {"defer", "abort"}:
+        safe["retry_decision"] = decision
+    next_action = str(context.get("next_action") or "").strip().lower()
+    if re.fullmatch(r"[a-z][a-z0-9_]{0,79}", next_action):
+        safe["next_action"] = next_action
+    for field in ("retry_after_seconds", "defer_seconds"):
+        raw_value = context.get(field)
+        if isinstance(raw_value, bool):
+            continue
+        try:
+            delay = float(raw_value)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if math.isfinite(delay) and 0 <= delay <= 86_400:
+            safe[field] = delay
+    return safe
+
+
 def _run_validation_with_fallback(
     *,
     runtime: ReportRuntimeState,
@@ -231,6 +273,7 @@ def _run_validation_with_fallback(
     pack_name: str,
     openai_client=None,
 ) -> ValidationReport:
+    validation_attempts = 0
     kwargs = {}
     if openai_client is not None and _accepts_keyword(
         dependencies.run_validation, "openai_client"
@@ -238,16 +281,42 @@ def _run_validation_with_fallback(
         kwargs["openai_client"] = openai_client
 
     def run_validation() -> ValidationReport:
-        return dependencies.run_validation(
-            validation_req,
-            runtime.settings,
-            child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:{pack_name}"),
-            pack_name=pack_name,
-            report_name=runtime.report_name,
-            md5=runtime.md5,
-            **kwargs,
-        )
+        nonlocal validation_attempts
+        validation_attempts += 1
+        try:
+            return dependencies.run_validation(
+                validation_req,
+                runtime.settings,
+                child_context(mode_ctx, task_id=f"{mode_ctx.task_id}:{pack_name}"),
+                pack_name=pack_name,
+                report_name=runtime.report_name,
+                md5=runtime.md5,
+                **kwargs,
+            )
+        except AppError as exc:
+            error_code, cause_code, cause_type = _validation_error_identity(exc)
+            raise AppError(
+                code=error_code,
+                message="Report validation execution failed",
+                retryable=exc.retryable,
+                severity=exc.severity,
+                context={
+                    "report_id": runtime.file.file_id,
+                    "pack_name": pack_name,
+                    "attempt_number": validation_attempts,
+                    "cause_code": cause_code,
+                    "cause_type": cause_type,
+                    **_safe_validation_retry_context(exc),
+                },
+                cause=exc,
+            ) from exc
 
+    retry_policy = RetryPolicy(
+        retries=1,
+        base_delay_seconds=0.5,
+        backoff_step_seconds=0.5,
+        jitter_seconds=0.25,
+    )
     try:
         return run_with_retry(
             step_name=f"report_analysis_validation:{pack_name}",
@@ -255,81 +324,136 @@ def _run_validation_with_fallback(
             ctx=mode_ctx,
             logger=logger,
             module_name=logger.name,
-            policy=RetryPolicy(
-                retries=1,
-                base_delay_seconds=0.5,
-                backoff_step_seconds=0.5,
-                jitter_seconds=0.25,
-            ),
+            policy=retry_policy,
             retry_event="validation_retry",
             failure_event="validation_retry_exhausted",
+            retry_fields_builder=lambda exc, attempt: {
+                "step": f"report_analysis_validation:{pack_name}",
+                "attempt": attempt + 1,
+                "file_id": runtime.file.file_id,
+                "pack_name": pack_name,
+                "error_code": _validation_error_identity(exc)[0],
+            },
+            failure_fields_builder=lambda exc, attempt, retryable: {
+                "step": f"report_analysis_validation:{pack_name}",
+                "attempt": attempt + 1,
+                "file_id": runtime.file.file_id,
+                "pack_name": pack_name,
+                "error_code": _validation_error_identity(exc)[0],
+                "retryable": retryable,
+            },
         )
-    except Exception as exc:
-        logger.info(
-            log_event(
-                mode_ctx,
-                role="orchestrator",
-                event="validation_failed",
-                module=logger.name,
-                fields={
-                    "file_id": runtime.file.file_id,
-                    "error": str(exc),
-                    "mode": runtime.analysis_mode,
-                    "pack_name": pack_name,
-                },
+    except AppError as exc:
+        error_code, cause_code, cause_type = _validation_error_identity(exc)
+        if exc.retryable:
+            logger.warning(
+                log_event(
+                    mode_ctx,
+                    role="orchestrator",
+                    event="validation_retryable_error_propagated",
+                    module=logger.name,
+                    fields={
+                        "file_id": runtime.file.file_id,
+                        "pack_name": pack_name,
+                        "error_code": error_code,
+                        "cause_code": cause_code,
+                        "cause_type": cause_type,
+                        "attempt_count": validation_attempts,
+                        "retryable": True,
+                    },
+                )
             )
+            raise
+        failure_code = error_code
+        failure_message = f"Validation execution failed ({failure_code})."
+        log_fields = {
+            "error_code": failure_code,
+            "cause_code": cause_code,
+            "cause_type": cause_type,
+            "retryable": False,
+        }
+    except Exception as exc:
+        failure_code, cause_code, cause_type = _validation_error_identity(exc)
+        failure_message = f"Validation execution failed unexpectedly ({cause_type})."
+        log_fields = {
+            "error_code": failure_code,
+            "cause_code": cause_code,
+            "cause_type": cause_type,
+            "retryable": False,
+        }
+
+    logger.info(
+        log_event(
+            mode_ctx,
+            role="orchestrator",
+            event="validation_failed",
+            module=logger.name,
+            fields={
+                "file_id": runtime.file.file_id,
+                "mode": runtime.analysis_mode,
+                "pack_name": pack_name,
+                **log_fields,
+            },
         )
-        fallback_path = dependencies.analysis_pack_path(
-            AnalysisPackPathRequest(
+    )
+    fallback_path = dependencies.analysis_pack_path(
+        AnalysisPackPathRequest(
+            schema_version="1.0",
+            output_dir=runtime.settings.output_dir,
+            report_id=ReportId(runtime.file.file_id),
+            pack_name=pack_name,
+            report_slug=runtime.report_name,
+        ),
+        mode_ctx,
+    ).output_path
+    fallback_report = ValidationReport(
+        schema_version="1.1",
+        status="fail",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                message=failure_message,
+                severity="error",
+                affected_section="validation",
+                rule_id="validation_execution",
+                violation_type=failure_code,
+            )
+        ],
+        severity="error",
+        source_path=fallback_path,
+    )
+    try:
+        dependencies.analysis_store_pack(
+            AnalysisStorePackRequest(
                 schema_version="1.0",
                 output_dir=runtime.settings.output_dir,
                 report_id=ReportId(runtime.file.file_id),
                 pack_name=pack_name,
+                payload=fallback_report.to_dict(),
                 report_slug=runtime.report_name,
             ),
             mode_ctx,
-        ).output_path
-        fallback_report = ValidationReport(
-            schema_version="1.1",
-            status="fail",
-            issues=[
-                ValidationIssue(
-                    schema_version="1.0",
-                    message=f"Validation error: {exc}",
-                    severity="error",
-                    affected_section="validation",
-                )
-            ],
-            severity="error",
-            source_path=fallback_path,
         )
-        try:
-            dependencies.analysis_store_pack(
-                AnalysisStorePackRequest(
-                    schema_version="1.0",
-                    output_dir=runtime.settings.output_dir,
-                    report_id=ReportId(runtime.file.file_id),
-                    pack_name=pack_name,
-                    payload=fallback_report.to_dict(),
-                    report_slug=runtime.report_name,
-                ),
+    except Exception as store_exc:  # pragma: no cover
+        store_error_code, store_cause_code, store_cause_type = (
+            _validation_error_identity(store_exc)
+        )
+        logger.info(
+            log_event(
                 mode_ctx,
+                role="orchestrator",
+                event="validation_store_failed",
+                module=logger.name,
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "error_code": store_error_code,
+                    "cause_code": store_cause_code,
+                    "cause_type": store_cause_type,
+                    "mode": runtime.analysis_mode,
+                },
             )
-        except Exception as store_exc:  # pragma: no cover
-            logger.info(
-                log_event(
-                    mode_ctx,
-                    role="orchestrator",
-                    event="validation_store_failed",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "error": str(store_exc),
-                        "mode": runtime.analysis_mode,
-                    },
-                )
-            )
-        return fallback_report
+        )
+    return fallback_report
 
 
 def _candidate_artifacts_path(response) -> str:

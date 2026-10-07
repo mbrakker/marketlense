@@ -103,7 +103,9 @@ def test_validation_fails_on_toc_integrity_breakage(tmp_path):
         "toc_entries": [
             {
                 "section_id": "section-4",
-                "section_title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                "section_title": (
+                    "Sentiments on GenAI: How do APAC consumers perceive AI?"
+                ),
                 "display_title": "Media brand ad equity",
                 "summary": "GenAI summary",
                 "key_points": [],
@@ -130,7 +132,9 @@ def test_validation_fails_on_toc_integrity_breakage(tmp_path):
                 "summary": "GenAI summary",
                 "key_points": [],
                 "section_id": "section-4",
-                "section_title": "Sentiments on GenAI: How do APAC consumers perceive AI?",
+                "section_title": (
+                    "Sentiments on GenAI: How do APAC consumers perceive AI?"
+                ),
                 "pages": [25],
             },
             {
@@ -571,7 +575,9 @@ def test_validation_warns_on_soft_artifact_abstention_and_info_evidence_pack_abs
                         "reason": "Grounding comparison completed.",
                     },
                     {
-                        "item_id": "quote:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4:text",
+                        "item_id": (
+                            "quote:7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4:text"
+                        ),
                         "section": "quotes:q1.text",
                         "text": "Quoted text",
                         "classification": "factual_claim",
@@ -792,7 +798,20 @@ def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp
         settings,
         _ctx(),
         prompt_client=FakePromptClient(),
-        openai_client=FailingOpenAI(grounding_exc=failure),
+        openai_client=FailingOpenAI(
+            grounding_exc=failure,
+            semantic_payload={
+                "metrics": [
+                    {
+                        "id": "i1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "Supported.",
+                    }
+                ],
+                "quotes": [],
+            },
+        ),
         analysis_store=FakeAnalysisStore(),
     )
     deterministic_success = validate_report(
@@ -818,7 +837,20 @@ def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp
         settings,
         _ctx(),
         prompt_client=FakePromptClient(),
-        openai_client=FailingOpenAI(grounding_exc=failure),
+        openai_client=FailingOpenAI(
+            grounding_exc=failure,
+            semantic_payload={
+                "metrics": [
+                    {
+                        "id": "i1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "Supported.",
+                    }
+                ],
+                "quotes": [],
+            },
+        ),
         analysis_store=FakeAnalysisStore(),
     )
 
@@ -827,7 +859,7 @@ def test_nonretryable_grounding_failure_blocks_without_deterministic_success(tmp
         issue.rule_id == "grounding" and issue.severity == "error"
         for issue in blocked.issues
     )
-    assert deterministic_success.status == "pass"
+    assert deterministic_success.status == "pass", deterministic_success.issues
     assert any(
         issue.rule_id == "grounding" and issue.severity == "warning"
         for issue in deterministic_success.issues

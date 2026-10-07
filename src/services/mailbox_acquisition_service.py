@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import base64
-import io
 import imaplib
+import io
 import logging
+import os
 import re
+import struct
 import zipfile
+import zlib
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from email import policy
@@ -15,6 +18,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import unquote
+from uuid import uuid4
 
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request as GoogleAuthRequest
@@ -22,11 +26,12 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from src.contracts.mailbox_acquisition import (
+    MailboxAcquisitionSettings,
     MailboxAttachment,
     MailboxAttachmentArtifact,
+    MailboxAttachmentFailure,
     MailboxAttachmentMaterializeRequest,
     MailboxAttachmentMaterializeResponse,
-    MailboxAcquisitionSettings,
     MailboxMessage,
     MailboxSearchRequest,
     MailboxSearchResult,
@@ -50,6 +55,30 @@ from src.utils.logging import log_event
 logger = logging.getLogger("market_lense.mailbox_acquisition_service")
 
 _BODY_CHAR_LIMIT = 20000
+_MIB = 1024 * 1024
+_MAX_ZIP_ATTACHMENT_BYTES = 25 * _MIB
+_MAX_ZIP_MEMBERS = 500
+_MAX_ZIP_MEMBER_BYTES = 16 * _MIB
+_MAX_ZIP_TOTAL_BYTES = 32 * _MIB
+_MAX_ZIP_PDF_COUNT = 100
+_MAX_ZIP_COMPRESSION_RATIO = 100.0
+_ZIP_READ_CHUNK_BYTES = 64 * 1024
+_SUPPORTED_ZIP_COMPRESSION_TYPES = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+_MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES = {
+    "mailbox_attachment_too_large",
+    "mailbox_zip_attachment_too_large",
+    "mailbox_zip_compression_ratio_exceeded",
+    "mailbox_zip_duplicate_pdf_name",
+    "mailbox_zip_encrypted_entry",
+    "mailbox_zip_invalid",
+    "mailbox_zip_invalid_member_size",
+    "mailbox_zip_member_count_exceeded",
+    "mailbox_zip_member_read_failed",
+    "mailbox_zip_member_size_exceeded",
+    "mailbox_zip_pdf_count_exceeded",
+    "mailbox_zip_total_size_exceeded",
+    "mailbox_zip_unsupported_compression",
+}
 _URL_RX = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
 _SAFE_FILENAME_RX = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -57,7 +86,9 @@ _SAFE_FILENAME_RX = re.compile(r"[^A-Za-z0-9._-]+")
 def _mailbox_budget(request: MailboxSearchRequest, ctx: RunContext) -> RunBudget:
     if request.run_budget is not None:
         return request.run_budget
-    return RunBudget(schema_version="1.0", run_id=ctx.run_id, publisher_name=request.publisher_name)
+    return RunBudget(
+        schema_version="1.0", run_id=ctx.run_id, publisher_name=request.publisher_name
+    )
 
 
 def _reserve_mailbox_read(
@@ -245,11 +276,37 @@ def materialize_mailbox_attachments(
         )
     )
     artifacts: list[MailboxAttachmentArtifact] = []
-    for attachment in request.attachments:
-        artifacts.extend(_materialize_attachment(request, attachment))
+    failures: list[MailboxAttachmentFailure] = []
+    for attachment_index, attachment in enumerate(request.attachments):
+        try:
+            artifacts.extend(_materialize_attachment(request, attachment, ctx))
+        except AppError as exc:
+            if exc.code not in _MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES:
+                raise
+            failures.append(
+                MailboxAttachmentFailure(
+                    schema_version="1.0",
+                    attachment_index=attachment_index,
+                    error_code=exc.code,
+                )
+            )
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="mailbox_attachment_candidate_rejected",
+                    module=logger.name,
+                    fields={
+                        "provider_message_id": request.provider_message_id,
+                        "attachment_index": attachment_index,
+                        "error_code": exc.code,
+                    },
+                )
+            )
     response = MailboxAttachmentMaterializeResponse(
-        schema_version="1.0",
+        schema_version="2.0",
         artifacts=artifacts,
+        failures=failures,
     )
     logger.info(
         log_event(
@@ -260,6 +317,7 @@ def materialize_mailbox_attachments(
             fields={
                 "provider_message_id": request.provider_message_id,
                 "artifact_count": len(response.artifacts),
+                "failure_count": len(response.failures),
             },
         )
     )
@@ -296,7 +354,10 @@ def preflight_mailbox_search(
             role="service",
             event="mailbox_search_preflight_complete",
             module=logger.name,
-            fields={"provider": result.provider, "query": _sanitize_query_for_log(result.query)},
+            fields={
+                "provider": result.provider,
+                "query": _sanitize_query_for_log(result.query),
+            },
         )
     )
     return result
@@ -304,7 +365,9 @@ def preflight_mailbox_search(
 
 def mailbox_provider_order(settings: MailboxAcquisitionSettings) -> list[str]:
     provider = str(settings.provider or "").strip().lower()
-    has_imap = bool(settings.imap_host and settings.imap_user and settings.imap_password)
+    has_imap = bool(
+        settings.imap_host and settings.imap_user and settings.imap_password
+    )
     if provider == "gmail":
         return ["gmail", "imap"] if has_imap else ["gmail"]
     if provider == "imap":
@@ -549,9 +612,9 @@ def _adapt_gmail_message(
         provider_message_id=message_id,
         subject=headers.get("subject", ""),
         sender=headers.get("from", ""),
-        received_at_utc=received.replace(microsecond=0).isoformat().replace(
-            "+00:00", "Z"
-        ),
+        received_at_utc=received.replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         text_body=text_body[:_BODY_CHAR_LIMIT],
         html_body=html_body[:_BODY_CHAR_LIMIT],
         links=links,
@@ -725,11 +788,18 @@ def _adapt_email_message(
 def _materialize_attachment(
     request: MailboxAttachmentMaterializeRequest,
     attachment: MailboxAttachment,
+    ctx: RunContext,
 ) -> list[MailboxAttachmentArtifact]:
     file_name = _safe_file_name(attachment.file_name)
     lower_name = file_name.casefold()
     content_type = str(attachment.content_type or "").casefold()
     if lower_name.endswith(".pdf") or content_type == "application/pdf":
+        if len(attachment.payload) > _MAX_ZIP_ATTACHMENT_BYTES:
+            raise AppError(
+                code="mailbox_attachment_too_large",
+                message="Mailbox PDF attachment exceeds the supported size",
+                retryable=False,
+            )
         path = _artifact_path(
             settings=request.settings,
             provider_message_id=request.provider_message_id,
@@ -747,7 +817,7 @@ def _materialize_attachment(
             )
         ]
     if lower_name.endswith(".zip") or "zip" in content_type:
-        return _materialize_zip_pdfs(request, attachment, file_name)
+        return _materialize_zip_pdfs(request, attachment, file_name, ctx)
     return []
 
 
@@ -755,35 +825,241 @@ def _materialize_zip_pdfs(
     request: MailboxAttachmentMaterializeRequest,
     attachment: MailboxAttachment,
     container_file_name: str,
+    ctx: RunContext,
 ) -> list[MailboxAttachmentArtifact]:
-    artifacts: list[MailboxAttachmentArtifact] = []
+    if len(attachment.payload) > _MAX_ZIP_ATTACHMENT_BYTES:
+        raise AppError(
+            code="mailbox_zip_attachment_too_large",
+            message="Mailbox ZIP attachment exceeds the supported size",
+            retryable=False,
+        )
     try:
         archive = zipfile.ZipFile(io.BytesIO(attachment.payload))
-    except zipfile.BadZipFile:
-        return []
+    except (
+        EOFError,
+        OSError,
+        ValueError,
+        zipfile.BadZipFile,
+        zipfile.LargeZipFile,
+        struct.error,
+        zlib.error,
+    ) as exc:
+        raise AppError(
+            code="mailbox_zip_invalid",
+            message="Mailbox ZIP attachment is malformed or unsupported",
+            cause=exc,
+            retryable=False,
+        ) from exc
+
     with archive:
-        for member in archive.infolist():
-            if member.is_dir() or not member.filename.casefold().endswith(".pdf"):
+        members = archive.infolist()
+        if len(members) > _MAX_ZIP_MEMBERS:
+            raise AppError(
+                code="mailbox_zip_member_count_exceeded",
+                message="Mailbox ZIP attachment contains too many members",
+                retryable=False,
+            )
+
+        pdf_members = []
+        output_names: set[str] = set()
+        declared_total_bytes = 0
+        for member in members:
+            if member.flag_bits & 0x1:
+                raise AppError(
+                    code="mailbox_zip_encrypted_entry",
+                    message="Encrypted mailbox ZIP entries are unsupported",
+                    retryable=False,
+                )
+            if member.compress_type not in _SUPPORTED_ZIP_COMPRESSION_TYPES:
+                raise AppError(
+                    code="mailbox_zip_unsupported_compression",
+                    message="Mailbox ZIP entry uses an unsupported compression method",
+                    retryable=False,
+                )
+            if member.file_size < 0 or member.compress_size < 0:
+                raise AppError(
+                    code="mailbox_zip_invalid_member_size",
+                    message="Mailbox ZIP entry has invalid size metadata",
+                    retryable=False,
+                )
+            if member.file_size > _MAX_ZIP_MEMBER_BYTES:
+                raise AppError(
+                    code="mailbox_zip_member_size_exceeded",
+                    message="Mailbox ZIP entry exceeds the supported size",
+                    retryable=False,
+                )
+            declared_total_bytes += member.file_size
+            if declared_total_bytes > _MAX_ZIP_TOTAL_BYTES:
+                raise AppError(
+                    code="mailbox_zip_total_size_exceeded",
+                    message="Mailbox ZIP entries exceed the cumulative size limit",
+                    retryable=False,
+                )
+            if member.file_size and (
+                member.compress_size == 0
+                or member.file_size / member.compress_size > _MAX_ZIP_COMPRESSION_RATIO
+            ):
+                raise AppError(
+                    code="mailbox_zip_compression_ratio_exceeded",
+                    message="Mailbox ZIP entry exceeds the supported compression ratio",
+                    retryable=False,
+                )
+            if member.is_dir():
                 continue
-            payload = archive.read(member)
+            if not member.filename.casefold().endswith(".pdf"):
+                continue
+            if len(pdf_members) >= _MAX_ZIP_PDF_COUNT:
+                raise AppError(
+                    code="mailbox_zip_pdf_count_exceeded",
+                    message="Mailbox ZIP attachment contains too many PDF files",
+                    retryable=False,
+                )
             file_name = _safe_file_name(Path(member.filename).name)
+            folded_file_name = file_name.casefold()
+            if folded_file_name in output_names:
+                raise AppError(
+                    code="mailbox_zip_duplicate_pdf_name",
+                    message="Mailbox ZIP contains colliding PDF output names",
+                    retryable=False,
+                )
+            output_names.add(folded_file_name)
+            pdf_members.append((member, file_name))
+
+        materialized: list[tuple[str, bytes]] = []
+        actual_total_bytes = 0
+        try:
+            for member, file_name in pdf_members:
+                payload = _read_zip_member_bounded(
+                    archive,
+                    member,
+                    total_bytes_read=actual_total_bytes,
+                )
+                actual_total_bytes += len(payload)
+                materialized.append((file_name, payload))
+        except AppError:
+            raise
+
+    artifacts: list[MailboxAttachmentArtifact] = []
+    staged: list[tuple[Path, Path, str, int, bool]] = []
+    committed_paths: set[Path] = set()
+    try:
+        for file_name, payload in materialized:
             path = _artifact_path(
                 settings=request.settings,
                 provider_message_id=request.provider_message_id,
                 file_name=file_name,
             )
-            path.write_bytes(payload)
+            temp_path = path.parent / f".{uuid4().hex}.tmp"
+            existed_before = path.exists()
+            staged.append((temp_path, path, file_name, len(payload), existed_before))
+            with temp_path.open("xb") as temp_file:
+                temp_file.write(payload)
+        for temp_path, path, file_name, size_bytes, _ in staged:
+            os.replace(temp_path, path)
+            committed_paths.add(path)
             artifacts.append(
                 MailboxAttachmentArtifact(
                     schema_version="1.0",
-                    file_name=path.name,
+                    file_name=file_name,
                     content_type="application/pdf",
-                    size_bytes=path.stat().st_size,
+                    size_bytes=size_bytes,
                     path=str(path),
                     source_container_file_name=container_file_name,
                 )
             )
+    except Exception as exc:
+        existed_by_path = {path: existed for _, path, _, _, existed in staged}
+        for temp_path, _, _, _, _ in staged:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="mailbox_zip_temp_cleanup_failed",
+                        module=logger.name,
+                        fields={"provider_message_id": request.provider_message_id},
+                    )
+                )
+        for path in committed_paths:
+            if existed_by_path.get(path, False):
+                continue
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="mailbox_zip_output_cleanup_failed",
+                        module=logger.name,
+                        fields={"provider_message_id": request.provider_message_id},
+                    )
+                )
+        if isinstance(exc, AppError):
+            raise
+        raise AppError(
+            code="mailbox_zip_write_failed",
+            message="Mailbox ZIP PDF artifacts could not be written atomically",
+            cause=exc,
+            retryable=True,
+        ) from exc
     return artifacts
+
+
+def _read_zip_member_bounded(
+    archive: zipfile.ZipFile,
+    member: zipfile.ZipInfo,
+    *,
+    total_bytes_read: int,
+) -> bytes:
+    payload = bytearray()
+    try:
+        with archive.open(member, "r") as member_stream:
+            while chunk := member_stream.read(_ZIP_READ_CHUNK_BYTES):
+                if len(payload) + len(chunk) > _MAX_ZIP_MEMBER_BYTES:
+                    raise AppError(
+                        code="mailbox_zip_member_size_exceeded",
+                        message=(
+                            "Mailbox ZIP entry exceeded the supported streamed size"
+                        ),
+                        retryable=False,
+                    )
+                if total_bytes_read + len(payload) + len(chunk) > _MAX_ZIP_TOTAL_BYTES:
+                    raise AppError(
+                        code="mailbox_zip_total_size_exceeded",
+                        message=(
+                            "Mailbox ZIP entries exceeded the cumulative streamed size"
+                        ),
+                        retryable=False,
+                    )
+                payload.extend(chunk)
+    except AppError:
+        raise
+    except (
+        EOFError,
+        NotImplementedError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        zipfile.BadZipFile,
+        struct.error,
+        zlib.error,
+    ) as exc:
+        raise AppError(
+            code="mailbox_zip_member_read_failed",
+            message="Mailbox ZIP entry could not be read safely",
+            cause=exc,
+            retryable=False,
+        ) from exc
+    if len(payload) != member.file_size:
+        raise AppError(
+            code="mailbox_zip_member_read_failed",
+            message="Mailbox ZIP entry size did not match its metadata",
+            retryable=False,
+        )
+    return bytes(payload)
 
 
 def _artifact_path(
@@ -821,8 +1097,11 @@ def _message_date_to_utc(value: str) -> str:
         parsed = parsedate_to_datetime(value)
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace(
-            "+00:00", "Z"
+        return (
+            parsed.astimezone(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
         )
     except Exception:
         return utc_now_seconds_z()

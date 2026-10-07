@@ -48,6 +48,7 @@ def prepare_report_source(
     analysis_pdf_path = runtime.local_pdf_path
     ocr_fallback_used = False
     ocr_pdf_path = ""
+    analysis_artifact_md5: str | None = None
     ocr_policy = str(
         getattr(runtime.settings, "pdf_text_ocr_policy", "native_first_selective")
         or "native_first_selective"
@@ -55,6 +56,7 @@ def prepare_report_source(
     native_text_resp, native_text_status = _load_text(
         runtime,
         analysis_pdf_path=runtime.local_pdf_path,
+        source_page_count=info_resp.page_count,
         pdf_context_for_tasks=pdf_context_for_tasks,
         cache_prefix="text",
         dependencies=dependencies,
@@ -128,9 +130,15 @@ def prepare_report_source(
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
         try:
-            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
+            (
+                text_resp,
+                text_status,
+                ocr_validation,
+                analysis_artifact_md5,
+            ) = _load_validated_ocr_text(
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
+                source_page_count=info_resp.page_count,
                 ocr_result=ocr_result,
                 dependencies=dependencies,
             )
@@ -191,7 +199,9 @@ def prepare_report_source(
                     "reason": native_validation.reason,
                     "sample_pages": list(native_validation.pages),
                     "ocr_policy": ocr_policy,
-                    "native_confidence_score": native_validation.native_confidence_score,
+                    "native_confidence_score": (
+                        native_validation.native_confidence_score
+                    ),
                 },
             )
         )
@@ -205,9 +215,15 @@ def prepare_report_source(
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
         try:
-            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
+            (
+                text_resp,
+                text_status,
+                ocr_validation,
+                analysis_artifact_md5,
+            ) = _load_validated_ocr_text(
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
+                source_page_count=info_resp.page_count,
                 ocr_result=ocr_result,
                 dependencies=dependencies,
             )
@@ -280,9 +296,15 @@ def prepare_report_source(
         ocr_fallback_used = True
         ocr_pdf_path = analysis_pdf_path
         try:
-            text_resp, text_status, ocr_validation = _load_validated_ocr_text(
+            (
+                text_resp,
+                text_status,
+                ocr_validation,
+                analysis_artifact_md5,
+            ) = _load_validated_ocr_text(
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
+                source_page_count=info_resp.page_count,
                 ocr_result=ocr_result,
                 dependencies=dependencies,
             )
@@ -329,6 +351,7 @@ def prepare_report_source(
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
                 preview_pdf_path=runtime.local_pdf_path,
+                source_page_count=info_resp.page_count,
                 detection_pdf_context=None
                 if analysis_pdf_path != runtime.local_pdf_path
                 else pdf_context_for_tasks,
@@ -340,10 +363,12 @@ def prepare_report_source(
                 _load_text,
                 runtime,
                 analysis_pdf_path=analysis_pdf_path,
+                source_page_count=info_resp.page_count,
                 pdf_context_for_tasks=None
                 if analysis_pdf_path != runtime.local_pdf_path
                 else pdf_context_for_tasks,
                 cache_prefix="ocr_text" if ocr_fallback_used else "text",
+                analysis_artifact_md5=analysis_artifact_md5,
                 dependencies=dependencies,
             )
             contents_page_number, contents_heading, contents_image = (
@@ -388,6 +413,7 @@ def prepare_report_source(
             runtime,
             analysis_pdf_path=analysis_pdf_path,
             preview_pdf_path=runtime.local_pdf_path,
+            source_page_count=info_resp.page_count,
             detection_pdf_context=pdf_context
             if analysis_pdf_path == runtime.local_pdf_path
             else None,

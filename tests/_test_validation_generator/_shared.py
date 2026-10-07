@@ -127,9 +127,9 @@ class FakeOpenAI:
 
 
 class FailingOpenAI(FakeOpenAI):
-    def __init__(self, *, semantic_exc=None, grounding_exc=None):
+    def __init__(self, *, semantic_exc=None, grounding_exc=None, semantic_payload=None):
         super().__init__(
-            semantic_payload={"metrics": [], "quotes": []},
+            semantic_payload=semantic_payload or {"metrics": [], "quotes": []},
             grounding_payload={"unsupported": []},
         )
         self.semantic_exc = semantic_exc

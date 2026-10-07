@@ -15,6 +15,7 @@ from src.generators.report_generation_dependencies import ReportSourceDependenci
 from src.generators.report_generation_shared import (
     contents_cache_key,
     logger,
+    ocr_text_cache_key,
     pdf_info_cache_key,
     text_cache_key,
 )
@@ -163,6 +164,7 @@ def _load_contents(
     *,
     analysis_pdf_path: str,
     preview_pdf_path: str,
+    source_page_count: int,
     detection_pdf_context: PdfContext | None,
     preview_pdf_context: PdfContext | None,
     cache_prefix: str,
@@ -190,6 +192,7 @@ def _load_contents(
             adapt_payload=lambda payload: _adapt_cached_contents(
                 payload,
                 analysis_pdf_path=analysis_pdf_path,
+                source_page_count=source_page_count,
             ),
         )
         contents_resp = contents_cached.value
@@ -331,24 +334,39 @@ def _load_text(
     runtime: ReportRuntimeState,
     *,
     analysis_pdf_path: str,
+    source_page_count: int,
     pdf_context_for_tasks: PdfContext | None,
     cache_prefix: str,
+    analysis_artifact_md5: str | None = None,
     dependencies: ReportSourceDependencies,
 ) -> tuple[PdfTextExtractResponse, TextStatus]:
     text_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text")
+    if not runtime.md5:
+        cache_key = ""
+    elif cache_prefix == "ocr_text":
+        cache_key = ocr_text_cache_key(
+            runtime.md5,
+            analysis_artifact_md5 or "",
+            runtime.settings,
+        )
+    else:
+        cache_key = text_cache_key(runtime.md5, runtime.settings)
     text_binding = bind_report_source_cache(
         settings=runtime.settings,
         md5=runtime.md5,
         file_id=runtime.file.file_id,
         phase="text",
         prefix=cache_prefix,
-        cache_key=text_cache_key(runtime.md5, runtime.settings) if runtime.md5 else "",
+        cache_key=cache_key,
     )
     text_cached = load_report_source_cache(
         text_binding,
         ctx=text_ctx,
         dependencies=dependencies,
-        adapt_payload=_adapt_cached_text,
+        adapt_payload=lambda payload: _adapt_cached_text(
+            payload,
+            source_page_count=source_page_count,
+        ),
     )
     text_resp = text_cached.value
     text_cache_hit = text_cached.cache_hit
@@ -366,7 +384,7 @@ def _load_text(
         write_report_source_cache(
             text_binding,
             payload={
-                "schema_version": "1.0",
+                "schema_version": "2.0",
                 "key": text_binding.cache_key,
                 "text": text_resp.text,
                 "pages_extracted": text_resp.pages_extracted,

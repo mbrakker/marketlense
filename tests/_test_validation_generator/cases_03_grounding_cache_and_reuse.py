@@ -496,7 +496,17 @@ def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_p
     reused = SimpleNamespace(
         reusable=True,
         reason="compatible_retained_output",
-        output_payload={"metrics": [], "quotes": []},
+        output_payload={
+            "metrics": [
+                {
+                    "id": "insight_1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported by evidence",
+                }
+            ],
+            "quotes": [],
+        },
     )
     client = FakeOpenAI(semantic_payload={"metrics": [], "quotes": []})
 
@@ -524,6 +534,417 @@ def test_semantic_validation_reuses_retained_result_without_recovery_state(tmp_p
     assert client.requests == []
 
 
+def test_semantic_validation_rejects_partial_verdicts_before_materializing(
+    tmp_path,
+) -> None:
+    materialized = []
+    client = FakeOpenAI(
+        semantic_payload={
+            "metrics": [
+                {
+                    "id": "metric-1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported by evidence",
+                }
+            ],
+            "quotes": [],
+        }
+    )
+
+    outcome = run_semantic_validation(
+        insights=[
+            {"id": "metric-1", "text": "Revenue grew", "metric": {"value": "10%"}},
+            {"id": "metric-2", "text": "Costs fell", "metric": {"value": "5%"}},
+        ],
+        quotes=[{"id": "quote-1", "text": "We grew", "speaker": "CEO"}],
+        evidence_texts=["Revenue grew by 10%; costs fell by 5%. CEO: We grew."],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=client,
+        ctx=_ctx(),
+        report_id="semantic-partial",
+        source_id="source:semantic-partial",
+        prompt_family_reuse_reader=lambda _request, _ctx: SimpleNamespace(
+            reusable=False, reason="no_retained_result"
+        ),
+        prompt_family_materializer=lambda request, _ctx: materialized.append(request),
+    )
+
+    assert len(outcome.issues) == 1
+    assert outcome.issues[0].severity == "error"
+    assert outcome.issues[0].violation_type == "semantic_verdicts_incomplete"
+    assert not outcome.metric_support
+    assert not outcome.quote_support
+    assert materialized == []
+
+
+@pytest.mark.parametrize(
+    "response_payload",
+    [
+        pytest.param(
+            {
+                "metrics": [
+                    {
+                        "id": "metric-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    },
+                    {
+                        "id": "metric-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    },
+                ],
+                "quotes": [
+                    {
+                        "id": "quote-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+            },
+            id="duplicate-metric-verdict",
+        ),
+        pytest.param(
+            {
+                "metrics": [
+                    {
+                        "id": "foreign",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+                "quotes": [
+                    {
+                        "id": "quote-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+            },
+            id="foreign-metric-verdict",
+        ),
+        pytest.param(
+            {
+                "metrics": [
+                    {
+                        "id": "metric-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+                "quotes": [
+                    {
+                        "id": "metric-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+            },
+            id="wrong-family-verdict",
+        ),
+        pytest.param(
+            {
+                "metrics": [
+                    {
+                        "id": "metric-1",
+                        "supported": True,
+                        "confidence": 0.9,
+                        "reason": "ok",
+                    }
+                ],
+                "quotes": [
+                    {"id": " ", "supported": True, "confidence": 0.9, "reason": "ok"}
+                ],
+            },
+            id="blank-quote-verdict",
+        ),
+    ],
+)
+def test_semantic_validation_rejects_invalid_verdict_identity_sets(
+    tmp_path, response_payload: dict
+) -> None:
+    materialized = []
+    outcome = run_semantic_validation(
+        insights=[
+            {"id": "metric-1", "text": "Revenue grew", "metric": {"value": "10%"}}
+        ],
+        quotes=[{"id": "quote-1", "text": "We grew", "speaker": "CEO"}],
+        evidence_texts=["Revenue grew by 10%. CEO: We grew."],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(semantic_payload=response_payload),
+        ctx=_ctx(),
+        report_id="semantic-invalid-identities",
+        source_id="source:semantic-invalid-identities",
+        prompt_family_reuse_reader=lambda _request, _ctx: SimpleNamespace(
+            reusable=False, reason="no_retained_result"
+        ),
+        prompt_family_materializer=lambda request, _ctx: materialized.append(request),
+    )
+
+    assert len(outcome.issues) == 1
+    assert outcome.issues[0].severity == "error"
+    assert outcome.issues[0].violation_type == "semantic_verdicts_incomplete"
+    assert materialized == []
+
+
+@pytest.mark.parametrize(
+    "insights",
+    [
+        pytest.param([{"id": " "}], id="blank-input-id"),
+        pytest.param(
+            [{"id": "duplicate"}, {"id": "duplicate"}], id="duplicate-input-id"
+        ),
+    ],
+)
+def test_semantic_validation_rejects_invalid_input_ids_without_calling_model(
+    tmp_path, insights: list[dict]
+) -> None:
+    client = FakeOpenAI(semantic_payload={"metrics": [], "quotes": []})
+    outcome = run_semantic_validation(
+        insights=insights,
+        quotes=[],
+        evidence_texts=["Source evidence."],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=client,
+        ctx=_ctx(),
+    )
+
+    assert outcome.issues[0].severity == "error"
+    assert outcome.issues[0].violation_type == "semantic_input_ids_invalid"
+    assert client.requests == []
+
+
+def test_empty_semantic_request_is_explicitly_not_applicable(tmp_path, caplog) -> None:
+    client = FakeOpenAI(semantic_payload={"metrics": [], "quotes": []})
+    with caplog.at_level(logging.INFO, logger="market_lense.validation_generator"):
+        outcome = run_semantic_validation(
+            insights=[],
+            quotes=[],
+            evidence_texts=["Source evidence."],
+            settings=_settings(tmp_path),
+            prompt_client=FakePromptClient(),
+            openai_client=client,
+            ctx=_ctx(),
+        )
+
+    assert outcome.issues == []
+    assert client.requests == []
+    assert "semantic_validation_not_applicable" in caplog.text
+
+
+def test_semantic_validation_fails_closed_without_evidence(tmp_path) -> None:
+    client = FakeOpenAI(semantic_payload={"metrics": [], "quotes": []})
+    outcome = run_semantic_validation(
+        insights=[
+            {"id": "metric-1", "text": "Revenue grew", "metric": {"value": "10%"}}
+        ],
+        quotes=[],
+        evidence_texts=[],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=client,
+        ctx=_ctx(),
+    )
+
+    assert len(outcome.issues) == 1
+    assert outcome.issues[0].severity == "error"
+    assert outcome.issues[0].violation_type == "semantic_evidence_missing"
+    assert client.requests == []
+
+
+def test_incomplete_reused_semantic_result_is_regenerated_before_materialization(
+    tmp_path,
+) -> None:
+    materialized = []
+    reuse_requests = []
+    client = FakeOpenAI(
+        semantic_payload={
+            "metrics": [
+                {
+                    "id": "metric-1",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported by evidence",
+                }
+            ],
+            "quotes": [],
+        }
+    )
+
+    def _reuse(request, _ctx):
+        reuse_requests.append(request)
+        return SimpleNamespace(
+            reusable=True,
+            reason="compatible_retained_output",
+            output_payload={"metrics": [], "quotes": []},
+        )
+
+    outcome = run_semantic_validation(
+        insights=[
+            {"id": "metric-1", "text": "Revenue grew", "metric": {"value": "10%"}}
+        ],
+        quotes=[],
+        evidence_texts=["Revenue grew by 10%."],
+        settings=_settings(tmp_path),
+        prompt_client=FakePromptClient(),
+        openai_client=client,
+        ctx=_ctx(),
+        report_id="semantic-reuse-incomplete",
+        source_id="source:semantic-reuse-incomplete",
+        prompt_family_reuse_reader=_reuse,
+        prompt_family_materializer=lambda request, _ctx: materialized.append(request),
+    )
+
+    assert client.requests
+    assert not outcome.issues
+    assert len(materialized) == 1
+    assert reuse_requests[0].processing_version == "semantic_validation_v2"
+    assert materialized[0].validator_version == "semantic_validation_output:2.0"
+
+
+def test_validate_report_fails_readiness_on_missing_semantic_verdict(tmp_path) -> None:
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="semantic-readiness",
+            report=_report(),
+            artifacts={
+                "insights_final": [
+                    {
+                        "id": "metric-1",
+                        "text": "Revenue reached 10%.",
+                        "evidence_id": "e1",
+                        "evidence": "Revenue reached 10%.",
+                        "metric": {"value": "10%", "unit": "%", "timeframe": "2025"},
+                    }
+                ]
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [{"id": "e1", "evidence": "Revenue reached 10%."}]
+                }
+            },
+            vector_store_id=None,
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI(
+            semantic_payload={"metrics": [], "quotes": []},
+            grounding_payload={"unsupported": []},
+        ),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert result.status == "fail"
+    assert any(
+        issue.violation_type == "semantic_verdicts_incomplete"
+        and issue.severity == "error"
+        for issue in result.issues
+    )
+
+
+def test_validate_report_reuses_only_complete_semantic_materialization(
+    tmp_path,
+) -> None:
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="semantic-materialization-reuse",
+        source_id="source:semantic-materialization-reuse",
+        report=_report(),
+        artifacts={
+            "insights_final": [
+                {
+                    "id": "metric-1",
+                    "text": "Revenue reached 10%.",
+                    "evidence_id": "e1",
+                    "evidence": "Revenue reached 10%.",
+                    "metric": {"value": "10%", "unit": "%", "timeframe": "2025"},
+                }
+            ],
+            "quotes_final": [
+                {
+                    "id": "quote-1",
+                    "text": "Revenue reached 10%.",
+                    "speaker": "Analyst",
+                    "evidence_id": "e1",
+                }
+            ],
+        },
+        evidence_packs={
+            "findings": {"findings": [{"id": "e1", "evidence": "Revenue reached 10%."}]}
+        },
+        vector_store_id=None,
+    )
+    settings = _settings(tmp_path)
+    complete_verdicts = {
+        "metrics": [
+            {
+                "id": "metric-1",
+                "supported": True,
+                "confidence": 0.9,
+                "reason": "Supported by source evidence.",
+            }
+        ],
+        "quotes": [
+            {
+                "id": "quote-1",
+                "supported": True,
+                "confidence": 0.9,
+                "reason": "Supported by source evidence.",
+            }
+        ],
+    }
+    first_client = FakeOpenAI(
+        semantic_payload=complete_verdicts,
+        grounding_payload={"unsupported": []},
+    )
+    first = validate_report(
+        request,
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=first_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    second_client = FakeOpenAI(
+        semantic_payload=complete_verdicts,
+        grounding_payload={"unsupported": []},
+    )
+    second = validate_report(
+        request,
+        settings,
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=second_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "semantic" and issue.severity == "error"
+        for issue in first.issues
+    )
+    assert not any(
+        issue.rule_id == "semantic" and issue.severity == "error"
+        for issue in second.issues
+    )
+    assert not any(
+        task_id.endswith(":semantic") for _, _, task_id in second_client.requests
+    )
+
+
 __all__ = [
     "test_validation_keeps_unsupported_number_and_quote_errors_with_data_gap",
     "test_validation_allows_structured_retrieval_failure_under_data_gap_policy",
@@ -536,4 +957,12 @@ __all__ = [
     "test_validation_cache_isolated_by_grounding_retrieval_mode",
     "test_validation_reuses_retained_primary_model_rules_before_provider_call",
     "test_semantic_validation_reuses_retained_result_without_recovery_state",
+    "test_semantic_validation_rejects_partial_verdicts_before_materializing",
+    "test_semantic_validation_rejects_invalid_verdict_identity_sets",
+    "test_semantic_validation_rejects_invalid_input_ids_without_calling_model",
+    "test_empty_semantic_request_is_explicitly_not_applicable",
+    "test_semantic_validation_fails_closed_without_evidence",
+    "test_incomplete_reused_semantic_result_is_regenerated_before_materialization",
+    "test_validate_report_fails_readiness_on_missing_semantic_verdict",
+    "test_validate_report_reuses_only_complete_semantic_materialization",
 ]

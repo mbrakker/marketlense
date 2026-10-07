@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
 from src.contracts.acquisition_handoff import VerifiedAcquisitionIngestHandoffRequest
+from src.contracts.mailbox_acquisition import (
+    MailboxAcquisitionSettings,
+    MailboxAttachment,
+    MailboxAttachmentMaterializeRequest,
+)
 from src.contracts.report_store import ReportMetadataGetRequest
 from src.contracts.workflow_queue import WorkflowJob
 from src.orchestrators.acquisition_ingest_handoff_orchestrator import (
     build_source_ingest_submission_from_verified_acquisition,
 )
+from src.services.mailbox_acquisition_service import materialize_mailbox_attachments
 from src.services.report_store_service import get_metadata
 from src.services.workflow_queue_service import enqueue_workflow_job
 from src.utils.errors import AppError
@@ -95,6 +103,26 @@ def _request(
         acquisition_route=route,
         processing_version="parser-ocr.v1",
         report_id=report_id,
+    )
+
+
+def _mailbox_settings(tmp_path: Path) -> MailboxAcquisitionSettings:
+    return MailboxAcquisitionSettings(
+        schema_version="1.0",
+        provider="gmail",
+        output_dir=str(tmp_path / "mailbox"),
+        search_window_minutes=120,
+        max_results=10,
+        poll_timeout_seconds=120.0,
+        poll_interval_seconds=30.0,
+        gmail_oauth_client_path="client.json",
+        gmail_oauth_token_path="token.json",
+        gmail_user_id="me",
+        imap_host="",
+        imap_port=993,
+        imap_user="",
+        imap_password="",
+        imap_mailbox="INBOX",
     )
 
 
@@ -242,3 +270,82 @@ def test_verified_acquisition_handoff_fails_closed_on_hash_or_report_conflict(
             ctx=_ctx(),
         )
     assert conflict.value.code == "acquisition_ingest_report_content_conflict"
+
+
+def test_mailbox_zip_candidate_failure_keeps_valid_pdf_eligible_for_ingest(
+    tmp_path,
+) -> None:
+    source_pdf = Path(_fixture("CAPGEMINI - 2026-Retail-Trends_ACIG.pdf"))
+    source_pdf_bytes = source_pdf.read_bytes()
+    archive_buffer = BytesIO()
+    with ZipFile(archive_buffer, "w") as archive:
+        archive.writestr("nested/retail-trends-2026.pdf", source_pdf_bytes)
+
+    response = materialize_mailbox_attachments(
+        MailboxAttachmentMaterializeRequest(
+            schema_version="1.0",
+            settings=_mailbox_settings(tmp_path),
+            provider_message_id="mailbox-zip-handoff",
+            attachments=[
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name="broken.zip",
+                    content_type="application/zip",
+                    payload=b"malformed zip",
+                ),
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name="delivery.zip",
+                    content_type="application/zip",
+                    payload=archive_buffer.getvalue(),
+                ),
+            ],
+        ),
+        _ctx(),
+    )
+
+    assert response.schema_version == "2.0"
+    assert [failure.error_code for failure in response.failures] == [
+        "mailbox_zip_invalid"
+    ]
+    assert response.failures[0].schema_version == "1.0"
+    assert response.failures[0].attachment_index == 0
+    assert len(response.artifacts) == 1
+    artifact = response.artifacts[0]
+    assert Path(artifact.path).read_bytes() == source_pdf_bytes
+
+    submission = build_source_ingest_submission_from_verified_acquisition(
+        _request(
+            str(tmp_path / "reports.sqlite"),
+            artifact.path,
+            source_url="https://publisher.example/reports/market-outlook-mailbox",
+            route="mailbox_delivery",
+        ),
+        parent_job=_parent_job(),
+        ctx=_ctx(),
+    )
+    assert submission.payload.source_content_hash
+
+    rejected_only = materialize_mailbox_attachments(
+        MailboxAttachmentMaterializeRequest(
+            schema_version="1.0",
+            settings=_mailbox_settings(tmp_path),
+            provider_message_id="mailbox-zip-rejected-only",
+            attachments=[
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name="broken.zip",
+                    content_type="application/zip",
+                    payload=b"malformed zip",
+                )
+            ],
+        ),
+        _ctx(),
+    )
+    assert rejected_only.artifacts == []
+    assert [failure.error_code for failure in rejected_only.failures] == [
+        "mailbox_zip_invalid"
+    ]
+    assert (
+        list((tmp_path / "mailbox" / "mailbox-zip-rejected-only").glob("*.pdf")) == []
+    )

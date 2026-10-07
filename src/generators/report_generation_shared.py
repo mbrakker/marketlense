@@ -152,6 +152,25 @@ def text_cache_key(md5: str, settings: IngestSettings) -> str:
     )
 
 
+def ocr_text_cache_key(
+    source_md5: str,
+    analysis_artifact_md5: str,
+    settings: IngestSettings,
+) -> str:
+    if not analysis_artifact_md5:
+        return ""
+    return sha256_json(
+        {
+            "schema_version": "2.0",
+            "source_md5": source_md5,
+            "analysis_artifact_md5": analysis_artifact_md5,
+            "max_pages": settings.pdf_text_max_pages,
+            "max_chars": settings.pdf_text_max_chars,
+            "extractor_generation": "ocr-artifact-text-1",
+        }
+    )
+
+
 def cache_path(cache_root: Path, prefix: str, cache_key: str) -> Path:
     path = cache_root / f"{prefix}_{cache_key}.json"
     if (

@@ -38,6 +38,8 @@ from .models import SemanticCheckOutcome, SemanticSupport, ValidationRuntime
 from .shared import LOGGER_NAME, issue, logger, s, to_float
 
 RULE_ID = "semantic"
+_SEMANTIC_PROCESSING_VERSION = "semantic_validation_v2"
+_SEMANTIC_VALIDATOR_VERSION = "semantic_validation_output:2.0"
 
 
 def run_semantic_rule(runtime: ValidationRuntime) -> List[ValidationIssue]:
@@ -75,9 +77,18 @@ def run_semantic_validation(
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
 ) -> SemanticCheckOutcome:
-    if not evidence_texts or (not insights and not quotes):
-        return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
     semantic_ctx = child_context(ctx, task_id=f"{ctx.task_id}:semantic")
+    if not insights and not quotes:
+        logger.info(
+            log_event(
+                semantic_ctx,
+                role="generator",
+                event="semantic_validation_not_applicable",
+                module=LOGGER_NAME,
+                fields={"reason": "no_requested_items"},
+            )
+        )
+        return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
     logger.info(
         log_event(
             semantic_ctx,
@@ -94,6 +105,53 @@ def run_semantic_validation(
     prompt_namespace = "report_vs/validate/semantic"
     resolved_report_id = str(report_id or report_name)
     payload = semantic_payload(insights, quotes)
+    expected_ids, input_error = _expected_semantic_ids(payload)
+    if input_error is not None:
+        logger.info(
+            log_event(
+                semantic_ctx,
+                role="generator",
+                event="semantic_validation_input_rejected",
+                module=LOGGER_NAME,
+                fields={"code": input_error.code},
+            )
+        )
+        return _semantic_error_outcome(input_error)
+    if not any(expected_ids.values()):
+        logger.info(
+            log_event(
+                semantic_ctx,
+                role="generator",
+                event="semantic_validation_not_applicable",
+                module=LOGGER_NAME,
+                fields={"reason": "no_semantic_items"},
+            )
+        )
+        return SemanticCheckOutcome(metric_support={}, quote_support={}, issues=[])
+    if not evidence_texts:
+        error = AppError(
+            code="semantic_evidence_missing",
+            message=(
+                "Semantic validation cannot verify requested items without "
+                "source evidence"
+            ),
+            retryable=False,
+            severity="error",
+            context={
+                "metric_count": len(expected_ids["metrics"]),
+                "quote_count": len(expected_ids["quotes"]),
+            },
+        )
+        logger.info(
+            log_event(
+                semantic_ctx,
+                role="generator",
+                event="semantic_validation_input_rejected",
+                module=LOGGER_NAME,
+                fields={"code": error.code},
+            )
+        )
+        return _semantic_error_outcome(error)
     prompt_vars = {
         "metrics_json": json.dumps(payload["metrics"], ensure_ascii=False),
         "quotes_json": json.dumps(payload["quotes"], ensure_ascii=False),
@@ -207,14 +265,14 @@ def run_semantic_validation(
                     source_id=source_id,
                     family_id=prompt_namespace,
                     family_schema_version="1.0",
-                    processing_version="validation_rule_v2",
+                    processing_version=_SEMANTIC_PROCESSING_VERSION,
                     prompt_content_hash=prompt_bundle.prompt_content_hash,
                     execution_identity=prompt_bundle.execution_identity.execution_identity,
                     model_provider=str(prompt_bundle.execution_policy.policy.provider),
                     model_name=prompt_bundle.resolved_model,
                     model_policy_namespace="report_vs",
                     routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                    validator_version="semantic_validation_output:1.0",
+                    validator_version=_SEMANTIC_VALIDATOR_VERSION,
                     relevant_input_hash=relevant_input_hash,
                     configuration_policy_hash=configuration_policy_hash,
                 ),
@@ -229,16 +287,33 @@ def run_semantic_validation(
                     ),
                     semantic_ctx,
                 )
-                reused_payload = dict(reuse.output_payload)
-                logger.info(
-                    log_event(
-                        semantic_ctx,
-                        role="generator",
-                        event="semantic_prompt_family_reused",
-                        module=LOGGER_NAME,
-                        fields={"family_id": prompt_namespace, "reason": reuse.reason},
+                candidate_payload = dict(reuse.output_payload)
+                try:
+                    _validate_semantic_verdicts(candidate_payload, expected_ids)
+                except AppError as exc:
+                    logger.info(
+                        log_event(
+                            semantic_ctx,
+                            role="generator",
+                            event="semantic_prompt_family_rejected",
+                            module=LOGGER_NAME,
+                            fields={"family_id": prompt_namespace, "reason": exc.code},
+                        )
                     )
-                )
+                else:
+                    reused_payload = candidate_payload
+                    logger.info(
+                        log_event(
+                            semantic_ctx,
+                            role="generator",
+                            event="semantic_prompt_family_reused",
+                            module=LOGGER_NAME,
+                            fields={
+                                "family_id": prompt_namespace,
+                                "reason": reuse.reason,
+                            },
+                        )
+                    )
         recovery_attempted = False
 
         def call_model(mode: str, original_response: str, schema_errors: str):
@@ -272,7 +347,7 @@ def run_semantic_validation(
                 report_name=report_name,
                 source_url=source_url,
                 output_schema=output_schema,
-                output_schema_identity="semantic_validation_output_v1",
+                output_schema_identity="semantic_validation_output_v2",
                 repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[
                     mode
                 ],
@@ -313,41 +388,6 @@ def run_semantic_validation(
             parsed = recovery.payload
         else:
             parsed = reused_payload
-        if reused_payload is None and source_id and not recovery_attempted:
-            prompt_family_materializer(
-                PromptFamilyMaterializationRequest(
-                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
-                    db_path=settings.reports_db,
-                    output_dir=settings.output_dir,
-                    report_id=resolved_report_id,
-                    report_slug=report_name or resolved_report_id,
-                    source_id=source_id,
-                    family_id=prompt_namespace,
-                    family_schema_version="1.0",
-                    processing_version="validation_rule_v2",
-                    output_payload=parsed,
-                    system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
-                    user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
-                    prompt_content_hash=prompt_bundle.prompt_content_hash,
-                    prompt_dependency_manifest=asdict(
-                        prompt_bundle.dependency_manifest
-                    ),
-                    execution_identity=prompt_bundle.execution_identity.execution_identity,
-                    execution_identity_manifest=asdict(
-                        prompt_bundle.execution_identity
-                    ),
-                    prompt_policy_version=prompt_bundle.prompt_content_hash,
-                    model_name=prompt_bundle.resolved_model,
-                    model_provider=str(prompt_bundle.execution_policy.policy.provider),
-                    model_policy_namespace="report_vs",
-                    routing_policy_version=prompt_bundle.execution_policy.policy_hash,
-                    relevant_input_hash=relevant_input_hash,
-                    configuration_policy_hash=configuration_policy_hash,
-                    validator_version="semantic_validation_output:1.0",
-                    validation_status="pass",
-                ),
-                semantic_ctx,
-            )
         logger.info(
             log_event(
                 semantic_ctx,
@@ -370,7 +410,43 @@ def run_semantic_validation(
                 retryable=False,
                 context={"model": prompt_bundle.resolved_model},
             )
+        _validate_semantic_verdicts(parsed, expected_ids)
         outcome = parse_semantic_response(parsed)
+        if reused_payload is None and source_id and not recovery_attempted:
+            prompt_family_materializer(
+                PromptFamilyMaterializationRequest(
+                    schema_version=PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
+                    db_path=settings.reports_db,
+                    output_dir=settings.output_dir,
+                    report_id=resolved_report_id,
+                    report_slug=report_name or resolved_report_id,
+                    source_id=source_id,
+                    family_id=prompt_namespace,
+                    family_schema_version="1.0",
+                    processing_version=_SEMANTIC_PROCESSING_VERSION,
+                    output_payload=parsed,
+                    system_prompt_hash=prompt_bundle.prompt_set.system.sha256,
+                    user_prompt_hash=prompt_bundle.prompt_set.user.sha256,
+                    prompt_content_hash=prompt_bundle.prompt_content_hash,
+                    prompt_dependency_manifest=asdict(
+                        prompt_bundle.dependency_manifest
+                    ),
+                    execution_identity=prompt_bundle.execution_identity.execution_identity,
+                    execution_identity_manifest=asdict(
+                        prompt_bundle.execution_identity
+                    ),
+                    prompt_policy_version=prompt_bundle.prompt_content_hash,
+                    model_name=prompt_bundle.resolved_model,
+                    model_provider=str(prompt_bundle.execution_policy.policy.provider),
+                    model_policy_namespace="report_vs",
+                    routing_policy_version=prompt_bundle.execution_policy.policy_hash,
+                    relevant_input_hash=relevant_input_hash,
+                    configuration_policy_hash=configuration_policy_hash,
+                    validator_version=_SEMANTIC_VALIDATOR_VERSION,
+                    validation_status="pass",
+                ),
+                semantic_ctx,
+            )
         logger.info(
             log_event(
                 semantic_ctx,
@@ -391,6 +467,8 @@ def run_semantic_validation(
             execution_identity=prompt_bundle.execution_identity.execution_identity,
         )
     except AppError as exc:
+        if exc.code in {"semantic_input_ids_invalid", "semantic_verdicts_incomplete"}:
+            return _semantic_error_outcome(exc)
         if exc.retryable:
             logger.info(
                 log_event(
@@ -446,6 +524,8 @@ def semantic_payload(insights: Sequence[dict], quotes: Sequence[dict]) -> dict:
     for idx, quote in enumerate(quotes):
         if not isinstance(quote, dict):
             continue
+        if not s(quote.get("text")).strip():
+            continue
         quote_entries.append(
             {
                 "id": quote_label(quote, idx),
@@ -455,6 +535,106 @@ def semantic_payload(insights: Sequence[dict], quotes: Sequence[dict]) -> dict:
             }
         )
     return {"metrics": metrics, "quotes": quote_entries}
+
+
+def _expected_semantic_ids(
+    payload: dict,
+) -> tuple[dict[str, tuple[str, ...]], AppError | None]:
+    expected: dict[str, tuple[str, ...]] = {}
+    for family in ("metrics", "quotes"):
+        entries = payload.get(family)
+        if not isinstance(entries, list):
+            entries = []
+        ids = tuple(
+            str(entry.get("id") or "").strip()
+            for entry in entries
+            if isinstance(entry, dict)
+        )
+        duplicate_count = len(ids) - len(set(ids))
+        blank_count = sum(not item_id for item_id in ids)
+        if blank_count or duplicate_count or len(ids) != len(entries):
+            return {}, AppError(
+                code="semantic_input_ids_invalid",
+                message=(
+                    "Semantic validation input contains blank or duplicate "
+                    "item identifiers"
+                ),
+                retryable=False,
+                severity="error",
+                context={
+                    "family": family,
+                    "expected_count": len(entries),
+                    "blank_count": blank_count,
+                    "duplicate_count": duplicate_count,
+                },
+            )
+        expected[family] = ids
+    return expected, None
+
+
+def _validate_semantic_verdicts(
+    payload: dict, expected_ids: dict[str, tuple[str, ...]]
+) -> None:
+    for family in ("metrics", "quotes"):
+        entries = payload.get(family)
+        if not isinstance(entries, list):
+            entries = []
+        received_ids = tuple(
+            str(entry.get("id") or "").strip()
+            for entry in entries
+            if isinstance(entry, dict)
+        )
+        expected = set(expected_ids.get(family, ()))
+        received = set(received_ids)
+        blank_count = sum(not item_id for item_id in received_ids)
+        duplicate_count = len(received_ids) - len(received)
+        missing_count = len(expected - received)
+        unknown_count = len(received - expected)
+        malformed_count = len(entries) - sum(
+            isinstance(entry, dict) for entry in entries
+        )
+        if (
+            blank_count
+            or duplicate_count
+            or missing_count
+            or unknown_count
+            or malformed_count
+        ):
+            raise AppError(
+                code="semantic_verdicts_incomplete",
+                message=(
+                    "Semantic response does not contain exactly one verdict per "
+                    "requested item"
+                ),
+                retryable=False,
+                severity="error",
+                context={
+                    "family": family,
+                    "expected_count": len(expected),
+                    "received_count": len(received_ids),
+                    "blank_count": blank_count,
+                    "duplicate_count": duplicate_count,
+                    "missing_count": missing_count,
+                    "unknown_count": unknown_count,
+                    "malformed_count": malformed_count,
+                },
+            )
+
+
+def _semantic_error_outcome(error: AppError) -> SemanticCheckOutcome:
+    return SemanticCheckOutcome(
+        metric_support={},
+        quote_support={},
+        issues=[
+            issue(
+                rule_id=RULE_ID,
+                message=error.message,
+                severity="error",
+                section="semantic",
+                violation_type=error.code,
+            )
+        ],
+    )
 
 
 def parse_semantic_response(payload: dict) -> SemanticCheckOutcome:

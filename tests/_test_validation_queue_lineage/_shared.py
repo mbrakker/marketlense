@@ -13,7 +13,6 @@ import pytest
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.run_context import RunContext
-from src.contracts.workflow_queue import SourceIngestPayload
 from src.contracts.validation_reliability import (
     ValidationReliabilityBuildRequest,
     ValidationReliabilityWriteRequest,
@@ -22,12 +21,13 @@ from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationCohortSubmissionRequest,
     PreselectedFrozenValidationSource,
 )
+from src.contracts.workflow_queue import SourceIngestPayload
 from src.generators.claim_validation_generator import validate_retained_claims
+from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
 from src.orchestrators.ingest_orchestrator import (
     submit_preselected_frozen_validation_cohort,
 )
 from src.orchestrators.workflow_worker_orchestrator import run_workflow_worker_once
-from src.orchestrators import workflow_queue_orchestrator as queue_orchestrator
 from src.services.config_service import build_ingest_settings, load_settings
 from src.services.validation_reliability_service import (
     build_validation_reliability_artifact,
@@ -167,7 +167,18 @@ def _full_chain_model_response(call: dict) -> FakeOpenAIResult:
             ],
             "not_found_reason": "",
         },
-        "semantic_validation_output_v1": {"metrics": [], "quotes": []},
+        "semantic_validation_output_v2": {
+            "metrics": [
+                {
+                    "id": f"insight-{index}",
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Supported by retained source evidence.",
+                }
+                for index in range(1, 6)
+            ],
+            "quotes": [],
+        },
         "grounding_validation_output_v2": {"unsupported": [], "checks": []},
         "context_category_fit_v1": {
             "schema_version": "1.0",

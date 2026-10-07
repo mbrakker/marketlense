@@ -69,8 +69,20 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
 
     def _file_stat(req, ctx):
         if req.path == str(cached_pdf_path):
-            return SimpleNamespace(exists=True, size_bytes=100, mtime_utc=1.0, md5=None)
-        return SimpleNamespace(exists=False, size_bytes=None, mtime_utc=None, md5=None)
+            return SimpleNamespace(
+                exists=True,
+                is_file=True,
+                size_bytes=100,
+                mtime_utc=1.0,
+                md5="cached-pdf-md5" if req.compute_md5 else None,
+            )
+        return SimpleNamespace(
+            exists=False,
+            is_file=False,
+            size_bytes=None,
+            mtime_utc=None,
+            md5=None,
+        )
 
     deps = _deps(
         extract_pdf_info=lambda req, ctx: PdfInfoResponse(
@@ -118,6 +130,213 @@ def test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr(
     assert state.ocr_fallback_used is True
     assert state.analysis_pdf_path == str(cached_pdf_path)
     assert ocr_calls["count"] == 0
+
+
+def test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact(
+    ingest_settings, run_context, tmp_path, caplog
+):
+    caplog.set_level("INFO", logger="market_lense.report_generator")
+    base_runtime = _runtime(
+        replace(
+            ingest_settings,
+            pdf_text_ocr_enabled=True,
+            pdf_text_ocr_cache_enabled=True,
+            pdf_text_min_density=1.0,
+        ),
+        run_context,
+        tmp_path,
+    )
+    model_a1 = "gpt-5-mini"
+    model_a2 = "gpt-4.1-mini"
+    runtime_a1 = replace(
+        base_runtime,
+        settings=replace(base_runtime.settings, pdf_text_ocr_model=model_a1),
+    )
+    artifact_text_by_path: dict[str, str] = {}
+    artifact_md5_by_path: dict[str, str] = {}
+    ocr_calls: list[str] = []
+    text_extraction_paths: list[str] = []
+    native_text_extractions = 0
+
+    # A pre-versioned OCR cache must be treated as legacy even though the
+    # original source and extraction limits still match.
+    legacy_key = text_cache_key(runtime_a1.md5, runtime_a1.settings)
+    cache_root = Path(runtime_a1.settings.cache_dir) / "pdf_cache" / str(runtime_a1.md5)
+    legacy_text = "legacy OCR artifact text " * 12
+    cache_root.mkdir(parents=True, exist_ok=True)
+    (cache_root / f"ocr_text_{legacy_key}.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "key": legacy_key,
+                "text": legacy_text,
+                "pages_extracted": 1,
+                "char_count": len(legacy_text),
+                "text_density": float(len(legacy_text)),
+                "pages": [{"page_number": 1, "text": legacy_text}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def _file_stat(req, ctx):
+        artifact_exists = req.path in artifact_text_by_path
+        if req.compute_md5:
+            return SimpleNamespace(
+                exists=artifact_exists,
+                is_file=artifact_exists,
+                md5=artifact_md5_by_path.get(req.path),
+            )
+        return SimpleNamespace(
+            exists=artifact_exists,
+            is_file=artifact_exists,
+            md5=None,
+        )
+
+    def _extract_pdf_text(req, ctx):
+        nonlocal native_text_extractions
+        if req.path == base_runtime.local_pdf_path:
+            native_text_extractions += 1
+            return PdfTextExtractResponse(
+                schema_version="1.0",
+                text="",
+                pages_extracted=1,
+                char_count=0,
+                text_density=0.0,
+                pages=[PdfTextPage(page_number=1, text="")],
+            )
+        text_extraction_paths.append(req.path)
+        artifact_text = artifact_text_by_path[req.path]
+        return PdfTextExtractResponse(
+            schema_version="1.0",
+            text=artifact_text,
+            pages_extracted=1,
+            char_count=len(artifact_text),
+            text_density=float(len(artifact_text)),
+            pages=[PdfTextPage(page_number=1, text=artifact_text)],
+        )
+
+    def _openai_ocr_pdf(req, ctx):
+        ocr_calls.append(req.model)
+        version = "A1" if req.model == model_a1 else "A2"
+        page_text = f"recognized OCR page {version}"
+        return SimpleNamespace(
+            schema_version="1.0",
+            pages=[
+                SimpleNamespace(schema_version="1.0", page_number=1, text=page_text)
+            ],
+            raw_text=f'{{"pages":[{{"page_number":1,"text":"{page_text}"}}]}}',
+            model=req.model,
+            request_id=f"req-{version}",
+        )
+
+    def _render_text_pdf(req, ctx):
+        rendered_text = f"Rendered OCR PDF text for {req.pages[0].text}. " * 5
+        artifact_text_by_path[req.output_path] = rendered_text
+        artifact_md5_by_path[req.output_path] = (
+            "artifact-" + req.pages[0].text.rsplit(" ", 1)[-1]
+        )
+        return PdfTextRenderResponse(
+            schema_version="1.0",
+            output_path=req.output_path,
+            rendered_page_count=len(req.pages),
+        )
+
+    deps = _deps(
+        extract_pdf_info=lambda req, ctx: PdfInfoResponse(
+            schema_version="1.0",
+            path=req.path,
+            page_count=1,
+            metadata={},
+        ),
+        split_pdf_for_ocr=lambda req, ctx: PdfOcrSplitResponse(
+            schema_version="1.0",
+            chunks=[
+                PdfOcrChunk(
+                    schema_version="1.0",
+                    chunk_index=1,
+                    source_pdf_path=req.source_pdf_path,
+                    chunk_pdf_path=req.source_pdf_path,
+                    start_page_number=1,
+                    end_page_number=1,
+                    page_count=1,
+                )
+            ],
+        ),
+        sample_pdf_text=lambda req, ctx: (
+            PdfTextSampleResponse(
+                schema_version="1.0",
+                samples=[
+                    PdfTextSample(
+                        page_index=0, page_number=1, char_count=0, has_text=False
+                    )
+                ],
+                any_text=False,
+            )
+            if req.path == base_runtime.local_pdf_path
+            else PdfTextSampleResponse(
+                schema_version="1.0",
+                samples=[
+                    PdfTextSample(
+                        page_index=0, page_number=1, char_count=40, has_text=True
+                    )
+                ],
+                any_text=True,
+            )
+        ),
+        file_stat=_file_stat,
+        extract_pdf_text=_extract_pdf_text,
+        openai_ocr_pdf=_openai_ocr_pdf,
+        render_text_pdf=_render_text_pdf,
+    )
+
+    state_a1 = prepare_report_source(
+        runtime_a1, deps, ocr_openai_client=_ocr_client(deps)
+    )
+    runtime_a2 = replace(
+        runtime_a1,
+        settings=replace(runtime_a1.settings, pdf_text_ocr_model=model_a2),
+    )
+    state_a2 = prepare_report_source(
+        runtime_a2, deps, ocr_openai_client=_ocr_client(deps)
+    )
+    state_a2_reused = prepare_report_source(
+        runtime_a2, deps, ocr_openai_client=_ocr_client(deps)
+    )
+
+    assert "recognized OCR page A1" in state_a1.text_response.pages[0].text
+    assert "recognized OCR page A2" in state_a2.text_response.pages[0].text
+    assert "recognized OCR page A2" in state_a2_reused.text_response.pages[0].text
+    assert "legacy OCR artifact text" not in state_a1.text_response.text
+    assert ocr_calls == [model_a1, model_a2]
+    assert len(text_extraction_paths) == 2
+    assert len(set(text_extraction_paths)) == 2
+    assert native_text_extractions == 1
+    expected_ocr_text_keys = {
+        ocr_text_cache_key(runtime_a1.md5, "artifact-A1", runtime_a1.settings),
+        ocr_text_cache_key(runtime_a2.md5, "artifact-A2", runtime_a2.settings),
+    }
+    ocr_text_cache_events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.name == "market_lense.report_generator"
+    ]
+    ocr_text_cache_events = [
+        event
+        for event in ocr_text_cache_events
+        if event["event"] in {"text_cache_hit", "text_cache_miss"}
+    ]
+    assert any(
+        event["fields"].get("cache_key") in expected_ocr_text_keys
+        and event["fields"].get("cache_miss_reason")
+        for event in ocr_text_cache_events
+    )
+    assert any(
+        event["fields"].get("cache_key") in expected_ocr_text_keys
+        and event["event"] == "text_cache_hit"
+        for event in ocr_text_cache_events
+    )
+    assert legacy_text not in caplog.text
 
 
 def test_prepare_report_source_runs_single_openai_ocr_model(
@@ -227,7 +446,10 @@ def test_prepare_report_source_maps_chunk_local_ocr_pages_to_original_page_numbe
                     SimpleNamespace(schema_version="1.0", page_number=1, text="page 1"),
                     SimpleNamespace(schema_version="1.0", page_number=2, text="page 2"),
                 ],
-                raw_text='{"pages":[{"page_number":1,"text":"page 1"},{"page_number":2,"text":"page 2"}]}',
+                raw_text=(
+                    '{"pages":[{"page_number":1,"text":"page 1"},'
+                    '{"page_number":2,"text":"page 2"}]}'
+                ),
                 model=req.model,
                 request_id="req_chunk_1",
             )
@@ -350,7 +572,10 @@ def test_prepare_report_source_accepts_blank_trailing_ocr_chunk(
                         text="ocr page two",
                     ),
                 ],
-                raw_text='{"pages":[{"page_number":1,"text":"ocr page one"},{"page_number":2,"text":"ocr page two"}]}',
+                raw_text=(
+                    '{"pages":[{"page_number":1,"text":"ocr page one"},'
+                    '{"page_number":2,"text":"ocr page two"}]}'
+                ),
                 model=req.model,
                 request_id="req_chunk_1",
             )
@@ -502,6 +727,7 @@ def test_prepare_report_source_surfaces_pdf_text_ocr_failed(
 
 __all__ = [
     "test_prepare_report_source_uses_cached_ocr_pdf_without_calling_openai_ocr",
+    "test_ocr_text_cache_tracks_derived_pdf_and_reuses_matching_artifact",
     "test_prepare_report_source_runs_single_openai_ocr_model",
     "test_prepare_report_source_maps_chunk_local_ocr_pages_to_original_page_numbers",
     "test_prepare_report_source_accepts_blank_trailing_ocr_chunk",
