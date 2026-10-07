@@ -4,8 +4,17 @@ from __future__ import annotations
 from ._shared import *  # noqa: F401,F403
 
 
-def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
-    publish_settings_factory, run_context, wordpress_http
+@pytest.mark.parametrize(
+    ("readback_status", "expected_status", "expected_readback_verified"),
+    [(200, "published", True), (404, "error", False)],
+)
+def test_readiness_bound_publish_requires_authenticated_readback(
+    publish_settings_factory,
+    run_context,
+    wordpress_http,
+    readback_status: int,
+    expected_status: str,
+    expected_readback_verified: bool,
 ) -> None:
     from src.contracts.validation import ValidationReport
     from src.generators.publish_readiness_generator import (
@@ -55,7 +64,8 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
         },
     )
     assert readiness.status == "pass"
-    (report_analysis_dir / "publish_readiness.json").write_text(
+    readiness_path = report_analysis_dir / "publish_readiness.json"
+    readiness_path.write_text(
         json.dumps(publish_readiness_payload(readiness)), encoding="utf-8"
     )
     (report_analysis_dir / "validation_regen_attempt_1.json").write_text(
@@ -90,12 +100,52 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
         payload={"id": 88, "link": "https://example.com/post/88", "status": "publish"},
     )
 
-    results = orch.run_publish(settings, limit=1)
+    def _readback(_call: RecordedHttpRequest) -> FakeHttpResponse:
+        if readback_status == 404:
+            return FakeHttpResponse.from_payload(
+                status_code=404, payload={"code": "rest_post_invalid_id"}
+            )
+        post = wordpress_http.calls_for(
+            "POST", "https://example.com/wp-json/wp/v2/ml_report"
+        )[0].json_data
+        return FakeHttpResponse.from_payload(
+            status_code=200,
+            payload={
+                "id": 88,
+                "type": "ml_report",
+                "status": post["status"],
+                "link": "https://example.com/post/88",
+                "featured_media": post.get("featured_media", 0),
+                "categories": post.get("categories", []),
+                "tags": post.get("tags", []),
+                "content": {"raw": post["content"], "rendered": post["content"]},
+                "meta": post["meta"],
+            },
+        )
+
+    wordpress_http.add(
+        "GET", "https://example.com/wp-json/wp/v2/ml_report/88", _readback
+    )
+
+    results = orch.run_publish(
+        settings,
+        limit=1,
+        report_readiness_references={str(html_path): str(readiness_path)},
+    )
 
     assert len(results) == 1
-    assert results[0].status == "published"
+    assert results[0].status == expected_status
     assert results[0].validation_status == "pass"
     assert results[0].validation_issues == []
+    assert results[0].authenticated_readback_verified is expected_readback_verified
+    assert (
+        len(
+            wordpress_http.calls_for(
+                "GET", "https://example.com/wp-json/wp/v2/ml_report/88"
+            )
+        )
+        == 1
+    )
     assert (
         len(
             wordpress_http.calls_for(
@@ -107,5 +157,5 @@ def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
 
 
 __all__ = [
-    "test_publish_uses_hash_bound_readiness_over_regen_snapshots",
+    "test_readiness_bound_publish_requires_authenticated_readback",
 ]

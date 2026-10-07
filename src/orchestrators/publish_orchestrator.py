@@ -2259,7 +2259,9 @@ def run_publish(
                 file_ctx,
             )
             outcome = _with_validation(outcome, validation_status, validation_issues)
-            if outcome.status == "published" and cohort_manifest:
+            if outcome.status == "published" and (
+                cohort_manifest or report_readiness_references
+            ):
                 created_post_readback = read_post_by_id(
                     WordPressPostReadRequest(
                         schema_version="1.0",
