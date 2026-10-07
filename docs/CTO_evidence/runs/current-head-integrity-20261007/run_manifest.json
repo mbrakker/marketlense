@@ -133,11 +133,11 @@
       "stage": "workflow_queue"
     }
   ],
-  "ended_at_utc": "2026-10-07T19:18:33Z",
+  "ended_at_utc": "2026-10-07T19:53:12Z",
   "external_side_effects_enabled": false,
   "objective": "Verify Prompt 2 policy-gated autonomous publication tests, default pytest, and exact-head CI; check sandbox access and package eligibility, recording the live run as blocked if no package passes current readiness.",
   "operator_intervention_policy": "The autonomous approval path was verified by isolated tests and deterministic CI queue evidence. Authenticated sandbox preflight passed, but no live approval, publication, human intervention, readback, or replay was attempted because no current fully ready immutable package was available.",
-  "producer_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+  "producer_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
   "required_evidence_classes": [
     "exact_repository_sha",
     "source_integrity",
@@ -155,9 +155,9 @@
       "producer": "marketlense_ci_and_pytest_verification",
       "role": "run",
       "schema_version": "1.0",
-      "sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
+      "sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
       "source_id": "current_head_evidence",
-      "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
+      "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
     }
   ],
   "stages_in_scope": [
@@ -172,7 +172,7 @@
     "live_sandbox_publication",
     "authenticated_wordpress_readback"
   ],
-  "started_at_utc": "2026-10-07T18:56:40Z",
+  "started_at_utc": "2026-10-07T19:25:15Z",
   "subjects": [
     {
       "identity_sha256": "e9d50b60883307141db252d9ced2336efb6d697d19d82362a5e3443fbe184c1a",
@@ -196,5 +196,5 @@
       "terminal_outcome": "success"
     }
   ],
-  "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1"
+  "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
 }

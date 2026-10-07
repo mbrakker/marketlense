@@ -1,6 +1,6 @@
 # CTO evidence pack
 
-Prompt 2 code HEAD verified: `253b840ad96d59a9047462ba200f6e1762802bf1`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
+Prompt 2 code HEAD verified: `1fce681c915f9d7203b3a3077d2e4c885fc19a72`. Collector/projector revision: `e3ba5c76765f48b4403a2ef5774fb2194d16489b`. The pack contains 24 independent declared runs and 4 historical telemetry snapshots.
 
 Run-scoped metrics remain separate in each bundle. `complete` means the manifest-required evidence classes were present; it does not mean the workload passed a product-level acceptance test. Historical runs are never relabeled as current-HEAD evidence.
 
@@ -48,7 +48,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 | `cohort-reliability-cohort-20261001-next-five` | `469c13c15d0d` | 5 | complete / not_evaluated | — | `a530814b746d90d4169ff08ffc7f57bfbd5344f2fef870eaaa654117978fab88` |
 | `cohort-reliability-cohort-20261001-next-five-before-cohort-result` | `365c342ba3ff` | 5 | complete / not_evaluated | — | `eca64b13c1e9579f0228e67dc53c59f62563abfce2a5f3427af9180e2571d582` |
 | `cohort-report-agnostic-prompt-repair-20261001` | `eae746de7a65` | 5 | complete / not_evaluated | — | `b096c0fb636053aebf3a37855a9de0e55e9572bb6c804928d0f513fc186570c9` |
-| `current-head-integrity-20261007` | `253b840ad96d` | 3 | complete / pass | — | `55635ac4656547e118bf0c13791643dd4037e93b9d1ac3ad3eb610eedd1a2d91` |
+| `current-head-integrity-20261007` | `1fce681c915f` | 3 | complete / pass | — | `23fc9c08d27ec8382fb4b453ec4e6f3ffb3c0c92dc88f1ff419cfb8fe9a8be4d` |
 | `file-search-comparison-20261003` | `be70355a28b8` | 5 | complete / not_evaluated | — | `7c96014fc0f534a127fc24f36386c2897fe42b7b3f598c66fb74d83e69c75c62` |
 | `grounding-concurrency-candidate-20261006` | `a1f2affcb4dd` | 0 | complete / not_evaluated | — | `0304d8dd076f6c365e94d0ce3866d66a152e92333b3ab2bd8f1f956bfe2fa71b` |
 | `human-editorial-review-20260901` | `56628ad76f86` | 5 | incomplete / not_evaluated | reviewer_attribution, rubric_identity | `b58b487b2cd31cdbf14346e50ee5b598f9991df9a3fb188182e271caf6108956` |
@@ -60,7 +60,7 @@ Run-scoped metrics remain separate in each bundle. `complete` means the manifest
 
 ## Current-HEAD evidence
 
-The Prompt 2 code HEAD `253b840ad96d59a9047462ba200f6e1762802bf1` passed the 23 focused autonomous-publication approval tests, the local full default suite on code-identical SHA `0060137ca3c8cd819087113e46b04d95f3fbea83` (6,795 passed, 1 skipped, 0 failed), and GitHub Actions run `37664282492`, attempt 3 (6,820 passed, 0 skipped, 0 failed; all required CI gates passed). The optional WordPress staging REST CI gate was skipped because dedicated `WP_STAGING_*` variables were not configured. The deterministic exact-head queue artifact records one approval and two materialized outbox rows in temporary SQLite, with zero provider calls and zero WordPress writes; it is not live publication proof. Authenticated read-only preflight against the operator-designated sandbox `WP_SITE_URL` passed with HTTP 200 and the required `ml_report` metadata fields. Live publication, authenticated readback, and replay remain blocked because all nine persisted queue readiness references point to missing package artifacts, and the only unexpired readiness artifact is marked `fail`. No approval, outbox event, WordPress write, human approval, readback, or replay was attempted.
+The Prompt 2 HEAD `1fce681c915f9d7203b3a3077d2e4c885fc19a72` passed the 23 focused autonomous-publication approval tests, the local full default suite on code-identical SHA `0060137ca3c8cd819087113e46b04d95f3fbea83` (6,795 passed, 1 skipped, 0 failed), and GitHub Actions CI run `37674339035`: the exact-head pytest output was 6,796 passed in 289.28 seconds, with 0 failures and 0 skips; coverage, mutation, all required repository gates, and release review passed with 0 issues. CodeQL run `37674340327` also passed on this SHA. The retained CI telemetry contains 6,820 passing test records. The deterministic queue artifact is bound to the same SHA and records one approval, two materialized outbox rows, zero provider calls, zero recorded effects, and zero WordPress writes in temporary SQLite; it is not live publication proof. The optional WordPress staging REST CI gate was skipped because dedicated `WP_STAGING_*` variables were not configured. Authenticated read-only preflight against the operator-designated sandbox `WP_SITE_URL` passed with HTTP 200 and the required `ml_report` metadata fields. Live publication, authenticated readback, and replay remain blocked because all nine persisted queue readiness references point to missing package artifacts, and the only unexpired readiness artifact is marked `fail`. No approval, outbox event, WordPress write, human approval, readback, or replay was attempted.
 
 ## Provenance and privacy
 

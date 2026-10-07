@@ -1,34 +1,4 @@
 {
-  "schema_version": "1.0",
-  "run_id": "current-head-integrity-20261007",
-  "run_type": "current_head_integrity",
-  "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
-  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
-  "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
-  "manifest_sha256": "da5045b17a0ff210bf52453d57e1051387ee5e9d0c05b045c91413c5f5edb104",
-  "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
-  "bundle_sha256": "55635ac4656547e118bf0c13791643dd4037e93b9d1ac3ad3eb610eedd1a2d91",
-  "source_sha_verification": "passed",
-  "sources": [
-    {
-      "source_id": "current_head_evidence",
-      "role": "run",
-      "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
-      "tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
-      "verified": true
-    }
-  ],
-  "contract_parse_roundtrip": "passed",
-  "completeness": "complete",
-  "disposition": "pass",
-  "required_evidence_classes": [
-    "exact_repository_sha",
-    "immutable_subjects",
-    "measurements",
-    "outcomes",
-    "source_integrity"
-  ],
   "available_evidence_classes": [
     "exact_repository_sha",
     "immutable_subjects",
@@ -36,144 +6,179 @@
     "outcomes",
     "source_integrity"
   ],
-  "missing_evidence_classes": [],
+  "bundle_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/cto_evidence_bundle.json",
+  "bundle_sha256": "23fc9c08d27ec8382fb4b453ec4e6f3ffb3c0c92dc88f1ff419cfb8fe9a8be4d",
+  "collector_repository_sha": "e3ba5c76765f48b4403a2ef5774fb2194d16489b",
+  "comparison_status": "not_applicable",
+  "completeness": "complete",
+  "contract_parse_roundtrip": "passed",
   "criteria_results": [
     {
+      "actual_value": 0,
       "criterion_id": "focused_tests_no_failures",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 0,
-      "actual_value": 0
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 23,
       "criterion_id": "focused_tests_executed",
       "disposition": "pass",
-      "required": true,
-      "operator": "gt",
       "expected_value": 0,
-      "actual_value": 23
+      "operator": "gt",
+      "required": true
     },
     {
+      "actual_value": 0,
       "criterion_id": "local_full_suite_no_failures",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 0,
-      "actual_value": 0
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 6795,
       "criterion_id": "local_full_suite_executed",
       "disposition": "pass",
-      "required": true,
-      "operator": "gt",
       "expected_value": 0,
-      "actual_value": 6795
+      "operator": "gt",
+      "required": true
     },
     {
+      "actual_value": 0,
       "criterion_id": "ci_default_suite_no_failures",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 0,
-      "actual_value": 0
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 6796,
       "criterion_id": "ci_default_suite_executed",
       "disposition": "pass",
-      "required": true,
-      "operator": "gt",
       "expected_value": 0,
-      "actual_value": 6820
+      "operator": "gt",
+      "required": true
     },
     {
+      "actual_value": 1,
       "criterion_id": "ci_coverage_gate_passed",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 1,
-      "actual_value": 1
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 1,
       "criterion_id": "ci_mutation_gate_passed",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 1,
-      "actual_value": 1
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 1,
       "criterion_id": "ci_release_evidence_passed",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 1,
-      "actual_value": 1
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 1,
       "criterion_id": "ci_workflow_queue_passed",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 1,
-      "actual_value": 1
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 1,
       "criterion_id": "workflow_queue_exact_head",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 1,
-      "actual_value": 1
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 0,
       "criterion_id": "no_external_provider_calls",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 0,
-      "actual_value": 0
+      "operator": "eq",
+      "required": true
     },
     {
+      "actual_value": 0,
       "criterion_id": "no_wordpress_writes",
       "disposition": "pass",
-      "required": true,
-      "operator": "eq",
       "expected_value": 0,
-      "actual_value": 0
+      "operator": "eq",
+      "required": true
     }
   ],
-  "subject_count": 3,
-  "metric_count": 68,
-  "source_count": 1,
-  "comparison_status": "not_applicable",
-  "unavailable_metric_count": 21,
+  "disposition": "pass",
+  "errors": [],
+  "manifest_path": "docs/CTO_evidence/runs/current-head-integrity-20261007/run_manifest.json",
+  "manifest_sha256": "009ce2ed1cbac4e08b08692cb607bc77c174ff4b605a64d800f1fa1a5c000701",
+  "metric_count": 69,
+  "missing_evidence_classes": [],
   "privacy_bounded_content_scan": {
-    "status": "passed",
+    "bundle_bytes": 60398,
     "checks": {
       "absolute_paths": true,
-      "emails": true,
-      "urls": true,
+      "bundle_byte_bound": true,
       "credentials": true,
       "database_connection_strings": true,
-      "source_identity_values": true,
+      "emails": true,
       "raw_content_fields": true,
-      "bundle_byte_bound": true
+      "source_identity_values": true,
+      "urls": true
     },
     "identity_match_count": 0,
     "raw_content_field_count": 0,
-    "bundle_bytes": 60004
+    "status": "passed"
   },
-  "status": "passed",
-  "errors": [],
+  "required_evidence_classes": [
+    "exact_repository_sha",
+    "immutable_subjects",
+    "measurements",
+    "outcomes",
+    "source_integrity"
+  ],
+  "run_id": "current-head-integrity-20261007",
+  "run_type": "current_head_integrity",
   "sandbox_publication_verification": {
+    "approval_ledger_mutated": false,
+    "authenticated_preflight_attempted": true,
+    "authenticated_preflight_status": "passed",
+    "authenticated_readback_attempted": false,
+    "automatic_approval_attempted": false,
+    "http_status": 200,
+    "human_approval_used": false,
+    "identical_package_replay_attempted": false,
+    "missing_prerequisites": [
+      "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
+    ],
+    "outbox_event_added": false,
+    "post_type": "ml_report",
+    "queue_scan": {
+      "awaiting_review_count": 8,
+      "eligible_package_count": 0,
+      "package_artifact_references_present": 0,
+      "prior_approved_count": 1,
+      "read_only": true,
+      "readiness_record_count": 9,
+      "source": "state/index.sqlite",
+      "unexpired_readiness_artifact_count": 1,
+      "unexpired_readiness_status_counts": {
+        "fail": 1
+      }
+    },
     "status": "blocked",
     "target_role": "sandbox",
     "target_selection": "operator-designated WP_SITE_URL",
-    "authenticated_preflight_attempted": true,
-    "authenticated_preflight_status": "passed",
-    "http_status": 200,
-    "post_type": "ml_report",
     "validation_policy": "block",
     "verified_meta_keys": [
       "ml_file_id",
@@ -183,30 +188,25 @@
       "ml_source_note",
       "ml_source_publication_date"
     ],
-    "queue_scan": {
-      "source": "state/index.sqlite",
-      "read_only": true,
-      "readiness_record_count": 9,
-      "awaiting_review_count": 8,
-      "prior_approved_count": 1,
-      "package_artifact_references_present": 0,
-      "eligible_package_count": 0,
-      "unexpired_readiness_artifact_count": 1,
-      "unexpired_readiness_status_counts": {
-        "fail": 1
-      }
-    },
-    "automatic_approval_attempted": false,
-    "approval_ledger_mutated": false,
-    "outbox_event_added": false,
-    "write_attempted": false,
     "wordpress_write_count": 0,
-    "authenticated_readback_attempted": false,
-    "identical_package_replay_attempted": false,
-    "human_approval_used": false,
-    "missing_prerequisites": [
-      "No current immutable package has unexpired passing readiness and complete retained artifacts; all nine persisted queue readiness references point to missing package files, and the only unexpired readiness artifact is marked fail."
-    ]
+    "write_attempted": false
   },
+  "schema_version": "1.0",
+  "source_count": 1,
+  "source_sha_verification": "passed",
+  "sources": [
+    {
+      "path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
+      "role": "run",
+      "sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
+      "source_id": "current_head_evidence",
+      "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+      "verified": true
+    }
+  ],
+  "status": "passed",
+  "subject_count": 3,
+  "tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
+  "unavailable_metric_count": 21,
   "wordpress_staging_rest_gate": "skipped"
 }

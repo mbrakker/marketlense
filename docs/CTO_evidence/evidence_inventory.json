@@ -538,18 +538,18 @@
     },
     {
       "canonical_declared_run_eligible": true,
-      "embedded_tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+      "embedded_tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
       "evidence_classes_supported_by_retained_fields": [
         "measurements",
         "outcomes"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
+      "included_source_sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
       "included_source_tested_repository_shas": [
-        "253b840ad96d59a9047462ba200f6e1762802bf1"
+        "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
       ],
       "limitation": "Exact-head approval tests, default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+      "manifest_tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
       "producer_format": "marketlense/generic-metrics/1.0",
       "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "run",
@@ -736,12 +736,12 @@
         "focused_test_result"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
+      "included_source_sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
       "included_source_tested_repository_shas": [
-        "253b840ad96d59a9047462ba200f6e1762802bf1"
+        "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
       ],
       "limitation": "Exact-head approval tests, default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+      "manifest_tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
       "producer_format": "pytest-junit-xml/1.0",
       "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "supporting",
@@ -777,12 +777,12 @@
         "side_effects"
       ],
       "included_source_path": "docs/CTO_evidence/source_artifacts/current_head/current_head_integrity.json",
-      "included_source_sha256": "3a3496def532958f6b71719dc0fb7747ac75650d702066a93d8012538487c1d8",
+      "included_source_sha256": "86da49dbdcc0e85aba3b30730e10947e52a578b1adcf0bacef656fc9d68e72f8",
       "included_source_tested_repository_shas": [
-        "253b840ad96d59a9047462ba200f6e1762802bf1"
+        "1fce681c915f9d7203b3a3077d2e4c885fc19a72"
       ],
       "limitation": "Exact-head approval tests, default pytest, and full CI are retained. Authenticated sandbox REST preflight passed; live publication/readback/replay is blocked because no eligible current ready package and its immutable artifacts are available.",
-      "manifest_tested_repository_sha": "253b840ad96d59a9047462ba200f6e1762802bf1",
+      "manifest_tested_repository_sha": "1fce681c915f9d7203b3a3077d2e4c885fc19a72",
       "producer_format": "workflow-queue-evidence/1.0",
       "publicization": "deterministic_exact_head_pytest_ci_and_queue_summary",
       "role": "supporting",
