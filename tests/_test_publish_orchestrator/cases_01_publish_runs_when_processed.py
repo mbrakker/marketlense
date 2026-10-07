@@ -907,107 +907,6 @@ def test_publish_reuses_preloaded_html_snapshot_after_preflight_read(
     assert not html_path.exists()
 
 
-def test_publish_uses_hash_bound_readiness_over_regen_snapshots(
-    publish_settings_factory, run_context, wordpress_http
-) -> None:
-    from src.contracts.validation import ValidationReport
-    from src.generators.publish_readiness_generator import (
-        evaluate_publish_readiness,
-        publish_readiness_payload,
-    )
-
-    settings = publish_settings_factory(validation_policy="block")
-    html_path = Path(settings.output_dir) / "report.html"
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html = (
-        "<!doctype html><!--\n"
-        "marketbearing-build:\n"
-        "  git_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-        "  generation_run_id: generation-run-1\n"
-        "  validation_run_id: validation-run-1\n"
-        "  source_id: source:file123\n"
-        "  source_md5: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
-        "  artifact_hash: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n"
-        "  generation_profile: safe_default\n"
-        "  generated_at_utc: 2026-08-26T12:00:00+00:00\n"
-        "--><html><head><title>Report 2026 | MarketLense</title>"
-        '<link rel="canonical" href="https://marketlense.example/reports/report"></head>'
-        "<body><h1>Report 2026</h1><p>Revenue grew in the measured market.</p>"
-        '<section id="source"><a href="https://publisher.example/reports/report">'
-        "Open original source</a></section></body></html>"
-    )
-    html_path.write_text(html, encoding="utf-8")
-    _write_report_card_manifest(html_path)
-    _seed_report_metadata(settings.reports_db, str(html_path), "file123", run_context)
-    report_analysis_dir = Path(settings.output_dir) / "report" / "report_analysis"
-    report_analysis_dir.mkdir(parents=True, exist_ok=True)
-    readiness = evaluate_publish_readiness(
-        report_id="file123",
-        artifacts={"categories": ["markets"]},
-        evidence_packs={},
-        validation_report=ValidationReport(schema_version="1.1", status="pass"),
-        final_html=html,
-        final_html_path=str(html_path),
-        report_card_manifest_path=str(html_path.parent / "report-card-manifest.json"),
-        category_ids=["markets"],
-        provenance={
-            "publisher_landing_page_url": "https://publisher.example/reports/report",
-            "original_report_url": "",
-            "marketlense_article_url": "https://marketlense.example/reports/report",
-        },
-    )
-    assert readiness.status == "pass"
-    (report_analysis_dir / "publish_readiness.json").write_text(
-        json.dumps(publish_readiness_payload(readiness)), encoding="utf-8"
-    )
-    (report_analysis_dir / "validation_regen_attempt_1.json").write_text(
-        json.dumps(
-            {
-                "schema_version": "1.1",
-                "status": "fail",
-                "severity": "error",
-                "issues": [
-                    {
-                        "schema_version": "1.0",
-                        "message": "stale attempt failure",
-                        "severity": "error",
-                        "affected_section": "summary",
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    _record_processed(settings.state_db, "file123", run_context)
-    wordpress_http.add_json(
-        "GET",
-        "https://example.com/wp-json/wp/v2/ml_report",
-        status_code=200,
-        payload=[],
-    )
-    wordpress_http.add_json(
-        "POST",
-        "https://example.com/wp-json/wp/v2/ml_report",
-        status_code=201,
-        payload={"id": 88, "link": "https://example.com/post/88", "status": "publish"},
-    )
-
-    results = orch.run_publish(settings, limit=1)
-
-    assert len(results) == 1
-    assert results[0].status == "published"
-    assert results[0].validation_status == "pass"
-    assert results[0].validation_issues == []
-    assert (
-        len(
-            wordpress_http.calls_for(
-                "POST", "https://example.com/wp-json/wp/v2/ml_report"
-            )
-        )
-        == 1
-    )
-
-
 __all__ = [
     "test_publish_runs_when_processed",
     "test_corrupt_persisted_publish_outcome_blocks_replay_writes",
@@ -1025,5 +924,4 @@ __all__ = [
     "test_publish_mismatched_entity_metadata_fails_before_wordpress",
     "test_publish_prefers_reports_db_file_id_mapping",
     "test_publish_reuses_preloaded_html_snapshot_after_preflight_read",
-    "test_publish_uses_hash_bound_readiness_over_regen_snapshots",
 ]

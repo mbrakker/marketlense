@@ -63,6 +63,10 @@ def _config(
     validation = publish.setdefault("validation", {})
     assert isinstance(validation, dict)
     validation["policy"] = validation_policy
+    run_budget = publish.setdefault("run_budget", {})
+    assert isinstance(run_budget, dict)
+    run_budget["enabled"] = True
+    run_budget["max_wordpress_writes"] = 0
     control = payload.setdefault("workflow_control", {})
     assert isinstance(control, dict)
     if autonomous:

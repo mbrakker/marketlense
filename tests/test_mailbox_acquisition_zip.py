@@ -236,17 +236,43 @@ def test_zip_limits_accept_exact_values_and_reject_limit_plus_one(tmp_path):
     ]
     assert list((tmp_path / "mailbox" / "pdf-count-plus-one").glob("*.pdf")) == []
 
-    ratio_exact_payload = _zip_bytes(
-        [("ratio.pdf", b"A" * 1600)], compression=zipfile.ZIP_DEFLATED
-    )
+    ratio_exact_size = 1600
+    for _ in range(32):
+        ratio_exact_payload = _zip_bytes(
+            [("ratio.pdf", b"A" * ratio_exact_size)],
+            compression=zipfile.ZIP_DEFLATED,
+        )
+        with ZipFile(BytesIO(ratio_exact_payload)) as archive:
+            member = archive.infolist()[0]
+            next_ratio_exact_size = int(
+                member.compress_size * _MAX_ZIP_COMPRESSION_RATIO
+            )
+            if member.file_size == next_ratio_exact_size:
+                break
+        ratio_exact_size = next_ratio_exact_size
+    else:
+        pytest.fail("could not create a ZIP member at the exact compression limit")
     with ZipFile(BytesIO(ratio_exact_payload)) as archive:
         member = archive.infolist()[0]
         assert member.file_size / member.compress_size == _MAX_ZIP_COMPRESSION_RATIO
     ratio_exact = _materialize(tmp_path, ratio_exact_payload, message_id="ratio-exact")
     assert ratio_exact.failures == []
+    ratio_over_limit_size = ratio_exact_size + 1
+    for _ in range(32):
+        ratio_over_limit_payload = _zip_bytes(
+            [("ratio.pdf", b"A" * ratio_over_limit_size)],
+            compression=zipfile.ZIP_DEFLATED,
+        )
+        with ZipFile(BytesIO(ratio_over_limit_payload)) as archive:
+            member = archive.infolist()[0]
+            if member.file_size / member.compress_size > _MAX_ZIP_COMPRESSION_RATIO:
+                break
+        ratio_over_limit_size += 1
+    else:
+        pytest.fail("could not create a ZIP member above the compression limit")
     ratio_plus_one = _materialize(
         tmp_path,
-        _zip_bytes([("ratio.pdf", b"A" * 1601)], compression=zipfile.ZIP_DEFLATED),
+        ratio_over_limit_payload,
         message_id="ratio-plus-one",
     )
     assert [failure.error_code for failure in ratio_plus_one.failures] == [

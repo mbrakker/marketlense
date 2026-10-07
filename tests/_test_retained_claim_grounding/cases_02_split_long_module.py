@@ -742,7 +742,9 @@ def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
     }
     settings = _settings(tmp_path)
     initial_store = FakeAnalysisStore()
-    initial_client = FakeOpenAI(grounding_payload=output)
+    initial_client = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []}, grounding_payload=output
+    )
     validate_report(
         request,
         settings,
@@ -759,7 +761,9 @@ def test_initial_and_regenerated_candidate_share_grounding_identity_and_cache(
         previous_artifacts=request.artifacts,
     )
     candidate_store = FakeAnalysisStore()
-    candidate_client = FakeOpenAI(grounding_payload=output)
+    candidate_client = FakeOpenAI(
+        semantic_payload={"metrics": [], "quotes": []}, grounding_payload=output
+    )
     validate_report(
         candidate_request,
         settings,
