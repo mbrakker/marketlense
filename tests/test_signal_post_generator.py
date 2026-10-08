@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict, replace
+
 import pytest
 
 from src.contracts.cross_report_analysis import (
@@ -8,17 +10,17 @@ from src.contracts.cross_report_analysis import (
     CrossReportProjectedDataReadResponse,
     CrossReportSourceReportCandidate,
 )
-from src.contracts.wordpress_entities import (
-    WORDPRESS_ENTITY_SCHEMA_VERSION,
-    SignalPostGenerationRequest,
-    SignalPublishProjection,
-)
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidate,
     SignalCandidateGroup,
     SignalCandidateReadResponse,
     SignalCandidateSourceRef,
+)
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationRequest,
+    SignalPublishProjection,
 )
 from src.generators.signal_post_generator import build_signal_publish_projection
 from src.utils.errors import AppError
@@ -179,7 +181,9 @@ def _frozen_candidate_data(
                 source_metadata={"pages": [2]},
             ),
         ],
-        raw_source_context={"fixture": "frozen publication manifest"},
+        raw_source_context={
+            "evidence": [asdict(item) for item in _projected_data().evidence]
+        },
         validation_status="approved",
         validation_notes=["source_backed"],
         group_id="signal-group:ai-commerce",
@@ -340,6 +344,25 @@ def test_frozen_multi_source_signal_uses_exact_manifest_and_replays_idempotently
     assert first.evidence_ids == ["report-a:claim:1", "report-b:claim:1"]
 
 
+def test_frozen_signal_rejects_stored_manifest_changes(run_context) -> None:
+    candidate_data = _frozen_candidate_data()
+    changed_group = replace(
+        candidate_data.groups[0], candidate_ids=["signal-candidate:changed"]
+    )
+    changed_candidate_data = replace(candidate_data, groups=[changed_group])
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(),
+            _projected_data(),
+            run_context,
+            candidate_data=changed_candidate_data,
+        )
+
+    assert exc_info.value.code == "signal_frozen_manifest_changed"
+    assert exc_info.value.retryable is False
+
+
 @pytest.mark.parametrize(
     ("mutation", "expected_code"),
     [
@@ -382,6 +405,33 @@ def test_frozen_signal_rejects_sources_or_evidence_removed_after_approval(
     assert exc_info.value.retryable is False
 
 
+def test_frozen_signal_rejects_evidence_changed_after_approval(run_context) -> None:
+    projected_data = _projected_data()
+    changed_evidence = replace(
+        projected_data.evidence[0],
+        text="Changed projected evidence with the same frozen evidence ID.",
+    )
+    changed_projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=projected_data.schema_version,
+        source_candidates=projected_data.source_candidates,
+        evidence=[changed_evidence, *projected_data.evidence[1:]],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(),
+            changed_projected_data,
+            run_context,
+            candidate_data=_frozen_candidate_data(),
+        )
+
+    assert exc_info.value.code == "signal_frozen_manifest_evidence_changed"
+    assert exc_info.value.retryable is False
+
+
 def test_frozen_signal_rejects_request_filters_incompatible_with_group(
     run_context,
 ) -> None:
@@ -394,6 +444,30 @@ def test_frozen_signal_rejects_request_filters_incompatible_with_group(
         )
 
     assert exc_info.value.code == "signal_frozen_manifest_filter_mismatch"
+    assert exc_info.value.retryable is False
+
+
+def test_frozen_signal_rejects_topic_category_relationship_changes(run_context) -> None:
+    projected_data = _projected_data()
+    changed_source = replace(
+        projected_data.source_candidates[0],
+        category_ids=["different-category"],
+        category_labels=["Different Category"],
+    )
+    changed_projected_data = replace(
+        projected_data,
+        source_candidates=[changed_source, *projected_data.source_candidates[1:]],
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(category_filters=[]),
+            changed_projected_data,
+            run_context,
+            candidate_data=_frozen_candidate_data(),
+        )
+
+    assert exc_info.value.code == "signal_frozen_manifest_topic_category_changed"
     assert exc_info.value.retryable is False
 
 

@@ -7,6 +7,10 @@ from dataclasses import asdict
 
 import pytest
 
+from src.contracts.cross_report_analysis import (
+    CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+    CrossReportProjectedDataReadResponse,
+)
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidate,
@@ -16,10 +20,16 @@ from src.contracts.signal_candidates import (
     SignalCandidateStoreRequest,
     SignalCandidateStoreResponse,
 )
+from src.contracts.wordpress_entities import (
+    WORDPRESS_ENTITY_SCHEMA_VERSION,
+    SignalPostGenerationRequest,
+)
+from src.generators.signal_post_generator import build_signal_publish_projection
 from src.services.analytics_store_service import (
     read_signal_candidates,
     upsert_signal_candidates,
 )
+from src.utils.errors import AppError
 
 
 def _source_ref(evidence_id: str) -> SignalCandidateSourceRef:
@@ -213,3 +223,134 @@ def test_signal_candidate_store_removes_stale_rows_for_same_extraction_request(
     assert [asdict(item)["candidate_id"] for item in readback.candidates] == [
         new_candidate.candidate_id
     ]
+
+
+@pytest.mark.integration
+def test_legacy_signal_candidate_group_migrates_to_held_and_cannot_generate(
+    tmp_path,
+    run_context,
+) -> None:
+    db_path = str(tmp_path / "legacy-signals.sqlite")
+    candidate = _candidate(
+        "signal-candidate:theme-ai:legacy",
+        group_id="signal-group:theme-ai:legacy",
+    )
+    group = _group("signal-group:theme-ai:legacy", candidate.candidate_id)
+    upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id=group.extraction_request_id,
+            candidates=[candidate],
+            groups=[group],
+        ),
+        run_context,
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DROP TABLE signal_candidate_groups")
+        conn.execute(
+            "DELETE FROM schema_migration_ledger "
+            "WHERE database_key='reports_db' "
+            "AND migration_id='reports_db_030_add_signal_publication_manifest'"
+        )
+        conn.execute(
+            "UPDATE schema_version SET current_version=29 "
+            "WHERE database_key='reports_db'"
+        )
+        conn.execute(
+            """
+            CREATE TABLE signal_candidate_groups (
+              group_id TEXT PRIMARY KEY,
+              extraction_request_id TEXT NOT NULL,
+              stable_key TEXT NOT NULL,
+              title TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              support_level TEXT NOT NULL,
+              candidate_ids_json TEXT NOT NULL,
+              source_report_ids_json TEXT NOT NULL,
+              evidence_ids_json TEXT NOT NULL,
+              caveats_json TEXT NOT NULL,
+              raw_group_context_json TEXT NOT NULL,
+              validation_status TEXT NOT NULL,
+              schema_version TEXT NOT NULL,
+              generated_at_utc TEXT NOT NULL,
+              created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+              updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO signal_candidate_groups(
+              group_id, extraction_request_id, stable_key, title, summary,
+              support_level, candidate_ids_json, source_report_ids_json,
+              evidence_ids_json, caveats_json, raw_group_context_json,
+              validation_status, schema_version, generated_at_utc
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                group.group_id,
+                group.extraction_request_id,
+                group.stable_key,
+                group.title,
+                group.summary,
+                group.support_level,
+                json.dumps(group.candidate_ids),
+                json.dumps(group.source_report_ids),
+                json.dumps(group.evidence_ids),
+                json.dumps(group.caveats),
+                json.dumps(group.raw_group_context),
+                group.validation_status,
+                group.schema_version,
+                group.generated_at_utc,
+            ),
+        )
+        conn.commit()
+
+    readback = read_signal_candidates(
+        SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id=group.extraction_request_id,
+            candidate_ids=[candidate.candidate_id],
+            group_ids=[group.group_id],
+            validation_statuses=["approved"],
+            limit=1,
+        ),
+        run_context,
+    )
+
+    assert readback.groups[0].publication_status == "held"
+    assert (
+        readback.groups[0].publication_hold_reason
+        == "signal_publication_manifest_legacy"
+    )
+    request = SignalPostGenerationRequest(
+        schema_version=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        request_id="legacy-signal-generation",
+        topic="AI commerce",
+        candidate_group_id=group.group_id,
+        extraction_request_id=group.extraction_request_id,
+        candidate_ids=[candidate.candidate_id],
+        source_report_ids=list(group.source_report_ids),
+        evidence_ids=list(group.evidence_ids),
+        topic_ids=list(group.topic_ids),
+        source_category_ids=dict(group.source_category_ids),
+    )
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            request,
+            CrossReportProjectedDataReadResponse(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                source_candidates=[],
+                evidence=[],
+                raw_metrics=[],
+                content_hashes={},
+                excluded_report_counts={},
+            ),
+            run_context,
+            candidate_data=readback,
+        )
+
+    assert exc_info.value.code == "signal_publication_manifest_legacy"
+    assert exc_info.value.retryable is False

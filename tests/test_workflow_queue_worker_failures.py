@@ -203,7 +203,7 @@ def test_report_pipeline_terminal_outcome_preserves_typed_failure_code(
             "signal_generation.v1",
             SignalGenerationPayload(),
             "dead_letter",
-            "workflow_queue_signal_generation_input_incomplete",
+            "signal_frozen_manifest_incomplete",
         ),
         (
             "briefing_generation",

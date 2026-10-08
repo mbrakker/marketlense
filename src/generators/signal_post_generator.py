@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import logging
+from dataclasses import asdict
 
 from src.contracts.cross_report_analysis import (
     CrossReportEvidenceReference,
@@ -486,6 +487,73 @@ def _frozen_manifest_inputs(
             context={"candidate_group_id": request.candidate_group_id},
         )
 
+    retained_evidence_by_pair: dict[tuple[str, str], dict[str, object]] = {}
+    for candidate in ordered_candidates:
+        candidate_reference_pairs_for_candidate = {
+            (ref.report_id, ref.evidence_id) for ref in candidate.source_refs
+        }
+        raw_evidence = candidate.raw_source_context.get("evidence")
+        if not isinstance(raw_evidence, list):
+            raise AppError(
+                code="signal_frozen_manifest_evidence_changed",
+                message=(
+                    "Stored Signal candidate no longer retains its approved evidence"
+                ),
+                retryable=False,
+                severity="error",
+                context={"candidate_group_id": request.candidate_group_id},
+            )
+        candidate_evidence_by_pair: dict[tuple[str, str], dict[str, object]] = {}
+        for raw_item in raw_evidence:
+            if not isinstance(raw_item, dict):
+                raise AppError(
+                    code="signal_frozen_manifest_evidence_changed",
+                    message=("Stored Signal candidate evidence manifest is malformed"),
+                    retryable=False,
+                    severity="error",
+                    context={"candidate_group_id": request.candidate_group_id},
+                )
+            pair = (
+                str(raw_item.get("report_id", "")),
+                str(raw_item.get("evidence_id", "")),
+            )
+            if not all(pair) or pair not in candidate_reference_pairs_for_candidate:
+                raise AppError(
+                    code="signal_frozen_manifest_evidence_changed",
+                    message=(
+                        "Stored Signal candidate evidence no longer matches its "
+                        "approved source references"
+                    ),
+                    retryable=False,
+                    severity="error",
+                    context={"candidate_group_id": request.candidate_group_id},
+                )
+            candidate_evidence_by_pair[pair] = raw_item
+        if set(candidate_evidence_by_pair) != candidate_reference_pairs_for_candidate:
+            raise AppError(
+                code="signal_frozen_manifest_evidence_changed",
+                message=(
+                    "Stored Signal candidate evidence no longer matches its "
+                    "approved source references"
+                ),
+                retryable=False,
+                severity="error",
+                context={"candidate_group_id": request.candidate_group_id},
+            )
+        for pair, raw_item in candidate_evidence_by_pair.items():
+            existing = retained_evidence_by_pair.setdefault(pair, raw_item)
+            if existing != raw_item:
+                raise AppError(
+                    code="signal_frozen_manifest_evidence_changed",
+                    message=(
+                        "Stored Signal candidates disagree about their approved "
+                        "evidence"
+                    ),
+                    retryable=False,
+                    severity="error",
+                    context={"candidate_group_id": request.candidate_group_id},
+                )
+
     source_by_report_id = {
         source.report_id: source for source in projected_data.source_candidates
     }
@@ -630,6 +698,20 @@ def _frozen_manifest_inputs(
             severity="error",
             context={"candidate_group_id": request.candidate_group_id},
         )
+    for item in selected_evidence:
+        if retained_evidence_by_pair.get((item.report_id, item.evidence_id)) != asdict(
+            item
+        ):
+            raise AppError(
+                code="signal_frozen_manifest_evidence_changed",
+                message=("Projected Signal evidence changed after candidate approval"),
+                retryable=False,
+                severity="error",
+                context={
+                    "candidate_group_id": request.candidate_group_id,
+                    "evidence_id": item.evidence_id,
+                },
+            )
     return ordered_candidates, group, selected_sources, selected_evidence
 
 

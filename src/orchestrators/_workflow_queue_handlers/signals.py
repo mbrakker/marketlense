@@ -46,7 +46,6 @@ from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
-    SignalCandidateGroup,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -159,6 +158,30 @@ from .shared import (
 )
 
 
+def _signal_candidate_group_manifest_hash(
+    *,
+    extraction_request_id: str,
+    group_id: str,
+    topic: str,
+    candidate_ids: list[str],
+    source_report_ids: list[str],
+    evidence_ids: list[str],
+    topic_ids: list[str],
+    source_category_ids: dict[str, list[str]],
+) -> str:
+    return _digest(
+        "signal-candidate-group-manifest.v1",
+        extraction_request_id,
+        group_id,
+        topic,
+        *candidate_ids,
+        *source_report_ids,
+        *evidence_ids,
+        *topic_ids,
+        json.dumps(source_category_ids, sort_keys=True, separators=(",", ":")),
+    )
+
+
 def _signal_candidate_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
@@ -249,21 +272,6 @@ def _signal_candidate_handler(
             publication_hold_reason_counts.get(reason, 0) + 1
         )
 
-    def _manifest_hash(group: SignalCandidateGroup) -> str:
-        return _digest(
-            "signal-candidate-group-manifest.v1",
-            group.extraction_request_id,
-            group.group_id,
-            group.topic,
-            *group.candidate_ids,
-            *group.source_report_ids,
-            *group.evidence_ids,
-            *group.topic_ids,
-            json.dumps(
-                group.source_category_ids, sort_keys=True, separators=(",", ":")
-            ),
-        )
-
     downstream = [
         WorkflowJobSubmission(
             schema_version="1.0",
@@ -284,7 +292,16 @@ def _signal_candidate_handler(
                     for report_id, category_ids in group.source_category_ids.items()
                 },
                 input_reference=app.signal_store_db or app.reports_db,
-                input_content_hash=_manifest_hash(group),
+                input_content_hash=_signal_candidate_group_manifest_hash(
+                    extraction_request_id=group.extraction_request_id,
+                    group_id=group.group_id,
+                    topic=group.topic,
+                    candidate_ids=group.candidate_ids,
+                    source_report_ids=group.source_report_ids,
+                    evidence_ids=group.evidence_ids,
+                    topic_ids=group.topic_ids,
+                    source_category_ids=group.source_category_ids,
+                ),
                 processing_version=payload.processing_version,
                 attributes={
                     "config_path": config_path,
@@ -306,7 +323,16 @@ def _signal_candidate_handler(
                 "signal-generation",
                 outcome.extraction_request_id,
                 group.group_id,
-                _manifest_hash(group),
+                _signal_candidate_group_manifest_hash(
+                    extraction_request_id=group.extraction_request_id,
+                    group_id=group.group_id,
+                    topic=group.topic,
+                    candidate_ids=group.candidate_ids,
+                    source_report_ids=group.source_report_ids,
+                    evidence_ids=group.evidence_ids,
+                    topic_ids=group.topic_ids,
+                    source_category_ids=group.source_category_ids,
+                ),
             ),
             deduplication_scope="signal-candidate-group",
             root_workflow_id=job.root_workflow_id or job.job_id,
@@ -327,7 +353,19 @@ def _signal_candidate_handler(
             output_reference=f"signal-candidates:{outcome.extraction_request_id}",
             output_content_hash=_digest(
                 outcome.extraction_request_id,
-                *[_manifest_hash(group) for group in outcome.batch.groups],
+                *[
+                    _signal_candidate_group_manifest_hash(
+                        extraction_request_id=group.extraction_request_id,
+                        group_id=group.group_id,
+                        topic=group.topic,
+                        candidate_ids=group.candidate_ids,
+                        source_report_ids=group.source_report_ids,
+                        evidence_ids=group.evidence_ids,
+                        topic_ids=group.topic_ids,
+                        source_category_ids=group.source_category_ids,
+                    )
+                    for group in outcome.batch.groups
+                ],
             ),
             execution_plan_hash=job.execution_plan_hash,
             output_verified=outcome.status == "stored",
@@ -411,19 +449,53 @@ def _signal_generation_handler(
     """Build a retained deterministic Signal package, then queue card rendering."""
 
     assert isinstance(payload, SignalGenerationPayload)
-    if not payload.candidate_group_id or not payload.frozen_evidence_manifest:
+    missing_manifest_fields = [
+        field_name
+        for field_name, value in (
+            ("candidate_group_id", payload.candidate_group_id),
+            ("frozen_evidence_manifest", payload.frozen_evidence_manifest),
+            ("extraction_request_id", payload.extraction_request_id),
+            ("topic", payload.topic),
+            ("candidate_ids", payload.candidate_ids),
+            ("source_report_ids", payload.source_report_ids),
+            ("evidence_ids", payload.evidence_ids),
+            ("topic_ids", payload.topic_ids),
+            ("source_category_ids", payload.source_category_ids),
+            ("input_content_hash", payload.input_content_hash),
+        )
+        if not value
+    ]
+    if missing_manifest_fields:
         raise AppError(
-            code="workflow_queue_signal_generation_input_incomplete",
-            message="Signal generation requires a candidate group and frozen evidence manifest",
+            code="signal_frozen_manifest_incomplete",
+            message="Signal generation requires the complete frozen candidate manifest",
             retryable=False,
+            severity="error",
+            context={"missing_fields": missing_manifest_fields},
+        )
+    expected_manifest_reference = f"signal-candidates:{payload.extraction_request_id}:{payload.candidate_group_id}"
+    expected_manifest_hash = _signal_candidate_group_manifest_hash(
+        extraction_request_id=payload.extraction_request_id,
+        group_id=payload.candidate_group_id,
+        topic=payload.topic,
+        candidate_ids=payload.candidate_ids,
+        source_report_ids=payload.source_report_ids,
+        evidence_ids=payload.evidence_ids,
+        topic_ids=payload.topic_ids,
+        source_category_ids=payload.source_category_ids,
+    )
+    if (
+        payload.frozen_evidence_manifest != expected_manifest_reference
+        or payload.input_content_hash != expected_manifest_hash
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_changed",
+            message="Queued Signal manifest reference or checksum has changed",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": payload.candidate_group_id},
         )
     topic = str(payload.topic or "").strip()
-    if not topic:
-        raise AppError(
-            code="workflow_queue_signal_topic_missing",
-            message="Signal generation requires the candidate group's selected topic",
-            retryable=False,
-        )
     config_path = str(payload.attributes.get("config_path", "")).strip()
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=config_path), ctx)
     projection_result = generate_signal_post_projection(

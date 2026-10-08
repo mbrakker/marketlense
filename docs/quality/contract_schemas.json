@@ -4611,6 +4611,12 @@
         "db_path": {
           "type": "string"
         },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "minimum_projection_status": {
           "enum": [
             "not_projected",
@@ -4626,6 +4632,12 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "tag_filters": {
           "items": {
@@ -38143,6 +38155,12 @@
         "max_signals": {
           "type": "integer"
         },
+        "minimum_evidence_items": {
+          "type": "integer"
+        },
+        "minimum_source_reports": {
+          "type": "integer"
+        },
         "projected_data_request": {
           "$ref": "#/$defs/src.contracts._cross_report_analysis.requests.CrossReportProjectedDataReadRequest"
         },
@@ -38192,12 +38210,35 @@
         "group_id": {
           "type": "string"
         },
+        "publication_hold_reason": {
+          "enum": [
+            "",
+            "signal_grounding_insufficient",
+            "signal_topic_category_relationship_missing",
+            "signal_publication_manifest_legacy"
+          ]
+        },
+        "publication_status": {
+          "enum": [
+            "eligible",
+            "held"
+          ]
+        },
         "raw_group_context": {
           "additionalProperties": {},
           "type": "object"
         },
         "schema_version": {
           "type": "string"
+        },
+        "source_category_ids": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
         },
         "source_report_ids": {
           "items": {
@@ -38221,6 +38262,15 @@
         },
         "title": {
           "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "topic_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "validation_status": {
           "enum": [
@@ -48230,6 +48280,15 @@
     "src.contracts.wordpress_entities.SignalPostGenerationRequest": {
       "additionalProperties": false,
       "properties": {
+        "candidate_group_id": {
+          "type": "string"
+        },
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "category_filters": {
           "items": {
             "type": "string"
@@ -48256,6 +48315,15 @@
             }
           ]
         },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
         "max_evidence_items": {
           "type": "integer"
         },
@@ -48280,6 +48348,21 @@
         "schema_version": {
           "type": "string"
         },
+        "source_category_ids": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "tag_filters": {
           "items": {
             "type": "string"
@@ -48291,6 +48374,12 @@
         },
         "topic": {
           "type": "string"
+        },
+        "topic_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -52882,7 +52971,22 @@
         "candidate_group_id": {
           "type": "string"
         },
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "cohort_id": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
           "type": "string"
         },
         "frozen_evidence_manifest": {
@@ -52911,6 +53015,30 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "source_category_ids": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "source_report_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "topic_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "validation_attempt_number": {
           "type": "integer"

@@ -479,7 +479,7 @@ def test_operational_handlers_reject_incomplete_inputs_before_external_work() ->
         queue_orchestrator._wordpress_publish_handler(
             job, WordPressPublishPayload(entity_type="report"), _ctx()
         )
-    with pytest.raises(AppError, match="selected topic"):
+    with pytest.raises(AppError) as signal_manifest_error:
         queue_orchestrator._signal_generation_handler(
             job,
             SignalGenerationPayload(
@@ -488,6 +488,7 @@ def test_operational_handlers_reject_incomplete_inputs_before_external_work() ->
             ),
             _ctx(),
         )
+    assert signal_manifest_error.value.code == "signal_frozen_manifest_incomplete"
     with pytest.raises(AppError, match="immutable source artifact hash"):
         queue_orchestrator._report_stage_handler(
             resume_from_stage="source_prepared", next_queue="report_selection"
@@ -764,6 +765,30 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
             "max_evidence_items": 1,
         },
     )
+    for altered_payload in (
+        replace(
+            generation_payload,
+            frozen_evidence_manifest="signal-candidates:changed-group",
+        ),
+        replace(generation_payload, input_content_hash="changed-manifest-hash"),
+    ):
+        with pytest.raises(AppError) as exc_info:
+            queue_orchestrator._signal_generation_handler(
+                replace(
+                    _workflow_job(
+                        queue_name="signal_generation",
+                        job_type="signal_generation.v1",
+                    ),
+                    entity_type="signal",
+                    entity_id=altered_payload.candidate_group_id,
+                    input_reference=altered_payload.input_reference,
+                    input_content_hash=altered_payload.input_content_hash,
+                ),
+                altered_payload,
+                _ctx(),
+            )
+        assert exc_info.value.code == "signal_frozen_manifest_changed"
+        assert exc_info.value.retryable is False
     generation_result = queue_orchestrator._signal_generation_handler(
         replace(
             _workflow_job(
