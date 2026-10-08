@@ -1092,6 +1092,10 @@ def render_report_output(
                 preview_png=preview_resp.image_path,
                 tag_acronyms=runtime.settings.html_tag_acronyms,
                 build_provenance=build_provenance,
+                final_crop_dpi=max(
+                    72,
+                    int(getattr(runtime.settings, "final_crop_dpi", 216) or 216),
+                ),
             ),
             runtime.ctx,
         )

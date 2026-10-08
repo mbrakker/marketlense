@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -241,3 +243,54 @@ def test_execute_http_acquisition_fails_when_stream_exceeds_cap(
         retryable=True,
     )
     assert destination_path.exists() is False
+
+
+def test_execute_http_acquisition_preserves_signed_report_url_semantics(
+    run_context,
+) -> None:
+    received_paths: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            received_paths.append(self.path)
+            body = b"%PDF-1.4 local signed-url fixture"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A003
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    signed_path_and_query = (
+        "/Report/Annual%2F2026.pdf?token=A%2FB+Case"
+        "&X-Amz-Signature=AbC%2F+Z.&part=1%26x%3Dy"
+    )
+    requested_url = f"http://127.0.0.1:{server.server_port}{signed_path_and_query}"
+    try:
+        response = service.execute_http_acquisition(
+            request=_request(
+                url=requested_url,
+                policy=HttpAcquisitionResponsePolicy(
+                    schema_version="1.0",
+                    require_success_status=True,
+                    capture_text=False,
+                    capture_binary=True,
+                    capture_content_type_markers=("application/pdf",),
+                    max_body_bytes=4096,
+                ),
+            ),
+            ctx=run_context,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert response.request_url == requested_url
+    assert received_paths == [signed_path_and_query]
+    assert response.body_bytes == b"%PDF-1.4 local signed-url fixture"

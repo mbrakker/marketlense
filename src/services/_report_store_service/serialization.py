@@ -299,6 +299,9 @@ def _parse_confirmation_evidence(
             final_page_url=str(parsed.get("final_page_url") or final_page_url).strip(),
             confirmation_score=int(parsed.get("confirmation_score") or 0),
             signal_labels=clean_string_list(parsed.get("signal_labels") or []),
+            submission_confirmed_at_utc=str(
+                parsed.get("submission_confirmed_at_utc") or ""
+            ).strip(),
         )
     except (TypeError, ValueError):
         return _empty_confirmation_evidence(final_page_url=final_page_url)

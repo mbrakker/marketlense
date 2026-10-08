@@ -282,6 +282,13 @@ def _incompatible_submission_fields(
         existing_payload = json.loads(existing.payload_json)
     except (TypeError, json.JSONDecodeError):
         existing_payload = None
+    if queue_name == "source_ingest" and isinstance(existing_payload, dict):
+        # Acquisition route is provenance only; identical content and processing
+        # identity must remain idempotent when another route finds the same PDF.
+        for payload in (existing_payload, payload_data):
+            attributes = payload.get("attributes")
+            if isinstance(attributes, dict):
+                attributes.pop("acquisition_route", None)
     if not isinstance(existing_payload, dict) or existing_payload != payload_data:
         incompatible.append("payload")
     return incompatible

@@ -110,6 +110,12 @@ class ReportDownloadOrchestratorRequest:
             )
         },
     )
+    source_identity_id: str = field(
+        default="",
+        metadata={
+            "doc": "Stable source identity propagated from the acquisition queue."
+        },
+    )
 
 
 @dataclass(frozen=True)

@@ -1438,6 +1438,9 @@
         "settings": {
           "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "state_db": {
           "type": "string"
         },
@@ -2878,6 +2881,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "submission_confirmed_at_utc": {
+          "type": "string"
         },
         "submit_button_state": {
           "type": "string"
@@ -29437,6 +29443,70 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_utils.CropPublicationProofRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "expected_image_sha256": {
+          "type": "string"
+        },
+        "image_path": {
+          "type": "string"
+        },
+        "item_type": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "qa_sidecar_path": {
+          "type": "string"
+        },
+        "render_dpi": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "image_path",
+        "qa_sidecar_path",
+        "candidate_id",
+        "page",
+        "item_type",
+        "render_dpi",
+        "expected_image_sha256"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_utils.CropPublicationProofResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "accepted",
+        "reason"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_utils.PdfEofCheckRequest": {
       "additionalProperties": false,
       "properties": {
@@ -35609,6 +35679,9 @@
         "file_id": {
           "type": "string"
         },
+        "final_crop_dpi": {
+          "type": "integer"
+        },
         "out_dir": {
           "type": "string"
         },
@@ -39066,6 +39139,9 @@
         "provider_cursor": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -39096,10 +39172,16 @@
         "selected_message_id": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
         "status": {
+          "type": "string"
+        },
+        "submission_confirmed_at_utc": {
           "type": "string"
         },
         "updated_at_utc": {
@@ -39128,6 +39210,85 @@
         "error_code",
         "created_at_utc",
         "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestByKeyGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "idempotency_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "idempotency_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestByKeyGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request"
       ],
       "type": "object"
     },
@@ -39253,6 +39414,9 @@
         "idempotency_key": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -39271,10 +39435,16 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
         "state_db": {
+          "type": "string"
+        },
+        "submission_confirmed_at_utc": {
           "type": "string"
         }
       },
@@ -52281,6 +52451,9 @@
           "type": "string"
         },
         "schema_version": {
+          "type": "string"
+        },
+        "source_identity_id": {
           "type": "string"
         },
         "source_url": {

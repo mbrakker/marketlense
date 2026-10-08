@@ -44,6 +44,11 @@ from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
+from src.contracts.state import (
+    MailDeliveryRequest,
+    MailDeliveryRequestByKeyGetRequest,
+    MailDeliveryRequestGetRequest,
+)
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
@@ -117,7 +122,10 @@ from src.orchestrators.publish_orchestrator import publish_cross_report_package
 from src.orchestrators.publisher_inventory_orchestrator import (
     run_publisher_inventory_discovery,
 )
-from src.orchestrators.report_download_orchestrator import run_report_download
+from src.orchestrators.report_download_orchestrator import (
+    resolve_deferred_delivery_email,
+    run_report_download,
+)
 from src.orchestrators.report_pipeline_orchestrator import run_report_pipeline
 from src.orchestrators.signal_candidate_orchestrator import (
     run_signal_candidate_extraction,
@@ -128,7 +136,7 @@ from src.orchestrators.signal_post_orchestrator import (
 from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
     sync_wordpress_intelligence_projection,
 )
-from src.services import analytics_store_service
+from src.services import analytics_store_service, state_service
 from src.services.config_service import (
     build_ingest_settings,
     load_browser_download_settings,
@@ -146,6 +154,10 @@ from src.services.workflow_queue_service import (
 )
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
+from src.utils.idempotency import (
+    legacy_mail_delivery_request_idempotency_key,
+    mail_delivery_request_idempotency_key,
+)
 from src.utils.wp_auth import build_auth_header
 
 from .shared import WorkflowQueueHandlerResult, _digest
@@ -235,31 +247,76 @@ def _report_acquisition_handler(
     delivery_email = payload.delivery_email_reference or str(
         payload.attributes.get("delivery_email", "")
     )
-    result = run_report_download(
-        ReportDownloadOrchestratorRequest(
-            schema_version="1.0",
-            url=payload.source_url,
-            settings=load_browser_download_settings(
-                ConfigLoadRequest(schema_version="1.0", path=""), ctx
-            ),
-            state_db=app.state_db,
-            reports_db=app.reports_db,
-            delivery_email=delivery_email or None,
-            publisher_insights_url=str(
-                payload.attributes.get("publisher_insights_url", "")
-            )
-            or None,
-            publisher_google_folder=str(
-                payload.attributes.get("publisher_google_folder", "")
-            )
-            or None,
-            report_title=payload.report_title,
-            publisher_name=payload.publisher_name,
-            mailbox_settings=load_mailbox_acquisition_settings(
-                ConfigLoadRequest(schema_version="1.0", path=""), ctx
-            ),
-            mail_delivery_generation_id=job.root_workflow_id or job.job_id,
+    download_request = ReportDownloadOrchestratorRequest(
+        schema_version="1.0",
+        url=payload.source_url,
+        settings=load_browser_download_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
         ),
+        state_db=app.state_db,
+        reports_db=app.reports_db,
+        delivery_email=delivery_email or None,
+        publisher_insights_url=str(payload.attributes.get("publisher_insights_url", ""))
+        or None,
+        publisher_google_folder=str(
+            payload.attributes.get("publisher_google_folder", "")
+        )
+        or None,
+        report_title=payload.report_title,
+        publisher_name=payload.publisher_name,
+        publisher_id=payload.publisher_id,
+        source_identity_id=payload.source_identity_id,
+        mailbox_settings=load_mailbox_acquisition_settings(
+            ConfigLoadRequest(schema_version="1.0", path=""), ctx
+        ),
+        mail_delivery_generation_id=job.root_workflow_id or job.job_id,
+    )
+    delivery_email = resolve_deferred_delivery_email(download_request)
+    generation_id = job.root_workflow_id or job.job_id
+    if delivery_email:
+        request_key = mail_delivery_request_idempotency_key(
+            generation_id=generation_id,
+            source_url=payload.source_url,
+            delivery_email=delivery_email,
+            source_identity_id=payload.source_identity_id,
+        )
+        existing_request = state_service.get_mail_delivery_request_by_key(
+            MailDeliveryRequestByKeyGetRequest(
+                schema_version="1.0",
+                state_db=app.state_db,
+                idempotency_key=request_key,
+            ),
+            ctx,
+        ).request
+        if existing_request is None:
+            existing_request = state_service.get_mail_delivery_request_by_key(
+                MailDeliveryRequestByKeyGetRequest(
+                    schema_version="1.0",
+                    state_db=app.state_db,
+                    idempotency_key=legacy_mail_delivery_request_idempotency_key(
+                        generation_id=generation_id,
+                        source_url=payload.source_url,
+                        delivery_email=delivery_email,
+                    ),
+                ),
+                ctx,
+            ).request
+        if existing_request is not None:
+            mailbox_child = build_mailbox_delivery_submission(
+                job, payload, None, existing_request
+            )
+            return WorkflowQueueHandlerResult(
+                result=WorkflowStageResult(
+                    output_reference=existing_request.source_url,
+                    output_content_hash=_digest(existing_request.source_url),
+                    execution_plan_hash=job.execution_plan_hash,
+                    output_verified=False,
+                    summary={"outcome": "email_requested", "replayed": True},
+                ),
+                downstream=[mailbox_child],
+            )
+    result = run_report_download(
+        download_request,
         ctx=ctx,
     )
     artifact = result.downloaded_file_path or result.onsite_capture_path or ""
@@ -288,7 +345,30 @@ def _report_acquisition_handler(
         source_hash = child.payload.source_content_hash
         children = [child]
     elif result.outcome in {"email_requested", "email_required"}:
-        children = [build_mailbox_delivery_submission(job, payload, result)]
+        if result.outcome == "email_required":
+            raise AppError(
+                code="workflow_queue_mail_submission_unconfirmed",
+                message="Mailbox work requires a verified email submission",
+                retryable=False,
+            )
+        request_id = str(result.mail_delivery_request_id or "").strip()
+        if not request_id.isdecimal():
+            raise AppError(
+                code="workflow_queue_mail_delivery_identity_missing",
+                message="Verified email submission has no durable request identity",
+                retryable=False,
+            )
+        durable_request = state_service.get_mail_delivery_request(
+            MailDeliveryRequestGetRequest(
+                schema_version="1.0",
+                state_db=app.state_db,
+                request_id=int(request_id),
+            ),
+            ctx,
+        ).request
+        children = [
+            build_mailbox_delivery_submission(job, payload, result, durable_request)
+        ]
     else:
         raise AppError(
             code="workflow_queue_acquisition_no_verified_artifact",
@@ -310,19 +390,28 @@ def _report_acquisition_handler(
 def build_mailbox_delivery_submission(
     job: WorkflowJob,
     payload: ReportAcquisitionPayload,
-    result: ReportDownloadOrchestratorResult,
+    result: ReportDownloadOrchestratorResult | None,
+    request: MailDeliveryRequest,
 ) -> WorkflowJobSubmission:
     """Build a mailbox child only from the persisted verified submission."""
-    if result.outcome == "email_required":
+    if result is not None and result.outcome == "email_required":
         raise AppError(
             code="workflow_queue_mail_submission_unconfirmed",
             message="Mailbox work requires a verified email submission",
             retryable=False,
         )
-    request_id = str(result.mail_delivery_request_id or "").strip()
-    watermark = str(result.mail_delivery_requested_after_utc or "").strip()
+    request_id = (
+        str(result.mail_delivery_request_id or "").strip()
+        if result is not None
+        else str(request.request_id)
+    )
+    watermark = (
+        str(result.mail_delivery_requested_after_utc or "").strip()
+        if result is not None
+        else request.requested_after_utc
+    )
     if (
-        result.outcome != "email_requested"
+        (result is not None and result.outcome != "email_requested")
         or not request_id.isdecimal()
         or not watermark
     ):
@@ -335,30 +424,43 @@ def build_mailbox_delivery_submission(
                 "watermark_present": bool(watermark),
             },
         )
+    if (
+        request.request_id != int(request_id)
+        or request.requested_after_utc != watermark
+        or request.submission_confirmed_at_utc != watermark
+        or not request.source_identity_id
+        or not request.publisher_id
+        or request.status not in {"pending", "succeeded"}
+        or request.source_identity_id != payload.source_identity_id
+    ):
+        raise AppError(
+            code="workflow_queue_mail_delivery_identity_mismatch",
+            message="Mailbox job identity does not match the persisted submission",
+            retryable=False,
+        )
     return WorkflowJobSubmission(
         schema_version="1.0",
         queue_name="mailbox_delivery",
         job_type="mailbox_delivery.v1",
         payload=MailboxDeliveryPayload(
-            schema_version="2.0",
+            schema_version="3.0",
             delivery_request_id=request_id,
-            source_url=payload.source_url,
-            publisher_id=payload.publisher_id,
-            report_title=payload.report_title,
+            source_url=request.source_url,
+            source_identity_id=request.source_identity_id,
+            publisher_id=request.publisher_id,
+            report_title=request.report_title,
             request_watermark=watermark,
             retry_policy_version="mailbox-v1",
-            input_reference=payload.source_url,
-            input_content_hash=payload.input_content_hash
-            or _digest(payload.source_url),
+            input_reference=request.source_url,
+            input_content_hash=_digest(request.source_url),
             processing_version=payload.processing_version,
             validation_run_id=payload.validation_run_id,
             cohort_id=payload.cohort_id,
             validation_attempt_number=payload.validation_attempt_number,
             validation_parent_attempt_number=payload.validation_parent_attempt_number,
             attributes={
-                "publisher_name": payload.publisher_name,
-                "delivery_email": payload.delivery_email_reference
-                or str(payload.attributes.get("delivery_email", "")),
+                "publisher_name": request.publisher_name,
+                "delivery_email": request.delivery_email,
             },
         ),
         idempotency_key=f"{request_id}:mailbox:v1",
@@ -367,8 +469,8 @@ def build_mailbox_delivery_submission(
         parent_job_id=job.job_id,
         trigger_event_id=job.trigger_event_id or job.job_id,
         correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
-        publisher_id=payload.publisher_id,
-        source_identity_id=payload.source_identity_id,
+        publisher_id=request.publisher_id,
+        source_identity_id=request.source_identity_id,
         budget_profile="mailbox_delivery",
     )
 
@@ -378,9 +480,11 @@ def _mailbox_delivery_handler(
 ) -> WorkflowQueueHandlerResult:
     assert isinstance(payload, MailboxDeliveryPayload)
     if (
-        payload.schema_version != "2.0"
+        payload.schema_version != "3.0"
         or not payload.delivery_request_id.isdecimal()
         or not payload.request_watermark.strip()
+        or not payload.source_identity_id.strip()
+        or not payload.publisher_id.strip()
     ):
         raise AppError(
             code="workflow_queue_mailbox_request_identity_missing",
@@ -395,13 +499,39 @@ def _mailbox_delivery_handler(
             retryable=False,
         )
     app = load_settings(ConfigLoadRequest(schema_version="1.0", path=""), ctx)
+    durable_request = state_service.get_mail_delivery_request(
+        MailDeliveryRequestGetRequest(
+            schema_version="1.0",
+            state_db=app.state_db,
+            request_id=int(payload.delivery_request_id),
+        ),
+        ctx,
+    ).request
+    delivery_email = str(payload.attributes.get("delivery_email", "")).strip()
+    identity_matches = (
+        durable_request.request_id == int(payload.delivery_request_id)
+        and durable_request.requested_after_utc == payload.request_watermark
+        and durable_request.submission_confirmed_at_utc == payload.request_watermark
+        and durable_request.source_url == payload.source_url
+        and durable_request.report_title == payload.report_title
+        and durable_request.publisher_id == payload.publisher_id
+        and durable_request.publisher_name == publisher_name
+        and durable_request.delivery_email == delivery_email
+        and durable_request.source_identity_id == payload.source_identity_id
+    )
+    if not identity_matches:
+        raise AppError(
+            code="workflow_queue_mailbox_request_identity_mismatch",
+            message="Mailbox payload does not match its persisted submission",
+            retryable=False,
+        )
     result = run_mail_report_acquisition(
         MailReportAcquisitionRequest(
             schema_version="1.0",
-            source_url=payload.source_url,
-            report_title=payload.report_title,
-            publisher_name=publisher_name,
-            delivery_email=str(payload.attributes.get("delivery_email", "")) or None,
+            source_url=durable_request.source_url,
+            report_title=durable_request.report_title,
+            publisher_name=durable_request.publisher_name,
+            delivery_email=durable_request.delivery_email or None,
             reports_db=app.reports_db,
             mailbox_settings=load_mailbox_acquisition_settings(
                 ConfigLoadRequest(schema_version="1.0", path=""), ctx
@@ -409,10 +539,8 @@ def _mailbox_delivery_handler(
             browser_download_settings=load_browser_download_settings(
                 ConfigLoadRequest(schema_version="1.0", path=""), ctx
             ),
-            requested_after_utc=payload.request_watermark or None,
-            workflow_request_id=int(payload.delivery_request_id or 0)
-            if payload.delivery_request_id.isdigit()
-            else 0,
+            requested_after_utc=durable_request.requested_after_utc or None,
+            workflow_request_id=durable_request.request_id,
         ),
         ctx=ctx,
     )
@@ -428,10 +556,10 @@ def _mailbox_delivery_handler(
         VerifiedAcquisitionIngestHandoffRequest(
             reports_db=app.reports_db,
             source_artifact_reference=artifact,
-            source_url=payload.source_url,
-            report_title=payload.report_title,
-            publisher_name=publisher_name,
-            publisher_id=payload.publisher_id,
+            source_url=durable_request.source_url,
+            report_title=durable_request.report_title,
+            publisher_name=durable_request.publisher_name,
+            publisher_id=durable_request.publisher_id,
             acquisition_route=(
                 result.acquisition_result_taxonomy or "mailbox_delivery"
             ),

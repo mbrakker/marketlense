@@ -89,14 +89,22 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         imap_mailbox="INBOX",
     )
 
-    deps = ReportDownloadDependencies(
-        download_report_with_browser_use=lambda req, ctx: replace(
-            _result(url="https://example.com/report", used_route_hint=False, path=None),
-            outcome="email_requested",
-            route_status="verified",
-            blocked_reason=None,
-            blocked_reason_detail=None,
+    browser_result = replace(
+        _result(url="https://example.com/report", used_route_hint=False, path=None),
+        outcome="email_requested",
+        route_status="verified",
+        blocked_reason=None,
+        blocked_reason_detail=None,
+    )
+    browser_result = replace(
+        browser_result,
+        confirmation_evidence=replace(
+            browser_result.confirmation_evidence,
+            submission_confirmed_at_utc="2026-07-04T10:59:00Z",
         ),
+    )
+    deps = ReportDownloadDependencies(
+        download_report_with_browser_use=lambda req, ctx: browser_result,
         get_publisher_download_route=lambda req, ctx: None,
         record_publisher_download_route=lambda req, ctx: None,
         file_md5=lambda req, ctx: FileHashResponse(
@@ -135,7 +143,9 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         reports_db=settings.reports_db,
         delivery_email="ops@example.com",
         report_title="Retail Trends 2026",
+        publisher_id="publisher-1",
         publisher_name="Example Publisher",
+        source_identity_id="source-identity-1",
         mailbox_settings=mailbox_settings,
         mail_delivery_generation_id="workflow-generation-1",
     )
@@ -156,12 +166,12 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
     )
     acquisition_payload = ReportAcquisitionPayload(
         source_identity_id="source-identity-1",
-        source_url="https://example.com/report",
-        publisher_id="publisher-1",
-        report_title="Retail Trends 2026",
-        publisher_name="Example Publisher",
-        delivery_email_reference="ops@example.com",
-        input_reference="https://example.com/report",
+        source_url="https://stale.example/incorrect",
+        publisher_id="stale-publisher",
+        report_title="Stale retry title",
+        publisher_name="Stale publisher",
+        delivery_email_reference="stale@example.com",
+        input_reference="https://stale.example/incorrect",
         input_content_hash="source-hash",
     )
     mailbox_submission = build_mailbox_delivery_submission(
@@ -170,6 +180,7 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         ),
         acquisition_payload,
         response,
+        due.requests[0],
     )
     with pytest.raises(AppError) as unconfirmed_error:
         build_mailbox_delivery_submission(
@@ -179,10 +190,21 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
             ),
             acquisition_payload,
             replace(response, outcome="email_required"),
+            due.requests[0],
         )
+    replayed_submission = build_mailbox_delivery_submission(
+        _workflow_job(
+            queue_name="report_acquisition", job_type="report_acquisition.v1"
+        ),
+        acquisition_payload,
+        None,
+        due.requests[0],
+    )
+    assert replayed_submission.idempotency_key == mailbox_submission.idempotency_key
+    assert replayed_submission.payload == mailbox_submission.payload
     mailbox_job, created = enqueue_workflow_job(
         settings.state_db,
-        mailbox_submission,
+        replayed_submission,
         run_context,
     )
     replayed_mailbox_job, replay_created = enqueue_workflow_job(
@@ -211,11 +233,30 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
     assert due.requests[0].delivery_email == "ops@example.com"
     assert due.requests[0].status == "pending"
     assert due.requests[0].route_family == "browser_email_form"
-    assert response.mail_delivery_request_id == due.requests[0].request_id
+    assert due.requests[0].publisher_id == "publisher-1"
+    assert due.requests[0].source_identity_id == "source-identity-1"
+    assert due.requests[0].submission_confirmed_at_utc == "2026-07-04T10:59:00Z"
+    assert due.requests[0].requested_after_utc == "2026-07-04T10:59:00Z"
+    assert response.mail_delivery_request_id == str(due.requests[0].request_id)
     assert response.mail_delivery_requested_after_utc == (
         due.requests[0].requested_after_utc
     )
-    assert mailbox_submission.payload.schema_version == "2.0"
+    assert mailbox_submission.payload.schema_version == "3.0"
+    assert mailbox_submission.payload.source_url == due.requests[0].source_url
+    assert mailbox_submission.payload.publisher_id == due.requests[0].publisher_id
+    assert mailbox_submission.payload.report_title == due.requests[0].report_title
+    assert (
+        mailbox_submission.payload.source_identity_id
+        == due.requests[0].source_identity_id
+    )
+    assert (
+        mailbox_submission.payload.attributes["publisher_name"]
+        == due.requests[0].publisher_name
+    )
+    assert (
+        mailbox_submission.payload.attributes["delivery_email"]
+        == due.requests[0].delivery_email
+    )
     assert unconfirmed_error.value.code == "workflow_queue_mail_submission_unconfirmed"
     assert created is True
     assert replay_created is False
@@ -241,8 +282,34 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         ).fetchone()
     assert resource_row == ("", "provisional")
 
+    missing_timestamp_result = replace(
+        browser_result,
+        confirmation_evidence=replace(
+            browser_result.confirmation_evidence,
+            submission_confirmed_at_utc="",
+        ),
+    )
+    with pytest.raises(AppError) as missing_timestamp_error:
+        run_report_download(
+            replace(
+                download_request,
+                mail_delivery_generation_id="workflow-generation-missing-time",
+            ),
+            ctx=run_context,
+            dependencies=replace(
+                deps,
+                download_report_with_browser_use=lambda req, ctx: (
+                    missing_timestamp_result
+                ),
+            ),
+        )
+    assert (
+        missing_timestamp_error.value.code
+        == "mail_delivery_submission_timestamp_missing"
+    )
+
     retry_response = run_report_download(
-        download_request,
+        replace(download_request, report_title="Changed retry title"),
         ctx=run_context,
         dependencies=deps,
     )
@@ -261,6 +328,13 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         run_context,
     )
     assert retry_response.mail_delivery_request_id == response.mail_delivery_request_id
+    replayed_request = next(
+        item
+        for item in all_due.requests
+        if item.request_id == int(response.mail_delivery_request_id or 0)
+    )
+    assert replayed_request.report_title == "Retail Trends 2026"
+    assert replayed_request.requested_after_utc == "2026-07-04T10:59:00Z"
     assert new_submission_response.mail_delivery_request_id != (
         response.mail_delivery_request_id
     )
@@ -408,19 +482,24 @@ def test_run_report_download_uses_mailbox_account_for_unattended_email_submissio
         imap_mailbox="INBOX",
     )
     browser_requests = []
+    browser_result = replace(
+        _result(url="https://example.com/report", used_route_hint=False, path=None),
+        outcome="email_requested",
+        route_status="verified",
+        blocked_reason=None,
+        blocked_reason_detail=None,
+    )
+    browser_result = replace(
+        browser_result,
+        confirmation_evidence=replace(
+            browser_result.confirmation_evidence,
+            submission_confirmed_at_utc="2026-07-04T10:59:00Z",
+        ),
+    )
 
     deps = ReportDownloadDependencies(
         download_report_with_browser_use=lambda req, ctx: (
-            browser_requests.append(req)
-            or replace(
-                _result(
-                    url="https://example.com/report", used_route_hint=False, path=None
-                ),
-                outcome="email_requested",
-                route_status="verified",
-                blocked_reason=None,
-                blocked_reason_detail=None,
-            )
+            browser_requests.append(req) or browser_result
         ),
         get_publisher_download_route=lambda req, ctx: None,
         record_publisher_download_route=lambda req, ctx: None,
@@ -460,7 +539,9 @@ def test_run_report_download_uses_mailbox_account_for_unattended_email_submissio
             state_db=settings.state_db,
             reports_db=settings.reports_db,
             report_title="Retail Trends 2026",
+            publisher_id="publisher-1",
             publisher_name="Example Publisher",
+            source_identity_id="source-identity-1",
             mailbox_settings=mailbox_settings,
         ),
         ctx=run_context,
@@ -600,17 +681,27 @@ def test_run_report_download_preflights_mailbox_before_email_form_submission(
     assert exc_info.value.code == "mailbox_imap_credentials_missing"
 
 
+@pytest.mark.parametrize(
+    "schema_version,request_id,watermark",
+    [
+        ("1.0", "source-identity-only", ""),
+        ("2.0", "1", "2026-07-04T11:00:00Z"),
+    ],
+)
 def test_mailbox_queue_holds_legacy_jobs_without_verified_request_identity(
     tmp_path: Path,
     run_context,
+    schema_version: str,
+    request_id: str,
+    watermark: str,
 ) -> None:
     state_db = str(tmp_path / "state.sqlite")
     payload = MailboxDeliveryPayload(
-        schema_version="1.0",
-        delivery_request_id="source-identity-only",
+        schema_version=schema_version,
+        delivery_request_id=request_id,
         source_url="https://example.com/report",
         report_title="Retail Trends 2026",
-        request_watermark="",
+        request_watermark=watermark,
         input_reference="https://example.com/report",
         input_content_hash="source-hash",
         attributes={"publisher_name": "Example Publisher"},

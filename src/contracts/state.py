@@ -119,7 +119,9 @@ class SourceQuarantineRecord:
     validator_version: str = field(metadata={"doc": "Integrity validator version."})
     status: str = field(metadata={"doc": "active, cleared, or superseded."})
     size_bytes: int = field(metadata={"doc": "Observed source byte size."})
-    failure_code: str = field(metadata={"doc": "Deterministic structural failure code."})
+    failure_code: str = field(
+        metadata={"doc": "Deterministic structural failure code."}
+    )
     next_operator_action: str = field(
         metadata={"doc": "Bounded revalidation or replacement guidance."}
     )
@@ -138,10 +140,14 @@ class SourceQuarantineRecord:
 
 @dataclass(frozen=True)
 class SourceQuarantineGetRequest:
-    schema_version: str = field(metadata={"doc": "Quarantine lookup request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine lookup request schema version."}
+    )
     state_db: str = field(metadata={"doc": "Canonical state database."})
     source_file_id: str = field(metadata={"doc": "Canonical source-file identity."})
-    content_checksum: str = field(metadata={"doc": "Observed upstream or local checksum."})
+    content_checksum: str = field(
+        metadata={"doc": "Observed upstream or local checksum."}
+    )
     validator_version: str = field(
         default="pdf-integrity-v1", metadata={"doc": "Required validator version."}
     )
@@ -149,7 +155,9 @@ class SourceQuarantineGetRequest:
 
 @dataclass(frozen=True)
 class SourceQuarantineGetResponse:
-    schema_version: str = field(metadata={"doc": "Quarantine lookup response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine lookup response schema version."}
+    )
     record: SourceQuarantineRecord | None = field(
         default=None, metadata={"doc": "Matching durable record, if present."}
     )
@@ -157,7 +165,9 @@ class SourceQuarantineGetResponse:
 
 @dataclass(frozen=True)
 class SourceQuarantineUpsertRequest:
-    schema_version: str = field(metadata={"doc": "Quarantine upsert request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine upsert request schema version."}
+    )
     state_db: str = field(metadata={"doc": "Canonical state database."})
     record: SourceQuarantineRecord = field(
         metadata={"doc": "Deterministically validated quarantine observation."}
@@ -166,14 +176,20 @@ class SourceQuarantineUpsertRequest:
 
 @dataclass(frozen=True)
 class SourceQuarantineUpsertResponse:
-    schema_version: str = field(metadata={"doc": "Quarantine upsert response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine upsert response schema version."}
+    )
     record: SourceQuarantineRecord = field(metadata={"doc": "Stored record."})
-    created: bool = field(metadata={"doc": "Whether an active record was newly created."})
+    created: bool = field(
+        metadata={"doc": "Whether an active record was newly created."}
+    )
 
 
 @dataclass(frozen=True)
 class SourceQuarantineListRequest:
-    schema_version: str = field(metadata={"doc": "Quarantine list request schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine list request schema version."}
+    )
     state_db: str = field(metadata={"doc": "Canonical state database."})
     statuses: List[str] = field(default_factory=list)
     limit: int = field(default=100)
@@ -181,7 +197,9 @@ class SourceQuarantineListRequest:
 
 @dataclass(frozen=True)
 class SourceQuarantineListResponse:
-    schema_version: str = field(metadata={"doc": "Quarantine list response schema version."})
+    schema_version: str = field(
+        metadata={"doc": "Quarantine list response schema version."}
+    )
     records: List[SourceQuarantineRecord] = field(default_factory=list)
 
 
@@ -582,13 +600,17 @@ class StateArtifactAcquisitionCacheRecordRequest:
         metadata={"doc": "Normalized report landing-page URL for this artifact."}
     )
     publisher_scope: str = field(
-        metadata={"doc": "Normalized publisher host scope used to prevent cross-publisher reuse."}
+        metadata={
+            "doc": "Normalized publisher host scope used to prevent cross-publisher reuse."
+        }
     )
     report_title: str = field(
         metadata={"doc": "Normalized report title used in the acquisition cache key."}
     )
     final_artifact_url: str = field(
-        metadata={"doc": "Resolved final artifact URL observed when the cache was recorded."}
+        metadata={
+            "doc": "Resolved final artifact URL observed when the cache was recorded."
+        }
     )
     artifact_path: str = field(
         metadata={"doc": "Local filesystem path of the validated artifact."}
@@ -601,7 +623,9 @@ class StateArtifactAcquisitionCacheRecordRequest:
     route_family: str = field(
         metadata={"doc": "Route family that acquired the artifact."}
     )
-    outcome: str = field(metadata={"doc": "Acquisition outcome that produced the artifact."})
+    outcome: str = field(
+        metadata={"doc": "Acquisition outcome that produced the artifact."}
+    )
     downloaded_mime_type: str = field(
         metadata={"doc": "Validated artifact MIME type when known."}
     )
@@ -610,7 +634,9 @@ class StateArtifactAcquisitionCacheRecordRequest:
         metadata={"doc": "Prompt/schema/cache version used by the cache key."}
     )
     expires_at_utc: str = field(
-        metadata={"doc": "UTC timestamp after which this artifact must be revalidated from source."}
+        metadata={
+            "doc": "UTC timestamp after which this artifact must be revalidated from source."
+        }
     )
 
 
@@ -638,7 +664,9 @@ class StateArtifactAcquisitionCacheResponse:
     size_bytes: int = field(metadata={"doc": "Artifact size in bytes."})
     cache_version: str = field(metadata={"doc": "Prompt/schema/cache version."})
     expires_at_utc: str = field(metadata={"doc": "UTC cache expiry timestamp."})
-    updated_at: int = field(metadata={"doc": "Unix timestamp when the cache was stored."})
+    updated_at: int = field(
+        metadata={"doc": "Unix timestamp when the cache was stored."}
+    )
 
 
 @dataclass(frozen=True)
@@ -749,6 +777,18 @@ class MailDeliveryRequest:
     error_code: str = field(metadata={"doc": "Last typed error code, if any."})
     created_at_utc: str = field(metadata={"doc": "UTC creation timestamp."})
     updated_at_utc: str = field(metadata={"doc": "UTC update timestamp."})
+    publisher_id: str = field(
+        default="", metadata={"doc": "Stable publisher identity for downstream ingest."}
+    )
+    source_identity_id: str = field(
+        default="", metadata={"doc": "Stable source identity for downstream ingest."}
+    )
+    submission_confirmed_at_utc: str = field(
+        default="",
+        metadata={
+            "doc": "Verified browser submission timestamp; legacy rows are empty."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -777,6 +817,53 @@ class MailDeliveryRequestUpsertRequest:
     route_history_id: str = field(
         default="",
         metadata={"doc": "Optional browser route-history identifier for provenance."},
+    )
+    publisher_id: str = field(
+        default="", metadata={"doc": "Stable publisher identity."}
+    )
+    source_identity_id: str = field(
+        default="", metadata={"doc": "Stable source identity."}
+    )
+    submission_confirmed_at_utc: str = field(
+        default="", metadata={"doc": "Verified browser submission timestamp."}
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestGetRequest:
+    schema_version: str = field(metadata={"doc": "Mail request get schema version."})
+    state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
+    request_id: int = field(metadata={"doc": "Durable mail request identifier."})
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestGetResponse:
+    schema_version: str = field(metadata={"doc": "Mail request get response version."})
+    request: MailDeliveryRequest = field(
+        metadata={"doc": "Authoritative durable request row."}
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestByKeyGetRequest:
+    schema_version: str = field(
+        metadata={"doc": "Mail request key lookup schema version."}
+    )
+    state_db: str = field(metadata={"doc": "SQLite path for mail-delivery state."})
+    idempotency_key: str = field(
+        metadata={"doc": "Stable logical submission identity."}
+    )
+
+
+@dataclass(frozen=True)
+class MailDeliveryRequestByKeyGetResponse:
+    schema_version: str = field(
+        metadata={"doc": "Mail request key lookup response version."}
+    )
+    request: MailDeliveryRequest | None = field(
+        metadata={
+            "doc": "Existing authoritative request, or none for a new submission."
+        }
     )
 
 

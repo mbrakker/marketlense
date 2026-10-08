@@ -6,6 +6,8 @@ from src.services._state_service.artifact_cache import (
     record_artifact_acquisition_cache,
 )
 from src.services._state_service.mail_delivery import (
+    get_mail_delivery_request,
+    get_mail_delivery_request_by_key,
     list_due_mail_delivery_requests,
     list_mailbox_candidate_rejections,
     mark_mail_delivery_request_attempt,
@@ -60,6 +62,8 @@ __all__ = [
     "get_artifact_acquisition_cache",
     "get_by_md5",
     "get_ingest_cursor",
+    "get_mail_delivery_request",
+    "get_mail_delivery_request_by_key",
     "get_publish",
     "get_source_quarantine",
     "get_report_download_route",

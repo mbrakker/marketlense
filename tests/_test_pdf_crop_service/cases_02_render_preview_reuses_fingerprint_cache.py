@@ -232,6 +232,49 @@ def test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun(
     assert any(event.get("event") == "crop_region_cache_hit" for event in events)
 
 
+def test_publication_strict_cache_reuses_accepted_crop_without_rerender(
+    tmp_path, caplog
+) -> None:
+    pdf_path = tmp_path / "strict-cache-warm.pdf"
+    out_dir = tmp_path / "out"
+    _build_basic_pdf(pdf_path)
+    request = CropRequest(
+        schema_version="1.0",
+        pdf_path=pdf_path.as_posix(),
+        out_dir=out_dir.as_posix(),
+        report_name="report",
+        items=[
+            CropItem(
+                id="strict-warm-figure",
+                type="figure",
+                score=91.0,
+                page=0,
+                bbox=(60, 90, 360, 280),
+            )
+        ],
+        subdir="slices",
+        mode="publication_strict",
+        dpi=216,
+    )
+
+    first = crop_regions(request, _ctx())
+    artifact_path = out_dir / first.paths[0]
+    original_mtime = artifact_path.stat().st_mtime_ns
+    assert first.outcomes[0].accepted is True
+    assert first.outcomes[0].dpi == 216
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+    second = crop_regions(request, _ctx())
+
+    assert second.paths == first.paths
+    assert second.outcomes[0].accepted is True
+    assert second.outcomes[0].dpi == 216
+    assert second.outcomes[0].image_sha256 == first.outcomes[0].image_sha256
+    assert artifact_path.stat().st_mtime_ns == original_mtime
+    events = _events(caplog, "market_lense.pdf_service.crop")
+    assert any(event.get("event") == "crop_region_cache_hit" for event in events)
+
+
 def test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_path(
     tmp_path,
 ) -> None:
@@ -458,6 +501,7 @@ __all__ = [
     "test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun",
     "test_render_page_for_crop_refine_invalidates_stale_artifact_version",
     "test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun",
+    "test_publication_strict_cache_reuses_accepted_crop_without_rerender",
     "test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_path",
     "test_publication_strict_cache_regenerates_tampered_qa_diagnostics",
     "test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics",

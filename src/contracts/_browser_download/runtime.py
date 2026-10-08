@@ -195,6 +195,12 @@ class BrowserDownloadConfirmationEvidence:
             "doc": "Stable labels describing which confirmation signals contributed to the score."
         },
     )
+    submission_confirmed_at_utc: str = field(
+        default="",
+        metadata={
+            "doc": "UTC time when the browser path verified successful email submission; empty otherwise."
+        },
+    )
 
 
 @dataclass(frozen=True)

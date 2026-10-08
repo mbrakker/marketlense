@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -11,6 +11,10 @@ from urllib.parse import urlsplit
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.contracts.report_assets import RenderRequest
+from src.contracts.pdf_utils import CropPublicationProofRequest
+from src.contracts.run_context import RunContext
+from src.services.pdf_service import verify_crop_publication_proof
+from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
 
 from .normalization import (
@@ -108,11 +112,19 @@ def _suppress_repeated_insight_advisory_items(
             ]
 
 
+logger = logging.getLogger("market_lense.render_service")
+
+
 def _build_figure_slides(
-    data: dict[str, Any], out_dir: Path, report_title: str
+    data: dict[str, Any],
+    out_dir: Path,
+    report_title: str,
+    ctx: RunContext | None = None,
+    expected_final_dpi: int = 0,
 ) -> list[dict[str, Any]]:
     figure_assets = _coerce_list(data.get("_figure_assets"))
     slides: list[dict[str, Any]] = []
+    rejection_reasons: Counter[str] = Counter()
     cards_by_candidate = {
         _s(candidate_card.get("candidate_id")): candidate_card
         for raw_card in _coerce_list(
@@ -144,23 +156,54 @@ def _build_figure_slides(
         card = cards_by_candidate.get(candidate_id)
         image_path = _s(asset.get("image_path"))
         page = asset.get("page")
-        if (
-            asset.get("crop_qa_accepted") is not True
-            or asset.get("crop_quality_profile") != "publication_strict"
-            or not _s(asset.get("crop_qa_sidecar_path")).strip()
-            or int(asset.get("crop_dpi") or 0) <= 0
-            or not re.fullmatch(r"[0-9a-fA-F]{64}", _s(asset.get("crop_image_sha256")))
-            or not _figure_image_matches_hash(
-                image_path=image_path,
-                out_dir=out_dir,
-                expected_sha256=_s(asset.get("crop_image_sha256")),
+        sidecar_path = _s(asset.get("crop_qa_sidecar_path")).strip()
+        try:
+            dpi = int(asset.get("crop_dpi") or 0)
+            source_page = int(page) if page is not None else -1
+        except (TypeError, ValueError):
+            dpi = 0
+            source_page = -1
+        rejection_reason = ""
+        if not candidate_id:
+            rejection_reason = "candidate_id_missing"
+        elif asset.get("crop_qa_accepted") is not True:
+            rejection_reason = "selection_qa_rejected"
+        elif asset.get("crop_quality_profile") != "publication_strict":
+            rejection_reason = "crop_profile_not_strict"
+        elif not sidecar_path:
+            rejection_reason = "qa_sidecar_path_missing"
+        elif dpi <= 0:
+            rejection_reason = "crop_dpi_missing"
+        elif expected_final_dpi <= 0:
+            rejection_reason = "configured_crop_dpi_missing"
+        elif dpi != expected_final_dpi:
+            rejection_reason = "configured_crop_dpi_mismatch"
+        elif not image_path:
+            rejection_reason = "crop_image_path_missing"
+        elif card is None:
+            rejection_reason = "insight_card_unavailable"
+        elif source_page < 0 or str(source_page) != str(card.get("source_page")):
+            rejection_reason = "source_page_mismatch"
+        else:
+            proof = verify_crop_publication_proof(
+                CropPublicationProofRequest(
+                    schema_version="1.0",
+                    output_dir=str(out_dir),
+                    image_path=image_path,
+                    qa_sidecar_path=sidecar_path,
+                    candidate_id=candidate_id,
+                    page=source_page,
+                    item_type=_s(asset.get("kind")),
+                    render_dpi=dpi,
+                    expected_image_sha256=_s(asset.get("crop_image_sha256")),
+                )
             )
-            or not image_path
-            or card is None
-            or page is None
-            or str(page) != str(card.get("source_page"))
-        ):
+            if not proof.accepted:
+                rejection_reason = proof.reason
+        if rejection_reason:
+            rejection_reasons[rejection_reason] += 1
             continue
+        assert card is not None
         index = len(slides) + 1
         is_primary = not slides
         caption = _s(card.get("caption"))
@@ -180,7 +223,7 @@ def _build_figure_slides(
                     caption=caption,
                 ),
                 "caption": caption,
-                "page": int(page),
+                "page": source_page,
                 "kind": _s(asset.get("kind")),
                 "candidate_id": candidate_id,
                 "is_primary": is_primary,
@@ -194,30 +237,27 @@ def _build_figure_slides(
                 ),
             }
         )
+    if figure_assets and rejection_reasons and ctx is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="render_publication_crops_filtered",
+                module=logger.name,
+                fields={
+                    "candidate_count": len(figure_assets),
+                    "accepted_count": len(slides),
+                    "rejection_reasons": dict(rejection_reasons),
+                },
+            )
+        )
     return slides
 
 
-def _figure_image_matches_hash(
-    *, image_path: str, out_dir: Path, expected_sha256: str
-) -> bool:
-    root = out_dir.resolve()
-    candidate = Path(str(image_path or ""))
-    if candidate.is_absolute():
-        return False
-    try:
-        resolved = (root / candidate).resolve()
-        resolved.relative_to(root)
-        digest = hashlib.sha256()
-        with resolved.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except (OSError, ValueError):
-        return False
-    return digest.hexdigest() == str(expected_sha256 or "").strip().casefold()
-
-
 def _build_render_view(
-    request: RenderRequest, tag_acronym_map: dict[str, str]
+    request: RenderRequest,
+    tag_acronym_map: dict[str, str],
+    ctx: RunContext | None = None,
 ) -> dict[str, Any]:
     data = request.data
     out_dir = Path(request.out_dir)
@@ -314,7 +354,7 @@ def _build_render_view(
     snapshot_tags = _coerce_list(data.get("taxonomy"))
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
     figure_slides = (
-        _build_figure_slides(data, out_dir, report_title)
+        _build_figure_slides(data, out_dir, report_title, ctx, request.final_crop_dpi)
         if figure_section_enabled
         else []
     )

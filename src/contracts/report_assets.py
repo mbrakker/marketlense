@@ -785,6 +785,12 @@ class RenderRequest:
             )
         },
     )
+    final_crop_dpi: int = field(
+        default=0,
+        metadata={
+            "doc": "Configured final publication-crop DPI; zero means the renderer has no trusted expected DPI."
+        },
+    )
 
 
 @dataclass(frozen=True)

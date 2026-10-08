@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -25,6 +26,7 @@ from src.utils.coercion import (
     normalize_optional_bool_signal,
 )
 from src.utils.errors import AppError
+from src.utils.clock import utc_now_seconds_z
 from src.utils.logging import log_event
 
 from ._artifact import ARTIFACT_LOGGER_NAME
@@ -527,6 +529,11 @@ def finalize_browser_report_download_result(
         onsite_capture_path=onsite_capture_path,
         onsite_completeness_status=onsite_completeness_status,
     )
+    if outcome == "email_requested":
+        confirmation_evidence = replace(
+            confirmation_evidence,
+            submission_confirmed_at_utc=utc_now_seconds_z(),
+        )
     terminal_evidence = _build_terminal_evidence(
         agent_result=agent_result,
         route_steps=route_steps,

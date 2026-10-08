@@ -9,6 +9,10 @@ from src.contracts.state import (
     MailboxCandidateRejectionListResponse,
     MailboxCandidateRejectionRecordRequest,
     MailDeliveryRequest,
+    MailDeliveryRequestByKeyGetRequest,
+    MailDeliveryRequestByKeyGetResponse,
+    MailDeliveryRequestGetRequest,
+    MailDeliveryRequestGetResponse,
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestListDueResponse,
     MailDeliveryRequestMarkAttemptRequest,
@@ -44,25 +48,15 @@ def upsert_mail_delivery_request(
         )
     )
     with _state_conn(request.state_db, ctx) as conn:
-        before = conn.execute(
-            "SELECT id FROM mail_delivery_requests WHERE idempotency_key=?",
-            (request.idempotency_key,),
-        ).fetchone()
-        conn.execute(
+        insert = conn.execute(
             """
             INSERT INTO mail_delivery_requests(
               idempotency_key, source_url, report_title, publisher_name,
               delivery_email, requested_after_utc, route_family, route_history_id,
-              status, next_attempt_after_utc, created_at_utc, updated_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
-            ON CONFLICT(idempotency_key) DO UPDATE SET
-              source_url=excluded.source_url,
-              report_title=excluded.report_title,
-              publisher_name=excluded.publisher_name,
-              delivery_email=excluded.delivery_email,
-              route_family=excluded.route_family,
-              route_history_id=excluded.route_history_id,
-              updated_at_utc=excluded.updated_at_utc
+              status, next_attempt_after_utc, created_at_utc, updated_at_utc,
+              publisher_id, source_identity_id, submission_confirmed_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(idempotency_key) DO NOTHING
             """,
             (
                 request.idempotency_key,
@@ -76,6 +70,9 @@ def upsert_mail_delivery_request(
                 request.requested_after_utc,
                 now,
                 now,
+                request.publisher_id,
+                request.source_identity_id,
+                request.submission_confirmed_at_utc,
             ),
         )
         row = conn.execute(
@@ -85,7 +82,7 @@ def upsert_mail_delivery_request(
     response = MailDeliveryRequestUpsertResponse(
         schema_version="1.0",
         request=_row_to_mail_delivery_request(row),
-        created=before is None,
+        created=insert.rowcount == 1,
     )
     logger.info(
         log_event(
@@ -102,6 +99,56 @@ def upsert_mail_delivery_request(
         )
     )
     return response
+
+
+def get_mail_delivery_request(
+    request: MailDeliveryRequestGetRequest,
+    ctx: RunContext,
+) -> MailDeliveryRequestGetResponse:
+    if request.request_id <= 0:
+        raise AppError(
+            code="mail_delivery_request_id_invalid",
+            message="Mail delivery request ID must be a positive integer",
+            retryable=False,
+        )
+    with _state_conn(request.state_db, ctx) as conn:
+        row = conn.execute(
+            "SELECT * FROM mail_delivery_requests WHERE id=?",
+            (request.request_id,),
+        ).fetchone()
+    if row is None:
+        raise AppError(
+            code="mail_delivery_request_not_found",
+            message="Mail delivery request does not exist",
+            retryable=False,
+            context={"request_id": request.request_id},
+        )
+    return MailDeliveryRequestGetResponse(
+        schema_version="1.0",
+        request=_row_to_mail_delivery_request(row),
+    )
+
+
+def get_mail_delivery_request_by_key(
+    request: MailDeliveryRequestByKeyGetRequest,
+    ctx: RunContext,
+) -> MailDeliveryRequestByKeyGetResponse:
+    key = str(request.idempotency_key or "").strip()
+    if not key:
+        raise AppError(
+            code="mail_delivery_idempotency_key_missing",
+            message="Mail delivery request idempotency key is required",
+            retryable=False,
+        )
+    with _state_conn(request.state_db, ctx) as conn:
+        row = conn.execute(
+            "SELECT * FROM mail_delivery_requests WHERE idempotency_key=?",
+            (key,),
+        ).fetchone()
+    return MailDeliveryRequestByKeyGetResponse(
+        schema_version="1.0",
+        request=_row_to_mail_delivery_request(row) if row is not None else None,
+    )
 
 
 def list_due_mail_delivery_requests(
@@ -391,6 +438,9 @@ def _row_to_mail_delivery_request(row) -> MailDeliveryRequest:
         error_code=str(row[17] or ""),
         created_at_utc=str(row[18] or ""),
         updated_at_utc=str(row[19] or ""),
+        publisher_id=str(row[20] or ""),
+        source_identity_id=str(row[21] or ""),
+        submission_confirmed_at_utc=str(row[22] or ""),
     )
 
 

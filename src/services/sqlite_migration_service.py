@@ -106,6 +106,7 @@ from ._sqlite_migration.state import (
     _state_db_012_create_queue_publication_and_briefing_state,
     _state_db_013_create_supervisor_lease,
     _state_db_014_create_source_quarantine,
+    _state_db_016_add_verified_mail_request_identity,
 )
 from ._sqlite_migration.ui_runs import (
     _UI_RUN_DEAD_LETTER_ACTIONS_TABLE_SQL,

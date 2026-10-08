@@ -651,6 +651,20 @@ def _state_db_015_create_performance_telemetry(conn: sqlite3.Connection) -> None
     )
 
 
+def _state_db_016_add_verified_mail_request_identity(conn: sqlite3.Connection) -> None:
+    for column_name in (
+        "publisher_id",
+        "source_identity_id",
+        "submission_confirmed_at_utc",
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="mail_delivery_requests",
+            column_name=column_name,
+            column_type="TEXT NOT NULL DEFAULT ''",
+        )
+
+
 _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
     _MigrationSpec(
         migration_id="state_db_001_create_base_tables",
@@ -726,5 +740,10 @@ _STATE_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="state_db_015_create_performance_telemetry",
         version=15,
         apply_fn=_state_db_015_create_performance_telemetry,
+    ),
+    _MigrationSpec(
+        migration_id="state_db_016_add_verified_mail_request_identity",
+        version=16,
+        apply_fn=_state_db_016_add_verified_mail_request_identity,
     ),
 )

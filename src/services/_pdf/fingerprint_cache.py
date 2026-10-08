@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from dataclasses import asdict, dataclass
@@ -11,6 +12,10 @@ from typing import Any
 
 import pymupdf as fitz
 
+from src.contracts.pdf_utils import (
+    CropPublicationProofRequest,
+    CropPublicationProofResponse,
+)
 from src.utils.cache_utils import sha256_json
 
 FINGERPRINT_RECORD_SCHEMA_VERSION = "2.0"
@@ -216,6 +221,122 @@ def write_artifact_sidecar(
         if temp_path.exists():
             temp_path.unlink()
     return sidecar_path.as_posix()
+
+
+def verify_crop_publication_proof(
+    request: CropPublicationProofRequest,
+) -> CropPublicationProofResponse:
+    def rejected(reason: str) -> CropPublicationProofResponse:
+        return CropPublicationProofResponse(
+            schema_version="1.0", accepted=False, reason=reason
+        )
+
+    if request.schema_version != "1.0":
+        return rejected("proof_schema_unsupported")
+    root = Path(request.output_dir)
+    image_rel = Path(request.image_path)
+    qa_rel = Path(request.qa_sidecar_path)
+    if image_rel.is_absolute() or qa_rel.is_absolute():
+        return rejected("proof_path_not_relative")
+    try:
+        root = root.resolve()
+        image_path = (root / image_rel).resolve()
+        qa_path = (root / qa_rel).resolve()
+        image_path.relative_to(root)
+        qa_path.relative_to(root)
+    except (OSError, ValueError):
+        return rejected("proof_path_outside_output")
+    expected_qa_rel = image_rel.with_suffix(image_rel.suffix + ".qa.json")
+    if qa_rel.as_posix() != expected_qa_rel.as_posix():
+        return rejected("qa_sidecar_path_mismatch")
+    if not image_path.is_file():
+        return rejected("crop_image_missing")
+    if not qa_path.is_file():
+        return rejected("qa_sidecar_missing")
+
+    image_sha256 = _file_sha256(image_path)
+    expected_image_sha256 = str(request.expected_image_sha256 or "").strip().casefold()
+    if (
+        not re.fullmatch(r"[0-9a-f]{64}", expected_image_sha256)
+        or image_sha256 != expected_image_sha256
+    ):
+        return rejected("crop_image_hash_mismatch")
+
+    qa_record = _load_sidecar(qa_path)
+    if qa_record is None:
+        return rejected("qa_sidecar_invalid")
+    if qa_record.get("schema_version") != "1.0":
+        return rejected("qa_schema_mismatch")
+    if str(qa_record.get("candidate_id") or "") != request.candidate_id:
+        return rejected("qa_candidate_mismatch")
+    if qa_record.get("page") != request.page:
+        return rejected("qa_page_mismatch")
+    if (
+        str(qa_record.get("candidate_type") or "").casefold()
+        != str(request.item_type or "").casefold()
+    ):
+        return rejected("qa_candidate_type_mismatch")
+    expected_effective_mode = {
+        "chart": "chart_strict",
+        "table": "table_strict",
+    }.get(str(request.item_type or "").casefold(), "publication_strict")
+    if (
+        qa_record.get("mode") != "publication_strict"
+        or qa_record.get("effective_mode") != expected_effective_mode
+    ):
+        return rejected("qa_profile_mismatch")
+    if qa_record.get("render_dpi") != request.render_dpi:
+        return rejected("qa_dpi_mismatch")
+    qa_result = qa_record.get("qa")
+    defects = qa_result.get("defect_labels") if isinstance(qa_result, dict) else None
+    if (
+        qa_record.get("accepted") is not True
+        or not isinstance(qa_result, dict)
+        or qa_result.get("accepted") is not True
+        or not isinstance(defects, list)
+        or defects
+    ):
+        return rejected("qa_not_accepted")
+
+    fingerprint_record = _load_sidecar(_sidecar_path(image_path))
+    if fingerprint_record is None:
+        return rejected("fingerprint_sidecar_missing_or_invalid")
+    if fingerprint_record.get("schema_version") != FINGERPRINT_RECORD_SCHEMA_VERSION:
+        return rejected("fingerprint_schema_mismatch")
+    if (
+        fingerprint_record.get("artifact_kind") != "crop_region"
+        or fingerprint_record.get("artifact_version") != CROP_REGION_ARTIFACT_VERSION
+    ):
+        return rejected("fingerprint_artifact_version_mismatch")
+    if (
+        fingerprint_record.get("output_rel_path") != image_rel.as_posix()
+        or fingerprint_record.get("page") != request.page
+    ):
+        return rejected("fingerprint_artifact_identity_mismatch")
+    actual_qa_sha256 = _file_sha256(qa_path)
+    if (
+        fingerprint_record.get("output_sha256") != image_sha256
+        or fingerprint_record.get("qa_sidecar_sha256") != actual_qa_sha256
+    ):
+        return rejected("fingerprint_content_hash_mismatch")
+    artifact_identity = fingerprint_record.get("artifact_identity")
+    if not isinstance(artifact_identity, str):
+        return rejected("fingerprint_artifact_identity_invalid")
+    try:
+        parsed_identity = json.loads(artifact_identity)
+    except (TypeError, json.JSONDecodeError):
+        return rejected("fingerprint_artifact_identity_invalid")
+    if not isinstance(parsed_identity, dict) or (
+        parsed_identity.get("item_id") != request.candidate_id
+        or str(parsed_identity.get("item_type") or "").casefold()
+        != str(request.item_type or "").casefold()
+        or parsed_identity.get("page") != request.page
+    ):
+        return rejected("fingerprint_artifact_identity_mismatch")
+
+    return CropPublicationProofResponse(
+        schema_version="1.0", accepted=True, reason="verified"
+    )
 
 
 def _sidecar_path(artifact_path: Path) -> Path:

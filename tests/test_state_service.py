@@ -1,4 +1,5 @@
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.state import (
     MailboxCandidateRejectionListRequest,
     MailboxCandidateRejectionRecordRequest,
+    MailDeliveryRequestByKeyGetRequest,
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestMarkAttemptRequest,
     MailDeliveryRequestUpsertRequest,
@@ -43,6 +45,7 @@ from src.services.state_service import (
     get_artifact_acquisition_cache,
     get_by_md5,
     get_ingest_cursor,
+    get_mail_delivery_request_by_key,
     get_report_download_route,
     get_source_quarantine,
     list_due_mail_delivery_requests,
@@ -129,8 +132,8 @@ def test_migration_adds_vector_columns_and_preserves_data(tmp_path: Path) -> Non
     assert resp.last_error is None
     assert resp.openai_file_id == "of_123"
     assert resp.doc_map_summary is None
-    assert schema_version == (15,)
-    assert ledger_count == 15
+    assert schema_version == (16,)
+    assert ledger_count == 16
 
 
 def test_source_quarantine_is_superseded_by_a_verified_replacement(
@@ -763,6 +766,9 @@ def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_st
         requested_after_utc="2026-07-04T11:08:00Z",
         route_family="browser_email_form",
         route_history_id="history-1",
+        publisher_id="publisher-1",
+        source_identity_id="source-1",
+        submission_confirmed_at_utc="2026-07-04T11:08:00Z",
     )
 
     first = upsert_mail_delivery_request(upsert, _ctx())
@@ -771,6 +777,19 @@ def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_st
     assert first.request.request_id == second.request.request_id
     assert first.created is True
     assert second.created is False
+    by_key = get_mail_delivery_request_by_key(
+        MailDeliveryRequestByKeyGetRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            idempotency_key=upsert.idempotency_key,
+        ),
+        _ctx(),
+    )
+    assert by_key.request is not None
+    assert by_key.request.request_id == first.request.request_id
+    assert (
+        by_key.request.submission_confirmed_at_utc == upsert.submission_confirmed_at_utc
+    )
 
     due = list_due_mail_delivery_requests(
         MailDeliveryRequestListDueRequest(
@@ -817,6 +836,42 @@ def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_st
         ).requests
         == []
     )
+
+    completed = mark_mail_delivery_request_attempt(
+        MailDeliveryRequestMarkAttemptRequest(
+            schema_version="1.0",
+            state_db=str(db_path),
+            request_id=first.request.request_id,
+            status="succeeded",
+            next_attempt_after_utc="2026-07-04T11:12:00Z",
+            provider_cursor="imap:106",
+            seen_provider_message_ids=["100", "101", "102"],
+            outcome="downloaded",
+            selected_message_id="102",
+            downloaded_file_path="/reports/retail.pdf",
+            error_code="",
+        ),
+        _ctx(),
+    )
+    replayed = upsert_mail_delivery_request(
+        replace(
+            upsert,
+            report_title="Changed title",
+            requested_after_utc="2026-07-04T11:20:00Z",
+            publisher_id="changed-publisher",
+            source_identity_id="changed-source",
+            submission_confirmed_at_utc="2026-07-04T11:20:00Z",
+        ),
+        _ctx(),
+    )
+
+    assert completed.request.status == "succeeded"
+    assert replayed.created is False
+    assert replayed.request.status == "succeeded"
+    assert replayed.request.report_title == "Retail Trends 2026"
+    assert replayed.request.requested_after_utc == "2026-07-04T11:08:00Z"
+    assert replayed.request.source_identity_id == "source-1"
+    assert replayed.request.submission_confirmed_at_utc == "2026-07-04T11:08:00Z"
 
 
 def test_mailbox_candidate_rejection_persists_sanitized_request_scoped_evidence(

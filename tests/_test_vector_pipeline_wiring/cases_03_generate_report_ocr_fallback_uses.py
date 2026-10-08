@@ -1,6 +1,10 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import pymupdf as fitz
+
+from src.contracts.candidates import Candidate
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -189,10 +193,20 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         }
     )
     pdf_path = tmp_path / "sample.pdf"
-    writer = PdfWriter()
-    writer.add_blank_page(width=72, height=72)
-    with pdf_path.open("wb") as handle:
-        writer.write(handle)
+    document = fitz.open()
+    page = document.new_page(width=420, height=560)
+    page.insert_text((65, 105), "Annual growth by region", fontsize=16)
+    page.draw_line((75, 390), (350, 390), color=(0, 0, 0), width=2)
+    page.draw_line((75, 150), (75, 390), color=(0, 0, 0), width=2)
+    for index, (x, height) in enumerate(((110, 120), (180, 170), (250, 95))):
+        page.draw_rect(
+            fitz.Rect(x, 390 - height, x + 35, 390),
+            color=(0.1, 0.35, 0.7),
+            fill=(0.2, 0.5, 0.85),
+        )
+        page.insert_text((x, 390 - height - 8), f"{50 + index * 10}%", fontsize=9)
+    document.save(pdf_path.as_posix())
+    document.close()
 
     file = DriveFile(
         schema_version="1.0",
@@ -313,7 +327,38 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
     deps = _base_vector_report_dependencies(
         tmp_path,
         extract_best_figure=_extract_best_figure,
-        collect_candidates=lambda req, _ctx: SimpleNamespace(candidates=[]),
+        collect_candidates=lambda req, _ctx: SimpleNamespace(
+            candidates=[
+                Candidate(
+                    schema_version="1.0",
+                    id="chart-1",
+                    kind="chart",
+                    page=0,
+                    bbox=(45.0, 75.0, 385.0, 435.0),
+                    caption="Detected figure caption",
+                    preview_text="Annual growth by region",
+                    meta={"area_frac": 0.2, "text_ratio": 0.2},
+                )
+            ]
+        ),
+        rank_candidates=lambda req, _ctx: SimpleNamespace(
+            results=[
+                SimpleNamespace(
+                    id="chart-1",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
         load_prompt_set=_fake_load_prompt_set,
         render_prompt=_fake_render_prompt,
         openai_chat_json_with_images=_fake_openai_chat_json_with_images,

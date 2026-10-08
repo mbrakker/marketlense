@@ -130,6 +130,22 @@ def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
             if isinstance(declared_schema_version, str):
                 values[field.name] = declared_schema_version
                 continue
+        if field.name in {
+            "bbox",
+            "original_bbox",
+            "refined_bbox",
+            "crop_box",
+            "media_box",
+        }:
+            values[field.name] = (1.0, 2.0, 3.0, 4.0)
+            continue
+        if field.name == "rotation":
+            values[field.name] = 0
+            continue
+        if field.name == "coordinate_transform_version":
+            module = importlib.import_module(contract_cls.__module__)
+            values[field.name] = module.CROP_REFINE_COORDINATE_TRANSFORM_VERSION
+            continue
         if field.name in {"sha256", "identity_sha256"}:
             values[field.name] = "a" * 64
             continue

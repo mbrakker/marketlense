@@ -132,9 +132,13 @@ def test_complete_small_quote_pools_use_verbatim_fast_path(tmp_path, candidate_c
     assert [quote["page"] for quote in payload["quotes_final"]] == [
         candidate["page"] for candidate in candidates
     ]
+    assert [quote["citation"] for quote in payload["quotes_final"]] == [
+        candidate["source"] for candidate in candidates
+    ]
     assert [quote["speaker"] for quote in payload["quotes_final"]] == [
         "Unknown" for _ in candidates
     ]
+    assert payload["family_status"]["quotes"]["status"] == "generated"
     cache = payload["_cache"]
     assert cache["family_reuse"][_QUOTE_FAMILY]["decision"] == "deterministic"
     assert cache["family_reuse"][_QUOTE_FAMILY]["producer"] == (
@@ -162,6 +166,7 @@ def test_complete_empty_quote_pool_is_explicit_abstention_without_model_call(
 
     assert "quotes" not in [call[2] for call in fake_openai.requests]
     assert payload["quotes_final"] == []
+    assert payload["family_status"]["quotes"]["status"] == "abstained"
     assert payload["_cache"]["family_reuse"][_QUOTE_FAMILY]["decision"] == (
         "complete_empty"
     )

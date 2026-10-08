@@ -92,9 +92,11 @@ the supported Windows path length.
 Final figure selection promotes only an accepted `publication_strict` crop
 rendered at the configured final DPI and carrying its QA sidecar and image
 SHA-256. Crop cache entries bind both the image and QA sidecar checksums;
-candidate previews are re-rendered at final DPI before selection. Legacy or
-embedded images without this proof are omitted, and the report renderer checks
-the selected image checksum before displaying it.
+candidate previews are re-rendered at final DPI before selection. The report
+renderer rechecks the fingerprint and QA sidecars, candidate/page/type, image
+checksum, strict profile, and configured final DPI. Missing, changed, or
+mismatched proof omits the figure and records a bounded rejection reason.
+Legacy or embedded images without this proof are omitted.
 Native extracted text remains keyed by the original source MD5 and extraction
 limits. OCR-derived text is keyed by the verified checksum of the rendered OCR
 PDF, extraction limits, and extractor generation; a legacy OCR-text entry
