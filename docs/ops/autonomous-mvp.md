@@ -8,6 +8,53 @@ The autonomous MVP uses the existing durable workflow supervisor and registered
 queue workers. The host controls cadence. Each invocation is one bounded pass;
 the command does not schedule itself or keep a worker loop running.
 
+## Check capabilities before a scheduled pass
+
+Run the profile-aware preflight before enabling or invoking the host cadence:
+
+```powershell
+python -m src.cli capability-preflight --profile autonomous_mvp
+python -m src.cli capability-preflight --profile autonomous_mvp --live
+```
+
+The first command performs local configuration, dependency, prompt, storage,
+queue-budget, and read-only SQLite checks. The second also makes bounded
+read-only checks for configured OpenAI and publisher-discovery OpenRouter model
+metadata, Drive folder identity and access, mailbox login, and WordPress
+authentication, proof metadata, and the post types used by report, briefing,
+and signal publication. Projection readiness also requires `manage_options`
+and the registered read-only route metadata for the projection endpoint. For
+workflows that create Drive child folders or archive artifacts, it also verifies
+the configured credential scope and Drive child-creation capability without
+writing. Publisher-discovery checks are included only when its queue is enabled;
+OpenAI candidate-screening checks
+are included only when that feature is enabled. It never generates with a
+model, reads mailbox messages, writes to Drive or WordPress, or launches a
+browser. Browser readiness loads the canonical installed or vendored browser-use
+runtime and checks browser assets; a separate Playwright package is not
+required. Signal workflows inspect the effective Signal store (`signal_store_db`,
+or `reports_db` when unset), and manual report generation checks the LLM usage
+ledger. The runtime check enforces the repository's Python 3.12 minimum. When
+OCR is enabled for an active workflow, preflight checks its configured OpenAI
+model and prompt namespace; OCR does not require a local Tesseract executable.
+In `--live` mode the preflight also
+checks the configured browser-use OpenAI model when that provider is configured;
+an OpenRouter-only browser fallback is reported as `not_checked` because it has
+no metadata-only probe here. These metadata checks do not make inference calls
+or verify provider billing/quota.
+
+The command uses the queues enabled by the selected profile. A missing optional
+integration does not block an unrelated queue. Required credentials that are
+missing are `blocked`; required external checks skipped without `--live` are
+`not_checked` and make the overall result `degraded`. Retryable external
+failures also produce `degraded`; incompatible local state or invalid required
+configuration produces `blocked`. Exit code `0` means `ready` or
+`not_required`, `2` means `degraded`, and `1` means `blocked`. The command prints
+one redacted JSON report to standard output with the repository SHA, selected
+profile, checked workflows and capabilities, elapsed time, provider-call count,
+and external-write count. Keep that output with the invocation logs when
+recording a scheduled run.
+
 ## Invoke one pass
 
 Select the profile in the process that runs the command, then invoke the

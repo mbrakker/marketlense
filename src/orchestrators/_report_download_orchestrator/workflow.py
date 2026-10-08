@@ -672,7 +672,7 @@ def run_report_download(
         onsite_completeness_status=result.onsite_completeness_status,
         drive_uploads=drive_uploads,
         mail_delivery_request_id=(
-            mail_delivery_request.request_id if mail_delivery_request else None
+            str(mail_delivery_request.request_id) if mail_delivery_request else None
         ),
         mail_delivery_requested_after_utc=(
             mail_delivery_request.requested_after_utc if mail_delivery_request else None

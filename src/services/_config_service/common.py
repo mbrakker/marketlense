@@ -243,7 +243,9 @@ def _resolve_bootstrap_config_path(path: str) -> Path:
     return CONFIG_PATH.resolve()
 
 
-def _iter_config_overlay_paths(config_path: Path) -> list[Path]:
+def _iter_config_overlay_paths(
+    config_path: Path, *, profile_name: str | None = None
+) -> list[Path]:
     if config_path.name != "app.yaml":
         return []
     overlays: list[Path] = []
@@ -253,7 +255,11 @@ def _iter_config_overlay_paths(config_path: Path) -> list[Path]:
     local_overlay = config_path.with_name("app.local.yaml")
     if local_overlay.exists():
         overlays.append(local_overlay)
-    profile = _env_value(CONFIG_PROFILE_ENV_KEY)
+    profile = (
+        _env_value(CONFIG_PROFILE_ENV_KEY)
+        if profile_name is None
+        else str(profile_name).strip()
+    )
     if profile:
         overlays.append(config_path.with_name(f"app.{profile}.yaml"))
     return [candidate for candidate in overlays if candidate.exists()]
@@ -313,12 +319,19 @@ def _load_html_tag_acronyms(path: str) -> list[str]:
     return acronyms
 
 
-def _load_config(path: str, *, include_overlays: bool = True) -> dict[str, Any]:
+def _load_config(
+    path: str,
+    *,
+    include_overlays: bool = True,
+    profile_name: str | None = None,
+) -> dict[str, Any]:
     config_path = Path(path).resolve()
     try:
         payload = _read_yaml_mapping(config_path, label="Config")
         if include_overlays:
-            for overlay_path in _iter_config_overlay_paths(config_path):
+            for overlay_path in _iter_config_overlay_paths(
+                config_path, profile_name=profile_name
+            ):
                 overlay_payload = _read_yaml_mapping(
                     overlay_path, label="Config overlay"
                 )
@@ -421,7 +434,7 @@ def load_model_pricing(request: ConfigLoadRequest, ctx: RunContext) -> dict[str,
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     cost_cfg = _resolve_cost_config(
         data,
         config_path=config_path,
@@ -511,7 +524,7 @@ class _ResolvedAppSettingsLoad:
 
 def _load_config_sections(request: ConfigLoadRequest) -> _ConfigLoadSections:
     config_path = _resolve_bootstrap_config_path(request.path)
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     runtime_base_path = _resolve_runtime_base_path(config_path)
     ingest = data.get("ingest", {}) or {}
     return _ConfigLoadSections(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -196,6 +197,16 @@ def test_verified_acquisition_handoff_preserves_identity_and_deduplicates_conten
     assert first_created is True
     assert duplicate_created is False
     assert duplicate_job.job_id == first_job.job_id
+    changed_compatibility = replace(
+        browser_same_content,
+        payload=replace(
+            browser_same_content.payload,
+            parser_ocr_compatibility_version="parser-ocr.v2",
+        ),
+    )
+    with pytest.raises(AppError) as conflict:
+        enqueue_workflow_job(state_db, changed_compatibility, _ctx())
+    assert conflict.value.code == "workflow_queue_idempotency_conflict"
     assert mailbox_created is True
     assert mailbox_job.job_id != first_job.job_id
 
