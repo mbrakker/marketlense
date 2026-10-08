@@ -1366,6 +1366,9 @@
             }
           ]
         },
+        "mail_delivery_generation_id": {
+          "type": "string"
+        },
         "mailbox_settings": {
           "anyOf": [
             {},
@@ -1540,6 +1543,26 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "mail_delivery_request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mail_delivery_requested_after_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "normalized_url": {
           "type": "string"
@@ -25831,6 +25854,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.mailbox_acquisition.MailboxLinkReference": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_text": {
+          "type": "string"
+        },
+        "nearby_text": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "anchor_text",
+        "nearby_text"
+      ],
+      "type": "object"
+    },
     "src.contracts.mailbox_acquisition.MailboxMessage": {
       "additionalProperties": false,
       "properties": {
@@ -25848,6 +25895,12 @@
         },
         "html_body": {
           "type": "string"
+        },
+        "link_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxLinkReference"
+          },
+          "type": "array"
         },
         "links": {
           "items": {
@@ -34186,6 +34239,12 @@
           },
           "type": "object"
         },
+        "dpi": {
+          "type": "integer"
+        },
+        "image_sha256": {
+          "type": "string"
+        },
         "path": {
           "type": "string"
         },
@@ -36701,6 +36760,12 @@
           "type": "string"
         },
         "caption_source": {
+          "type": "string"
+        },
+        "crop_dpi": {
+          "type": "integer"
+        },
+        "crop_image_sha256": {
           "type": "string"
         },
         "crop_qa_accepted": {

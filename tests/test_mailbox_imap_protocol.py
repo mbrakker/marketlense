@@ -8,16 +8,26 @@ from src.contracts.mailbox_acquisition import (
     MailboxAcquisitionSettings,
     MailboxSearchRequest,
 )
+from src.generators.mail_report_acquisition_generator import (
+    select_mail_report_link_candidates,
+)
 from src.contracts.run_budget import RunBudget
 from src.services.mailbox_acquisition_service import search_mailbox_messages
 from src.utils.logging import new_run_context
 
 
 class _ImapProtocolFake:
-    def __init__(self, *, uids=(91, 92), uid_validity: str = "700") -> None:
+    def __init__(
+        self,
+        *,
+        uids=(91, 92),
+        uid_validity: str = "700",
+        html_body: str = "",
+    ) -> None:
         self.commands: list[tuple[object, ...]] = []
         self.uid_validity = uid_validity
         self.uids = uids
+        self.html_body = html_body
 
     def __enter__(self) -> _ImapProtocolFake:
         return self
@@ -57,6 +67,8 @@ class _ImapProtocolFake:
             message["Subject"] = f"Delivery {uid}"
             message["Date"] = "Fri, 09 Oct 2036 12:00:00 +0000"
             message.set_content("Your requested report is ready.")
+            if self.html_body:
+                message.add_alternative(self.html_body, subtype="html")
             return "OK", [
                 (
                     f'{uid} (UID {uid} INTERNALDATE "{internal_date}" BODY[] '
@@ -207,3 +219,39 @@ def test_imap_legacy_sequence_ids_do_not_suppress_uid_messages(tmp_path) -> None
     assert sorted(
         message.provider_message_id.rsplit(":", 1)[-1] for message in result.messages
     ) == ["91", "92"]
+
+
+def test_imap_html_link_context_selects_opaque_report_cta_without_negative_links(
+    tmp_path,
+) -> None:
+    report_url = (
+        "https://cdn.example.test/Report/Annual.pdf?token=a%2Fb+Case"
+        "&X-Amz-Signature=AbC%2f+Z."
+    )
+    unsubscribe_url = "https://cdn.example.test/unsubscribe?token=private"
+    escaped_report_url = report_url.replace("&", "&amp;")
+    request, ctx = _request(tmp_path)
+    client = _ImapProtocolFake(
+        uids=(91,),
+        html_body=(
+            "<div><p>Your Annual Report is ready.</p>"
+            f'<a href="{escaped_report_url}">Download the Annual Report</a>'
+            "</div><div>"
+            f'<a href="{unsubscribe_url}">Unsubscribe</a>'
+            "</div>"
+        ),
+    )
+
+    message = _search(request, ctx, client).messages[0]
+    candidates = select_mail_report_link_candidates(
+        messages=[message],
+        source_url="https://example.test/request-report",
+        report_title="Annual Report",
+        publisher_name="Example Publisher",
+        ctx=ctx,
+    )
+
+    assert message.links == [report_url, unsubscribe_url]
+    assert message.link_references[0].anchor_text == "Download the Annual Report"
+    assert "Annual Report" in message.link_references[0].nearby_text
+    assert [candidate.url for candidate in candidates] == [report_url]

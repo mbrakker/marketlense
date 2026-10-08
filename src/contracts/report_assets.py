@@ -316,6 +316,12 @@ class CropOutcome:
     rejection_reason: str = field(
         default="", metadata={"doc": "Typed rejection reason for rejected crops."}
     )
+    dpi: int = field(
+        default=0, metadata={"doc": "Render DPI of the accepted crop artifact."}
+    )
+    image_sha256: str = field(
+        default="", metadata={"doc": "SHA-256 of the materialized crop image."}
+    )
 
 
 @dataclass(frozen=True)

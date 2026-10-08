@@ -26,6 +26,7 @@ from src.contracts.analytics_projection import (
 from src.contracts.browser_download import (
     ReportDownloadDriveUpload,
     ReportDownloadOrchestratorRequest,
+    ReportDownloadOrchestratorResult,
 )
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.cover_images import CoverImageGenerationRequest, CoverImageReport
@@ -257,6 +258,7 @@ def _report_acquisition_handler(
             mailbox_settings=load_mailbox_acquisition_settings(
                 ConfigLoadRequest(schema_version="1.0", path=""), ctx
             ),
+            mail_delivery_generation_id=job.root_workflow_id or job.job_id,
         ),
         ctx=ctx,
     )
@@ -286,43 +288,7 @@ def _report_acquisition_handler(
         source_hash = child.payload.source_content_hash
         children = [child]
     elif result.outcome in {"email_requested", "email_required"}:
-        children = [
-            WorkflowJobSubmission(
-                schema_version="1.0",
-                queue_name="mailbox_delivery",
-                job_type="mailbox_delivery.v1",
-                payload=MailboxDeliveryPayload(
-                    delivery_request_id=payload.source_identity_id
-                    or _digest(payload.source_url),
-                    source_url=payload.source_url,
-                    publisher_id=payload.publisher_id,
-                    report_title=payload.report_title,
-                    request_watermark="",
-                    retry_policy_version="mailbox-v1",
-                    input_reference=payload.source_url,
-                    input_content_hash=payload.input_content_hash
-                    or _digest(payload.source_url),
-                    processing_version=payload.processing_version,
-                    validation_run_id=payload.validation_run_id,
-                    cohort_id=payload.cohort_id,
-                    validation_attempt_number=payload.validation_attempt_number,
-                    validation_parent_attempt_number=payload.validation_parent_attempt_number,
-                    attributes={
-                        "publisher_name": payload.publisher_name,
-                        "delivery_email": delivery_email,
-                    },
-                ),
-                idempotency_key=f"{payload.source_identity_id or _digest(payload.source_url)}:mailbox:v1",
-                deduplication_scope="mailbox-delivery-source",
-                root_workflow_id=job.root_workflow_id or job.job_id,
-                parent_job_id=job.job_id,
-                trigger_event_id=job.trigger_event_id or job.job_id,
-                correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
-                publisher_id=payload.publisher_id,
-                source_identity_id=payload.source_identity_id,
-                budget_profile="mailbox_delivery",
-            )
-        ]
+        children = [build_mailbox_delivery_submission(job, payload, result)]
     else:
         raise AppError(
             code="workflow_queue_acquisition_no_verified_artifact",
@@ -341,10 +307,86 @@ def _report_acquisition_handler(
     )
 
 
+def build_mailbox_delivery_submission(
+    job: WorkflowJob,
+    payload: ReportAcquisitionPayload,
+    result: ReportDownloadOrchestratorResult,
+) -> WorkflowJobSubmission:
+    """Build a mailbox child only from the persisted verified submission."""
+    if result.outcome == "email_required":
+        raise AppError(
+            code="workflow_queue_mail_submission_unconfirmed",
+            message="Mailbox work requires a verified email submission",
+            retryable=False,
+        )
+    request_id = str(result.mail_delivery_request_id or "").strip()
+    watermark = str(result.mail_delivery_requested_after_utc or "").strip()
+    if (
+        result.outcome != "email_requested"
+        or not request_id.isdecimal()
+        or not watermark
+    ):
+        raise AppError(
+            code="workflow_queue_mail_delivery_identity_missing",
+            message="Verified email submission has no durable request identity",
+            retryable=False,
+            context={
+                "request_id_present": bool(request_id),
+                "watermark_present": bool(watermark),
+            },
+        )
+    return WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="mailbox_delivery",
+        job_type="mailbox_delivery.v1",
+        payload=MailboxDeliveryPayload(
+            schema_version="2.0",
+            delivery_request_id=request_id,
+            source_url=payload.source_url,
+            publisher_id=payload.publisher_id,
+            report_title=payload.report_title,
+            request_watermark=watermark,
+            retry_policy_version="mailbox-v1",
+            input_reference=payload.source_url,
+            input_content_hash=payload.input_content_hash
+            or _digest(payload.source_url),
+            processing_version=payload.processing_version,
+            validation_run_id=payload.validation_run_id,
+            cohort_id=payload.cohort_id,
+            validation_attempt_number=payload.validation_attempt_number,
+            validation_parent_attempt_number=payload.validation_parent_attempt_number,
+            attributes={
+                "publisher_name": payload.publisher_name,
+                "delivery_email": payload.delivery_email_reference
+                or str(payload.attributes.get("delivery_email", "")),
+            },
+        ),
+        idempotency_key=f"{request_id}:mailbox:v1",
+        deduplication_scope="mailbox-delivery-request",
+        root_workflow_id=job.root_workflow_id or job.job_id,
+        parent_job_id=job.job_id,
+        trigger_event_id=job.trigger_event_id or job.job_id,
+        correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+        publisher_id=payload.publisher_id,
+        source_identity_id=payload.source_identity_id,
+        budget_profile="mailbox_delivery",
+    )
+
+
 def _mailbox_delivery_handler(
     job: WorkflowJob, payload: QueuePayload, ctx: RunContext
 ) -> WorkflowQueueHandlerResult:
     assert isinstance(payload, MailboxDeliveryPayload)
+    if (
+        payload.schema_version != "2.0"
+        or not payload.delivery_request_id.isdecimal()
+        or not payload.request_watermark.strip()
+    ):
+        raise AppError(
+            code="workflow_queue_mailbox_request_identity_missing",
+            message="Mailbox job has no verified durable submission identity",
+            retryable=False,
+        )
     publisher_name = str(payload.attributes.get("publisher_name", "")).strip()
     if not payload.source_url or not payload.report_title or not publisher_name:
         raise AppError(

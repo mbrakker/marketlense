@@ -101,6 +101,15 @@ class ReportDownloadOrchestratorRequest:
             "doc": "Explicit operator override that permits browser and mailbox revalidation of a fresh remembered hard blocker."
         },
     )
+    mail_delivery_generation_id: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Stable queue workflow identity separating an explicitly new mail "
+                "submission from retries of the same submission."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -246,5 +255,17 @@ class ReportDownloadOrchestratorResult:
         default_factory=list,
         metadata={
             "doc": "Drive archival results for successful local terminal artifacts."
+        },
+    )
+    mail_delivery_request_id: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Durable mail request ID created after a verified email submission."
+        },
+    )
+    mail_delivery_requested_after_utc: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Exact persisted submission watermark for the durable mail request."
         },
     )

@@ -13,7 +13,7 @@ import pymupdf as fitz
 
 from src.utils.cache_utils import sha256_json
 
-FINGERPRINT_RECORD_SCHEMA_VERSION = "1.0"
+FINGERPRINT_RECORD_SCHEMA_VERSION = "2.0"
 PAGE_CONTENT_FINGERPRINT_VERSION = "1.0"
 PAGE_CONTENT_FINGERPRINT_DPI = 48
 PREVIEW_ARTIFACT_VERSION = "1.0"
@@ -21,7 +21,7 @@ CROP_REFINE_PAGE_ARTIFACT_VERSION = "1.0"
 # Crop cache acceptance now depends on the final strict-QA diagnostic sidecar.
 # Bump only this artifact so pre-QA cache entries are rebuilt without
 # invalidating unrelated preview/refinement artifacts.
-CROP_REGION_ARTIFACT_VERSION = "1.2"
+CROP_REGION_ARTIFACT_VERSION = "1.3"
 
 
 @dataclass(frozen=True)
@@ -37,6 +37,8 @@ class PdfArtifactFingerprintRecord:
     settings_fingerprint: str
     parser_fingerprint: str
     artifact_version: str
+    output_sha256: str = ""
+    qa_sidecar_sha256: str = ""
 
 
 @dataclass(frozen=True)
@@ -145,6 +147,14 @@ def resolve_artifact_cache(
             sidecar_path=sidecar_path.as_posix(),
             output_rel_path=record.output_rel_path,
         )
+    if stored.get("schema_version") != record.schema_version:
+        return _miss_status(record, sidecar_path, "schema_version_changed")
+    if stored.get("output_sha256") != _file_sha256(artifact_path):
+        return _miss_status(record, sidecar_path, "output_hash_changed")
+    qa_sidecar_path = _qa_sidecar_path(artifact_path)
+    actual_qa_hash = _file_sha256(qa_sidecar_path) if qa_sidecar_path.exists() else ""
+    if stored.get("qa_sidecar_sha256") != actual_qa_hash:
+        return _miss_status(record, sidecar_path, "qa_sidecar_hash_changed")
     if stored.get("artifact_kind") != record.artifact_kind:
         return _miss_status(record, sidecar_path, "artifact_kind_changed")
     if stored.get("artifact_identity") != record.artifact_identity:
@@ -179,7 +189,13 @@ def write_artifact_sidecar(
     record = descriptor.record()
     sidecar_path = _sidecar_path(artifact_path)
     sidecar_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(asdict(record), ensure_ascii=True, sort_keys=True)
+    payload_data = asdict(record)
+    payload_data["output_sha256"] = _file_sha256(artifact_path)
+    qa_sidecar_path = _qa_sidecar_path(artifact_path)
+    payload_data["qa_sidecar_sha256"] = (
+        _file_sha256(qa_sidecar_path) if qa_sidecar_path.exists() else ""
+    )
+    payload = json.dumps(payload_data, ensure_ascii=True, sort_keys=True)
     # Several crop workers can materialize the same cached artifact at once.
     # A PID-only temporary name collides within a worker process, allowing one
     # writer to move the other's file before it reaches ``os.replace``.
@@ -204,6 +220,21 @@ def write_artifact_sidecar(
 
 def _sidecar_path(artifact_path: Path) -> Path:
     return artifact_path.with_name(f"{artifact_path.name}.fingerprint.json")
+
+
+def _qa_sidecar_path(artifact_path: Path) -> Path:
+    return artifact_path.with_name(f"{artifact_path.name}.qa.json")
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return ""
+    return digest.hexdigest()
 
 
 def _replace_sidecar(temp_path: Path, sidecar_path: Path) -> None:

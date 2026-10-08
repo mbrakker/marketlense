@@ -385,6 +385,7 @@ def _crop_regions(
                             qa_sidecar_path=qa_sidecar_path,
                             qa_result=qa_result,
                             rejection_reason=_rejection_reason(qa_result),
+                            dpi=render_dpi,
                         )
                     )
                     if ctx is not None:
@@ -421,6 +422,8 @@ def _crop_regions(
                             else "",
                             qa_result=qa_result,
                             rejection_reason="",
+                            dpi=render_dpi,
+                            image_path=output_path,
                         )
                     )
                     if ctx is not None:
@@ -635,6 +638,7 @@ def _crop_regions(
                             qa_sidecar_path=_qa_sidecar_rel_path(rel),
                             qa_result=qa_result,
                             rejection_reason=_rejection_reason(qa_result),
+                            dpi=render_dpi,
                         )
                     )
                     if ctx is not None:
@@ -688,6 +692,8 @@ def _crop_regions(
                     else "",
                     qa_result=qa_result,
                     rejection_reason="",
+                    dpi=render_dpi,
+                    image_path=output_path,
                 )
             )
     finally:
@@ -809,6 +815,8 @@ def _crop_outcome(
     qa_sidecar_path: str,
     qa_result: dict[str, object] | None,
     rejection_reason: str,
+    dpi: int,
+    image_path: Path | None = None,
 ) -> CropOutcome:
     qa = _qa_payload(qa_result)
     raw_score = qa.get("total_score")
@@ -842,7 +850,24 @@ def _crop_outcome(
         detector_summary=detector_summary,
         quality_profile=str(quality_profile or ""),
         rejection_reason=str(rejection_reason or ""),
+        dpi=max(0, int(dpi)),
+        image_sha256=(
+            _crop_image_sha256(image_path)
+            if accepted and image_path is not None
+            else ""
+        ),
     )
+
+
+def _crop_image_sha256(image_path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with image_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return ""
+    return digest.hexdigest()
 
 
 __all__ = [

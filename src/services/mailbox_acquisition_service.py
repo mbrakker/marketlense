@@ -18,7 +18,6 @@ from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, cast
-from urllib.parse import unquote
 from uuid import uuid4
 
 from bs4 import BeautifulSoup
@@ -33,6 +32,7 @@ from src.contracts.mailbox_acquisition import (
     MailboxAttachmentFailure,
     MailboxAttachmentMaterializeRequest,
     MailboxAttachmentMaterializeResponse,
+    MailboxLinkReference,
     MailboxMessage,
     MailboxSearchRequest,
     MailboxSearchResult,
@@ -52,6 +52,7 @@ from src.services.llm_usage_ledger_service import (
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.url_utils import url_identity
 
 logger = logging.getLogger("market_lense.mailbox_acquisition_service")
 
@@ -691,7 +692,7 @@ def _adapt_gmail_message(
     )
     internal_ms = int(str(payload.get("internalDate") or "0") or "0")
     received = datetime.fromtimestamp(internal_ms / 1000, tz=timezone.utc)
-    links = _extract_links(text_body=text_body, html_body=html_body)
+    link_references = _extract_link_references(text_body=text_body, html_body=html_body)
     artifacts = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
@@ -711,7 +712,8 @@ def _adapt_gmail_message(
         .replace("+00:00", "Z"),
         text_body=text_body[:_BODY_CHAR_LIMIT],
         html_body=html_body[:_BODY_CHAR_LIMIT],
-        links=links,
+        links=[reference.url for reference in link_references],
+        link_references=link_references,
         attachment_file_names=[attachment.file_name for attachment in attachments],
         attachment_artifacts=artifacts,
     )
@@ -854,6 +856,7 @@ def _adapt_email_message(
             html_chunks.append(str(body))
     text_body = "\n".join(text_chunks)[:_BODY_CHAR_LIMIT]
     html_body = "\n".join(html_chunks)[:_BODY_CHAR_LIMIT]
+    link_references = _extract_link_references(text_body=text_body, html_body=html_body)
     artifacts = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
@@ -871,7 +874,8 @@ def _adapt_email_message(
         received_at_utc=received_at_utc,
         text_body=text_body,
         html_body=html_body,
-        links=_extract_links(text_body=text_body, html_body=html_body),
+        links=[reference.url for reference in link_references],
+        link_references=link_references,
         attachment_file_names=_dedupe_strings(
             [attachment.file_name for attachment in attachments]
         ),
@@ -1206,20 +1210,98 @@ def _imap_internaldate_to_utc(value: bytes | str | None) -> str:
 
 
 def _extract_links(*, text_body: str, html_body: str) -> list[str]:
-    links: list[str] = []
-    for match in _URL_RX.findall(text_body or ""):
-        links.append(_clean_url(match))
+    return [
+        reference.url
+        for reference in _extract_link_references(
+            text_body=text_body, html_body=html_body
+        )
+    ]
+
+
+def _extract_link_references(
+    *, text_body: str, html_body: str
+) -> list[MailboxLinkReference]:
+    references: list[MailboxLinkReference] = []
+    for match in _URL_RX.finditer(text_body or ""):
+        url = _clean_url(match.group(0))
+        if _is_absolute_http_url(url):
+            references.append(
+                MailboxLinkReference(
+                    schema_version="1.0",
+                    url=url,
+                    anchor_text="",
+                    nearby_text=_bounded_context(text_body, match.start(), match.end()),
+                )
+            )
     if html_body:
         soup = BeautifulSoup(html_body, "html.parser")
         for anchor in soup.find_all("a", href=True):
-            links.append(_clean_url(str(anchor.get("href") or "")))
-        for match in _URL_RX.findall(soup.get_text(" ")):
-            links.append(_clean_url(match))
-    return _dedupe_strings([link for link in links if _is_absolute_http_url(link)])
+            # An HTML href is already a delimited attribute; punctuation at
+            # its end can be part of a signed token and must remain intact.
+            url = str(anchor.get("href") or "").strip()
+            if not _is_absolute_http_url(url):
+                continue
+            anchor_text = str(anchor.get_text(" ", strip=True) or "")[:160]
+            parent_text = str(anchor.parent.get_text(" ", strip=True) or "")
+            anchor_index = parent_text.find(anchor_text) if anchor_text else -1
+            nearby_text = (
+                _bounded_context(
+                    parent_text,
+                    anchor_index,
+                    anchor_index + len(anchor_text),
+                )
+                if anchor_index >= 0
+                else anchor_text
+            )
+            references.append(
+                MailboxLinkReference(
+                    schema_version="1.0",
+                    url=url,
+                    anchor_text=anchor_text,
+                    nearby_text=nearby_text,
+                )
+            )
+        html_text = soup.get_text(" ")
+        for match in _URL_RX.finditer(html_text):
+            url = _clean_url(match.group(0))
+            if _is_absolute_http_url(url):
+                references.append(
+                    MailboxLinkReference(
+                        schema_version="1.0",
+                        url=url,
+                        anchor_text="",
+                        nearby_text=_bounded_context(
+                            html_text, match.start(), match.end()
+                        ),
+                    )
+                )
+    deduped: list[MailboxLinkReference] = []
+    seen: dict[str, int] = {}
+    for reference in references:
+        marker = url_identity(reference.url)
+        index = seen.get(marker)
+        if index is None:
+            seen[marker] = len(deduped)
+            deduped.append(reference)
+        elif not deduped[index].anchor_text and reference.anchor_text:
+            deduped[index] = reference
+    return deduped
 
 
 def _clean_url(value: str) -> str:
-    return unquote(str(value or "").strip().rstrip(".,;:)>]}'\""))
+    return str(value or "").strip().rstrip(".,;:)>]}'\"")
+
+
+def _bounded_context(text: str, start: int, end: int, *, limit: int = 360) -> str:
+    token = " ".join(str(text or "").split())
+    if not token:
+        return ""
+    # Matching offsets come from the pre-normalized source, so fall back to a
+    # bounded leading excerpt if whitespace normalization changed the length.
+    if start < 0 or end < start or end > len(token):
+        return token[:limit]
+    radius = max(0, (limit - (end - start)) // 2)
+    return token[max(0, start - radius) : min(len(token), end + radius)][:limit]
 
 
 def _is_absolute_http_url(url: str) -> bool:

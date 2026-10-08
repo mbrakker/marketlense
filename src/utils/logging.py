@@ -104,10 +104,10 @@ _URL_ENCODED_EMAIL_RX = re.compile(
     r"(?i)[A-Za-z0-9._%+-]+%40[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
 )
 _URL_SENSITIVE_QUERY_RX = re.compile(
-    r"(?i)([?&;](?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token)=)([^&#\s]+)"
+    r"(?i)([?&;](?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token|awsaccesskeyid|googleaccessid|key-pair-id|policy|hdnea|x-amz-(?:credential|security-token|signature)|x-goog-(?:credential|signature))=)([^&#\s]+)"
 )
 _URL_ENCODED_SENSITIVE_QUERY_RX = re.compile(
-    r"(?i)((?:%3F|%26|%3B)(?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token)(?:=|%3D))([^%&#\s]+)"
+    r"(?i)((?:%3F|%26|%3B)(?:auth|authorization|email|e-mail|key|mkt_tok|password|secret|sig|signature|token|awsaccesskeyid|googleaccessid|key(?:-|%2D)pair(?:-|%2D)id|policy|hdnea|x(?:-|%2D)amz(?:-|%2D)(?:credential|security(?:-|%2D)token|signature)|x(?:-|%2D)goog(?:-|%2D)(?:credential|signature))(?:=|%3D))([^&#\s]+)"
 )
 _PHONE_RX = re.compile(
     r"\b(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3}[-.\s]?\d{4}\b"

@@ -174,6 +174,8 @@ def _report_payload_from_dict(raw_payload: object) -> ReportPayload:
                     crop_rejection_reason=str(
                         raw_asset.get("crop_rejection_reason") or ""
                     ),
+                    crop_dpi=int(raw_asset.get("crop_dpi") or 0),
+                    crop_image_sha256=str(raw_asset.get("crop_image_sha256") or ""),
                     schema_version=str(raw_asset.get("schema_version") or "1.0"),
                 )
             )
