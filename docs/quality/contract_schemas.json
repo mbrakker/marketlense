@@ -182,7 +182,10 @@
           "type": "boolean"
         },
         "reason_code": {
-          "type": "string"
+          "enum": [
+            "browser_runtime_available",
+            "browser_runtime_dependency_missing"
+          ]
         },
         "schema_version": {
           "type": "string"
