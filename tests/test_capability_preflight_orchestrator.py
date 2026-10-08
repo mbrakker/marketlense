@@ -701,3 +701,49 @@ def test_autonomous_preflight_requires_worker_batch_dispatch_to_be_enabled(
     )
     assert dispatch.status == "blocked"
     assert report.workflow_statuses["cost_reconciliation"] == "blocked"
+
+
+def test_unknown_enabled_queue_fails_closed_without_provider_calls(
+    tmp_path: Path,
+) -> None:
+    policies = _queues()
+    policies["unmapped_queue"] = WorkflowQueuePolicy(
+        queue_name="unmapped_queue",
+        enabled=True,
+        max_workers=1,
+        max_attempts=1,
+        lease_seconds=60,
+        maximum_pending=10,
+        maximum_fanout=1,
+        budget_profile="publishing",
+    )
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="autonomous_mvp",
+            settings=_settings(tmp_path),
+            workflow_control=_control("autonomous_mvp"),
+            queue_policies=policies,
+            live_checks=False,
+        ),
+        _ctx(),
+        dependencies=_dependencies(),
+    )
+
+    profile = next(
+        check for check in report.checks if check.capability == "workflow_profile"
+    )
+    registry = next(
+        check
+        for check in report.checks
+        if check.capability == "workflow_queue_registry"
+    )
+    assert report.workflow_names == ["unmapped_queue"]
+    assert profile.status == "blocked"
+    assert profile.reason_code == "workflow_capability_profile_missing"
+    assert profile.affected_workflows == ["unmapped_queue"]
+    assert registry.status == "blocked"
+    assert registry.reason_code == "workflow_queue_capability_mapping_missing"
+    assert registry.affected_workflows == ["unmapped_queue"]
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
