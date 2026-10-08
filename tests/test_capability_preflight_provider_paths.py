@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
+from src.contracts._browser_download.dev_diagnostics import (
+    BrowserExecutableAvailabilityResponse,
+)
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
     BrowserDownloadSettings,
-)
-from src.contracts._browser_download.dev_diagnostics import (
-    BrowserExecutableAvailabilityResponse,
 )
 from src.contracts.config import AppSettings, ConfigLoadRequest
 from src.contracts.drive import DriveFolderCapabilityPreflightResponse
@@ -156,6 +156,7 @@ def _report(
     workflow: str,
     *,
     live: bool,
+    supervisor_enabled: bool = True,
     file_stat=None,
     drive_probe=None,
     mailbox_probe=None,
@@ -166,12 +167,18 @@ def _report(
 ) -> CapabilityPreflightReport:
     settings = _settings(tmp_path)
     Path(settings.google_sa_path).write_text("{}", encoding="utf-8")
+    workflow_control = _control()
+    if not supervisor_enabled:
+        workflow_control = replace(
+            workflow_control,
+            supervisor=replace(workflow_control.supervisor, enabled=False),
+        )
     return run_capability_preflight(
         CapabilityPreflightRequest(
             schema_version="1.0",
             profile_name="autonomous_mvp",
             settings=settings,
-            workflow_control=_control(),
+            workflow_control=workflow_control,
             queue_policies=_queues(workflow),
             browser_settings=browser_settings,
             mailbox_settings=mailbox_settings,
@@ -258,6 +265,28 @@ def test_autonomous_profile_with_no_enabled_workflow_is_not_required(
     assert report.status == "not_required"
     assert check.status == "not_required"
     assert check.reason_code == "no_workflows_enabled"
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_disabled_autonomous_supervisor_is_a_global_blocker(
+    tmp_path: Path,
+) -> None:
+    report = _report(
+        tmp_path,
+        "cost_reconciliation",
+        live=False,
+        supervisor_enabled=False,
+    )
+    check = next(
+        item for item in report.checks if item.capability == "autonomous_supervisor"
+    )
+
+    assert report.workflow_names == []
+    assert report.status == "blocked"
+    assert check.status == "blocked"
+    assert check.reason_code == "autonomous_supervisor_disabled"
+    assert check.affected_workflows == []
     assert report.provider_calls == 0
     assert report.external_writes == 0
 
