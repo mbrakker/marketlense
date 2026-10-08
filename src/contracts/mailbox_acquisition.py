@@ -53,7 +53,12 @@ class MailboxAcquisitionSettings:
 class MailboxMessage:
     schema_version: str = field(metadata={"doc": "Mailbox message schema version."})
     provider_message_id: str = field(
-        metadata={"doc": "Provider-specific stable mailbox message ID."}
+        metadata={
+            "doc": (
+                "Opaque stable provider/account/mailbox-scoped message ID; IMAP IDs "
+                "include UIDVALIDITY and UID."
+            )
+        }
     )
     subject: str = field(metadata={"doc": "Message subject."})
     sender: str = field(metadata={"doc": "Message sender header."})

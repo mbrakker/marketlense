@@ -68,6 +68,21 @@ def _events(caplog, logger_name: str) -> list[dict[str, object]]:
     return events
 
 
+def _transform_bbox(
+    bbox: tuple[float, float, float, float],
+    transform: tuple[float, float, float, float, float, float],
+) -> tuple[float, float, float, float]:
+    a, b, c, d, e, f = transform
+    x0, y0, x1, y1 = bbox
+    points = [
+        (a * x + c * y + e, b * x + d * y + f)
+        for x, y in ((x0, y0), (x0, y1), (x1, y0), (x1, y1))
+    ]
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
 def _build_basic_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=420, height=560)

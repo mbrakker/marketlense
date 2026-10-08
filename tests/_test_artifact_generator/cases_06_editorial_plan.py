@@ -8,9 +8,13 @@ import pytest
 
 from src.generators import artifact_normalization
 from src.generators._artifact_generator.generation import (
+    _ARTIFACT_FAMILY_ROOTS,
     _summary_prioritized_evidence_json,
 )
 from src.generators._artifact_generator.storage import _artifact_cache_meta
+from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _record_prompt_family_materializations,
+)
 from src.services.schema_validator_service import validate_evidence_references
 from src.utils.errors import AppError
 
@@ -727,6 +731,9 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
         "ctx": _ctx(),
     }
     first = _artifact_cache_meta(**common, prompt_client=PlanPromptClient("a" * 64))
+    assert first["editorial_plan_transform_version"] == (
+        artifact_normalization.EDITORIAL_PLAN_TRANSFORM_VERSION
+    )
     changed_prompt = _artifact_cache_meta(
         **common, prompt_client=PlanPromptClient("b" * 64)
     )
@@ -743,6 +750,158 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
     assert first["inputs_sha256"] != changed_inputs["inputs_sha256"]
 
 
+@pytest.mark.parametrize("change", ["composite_only", "plan_prompt", "findings"])
+def test_editorial_plan_family_reuse_and_dependency_invalidation(tmp_path, change):
+    report_id = "editorial-plan-family-replay"
+    report_name = "Editorial Plan Family Replay"
+    context = replace(_ctx(), source_identity_id="source:editorial-plan-replay")
+    settings = _settings(tmp_path)
+
+    class PlanPromptClient(FakePromptClient):
+        def __init__(self, prompt_hash: str):
+            self.prompt_hash = prompt_hash
+
+        def load_prompt_set(self, request, ctx):
+            prompt_set = super().load_prompt_set(request, ctx)
+            if request.namespace != "report_vs/artifacts/editorial_plan":
+                return prompt_set
+            return replace(
+                prompt_set,
+                prompt_content_hash=self.prompt_hash,
+                dependency_manifest=replace(
+                    prompt_set.dependency_manifest,
+                    prompt_content_hash=self.prompt_hash,
+                ),
+            )
+
+    responses = {
+        "summary": {
+            "summary": {
+                "tldr": "Grounded TLDR.",
+                "card_tldr_compact": "Grounded TLDR.",
+                "executive_summary": "Evidence informs planning.",
+                "claim_evidence_map": [],
+            }
+        },
+        "insights_candidates": {"insights_candidates": []},
+        "quotes": {"quotes_final": []},
+        "insights_final": {"insights_final": []},
+        "cover_semantics": _cover_semantics_response(),
+        "expert_comment": {"expert_comment": "Grounded comment."},
+        "linkedin_post": {"linkedin_post": "Grounded LinkedIn post."},
+    }
+    cold_evidence = _evidence_packs()
+    cold_client = FakeOpenAI(responses)
+    first = generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=cold_evidence,
+        settings=settings,
+        md5="editorial-plan-family-replay-md5",
+        category_ids=["retail"],
+        ctx=context,
+        openai_client=cold_client,
+        prompt_client=PlanPromptClient("a" * 64),
+        analysis_store=FakeAnalysisStore(),
+    )
+    runtime = SimpleNamespace(
+        ctx=context,
+        settings=settings,
+        file=SimpleNamespace(file_id=report_id),
+        report_name=slugify(report_name),
+        execution_compatibility={},
+    )
+    _record_prompt_family_materializations(
+        runtime,
+        stage_name="analysis_complete",
+        payload={
+            "analysis": {
+                "artifacts_payload": first,
+                "evidence_packs": cold_evidence,
+                "validation_report": {"status": "pass"},
+            }
+        },
+        artifact_lineage={},
+        artifact_hashes={},
+    )
+
+    warm_evidence = _evidence_packs()
+    if change == "findings":
+        warm_evidence["findings"]["findings"][0]["text"] = "Revenue grew 12%"
+    warm_prompt_hash = "b" * 64 if change == "plan_prompt" else "a" * 64
+    warm_client = FakeOpenAI(responses)
+    replay = generate_artifacts(
+        report_id=report_id,
+        report_name=report_name,
+        doc_map=_doc_map(),
+        evidence_packs=warm_evidence,
+        settings=settings,
+        md5="editorial-plan-family-replay-md5",
+        category_ids=["software"],
+        ctx=context,
+        openai_client=warm_client,
+        prompt_client=PlanPromptClient(warm_prompt_hash),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    plan_family = "report_vs/artifacts/editorial_plan"
+    quote_family = "report_vs/artifacts/quotes"
+    assert first["_cache"]["key"] != replay["_cache"]["key"]
+    assert replay["_cache"]["family_reuse"][quote_family]["decision"] == "reused"
+    assert set(_ARTIFACT_FAMILY_ROOTS).issubset(first["_cache"]["family_reuse"])
+    called_steps = {request[2] for request in warm_client.requests}
+    if change == "composite_only":
+        assert all(
+            replay["_cache"]["family_reuse"][family]["decision"] == "reused"
+            for family in _ARTIFACT_FAMILY_ROOTS
+        )
+        assert not called_steps.intersection(_ARTIFACT_FAMILY_ROOTS.values())
+    else:
+        dependent_families = {
+            "report_vs/artifacts/editorial_plan",
+            "report_vs/artifacts/summary",
+            "report_vs/artifacts/insights_candidates",
+            "report_vs/artifacts/insights_final",
+            "report_vs/artifacts/expert_comment",
+            "report_vs/artifacts/linkedin_post",
+        }
+        expected_steps = {family.rsplit("/", 1)[-1] for family in dependent_families}
+        assert expected_steps.issubset(called_steps)
+        assert "quotes" not in called_steps
+        assert all(
+            replay["_cache"]["family_reuse"][family]["decision"] == "regenerated"
+            for family in dependent_families
+        )
+        unrelated_families = set(_ARTIFACT_FAMILY_ROOTS) - dependent_families
+        if change == "plan_prompt":
+            assert all(
+                replay["_cache"]["family_reuse"][family]["decision"] == "reused"
+                for family in unrelated_families
+            )
+        else:
+            # Cover semantics receives the full evidence context today, so a
+            # changed finding is also a true input change for that family.
+            cover_family = "report_vs/artifacts/cover_semantics"
+            assert replay["_cache"]["family_reuse"][cover_family]["decision"] == (
+                "regenerated"
+            )
+        if change == "plan_prompt":
+            assert (
+                replay["_cache"]["family_reuse"][plan_family]["prompt_content_hash"]
+                != first["_cache"]["family_reuse"][plan_family]["prompt_content_hash"]
+            )
+        else:
+            assert (
+                replay["_cache"]["family_reuse"][plan_family]["relevant_input_hash"]
+                != first["_cache"]["family_reuse"][plan_family]["relevant_input_hash"]
+            )
+    transformation = first["_cache"]["family_transformations"][plan_family]
+    assert transformation["transform"] == "normalize_and_stabilize_editorial_plan"
+    assert transformation["input_hash"]
+    assert transformation["output_hash"]
+
+
 __all__ = [
     "test_summary_evidence_orders_direct_finding_for_priority_section",
     "test_summary_evidence_preserves_invalid_findings_pack",
@@ -753,4 +912,5 @@ __all__ = [
     "test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack",
     "test_expert_comment_can_abstain_when_no_distinct_synthesis_is_returned",
     "test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity",
+    "test_editorial_plan_family_reuse_and_dependency_invalidation",
 ]

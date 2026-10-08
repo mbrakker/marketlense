@@ -21,7 +21,7 @@ CROP_REFINE_PAGE_ARTIFACT_VERSION = "1.0"
 # Crop cache acceptance now depends on the final strict-QA diagnostic sidecar.
 # Bump only this artifact so pre-QA cache entries are rebuilt without
 # invalidating unrelated preview/refinement artifacts.
-CROP_REGION_ARTIFACT_VERSION = "1.1"
+CROP_REGION_ARTIFACT_VERSION = "1.2"
 
 
 @dataclass(frozen=True)

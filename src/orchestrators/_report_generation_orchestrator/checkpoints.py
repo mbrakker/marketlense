@@ -913,11 +913,32 @@ def _record_prompt_family_materializations(
         f"report_vs/evidence_packs/{name}"
         for name in sorted(evidence_packs)
         if f"report_vs/evidence_packs/{name}" in materialized
+        or f"report_vs/evidence_packs/{name}" in artifact_lineage
     )
+    quote_evidence_family_ids = tuple(
+        family_id
+        for family_id in evidence_family_ids
+        if family_id == "report_vs/evidence_packs/quote_candidates"
+    )
+    editorial_plan_family = "report_vs/artifacts/editorial_plan"
+    editorial_plan_output = family_outputs.get(editorial_plan_family)
+    if isinstance(editorial_plan_output, dict):
+        # Materialize the validated model output before deterministic plan
+        # normalization/stabilization. The transformed public plan has its own
+        # versioned identity in artifact cache metadata.
+        persist(
+            editorial_plan_family,
+            editorial_plan_output,
+            ("report_vs/doc_map", *evidence_family_ids),
+        )
     persist(
         "report_vs/artifacts/summary",
         family_outputs.get("report_vs/artifacts/summary", artifacts.get("summary", {})),
-        ("report_vs/doc_map", *evidence_family_ids),
+        (
+            "report_vs/doc_map",
+            editorial_plan_family,
+            *evidence_family_ids,
+        ),
     )
     persist(
         "report_vs/artifacts/insights_candidates",
@@ -925,21 +946,29 @@ def _record_prompt_family_materializations(
             "report_vs/artifacts/insights_candidates",
             artifacts.get("insights_candidates", []),
         ),
-        ("report_vs/doc_map", *evidence_family_ids),
+        (
+            "report_vs/doc_map",
+            editorial_plan_family,
+            *evidence_family_ids,
+        ),
     )
     persist(
         "report_vs/artifacts/quotes",
         family_outputs.get(
             "report_vs/artifacts/quotes", artifacts.get("quotes_final", [])
         ),
-        ("report_vs/doc_map", *evidence_family_ids),
+        ("report_vs/doc_map", *quote_evidence_family_ids),
     )
     persist(
         "report_vs/artifacts/insights_final",
         family_outputs.get(
             "report_vs/artifacts/insights_final", artifacts.get("insights_final", [])
         ),
-        ("report_vs/artifacts/insights_candidates", *evidence_family_ids),
+        (
+            "report_vs/artifacts/insights_candidates",
+            editorial_plan_family,
+            *evidence_family_ids,
+        ),
     )
     persist(
         "report_vs/artifacts/cover_semantics",
@@ -958,6 +987,7 @@ def _record_prompt_family_materializations(
             "report_vs/artifacts/summary",
             "report_vs/artifacts/insights_final",
             "report_vs/artifacts/quotes",
+            editorial_plan_family,
             "report_vs/validate/grounding",
             "report_vs/validate/semantic",
         ),
@@ -971,6 +1001,7 @@ def _record_prompt_family_materializations(
         (
             "report_vs/artifacts/summary",
             "report_vs/artifacts/insights_final",
+            editorial_plan_family,
             "report_vs/validate/grounding",
             "report_vs/validate/semantic",
         ),

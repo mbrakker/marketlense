@@ -467,6 +467,114 @@ def test_refine_selection_adaptive_ambiguous_calls_llm(tmp_path):
     assert items[0].bbox[3] > refined_bbox[3]
 
 
+def test_refine_selection_transforms_candidate_boxes_for_rotated_page_prompt(
+    tmp_path, caplog
+):
+    settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
+    canonical_bbox = (50.0, 50.0, 150.0, 120.0)
+    display_to_pdf = (0.0, -1.0, 1.0, 0.0, 0.0, 180.0)
+    pdf_to_display = (0.0, 1.0, -1.0, 0.0, 180.0, 0.0)
+    rendered_prompt_variables = []
+    refine_requests = []
+
+    def _render_prompt(req, ctx):
+        if req.variables.get("phase"):
+            rendered_prompt_variables.append(req.variables)
+        return SimpleNamespace(text="prompt")
+
+    def _render_page(req, ctx):
+        return SimpleNamespace(
+            schema_version="1.1",
+            image_path="page.png",
+            page=req.page,
+            image_width=260,
+            image_height=180,
+            page_width=180.0,
+            page_height=260.0,
+            scale_x=1.0,
+            scale_y=1.0,
+            coordinate_transform_version="pdf-page-affine-v1",
+            display_to_pdf_transform=display_to_pdf,
+            pdf_to_display_transform=pdf_to_display,
+            image_to_pdf_transform=display_to_pdf,
+            rotation=90,
+            crop_box=(0.0, 0.0, 260.0, 180.0),
+            media_box=(0.0, 0.0, 260.0, 180.0),
+            pdf_page_width=260.0,
+            pdf_page_height=180.0,
+        )
+
+    def _refine(req, ctx):
+        refine_requests.append(req)
+        return CropRefineResponse(
+            schema_version="1.0",
+            results=[
+                CropRefineResult(
+                    schema_version="1.0",
+                    id="chart-rotated",
+                    is_valid_candidate=True,
+                    refined_bbox=canonical_bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.9,
+                    reason="valid",
+                )
+            ],
+            raw_content="RAW_PROVIDER_RESPONSE_SENTINEL",
+        )
+
+    candidate = _candidate(
+        cid="chart-rotated",
+        kind="chart",
+        bbox=canonical_bbox,
+        meta={"area_frac": 0.15, "text_ratio": 0.4},
+    )
+    caplog.set_level("INFO")
+    items, accepted = rsg.select_refined_candidate_items(
+        ranked_rows=[
+            RankedCandidate(
+                id=candidate.id,
+                type="chart",
+                score=90,
+                quality_score=88,
+                insight_score=89,
+                data_score=84,
+                keep=True,
+            )
+        ],
+        ranked_candidates=[candidate],
+        settings=settings,
+        local_pdf_path=_pdf_path(tmp_path),
+        report_name="report",
+        file_id="file",
+        md5=None,
+        ctx=_ctx(),
+        pdf_context=None,
+        fallback_model="gpt-5-mini",
+        selected_kind_max=max(1, int(settings.rank_selected_max)),
+        dependencies=_deps(
+            render_prompt=_render_prompt,
+            render_page_for_crop_refine=_render_page,
+            refine_candidate_crops=_refine,
+        ),
+    )
+
+    assert len(items) == 1 and len(accepted) == 1
+    assert "RAW_PROVIDER_RESPONSE_SENTINEL" not in caplog.text
+    assert len(refine_requests) == 2
+    assert all(
+        request.display_to_pdf_transform == display_to_pdf
+        and request.coordinate_transform_version == "pdf-page-affine-v1"
+        for request in refine_requests
+    )
+    assert len(rendered_prompt_variables) == 2
+    for variables in rendered_prompt_variables:
+        candidates = json.loads(variables["candidates_json"])
+        assert candidates[0]["bbox"] == [60.0, 50.0, 130.0, 150.0]
+        if "proposed_bbox" in candidates[0]:
+            assert candidates[0]["proposed_bbox"] == [60.0, 50.0, 130.0, 150.0]
+
+
 def test_refine_selection_batches_same_page_candidates_by_phase(tmp_path):
     settings = _settings(tmp_path, crop_refine_enabled=True, crop_refine_mode="always")
     llm_calls: list[list[str]] = []
@@ -685,6 +793,7 @@ __all__ = [
     "test_prefilter_rejects_low_signal_chart_fragment",
     "test_refine_selection_adaptive_obvious_pass_skips_llm",
     "test_refine_selection_adaptive_ambiguous_calls_llm",
+    "test_refine_selection_transforms_candidate_boxes_for_rotated_page_prompt",
     "test_refine_selection_batches_same_page_candidates_by_phase",
     "test_refine_selection_batched_page_maps_mixed_valid_invalid_decisions",
 ]

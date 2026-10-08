@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,11 +18,15 @@ from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     SoftCopyPromptFamilyMaterialization,
 )
+from src.generators._artifact_generator.generation import _ARTIFACT_FAMILY_ROOTS
 from src.services.prompt_family_materialization_service import (
     materialize_prompt_family,
     read_reusable_prompt_family,
 )
 from src.services.report_store_service import trace_artifact_lineage
+from src.orchestrators._report_generation_orchestrator.checkpoints import (
+    _record_prompt_family_materializations,
+)
 from src.utils.errors import AppError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -122,6 +127,198 @@ def test_materialization_is_independent_idempotent_and_supersedes_history(
     }
     assert trace.records[0].metadata["prompt_content_hash"] == "prompt-content-hash"
     assert trace.records[0].metadata["execution_identity"] == "execution-identity-hash"
+
+
+def test_checkpoint_materializes_editorial_plan_with_docmap_and_evidence_lineage(
+    tmp_path: Path,
+) -> None:
+    family_id = "report_vs/artifacts/editorial_plan"
+    raw_plan = {
+        "report_thesis": "Evidence shifts the operating outlook.",
+        "themes": [{"theme": "Retention", "priority": 1, "evidence_ids": ["f1"]}],
+    }
+    identity = {
+        "execution_identity": "plan-execution",
+        "execution_identity_manifest": {"provider": "openai", "model": "gpt-5-mini"},
+        "relevant_input_hash": "plan-input-hash",
+        "configuration_policy_hash": "plan-configuration-hash",
+        "validator_version": "artifacts_schema:3.0",
+        "model_name": "gpt-5-mini",
+        "model_provider": "openai",
+        "model_policy_namespace": "report_vs",
+        "routing_policy_version": "plan-routing-hash",
+    }
+    runtime = SimpleNamespace(
+        ctx=replace(_ctx(), source_identity_id="source-1"),
+        settings=SimpleNamespace(
+            reports_db=str(tmp_path / "reports.sqlite"),
+            output_dir=str(tmp_path / "out"),
+        ),
+        file=SimpleNamespace(file_id="editorial-plan-report"),
+        report_name="editorial-plan-report",
+        execution_compatibility={
+            "prompt_versions": {family_id: "plan-prompt-content-hash"},
+            "model_policy_versions": {family_id: "plan-routing-hash"},
+            "validator_versions": {family_id: "artifacts_schema:3.0"},
+        },
+    )
+    upstream_materializations = {}
+    for upstream_family, upstream_output in (
+        ("report_vs/doc_map", {"sections": [{"id": "s1"}]}),
+        ("report_vs/evidence_packs/findings", {"findings": [{"id": "f1"}]}),
+        (
+            "report_vs/evidence_packs/quote_candidates",
+            {"quote_candidates": [{"id": "q1"}]},
+        ),
+    ):
+        upstream_request = replace(
+            _request(tmp_path, output=upstream_output),
+            report_id="editorial-plan-report",
+            report_slug="editorial-plan-report",
+            source_id="source-1",
+            family_id=upstream_family,
+            family_schema_version="1.0",
+        )
+        upstream_materializations[upstream_family] = materialize_prompt_family(
+            upstream_request, runtime.ctx
+        ).materialization
+    payload = {
+        "analysis": {
+            "artifacts_payload": {
+                "editorial_plan": {
+                    **raw_plan,
+                    "themes": [
+                        *raw_plan["themes"],
+                        {
+                            "theme": "Deterministic coverage addition",
+                            "priority": 2,
+                            "evidence_ids": ["f2"],
+                        },
+                    ],
+                },
+                "_cache": {
+                    "prompts": {
+                        family_id: {
+                            "prompt_system_sha256": "system-hash",
+                            "prompt_user_sha256": "user-hash",
+                            "prompt_content_hash": "plan-prompt-content-hash",
+                            "dependency_manifest": {"namespace": family_id},
+                            "execution_identity": "plan-execution",
+                            "execution_identity_manifest": identity[
+                                "execution_identity_manifest"
+                            ],
+                            "model": "gpt-5-mini",
+                        }
+                    },
+                    "family_reuse": {family_id: identity},
+                    "family_outputs": {family_id: raw_plan},
+                },
+            },
+            "evidence_packs": {
+                "findings": {"findings": []},
+                "quote_candidates": {"quote_candidates": []},
+            },
+            "validation_report": {"status": "pass"},
+        }
+    }
+    artifact_lineage = {
+        "report_vs/doc_map": upstream_materializations["report_vs/doc_map"].artifact_id,
+        "report_vs/evidence_packs/findings": upstream_materializations[
+            "report_vs/evidence_packs/findings"
+        ].artifact_id,
+        "report_vs/evidence_packs/quote_candidates": upstream_materializations[
+            "report_vs/evidence_packs/quote_candidates"
+        ].artifact_id,
+    }
+    artifact_hashes = {
+        "report_vs/doc_map": upstream_materializations["report_vs/doc_map"].output_hash,
+        "report_vs/evidence_packs/findings": upstream_materializations[
+            "report_vs/evidence_packs/findings"
+        ].output_hash,
+        "report_vs/evidence_packs/quote_candidates": upstream_materializations[
+            "report_vs/evidence_packs/quote_candidates"
+        ].output_hash,
+    }
+
+    materialized = _record_prompt_family_materializations(
+        runtime,
+        stage_name="analysis_complete",
+        payload=payload,
+        artifact_lineage=artifact_lineage,
+        artifact_hashes=artifact_hashes,
+    )
+
+    assert set(materialized) == set(_ARTIFACT_FAMILY_ROOTS)
+    trace = trace_artifact_lineage(
+        ArtifactLineageTraceRequest(
+            schema_version="1.0",
+            db_path=str(tmp_path / "reports.sqlite"),
+            artifact_id=materialized[family_id],
+        ),
+        runtime.ctx,
+    )
+    plan_artifact_id = materialized[family_id]
+    assert set(trace.edges) == {
+        (plan_artifact_id, upstream_materializations["report_vs/doc_map"].artifact_id),
+        (
+            plan_artifact_id,
+            upstream_materializations["report_vs/evidence_packs/findings"].artifact_id,
+        ),
+        (
+            plan_artifact_id,
+            upstream_materializations[
+                "report_vs/evidence_packs/quote_candidates"
+            ].artifact_id,
+        ),
+    }
+    assert (
+        trace.records[0].metadata["prompt_content_hash"] == "plan-prompt-content-hash"
+    )
+    retained_plan = json.loads(
+        Path(trace.records[0].storage_ref).read_text(encoding="utf-8")
+    )
+    assert retained_plan["output"] == raw_plan
+
+    def lineage_trace(family: str):
+        return trace_artifact_lineage(
+            ArtifactLineageTraceRequest(
+                schema_version="1.0",
+                db_path=str(tmp_path / "reports.sqlite"),
+                artifact_id=materialized[family],
+            ),
+            runtime.ctx,
+        )
+
+    plan_dependent_families = (
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/insights_candidates",
+        "report_vs/artifacts/insights_final",
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/linkedin_post",
+    )
+    for dependent_family in plan_dependent_families:
+        assert (materialized[dependent_family], plan_artifact_id) in lineage_trace(
+            dependent_family
+        ).edges
+
+    quote_trace = lineage_trace("report_vs/artifacts/quotes")
+    assert (
+        materialized["report_vs/artifacts/quotes"],
+        plan_artifact_id,
+    ) not in quote_trace.edges
+    quote_artifact_id = materialized["report_vs/artifacts/quotes"]
+    assert set(quote_trace.edges) == {
+        (
+            quote_artifact_id,
+            upstream_materializations["report_vs/doc_map"].artifact_id,
+        ),
+        (
+            quote_artifact_id,
+            upstream_materializations[
+                "report_vs/evidence_packs/quote_candidates"
+            ].artifact_id,
+        ),
+    }
 
 
 def test_materialization_rejects_dependency_without_verified_hash(

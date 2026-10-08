@@ -722,10 +722,11 @@ def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
 
     response = apply_crop_refine_bbox(
         CropRefineBBoxApplyRequest(
-            schema_version="1.0",
+            schema_version="1.1",
             pdf_path=pdf_path.as_posix(),
             page=0,
             bbox=(-30.0, -25.0, 500.0, 700.0),
+            original_bbox=(60.0, 90.0, 220.0, 220.0),
         ),
         _ctx(),
     )
@@ -734,6 +735,157 @@ def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
     assert response.page == 0
     assert 0.0 <= x0 < x1 <= 420.0
     assert 0.0 <= y0 < y1 <= 560.0
+    assert response.degradation_reason == "proposal_outside_page_fallback"
+    assert x1 - x0 < 250.0
+    assert y1 - y0 < 250.0
+
+
+def test_apply_crop_refine_bbox_rejects_near_page_expansion(tmp_path):
+    pdf_path = tmp_path / "bbox-expansion.pdf"
+    _build_basic_pdf(pdf_path)
+
+    response = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=(0.0, 0.0, 420.0, 560.0),
+            original_bbox=(60.0, 90.0, 220.0, 220.0),
+        ),
+        _ctx(),
+    )
+
+    assert response.degradation_reason == "near_page_expansion_fallback"
+    assert response.bbox[2] - response.bbox[0] < 250.0
+    assert response.bbox[3] - response.bbox[1] < 250.0
+
+
+def test_apply_crop_refine_bbox_allows_source_labelled_full_page(tmp_path):
+    pdf_path = tmp_path / "bbox-full-page.pdf"
+    _build_basic_pdf(pdf_path)
+
+    response = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=(0.0, 0.0, 420.0, 560.0),
+            original_bbox=(0.0, 0.0, 420.0, 560.0),
+            full_page_target=True,
+        ),
+        _ctx(),
+    )
+
+    assert response.degradation_reason == ""
+    assert response.bbox == pytest.approx((0.0, 0.0, 420.0, 560.0))
+
+
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+def test_crop_refine_render_exposes_reversible_page_transforms(tmp_path, rotation):
+    pdf_path = tmp_path / f"rotated-crop-{rotation}.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=320, height=240)
+    page.draw_rect(fitz.Rect(70, 80, 170, 150), color=(1, 0, 0), fill=(1, 0, 0))
+    page.set_mediabox(fitz.Rect(10, 20, 330, 260))
+    page.set_cropbox(fitz.Rect(30, 50, 310, 230))
+    page.set_rotation(rotation)
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    response = render_page_for_crop_refine(
+        CropRefinePageRenderRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=(tmp_path / "out").as_posix(),
+            report_name="rotated",
+            page=0,
+            dpi=72,
+        ),
+        _ctx(),
+    )
+
+    assert response.coordinate_transform_version == "pdf-page-affine-v1"
+    assert response.rotation == rotation
+    assert response.crop_box == pytest.approx((30.0, 50.0, 310.0, 230.0))
+    assert response.media_box == pytest.approx((10.0, 20.0, 330.0, 260.0))
+    assert response.pdf_page_width == pytest.approx(280.0)
+    assert response.pdf_page_height == pytest.approx(180.0)
+
+    # The red drawing becomes crop-relative (40, 50)-(140, 120) in canonical
+    # PDF coordinates, and the rendered-page transform maps both corners to
+    # the visible rotated page then back without accumulating an offset.
+    source_bbox = (40.0, 50.0, 140.0, 120.0)
+    displayed_bbox = _transform_bbox(source_bbox, response.pdf_to_display_transform)
+    round_trip_bbox = _transform_bbox(displayed_bbox, response.display_to_pdf_transform)
+    assert round_trip_bbox == pytest.approx(source_bbox, abs=0.01)
+    pixel_bbox = (
+        displayed_bbox[0] * response.scale_x,
+        displayed_bbox[1] * response.scale_y,
+        displayed_bbox[2] * response.scale_x,
+        displayed_bbox[3] * response.scale_y,
+    )
+    image_round_trip_bbox = _transform_bbox(pixel_bbox, response.image_to_pdf_transform)
+    assert image_round_trip_bbox == pytest.approx(source_bbox, abs=0.5)
+
+
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+def test_crop_refine_and_crop_regions_preserve_visual_for_shifted_page_boxes(
+    tmp_path, rotation
+):
+    pdf_path = tmp_path / f"visual-crop-{rotation}.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=320, height=240)
+    page.draw_rect(fitz.Rect(70, 80, 170, 150), color=(1, 0, 0), fill=(1, 0, 0))
+    page.draw_rect(fitz.Rect(225, 90, 260, 130), color=(0, 0, 1), fill=(0, 0, 1))
+    page.set_mediabox(fitz.Rect(10, 20, 330, 260))
+    page.set_cropbox(fitz.Rect(30, 50, 310, 230))
+    page.set_rotation(rotation)
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    refined = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=(40.0, 50.0, 140.0, 120.0),
+            original_bbox=(40.0, 50.0, 140.0, 120.0),
+        ),
+        _ctx(),
+    )
+    cropped = crop_regions(
+        CropRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=(tmp_path / "out").as_posix(),
+            report_name="rotated-visual",
+            items=[
+                CropItem(
+                    id="chart-0",
+                    type="chart",
+                    score=90.0,
+                    page=0,
+                    bbox=refined.bbox,
+                )
+            ],
+            mode="legacy",
+        ),
+        _ctx(),
+    )
+
+    with Image.open(tmp_path / "out" / cropped.paths[0]) as image:
+        rgb = image.convert("RGB")
+        pixels = list(rgb.get_flattened_data())
+        red_count = sum(
+            1 for red, green, blue in pixels if red > 200 and green < 60 and blue < 60
+        )
+        blue_count = sum(
+            1 for red, green, blue in pixels if blue > 200 and red < 60 and green < 60
+        )
+
+    assert red_count > 2_000
+    assert blue_count == 0
+    assert image.width * image.height < 40_000
 
 
 def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_error):
@@ -743,10 +895,11 @@ def test_apply_crop_refine_bbox_rejects_page_out_of_range(tmp_path, assert_app_e
     with pytest.raises(AppError) as exc_info:
         apply_crop_refine_bbox(
             CropRefineBBoxApplyRequest(
-                schema_version="1.0",
+                schema_version="1.1",
                 pdf_path=pdf_path.as_posix(),
                 page=3,
                 bbox=(10.0, 10.0, 40.0, 40.0),
+                original_bbox=(10.0, 10.0, 40.0, 40.0),
             ),
             _ctx(),
         )
@@ -763,10 +916,11 @@ def test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text(tmp_pa
     _build_pdf_with_long_line_crossing_crop_edge(pdf_path)
     response = apply_crop_refine_bbox(
         CropRefineBBoxApplyRequest(
-            schema_version="1.0",
+            schema_version="1.1",
             pdf_path=pdf_path.as_posix(),
             page=0,
             bbox=(60.0, 90.0, 360.0, 420.0),
+            original_bbox=(60.0, 90.0, 360.0, 420.0),
         ),
         _ctx(),
     )
@@ -851,6 +1005,10 @@ __all__ = [
     "test_render_preview_and_crop_refine_page_render_create_assets",
     "test_render_preview_compacts_filename_for_long_report_slug",
     "test_apply_crop_refine_bbox_clamps_to_page_bounds",
+    "test_apply_crop_refine_bbox_rejects_near_page_expansion",
+    "test_apply_crop_refine_bbox_allows_source_labelled_full_page",
+    "test_crop_refine_render_exposes_reversible_page_transforms",
+    "test_crop_refine_and_crop_regions_preserve_visual_for_shifted_page_boxes",
     "test_apply_crop_refine_bbox_rejects_page_out_of_range",
     "test_apply_crop_refine_bbox_does_not_over_trim_for_long_crossing_text",
     "test_crop_and_preview_sanitize_report_and_subdir_segments",

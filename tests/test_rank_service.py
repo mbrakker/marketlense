@@ -7,6 +7,7 @@ from src.contracts.openai import OpenAIResponseResult
 from src.contracts.report_assets import (
     CropRefineCandidate,
     CropRefineRequest,
+    CropRefineResult,
     RankRequest,
 )
 from src.contracts.run_budget import RunBudget
@@ -244,3 +245,142 @@ def test_crop_refine_forwards_its_run_budget_to_image_accounting(tmp_path):
     assert captured[0].run_budget == budget
     assert captured[0].usage_db_path == str(tmp_path / "isolated-usage.sqlite")
     assert captured[0].prompt_namespace == "rank_candidates/crop_refine"
+
+
+def test_crop_refine_converts_displayed_model_bbox_to_canonical_pdf(tmp_path):
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="r",
+        publisher_name="publisher-1",
+        usage_db_path=str(tmp_path / "isolated-usage.sqlite"),
+    )
+    request = CropRefineRequest(
+        schema_version="1.1",
+        system_prompt="system",
+        user_prompt="display coordinates",
+        prompt_system_sha256="sys",
+        prompt_user_sha256="usr",
+        model="gpt-5-mini",
+        temperature=0.0,
+        api_key="key",
+        page_image_path=str(tmp_path / "page.png"),
+        page=0,
+        page_width=180.0,
+        page_height=260.0,
+        candidates=[
+            CropRefineCandidate(
+                schema_version="1.0",
+                id="chart-1",
+                type="chart",
+                page=0,
+                bbox=(50.0, 50.0, 150.0, 120.0),
+            )
+        ],
+        run_budget=budget,
+        display_to_pdf_transform=(0.0, -1.0, 1.0, 0.0, 0.0, 180.0),
+    )
+
+    def _image_response(provider_request, ctx):
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text="",
+            parsed_json={
+                "results": [
+                    {
+                        "id": "chart-1",
+                        "is_valid_candidate": True,
+                        "refined_bbox": [60.0, 50.0, 130.0, 150.0],
+                        "confidence": 0.9,
+                    }
+                ]
+            },
+            input_tokens=1,
+            output_tokens=1,
+            tool_calls=0,
+            model=provider_request.model,
+        )
+
+    result = rank_service.refine_candidate_crops(
+        request,
+        _ctx(),
+        openai_chat_json_with_images_client=_image_response,
+    )
+
+    assert result.results[0].is_valid_candidate is True
+    assert result.results[0].refined_bbox == pytest.approx((50.0, 50.0, 150.0, 120.0))
+
+
+def test_crop_refine_result_contract_rejects_invalid_model_geometry():
+    with pytest.raises(ValueError, match="finite coordinates"):
+        CropRefineResult(
+            schema_version="1.0",
+            id="chart-1",
+            is_valid_candidate=True,
+            refined_bbox=(float("nan"), 10.0, 30.0, 40.0),
+            include_title=True,
+            include_note_if_present=True,
+            confidence=0.9,
+        )
+
+
+def test_crop_refine_rejects_nonfinite_provider_geometry(tmp_path):
+    budget = RunBudget(
+        schema_version="1.0",
+        run_id="r",
+        publisher_name="publisher-1",
+        usage_db_path=str(tmp_path / "isolated-usage.sqlite"),
+    )
+    candidate = CropRefineCandidate(
+        schema_version="1.0",
+        id="chart-1",
+        type="chart",
+        page=0,
+        bbox=(10.0, 20.0, 100.0, 120.0),
+    )
+    request = CropRefineRequest(
+        schema_version="1.1",
+        system_prompt="system",
+        user_prompt="display coordinates",
+        prompt_system_sha256="sys",
+        prompt_user_sha256="usr",
+        model="gpt-5-mini",
+        temperature=0.0,
+        api_key="key",
+        page_image_path=str(tmp_path / "page.png"),
+        page=0,
+        page_width=180.0,
+        page_height=260.0,
+        candidates=[candidate],
+        run_budget=budget,
+        display_to_pdf_transform=(0.0, -1.0, 1.0, 0.0, 0.0, 180.0),
+    )
+
+    def _image_response(provider_request, ctx):
+        return OpenAIResponseResult(
+            schema_version="1.0",
+            text="",
+            parsed_json={
+                "results": [
+                    {
+                        "id": candidate.id,
+                        "is_valid_candidate": True,
+                        "refined_bbox": [float("nan"), 20.0, 80.0, 100.0],
+                    }
+                ]
+            },
+            input_tokens=1,
+            output_tokens=1,
+            tool_calls=0,
+            model=provider_request.model,
+        )
+
+    result = rank_service.refine_candidate_crops(
+        request,
+        _ctx(),
+        openai_chat_json_with_images_client=_image_response,
+    )
+
+    assert len(result.results) == 1
+    assert result.results[0].is_valid_candidate is False
+    assert result.results[0].reason == "invalid_geometry"
+    assert result.results[0].refined_bbox == candidate.bbox

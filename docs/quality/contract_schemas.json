@@ -34233,6 +34233,28 @@
           ],
           "type": "array"
         },
+        "full_page_target": {
+          "type": "boolean"
+        },
+        "original_bbox": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "page": {
           "type": "integer"
         },
@@ -34257,7 +34279,8 @@
         "schema_version",
         "pdf_path",
         "page",
-        "bbox"
+        "bbox",
+        "original_bbox"
       ],
       "type": "object"
     },
@@ -34282,6 +34305,9 @@
             }
           ],
           "type": "array"
+        },
+        "degradation_reason": {
+          "type": "string"
         },
         "page": {
           "type": "integer"
@@ -34405,14 +34431,105 @@
     "src.contracts.report_assets.CropRefinePageRenderResponse": {
       "additionalProperties": false,
       "properties": {
+        "coordinate_transform_version": {
+          "type": "string"
+        },
+        "crop_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_height": {
           "type": "integer"
         },
         "image_path": {
           "type": "string"
         },
+        "image_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_width": {
           "type": "integer"
+        },
+        "media_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "page": {
           "type": "integer"
@@ -34422,6 +34539,40 @@
         },
         "page_width": {
           "type": "number"
+        },
+        "pdf_page_height": {
+          "type": "number"
+        },
+        "pdf_page_width": {
+          "type": "number"
+        },
+        "pdf_to_display_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "rotation": {
+          "type": "integer"
         },
         "scale_x": {
           "type": "number"
@@ -34442,7 +34593,16 @@
         "page_width",
         "page_height",
         "scale_x",
-        "scale_y"
+        "scale_y",
+        "coordinate_transform_version",
+        "display_to_pdf_transform",
+        "pdf_to_display_transform",
+        "image_to_pdf_transform",
+        "rotation",
+        "crop_box",
+        "media_box",
+        "pdf_page_width",
+        "pdf_page_height"
       ],
       "type": "object"
     },
@@ -34458,11 +34618,39 @@
           },
           "type": "array"
         },
+        "coordinate_transform_version": {
+          "type": "string"
+        },
         "cost_daily_path": {
           "type": "string"
         },
         "cost_ledger_path": {
           "type": "string"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "execution_identity": {
           "type": "string"

@@ -19,6 +19,7 @@ from src.contracts.report_assets import CropOutcome, CropRequest, CropResponse
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.services._pdf._crop.geometry import (
+    _canonical_page_rect,
     _legacy_chart_border_trim,
     _tighten_chart_crop_rect,
     _tighten_crop_rect_for_strict_mode,
@@ -217,7 +218,9 @@ def _crop_regions(
             pno = it.page
             x0, y0, x1, y1 = it.bbox
             page = local_doc[pno]
-            rect = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad) & page.rect
+            rect = fitz.Rect(
+                x0 - pad, y0 - pad, x1 + pad, y1 + pad
+            ) & _canonical_page_rect(page)
             effective_mode = _effective_crop_mode(mode, it.type)
             if effective_mode == "chart_strict" or it.type == "chart":
                 rect = _tighten_chart_crop_rect(page, rect)
@@ -441,7 +444,7 @@ def _crop_regions(
             pix = _png_safe_pixmap(
                 page.get_pixmap(
                     matrix=fitz.Matrix(render_scale, render_scale),
-                    clip=region.rect,
+                    clip=region.rect * page.rotation_matrix,
                     alpha=False,
                 )
             )

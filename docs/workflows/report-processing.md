@@ -61,6 +61,14 @@ unique temporary file followed by an atomic replace. A bounded retry absorbs
 transient Windows replacement contention. This makes the cache race-safe
 without treating a missing sidecar as a valid cache hit; an interrupted write
 is simply regenerated.
+Crop-refinement boxes use canonical unrotated, crop-relative PDF points. The
+page-render contract records the rotation/crop/media boxes and versioned affine
+maps between those points, the displayed page, and image pixels. The model sees
+candidate boxes in the displayed frame and returned boxes are mapped back once
+before PDF cropping. Invalid model geometry is rejected; out-of-page or
+near-page expansions fall back to the validated source candidate, unless its
+source metadata explicitly identifies a full-page target. Final crop rendering
+maps canonical boxes through page rotation before applying the image clip.
 Primary figure extraction applies the same 240-character absolute-path budget
 before asking PyMuPDF to write its image. Deep isolated runs deterministically
 compact the report asset directory and, when needed, the image filename with a

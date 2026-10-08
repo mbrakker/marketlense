@@ -38,6 +38,7 @@ from src.generators._artifact_generator.storage import (
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
+    EDITORIAL_PLAN_TRANSFORM_VERSION,
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
@@ -918,11 +919,44 @@ def generate_artifacts(
             payload, editorial_plan_ctx
         ),
     )
+    raw_editorial_plan = editorial_plan_result.get("editorial_plan")
     editorial_plan = stabilize_broad_artifact_editorial_plan(
-        normalize_artifact_editorial_plan(editorial_plan_result.get("editorial_plan")),
+        normalize_artifact_editorial_plan(raw_editorial_plan),
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
     )
+    editorial_plan_transform_identity = {
+        "transform": "normalize_and_stabilize_editorial_plan",
+        "version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+        "input_hash": sha256_json(raw_editorial_plan),
+        "output_hash": sha256_json(editorial_plan),
+    }
+    editorial_plan_identity = family_reuse["report_vs/artifacts/editorial_plan"]
+    editorial_plan_dependency_hash = sha256_json(
+        {
+            "family_id": "report_vs/artifacts/editorial_plan",
+            "producing_identity": {
+                key: editorial_plan_identity.get(key)
+                for key in (
+                    "family_schema_version",
+                    "processing_version",
+                    "prompt_content_hash",
+                    "execution_identity",
+                    "model_provider",
+                    "model_name",
+                    "model_policy_namespace",
+                    "routing_policy_version",
+                    "validator_version",
+                    "relevant_input_hash",
+                    "configuration_policy_hash",
+                )
+            },
+            "transform": editorial_plan_transform_identity,
+        }
+    )
+    editorial_plan_dependency_vars = {
+        "_editorial_plan_dependency_hash": editorial_plan_dependency_hash
+    }
     editorial_plan_json = _dump_json(editorial_plan)
     summary_evidence_json = _summary_prioritized_evidence_json(
         safe_evidence, editorial_plan
@@ -931,6 +965,13 @@ def generate_artifacts(
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
     quote_candidates = artifact_quote_candidates(safe_evidence)
+    quote_family_variables = {
+        "quote_candidates_json": _dump_json(quote_candidates),
+        "doc_map_json": base_vars["doc_map_json"],
+        "evidence_json": _dump_json(
+            {"quote_candidates": safe_evidence.get("quote_candidates", {})}
+        ),
+    }
 
     toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
     toc_topics = [entry["display_title"] for entry in toc_bundle["toc_entries"]]
@@ -942,6 +983,7 @@ def generate_artifacts(
             namespace="report_vs/artifacts/summary",
             variables={
                 **base_vars,
+                **editorial_plan_dependency_vars,
                 "evidence_json": summary_evidence_json,
                 "editorial_plan_json": editorial_plan_json,
             },
@@ -951,17 +993,18 @@ def generate_artifacts(
             schema_version="1.0",
             step_name="insights_candidates",
             namespace="report_vs/artifacts/insights_candidates",
-            variables={**base_vars, "editorial_plan_json": editorial_plan_json},
+            variables={
+                **base_vars,
+                **editorial_plan_dependency_vars,
+                "editorial_plan_json": editorial_plan_json,
+            },
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates"),
         ),
         ArtifactRenderTask(
             schema_version="1.0",
             step_name="quotes",
             namespace="report_vs/artifacts/quotes",
-            variables={
-                **base_vars,
-                "quote_candidates_json": _dump_json(quote_candidates),
-            },
+            variables=quote_family_variables,
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:quotes"),
         ),
     ]
@@ -1090,6 +1133,7 @@ def generate_artifacts(
 
     insights_final_vars = {
         **base_vars,
+        **editorial_plan_dependency_vars,
         "editorial_plan_json": editorial_plan_json,
         "insights_candidates_json": _dump_json(insights_candidates),
         "final_insight_target_count": final_insight_target_count,
@@ -1213,6 +1257,7 @@ def generate_artifacts(
                 step_name="expert_comment",
                 namespace="report_vs/artifacts/expert_comment",
                 variables={
+                    **editorial_plan_dependency_vars,
                     "editorial_plan_json": editorial_plan_json,
                     "expert_synthesis_context_json": _dump_json(
                         expert_synthesis_context
@@ -1227,6 +1272,7 @@ def generate_artifacts(
                 step_name="linkedin_post",
                 namespace="report_vs/artifacts/linkedin_post",
                 variables={
+                    **editorial_plan_dependency_vars,
                     "editorial_plan_json": editorial_plan_json,
                     "doc_map_json": base_vars["doc_map_json"],
                     "insights_final_json": _dump_json(distribution_insights),
@@ -1372,6 +1418,7 @@ def generate_artifacts(
                     step_name="expert_comment",
                     namespace="report_vs/artifacts/expert_comment",
                     variables={
+                        **editorial_plan_dependency_vars,
                         "editorial_plan_json": editorial_plan_json,
                         "expert_synthesis_context_json": _dump_json(
                             expert_synthesis_context
@@ -1386,6 +1433,7 @@ def generate_artifacts(
                     step_name="linkedin_post",
                     namespace="report_vs/artifacts/linkedin_post",
                     variables={
+                        **editorial_plan_dependency_vars,
                         "editorial_plan_json": editorial_plan_json,
                         "doc_map_json": base_vars["doc_map_json"],
                         "insights_final_json": _dump_json(insights_final),
@@ -1515,6 +1563,11 @@ def generate_artifacts(
             "family_reuse": family_reuse,
             "producing_prompt_identities": producing_prompt_identities,
             "family_outputs": family_outputs,
+            "family_transformations": {
+                "report_vs/artifacts/editorial_plan": (
+                    editorial_plan_transform_identity
+                )
+            },
             "family_reuse_telemetry": family_reuse_telemetry,
         },
         soft_copy_claim_bindings=soft_copy_claim_bindings,
