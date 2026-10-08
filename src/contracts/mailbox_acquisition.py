@@ -50,6 +50,24 @@ class MailboxAcquisitionSettings:
 
 
 @dataclass(frozen=True)
+class MailboxAccessPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox access-preflight response schema version."}
+    )
+    provider: str = field(
+        metadata={"doc": "Configured provider that passed the read-only access check."}
+    )
+    accessible: bool = field(
+        metadata={
+            "doc": "Whether mailbox authentication and metadata access succeeded."
+        }
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded mailbox/provider requests made by the check."}
+    )
+
+
+@dataclass(frozen=True)
 class MailboxMessage:
     schema_version: str = field(metadata={"doc": "Mailbox message schema version."})
     provider_message_id: str = field(

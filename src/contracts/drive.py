@@ -282,6 +282,47 @@ class DriveFolderFileListResponse:
 
 
 @dataclass(frozen=True)
+class DriveFolderCapabilityPreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder capability-preflight request version."}
+    )
+    folder_id: str = field(metadata={"doc": "Configured Drive folder identity."})
+    service_account_path: str = field(
+        metadata={"doc": "Service-account credential path for service-account auth."}
+    )
+    auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Existing OAuth token path; preflight never refreshes or writes it."
+        },
+    )
+    supports_all_drives: bool = field(default=True)
+    include_items_from_all_drives: bool = field(default=True)
+    drive_id: Optional[str] = field(default=None)
+    timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Bounded timeout for one metadata-only Drive request."},
+    )
+
+
+@dataclass(frozen=True)
+class DriveFolderCapabilityPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder capability-preflight response version."}
+    )
+    accessible: bool = field(
+        metadata={"doc": "Whether the configured folder is readable."}
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded Drive API requests performed by the check."}
+    )
+
+
+@dataclass(frozen=True)
 class DriveWritePreflightRequest:
     schema_version: str = field(
         metadata={"doc": "Drive write-preflight request schema version."}

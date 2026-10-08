@@ -43,7 +43,7 @@ def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
 
 
 def _resolve_authorized_user_credentials(
-    *, token_path: str, ctx: RunContext
+    *, token_path: str, ctx: RunContext, allow_refresh: bool = True
 ) -> _DriveCredentialResolution:
     if not token_path:
         raise AppError(
@@ -76,6 +76,12 @@ def _resolve_authorized_user_credentials(
             credentials=credentials,
             refreshed=False,
             credential_path=token_path,
+        )
+    if not allow_refresh:
+        raise AppError(
+            code="drive_oauth_refresh_required",
+            message="Drive OAuth token requires refresh; capability preflight will not rewrite credential files",
+            retryable=False,
         )
     if credentials.expired and credentials.refresh_token:
         try:
@@ -120,6 +126,7 @@ def _resolve_drive_credentials(
     service_account_path: str,
     oauth_token_path: str | None,
     ctx: RunContext,
+    allow_refresh: bool = True,
 ) -> _DriveCredentialResolution:
     if auth_mode == "service_account":
         try:
@@ -142,6 +149,7 @@ def _resolve_drive_credentials(
     return _resolve_authorized_user_credentials(
         token_path=str(oauth_token_path or ""),
         ctx=ctx,
+        allow_refresh=allow_refresh,
     )
 
 
@@ -151,26 +159,35 @@ def _build_drive_client(
     service_account_path: str,
     oauth_token_path: str | None,
     ctx: RunContext,
+    allow_token_refresh: bool = True,
+    timeout_seconds: float = DRIVE_HTTP_TIMEOUT_SECONDS,
 ):
     resolution = _resolve_drive_credentials(
         auth_mode=auth_mode,
         service_account_path=service_account_path,
         oauth_token_path=oauth_token_path,
         ctx=ctx,
+        allow_refresh=allow_token_refresh,
     )
     return boundary.build(
         "drive",
         "v3",
-        http=_build_authorized_drive_http(resolution.credentials),
+        http=_build_authorized_drive_http(
+            resolution.credentials, timeout_seconds=timeout_seconds
+        ),
         cache_discovery=False,
         static_discovery=True,
     )
 
 
-def _build_authorized_drive_http(credentials) -> AuthorizedHttp:
+def _build_authorized_drive_http(
+    credentials, *, timeout_seconds: float = DRIVE_HTTP_TIMEOUT_SECONDS
+) -> AuthorizedHttp:
     return AuthorizedHttp(
         credentials,
-        http=httplib2.Http(timeout=DRIVE_HTTP_TIMEOUT_SECONDS),
+        http=httplib2.Http(
+            timeout=min(max(float(timeout_seconds), 0.1), DRIVE_HTTP_TIMEOUT_SECONDS)
+        ),
     )
 
 

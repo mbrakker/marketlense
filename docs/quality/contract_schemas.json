@@ -147,6 +147,34 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.dev_diagnostics.BrowserExecutableAvailabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.dev_diagnostics.BrowserExecutableAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "available"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.forensics.FailedAcquisitionForensicsArtifact": {
       "additionalProperties": false,
       "properties": {
@@ -15953,6 +15981,16 @@
         "path": {
           "type": "string"
         },
+        "profile_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -20528,6 +20566,78 @@
       ],
       "type": "object"
     },
+    "src.contracts.drive.DriveFolderCapabilityPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "drive_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "include_items_from_all_drives": {
+          "type": "boolean"
+        },
+        "oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "service_account_path": {
+          "type": "string"
+        },
+        "supports_all_drives": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder_id",
+        "service_account_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveFolderCapabilityPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
     "src.contracts.drive.DriveFolderEnsureRequest": {
       "additionalProperties": false,
       "properties": {
@@ -21735,6 +21845,42 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.ExecutableAvailabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "executable_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "executable_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ExecutableAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "executable_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "executable_name",
+        "available"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.FileBundleHashRequest": {
       "additionalProperties": false,
       "properties": {
@@ -22455,6 +22601,37 @@
         "schema_version",
         "path",
         "content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.RepositoryRevisionReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "working_directory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.RepositoryRevisionReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "commit_sha": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "commit_sha"
       ],
       "type": "object"
     },
@@ -24178,6 +24355,100 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm.OpenAIModelPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "model"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenAIModelPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "model",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenRouterModelPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "model"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenRouterModelPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "model",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm_usage.LLMPolicyEffectivenessRequest": {
       "additionalProperties": false,
       "properties": {
@@ -25611,6 +25882,30 @@
         "score",
         "reason",
         "provider_message_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.mailbox_acquisition.MailboxAccessPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "provider",
+        "accessible",
+        "provider_calls"
       ],
       "type": "object"
     },
@@ -29823,6 +30118,214 @@
         "sample_count",
         "p50_wall_time_ms",
         "p95_wall_time_ms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "degraded",
+            "blocked",
+            "not_required",
+            "not_checked"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "capability",
+        "affected_workflows",
+        "status",
+        "reason_code",
+        "retryable",
+        "remediation",
+        "required"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightReport": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_count": {
+          "type": "integer"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.CapabilityPreflightCheck"
+          },
+          "type": "array"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "external_writes": {
+          "type": "integer"
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "degraded",
+            "blocked",
+            "not_required",
+            "not_checked"
+          ]
+        },
+        "workflow_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow_statuses": {
+          "additionalProperties": {
+            "enum": [
+              "ready",
+              "degraded",
+              "blocked",
+              "not_required",
+              "not_checked"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "status",
+        "workflow_names",
+        "workflow_statuses",
+        "checks",
+        "elapsed_ms",
+        "provider_calls",
+        "external_writes",
+        "blocking_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "live_checks": {
+          "type": "boolean"
+        },
+        "mailbox_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "publish_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.publish.PublishSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_inventory_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_inventory_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._publisher_inventory.settings.PublisherInventorySettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queue_policies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowQueuePolicy"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.config.AppSettings"
+        },
+        "workflow_control": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlSettings"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "settings",
+        "workflow_control",
+        "queue_policies"
       ],
       "type": "object"
     },
@@ -38629,6 +39132,77 @@
         "claim_provenance",
         "producing_prompt_identity",
         "generation_attempt"
+      ],
+      "type": "object"
+    },
+    "src.contracts.sqlite_migration.SqliteCapabilityInspectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "database_key": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "lock_timeout_seconds": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.sqlite_migration.SqliteCapabilityInspectionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "current_version": {
+          "type": "integer"
+        },
+        "database_key": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "integer"
+        },
+        "foreign_keys_ok": {
+          "type": "boolean"
+        },
+        "integrity_ok": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "write_lock_available": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "status",
+        "reason_code",
+        "retryable",
+        "current_version",
+        "expected_version",
+        "integrity_ok",
+        "foreign_keys_ok",
+        "write_lock_available"
       ],
       "type": "object"
     },
@@ -47959,6 +48533,12 @@
         "post_type": {
           "type": "string"
         },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "required_meta_keys": {
           "items": {
             "type": "string"
@@ -47969,6 +48549,12 @@
           "type": "string"
         },
         "ssl_verify": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        },
+        "verify_authentication": {
           "type": "boolean"
         }
       },
@@ -47983,6 +48569,9 @@
     "src.contracts.wordpress.WordPressPublishTargetPreflightResponse": {
       "additionalProperties": false,
       "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
         "base_url": {
           "type": "string"
         },
@@ -47992,6 +48581,9 @@
         "post_type": {
           "type": "string"
         },
+        "provider_calls": {
+          "type": "integer"
+        },
         "reachable": {
           "type": "boolean"
         },
@@ -48000,6 +48592,12 @@
         },
         "status_code": {
           "type": "integer"
+        },
+        "verified_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "verified_meta_keys": {
           "items": {

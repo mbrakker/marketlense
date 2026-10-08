@@ -20,7 +20,7 @@ def load_publisher_inventory_settings(
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
 
@@ -140,17 +140,27 @@ def load_publisher_inventory_settings(
         resolver.missing.append("env:OPENAI_API_KEY")
 
     if resolver.missing:
+        missing_values = tuple(resolver.missing)
         logger.info(
             log_event(
                 ctx,
                 role="service",
                 event="publisher_inventory_config_load_failed",
                 module=logger.name,
-                fields={"missing": resolver.missing},
+                fields={"missing": list(missing_values)},
             )
         )
-        raise RuntimeError(
-            f"Missing required config/env values: {', '.join(resolver.missing)}"
+        if "env:OPENROUTER_API_KEY" in missing_values:
+            code = "publisher_inventory_openrouter_api_key_missing"
+        elif "env:OPENAI_API_KEY" in missing_values:
+            code = "publisher_inventory_openai_api_key_missing"
+        else:
+            code = "publisher_inventory_configuration_incomplete"
+        raise AppError(
+            code=code,
+            message="Publisher inventory configuration is incomplete",
+            retryable=False,
+            context={"missing_fields": list(missing_values)},
         )
 
     settings = PublisherInventorySettings(

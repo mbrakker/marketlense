@@ -108,6 +108,22 @@ class WordPressPublishTargetPreflightRequest:
             )
         },
     )
+    verify_authentication: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether to verify the supplied identity through the read-only users/me REST endpoint."
+        },
+    )
+    required_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Post-type capability names that must be granted to the authenticated user."
+        },
+    )
+    timeout_seconds: float = field(
+        default=30.0,
+        metadata={"doc": "Maximum timeout for each WordPress capability request."},
+    )
 
 
 @dataclass(frozen=True)
@@ -129,6 +145,9 @@ class WordPressPublishTargetPreflightResponse:
             )
         },
     )
+    authenticated: bool = field(default=False)
+    verified_capabilities: Tuple[str, ...] = field(default=())
+    provider_calls: int = field(default=2)
 
 
 @dataclass(frozen=True)

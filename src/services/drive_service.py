@@ -27,6 +27,7 @@ from ._drive_service.listing import (
     download_pdf_to_path,
     get_file_metadata,
     list_files_in_folder,
+    preflight_drive_folder_access,
     list_pdfs,
 )
 from ._drive_service.write import *

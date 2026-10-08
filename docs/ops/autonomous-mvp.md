@@ -8,6 +8,41 @@ The autonomous MVP uses the existing durable workflow supervisor and registered
 queue workers. The host controls cadence. Each invocation is one bounded pass;
 the command does not schedule itself or keep a worker loop running.
 
+## Check capabilities before a scheduled pass
+
+Run the profile-aware preflight before enabling or invoking the host cadence:
+
+```powershell
+python -m src.cli capability-preflight --profile autonomous_mvp
+python -m src.cli capability-preflight --profile autonomous_mvp --live
+```
+
+The first command performs local configuration, dependency, prompt, storage,
+queue-budget, and read-only SQLite checks. The second also makes bounded
+read-only checks for configured OpenAI and publisher-discovery OpenRouter model
+metadata, Drive folder access, mailbox login, and WordPress authentication, post
+type, proof metadata, and publication capabilities. Publisher-discovery checks
+are included only when its queue is enabled; OpenAI candidate-screening checks
+are included only when that feature is enabled. It never generates with a
+model, reads mailbox messages, writes to Drive or WordPress, or launches a
+browser. Browser readiness checks the installed runtime and browser assets. In
+`--live` mode it also checks the configured browser-use OpenAI model when that
+provider is configured; an OpenRouter-only browser fallback is reported as
+`not_checked` because it has no metadata-only probe here. These metadata checks
+do not make inference calls or verify provider billing/quota.
+
+The command uses the queues enabled by the selected profile. A missing optional
+integration does not block an unrelated queue. Required credentials that are
+missing are `blocked`; required external checks skipped without `--live` are
+`not_checked` and make the overall result `degraded`. Retryable external
+failures also produce `degraded`; incompatible local state or invalid required
+configuration produces `blocked`. Exit code `0` means `ready` or
+`not_required`, `2` means `degraded`, and `1` means `blocked`. The command prints
+one redacted JSON report to standard output with the repository SHA, selected
+profile, checked workflows and capabilities, elapsed time, provider-call count,
+and external-write count. Keep that output with the invocation logs when
+recording a scheduled run.
+
 ## Invoke one pass
 
 Select the profile in the process that runs the command, then invoke the

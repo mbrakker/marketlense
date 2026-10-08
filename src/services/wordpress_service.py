@@ -114,6 +114,36 @@ def preflight_publish_target(
     )
 
 
+def preflight_publish_capability(
+    settings: PublishSettings, ctx: RunContext
+) -> WordPressPublishTargetPreflightResponse:
+    """Verify the authenticated read and publication capability without writes."""
+    wp = settings.wp
+    auth_header = build_auth_header(
+        username=wp.username,
+        app_password=wp.app_password,
+        bearer_token=wp.bearer_token,
+    )
+    required_capabilities = ["create_posts"]
+    if str(wp.post_status or "").strip().lower() == "publish":
+        required_capabilities.append("publish_posts")
+    return _preflight_publish_target_request(
+        WordPressPublishTargetPreflightRequest(
+            schema_version="1.0",
+            base_url=wp.site_url,
+            auth_header=auth_header,
+            post_type=wp.post_type,
+            ssl_verify=wp.ssl_verify,
+            ca_bundle_path=wp.ca_bundle_path,
+            required_meta_keys=_required_publish_meta_keys(wp.post_type),
+            verify_authentication=True,
+            required_capabilities=tuple(required_capabilities),
+            timeout_seconds=5.0,
+        ),
+        ctx,
+    )
+
+
 __all__ = [
     "_WordPressRequestResult",
     "_SessionPool",
@@ -137,6 +167,7 @@ __all__ = [
     "_raise_wordpress_installation_redirect",
     "_safe_json",
     "preflight_publish_target",
+    "preflight_publish_capability",
     "upload_media",
     "prepare_media_upload",
     "create_post",

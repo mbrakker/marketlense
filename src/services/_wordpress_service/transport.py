@@ -140,6 +140,7 @@ def _execute_request(
     request_error_event: str,
     request_error_code: str,
     request_error_message: str,
+    timeout_seconds: float = DEFAULT_TIMEOUT,
     request_error_fields: Optional[Dict[str, Any]] = None,
     params: Optional[dict[str, Any]] = None,
     data: Any = None,
@@ -149,7 +150,7 @@ def _execute_request(
     normalized_method = str(method or "").strip().upper()
     request_kwargs: dict[str, Any] = {
         "headers": dict(headers or {}),
-        "timeout": DEFAULT_TIMEOUT,
+        "timeout": min(max(float(timeout_seconds), 0.1), DEFAULT_TIMEOUT),
         "allow_redirects": False,
         "verify": _requests_verify(
             ssl_verify=ssl_verify,
@@ -427,6 +428,19 @@ def _safe_json(text: str) -> Dict[str, Any]:
         return {}
 
 
+def _execute_preflight_request(*, provider_calls: int, **kwargs: Any) -> Any:
+    try:
+        return _execute_request(**kwargs)
+    except AppError as exc:
+        raise AppError(
+            code=exc.code,
+            message="WordPress capability preflight request failed",
+            cause=exc,
+            retryable=exc.retryable,
+            context={"provider_calls": provider_calls + 1},
+        ) from exc
+
+
 def preflight_publish_target(
     request: WordPressPublishTargetPreflightRequest,
     ctx: RunContext,
@@ -434,6 +448,69 @@ def preflight_publish_target(
     endpoint = _post_type_endpoint(request.post_type)
     base = request.base_url.rstrip("/")
     url = f"{base}/wp-json/wp/v2/types/{endpoint}"
+    authenticated = False
+    verified_capabilities: tuple[str, ...] = ()
+    provider_calls = 0
+    user_capabilities: dict[str, object] = {}
+    if request.verify_authentication:
+        user_result = _execute_preflight_request(
+            provider_calls=provider_calls,
+            method="GET",
+            url=f"{base}/wp-json/wp/v2/users/me",
+            headers={"Authorization": request.auth_header},
+            params={"context": "edit"},
+            ssl_verify=request.ssl_verify,
+            ca_bundle_path=request.ca_bundle_path,
+            timeout_seconds=request.timeout_seconds,
+            ctx=ctx,
+            request_error_event="wordpress_authentication_preflight_failed",
+            request_error_code="wordpress_authentication_unavailable",
+            request_error_message="WordPress authentication preflight failed",
+            request_error_fields={"post_type": request.post_type},
+        )
+        provider_calls += 1
+        user_response = user_result.response
+        user_status = int(getattr(user_response, "status_code", 0) or 0)
+        if user_status >= 500:
+            _raise_http_server_error(
+                ctx=ctx,
+                event="wordpress_authentication_preflight_failed",
+                code="wordpress_authentication_unavailable",
+                message_prefix="WordPress authentication preflight failed",
+                resp=user_response,
+                fields={"post_type": request.post_type},
+            )
+        if user_status in {401, 403}:
+            raise AppError(
+                code="wordpress_authentication_invalid",
+                message="WordPress rejected the configured publication credentials",
+                retryable=False,
+                context={"status_code": user_status},
+            )
+        if user_status >= 400:
+            raise AppError(
+                code="wordpress_authentication_unverified",
+                message="WordPress authentication could not be verified through REST",
+                retryable=False,
+                context={"status_code": user_status},
+            )
+        user_payload = _safe_json(getattr(user_response, "text", "") or "")
+        raw_user_capabilities = (
+            user_payload.get("capabilities") if isinstance(user_payload, dict) else None
+        )
+        if (
+            not isinstance(user_payload, dict)
+            or int(user_payload.get("id", 0) or 0) <= 0
+            or not isinstance(raw_user_capabilities, dict)
+        ):
+            raise AppError(
+                code="wordpress_authentication_unverified",
+                message="WordPress did not return authenticated user capabilities",
+                retryable=False,
+            )
+        authenticated = True
+        user_capabilities = raw_user_capabilities
+
     logger.info(
         log_event(
             ctx,
@@ -447,18 +524,22 @@ def preflight_publish_target(
             },
         )
     )
-    result = _execute_request(
+    result = _execute_preflight_request(
+        provider_calls=provider_calls,
         method="GET",
         url=url,
         headers={"Authorization": request.auth_header},
+        params={"context": "edit"} if request.verify_authentication else None,
         ssl_verify=request.ssl_verify,
         ca_bundle_path=request.ca_bundle_path,
+        timeout_seconds=request.timeout_seconds,
         ctx=ctx,
         request_error_event="wordpress_publish_target_preflight_failed",
         request_error_code="wordpress_publish_target_unreachable",
         request_error_message="WordPress publish target preflight failed",
         request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
     )
+    provider_calls += 1
     response = result.response
     status_code = int(getattr(response, "status_code", 0) or 0)
     if status_code >= 500:
@@ -501,18 +582,21 @@ def preflight_publish_target(
             context={"post_type": request.post_type},
         )
     metadata_url = f"{base}/wp-json/wp/v2/{endpoint}"
-    metadata_result = _execute_request(
+    metadata_result = _execute_preflight_request(
+        provider_calls=provider_calls,
         method="OPTIONS",
         url=metadata_url,
         headers={"Authorization": request.auth_header},
         ssl_verify=request.ssl_verify,
         ca_bundle_path=request.ca_bundle_path,
+        timeout_seconds=request.timeout_seconds,
         ctx=ctx,
         request_error_event="wordpress_publish_target_metadata_preflight_failed",
         request_error_code="wordpress_publish_target_metadata_unavailable",
         request_error_message="WordPress publish target metadata preflight failed",
         request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
     )
+    provider_calls += 1
     metadata_response = metadata_result.response
     metadata_status_code = int(getattr(metadata_response, "status_code", 0) or 0)
     if metadata_status_code >= 500:
@@ -574,6 +658,33 @@ def preflight_publish_target(
                 "missing_meta_key_count": len(missing_meta_keys),
             },
         )
+
+    if request.verify_authentication:
+        raw_type_capabilities = payload.get("capabilities")
+        if not isinstance(raw_type_capabilities, dict):
+            raise AppError(
+                code="wordpress_capability_unverified",
+                message="WordPress did not expose the target post-type capabilities",
+                retryable=False,
+            )
+        missing_capabilities = []
+        for capability in request.required_capabilities:
+            granted_capability = str(
+                raw_type_capabilities.get(capability) or ""
+            ).strip()
+            if (
+                not granted_capability
+                or user_capabilities.get(granted_capability) is not True
+            ):
+                missing_capabilities.append(capability)
+        if missing_capabilities:
+            raise AppError(
+                code="wordpress_create_permission_missing",
+                message="Configured WordPress credentials lack required publication capabilities",
+                retryable=False,
+                context={"missing_capability_count": len(missing_capabilities)},
+            )
+        verified_capabilities = tuple(request.required_capabilities)
     logger.info(
         log_event(
             ctx,
@@ -587,6 +698,9 @@ def preflight_publish_target(
                 "pool_reused": result.pool_reused,
                 "verified_meta_key_count": len(request.required_meta_keys),
                 "metadata_pool_reused": metadata_result.pool_reused,
+                "authenticated": authenticated,
+                "verified_capability_count": len(verified_capabilities),
+                "provider_calls": provider_calls,
             },
         )
     )
@@ -598,6 +712,9 @@ def preflight_publish_target(
         reachable=True,
         status_code=status_code,
         verified_meta_keys=tuple(request.required_meta_keys),
+        authenticated=authenticated,
+        verified_capabilities=verified_capabilities,
+        provider_calls=provider_calls,
     )
 
 
@@ -621,5 +738,6 @@ __all__ = [
     "_raise_http_server_error",
     "_raise_http_redirect_error",
     "_safe_json",
+    "_execute_preflight_request",
     "preflight_publish_target",
 ]

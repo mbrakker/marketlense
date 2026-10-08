@@ -5,6 +5,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import subprocess
 import threading
 import time
 import uuid
@@ -22,6 +24,8 @@ from src.contracts.files import (
     DirectoryPatternCountResponse,
     DirectoryPatternCountRow,
     DirectoryPatternSpec,
+    ExecutableAvailabilityRequest,
+    ExecutableAvailabilityResponse,
     FileBundleHashRequest,
     FileBundleHashResponse,
     FileExistsRequest,
@@ -53,6 +57,8 @@ from src.contracts.files import (
     ReadTextFilesResponse,
     ReadTextRequest,
     ReadTextResponse,
+    RepositoryRevisionReadRequest,
+    RepositoryRevisionReadResponse,
     StructuredLogLoadRequest,
     StructuredLogLoadResponse,
     WriteBytesRequest,
@@ -1313,6 +1319,58 @@ def file_stat(request: FileStatRequest, ctx: RunContext) -> FileStatResponse:
         )
     )
     return response
+
+
+def inspect_executable(
+    request: ExecutableAvailabilityRequest, ctx: RunContext
+) -> ExecutableAvailabilityResponse:
+    name = str(request.executable_name or "").strip()
+    available = bool(name) and shutil.which(name) is not None
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="executable_availability_checked",
+            module=logger.name,
+            fields={"executable_name": name, "available": available},
+        )
+    )
+    return ExecutableAvailabilityResponse(
+        schema_version="1.0", executable_name=name, available=available
+    )
+
+
+def read_repository_revision(
+    request: RepositoryRevisionReadRequest, ctx: RunContext
+) -> RepositoryRevisionReadResponse:
+    configured_revision = str(os.environ.get("GITHUB_SHA", "")).strip().lower()
+    revision = configured_revision
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--verify", "HEAD"],
+                cwd=str(request.working_directory or "") or None,
+                capture_output=True,
+                check=True,
+                text=True,
+                timeout=2.0,
+            )
+        except (OSError, subprocess.SubprocessError):
+            revision = ""
+        else:
+            revision = result.stdout.strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        revision = ""
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="repository_revision_read_complete",
+            module=logger.name,
+            fields={"available": bool(revision)},
+        )
+    )
+    return RepositoryRevisionReadResponse(schema_version="1.0", commit_sha=revision)
 
 
 def delete_file(request: DeleteFileRequest, ctx: RunContext) -> DeleteFileResponse:

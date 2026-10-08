@@ -8,6 +8,23 @@ BROWSER_DEVELOPER_DIAGNOSTICS_SCHEMA_VERSION = "1.0"
 
 
 @dataclass(frozen=True)
+class BrowserExecutableAvailabilityRequest:
+    schema_version: str = field(
+        metadata={"doc": "Browser-executable availability request schema version."}
+    )
+
+
+@dataclass(frozen=True)
+class BrowserExecutableAvailabilityResponse:
+    schema_version: str = field(
+        metadata={"doc": "Browser-executable availability response schema version."}
+    )
+    available: bool = field(
+        metadata={"doc": "True when a supported local Chromium executable was found."}
+    )
+
+
+@dataclass(frozen=True)
 class BrowserDeveloperDiagnosticsRequest:
     schema_version: str = field(
         metadata={"doc": "Browser developer diagnostics request schema version."}
