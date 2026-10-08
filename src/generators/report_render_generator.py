@@ -22,7 +22,9 @@ from src.contracts.report_analysis import (
 from src.contracts.report_assets import PreviewRequest, PreviewResponse, RenderRequest
 from src.contracts.report_cards import (
     CardCoverAssetSet,
+    CoverFingerprint,
     CoverFingerprintProjectionRequest,
+    ReportCardManifest,
     ReportCardManifestRequest,
     ReportCardManifestWriteRequest,
 )
@@ -36,6 +38,7 @@ from src.contracts.report_store import (
     ReportMetadataGetRequest,
     ReportMetadataUpsertRequest,
 )
+from src.contracts.run_context import RunContext
 from src.contracts.semantic_ids import ReportId
 from src.generators.claim_validation_generator import (
     materialize_retained_claim_package,
@@ -249,6 +252,154 @@ def _artifact_insights(artifacts: dict) -> tuple[dict[str, object], ...]:
     if not isinstance(value, list):
         return ()
     return tuple(item for item in value if isinstance(item, dict))
+
+
+def _report_card_manifest_request(
+    *,
+    runtime: ReportRuntimeState,
+    analysis: ReportAnalysisState,
+    title: str,
+    publisher: str,
+    published_date: str,
+    region: str,
+    covered_period: str | None,
+    fingerprint: CoverFingerprint,
+    covers: CardCoverAssetSet,
+    cover_style_hash: str,
+) -> ReportCardManifestRequest:
+    artifacts_payload = analysis.artifacts_payload or {}
+    summary = artifacts_payload.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    source_identity = runtime.source_identity
+    return ReportCardManifestRequest(
+        schema_version="1.0",
+        title=title,
+        publisher=publisher,
+        published_date=published_date,
+        region=region,
+        covered_period=covered_period or "",
+        tldr_compact=str(summary.get("card_tldr_compact") or ""),
+        tldr_standard=str(summary.get("tldr") or ""),
+        insights_final=_artifact_insights(artifacts_payload),
+        summary_abstained=family_is_abstained(artifacts_payload, "summary"),
+        fingerprint=fingerprint,
+        covers=covers,
+        source_title=str(getattr(source_identity, "canonical_title", "") or "").strip(),
+        source_url=_safe_public_source_url(
+            getattr(
+                source_identity,
+                "canonical_landing_page_url",
+                runtime.source_url,
+            )
+            or runtime.source_url
+        ),
+        source_note=_public_source_note(runtime),
+        source_metadata_hash=str(
+            getattr(source_identity, "source_metadata_hash", "") or ""
+        ).strip(),
+        source_identity_status=str(
+            getattr(source_identity, "identity_status", "unknown") or "unknown"
+        ).strip(),
+        source_publication_date_status=str(
+            getattr(source_identity, "publication_date_status", "unknown") or "unknown"
+        ).strip(),
+        cover_style_hash=cover_style_hash,
+    )
+
+
+def _report_card_assets_exist(
+    manifest: ReportCardManifest,
+    report_output_dir: Path,
+    dependencies: ReportRenderDependencies,
+    ctx: RunContext,
+) -> bool:
+    root = report_output_dir.resolve()
+    for asset in (manifest.covers.small, manifest.covers.medium, manifest.covers.large):
+        asset_path = Path(asset.output_path)
+        if asset_path.is_absolute() or ".." in asset_path.parts:
+            return False
+        resolved_path = (root / asset_path).resolve()
+        try:
+            resolved_path.relative_to(root)
+        except ValueError:
+            return False
+        stat = dependencies.file_stat(
+            FileStatRequest(schema_version="1.0", path=str(resolved_path)), ctx
+        )
+        if not stat.exists or not stat.is_file:
+            return False
+    return True
+
+
+def _render_only_reuse_outcome(
+    *,
+    runtime: ReportRuntimeState,
+    source: ReportSourceState,
+    analysis: ReportAnalysisState,
+    dependencies: ReportRenderDependencies,
+    html_path: str,
+    manifest_path: str,
+    build_provenance: dict[str, str],
+) -> IngestOutcome:
+    (
+        readiness_path,
+        readiness_status,
+        retained_claim_path,
+        materialization_failure_code,
+    ) = _persist_publish_readiness(
+        runtime=runtime,
+        source=source,
+        analysis=analysis,
+        dependencies=dependencies,
+        final_html_path=html_path,
+        report_card_manifest_path=manifest_path,
+        build_provenance=build_provenance,
+    )
+    logger.info(
+        log_event(
+            runtime.ctx,
+            role="generator",
+            event="report_card_assets_reused_for_render_only",
+            module=logger.name,
+            fields={"file_id": runtime.file.file_id, "manifest_available": True},
+        )
+    )
+    return IngestOutcome(
+        schema_version="1.1",
+        file_id=runtime.file.file_id,
+        name=runtime.file_name,
+        md5=runtime.md5,
+        html_path=html_path,
+        status=(
+            "error"
+            if materialization_failure_code or readiness_status != "pass"
+            else "processed"
+        ),
+        error=materialization_failure_code
+        or ("publish_readiness_failed" if readiness_status != "pass" else None),
+        publish_readiness_status=readiness_status,
+        vector_store_id=analysis.vector_store_id,
+        vector_store_status=analysis.vector_store_status,
+        indexed_at_utc=analysis.indexed_at_utc,
+        openai_file_id=analysis.openai_file_id,
+        evidence_packs={
+            **analysis.evidence_paths,
+            **(
+                {"retained_claim_validation": retained_claim_path}
+                if retained_claim_path
+                else {}
+            ),
+            "publish_readiness": readiness_path,
+        },
+        vector_store_last_error=analysis.last_error,
+        text_validation_status=source.text_validation_status,
+        text_validation_reason=source.text_validation_reason,
+        text_validation_pages=source.text_validation_pages,
+        ocr_fallback_used=source.ocr_fallback_used,
+        ocr_pdf_path=source.ocr_pdf_path or None,
+        report_card_manifest_path=manifest_path,
+    )
 
 
 def _is_card_contract_error(exc: AppError) -> bool:
@@ -912,91 +1063,6 @@ def render_report_output(
         runtime.ctx,
     )
 
-    if reuse_report_card_assets:
-        report_output_dir = Path(runtime.settings.output_dir) / runtime.report_name
-        manifest_path = report_output_dir / "report-card-manifest.json"
-        report_card_manifest_path = (
-            str(manifest_path)
-            if dependencies.file_exists(
-                FileExistsRequest(schema_version="1.0", path=str(manifest_path)),
-                runtime.ctx,
-            ).exists
-            else None
-        )
-        if report_card_manifest_path:
-            (
-                readiness_path,
-                readiness_status,
-                retained_claim_path,
-                materialization_failure_code,
-            ) = _persist_publish_readiness(
-                runtime=runtime,
-                source=source,
-                analysis=analysis,
-                dependencies=dependencies,
-                final_html_path=out_html,
-                report_card_manifest_path=report_card_manifest_path,
-                build_provenance=build_provenance,
-            )
-            logger.info(
-                log_event(
-                    runtime.ctx,
-                    role="generator",
-                    event="report_card_assets_reused_for_render_only",
-                    module=logger.name,
-                    fields={
-                        "file_id": runtime.file.file_id,
-                        "manifest_available": True,
-                    },
-                )
-            )
-            return IngestOutcome(
-                schema_version="1.1",
-                file_id=runtime.file.file_id,
-                name=runtime.file_name,
-                md5=runtime.md5,
-                html_path=out_html,
-                status=(
-                    "error"
-                    if materialization_failure_code or readiness_status != "pass"
-                    else "processed"
-                ),
-                error=materialization_failure_code
-                or ("publish_readiness_failed" if readiness_status != "pass" else None),
-                publish_readiness_status=readiness_status,
-                vector_store_id=analysis.vector_store_id,
-                vector_store_status=analysis.vector_store_status,
-                indexed_at_utc=analysis.indexed_at_utc,
-                openai_file_id=analysis.openai_file_id,
-                evidence_packs={
-                    **analysis.evidence_paths,
-                    **(
-                        {"retained_claim_validation": retained_claim_path}
-                        if retained_claim_path
-                        else {}
-                    ),
-                    "publish_readiness": readiness_path,
-                },
-                vector_store_last_error=analysis.last_error,
-                text_validation_status=source.text_validation_status,
-                text_validation_reason=source.text_validation_reason,
-                text_validation_pages=source.text_validation_pages,
-                ocr_fallback_used=source.ocr_fallback_used,
-                ocr_pdf_path=source.ocr_pdf_path or None,
-                report_card_manifest_path=report_card_manifest_path,
-            )
-        logger.info(
-            log_event(
-                runtime.ctx,
-                role="generator",
-                event="report_card_assets_reuse_invalidated",
-                module=logger.name,
-                fields={
-                    "file_id": runtime.file.file_id,
-                    "reason": "manifest_missing",
-                },
-            )
-        )
     cover_meta = dependencies.get_report_metadata(
         ReportMetadataGetRequest(
             schema_version="1.0",
@@ -1048,6 +1114,91 @@ def render_report_output(
                 cover_semantics=cover_semantics,
             )
         )
+        style_hash_response = dependencies.hash_file_bundle(
+            FileBundleHashRequest(
+                schema_version="1.0",
+                paths=[runtime.settings.cover_style_path],
+            ),
+            cover_ctx,
+        )
+        cover_style_hash = style_hash_response.file_sha256.get(
+            runtime.settings.cover_style_path
+        )
+        if not cover_style_hash:
+            raise AppError(
+                code="cover_style_identity_missing",
+                message="Cover style configuration identity is unavailable",
+                retryable=False,
+            )
+        report_output_dir = Path(runtime.settings.output_dir) / runtime.report_name
+        manifest_path = report_output_dir / "report-card-manifest.json"
+        if reuse_report_card_assets:
+            manifest_available = dependencies.file_exists(
+                FileExistsRequest(schema_version="1.0", path=str(manifest_path)),
+                cover_ctx,
+            ).exists
+            reuse_reason = "manifest_missing"
+            if manifest_available:
+                try:
+                    payload = dependencies.read_json(
+                        ReadJsonRequest(schema_version="1.0", path=str(manifest_path)),
+                        cover_ctx,
+                    ).payload
+                    if not isinstance(payload, dict):
+                        raise AppError(
+                            code="report_card_manifest_invalid",
+                            message="Report-card manifest must be a JSON object",
+                            retryable=False,
+                        )
+                    cached_manifest = ReportCardManifest.from_dict(payload)
+                    expected_manifest = build_report_card_manifest(
+                        _report_card_manifest_request(
+                            runtime=runtime,
+                            analysis=analysis,
+                            title=cover_title,
+                            publisher=cover_publisher,
+                            published_date=public_publication_date,
+                            region=cover_region or "",
+                            covered_period=cover_time_period,
+                            fingerprint=fingerprint,
+                            covers=cached_manifest.covers,
+                            cover_style_hash=cover_style_hash,
+                        )
+                    )
+                    assets_present = _report_card_assets_exist(
+                        cached_manifest,
+                        report_output_dir,
+                        dependencies,
+                        cover_ctx,
+                    )
+                    if expected_manifest == cached_manifest and assets_present:
+                        return _render_only_reuse_outcome(
+                            runtime=runtime,
+                            source=source,
+                            analysis=analysis,
+                            dependencies=dependencies,
+                            html_path=out_html,
+                            manifest_path=str(manifest_path),
+                            build_provenance=build_provenance,
+                        )
+                    reuse_reason = (
+                        "cover_asset_missing"
+                        if not assets_present
+                        else "manifest_identity_changed"
+                    )
+                except AppError as exc:
+                    if exc.retryable:
+                        raise
+                    reuse_reason = exc.code
+            logger.info(
+                log_event(
+                    cover_ctx,
+                    role="generator",
+                    event="report_card_assets_reuse_invalidated",
+                    module=logger.name,
+                    fields={"file_id": runtime.file.file_id, "reason": reuse_reason},
+                )
+            )
         cover_outcomes = dependencies.generate_cover_images(
             CoverImageGenerationRequest(
                 schema_version="2.0",
@@ -1098,55 +1249,21 @@ def render_report_output(
             and cover_outcome.status == "generated"
             and cover_assets is not None
         ):
-            report_output_dir = Path(runtime.settings.output_dir) / runtime.report_name
-            summary = artifacts_payload.get("summary")
-            if not isinstance(summary, dict):
-                summary = {}
             manifest = build_report_card_manifest(
-                ReportCardManifestRequest(
-                    schema_version="1.0",
+                _report_card_manifest_request(
+                    runtime=runtime,
+                    analysis=analysis,
                     title=cover_title,
                     publisher=cover_publisher,
                     published_date=public_publication_date,
                     region=cover_region or "",
-                    covered_period=cover_time_period or "",
-                    tldr_compact=str(summary.get("card_tldr_compact") or ""),
-                    tldr_standard=str(summary.get("tldr") or ""),
-                    insights_final=_artifact_insights(artifacts_payload),
-                    summary_abstained=family_is_abstained(artifacts_payload, "summary"),
+                    covered_period=cover_time_period,
                     fingerprint=fingerprint,
                     covers=_relative_cover_assets(
                         cover_assets,
                         report_output_dir,
                     ),
-                    source_title=str(
-                        getattr(runtime.source_identity, "canonical_title", "") or ""
-                    ).strip(),
-                    source_url=_safe_public_source_url(
-                        getattr(
-                            runtime.source_identity,
-                            "canonical_landing_page_url",
-                            runtime.source_url,
-                        )
-                        or runtime.source_url
-                    ),
-                    source_note=_public_source_note(runtime),
-                    source_metadata_hash=str(
-                        getattr(runtime.source_identity, "source_metadata_hash", "")
-                        or ""
-                    ).strip(),
-                    source_identity_status=str(
-                        getattr(runtime.source_identity, "identity_status", "unknown")
-                        or "unknown"
-                    ).strip(),
-                    source_publication_date_status=str(
-                        getattr(
-                            runtime.source_identity,
-                            "publication_date_status",
-                            "unknown",
-                        )
-                        or "unknown"
-                    ).strip(),
+                    cover_style_hash=cover_style_hash,
                 )
             )
             manifest_response = dependencies.write_report_card_manifest(

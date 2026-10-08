@@ -25305,6 +25305,16 @@
         "created_at": {
           "type": "number"
         },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -25333,6 +25343,16 @@
     "src.contracts.lock.LockReleaseRequest": {
       "additionalProperties": false,
       "properties": {
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -35675,6 +35695,9 @@
     "src.contracts.report_cards.ReportCardManifest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },
@@ -35763,6 +35786,9 @@
     "src.contracts.report_cards.ReportCardManifestRequest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },

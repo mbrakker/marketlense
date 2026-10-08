@@ -73,7 +73,7 @@ This is the repository's single, source-neutral work register. Every canonical t
 | Closed | E4 | Executable retained PDF benchmark corpus in CI | Hash-pinned deterministic regression corpus is CI-gated; E15 owns independent human semantic crop acceptance. |
 | Closed | E5 | Crop-QA scorecards and selection telemetry | Retained crop-QA sidecars support operator-only quality/clipping/storage scorecards. |
 | Active | E6 | Retain a hash-pinned claim-embedding benchmark export | Persist approved vectors for reproducible zero-provider semantic benchmarking. |
-| Closed | E7 | Planner-enforced artifact-family reuse | Retained render/crop/checkpoint/publication reuse is planner-enforced with plan/actual reconciliation. |
+| Closed | E7 | Planner-enforced artifact-family reuse | Retained render/crop/checkpoint/publication reuse is planner-enforced with plan/actual reconciliation; report-card replay checks content/source/region/style identity and all three assets before reuse. |
 | Closed | E8 | Use canonical source identity to suppress duplicate research work | Exact identity/content-hash package reuse is implemented with retained evidence. |
 | Closed | E9 | Materialize prompt-family outputs and route only required model calls | Implemented/proven registered families use fail-closed pre-call reuse; A21 owns residual family coverage/interruption gaps and E12 category-only checkpoints. |
 | Active | E10 | Attest active model-pricing rates before they become stale | Keep cost attribution and spend enforcement trustworthy as provider pricing changes. |

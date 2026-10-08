@@ -1,4 +1,4 @@
-# ruff: noqa: F401,F403,F405
+# ruff: noqa: F401,F403,F405,I001
 from __future__ import annotations
 from ._split_support_cases_01_render_output_and_cards import *  # noqa: F401,F403
 
@@ -161,8 +161,15 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
 
     def _hash_bundle(req, ctx):
         del ctx
-        assert {Path(path).name for path in req.paths} == set(template_contents)
-        return SimpleNamespace(sha256=_template_bundle_sha(template_contents))
+        if {Path(path).name for path in req.paths} == set(template_contents):
+            return SimpleNamespace(sha256=_template_bundle_sha(template_contents))
+        return SimpleNamespace(
+            sha256="style-bundle",
+            file_sha256={
+                path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                for path in req.paths
+            },
+        )
 
     def _file_stat(req, ctx):
         del ctx
@@ -246,8 +253,17 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
 
     def _hash_bundle(req, ctx):
         del ctx
-        assert {Path(path).name for path in req.paths} == set(current_template_contents)
-        return SimpleNamespace(sha256=_template_bundle_sha(current_template_contents))
+        if {Path(path).name for path in req.paths} == set(current_template_contents):
+            return SimpleNamespace(
+                sha256=_template_bundle_sha(current_template_contents)
+            )
+        return SimpleNamespace(
+            sha256="style-bundle",
+            file_sha256={
+                path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                for path in req.paths
+            },
+        )
 
     def _render_report(req, ctx):
         del ctx
@@ -502,6 +518,191 @@ def test_render_only_regenerates_card_manifest_when_it_is_missing(tmp_path):
     assert outcome.report_card_manifest_path.endswith("report-card-manifest.json")
 
 
+def test_render_only_reuses_compatible_manifest_and_all_three_cover_assets(tmp_path):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(runtime.settings.output_dir) / runtime.report_name / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_covers = []
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _generate_covers(req, ctx):
+        del ctx
+        generated_covers.append(req)
+        assets = _cover_assets(runtime)
+        for asset in (assets.small, assets.medium, assets.large):
+            path = Path(asset.output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"cover:{asset.size}".encode())
+        return [SimpleNamespace(status="generated", assets=assets, error=None)]
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=_generate_covers,
+        write_report_card_manifest=write_report_card_manifest,
+    )
+    preview = render_preview_asset(runtime, source, deps)
+    first = render_report_output(
+        runtime, source, selection, analysis, deps, preview_resp=preview
+    )
+    manifest_path = Path(first.report_card_manifest_path)
+    original_manifest = ReportCardManifest.from_dict(
+        json.loads(manifest_path.read_text(encoding="utf-8"))
+    )
+    linked_paths = [
+        Path(runtime.settings.output_dir) / runtime.report_name / asset.output_path
+        for asset in (
+            original_manifest.covers.small,
+            original_manifest.covers.medium,
+            original_manifest.covers.large,
+        )
+    ]
+    assert all(path.is_file() for path in linked_paths)
+    assert [
+        asset.size
+        for asset in (
+            original_manifest.covers.small,
+            original_manifest.covers.medium,
+            original_manifest.covers.large,
+        )
+    ] == ["small", "medium", "large"]
+
+    replay = render_report_output(
+        runtime,
+        source,
+        selection,
+        analysis,
+        deps,
+        preview_resp=preview,
+        reuse_report_card_assets=True,
+    )
+
+    assert len(generated_covers) == 1
+    assert replay.report_card_manifest_path == str(manifest_path)
+    assert (
+        ReportCardManifest.from_dict(
+            json.loads(manifest_path.read_text(encoding="utf-8"))
+        )
+        == original_manifest
+    )
+
+
+@pytest.mark.parametrize(
+    "changed_input", ["semantics", "source", "style", "region", "asset"]
+)
+def test_render_only_invalidates_cover_reuse_when_approved_inputs_change(
+    changed_input, tmp_path
+):
+    runtime = _runtime(tmp_path, md5="md5")
+    source = _source(runtime)
+    selection = _selection(runtime, source)
+    analysis = _analysis(runtime, source, selection)
+    html_path = Path(runtime.settings.output_dir) / runtime.report_name / "report.html"
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_covers = []
+    region = {"value": "US"}
+
+    def _render_report(req, ctx):
+        del req, ctx
+        html_path.write_text("<html></html>", encoding="utf-8")
+        return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
+
+    def _generate_covers(req, ctx):
+        del ctx
+        generated_covers.append(req)
+        assets = _cover_assets(runtime)
+        for asset in (assets.small, assets.medium, assets.large):
+            path = Path(asset.output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"cover:{asset.size}:{len(generated_covers)}".encode())
+        return [SimpleNamespace(status="generated", assets=assets, error=None)]
+
+    def _metadata(req, ctx):
+        result = _deps().get_report_metadata(req, ctx)
+        return replace(result, region=region["value"])
+
+    deps = _deps(
+        render_report=_render_report,
+        generate_cover_images=_generate_covers,
+        write_report_card_manifest=write_report_card_manifest,
+        get_report_metadata=_metadata,
+    )
+    preview = render_preview_asset(runtime, source, deps)
+    render_report_output(
+        runtime, source, selection, analysis, deps, preview_resp=preview
+    )
+
+    replay_runtime = runtime
+    replay_source = source
+    replay_selection = selection
+    replay_analysis = analysis
+    if changed_input == "semantics":
+        replay_analysis = replace(
+            analysis,
+            artifacts_payload={
+                **analysis.artifacts_payload,
+                "cover_semantics": {
+                    **analysis.artifacts_payload["cover_semantics"],
+                    "direction": "falling",
+                },
+            },
+        )
+    elif changed_input == "source":
+        replay_runtime = replace(
+            runtime,
+            source_identity=SimpleNamespace(
+                canonical_title="Updated source title",
+                canonical_landing_page_url="https://example.com/updated-source",
+                source_metadata_hash="updated-source-hash",
+                identity_status="verified",
+                publication_date_status="verified",
+                publisher_name="Publisher",
+            ),
+        )
+        replay_source = _source(replay_runtime)
+        replay_selection = _selection(replay_runtime, replay_source)
+        replay_analysis = _analysis(replay_runtime, replay_source, replay_selection)
+    elif changed_input == "style":
+        Path(runtime.settings.cover_style_path).write_text(
+            "style: changed\n", encoding="utf-8"
+        )
+    elif changed_input == "region":
+        region["value"] = "Europe"
+    else:
+        manifest_path = (
+            Path(runtime.settings.output_dir)
+            / runtime.report_name
+            / "report-card-manifest.json"
+        )
+        manifest = ReportCardManifest.from_dict(
+            json.loads(manifest_path.read_text(encoding="utf-8"))
+        )
+        missing_asset = (
+            Path(runtime.settings.output_dir)
+            / runtime.report_name
+            / manifest.covers.medium.output_path
+        )
+        missing_asset.unlink()
+
+    render_report_output(
+        replay_runtime,
+        replay_source,
+        replay_selection,
+        replay_analysis,
+        deps,
+        preview_resp=preview,
+        reuse_report_card_assets=True,
+    )
+
+    assert len(generated_covers) == 2
+
+
 def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_changes(
     tmp_path,
 ):
@@ -510,6 +711,8 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
     selection = _selection(runtime, source)
     baseline = _analysis(runtime, source, selection)
     generated_covers = []
+    rendered_bytes = []
+    written_manifests = []
     html_path = Path(tmp_path / "out" / "report.html")
     html_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -518,31 +721,59 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
+    def _generate_covers(request, ctx):
+        del ctx
+        generated_covers.append(request)
+        assets = _cover_assets(runtime)
+        outputs = (assets.small, assets.medium, assets.large)
+        for asset in outputs:
+            path = Path(asset.output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(
+                f"{request.reports[0].fingerprint.seed}:{asset.size}".encode()
+            )
+        rendered_bytes.append(
+            tuple(Path(asset.output_path).read_bytes() for asset in outputs)
+        )
+        return [SimpleNamespace(status="generated", assets=assets, error=None)]
+
     deps = _deps(
         render_report=_render_report,
-        generate_cover_images=lambda req, ctx: (
-            generated_covers.append(req)
-            or [
-                SimpleNamespace(
-                    status="generated", assets=_cover_assets(runtime), error=None
-                )
-            ]
-        ),
-        write_report_card_manifest=lambda req, ctx: SimpleNamespace(
-            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+        generate_cover_images=_generate_covers,
+        write_report_card_manifest=lambda req, ctx: (
+            written_manifests.append(req.manifest)
+            or SimpleNamespace(
+                manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+            )
         ),
     )
     preview = render_preview_asset(runtime, source, deps)
     payloads = [
-        {**baseline.artifacts_payload, "_cache": {"hit": False}},
-        {**baseline.artifacts_payload, "_cache": {"hit": True, "elapsed_ms": 17}},
+        {
+            **baseline.artifacts_payload,
+            "_cache": {
+                "hit": False,
+                "elapsed_ms": 17,
+                "usage": {"prompt_tokens": 20},
+                "reuse": "cold",
+            },
+        },
+        {
+            **baseline.artifacts_payload,
+            "_cache": {
+                "hit": True,
+                "elapsed_ms": 900,
+                "usage": {"prompt_tokens": 200, "completion_tokens": 30},
+                "reuse": "warm",
+            },
+        },
         {
             **baseline.artifacts_payload,
             "insights_final": [
                 {"text": "A changed first finding."},
                 baseline.artifacts_payload["insights_final"][1],
             ],
-            "_cache": {"hit": True, "elapsed_ms": 17},
+            "_cache": {"hit": True, "elapsed_ms": 900, "reuse": "warm"},
         },
     ]
 
@@ -556,10 +787,14 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
             preview_resp=preview,
         )
 
-    seeds = [request.reports[0].fingerprint.seed for request in generated_covers]
-    assert len(seeds) == 3
-    assert seeds[0] == seeds[1]
-    assert seeds[2] != seeds[1]
+    fingerprints = [request.reports[0].fingerprint for request in generated_covers]
+    assert len(fingerprints) == 3
+    assert fingerprints[0] == fingerprints[1]
+    assert fingerprints[2] != fingerprints[1]
+    assert rendered_bytes[0] == rendered_bytes[1]
+    assert rendered_bytes[2] != rendered_bytes[1]
+    assert written_manifests[0] == written_manifests[1]
+    assert written_manifests[2] != written_manifests[1]
 
 
 def test_render_omits_ambiguous_retained_cover_period_before_card_generation(tmp_path):

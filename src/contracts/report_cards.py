@@ -324,6 +324,10 @@ class ReportCardManifestRequest:
     source_publication_date_status: str = field(
         default="unknown", metadata={"doc": "Canonical publication-date status."}
     )
+    cover_style_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 identity of the style used to render covers."},
+    )
 
 
 @dataclass(frozen=True)
@@ -370,6 +374,10 @@ class ReportCardManifest:
     )
     source_publication_date_status: str = field(
         default="unknown", metadata={"doc": "Canonical publication-date status."}
+    )
+    cover_style_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 identity of the style used to render covers."},
     )
 
     @classmethod
@@ -503,6 +511,12 @@ class ReportCardManifest:
                 payload.get("source_publication_date_status") or "unknown",
                 code="cover_fingerprint_invalid",
                 field_name="source_publication_date_status",
+            ),
+            cover_style_hash=_text(
+                payload.get("cover_style_hash"),
+                code="cover_fingerprint_invalid",
+                field_name="cover_style_hash",
+                allow_empty=True,
             ),
         )
 

@@ -258,9 +258,7 @@ def build_report_card_manifest(
                 text
                 for item in candidates
                 if isinstance(item, Mapping)
-                and (
-                    text := " ".join(_sanitize_public_prose(item.get("text")).split())
-                )
+                and (text := " ".join(_sanitize_public_prose(item.get("text")).split()))
                 and 1 <= len(text.split()) <= 18
                 and not text.endswith(("...", "\u2026"))
                 and text[-1] in ".?!"
@@ -301,5 +299,6 @@ def build_report_card_manifest(
             "source_metadata_hash": request.source_metadata_hash,
             "source_identity_status": request.source_identity_status,
             "source_publication_date_status": request.source_publication_date_status,
+            "cover_style_hash": request.cover_style_hash,
         }
     )
