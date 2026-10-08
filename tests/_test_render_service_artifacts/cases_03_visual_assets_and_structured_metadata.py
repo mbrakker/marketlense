@@ -1,5 +1,7 @@
 # ruff: noqa: F401,F403,F405
 
+import hashlib
+
 from ._shared import *
 
 
@@ -630,6 +632,9 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
     variant_path = assets_dir / "primary@2x.png"
     Image.new("RGB", (800, 450), color="navy").save(base_path)
     Image.new("RGB", (1600, 900), color="navy").save(variant_path)
+    sidecar_path = "report/slices/primary.png.qa.json"
+    (tmp_path / sidecar_path).write_text('{"accepted":true}', encoding="utf-8")
+    image_sha256 = hashlib.sha256(base_path.read_bytes()).hexdigest()
 
     data = {
         "title": "Responsive Figure Report",
@@ -652,6 +657,10 @@ def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
                 "is_primary": True,
                 "display_caption": "Primary generated caption",
                 "crop_qa_accepted": True,
+                "crop_qa_sidecar_path": sidecar_path,
+                "crop_quality_profile": "publication_strict",
+                "crop_dpi": 216,
+                "crop_image_sha256": image_sha256,
             }
         ],
         "artifacts": {

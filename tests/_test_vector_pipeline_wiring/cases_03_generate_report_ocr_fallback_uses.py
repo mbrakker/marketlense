@@ -1,6 +1,13 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import hashlib
+
+from PIL import Image
+
+from src.contracts.candidates import Candidate
+from src.contracts.report_models import RankedCandidate
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -186,6 +193,8 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
             "figure_caption_prompt_namespace": "report_vs/figure_caption",
             "figure_caption_max_chars": 120,
             "openai_models": {"report_vs/figure_caption": "gpt-5-caption"},
+            "crop_refine_enabled": False,
+            "crop_refine_mode": "off",
         }
     )
     pdf_path = tmp_path / "sample.pdf"
@@ -310,10 +319,71 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         html_path.write_text("<html></html>", encoding="utf-8")
         return RenderResponse(schema_version="1.0", html_path=str(html_path))
 
+    figure_candidate = Candidate(
+        schema_version="1.0",
+        id="chart-1",
+        kind="chart",
+        page=0,
+        bbox=(10.0, 10.0, 300.0, 220.0),
+        caption="Detected figure caption",
+        preview_text="Revenue trend chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+
+    def _fake_crop_regions(request, _ctx):
+        item = request.items[0]
+        image_path = f"{request.report_name}/slices/{item.id}.png"
+        output_path = Path(request.out_dir) / image_path
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (32, 24), color="navy").save(output_path)
+        image_sha256 = hashlib.sha256(output_path.read_bytes()).hexdigest()
+        sidecar_path = f"{image_path}.qa.json"
+        (Path(request.out_dir) / sidecar_path).write_text(
+            '{"accepted":true}', encoding="utf-8"
+        )
+        return SimpleNamespace(
+            paths=[image_path],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id=item.id,
+                    path=image_path,
+                    accepted=True,
+                    qa_sidecar_path=sidecar_path,
+                    score=0.99,
+                    defects=[],
+                    detector_summary={},
+                    quality_profile="publication_strict",
+                    dpi=int(request.dpi),
+                    image_sha256=image_sha256,
+                )
+            ],
+        )
+
     deps = _base_vector_report_dependencies(
         tmp_path,
         extract_best_figure=_extract_best_figure,
-        collect_candidates=lambda req, _ctx: SimpleNamespace(candidates=[]),
+        collect_candidates=lambda req, _ctx: SimpleNamespace(
+            candidates=[figure_candidate]
+        ),
+        rank_candidates=lambda req, _ctx: SimpleNamespace(
+            results=[
+                RankedCandidate(
+                    id="chart-1",
+                    type="chart",
+                    score=98,
+                    quality_score=98,
+                    insight_score=98,
+                    data_score=98,
+                    keep=True,
+                )
+            ],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        crop_regions=_fake_crop_regions,
         load_prompt_set=_fake_load_prompt_set,
         render_prompt=_fake_render_prompt,
         openai_chat_json_with_images=_fake_openai_chat_json_with_images,
