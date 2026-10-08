@@ -20,6 +20,7 @@ From the repository root:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements.lock
+.\.venv\Scripts\python.exe -m pip install --no-deps -e .\tools\browser-use
 Copy-Item src\config\app.example.yaml src\config\app.local.yaml
 ```
 
@@ -43,9 +44,12 @@ streamlit run src/streamlit_app.py
 `plan` is safe to use before credentials are available because it produces an execution plan without launching a workflow. To process reports, complete [configuration](configuration.md) and [credentials](credentials.md), then run a bounded command such as `python -m src.cli ingest --limit 1`.
 
 Browser doctor and browser acquisition use the same interpreter and canonical
-`browser_use` loader. Run the doctor through the environment that will execute
-acquisition (normally `.venv`): it checks the worker subprocess import before
-opening a bounded browser session and reports the interpreter, virtualenv,
-module path, and supported vendored-package checksum.
+`browser_use` loader. The editable install above provides the supported
+vendored runtime; Playwright is not a required runtime dependency. Run the doctor
+through the environment that will execute acquisition (normally `.venv`): it
+checks the worker subprocess import before opening a bounded browser session and
+reports the interpreter, virtualenv, module path, and supported vendored-package
+checksum. The capability preflight checks runtime imports and browser assets
+without opening a browser.
 
 For WordPress local development, use [WordPress operations](wordpress.md). For test and gate commands, use [quality testing](../quality/testing.md).

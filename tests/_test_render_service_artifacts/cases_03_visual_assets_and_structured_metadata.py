@@ -1,5 +1,7 @@
 # ruff: noqa: F401,F403,F405
 
+import hashlib
+
 from ._shared import *
 
 
@@ -621,6 +623,80 @@ def test_render_formats_slug_chips_with_acronyms(tmp_path):
     assert "ROI" in html
     assert "ai-in-retail" not in html
     assert "private_label" not in html
+
+
+def test_render_adds_responsive_srcset_when_variant_exists(tmp_path):
+    assets_dir = tmp_path / "report" / "slices"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    base_path = assets_dir / "primary.png"
+    variant_path = assets_dir / "primary@2x.png"
+    Image.new("RGB", (800, 450), color="navy").save(base_path)
+    Image.new("RGB", (1600, 900), color="navy").save(variant_path)
+    sidecar_path = "report/slices/primary.png.qa.json"
+    (tmp_path / sidecar_path).write_text('{"accepted":true}', encoding="utf-8")
+    image_sha256 = hashlib.sha256(base_path.read_bytes()).hexdigest()
+
+    data = {
+        "title": "Responsive Figure Report",
+        "tldr": "TLDR",
+        "insights": ["Insight A"] * 5,
+        "quote": {"text": "Quote", "author": "Author"},
+        "commentary": "Commentary",
+        "publisher": "Publisher",
+        "taxonomy": ["tag"],
+        "region": "US",
+        "time_period": "2024",
+        "contents_page_number": 0,
+        "_figure_assets": [
+            {
+                "schema_version": "1.0",
+                "image_path": "report/slices/primary.png",
+                "page": 2,
+                "candidate_id": "chart-1",
+                "kind": "chart",
+                "is_primary": True,
+                "display_caption": "Primary generated caption",
+                "crop_qa_accepted": True,
+                "crop_qa_sidecar_path": sidecar_path,
+                "crop_quality_profile": "publication_strict",
+                "crop_dpi": 216,
+                "crop_image_sha256": image_sha256,
+            }
+        ],
+        "artifacts": {
+            "chart_insight_cards": [
+                {
+                    "status": "generated",
+                    "candidate_id": "chart-1",
+                    "crop_qa_accepted": True,
+                    "evidence_id": "f1",
+                    "insight_id": "i1",
+                    "source_page": 2,
+                    "caption": "Primary generated caption",
+                    "public_takeaway": "The chart supports the published finding.",
+                }
+            ]
+        },
+    }
+    req = RenderRequest(
+        schema_version="1.0",
+        data=data,
+        doc_name="responsive.pdf",
+        file_id="file_responsive",
+        out_dir=str(tmp_path),
+        preview_png=None,
+    )
+
+    resp = render_report(req, _ctx())
+    html = Path(resp.html_path).read_text(encoding="utf-8")
+
+    assert (
+        'srcset="report/slices/primary.png 1x, report/slices/primary@2x.png 2x"' in html
+    )
+    assert 'sizes="(max-width: 800px) 100vw, 980px"' in html
+    assert 'width="800"' in html
+    assert 'height="450"' in html
+    assert 'loading="lazy"' in html
 
 
 def test_render_creates_missing_nested_output_directory(tmp_path):

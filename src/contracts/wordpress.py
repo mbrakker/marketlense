@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional, Tuple
 
 from src.contracts.run_budget import RunBudget, RunBudgetUsage
+
+SCHEMA_VERSION = "1.0"
 
 
 WordPressTransactionOutcome = Literal[
@@ -84,13 +87,104 @@ class WordPressAuthSettings:
 
 
 @dataclass(frozen=True)
+class WordPressPostTypePreflightRequirement:
+    post_type: str = field(
+        metadata={"doc": "Registered WordPress REST post type slug."}
+    )
+    required_meta_keys: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Required writable metadata keys for this post type."},
+    )
+    schema_version: str = field(
+        default=SCHEMA_VERSION,
+        metadata={"doc": "Post-type preflight requirement schema version."},
+    )
+
+    def __post_init__(self) -> None:
+        if self.schema_version != SCHEMA_VERSION:
+            raise ValueError("Unsupported WordPress post-type requirement version")
+        if not isinstance(self.post_type, str) or not re.fullmatch(
+            r"[A-Za-z0-9_-]+", self.post_type
+        ):
+            raise ValueError("WordPress post type must be a route-safe slug")
+        if not isinstance(self.required_meta_keys, tuple) or any(
+            not isinstance(key, str) or not key.strip()
+            for key in self.required_meta_keys
+        ):
+            raise ValueError(
+                "WordPress metadata requirements must be non-empty strings"
+            )
+
+
+@dataclass(frozen=True)
+class WordPressPublishCapabilityRequirements:
+    schema_version: str = field(
+        metadata={"doc": "WordPress capability requirements schema version."}
+    )
+    post_types: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Post type slugs that enabled workflows may publish."},
+    )
+    post_type_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Capabilities required for every selected post type."},
+    )
+    user_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Capabilities required directly from the authenticated user."},
+    )
+    rest_routes: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Registered REST routes under wp-json that must exist."},
+    )
+    rest_methods: Tuple[str, ...] = field(
+        default=("POST",),
+        metadata={"doc": "HTTP methods required on each selected REST route."},
+    )
+
+    def __post_init__(self) -> None:
+        if self.schema_version != "1.0":
+            raise ValueError("Unsupported WordPress capability requirements version")
+        for values in (
+            self.post_types,
+            self.post_type_capabilities,
+            self.user_capabilities,
+            self.rest_routes,
+            self.rest_methods,
+        ):
+            if not isinstance(values, tuple) or any(
+                not isinstance(value, str) or not value.strip() for value in values
+            ):
+                raise ValueError(
+                    "WordPress capability requirements must be tuples of non-empty strings"
+                )
+        if any(not re.fullmatch(r"[A-Z]+", method) for method in self.rest_methods):
+            raise ValueError("WordPress REST methods must use uppercase token names")
+        if any(
+            not re.fullmatch(r"[A-Za-z0-9_-]+", post_type)
+            for post_type in self.post_types
+        ):
+            raise ValueError("WordPress post types must be route-safe slugs")
+        for route in self.rest_routes:
+            if any(
+                not re.fullmatch(r"[A-Za-z0-9_-]+", segment)
+                for segment in route.split("/")
+            ):
+                raise ValueError("WordPress REST routes must be relative wp-json paths")
+
+
+@dataclass(frozen=True)
 class WordPressPublishTargetPreflightRequest:
     schema_version: str = field(
         metadata={"doc": "WordPress publish-target preflight request schema version."}
     )
     base_url: str = field(metadata={"doc": "WordPress site base URL."})
     auth_header: str = field(metadata={"doc": "Authorization header value."})
-    post_type: str = field(metadata={"doc": "REST post type endpoint slug."})
+    post_type: str = field(
+        metadata={
+            "doc": "Primary REST post type slug, or empty when checking REST routes only."
+        }
+    )
     ssl_verify: bool = field(
         default=True,
         metadata={"doc": "Whether HTTPS certificates should be verified."},
@@ -108,6 +202,40 @@ class WordPressPublishTargetPreflightRequest:
             )
         },
     )
+    verify_authentication: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether to verify the supplied identity through the read-only users/me REST endpoint."
+        },
+    )
+    required_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Post-type capability names that must be granted to the authenticated user."
+        },
+    )
+    timeout_seconds: float = field(
+        default=30.0,
+        metadata={"doc": "Maximum timeout for each WordPress capability request."},
+    )
+    additional_post_types: Tuple[WordPressPostTypePreflightRequirement, ...] = field(
+        default=(),
+        metadata={"doc": "Additional post types and their required writable metadata."},
+    )
+    required_user_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Direct user capabilities required by the operation."},
+    )
+    required_rest_routes: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "REST routes under wp-json that must expose the required methods."
+        },
+    )
+    required_rest_methods: Tuple[str, ...] = field(
+        default=("POST",),
+        metadata={"doc": "HTTP methods required on each selected REST route."},
+    )
 
 
 @dataclass(frozen=True)
@@ -116,7 +244,11 @@ class WordPressPublishTargetPreflightResponse:
         metadata={"doc": "WordPress publish-target preflight response schema version."}
     )
     base_url: str = field(metadata={"doc": "WordPress site base URL checked."})
-    post_type: str = field(metadata={"doc": "REST post type endpoint slug checked."})
+    post_type: str = field(
+        metadata={
+            "doc": "Primary REST post type endpoint slug checked; empty when only routes are checked."
+        }
+    )
     endpoint: str = field(metadata={"doc": "Resolved REST endpoint checked."})
     reachable: bool = field(metadata={"doc": "True when the REST target is usable."})
     status_code: int = field(metadata={"doc": "HTTP status code returned."})
@@ -128,6 +260,23 @@ class WordPressPublishTargetPreflightResponse:
                 "contains field names only."
             )
         },
+    )
+    authenticated: bool = field(default=False)
+    verified_capabilities: Tuple[str, ...] = field(default=())
+    provider_calls: int = field(default=2)
+    verified_post_types: Tuple[str, ...] = field(
+        default=(),
+        metadata={
+            "doc": "Post type targets whose metadata and capabilities were verified."
+        },
+    )
+    verified_user_capabilities: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Direct authenticated user capabilities verified as granted."},
+    )
+    verified_rest_routes: Tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "REST routes whose required methods were verified."},
     )
 
 

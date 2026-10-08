@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import time
+import re
 from dataclasses import asdict
+from typing import cast
 
 import typer
 from rich import box
@@ -11,6 +13,13 @@ from src._cli.app import cli_app, console, logger
 from src._cli.runtime import sync_cli_patch_points
 from src.contracts.categories import RecategorizeRequest
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
+from src.contracts.files import RepositoryRevisionReadRequest
+from src.contracts.pipeline_preflight import (
+    CapabilityProfileName,
+    CapabilityPreflightCheck,
+    CapabilityPreflightReport,
+    CapabilityPreflightRequest,
+)
 from src.contracts.costs import CostReportingRequest, CostReportRequest
 from src.contracts.cover_images import CoverImageOrchestratorRequest
 from src.contracts.logging import LoggingSetupRequest
@@ -30,6 +39,11 @@ from src.orchestrators.candidate_extraction_orchestrator import run_candidate_ex
 from src.orchestrators.cost_reporting_orchestrator import run_cost_reporting
 from src.orchestrators.cover_image_orchestrator import run_cover_image_generation
 from src.orchestrators.ingest_orchestrator import run_ingest
+from src.orchestrators.pipeline_preflight_orchestrator import (
+    derive_capability_workflows,
+    run_capability_preflight,
+    workflow_profiles_for_runtime,
+)
 from src.orchestrators.publish_orchestrator import run_publish
 from src.orchestrators.recategorize_orchestrator import run_recategorize
 from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
@@ -38,12 +52,17 @@ from src.orchestrators.wordpress_intelligence_projection_orchestrator import (
 from src.orchestrators.wp_category_update_orchestrator import run_update_wp_categories
 from src.services.config_service import (
     build_ingest_settings,
+    load_browser_download_settings,
+    load_mailbox_acquisition_settings,
     load_publish_settings,
+    load_publisher_inventory_settings,
     load_settings,
     load_workflow_control_settings,
+    load_workflow_queue_policies,
 )
 from src.services.config_service import new_runtime_context as new_run_context
 from src.services.logging_service import setup_logging
+from src.services import file_service
 from src.services.state_service import write_workflow_control_observation
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
@@ -59,9 +78,12 @@ _CLI_PATCH_POINTS = (
     "execute_ui_run",
     "get_ui_run_record",
     "load_browser_download_settings",
+    "load_mailbox_acquisition_settings",
     "load_publish_settings",
     "load_publisher_inventory_settings",
     "load_settings",
+    "load_workflow_control_settings",
+    "load_workflow_queue_policies",
     "promote_private_api_evidence_to_browser_playbook",
     "read_text",
     "replay_ui_run",
@@ -78,6 +100,7 @@ _CLI_PATCH_POINTS = (
     "run_recategorize",
     "run_report_download",
     "run_update_wp_categories",
+    "run_capability_preflight",
     "setup_logging",
     "write_ui_run_record",
     "write_ui_run_replay_manifest",
@@ -88,6 +111,162 @@ _CLI_PATCH_POINTS = (
 
 def _sync_cli_patch_points() -> None:
     sync_cli_patch_points(globals(), _CLI_PATCH_POINTS)
+
+
+def _repository_commit_sha(ctx) -> str:
+    revision = file_service.read_repository_revision(
+        RepositoryRevisionReadRequest(schema_version="1.0"), ctx
+    )
+    return revision.commit_sha
+
+
+def _capability_config_failure(
+    profile: CapabilityProfileName, reason_code: str
+) -> CapabilityPreflightReport:
+    safe_code = re.sub(r"[^a-z0-9_]", "_", str(reason_code or "").lower())[:80]
+    return CapabilityPreflightReport(
+        schema_version="1.0",
+        profile_name=profile,
+        status="blocked",
+        workflow_names=[],
+        workflow_statuses={},
+        checks=[
+            CapabilityPreflightCheck(
+                schema_version="1.0",
+                capability="resolved_configuration",
+                affected_workflows=[],
+                status="blocked",
+                reason_code=safe_code or "configuration_invalid",
+                retryable=False,
+                remediation="Resolve the selected application configuration and rerun capability preflight",
+                required=True,
+            )
+        ],
+        elapsed_ms=0,
+        provider_calls=0,
+        external_writes=0,
+        blocking_count=1,
+    )
+
+
+@cli_app.command("capability-preflight")
+def capability_preflight(
+    profile: str = typer.Option(
+        "manual",
+        "--profile",
+        help="Configuration profile to inspect: manual or autonomous_mvp",
+    ),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Run bounded read-only external capability probes",
+    ),
+) -> None:
+    """Emit a redacted readiness report for the selected workflow profile."""
+    _sync_cli_patch_points()
+    if profile not in {"manual", "autonomous_mvp"}:
+        raise typer.BadParameter("--profile must be manual or autonomous_mvp")
+    selected_profile = cast(CapabilityProfileName, profile)
+    ctx = new_run_context(task_id="cli_capability_preflight")
+    setup_logging(LoggingSetupRequest(schema_version="1.0"), ctx)
+    config_request = ConfigLoadRequest(
+        schema_version="1.0",
+        path="",
+        profile_name="autonomous_mvp" if profile == "autonomous_mvp" else "",
+    )
+    try:
+        settings = load_settings(config_request, ctx)
+        workflow_control = load_workflow_control_settings(config_request, ctx)
+        queue_policies = load_workflow_queue_policies(config_request, ctx)
+        workflows = derive_capability_workflows(
+            profile_name=selected_profile,
+            supervisor_enabled=workflow_control.supervisor.enabled,
+            queue_policies=queue_policies,
+        )
+        runtime_profiles = workflow_profiles_for_runtime(workflows)
+        workflow_profiles = [
+            workflow_control.preflight_profiles[name]
+            for name in runtime_profiles
+            if name in workflow_control.preflight_profiles
+        ]
+        browser_settings = None
+        browser_settings_config_error = None
+        if any(item.require_browser for item in workflow_profiles):
+            try:
+                browser_settings = load_browser_download_settings(config_request, ctx)
+            except AppError as exc:
+                browser_settings_config_error = exc.code
+            except Exception:
+                browser_settings_config_error = "browser_configuration_invalid"
+
+        mailbox_settings = None
+        mailbox_settings_config_error = None
+        if "mailbox_delivery" in workflows:
+            try:
+                mailbox_settings = load_mailbox_acquisition_settings(
+                    config_request, ctx
+                )
+            except AppError as exc:
+                mailbox_settings_config_error = exc.code
+            except Exception:
+                mailbox_settings_config_error = "mailbox_configuration_invalid"
+
+        publish_settings = None
+        publish_settings_config_error = None
+        if any(item.require_publish for item in workflow_profiles):
+            try:
+                publish_settings = load_publish_settings(config_request, ctx)
+            except AppError as exc:
+                publish_settings_config_error = exc.code
+            except Exception:
+                publish_settings_config_error = "publish_configuration_invalid"
+        publisher_inventory_settings = None
+        publisher_inventory_config_error = None
+        if "publisher_discovery" in workflows:
+            try:
+                publisher_inventory_settings = load_publisher_inventory_settings(
+                    config_request, ctx
+                )
+            except AppError as exc:
+                publisher_inventory_config_error = exc.code
+            except Exception:
+                publisher_inventory_config_error = (
+                    "publisher_inventory_configuration_invalid"
+                )
+    except AppError as exc:
+        report = _capability_config_failure(selected_profile, exc.code)
+    except Exception:
+        report = _capability_config_failure(selected_profile, "configuration_invalid")
+    else:
+        report = run_capability_preflight(
+            CapabilityPreflightRequest(
+                schema_version="1.0",
+                profile_name=selected_profile,
+                settings=settings,
+                workflow_control=workflow_control,
+                queue_policies=queue_policies,
+                publish_settings=publish_settings,
+                publish_settings_config_error=publish_settings_config_error,
+                mailbox_settings=mailbox_settings,
+                mailbox_settings_config_error=mailbox_settings_config_error,
+                browser_settings=browser_settings,
+                browser_settings_config_error=browser_settings_config_error,
+                publisher_inventory_settings=publisher_inventory_settings,
+                publisher_inventory_config_error=publisher_inventory_config_error,
+                live_checks=live,
+            ),
+            ctx,
+        )
+    console.print_json(
+        data={
+            "repository_commit_sha": _repository_commit_sha(ctx),
+            **asdict(report),
+        }
+    )
+    if report.status == "blocked":
+        raise typer.Exit(code=1)
+    if report.status == "degraded":
+        raise typer.Exit(code=2)
 
 
 @cli_app.command("sync-wordpress-intelligence")

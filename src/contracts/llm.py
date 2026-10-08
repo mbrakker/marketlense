@@ -7,6 +7,68 @@ from src.contracts.run_context import RunContext
 
 
 @dataclass(frozen=True)
+class OpenAIModelPreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI model-preflight request schema version."}
+    )
+    api_key: str = field(
+        metadata={
+            "doc": "Resolved API credential; secret and never emitted in results."
+        }
+    )
+    model: str = field(metadata={"doc": "Configured provider model to verify."})
+    timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Maximum provider request duration in seconds."},
+    )
+
+
+@dataclass(frozen=True)
+class OpenAIModelPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenAI model-preflight response schema version."}
+    )
+    model: str = field(metadata={"doc": "Configured model verified."})
+    accessible: bool = field(
+        metadata={"doc": "Whether the authenticated account can retrieve the model."}
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded metadata requests made by the check."}
+    )
+
+
+@dataclass(frozen=True)
+class OpenRouterModelPreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "OpenRouter model-preflight request schema version."}
+    )
+    api_key: str = field(
+        metadata={
+            "doc": "Resolved API credential; secret and never emitted in results."
+        }
+    )
+    model: str = field(metadata={"doc": "Configured OpenRouter model slug to verify."})
+    timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Maximum provider request duration in seconds."},
+    )
+
+
+@dataclass(frozen=True)
+class OpenRouterModelPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "OpenRouter model-preflight response schema version."}
+    )
+    model: str = field(metadata={"doc": "Configured model whose metadata was read."})
+    accessible: bool = field(
+        metadata={"doc": "Whether authenticated metadata retrieval verified the model."}
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded metadata requests made by the check."}
+    )
+
+
+@dataclass(frozen=True)
 class LLMRoutingPolicy:
     schema_version: str = field(metadata={"doc": "LLM routing-policy schema version."})
     model: str = field(metadata={"doc": "Provider-local model selected for scope."})

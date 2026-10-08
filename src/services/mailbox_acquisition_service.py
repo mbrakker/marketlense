@@ -23,7 +23,9 @@ from uuid import uuid4
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
+from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
+import httplib2
 
 from src.contracts.mailbox_acquisition import (
     MailboxAcquisitionSettings,
@@ -32,6 +34,7 @@ from src.contracts.mailbox_acquisition import (
     MailboxAttachmentFailure,
     MailboxAttachmentMaterializeRequest,
     MailboxAttachmentMaterializeResponse,
+    MailboxAccessPreflightResponse,
     MailboxLinkReference,
     MailboxMessage,
     MailboxSearchRequest,
@@ -367,6 +370,160 @@ def preflight_mailbox_search(
         )
     )
     return result
+
+
+def preflight_mailbox_access(
+    settings: MailboxAcquisitionSettings,
+    ctx: RunContext,
+) -> MailboxAccessPreflightResponse:
+    """Verify mailbox login with one metadata-only request and no message reads."""
+
+    errors: list[AppError] = []
+    provider_calls = 0
+    for provider in mailbox_provider_order(settings):
+        try:
+            if provider == "gmail":
+                provider_calls += _preflight_gmail_access(settings)
+            elif provider == "imap":
+                provider_calls += 1
+                _preflight_imap_access(settings)
+            else:
+                continue
+            response = MailboxAccessPreflightResponse(
+                schema_version="1.0",
+                provider=provider,
+                accessible=True,
+                provider_calls=provider_calls,
+            )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="mailbox_access_preflight_complete",
+                    module=logger.name,
+                    fields={
+                        "provider": response.provider,
+                        "accessible": response.accessible,
+                        "provider_calls": response.provider_calls,
+                    },
+                )
+            )
+            return response
+        except AppError as exc:
+            if provider == "gmail":
+                provider_calls += max(0, int(exc.context.get("provider_calls", 0) or 0))
+            errors.append(exc)
+
+    if errors:
+        error = errors[-1]
+        raise AppError(
+            code=error.code,
+            message="Mailbox access preflight failed for configured providers",
+            cause=error,
+            retryable=error.retryable,
+            context={"provider_calls": provider_calls},
+        ) from error
+    raise AppError(
+        code="mailbox_provider_unconfigured",
+        message="No supported mailbox provider is configured",
+        retryable=False,
+    )
+
+
+def _preflight_gmail_access(settings: MailboxAcquisitionSettings) -> int:
+    token_path = Path(settings.gmail_oauth_token_path).expanduser().resolve()
+    if not settings.gmail_oauth_token_path or not token_path.is_file():
+        raise AppError(
+            code="mailbox_gmail_token_missing",
+            message="Gmail OAuth token is not configured",
+            retryable=False,
+        )
+    provider_calls = 0
+    try:
+        credentials = Credentials.from_authorized_user_file(str(token_path))
+        if credentials.expired and credentials.refresh_token:
+            provider_calls += 1
+            credentials.refresh(_bounded_google_auth_request(timeout_seconds=5.0))
+        service = build(
+            "gmail",
+            "v1",
+            http=AuthorizedHttp(
+                credentials,
+                http=httplib2.Http(timeout=5.0),
+                max_refresh_attempts=0,
+            ),
+            cache_discovery=False,
+        )
+        profile_request = service.users().getProfile(
+            userId=settings.gmail_user_id or "me"
+        )
+        provider_calls += 1
+        profile_request.execute(num_retries=0)
+        return provider_calls
+    except Exception as exc:
+        status_code = getattr(exc, "status_code", None)
+        invalid_auth = status_code in {400, 401, 403}
+        raise AppError(
+            code=(
+                "mailbox_gmail_credentials_invalid"
+                if invalid_auth
+                else "mailbox_gmail_unavailable"
+            ),
+            message="Gmail mailbox access preflight failed",
+            cause=exc,
+            retryable=not invalid_auth,
+            context={"provider_calls": provider_calls},
+        ) from exc
+
+
+def _bounded_google_auth_request(*, timeout_seconds: float) -> Callable[..., Any]:
+    request = GoogleAuthRequest()
+
+    def bounded_request(url: str, **kwargs: Any) -> Any:
+        kwargs["timeout"] = timeout_seconds
+        return request(url, **kwargs)
+
+    return bounded_request
+
+
+def _preflight_imap_access(settings: MailboxAcquisitionSettings) -> None:
+    _validate_imap_settings(settings)
+    try:
+        with imaplib.IMAP4_SSL(
+            settings.imap_host,
+            settings.imap_port,
+            timeout=5.0,
+        ) as connection:
+            connection.login(settings.imap_user, settings.imap_password)
+            status, _ = connection.select(
+                settings.imap_mailbox or "INBOX", readonly=True
+            )
+            if status != "OK":
+                raise imaplib.IMAP4.error("mailbox selection failed")
+    except AppError:
+        raise
+    except imaplib.IMAP4.error as exc:
+        invalid_auth = any(
+            marker in str(exc).casefold()
+            for marker in ("authenticationfailed", "login failed", "auth failed")
+        )
+        raise AppError(
+            code=(
+                "mailbox_imap_credentials_invalid"
+                if invalid_auth
+                else "mailbox_imap_unavailable"
+            ),
+            message="IMAP mailbox access preflight failed",
+            cause=exc,
+            retryable=not invalid_auth,
+        ) from exc
+    except Exception as exc:
+        raise AppError(
+            code="mailbox_imap_unavailable",
+            message="IMAP mailbox access preflight failed",
+            cause=exc,
+            retryable=True,
+        ) from exc
 
 
 def mailbox_provider_order(settings: MailboxAcquisitionSettings) -> list[str]:
@@ -1332,6 +1489,7 @@ def _seen_message_ids(request: MailboxSearchRequest) -> set[str]:
 __all__ = [
     "mailbox_provider_order",
     "materialize_mailbox_attachments",
+    "preflight_mailbox_access",
     "preflight_mailbox_search",
     "search_mailbox_messages",
 ]

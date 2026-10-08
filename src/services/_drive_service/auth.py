@@ -29,10 +29,35 @@ from .shared import (
 )
 
 
-def _persist_authorized_user_credentials(credentials, token_path: str) -> None:
+_GRANTED_SCOPES_UNSET = object()
+
+
+def _normalize_granted_scopes(value: object) -> tuple[str, ...] | None:
+    if not isinstance(value, (list, tuple, set, frozenset)):
+        return None
+    if any(not isinstance(scope, str) or not scope.strip() for scope in value):
+        return None
+    return tuple(sorted(set(value)))
+
+
+def _persist_authorized_user_credentials(
+    credentials,
+    token_path: str,
+    *,
+    granted_scopes: object = _GRANTED_SCOPES_UNSET,
+) -> None:
     path = Path(token_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(credentials.to_json(), encoding="utf-8")
+    payload = json.loads(credentials.to_json())
+    actual_granted_scopes = (
+        getattr(credentials, "granted_scopes", None)
+        if granted_scopes is _GRANTED_SCOPES_UNSET
+        else granted_scopes
+    )
+    normalized_scopes = _normalize_granted_scopes(actual_granted_scopes)
+    if normalized_scopes is not None:
+        payload["granted_scopes"] = list(normalized_scopes)
+    path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
@@ -43,7 +68,7 @@ def _load_authorized_user_credentials(*, token_path: str, ctx: RunContext):
 
 
 def _resolve_authorized_user_credentials(
-    *, token_path: str, ctx: RunContext
+    *, token_path: str, ctx: RunContext, allow_refresh: bool = True
 ) -> _DriveCredentialResolution:
     if not token_path:
         raise AppError(
@@ -60,6 +85,9 @@ def _resolve_authorized_user_credentials(
             context={"oauth_token_path": token_path},
         )
     try:
+        token_payload = json.loads(token_file.read_text(encoding="utf-8"))
+        if not isinstance(token_payload, dict):
+            raise ValueError("OAuth token JSON must be an object")
         credentials = AuthorizedUserCredentials.from_authorized_user_file(
             str(token_file), DRIVE_SCOPES
         )
@@ -71,11 +99,19 @@ def _resolve_authorized_user_credentials(
             retryable=False,
             context={"oauth_token_path": token_path},
         ) from exc
+    granted_scopes = _normalize_granted_scopes(token_payload.get("granted_scopes"))
     if credentials.valid:
         return _DriveCredentialResolution(
             credentials=credentials,
             refreshed=False,
             credential_path=token_path,
+            granted_scopes=granted_scopes,
+        )
+    if not allow_refresh:
+        raise AppError(
+            code="drive_oauth_refresh_required",
+            message="Drive OAuth token requires refresh; capability preflight will not rewrite credential files",
+            retryable=False,
         )
     if credentials.expired and credentials.refresh_token:
         try:
@@ -88,7 +124,14 @@ def _resolve_authorized_user_credentials(
                 retryable=False,
                 context={"oauth_token_path": token_path},
             ) from exc
-        _persist_authorized_user_credentials(credentials, token_path)
+        refreshed_scopes = _normalize_granted_scopes(
+            getattr(credentials, "granted_scopes", None)
+        )
+        if refreshed_scopes is not None:
+            granted_scopes = refreshed_scopes
+        _persist_authorized_user_credentials(
+            credentials, token_path, granted_scopes=granted_scopes
+        )
         logger.info(
             log_event(
                 ctx,
@@ -105,6 +148,7 @@ def _resolve_authorized_user_credentials(
             credentials=credentials,
             refreshed=True,
             credential_path=token_path,
+            granted_scopes=granted_scopes,
         )
     raise AppError(
         code="drive_oauth_refresh_token_missing",
@@ -120,6 +164,7 @@ def _resolve_drive_credentials(
     service_account_path: str,
     oauth_token_path: str | None,
     ctx: RunContext,
+    allow_refresh: bool = True,
 ) -> _DriveCredentialResolution:
     if auth_mode == "service_account":
         try:
@@ -138,11 +183,35 @@ def _resolve_drive_credentials(
             credentials=creds,
             refreshed=False,
             credential_path=service_account_path,
+            granted_scopes=tuple(DRIVE_SCOPES),
         )
     return _resolve_authorized_user_credentials(
         token_path=str(oauth_token_path or ""),
         ctx=ctx,
+        allow_refresh=allow_refresh,
     )
+
+
+def _credentials_include_required_drive_scopes(
+    credentials: object,
+    *,
+    auth_mode: str,
+    granted_scopes: tuple[str, ...] | None,
+) -> bool | None:
+    if auth_mode == "oauth_user":
+        if granted_scopes is None:
+            return None
+        return set(DRIVE_SCOPES).issubset(granted_scopes)
+    has_scopes = getattr(credentials, "has_scopes", None)
+    if callable(has_scopes):
+        try:
+            return bool(has_scopes(DRIVE_SCOPES))
+        except (TypeError, ValueError):
+            return False
+    scopes = getattr(credentials, "scopes", None)
+    if scopes is None:
+        return None
+    return set(DRIVE_SCOPES).issubset({str(scope) for scope in scopes})
 
 
 def _build_drive_client(
@@ -151,26 +220,69 @@ def _build_drive_client(
     service_account_path: str,
     oauth_token_path: str | None,
     ctx: RunContext,
+    allow_token_refresh: bool = True,
+    allow_401_refresh: bool = True,
+    require_write_scope: bool = False,
+    timeout_seconds: float = DRIVE_HTTP_TIMEOUT_SECONDS,
 ):
     resolution = _resolve_drive_credentials(
         auth_mode=auth_mode,
         service_account_path=service_account_path,
         oauth_token_path=oauth_token_path,
         ctx=ctx,
+        allow_refresh=allow_token_refresh,
     )
+    scope_check = (
+        _credentials_include_required_drive_scopes(
+            resolution.credentials,
+            auth_mode=auth_mode,
+            granted_scopes=resolution.granted_scopes,
+        )
+        if require_write_scope
+        else True
+    )
+    if require_write_scope and scope_check is not True:
+        is_unverified = scope_check is None
+        raise AppError(
+            code=(
+                "drive_preflight_scope_unverified"
+                if is_unverified
+                else "drive_preflight_scope_insufficient"
+            ),
+            message=(
+                "Drive credential grant scopes are unavailable for verification"
+                if is_unverified
+                else "Drive credentials do not include the required write scope"
+            ),
+            retryable=False,
+            severity="error",
+            context={"auth_mode": auth_mode, "provider_calls": 0},
+        )
     return boundary.build(
         "drive",
         "v3",
-        http=_build_authorized_drive_http(resolution.credentials),
+        http=_build_authorized_drive_http(
+            resolution.credentials,
+            timeout_seconds=timeout_seconds,
+            allow_401_refresh=allow_401_refresh,
+        ),
         cache_discovery=False,
         static_discovery=True,
     )
 
 
-def _build_authorized_drive_http(credentials) -> AuthorizedHttp:
+def _build_authorized_drive_http(
+    credentials,
+    *,
+    timeout_seconds: float = DRIVE_HTTP_TIMEOUT_SECONDS,
+    allow_401_refresh: bool = True,
+) -> AuthorizedHttp:
     return AuthorizedHttp(
         credentials,
-        http=httplib2.Http(timeout=DRIVE_HTTP_TIMEOUT_SECONDS),
+        http=httplib2.Http(
+            timeout=min(max(float(timeout_seconds), 0.1), DRIVE_HTTP_TIMEOUT_SECONDS)
+        ),
+        max_refresh_attempts=2 if allow_401_refresh else 0,
     )
 
 
@@ -242,7 +354,10 @@ def authorize_oauth_user(
     response = DriveOAuthAuthorizeResponse(
         schema_version="1.0",
         token_output_path=token_output_path,
-        scopes=list(getattr(credentials, "scopes", DRIVE_SCOPES) or DRIVE_SCOPES),
+        scopes=list(
+            _normalize_granted_scopes(getattr(credentials, "granted_scopes", None))
+            or ()
+        ),
         refresh_token_present=bool(getattr(credentials, "refresh_token", None)),
     )
     logger.info(

@@ -58,7 +58,7 @@ def load_publish_settings(
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     runtime_base_path = _resolve_runtime_base_path(config_path)
     resolver = _ConfigResolver()
     need = resolver.need

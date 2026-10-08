@@ -18,6 +18,12 @@ overrides. This lets a named isolated validation profile reliably control its
 paths and side-effect budgets while `app.local.yaml` still supplies local
 defaults when no profile is selected.
 
+`python -m src.cli capability-preflight --profile manual` explicitly evaluates
+the base/manual configuration, even if `MARKET_LENSE_CONFIG_PROFILE` is set.
+Use `--profile autonomous_mvp` to resolve the adjacent autonomous overlay. Both
+forms continue to honor `MARKET_LENSE_CONFIG_PATH` and environment variables
+supported by the selected configuration loaders.
+
 An empty overlay value does not suppress a supported environment fallback. For a
 no-WordPress-write validation preflight, explicitly set `WP_SITE_URL`,
 `WP_ADMIN_URL`, and `WP_USERNAME` to empty values in the invoking process and

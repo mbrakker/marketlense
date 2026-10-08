@@ -282,16 +282,26 @@ def _incompatible_submission_fields(
         existing_payload = json.loads(existing.payload_json)
     except (TypeError, json.JSONDecodeError):
         existing_payload = None
-    if queue_name == "source_ingest" and isinstance(existing_payload, dict):
-        # Acquisition route is provenance only; identical content and processing
-        # identity must remain idempotent when another route finds the same PDF.
-        for payload in (existing_payload, payload_data):
-            attributes = payload.get("attributes")
-            if isinstance(attributes, dict):
-                attributes.pop("acquisition_route", None)
-    if not isinstance(existing_payload, dict) or existing_payload != payload_data:
+    if not isinstance(existing_payload, dict) or _normalize_submission_payload(
+        existing_payload, queue_name
+    ) != _normalize_submission_payload(payload_data, queue_name):
         incompatible.append("payload")
     return incompatible
+
+
+def _normalize_submission_payload(
+    payload: dict[str, object], queue_name: str
+) -> dict[str, object]:
+    if queue_name != "source_ingest":
+        return payload
+    attributes = payload.get("attributes")
+    if not isinstance(attributes, dict) or "acquisition_route" not in attributes:
+        return payload
+    normalized = dict(payload)
+    normalized_attributes = dict(attributes)
+    normalized_attributes.pop("acquisition_route", None)
+    normalized["attributes"] = normalized_attributes
+    return normalized
 
 
 def get_workflow_job(state_db: str, job_id: str, ctx: RunContext) -> WorkflowJob | None:

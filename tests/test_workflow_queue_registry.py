@@ -285,7 +285,12 @@ def test_operational_handlers_reject_incomplete_inputs_before_external_work() ->
         AppError, match="no verified durable submission identity"
     ) as mailbox_error:
         queue_orchestrator._mailbox_delivery_handler(
-            job, MailboxDeliveryPayload(), _ctx()
+            job,
+            MailboxDeliveryPayload(
+                delivery_request_id="1",
+                request_watermark="2026-10-08T00:00:00Z",
+            ),
+            _ctx(),
         )
     assert mailbox_error.value.code == "workflow_queue_mailbox_request_identity_missing"
     with pytest.raises(AppError, match="requires a current approval"):

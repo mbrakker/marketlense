@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: F403,F405,F821
+
 from src.contracts.mailbox_acquisition import MailboxAcquisitionSettings
 from src.services._config_service.common import *
 
@@ -18,7 +20,7 @@ def load_mailbox_acquisition_settings(
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     runtime_base_path = _resolve_runtime_base_path(config_path)
     mailbox_cfg = data.get("mailbox_acquisition", {}) or {}
     paths = data.get("paths", {}) or {}
