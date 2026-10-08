@@ -6,6 +6,7 @@ import hashlib
 from PIL import Image
 
 from src.contracts.candidates import Candidate
+from src.contracts.report_assets import CropOutcome, CropResponse
 from src.contracts.report_models import RankedCandidate
 
 from ._shared import *  # noqa: F401,F403
@@ -341,10 +342,12 @@ def test_generate_report_vector_store_figure_caption_fail_open_runs_before_valid
         (Path(request.out_dir) / sidecar_path).write_text(
             '{"accepted":true}', encoding="utf-8"
         )
-        return SimpleNamespace(
+        return CropResponse(
+            schema_version="1.0",
             paths=[image_path],
             outcomes=[
-                SimpleNamespace(
+                CropOutcome(
+                    schema_version="1.0",
                     candidate_id=item.id,
                     path=image_path,
                     accepted=True,
