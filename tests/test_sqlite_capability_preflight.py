@@ -22,7 +22,7 @@ def _migrate_state_db(path: Path) -> None:
                 schema_version="1.0",
                 database_key="state_db",
                 db_path=str(path),
-                target_version=15,
+                target_version=16,
                 ctx=new_runtime_context(task_id="test_sqlite_capability_migration"),
             ),
             conn,
@@ -49,7 +49,7 @@ def test_inspect_sqlite_capability_accepts_current_database_without_migrating(
     )
 
     assert result.status == "ready"
-    assert result.current_version == result.expected_version == 15
+    assert result.current_version == result.expected_version == 16
     assert result.integrity_ok is True
     assert result.foreign_keys_ok is True
     assert result.write_lock_available is True
@@ -78,7 +78,7 @@ def test_inspect_sqlite_capability_rejects_schema_mismatch_without_migration(
     assert result.status == "blocked"
     assert result.reason_code == "sqlite_schema_incompatible"
     assert result.current_version == 14
-    assert result.expected_version == 15
+    assert result.expected_version == 16
 
 
 def test_inspect_sqlite_capability_does_not_create_missing_database(
