@@ -904,6 +904,9 @@ def preflight_drive_folder_access(
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
         status_code = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
         authentication_error = status_code in {401, 403}
+        retryable = (
+            status_code == 0 or status_code in {408, 425, 429} or status_code >= 500
+        )
         raise AppError(
             code=(
                 "drive_credentials_invalid"
@@ -912,7 +915,7 @@ def preflight_drive_folder_access(
             ),
             message="Drive folder capability preflight failed",
             cause=exc,
-            retryable=not authentication_error,
+            retryable=retryable,
             context={"status_code": status_code},
         ) from exc
     response = DriveFolderCapabilityPreflightResponse(

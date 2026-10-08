@@ -63,7 +63,9 @@ class MailboxAccessPreflightResponse:
         }
     )
     provider_calls: int = field(
-        metadata={"doc": "Bounded mailbox/provider requests made by the check."}
+        metadata={
+            "doc": "Bounded provider requests made by the check, counting Gmail token refresh separately from the Gmail profile request."
+        }
     )
 
 

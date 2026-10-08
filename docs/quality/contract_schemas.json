@@ -30255,6 +30255,16 @@
             }
           ]
         },
+        "browser_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "live_checks": {
           "type": "boolean"
         },
@@ -30262,6 +30272,16 @@
           "anyOf": [
             {
               "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mailbox_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
             },
             {
               "type": "null"
@@ -30278,6 +30298,16 @@
           "anyOf": [
             {
               "$ref": "#/$defs/src.contracts.publish.PublishSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publish_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
             },
             {
               "type": "null"

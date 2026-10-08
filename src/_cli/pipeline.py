@@ -189,21 +189,37 @@ def capability_preflight(
             for name in runtime_profiles
             if name in workflow_control.preflight_profiles
         ]
-        browser_settings = (
-            load_browser_download_settings(config_request, ctx)
-            if any(item.require_browser for item in workflow_profiles)
-            else None
-        )
-        mailbox_settings = (
-            load_mailbox_acquisition_settings(config_request, ctx)
-            if "mailbox_delivery" in workflows
-            else None
-        )
-        publish_settings = (
-            load_publish_settings(config_request, ctx)
-            if any(item.require_publish for item in workflow_profiles)
-            else None
-        )
+        browser_settings = None
+        browser_settings_config_error = None
+        if any(item.require_browser for item in workflow_profiles):
+            try:
+                browser_settings = load_browser_download_settings(config_request, ctx)
+            except AppError as exc:
+                browser_settings_config_error = exc.code
+            except Exception:
+                browser_settings_config_error = "browser_configuration_invalid"
+
+        mailbox_settings = None
+        mailbox_settings_config_error = None
+        if "mailbox_delivery" in workflows:
+            try:
+                mailbox_settings = load_mailbox_acquisition_settings(
+                    config_request, ctx
+                )
+            except AppError as exc:
+                mailbox_settings_config_error = exc.code
+            except Exception:
+                mailbox_settings_config_error = "mailbox_configuration_invalid"
+
+        publish_settings = None
+        publish_settings_config_error = None
+        if any(item.require_publish for item in workflow_profiles):
+            try:
+                publish_settings = load_publish_settings(config_request, ctx)
+            except AppError as exc:
+                publish_settings_config_error = exc.code
+            except Exception:
+                publish_settings_config_error = "publish_configuration_invalid"
         publisher_inventory_settings = None
         publisher_inventory_config_error = None
         if "publisher_discovery" in workflows:
@@ -230,8 +246,11 @@ def capability_preflight(
                 workflow_control=workflow_control,
                 queue_policies=queue_policies,
                 publish_settings=publish_settings,
+                publish_settings_config_error=publish_settings_config_error,
                 mailbox_settings=mailbox_settings,
+                mailbox_settings_config_error=mailbox_settings_config_error,
                 browser_settings=browser_settings,
+                browser_settings_config_error=browser_settings_config_error,
                 publisher_inventory_settings=publisher_inventory_settings,
                 publisher_inventory_config_error=publisher_inventory_config_error,
                 live_checks=live,

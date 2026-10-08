@@ -572,6 +572,52 @@ def test_publisher_config_error_is_scoped_and_actionable(
     assert report.provider_calls == 0
 
 
+def test_optional_integration_config_errors_preserve_other_workflow_readiness(
+    tmp_path: Path,
+) -> None:
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="autonomous_mvp",
+            settings=_settings(tmp_path),
+            workflow_control=_control("autonomous_mvp"),
+            queue_policies=_queues(
+                "cost_reconciliation",
+                "mailbox_delivery",
+                "source_revalidation",
+                "wordpress_publish",
+            ),
+            publish_settings_config_error="publish_configuration_invalid",
+            mailbox_settings_config_error="mailbox_configuration_invalid",
+            browser_settings_config_error="browser_configuration_invalid",
+            live_checks=False,
+        ),
+        _ctx(),
+        dependencies=_dependencies(),
+    )
+
+    assert report.workflow_names == [
+        "cost_reconciliation",
+        "mailbox_delivery",
+        "source_revalidation",
+        "wordpress_publish",
+    ]
+    assert report.workflow_statuses["cost_reconciliation"] == "ready"
+    assert report.workflow_statuses["mailbox_delivery"] == "blocked"
+    assert report.workflow_statuses["source_revalidation"] == "blocked"
+    assert report.workflow_statuses["wordpress_publish"] == "blocked"
+    assert report.provider_calls == 0
+    assert {
+        check.capability: check.reason_code
+        for check in report.checks
+        if check.capability in {"mailbox", "browser", "wordpress"}
+    } == {
+        "mailbox": "mailbox_configuration_invalid",
+        "browser": "browser_configuration_invalid",
+        "wordpress": "publish_configuration_invalid",
+    }
+
+
 def test_transient_model_failure_is_retryable_degraded_and_counted(
     tmp_path: Path,
 ) -> None:

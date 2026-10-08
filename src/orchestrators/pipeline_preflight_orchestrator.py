@@ -2049,6 +2049,20 @@ def _check_mailbox_capability(
     ctx: RunContext,
 ) -> tuple[CapabilityPreflightCheck, int]:
     settings = request.mailbox_settings
+    config_error = str(request.mailbox_settings_config_error or "").strip()
+    if config_error:
+        return (
+            _capability_check(
+                "mailbox",
+                workflows,
+                "blocked",
+                _safe_reason_code(config_error, "mailbox_configuration_invalid"),
+                False,
+                "Correct mailbox acquisition settings for the enabled mailbox workflow",
+                required=True,
+            ),
+            0,
+        )
     if settings is None:
         return (
             _capability_check(
@@ -2184,7 +2198,7 @@ def _check_mailbox_capability(
                 else "Check mailbox credentials and provider settings",
                 required=True,
             ),
-            max(1, int(exc.context.get("provider_calls", 0) or 0)),
+            max(0, int(exc.context.get("provider_calls", 0) or 0)),
         )
     except Exception:
         return (
@@ -2208,6 +2222,20 @@ def _check_browser_capability(
     ctx: RunContext,
 ) -> tuple[CapabilityPreflightCheck, int]:
     settings = request.browser_settings
+    config_error = str(request.browser_settings_config_error or "").strip()
+    if config_error:
+        return (
+            _capability_check(
+                "browser",
+                workflows,
+                "blocked",
+                _safe_reason_code(config_error, "browser_configuration_invalid"),
+                False,
+                "Correct browser acquisition settings for the enabled workflow",
+                required=True,
+            ),
+            0,
+        )
     if settings is None:
         return (
             _capability_check(
@@ -2396,6 +2424,20 @@ def _check_wordpress_capability(
     ctx: RunContext,
 ) -> tuple[CapabilityPreflightCheck, int]:
     settings = request.publish_settings
+    config_error = str(request.publish_settings_config_error or "").strip()
+    if config_error:
+        return (
+            _capability_check(
+                "wordpress",
+                workflows,
+                "blocked",
+                _safe_reason_code(config_error, "publish_configuration_invalid"),
+                False,
+                "Correct WordPress publication settings for the enabled workflow",
+                required=True,
+            ),
+            0,
+        )
     if settings is None:
         return (
             _capability_check(

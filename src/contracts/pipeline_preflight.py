@@ -80,6 +80,24 @@ class CapabilityPreflightRequest:
         default=None,
         metadata={"doc": "Resolved browser settings when browser work is enabled."},
     )
+    browser_settings_config_error: str | None = field(
+        default=None,
+        metadata={
+            "doc": "Safe stable config error code scoped to browser workflows, if their optional settings could not load."
+        },
+    )
+    mailbox_settings_config_error: str | None = field(
+        default=None,
+        metadata={
+            "doc": "Safe stable config error code scoped to mailbox workflows, if their optional settings could not load."
+        },
+    )
+    publish_settings_config_error: str | None = field(
+        default=None,
+        metadata={
+            "doc": "Safe stable config error code scoped to WordPress workflows, if their optional settings could not load."
+        },
+    )
     publisher_inventory_settings: PublisherInventorySettings | None = field(
         default=None,
         metadata={

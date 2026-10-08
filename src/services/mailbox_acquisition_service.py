@@ -16,7 +16,7 @@ from email.message import EmailMessage, Message
 from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 from urllib.parse import unquote
 from uuid import uuid4
 
@@ -377,8 +377,7 @@ def preflight_mailbox_access(
     for provider in mailbox_provider_order(settings):
         try:
             if provider == "gmail":
-                provider_calls += 1
-                _preflight_gmail_access(settings)
+                provider_calls += _preflight_gmail_access(settings)
             elif provider == "imap":
                 provider_calls += 1
                 _preflight_imap_access(settings)
@@ -405,6 +404,8 @@ def preflight_mailbox_access(
             )
             return response
         except AppError as exc:
+            if provider == "gmail":
+                provider_calls += max(0, int(exc.context.get("provider_calls", 0) or 0))
             errors.append(exc)
 
     if errors:
@@ -423,7 +424,7 @@ def preflight_mailbox_access(
     )
 
 
-def _preflight_gmail_access(settings: MailboxAcquisitionSettings) -> None:
+def _preflight_gmail_access(settings: MailboxAcquisitionSettings) -> int:
     token_path = Path(settings.gmail_oauth_token_path).expanduser().resolve()
     if not settings.gmail_oauth_token_path or not token_path.is_file():
         raise AppError(
@@ -431,19 +432,28 @@ def _preflight_gmail_access(settings: MailboxAcquisitionSettings) -> None:
             message="Gmail OAuth token is not configured",
             retryable=False,
         )
+    provider_calls = 0
     try:
         credentials = Credentials.from_authorized_user_file(str(token_path))
         if credentials.expired and credentials.refresh_token:
-            credentials.refresh(GoogleAuthRequest(timeout=5.0))
+            provider_calls += 1
+            credentials.refresh(_bounded_google_auth_request(timeout_seconds=5.0))
         service = build(
             "gmail",
             "v1",
-            http=AuthorizedHttp(credentials, http=httplib2.Http(timeout=5.0)),
+            http=AuthorizedHttp(
+                credentials,
+                http=httplib2.Http(timeout=5.0),
+                max_refresh_attempts=0,
+            ),
             cache_discovery=False,
         )
-        service.users().getProfile(userId=settings.gmail_user_id or "me").execute(
-            num_retries=0
+        profile_request = service.users().getProfile(
+            userId=settings.gmail_user_id or "me"
         )
+        provider_calls += 1
+        profile_request.execute(num_retries=0)
+        return provider_calls
     except Exception as exc:
         status_code = getattr(exc, "status_code", None)
         invalid_auth = status_code in {400, 401, 403}
@@ -456,7 +466,18 @@ def _preflight_gmail_access(settings: MailboxAcquisitionSettings) -> None:
             message="Gmail mailbox access preflight failed",
             cause=exc,
             retryable=not invalid_auth,
+            context={"provider_calls": provider_calls},
         ) from exc
+
+
+def _bounded_google_auth_request(*, timeout_seconds: float) -> Callable[..., Any]:
+    request = GoogleAuthRequest()
+
+    def bounded_request(url: str, **kwargs: Any) -> Any:
+        kwargs["timeout"] = timeout_seconds
+        return request(url, **kwargs)
+
+    return bounded_request
 
 
 def _preflight_imap_access(settings: MailboxAcquisitionSettings) -> None:
