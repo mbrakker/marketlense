@@ -44,7 +44,7 @@ def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
 
 
-def _settings(root: Path) -> AppSettings:
+def _settings(root: Path, *, openai_api_key: str = "sk-test") -> AppSettings:
     root.mkdir(parents=True, exist_ok=True)
     assets = {
         "categories": root / "categories.yaml",
@@ -58,7 +58,7 @@ def _settings(root: Path) -> AppSettings:
         schema_version="1.0",
         google_sa_path=str(root / "service-account.json"),
         gdrive_folder_id="configured-folder",
-        openai_api_key="sk-test",
+        openai_api_key=openai_api_key,
         openai_model="model-test",
         batch_limit=1,
         output_dir=str(root / "out"),
@@ -156,6 +156,7 @@ def _report(
     workflow: str,
     *,
     live: bool,
+    openai_api_key: str = "sk-test",
     supervisor_enabled: bool = True,
     without_preflight_profile: str | None = None,
     file_stat=None,
@@ -166,7 +167,7 @@ def _report(
     mailbox_settings: MailboxAcquisitionSettings | None = None,
     publish_settings: PublishSettings | None = None,
 ) -> CapabilityPreflightReport:
-    settings = _settings(tmp_path)
+    settings = _settings(tmp_path, openai_api_key=openai_api_key)
     Path(settings.google_sa_path).write_text("{}", encoding="utf-8")
     workflow_control = _control()
     if not supervisor_enabled:
@@ -313,6 +314,26 @@ def test_enabled_workflow_without_preflight_profile_is_scoped_blocked(
     assert report.workflow_statuses["report_acquisition"] == "blocked"
     assert check.reason_code == "workflow_capability_profile_missing"
     assert check.affected_workflows == ["report_acquisition"]
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_report_analysis_without_openai_key_is_scoped_blocked_without_calls(
+    tmp_path: Path,
+) -> None:
+    report = _report(
+        tmp_path,
+        "report_analysis",
+        live=False,
+        openai_api_key="",
+    )
+    check = next(item for item in report.checks if item.capability == "llm_model")
+
+    assert report.workflow_names == ["report_analysis"]
+    assert report.workflow_statuses["report_analysis"] == "blocked"
+    assert check.status == "blocked"
+    assert check.reason_code == "openai_missing_api_key"
+    assert check.affected_workflows == ["report_analysis"]
     assert report.provider_calls == 0
     assert report.external_writes == 0
 
