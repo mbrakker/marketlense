@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import logging
+import re
 import threading
 import warnings
 from contextlib import contextmanager
@@ -36,6 +37,7 @@ class _WordPressRequestResult:
     used_pooled_session: bool
     pool_key: str
     pool_reused: bool
+    provider_calls: int = 1
 
 
 class _SessionPool:
@@ -59,6 +61,20 @@ _SESSION_POOL = _SessionPool()
 def _post_type_endpoint(post_type: str) -> str:
     token = str(post_type).strip().strip("/")
     return "posts" if token in {"", "post"} else token
+
+
+def _rest_route_endpoint(route: str) -> str:
+    token = str(route).strip()
+    segments = token.split("/")
+    if not token or any(
+        not re.fullmatch(r"[A-Za-z0-9_-]+", segment) for segment in segments
+    ):
+        raise AppError(
+            code="wordpress_rest_route_invalid",
+            message="WordPress REST preflight route must be a relative wp-json path",
+            retryable=False,
+        )
+    return "/".join(segments)
 
 
 def _requests_verify(*, ssl_verify: bool, ca_bundle_path: Optional[str]) -> bool | str:
@@ -148,6 +164,7 @@ def _execute_request(
     allow_redirects: Optional[bool] = None,
 ) -> _WordPressRequestResult:
     normalized_method = str(method or "").strip().upper()
+    request_calls = 0
     request_kwargs: dict[str, Any] = {
         "headers": dict(headers or {}),
         "timeout": min(max(float(timeout_seconds), 0.1), DEFAULT_TIMEOUT),
@@ -167,6 +184,8 @@ def _execute_request(
         request_kwargs["allow_redirects"] = bool(allow_redirects)
 
     def _send(request_url: str) -> _WordPressRequestResult:
+        nonlocal request_calls
+        request_calls += 1
         pool_key = _session_pool_key(request_url)
         direct_transport = _patched_direct_transport(normalized_method)
         if direct_transport is not None:
@@ -195,6 +214,7 @@ def _execute_request(
                     resp=result.response,
                     fields={
                         **(request_error_fields or {}),
+                        "provider_calls": request_calls,
                         "url": url,
                         "method": normalized_method,
                         "pool_key": result.pool_key,
@@ -224,8 +244,21 @@ def _execute_request(
                         },
                     )
                 )
-                return _send(fallback_url)
-            return result
+                fallback_result = _send(fallback_url)
+                return _WordPressRequestResult(
+                    response=fallback_result.response,
+                    used_pooled_session=fallback_result.used_pooled_session,
+                    pool_key=fallback_result.pool_key,
+                    pool_reused=fallback_result.pool_reused,
+                    provider_calls=request_calls,
+                )
+            return _WordPressRequestResult(
+                response=result.response,
+                used_pooled_session=result.used_pooled_session,
+                pool_key=result.pool_key,
+                pool_reused=result.pool_reused,
+                provider_calls=request_calls,
+            )
     except requests.RequestException as exc:
         _raise_request_exception(
             ctx=ctx,
@@ -235,6 +268,7 @@ def _execute_request(
             exc=exc,
             fields={
                 **(request_error_fields or {}),
+                "provider_calls": request_calls,
                 "url": url,
                 "method": normalized_method,
                 "pool_key": _session_pool_key(url),
@@ -432,12 +466,13 @@ def _execute_preflight_request(*, provider_calls: int, **kwargs: Any) -> Any:
     try:
         return _execute_request(**kwargs)
     except AppError as exc:
+        request_calls = max(1, int(exc.context.get("provider_calls", 1) or 1))
         raise AppError(
             code=exc.code,
             message="WordPress capability preflight request failed",
             cause=exc,
             retryable=exc.retryable,
-            context={"provider_calls": provider_calls + 1},
+            context={"provider_calls": provider_calls + request_calls},
         ) from exc
 
 
@@ -445,55 +480,145 @@ def preflight_publish_target(
     request: WordPressPublishTargetPreflightRequest,
     ctx: RunContext,
 ) -> WordPressPublishTargetPreflightResponse:
-    endpoint = _post_type_endpoint(request.post_type)
     base = request.base_url.rstrip("/")
-    url = f"{base}/wp-json/wp/v2/types/{endpoint}"
+    targets: list[tuple[str, str, tuple[str, ...]]] = []
+    if str(request.post_type or "").strip():
+        targets.append(
+            (
+                str(request.post_type).strip(),
+                _post_type_endpoint(request.post_type),
+                request.required_meta_keys,
+            )
+        )
+    for additional in request.additional_post_types:
+        post_type = str(additional.post_type).strip()
+        if not post_type:
+            raise AppError(
+                code="wordpress_post_type_invalid",
+                message="WordPress preflight post type must not be empty",
+                retryable=False,
+            )
+        targets.append(
+            (
+                post_type,
+                _post_type_endpoint(post_type),
+                additional.required_meta_keys,
+            )
+        )
+    target_names = [target[0] for target in targets]
+    if len(target_names) != len(set(target_names)):
+        raise AppError(
+            code="wordpress_post_type_duplicate",
+            message="WordPress preflight post types must be unique",
+            retryable=False,
+        )
+    route_targets = tuple(
+        (route, _rest_route_endpoint(route)) for route in request.required_rest_routes
+    )
+    if not targets and not route_targets and not request.required_user_capabilities:
+        raise AppError(
+            code="wordpress_preflight_requirements_empty",
+            message="WordPress preflight requires a post type, route, or user capability",
+            retryable=False,
+        )
+    if (
+        request.required_capabilities
+        or request.required_user_capabilities
+        or route_targets
+    ) and not request.verify_authentication:
+        raise AppError(
+            code="wordpress_authentication_unverified",
+            message="WordPress capability and route checks require authenticated identity verification",
+            retryable=False,
+        )
+
+    first_endpoint = (
+        targets[0][1] if targets else (route_targets[0][1] if route_targets else "")
+    )
     authenticated = False
-    verified_capabilities: tuple[str, ...] = ()
-    provider_calls = 0
     user_capabilities: dict[str, object] = {}
-    if request.verify_authentication:
-        user_result = _execute_preflight_request(
+    provider_calls = 0
+    verified_post_types: list[str] = []
+    verified_meta_keys: list[str] = []
+    verified_capabilities: list[str] = []
+    verified_user_capabilities: tuple[str, ...] = ()
+    verified_rest_routes: list[str] = []
+    primary_status_code = 0
+    primary_pool_reused = False
+
+    def execute(
+        *,
+        method: str,
+        url: str,
+        event: str,
+        code: str,
+        message: str,
+        fields: dict[str, object],
+        params: dict[str, str] | None = None,
+    ) -> tuple[Any, bool]:
+        nonlocal provider_calls
+        result = _execute_preflight_request(
             provider_calls=provider_calls,
-            method="GET",
-            url=f"{base}/wp-json/wp/v2/users/me",
+            method=method,
+            url=url,
             headers={"Authorization": request.auth_header},
-            params={"context": "edit"},
+            params=params,
             ssl_verify=request.ssl_verify,
             ca_bundle_path=request.ca_bundle_path,
             timeout_seconds=request.timeout_seconds,
             ctx=ctx,
-            request_error_event="wordpress_authentication_preflight_failed",
-            request_error_code="wordpress_authentication_unavailable",
-            request_error_message="WordPress authentication preflight failed",
-            request_error_fields={"post_type": request.post_type},
+            request_error_event=event,
+            request_error_code=code,
+            request_error_message=message,
+            request_error_fields=fields,
         )
-        provider_calls += 1
-        user_response = user_result.response
-        user_status = int(getattr(user_response, "status_code", 0) or 0)
-        if user_status >= 500:
+        provider_calls += result.provider_calls
+        response = result.response
+        status_code = int(getattr(response, "status_code", 0) or 0)
+        if status_code >= 500:
             _raise_http_server_error(
                 ctx=ctx,
+                event=event,
+                code=code,
+                message_prefix=message,
+                resp=response,
+                fields={**fields, "provider_calls": provider_calls},
+            )
+        if status_code >= 400:
+            raise AppError(
+                code=code,
+                message=f"{message}: {status_code}",
+                retryable=False,
+                context={"status_code": status_code, "provider_calls": provider_calls},
+            )
+        return response, bool(result.pool_reused)
+
+    if request.verify_authentication:
+        try:
+            user_response, _ = execute(
+                method="GET",
+                url=f"{base}/wp-json/wp/v2/users/me",
+                params={"context": "edit"},
                 event="wordpress_authentication_preflight_failed",
                 code="wordpress_authentication_unavailable",
-                message_prefix="WordPress authentication preflight failed",
-                resp=user_response,
-                fields={"post_type": request.post_type},
+                message="WordPress authentication preflight failed",
+                fields={
+                    "post_type_count": len(targets),
+                    "rest_route_count": len(route_targets),
+                },
             )
-        if user_status in {401, 403}:
-            raise AppError(
-                code="wordpress_authentication_invalid",
-                message="WordPress rejected the configured publication credentials",
-                retryable=False,
-                context={"status_code": user_status},
-            )
-        if user_status >= 400:
-            raise AppError(
-                code="wordpress_authentication_unverified",
-                message="WordPress authentication could not be verified through REST",
-                retryable=False,
-                context={"status_code": user_status},
-            )
+        except AppError as exc:
+            if exc.context.get("status_code") in {401, 403}:
+                raise AppError(
+                    code="wordpress_authentication_invalid",
+                    message="WordPress rejected the configured publication credentials",
+                    retryable=False,
+                    context={
+                        "status_code": exc.context.get("status_code"),
+                        "provider_calls": provider_calls,
+                    },
+                ) from exc
+            raise
         user_payload = _safe_json(getattr(user_response, "text", "") or "")
         raw_user_capabilities = (
             user_payload.get("capabilities") if isinstance(user_payload, dict) else None
@@ -507,9 +632,27 @@ def preflight_publish_target(
                 code="wordpress_authentication_unverified",
                 message="WordPress did not return authenticated user capabilities",
                 retryable=False,
+                context={"provider_calls": provider_calls},
             )
         authenticated = True
         user_capabilities = raw_user_capabilities
+        missing_user_capabilities = tuple(
+            capability
+            for capability in request.required_user_capabilities
+            if user_capabilities.get(capability) is not True
+        )
+        if missing_user_capabilities:
+            raise AppError(
+                code="wordpress_user_capability_missing",
+                message="Configured WordPress credentials lack a required user capability",
+                retryable=False,
+                context={
+                    "missing_capability_count": len(missing_user_capabilities),
+                    "provider_calls": provider_calls,
+                },
+            )
+        verified_user_capabilities = tuple(request.required_user_capabilities)
+        primary_status_code = int(getattr(user_response, "status_code", 0) or 0)
 
     logger.info(
         log_event(
@@ -519,172 +662,172 @@ def preflight_publish_target(
             module=logger.name,
             fields={
                 "base_url": base,
-                "post_type": request.post_type,
-                "endpoint": endpoint,
+                "post_type_count": len(targets),
+                "rest_route_count": len(route_targets),
+                "endpoint": first_endpoint,
             },
         )
     )
-    result = _execute_preflight_request(
-        provider_calls=provider_calls,
-        method="GET",
-        url=url,
-        headers={"Authorization": request.auth_header},
-        params={"context": "edit"} if request.verify_authentication else None,
-        ssl_verify=request.ssl_verify,
-        ca_bundle_path=request.ca_bundle_path,
-        timeout_seconds=request.timeout_seconds,
-        ctx=ctx,
-        request_error_event="wordpress_publish_target_preflight_failed",
-        request_error_code="wordpress_publish_target_unreachable",
-        request_error_message="WordPress publish target preflight failed",
-        request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
-    )
-    provider_calls += 1
-    response = result.response
-    status_code = int(getattr(response, "status_code", 0) or 0)
-    if status_code >= 500:
-        _raise_http_server_error(
-            ctx=ctx,
+    for index, (post_type, endpoint, required_meta_keys) in enumerate(targets):
+        fields: dict[str, object] = {"post_type": post_type, "endpoint": endpoint}
+        response, pool_reused = execute(
+            method="GET",
+            url=f"{base}/wp-json/wp/v2/types/{endpoint}",
+            params={"context": "edit"} if request.verify_authentication else None,
             event="wordpress_publish_target_preflight_failed",
             code="wordpress_publish_target_unreachable",
-            message_prefix="WordPress publish target preflight failed",
-            resp=response,
-            fields={"post_type": request.post_type, "endpoint": endpoint},
+            message="WordPress publish target preflight failed",
+            fields=fields,
         )
-    if status_code >= 400:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="wordpress_publish_target_preflight_failed",
-                module=logger.name,
-                fields={
-                    "post_type": request.post_type,
-                    "endpoint": endpoint,
-                    "status_code": status_code,
-                },
+        payload = _safe_json(getattr(response, "text", "") or "")
+        if (
+            not isinstance(payload, dict)
+            or not str(
+                payload.get("rest_base") or payload.get("slug") or endpoint
+            ).strip()
+        ):
+            raise AppError(
+                code="wordpress_publish_target_invalid_response",
+                message="WordPress publish target preflight returned invalid JSON",
+                retryable=False,
+                context={"post_type": post_type, "provider_calls": provider_calls},
             )
-        )
-        raise AppError(
-            code="wordpress_publish_target_unavailable",
-            message=f"WordPress publish target preflight failed: {status_code}",
-            retryable=False,
-            context={"post_type": request.post_type, "status_code": status_code},
-        )
-    payload = _safe_json(getattr(response, "text", "") or "")
-    if not isinstance(payload, dict):
-        payload = {}
-    if str(payload.get("rest_base") or payload.get("slug") or endpoint).strip() == "":
-        raise AppError(
-            code="wordpress_publish_target_invalid_response",
-            message="WordPress publish target preflight returned invalid JSON",
-            retryable=False,
-            context={"post_type": request.post_type},
-        )
-    metadata_url = f"{base}/wp-json/wp/v2/{endpoint}"
-    metadata_result = _execute_preflight_request(
-        provider_calls=provider_calls,
-        method="OPTIONS",
-        url=metadata_url,
-        headers={"Authorization": request.auth_header},
-        ssl_verify=request.ssl_verify,
-        ca_bundle_path=request.ca_bundle_path,
-        timeout_seconds=request.timeout_seconds,
-        ctx=ctx,
-        request_error_event="wordpress_publish_target_metadata_preflight_failed",
-        request_error_code="wordpress_publish_target_metadata_unavailable",
-        request_error_message="WordPress publish target metadata preflight failed",
-        request_error_fields={"post_type": request.post_type, "endpoint": endpoint},
-    )
-    provider_calls += 1
-    metadata_response = metadata_result.response
-    metadata_status_code = int(getattr(metadata_response, "status_code", 0) or 0)
-    if metadata_status_code >= 500:
-        _raise_http_server_error(
-            ctx=ctx,
+        metadata_response, metadata_pool_reused = execute(
+            method="OPTIONS",
+            url=f"{base}/wp-json/wp/v2/{endpoint}",
             event="wordpress_publish_target_metadata_preflight_failed",
             code="wordpress_publish_target_metadata_unavailable",
-            message_prefix="WordPress publish target metadata preflight failed",
-            resp=metadata_response,
-            fields={"post_type": request.post_type, "endpoint": endpoint},
+            message="WordPress publish target metadata preflight failed",
+            fields=fields,
         )
-    if metadata_status_code >= 400:
-        raise AppError(
-            code="wordpress_publish_target_metadata_unavailable",
-            message=(
-                "WordPress publish target metadata preflight failed: "
-                f"{metadata_status_code}"
-            ),
-            retryable=False,
-            context={
-                "post_type": request.post_type,
-                "status_code": metadata_status_code,
-            },
+        metadata_payload = _safe_json(getattr(metadata_response, "text", "") or "")
+        schema = (
+            metadata_payload.get("schema") if isinstance(metadata_payload, dict) else {}
         )
-    metadata_payload = _safe_json(getattr(metadata_response, "text", "") or "")
-    schema = (
-        metadata_payload.get("schema") if isinstance(metadata_payload, dict) else {}
-    )
-    properties = schema.get("properties") if isinstance(schema, dict) else {}
-    meta = properties.get("meta") if isinstance(properties, dict) else {}
-    meta_properties = meta.get("properties") if isinstance(meta, dict) else {}
-    registered_meta_keys = {
-        str(key).strip() for key in (meta_properties or {}) if str(key).strip()
-    }
-    missing_meta_keys = tuple(
-        key for key in request.required_meta_keys if key not in registered_meta_keys
-    )
-    if missing_meta_keys:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="wordpress_publish_target_metadata_preflight_blocked",
-                module=logger.name,
-                fields={
-                    "post_type": request.post_type,
-                    "endpoint": endpoint,
-                    "required_meta_key_count": len(request.required_meta_keys),
+        properties = schema.get("properties") if isinstance(schema, dict) else {}
+        meta = properties.get("meta") if isinstance(properties, dict) else {}
+        meta_properties = meta.get("properties") if isinstance(meta, dict) else {}
+        registered_meta_keys = {
+            str(key).strip() for key in (meta_properties or {}) if str(key).strip()
+        }
+        missing_meta_keys = tuple(
+            key for key in required_meta_keys if key not in registered_meta_keys
+        )
+        if missing_meta_keys:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="wordpress_publish_target_metadata_preflight_blocked",
+                    module=logger.name,
+                    fields={
+                        "post_type": post_type,
+                        "required_meta_key_count": len(required_meta_keys),
+                        "missing_meta_key_count": len(missing_meta_keys),
+                    },
+                )
+            )
+            raise AppError(
+                code="wordpress_publish_target_metadata_missing",
+                message="WordPress publish target is missing required proof metadata",
+                retryable=False,
+                context={
+                    "post_type": post_type,
                     "missing_meta_key_count": len(missing_meta_keys),
+                    "provider_calls": provider_calls,
                 },
             )
+        if request.verify_authentication:
+            raw_type_capabilities = payload.get("capabilities")
+            if not isinstance(raw_type_capabilities, dict):
+                raise AppError(
+                    code="wordpress_capability_unverified",
+                    message="WordPress did not expose the target post-type capabilities",
+                    retryable=False,
+                    context={"post_type": post_type, "provider_calls": provider_calls},
+                )
+            missing_capabilities = []
+            for capability in request.required_capabilities:
+                granted_capability = str(
+                    raw_type_capabilities.get(capability) or ""
+                ).strip()
+                if (
+                    not granted_capability
+                    or user_capabilities.get(granted_capability) is not True
+                ):
+                    missing_capabilities.append(capability)
+            if missing_capabilities:
+                raise AppError(
+                    code="wordpress_create_permission_missing",
+                    message="Configured WordPress credentials lack required publication capabilities",
+                    retryable=False,
+                    context={
+                        "missing_capability_count": len(missing_capabilities),
+                        "provider_calls": provider_calls,
+                    },
+                )
+            for capability in request.required_capabilities:
+                if capability not in verified_capabilities:
+                    verified_capabilities.append(capability)
+        verified_post_types.append(post_type)
+        verified_meta_keys.extend(
+            key for key in required_meta_keys if key not in verified_meta_keys
         )
-        raise AppError(
-            code="wordpress_publish_target_metadata_missing",
-            message="WordPress publish target is missing required proof metadata",
-            retryable=False,
-            context={
-                "post_type": request.post_type,
-                "missing_meta_key_count": len(missing_meta_keys),
-            },
-        )
+        if index == 0:
+            primary_status_code = int(getattr(response, "status_code", 0) or 0)
+            primary_pool_reused = pool_reused and metadata_pool_reused
 
-    if request.verify_authentication:
-        raw_type_capabilities = payload.get("capabilities")
-        if not isinstance(raw_type_capabilities, dict):
+    for route, route_path in route_targets:
+        route_response, pool_reused = execute(
+            method="OPTIONS",
+            url=f"{base}/wp-json/{route_path}",
+            event="wordpress_rest_route_preflight_failed",
+            code="wordpress_rest_route_unavailable",
+            message="WordPress REST route preflight failed",
+            fields={"route": route},
+        )
+        route_payload = _safe_json(getattr(route_response, "text", "") or "")
+        methods: set[str] = set()
+        if isinstance(route_payload, dict):
+            raw_methods = route_payload.get("methods")
+            if isinstance(raw_methods, list):
+                methods.update(str(method).upper() for method in raw_methods)
+            endpoints = route_payload.get("endpoints")
+            if isinstance(endpoints, list):
+                for endpoint_payload in endpoints:
+                    endpoint_methods = (
+                        endpoint_payload.get("methods")
+                        if isinstance(endpoint_payload, dict)
+                        else None
+                    )
+                    if isinstance(endpoint_methods, list):
+                        methods.update(
+                            str(method).upper() for method in endpoint_methods
+                        )
+        headers = getattr(route_response, "headers", {})
+        allow_header = headers.get("Allow") if isinstance(headers, dict) else None
+        if isinstance(allow_header, str):
+            methods.update(method.strip().upper() for method in allow_header.split(","))
+        missing_methods = tuple(
+            method.upper()
+            for method in request.required_rest_methods
+            if method.upper() not in methods
+        )
+        if missing_methods:
             raise AppError(
-                code="wordpress_capability_unverified",
-                message="WordPress did not expose the target post-type capabilities",
+                code="wordpress_rest_route_method_missing",
+                message="WordPress REST route does not expose a required method",
                 retryable=False,
+                context={
+                    "missing_method_count": len(missing_methods),
+                    "provider_calls": provider_calls,
+                },
             )
-        missing_capabilities = []
-        for capability in request.required_capabilities:
-            granted_capability = str(
-                raw_type_capabilities.get(capability) or ""
-            ).strip()
-            if (
-                not granted_capability
-                or user_capabilities.get(granted_capability) is not True
-            ):
-                missing_capabilities.append(capability)
-        if missing_capabilities:
-            raise AppError(
-                code="wordpress_create_permission_missing",
-                message="Configured WordPress credentials lack required publication capabilities",
-                retryable=False,
-                context={"missing_capability_count": len(missing_capabilities)},
-            )
-        verified_capabilities = tuple(request.required_capabilities)
+        verified_rest_routes.append(route)
+        if not targets and not primary_status_code:
+            primary_status_code = int(getattr(route_response, "status_code", 0) or 0)
+            primary_pool_reused = pool_reused
+
     logger.info(
         log_event(
             ctx,
@@ -692,14 +835,13 @@ def preflight_publish_target(
             event="wordpress_publish_target_preflight_complete",
             module=logger.name,
             fields={
-                "post_type": request.post_type,
-                "endpoint": endpoint,
-                "status_code": status_code,
-                "pool_reused": result.pool_reused,
-                "verified_meta_key_count": len(request.required_meta_keys),
-                "metadata_pool_reused": metadata_result.pool_reused,
+                "post_type_count": len(verified_post_types),
+                "verified_meta_key_count": len(verified_meta_keys),
                 "authenticated": authenticated,
                 "verified_capability_count": len(verified_capabilities),
+                "verified_user_capability_count": len(verified_user_capabilities),
+                "verified_rest_route_count": len(verified_rest_routes),
+                "pool_reused": primary_pool_reused,
                 "provider_calls": provider_calls,
             },
         )
@@ -708,12 +850,19 @@ def preflight_publish_target(
         schema_version="1.0",
         base_url=base,
         post_type=request.post_type,
-        endpoint=endpoint,
+        endpoint=(
+            f"{base}/wp-json/wp/v2/{first_endpoint}"
+            if targets
+            else f"{base}/wp-json/{first_endpoint}"
+        ),
         reachable=True,
-        status_code=status_code,
-        verified_meta_keys=tuple(request.required_meta_keys),
+        status_code=primary_status_code,
+        verified_meta_keys=tuple(verified_meta_keys),
         authenticated=authenticated,
-        verified_capabilities=verified_capabilities,
+        verified_capabilities=tuple(verified_capabilities),
+        verified_post_types=tuple(verified_post_types),
+        verified_user_capabilities=verified_user_capabilities,
+        verified_rest_routes=tuple(verified_rest_routes),
         provider_calls=provider_calls,
     )
 

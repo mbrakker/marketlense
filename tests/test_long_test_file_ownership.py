@@ -93,6 +93,18 @@ LONG_TEST_FILE_ALLOWLIST = {
         "expires_on": "2026-09-30",
         "max_lines": 1099,
     },
+    "tests/_test_pdf_crop_service/cases_01_strict_crop_filenames_do_not.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Crop geometry and coordinate-regression cases require a focused split.",
+        "expires_on": "2026-11-09",
+        "max_lines": 1016,
+    },
+    "tests/test_workflow_queue_service.py": {
+        "owner": "quality/repository-hygiene",
+        "reason": "Queue submission, outbox, and concurrency cases require a focused split.",
+        "expires_on": "2026-11-09",
+        "max_lines": 1047,
+    },
 }
 
 

@@ -14,7 +14,10 @@ from src.contracts.browser_download import (
     BrowserDownloadSettings,
 )
 from src.contracts.config import AppSettings, ConfigLoadRequest
-from src.contracts.drive import DriveFolderCapabilityPreflightResponse
+from src.contracts.drive import (
+    DriveFolderCapabilityPreflightRequest,
+    DriveFolderCapabilityPreflightResponse,
+)
 from src.contracts.files import ExecutableAvailabilityResponse
 from src.contracts.mailbox_acquisition import (
     MailboxAccessPreflightResponse,
@@ -25,6 +28,7 @@ from src.contracts.pipeline_preflight import (
     CapabilityPreflightRequest,
 )
 from src.contracts.publish import PublishSettings
+from src.contracts.publisher_inventory import PublisherInventorySettings
 from src.contracts.run_context import RunContext
 from src.contracts.sqlite_migration import SqliteCapabilityInspectionResponse
 from src.contracts.wordpress import (
@@ -172,6 +176,7 @@ def _report(
     browser_settings: BrowserDownloadSettings | None = None,
     mailbox_settings: MailboxAcquisitionSettings | None = None,
     publish_settings: PublishSettings | None = None,
+    publisher_inventory_settings: PublisherInventorySettings | None = None,
 ) -> CapabilityPreflightReport:
     settings = _settings(tmp_path, openai_api_key=openai_api_key)
     Path(settings.google_sa_path).write_text("{}", encoding="utf-8")
@@ -195,6 +200,7 @@ def _report(
             browser_settings=browser_settings,
             mailbox_settings=mailbox_settings,
             publish_settings=publish_settings,
+            publisher_inventory_settings=publisher_inventory_settings,
             live_checks=live,
         ),
         _ctx(),
@@ -208,12 +214,99 @@ def _report(
 
 
 @pytest.mark.parametrize(
+    ("is_folder", "can_add_children", "expected_status", "expected_reason"),
+    [
+        (True, True, "ready", "drive_folder_write_ready"),
+        (True, False, "blocked", "drive_folder_write_unavailable"),
+        (True, None, "not_checked", "drive_folder_write_capability_unverified"),
+        (False, None, "blocked", "drive_target_not_folder"),
+        (None, None, "not_checked", "drive_target_type_unverified"),
+    ],
+)
+def test_publisher_discovery_drive_probe_uses_its_configured_parent_folder(
+    tmp_path: Path,
+    is_folder: bool | None,
+    can_add_children: bool | None,
+    expected_status: str,
+    expected_reason: str,
+) -> None:
+    settings = _settings(tmp_path)
+    inventory_settings = PublisherInventorySettings(
+        schema_version="1.0",
+        openrouter_api_key="openrouter-test",
+        model="openai/gpt-test",
+        temperature=0.0,
+        timeout_seconds=5.0,
+        max_steps=1,
+        output_dir=str(tmp_path / "publisher-discovery"),
+        reports_db=settings.reports_db,
+        google_sa_path=settings.google_sa_path,
+        prompt_namespace="publisher_inventory/discovery",
+        pagination_max_pages=1,
+        http_timeout_seconds=5.0,
+        drive_parent_folder_id="publisher-discovery-folder",
+        candidate_screening_enabled=False,
+    )
+
+    probed_folders: list[str] = []
+
+    def probe(request, _ctx):
+        probed_folders.append(request.folder_id)
+        assert request.folder_id == "publisher-discovery-folder"
+        assert request.require_write_scope is True
+        return DriveFolderCapabilityPreflightResponse(
+            schema_version="1.0",
+            accessible=True,
+            is_folder=is_folder,
+            can_add_children=can_add_children,
+            provider_calls=1,
+        )
+
+    report = _report(
+        tmp_path,
+        "publisher_discovery",
+        live=True,
+        drive_probe=probe,
+        publisher_inventory_settings=inventory_settings,
+    )
+
+    drive_check = next(
+        item for item in report.checks if item.capability == "google_drive"
+    )
+    assert drive_check.affected_workflows == ["publisher_discovery"]
+    assert probed_folders == ["publisher-discovery-folder"]
+    assert drive_check.status == expected_status
+    assert drive_check.reason_code == expected_reason
+    assert report.external_writes == 0
+
+
+def test_drive_preflight_v1_retains_legacy_request_and_response_construction() -> None:
+    request = DriveFolderCapabilityPreflightRequest(
+        schema_version="1.0",
+        folder_id="folder-id",
+        service_account_path="service-account.json",
+        include_items_from_all_drives=False,
+        drive_id="shared-drive-id",
+    )
+    response = DriveFolderCapabilityPreflightResponse(
+        schema_version="1.0", accessible=True, provider_calls=1
+    )
+
+    assert request.include_items_from_all_drives is False
+    assert request.drive_id == "shared-drive-id"
+    assert response.is_folder is None
+    assert response.can_add_children is None
+
+
+@pytest.mark.parametrize(
     ("outcome", "expected_status", "expected_calls"),
     [
         ("accessible", "ready", 2),
         ("inaccessible", "blocked", 1),
         ("transient", "degraded", 1),
         ("permanent", "blocked", 1),
+        ("scope_insufficient", "blocked", 0),
+        ("scope_unverified", "not_checked", 0),
         ("unexpected", "degraded", 1),
     ],
 )
@@ -224,7 +317,8 @@ def test_drive_live_probe_maps_access_and_failures_to_workflow_status(
     expected_calls: int,
 ) -> None:
     def probe(request, _ctx):
-        assert request.folder_id == "configured-folder"
+        assert request.folder_id == "report-archive-folder"
+        assert request.require_write_scope is True
         assert request.timeout_seconds == 5.0
         if outcome == "transient":
             raise AppError(
@@ -234,19 +328,41 @@ def test_drive_live_probe_maps_access_and_failures_to_workflow_status(
             raise AppError(
                 code="drive_folder_unavailable", message="missing", retryable=False
             )
+        if outcome == "scope_insufficient":
+            raise AppError(
+                code="drive_preflight_scope_insufficient",
+                message="write scope unavailable",
+                retryable=False,
+                context={"provider_calls": 0},
+            )
+        if outcome == "scope_unverified":
+            raise AppError(
+                code="drive_preflight_scope_unverified",
+                message="actual grant scopes are unavailable",
+                retryable=False,
+                context={"provider_calls": 0},
+            )
         if outcome == "unexpected":
             raise RuntimeError("provider error")
         return DriveFolderCapabilityPreflightResponse(
             schema_version="1.0",
             accessible=outcome == "accessible",
+            is_folder=outcome == "accessible",
+            can_add_children=True if outcome == "accessible" else None,
             provider_calls=2 if outcome == "accessible" else 1,
         )
 
+    archive_folder_id = "report-archive-folder"
     report = _report(
         tmp_path,
         "report_acquisition",
         live=True,
         drive_probe=probe,
+        browser_settings=_browser_settings(
+            drive_upload_enabled=True,
+            drive_upload_parent_folder_id=archive_folder_id,
+            drive_upload_google_sa_path=str(tmp_path / "service-account.json"),
+        ),
     )
     check = next(item for item in report.checks if item.capability == "google_drive")
 
@@ -258,7 +374,16 @@ def test_drive_live_probe_maps_access_and_failures_to_workflow_status(
 def test_drive_local_mode_reports_probe_skipped_without_provider_calls(
     tmp_path: Path,
 ) -> None:
-    report = _report(tmp_path, "report_acquisition", live=False)
+    report = _report(
+        tmp_path,
+        "report_acquisition",
+        live=False,
+        browser_settings=_browser_settings(
+            drive_upload_enabled=True,
+            drive_upload_parent_folder_id="configured-folder",
+            drive_upload_google_sa_path=str(tmp_path / "service-account.json"),
+        ),
+    )
     check = next(item for item in report.checks if item.capability == "google_drive")
 
     assert check.status == "not_checked"
@@ -401,10 +526,19 @@ def test_mailbox_live_probe_keeps_retryability_and_call_count_scoped(
         "mailbox_delivery",
         live=True,
         drive_probe=lambda _request, _ctx: DriveFolderCapabilityPreflightResponse(
-            schema_version="1.0", accessible=True, provider_calls=1
+            schema_version="1.0",
+            accessible=True,
+            is_folder=True,
+            can_add_children=True,
+            provider_calls=1,
         ),
         mailbox_probe=mailbox_probe,
         mailbox_settings=_mailbox_settings(tmp_path),
+        browser_settings=_browser_settings(
+            drive_upload_enabled=True,
+            drive_upload_parent_folder_id="configured-folder",
+            drive_upload_google_sa_path=str(tmp_path / "service-account.json"),
+        ),
     )
     check = next(item for item in report.checks if item.capability == "mailbox")
     drive_calls = next(
@@ -516,7 +650,12 @@ def test_mailbox_rejects_unknown_provider_before_any_probe(tmp_path: Path) -> No
     assert report.provider_calls == 0
 
 
-def _browser_settings() -> BrowserDownloadSettings:
+def _browser_settings(
+    *,
+    drive_upload_enabled: bool = False,
+    drive_upload_parent_folder_id: str = "",
+    drive_upload_google_sa_path: str = "",
+) -> BrowserDownloadSettings:
     return BrowserDownloadSettings(
         schema_version="1.0",
         openrouter_api_key="",
@@ -532,6 +671,9 @@ def _browser_settings() -> BrowserDownloadSettings:
             schema_version="1.0", fields=[], delivery_emails=[]
         ),
         openai_api_key="",
+        drive_upload_enabled=drive_upload_enabled,
+        drive_upload_parent_folder_id=drive_upload_parent_folder_id,
+        drive_upload_google_sa_path=drive_upload_google_sa_path,
     )
 
 
@@ -586,7 +728,10 @@ def test_wordpress_live_probe_requires_verified_create_capability(
     expected_status: str,
     expected_calls: int,
 ) -> None:
-    def wordpress_probe(_settings, _ctx):
+    captured_requirements = []
+
+    def wordpress_probe(_settings, _ctx, requirements):
+        captured_requirements.append(requirements)
         if outcome == "transient":
             raise AppError(
                 code="wordpress_provider_unavailable",
@@ -607,6 +752,7 @@ def test_wordpress_live_probe_requires_verified_create_capability(
             verified_capabilities=(
                 ("create_posts", "publish_posts") if outcome == "ready" else ()
             ),
+            verified_post_types=(requirements.post_types if outcome == "ready" else ()),
             provider_calls=3 if outcome == "ready" else 2,
         )
 
@@ -623,6 +769,11 @@ def test_wordpress_live_probe_requires_verified_create_capability(
     assert check.affected_workflows == ["wordpress_publish"]
     assert report.provider_calls == expected_calls
     assert report.external_writes == 0
+    assert captured_requirements[0].post_types == (
+        "ml_report",
+        "ml_briefing",
+        "ml_signal",
+    )
 
 
 def test_wordpress_local_mode_does_not_claim_unverified_readiness(
@@ -639,6 +790,44 @@ def test_wordpress_local_mode_does_not_claim_unverified_readiness(
     assert check.status == "not_checked"
     assert check.reason_code == "wordpress_live_probe_skipped"
     assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_wordpress_projection_preflight_requires_admin_capability_and_route(
+    tmp_path: Path,
+) -> None:
+    captured_requirements = []
+
+    def wordpress_probe(_settings, _ctx, requirements):
+        captured_requirements.append(requirements)
+        return WordPressPublishTargetPreflightResponse(
+            schema_version="1.0",
+            base_url="https://site.example.test",
+            post_type="",
+            endpoint="https://site.example.test/wp-json/marketlense/v1/intelligence-projection",
+            reachable=True,
+            status_code=200,
+            authenticated=True,
+            verified_user_capabilities=() if requirements.user_capabilities else (),
+            verified_rest_routes=(),
+            provider_calls=2,
+        )
+
+    report = _report(
+        tmp_path,
+        "wordpress_projection",
+        live=True,
+        wordpress_probe=wordpress_probe,
+        publish_settings=_publish_settings(),
+    )
+    check = next(item for item in report.checks if item.capability == "wordpress")
+
+    assert check.status == "blocked"
+    assert captured_requirements[0].post_types == ()
+    assert captured_requirements[0].user_capabilities == ("manage_options",)
+    assert captured_requirements[0].rest_routes == (
+        "marketlense/v1/intelligence-projection",
+    )
     assert report.external_writes == 0
 
 

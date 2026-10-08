@@ -46,6 +46,7 @@ def _settings(root: Path, *, api_key: str = "sk-test") -> AppSettings:
         cache_dir=str(root / "cache"),
         state_db=str(root / "state.sqlite"),
         reports_db=str(root / "reports.sqlite"),
+        signal_store_db=str(root / "signals.sqlite"),
         publisher_profiles_path=str(root / "publishers.json"),
         category_mapping_path=str(root / "categories.yaml"),
         cover_style_path=str(root / "cover-style.yaml"),
@@ -128,7 +129,12 @@ def _queues(*enabled: str) -> dict[str, WorkflowQueuePolicy]:
 
 
 def _dependencies(
-    *, model_check=None, openrouter_check=None, prompt_check=None
+    *,
+    model_check=None,
+    openrouter_check=None,
+    prompt_check=None,
+    sqlite_check=None,
+    executable_check=None,
 ) -> CapabilityPreflightDependencies:
     ready_sqlite = SqliteCapabilityInspectionResponse(
         schema_version="1.0",
@@ -147,14 +153,22 @@ def _dependencies(
         raise AssertionError("local-only preflight called a provider")
 
     return CapabilityPreflightDependencies(
-        inspect_sqlite=lambda _request, _ctx: ready_sqlite,
+        inspect_sqlite=sqlite_check
+        or (
+            lambda request, _ctx: replace(
+                ready_sqlite, database_key=request.database_key
+            )
+        ),
         file_stat=file_service.file_stat,
         write_bytes=file_service.write_bytes,
         delete_file=file_service.delete_file,
-        inspect_executable=lambda request, _ctx: ExecutableAvailabilityResponse(
-            schema_version="1.0",
-            executable_name=request.executable_name,
-            available=True,
+        inspect_executable=executable_check
+        or (
+            lambda request, _ctx: ExecutableAvailabilityResponse(
+                schema_version="1.0",
+                executable_name=request.executable_name,
+                available=True,
+            )
         ),
         preflight_browser_executable=lambda _request, _ctx: (
             BrowserExecutableAvailabilityResponse(schema_version="1.0", available=True)

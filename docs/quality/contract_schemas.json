@@ -20644,6 +20644,9 @@
             }
           ]
         },
+        "require_write_scope": {
+          "type": "boolean"
+        },
         "schema_version": {
           "type": "string"
         },
@@ -20669,6 +20672,26 @@
       "properties": {
         "accessible": {
           "type": "boolean"
+        },
+        "can_add_children": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_folder": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "provider_calls": {
           "type": "integer"
@@ -48790,6 +48813,27 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressPostTypePreflightRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "post_type": {
+          "type": "string"
+        },
+        "required_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "post_type"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressPostUpdateRequest": {
       "additionalProperties": false,
       "properties": {
@@ -48889,9 +48933,57 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressPublishCapabilityRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "post_type_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "post_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rest_methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "user_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressPublishTargetPreflightRequest": {
       "additionalProperties": false,
       "properties": {
+        "additional_post_types": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress.WordPressPostTypePreflightRequirement"
+          },
+          "type": "array"
+        },
         "auth_header": {
           "type": "string"
         },
@@ -48918,6 +49010,24 @@
           "type": "array"
         },
         "required_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_rest_methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_user_capabilities": {
           "items": {
             "type": "string"
           },
@@ -48978,6 +49088,24 @@
           "type": "array"
         },
         "verified_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_post_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_user_capabilities": {
           "items": {
             "type": "string"
           },

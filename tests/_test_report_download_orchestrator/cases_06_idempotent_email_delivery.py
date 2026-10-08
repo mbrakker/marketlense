@@ -211,7 +211,7 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
     assert due.requests[0].delivery_email == "ops@example.com"
     assert due.requests[0].status == "pending"
     assert due.requests[0].route_family == "browser_email_form"
-    assert response.mail_delivery_request_id == due.requests[0].request_id
+    assert response.mail_delivery_request_id == str(due.requests[0].request_id)
     assert response.mail_delivery_requested_after_utc == (
         due.requests[0].requested_after_utc
     )

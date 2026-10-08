@@ -874,31 +874,41 @@ def preflight_drive_folder_access(
             role="service",
             event="drive_folder_capability_preflight_start",
             module=logger.name,
-            fields={"auth_mode": request.auth_mode, "provider_calls": 1},
+            fields={"auth_mode": request.auth_mode, "provider_call_limit": 1},
         )
     )
     try:
-        drive = _build_drive_client(
-            auth_mode=request.auth_mode,
-            service_account_path=request.service_account_path,
-            oauth_token_path=request.oauth_token_path,
-            ctx=ctx,
-            allow_token_refresh=False,
-            timeout_seconds=request.timeout_seconds,
+        try:
+            drive = _build_drive_client(
+                auth_mode=request.auth_mode,
+                service_account_path=request.service_account_path,
+                oauth_token_path=request.oauth_token_path,
+                ctx=ctx,
+                allow_token_refresh=False,
+                allow_401_refresh=False,
+                require_write_scope=request.require_write_scope,
+                timeout_seconds=request.timeout_seconds,
+            )
+        except AppError as exc:
+            if "provider_calls" in exc.context:
+                raise
+            raise AppError(
+                code=exc.code,
+                message=exc.message,
+                cause=exc,
+                retryable=exc.retryable,
+                severity=exc.severity,
+                context={**exc.context, "provider_calls": 0},
+            ) from exc
+        metadata = (
+            drive.files()
+            .get(
+                fileId=folder_id,
+                fields="id,mimeType,capabilities(canAddChildren)",
+                supportsAllDrives=bool(request.supports_all_drives),
+            )
+            .execute(num_retries=0)
         )
-        escaped_folder_id = folder_id.replace("\\", "\\\\").replace("'", "\\'")
-        query = f"'{escaped_folder_id}' in parents and trashed = false"
-        kwargs = {
-            "q": query,
-            "pageSize": 1,
-            "fields": "files(id)",
-            "supportsAllDrives": bool(request.supports_all_drives),
-            "includeItemsFromAllDrives": bool(request.include_items_from_all_drives),
-        }
-        if request.drive_id:
-            kwargs["corpora"] = "drive"
-            kwargs["driveId"] = request.drive_id
-        drive.files().list(**kwargs).execute(num_retries=0)
     except AppError:
         raise
     except DRIVE_BOUNDARY_EXCEPTIONS as exc:
@@ -916,10 +926,27 @@ def preflight_drive_folder_access(
             message="Drive folder capability preflight failed",
             cause=exc,
             retryable=retryable,
-            context={"status_code": status_code},
+            context={"status_code": status_code, "provider_calls": 1},
         ) from exc
+    if not isinstance(metadata, dict):
+        raise AppError(
+            code="drive_folder_metadata_invalid",
+            message="Drive folder capability metadata response was invalid",
+            retryable=True,
+            context={"provider_calls": 1},
+        )
+    capabilities = metadata.get("capabilities")
+    can_add_children_value = (
+        capabilities.get("canAddChildren") if isinstance(capabilities, dict) else None
+    )
     response = DriveFolderCapabilityPreflightResponse(
-        schema_version="1.0", accessible=True, provider_calls=1
+        schema_version="1.0",
+        accessible=True,
+        is_folder=metadata.get("mimeType") == "application/vnd.google-apps.folder",
+        can_add_children=(
+            can_add_children_value if isinstance(can_add_children_value, bool) else None
+        ),
+        provider_calls=1,
     )
     logger.info(
         log_event(
@@ -927,7 +954,12 @@ def preflight_drive_folder_access(
             role="service",
             event="drive_folder_capability_preflight_complete",
             module=logger.name,
-            fields={"accessible": response.accessible, "provider_calls": 1},
+            fields={
+                "accessible": response.accessible,
+                "is_folder": response.is_folder,
+                "can_add_children": response.can_add_children,
+                "provider_calls": 1,
+            },
         )
     )
     return response

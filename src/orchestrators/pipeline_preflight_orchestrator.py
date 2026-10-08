@@ -56,6 +56,7 @@ from src.contracts.sqlite_migration import (
     SqliteCapabilityInspectionResponse,
 )
 from src.contracts.workflow_queue import WorkflowQueuePolicy
+from src.contracts.wordpress import WordPressPublishCapabilityRequirements
 from src.services import (
     browser_report_download_service,
     drive_service,
@@ -75,6 +76,10 @@ from src.utils.model_resolver import (
 )
 
 logger = logging.getLogger("market_lense.pipeline_preflight_orchestrator")
+
+
+def _python_runtime_supported(version: tuple[int, ...], executable: str) -> bool:
+    return bool(str(executable or "").strip()) and version[:2] >= (3, 12)
 
 
 def derive_capability_workflows(
@@ -156,6 +161,7 @@ _REPORTS_DB_WORKFLOWS = frozenset(
         "public_render_repair",
     }
 )
+_SIGNAL_STORE_WORKFLOWS = frozenset({"signal_candidate", "signal_generation"})
 _REPORT_ARTIFACT_WORKFLOWS = frozenset(
     {
         "report_generation",
@@ -235,7 +241,9 @@ class CapabilityPreflightDependencies:
     preflight_mailbox_access: Callable[
         [MailboxAcquisitionSettings, RunContext], MailboxAccessPreflightResponse
     ]
-    preflight_wordpress_publish_target: Callable[[PublishSettings, RunContext], object]
+    preflight_wordpress_publish_target: Callable[
+        [PublishSettings, RunContext, WordPressPublishCapabilityRequirements], object
+    ]
 
 
 def default_capability_preflight_dependencies() -> CapabilityPreflightDependencies:
@@ -256,7 +264,13 @@ def default_capability_preflight_dependencies() -> CapabilityPreflightDependenci
         preflight_openrouter_model=llm_service.preflight_openrouter_model,
         preflight_drive_folder_access=drive_service.preflight_drive_folder_access,
         preflight_mailbox_access=mailbox_acquisition_service.preflight_mailbox_access,
-        preflight_wordpress_publish_target=wordpress_service.preflight_publish_capability,
+        preflight_wordpress_publish_target=(
+            lambda settings, ctx, requirements: (
+                wordpress_service.preflight_publish_capability(
+                    settings, ctx, requirements
+                )
+            )
+        ),
     )
 
 
@@ -274,6 +288,12 @@ def run_capability_preflight(
         profile_name=request.profile_name,
         supervisor_enabled=request.workflow_control.supervisor.enabled,
         queue_policies=request.queue_policies,
+    )
+    ocr_workflows = tuple(
+        workflow
+        for workflow in workflows
+        if workflow in _OCR_WORKFLOWS
+        and bool(getattr(request.settings, "pdf_text_ocr_enabled", False))
     )
     checks: list[CapabilityPreflightCheck] = []
     provider_calls = 0
@@ -377,7 +397,9 @@ def run_capability_preflight(
     embedding_workflows = tuple(
         workflow for workflow in workflows if workflow == "claim_embedding"
     )
-    openai_workflows = tuple(sorted(set(llm_workflows) | set(embedding_workflows)))
+    openai_workflows = tuple(
+        sorted(set(llm_workflows) | set(embedding_workflows) | set(ocr_workflows))
+    )
     drive_workflows = _profile_workflows(profiles, workflow_profiles, "require_drive")
     if request.browser_settings is not None and not (
         request.browser_settings.drive_upload_enabled
@@ -563,6 +585,41 @@ def run_capability_preflight(
             )
         )
 
+    if ocr_workflows:
+        settings = request.settings
+        llm_model_check = next(
+            (check for check in checks if check.capability == "llm_model"), None
+        )
+        if (
+            str(settings.pdf_text_ocr_model or "").strip()
+            == str(settings.openai_model or "").strip()
+            and set(ocr_workflows).issubset(llm_workflows)
+            and llm_model_check is not None
+        ):
+            checks.append(
+                _capability_check(
+                    "ocr_model",
+                    ocr_workflows,
+                    llm_model_check.status,
+                    llm_model_check.reason_code,
+                    llm_model_check.retryable,
+                    llm_model_check.remediation,
+                    required=True,
+                )
+            )
+        else:
+            ocr_model_check, calls = _check_openai_model_capability(
+                request,
+                ocr_workflows,
+                str(settings.pdf_text_ocr_model or "").strip(),
+                capability="ocr_model",
+                missing_dependency_checks=checks,
+                deps=deps,
+                ctx=ctx,
+            )
+            checks.append(ocr_model_check)
+            provider_calls += calls
+
     if embedding_workflows:
         embedding_check, calls = _check_openai_model_capability(
             request,
@@ -598,10 +655,10 @@ def run_capability_preflight(
     provider_calls += calls
 
     if drive_workflows:
-        drive_check, calls = _check_drive_capability(
+        drive_checks, calls = _check_drive_capability(
             request, drive_workflows, deps, ctx
         )
-        checks.append(drive_check)
+        checks.extend(drive_checks)
         provider_calls += calls
     else:
         checks.append(
@@ -805,6 +862,19 @@ def _check_openai_model_capability(
             ),
             0,
         )
+    if not str(model or "").strip():
+        return (
+            _capability_check(
+                capability,
+                workflows,
+                "blocked",
+                "openai_model_missing",
+                False,
+                "Set the configured OpenAI model for this workflow",
+                required=True,
+            ),
+            0,
+        )
     if _dependency_blocked(missing_dependency_checks, "openai_dependencies", workflows):
         return (
             _capability_check(
@@ -854,7 +924,7 @@ def _check_openai_model_capability(
                 bool(exc.retryable),
                 "Rerun the preflight"
                 if exc.retryable
-                else "Check OPENAI_API_KEY and the configured embedding model",
+                else "Check OPENAI_API_KEY and the configured OpenAI model",
                 required=True,
             ),
             1,
@@ -880,7 +950,7 @@ def _check_openai_model_capability(
                 "blocked",
                 "openai_model_unavailable",
                 False,
-                "Check OPENAI_API_KEY and the configured embedding model",
+                "Check OPENAI_API_KEY and the configured OpenAI model",
                 required=True,
             ),
             1,
@@ -1268,7 +1338,7 @@ def _check_capability_dependencies(
         ]
 
     settings = request.settings
-    python_ok = bool(sys.executable) and sys.version_info >= (3, 11)
+    python_ok = _python_runtime_supported(tuple(sys.version_info[:2]), sys.executable)
     checks = [
         _capability_check(
             "python_runtime",
@@ -1367,39 +1437,22 @@ def _check_capability_dependencies(
                 required=True,
             )
         )
-    ocr_workflows = tuple(
-        workflow for workflow in workflows if workflow in _OCR_WORKFLOWS
+    ocr_enabled = bool(getattr(settings, "pdf_text_ocr_enabled", False))
+    checks.append(
+        _capability_check(
+            "ocr_executable",
+            (),
+            "not_required",
+            "ocr_provider_backed"
+            if ocr_enabled and any(workflow in _OCR_WORKFLOWS for workflow in workflows)
+            else "ocr_not_required",
+            False,
+            "OCR uses the configured LLM provider; no local OCR executable is required"
+            if ocr_enabled and any(workflow in _OCR_WORKFLOWS for workflow in workflows)
+            else "OCR is disabled or no enabled workflow uses OCR",
+            required=False,
+        )
     )
-    if ocr_workflows and bool(getattr(settings, "pdf_text_ocr_enabled", False)):
-        tesseract_available = deps.inspect_executable(
-            ExecutableAvailabilityRequest(
-                schema_version="1.0", executable_name="tesseract"
-            ),
-            ctx,
-        ).available
-        checks.append(
-            _capability_check(
-                "ocr_executable",
-                ocr_workflows,
-                "ready" if tesseract_available else "blocked",
-                "tesseract_available" if tesseract_available else "tesseract_missing",
-                False,
-                "Install Tesseract or disable the OCR fallback if the workflow does not use it",
-                required=True,
-            )
-        )
-    else:
-        checks.append(
-            _capability_check(
-                "ocr_executable",
-                (),
-                "not_required",
-                "ocr_not_required",
-                False,
-                "OCR fallback is disabled",
-                required=False,
-            )
-        )
     return checks
 
 
@@ -1423,6 +1476,12 @@ def _check_capability_assets(
     ctx: RunContext,
 ) -> list[CapabilityPreflightCheck]:
     checks: list[CapabilityPreflightCheck] = []
+    ocr_workflows = tuple(
+        workflow
+        for workflow in workflows
+        if workflow in _OCR_WORKFLOWS
+        and bool(getattr(request.settings, "pdf_text_ocr_enabled", False))
+    )
     category_workflows = tuple(
         workflow for workflow in workflows if workflow in _CATEGORY_MAPPING_WORKFLOWS
     )
@@ -1503,6 +1562,12 @@ def _check_capability_assets(
         }
         if profile_name == "report_generation":
             namespaces.update(report_pipeline_prompt_namespaces(request.settings))
+        if workflow in ocr_workflows:
+            ocr_namespace = str(
+                getattr(request.settings, "pdf_text_ocr_prompt_namespace", "") or ""
+            ).strip()
+            if ocr_namespace:
+                namespaces.add(ocr_namespace)
         for namespace in namespaces:
             prompt_workflows.setdefault(namespace, set()).add(workflow)
     prompt_namespaces = tuple(sorted(prompt_workflows))
@@ -1688,18 +1753,37 @@ def _check_capability_databases(
     checks: list[CapabilityPreflightCheck],
     ctx: RunContext,
 ) -> int:
-    del llm_workflows
     if not workflows:
         return 0
-    stores: list[tuple[str, str, tuple[str, ...]]] = [
-        ("state_db", request.settings.state_db, workflows)
+    stores: list[tuple[str, str, str, tuple[str, ...]]] = [
+        ("state_db", "state_db", request.settings.state_db, workflows)
     ]
+    signal_workflows = tuple(
+        workflow for workflow in workflows if workflow in _SIGNAL_STORE_WORKFLOWS
+    )
+    if signal_workflows:
+        # The dedicated Signal file uses the reports migration registry while
+        # retaining a separate configured path and readiness result.
+        stores.append(
+            (
+                "signal_store_db",
+                "reports_db",
+                request.settings.signal_store_db or request.settings.reports_db,
+                signal_workflows,
+            )
+        )
     if report_workflows:
-        stores.append(("reports_db", request.settings.reports_db, report_workflows))
-    if any(request.queue_policies.get(workflow) for workflow in workflows):
-        stores.append(("llm_usage_db", request.settings.usage_db_path, workflows))
+        stores.append(
+            ("reports_db", "reports_db", request.settings.reports_db, report_workflows)
+        )
+    if llm_workflows or any(
+        request.queue_policies.get(workflow) for workflow in workflows
+    ):
+        stores.append(
+            ("llm_usage_db", "llm_usage_db", request.settings.usage_db_path, workflows)
+        )
     provider_calls = 0
-    for database_key, path, affected_workflows in stores:
+    for capability_key, database_key, path, affected_workflows in stores:
         if not str(path or "").strip():
             status = "blocked"
             reason_code = "sqlite_database_path_missing"
@@ -1732,7 +1816,7 @@ def _check_capability_databases(
             retryable = False
         checks.append(
             _capability_check(
-                f"{database_key}",
+                capability_key,
                 affected_workflows,
                 status,
                 _safe_reason_code(reason_code, "sqlite_inspection_failed"),
@@ -1858,14 +1942,108 @@ def _dependency_blocked(
     )
 
 
+@dataclass(frozen=True)
+class _DrivePreflightTarget:
+    folder_id: str
+    service_account_path: str
+    auth_mode: str
+    oauth_token_path: str | None
+    supports_all_drives: bool
+    requires_child_write: bool
+
+
 def _check_drive_capability(
     request: CapabilityPreflightRequest,
     workflows: tuple[str, ...],
     deps: CapabilityPreflightDependencies,
     ctx: RunContext,
-) -> tuple[CapabilityPreflightCheck, int]:
+) -> tuple[list[CapabilityPreflightCheck], int]:
     settings = request.settings
-    if not str(settings.gdrive_folder_id or "").strip():
+    targets: dict[_DrivePreflightTarget, list[str]] = {}
+    checks: list[CapabilityPreflightCheck] = []
+
+    for workflow in workflows:
+        if workflow == "publisher_discovery":
+            inventory = request.publisher_inventory_settings
+            if inventory is None:
+                checks.append(
+                    _capability_check(
+                        "google_drive",
+                        (workflow,),
+                        "blocked",
+                        _safe_reason_code(
+                            request.publisher_inventory_config_error or "",
+                            "publisher_inventory_configuration_missing",
+                        ),
+                        False,
+                        "Resolve publisher discovery Drive settings",
+                        required=True,
+                    )
+                )
+                continue
+            target = _DrivePreflightTarget(
+                folder_id=inventory.drive_parent_folder_id,
+                service_account_path=inventory.google_sa_path,
+                auth_mode=inventory.drive_auth_mode,
+                oauth_token_path=inventory.google_oauth_token_path,
+                supports_all_drives=True,
+                requires_child_write=True,
+            )
+        elif workflow in {"report_acquisition", "mailbox_delivery"}:
+            browser = request.browser_settings
+            if browser is None:
+                checks.append(
+                    _capability_check(
+                        "google_drive",
+                        (workflow,),
+                        "blocked",
+                        _safe_reason_code(
+                            request.browser_settings_config_error or "",
+                            "drive_upload_configuration_missing",
+                        ),
+                        False,
+                        "Resolve the workflow's Drive archive settings",
+                        required=True,
+                    )
+                )
+                continue
+            target = _DrivePreflightTarget(
+                folder_id=browser.drive_upload_parent_folder_id,
+                service_account_path=browser.drive_upload_google_sa_path,
+                auth_mode=browser.drive_upload_auth_mode,
+                oauth_token_path=browser.drive_upload_oauth_token_path,
+                supports_all_drives=browser.drive_upload_supports_all_drives,
+                requires_child_write=True,
+            )
+        else:
+            target = _DrivePreflightTarget(
+                folder_id=settings.gdrive_folder_id,
+                service_account_path=settings.google_sa_path,
+                auth_mode=settings.drive_auth_mode,
+                oauth_token_path=settings.google_oauth_token_path,
+                supports_all_drives=settings.drive_supports_all_drives,
+                requires_child_write=False,
+            )
+        targets.setdefault(target, []).append(workflow)
+
+    provider_calls = 0
+    for target, target_workflows in targets.items():
+        check, calls = _check_drive_target(
+            request, target, tuple(target_workflows), deps, ctx
+        )
+        checks.append(check)
+        provider_calls += calls
+    return checks, provider_calls
+
+
+def _check_drive_target(
+    request: CapabilityPreflightRequest,
+    target: _DrivePreflightTarget,
+    workflows: tuple[str, ...],
+    deps: CapabilityPreflightDependencies,
+    ctx: RunContext,
+) -> tuple[CapabilityPreflightCheck, int]:
+    if not str(target.folder_id or "").strip():
         return (
             _capability_check(
                 "google_drive",
@@ -1873,12 +2051,12 @@ def _check_drive_capability(
                 "blocked",
                 "drive_folder_id_missing",
                 False,
-                "Set ingest.gdrive_folder_id for the configured Drive source",
+                "Set the folder used by this workflow's Drive integration",
                 required=True,
             ),
             0,
         )
-    if settings.drive_auth_mode not in {"service_account", "oauth_user"}:
+    if target.auth_mode not in {"service_account", "oauth_user"}:
         return (
             _capability_check(
                 "google_drive",
@@ -1886,15 +2064,15 @@ def _check_drive_capability(
                 "blocked",
                 "drive_auth_mode_invalid",
                 False,
-                "Set drive_auth_mode to service_account or oauth_user",
+                "Set Drive auth mode to service_account or oauth_user",
                 required=True,
             ),
             0,
         )
     credential_path = (
-        settings.google_sa_path
-        if settings.drive_auth_mode == "service_account"
-        else str(settings.google_oauth_token_path or "")
+        target.service_account_path
+        if target.auth_mode == "service_account"
+        else str(target.oauth_token_path or "")
     )
     if not credential_path:
         return (
@@ -1904,7 +2082,7 @@ def _check_drive_capability(
                 "blocked",
                 "drive_credentials_missing",
                 False,
-                "Configure the credential file for the selected Drive auth mode",
+                "Configure credentials for this workflow's selected Drive auth mode",
                 required=True,
             ),
             0,
@@ -1933,7 +2111,7 @@ def _check_drive_capability(
     if not credential_available:
         reason = (
             "drive_service_account_missing"
-            if settings.drive_auth_mode == "service_account"
+            if target.auth_mode == "service_account"
             else "drive_oauth_token_missing"
         )
         return (
@@ -1972,20 +2150,7 @@ def _check_drive_capability(
                 "not_checked",
                 "drive_live_probe_skipped",
                 False,
-                "Rerun with --live to verify read access to the configured Drive folder",
-                required=True,
-            ),
-            0,
-        )
-    if importlib.util.find_spec("googleapiclient") is None:
-        return (
-            _capability_check(
-                "google_drive",
-                workflows,
-                "blocked",
-                "drive_dependency_missing",
-                False,
-                "Install the locked Google API dependencies",
+                "Rerun with --live to verify the configured Drive folder",
                 required=True,
             ),
             0,
@@ -1994,17 +2159,17 @@ def _check_drive_capability(
         result = deps.preflight_drive_folder_access(
             DriveFolderCapabilityPreflightRequest(
                 schema_version="1.0",
-                folder_id=settings.gdrive_folder_id,
-                service_account_path=settings.google_sa_path,
-                auth_mode=settings.drive_auth_mode,
-                oauth_token_path=settings.google_oauth_token_path,
-                supports_all_drives=settings.drive_supports_all_drives,
-                include_items_from_all_drives=settings.drive_include_items_from_all_drives,
-                drive_id=settings.drive_id,
+                folder_id=target.folder_id,
+                service_account_path=target.service_account_path,
+                auth_mode=target.auth_mode,
+                oauth_token_path=target.oauth_token_path,
+                supports_all_drives=target.supports_all_drives,
+                require_write_scope=target.requires_child_write,
                 timeout_seconds=5.0,
             ),
             ctx,
         )
+        calls = max(0, int(result.provider_calls))
         if not result.accessible:
             return (
                 _capability_check(
@@ -2013,37 +2178,95 @@ def _check_drive_capability(
                     "blocked",
                     "drive_folder_unavailable",
                     False,
-                    "Verify the configured account has read access to the Drive folder",
+                    "Verify the configured account has access to the Drive folder",
                     required=True,
                 ),
-                max(0, int(result.provider_calls)),
+                calls,
             )
+        if result.is_folder is False:
+            return (
+                _capability_check(
+                    "google_drive",
+                    workflows,
+                    "blocked",
+                    "drive_target_not_folder",
+                    False,
+                    "Configure a Drive folder for this workflow",
+                    required=True,
+                ),
+                calls,
+            )
+        if result.is_folder is None:
+            return (
+                _capability_check(
+                    "google_drive",
+                    workflows,
+                    "not_checked",
+                    "drive_target_type_unverified",
+                    False,
+                    "Rerun with a Drive preflight service that reports the target type",
+                    required=True,
+                ),
+                calls,
+            )
+        if target.requires_child_write and result.can_add_children is not True:
+            status: CapabilityStatus = (
+                "blocked" if result.can_add_children is False else "not_checked"
+            )
+            return (
+                _capability_check(
+                    "google_drive",
+                    workflows,
+                    status,
+                    "drive_folder_write_unavailable"
+                    if result.can_add_children is False
+                    else "drive_folder_write_capability_unverified",
+                    False,
+                    "Grant child creation access or verify the Drive capability",
+                    required=True,
+                ),
+                calls,
+            )
+        reason_code = (
+            "drive_folder_write_ready"
+            if target.requires_child_write
+            else "drive_folder_accessible"
+        )
         return (
             _capability_check(
                 "google_drive",
                 workflows,
                 "ready",
-                "drive_folder_accessible",
+                reason_code,
                 False,
                 "continue",
                 required=True,
             ),
-            max(0, int(result.provider_calls)),
+            calls,
         )
     except AppError as exc:
+        reported_calls = exc.context.get("provider_calls")
+        calls = max(0, int(reported_calls)) if reported_calls is not None else 1
+        scope_unverified = exc.code == "drive_preflight_scope_unverified"
         return (
             _capability_check(
                 "google_drive",
                 workflows,
-                "degraded" if exc.retryable else "blocked",
+                "not_checked"
+                if scope_unverified
+                else "degraded"
+                if exc.retryable
+                else "blocked",
                 _safe_reason_code(exc.code, "drive_preflight_failed"),
                 bool(exc.retryable),
-                "Rerun the preflight"
+                "Reauthorize Drive and rerun the preflight"
+                if scope_unverified
+                else "Rerun the preflight"
                 if exc.retryable
                 else "Check Drive credentials, scopes and folder access",
                 required=True,
             ),
-            1,
+            calls,
         )
     except Exception:
         return (
@@ -2534,14 +2757,62 @@ def _check_wordpress_capability(
             0,
         )
     try:
-        result = deps.preflight_wordpress_publish_target(settings, ctx)
-        required_capabilities = {"create_posts"}
-        if str(wp.post_status or "").strip().lower() == "publish":
-            required_capabilities.add("publish_posts")
+        publisher_enabled = "wordpress_publish" in workflows
+        category_update_enabled = "wordpress_category_update" in workflows
+        projection_enabled = "wordpress_projection" in workflows
+        required_post_types = (
+            ("ml_report", "ml_briefing", "ml_signal")
+            if publisher_enabled
+            else ((str(wp.post_type),) if category_update_enabled else ())
+        )
+        required_post_type_capabilities: set[str] = set()
+        if publisher_enabled:
+            required_post_type_capabilities.add("create_posts")
+            if str(wp.post_status or "").strip().lower() == "publish":
+                required_post_type_capabilities.add("publish_posts")
+        if category_update_enabled:
+            required_post_type_capabilities.add("edit_posts")
+        requirements = WordPressPublishCapabilityRequirements(
+            schema_version="1.0",
+            post_types=required_post_types,
+            post_type_capabilities=tuple(sorted(required_post_type_capabilities)),
+            user_capabilities=("manage_options",) if projection_enabled else (),
+            rest_routes=(
+                ("marketlense/v1/intelligence-projection",)
+                if projection_enabled
+                else ()
+            ),
+        )
+        if not required_post_types and not projection_enabled:
+            # Preserve the legacy check for any future publish profile until its
+            # concrete target requirements are declared above.
+            required_post_types = (str(wp.post_type),)
+            required_post_type_capabilities.update({"create_posts"})
+            if str(wp.post_status or "").strip().lower() == "publish":
+                required_post_type_capabilities.add("publish_posts")
+            requirements = WordPressPublishCapabilityRequirements(
+                schema_version="1.0",
+                post_types=required_post_types,
+                post_type_capabilities=tuple(sorted(required_post_type_capabilities)),
+            )
+        result = deps.preflight_wordpress_publish_target(settings, ctx, requirements)
+        required_capabilities = set(requirements.post_type_capabilities)
         verified = set(getattr(result, "verified_capabilities", ()))
-        if not bool(
-            getattr(result, "authenticated", False)
-        ) or not required_capabilities.issubset(verified):
+        verified_post_types = set(getattr(result, "verified_post_types", ()))
+        verified_user_capabilities = set(
+            getattr(result, "verified_user_capabilities", ())
+        )
+        verified_rest_routes = set(getattr(result, "verified_rest_routes", ()))
+        requirements_verified = (
+            required_capabilities.issubset(verified)
+            and set(requirements.post_types).issubset(verified_post_types)
+            and set(requirements.user_capabilities).issubset(verified_user_capabilities)
+            and set(requirements.rest_routes).issubset(verified_rest_routes)
+        )
+        if (
+            not bool(getattr(result, "authenticated", False))
+            or not requirements_verified
+        ):
             return (
                 _capability_check(
                     "wordpress",
@@ -2549,7 +2820,7 @@ def _check_wordpress_capability(
                     "blocked",
                     "wordpress_capability_unverified",
                     False,
-                    "Verify the configured identity can create the selected post type and status",
+                    "Verify WordPress route registration, required capabilities, and writable metadata for every enabled target",
                     required=True,
                 ),
                 max(0, int(getattr(result, "provider_calls", 1) or 0)),

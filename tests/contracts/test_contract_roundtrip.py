@@ -50,6 +50,15 @@ def _build_value(annotation: Any, field_name: str, stack: tuple[type, ...]) -> A
     origin = get_origin(annotation)
     args = get_args(annotation)
 
+    if field_name in {"bbox", "original_bbox", "refined_bbox", "crop_box", "media_box"}:
+        return (0.0, 0.0, 2.0, 2.0)
+    if field_name == "coordinate_transform_version" and stack:
+        module = importlib.import_module(stack[-1].__module__)
+        return getattr(
+            module, "CROP_REFINE_COORDINATE_TRANSFORM_VERSION", "version_value"
+        )
+    if field_name == "rotation":
+        return 0
     if annotation in {Any, object}:
         return f"{field_name}_value"
     if annotation is None or annotation is type(None):
@@ -127,6 +136,12 @@ def _build_dataclass(contract_cls: type, stack: tuple[type, ...]) -> Any:
                 "SCHEMA_VERSION",
                 None,
             )
+            if not isinstance(declared_schema_version, str):
+                declared_schema_version = getattr(
+                    importlib.import_module(contract_cls.__module__),
+                    "REPORT_ASSETS_SCHEMA_VERSION",
+                    None,
+                )
             if isinstance(declared_schema_version, str):
                 values[field.name] = declared_schema_version
                 continue
