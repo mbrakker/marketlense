@@ -44,14 +44,14 @@ from src.contracts.publisher_inventory import PublisherInventoryDiscoveryRequest
 from src.contracts.report_cards import CoverFingerprint
 from src.contracts.run_budget import BudgetOverrideContext
 from src.contracts.run_context import RunContext
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateExtractionRequest,
+)
 from src.contracts.state import (
     MailDeliveryRequest,
     MailDeliveryRequestByKeyGetRequest,
     MailDeliveryRequestGetRequest,
-)
-from src.contracts.signal_candidates import (
-    SIGNAL_CANDIDATE_SCHEMA_VERSION,
-    SignalCandidateExtractionRequest,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -302,6 +302,16 @@ def _report_acquisition_handler(
                 ctx,
             ).request
         if existing_request is not None:
+            if existing_request.status == "submission_started":
+                raise AppError(
+                    code="workflow_queue_mail_submission_unconfirmed",
+                    message=(
+                        "A prior form submission has no durable confirmation; "
+                        "mailbox work remains held"
+                    ),
+                    retryable=False,
+                    context={"request_id": existing_request.request_id},
+                )
             mailbox_child = build_mailbox_delivery_submission(
                 job, payload, None, existing_request
             )

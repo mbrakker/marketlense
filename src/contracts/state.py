@@ -827,6 +827,12 @@ class MailDeliveryRequestUpsertRequest:
     submission_confirmed_at_utc: str = field(
         default="", metadata={"doc": "Verified browser submission timestamp."}
     )
+    status: str = field(
+        default="pending",
+        metadata={
+            "doc": "Request state, including the non-pollable submission_started intent."
+        },
+    )
 
 
 @dataclass(frozen=True)

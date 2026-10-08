@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from dataclasses import replace
@@ -389,6 +390,13 @@ def run_report_download(
                     route_families=[planned_step.route_family],
                 )
         try:
+            _prepare_mail_delivery_submission_intent(
+                request=request,
+                normalized_url=normalized_url,
+                planned_step=planned_step,
+                ctx=ctx,
+                dependencies=deps,
+            )
             result = _run_download_attempt(
                 request=request,
                 ctx=ctx,
@@ -1116,8 +1124,9 @@ def record_deferred_mail_delivery_request(
             message="Verified email submission has no valid confirmation timestamp",
             retryable=False,
         )
-    source_identity_id = str(request.source_identity_id or "").strip()
-    publisher_id = str(request.publisher_id or "").strip()
+    publisher_id, source_identity_id = _mail_delivery_identity_values(
+        request, result.normalized_url or request.url
+    )
     if not source_identity_id or not publisher_id:
         raise AppError(
             code="mail_delivery_source_identity_missing",
@@ -1146,9 +1155,20 @@ def record_deferred_mail_delivery_request(
             publisher_id=publisher_id,
             source_identity_id=source_identity_id,
             submission_confirmed_at_utc=submission_confirmed_at_utc,
+            status="pending",
         ),
         ctx,
     )
+    if (
+        upsert_response.request.requested_after_utc != submission_confirmed_at_utc
+        or upsert_response.request.submission_confirmed_at_utc
+        != submission_confirmed_at_utc
+    ):
+        raise AppError(
+            code="mail_delivery_submission_watermark_mismatch",
+            message="Confirmed mail submission does not match its durable watermark",
+            retryable=False,
+        )
     dependencies.write_workflow_control_observation(
         WorkflowControlObservationWriteRequest(
             schema_version="1.0",
@@ -1214,7 +1234,99 @@ def _mail_delivery_report_title(
         return request.report_title.strip()
     if request.candidate_trace is not None and request.candidate_trace.title.strip():
         return request.candidate_trace.title.strip()
-    return result.route_summary.strip() or result.normalized_url or request.url
+    return result.normalized_url or request.url
+
+
+def _mail_delivery_identity_values(
+    request: ReportDownloadOrchestratorRequest, source_url: str
+) -> tuple[str, str]:
+    publisher_id = str(request.publisher_id or "").strip()
+    source_identity_id = str(request.source_identity_id or "").strip()
+    if not source_identity_id:
+        source_identity_id = hashlib.sha256(
+            normalize_url(source_url).encode()
+        ).hexdigest()
+    if not publisher_id:
+        host = (
+            str(
+                urlsplit(
+                    _publisher_scope_url_for_request(request) or source_url
+                ).hostname
+                or ""
+            )
+            .strip()
+            .casefold()
+        )
+        if host:
+            publisher_id = f"host:{host}"
+    return publisher_id, source_identity_id
+
+
+def _prepare_mail_delivery_submission_intent(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    planned_step: ReportDownloadRoutePlanStep,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> None:
+    if (
+        planned_step.route_family != "browser_email_form"
+        or request.mailbox_settings is None
+    ):
+        return
+    delivery_email = resolve_deferred_delivery_email(request)
+    if not delivery_email:
+        return
+    publisher_id, source_identity_id = _mail_delivery_identity_values(
+        request, normalized_url
+    )
+    if not publisher_id or not source_identity_id:
+        raise AppError(
+            code="mail_delivery_source_identity_missing",
+            message="Email submission requires durable publisher and source identities",
+            retryable=False,
+        )
+    report_title = request.report_title.strip()
+    if not report_title and request.candidate_trace is not None:
+        report_title = request.candidate_trace.title.strip()
+    report_title = report_title or normalized_url
+    response = dependencies.upsert_mail_delivery_request(
+        MailDeliveryRequestUpsertRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            idempotency_key=mail_delivery_request_idempotency_key(
+                generation_id=request.mail_delivery_generation_id,
+                source_url=normalized_url,
+                delivery_email=delivery_email,
+                source_identity_id=source_identity_id,
+            ),
+            source_url=request.url,
+            report_title=report_title,
+            publisher_name=_mail_delivery_publisher_name(request),
+            delivery_email=delivery_email,
+            requested_after_utc="",
+            route_family=planned_step.route_family,
+            route_history_id="",
+            publisher_id=publisher_id,
+            source_identity_id=source_identity_id,
+            submission_confirmed_at_utc="",
+            status="submission_started",
+        ),
+        ctx,
+    )
+    if not response.created:
+        code = (
+            "mail_delivery_submission_in_progress"
+            if response.request.status == "submission_started"
+            else "mail_delivery_submission_already_recorded"
+        )
+        raise AppError(
+            code=code,
+            message="A durable mail submission already exists for this generation",
+            retryable=False,
+            context={"request_id": response.request.request_id},
+        )
 
 
 def _mail_delivery_publisher_name(request: ReportDownloadOrchestratorRequest) -> str:

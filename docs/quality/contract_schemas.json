@@ -39444,6 +39444,9 @@
         "state_db": {
           "type": "string"
         },
+        "status": {
+          "type": "string"
+        },
         "submission_confirmed_at_utc": {
           "type": "string"
         }
