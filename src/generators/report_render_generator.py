@@ -215,6 +215,7 @@ def _safe_public_source_url(value: object) -> str:
 def _relative_cover_assets(
     assets: CardCoverAssetSet,
     report_output_dir: Path,
+    content_sha256_by_size: dict[str, str],
 ) -> CardCoverAssetSet:
     root = report_output_dir.resolve()
     payload = asdict(assets)
@@ -242,7 +243,53 @@ def _relative_cover_assets(
                 context={"size": size, "output_path": str(output_path)},
             )
         payload[size]["output_path"] = relative.as_posix()
+        payload[size]["content_sha256"] = content_sha256_by_size[size]
     return CardCoverAssetSet.from_dict(payload)
+
+
+def _cover_asset_checksums(
+    assets: CardCoverAssetSet,
+    report_output_dir: Path,
+    dependencies: ReportRenderDependencies,
+    ctx: RunContext,
+) -> dict[str, str]:
+    root = report_output_dir.resolve()
+    paths_by_size: dict[str, str] = {}
+    for size in ("small", "medium", "large"):
+        asset_path = Path(getattr(assets, size).output_path)
+        resolved_path = (
+            asset_path.resolve()
+            if asset_path.is_absolute()
+            else (root / asset_path).resolve()
+        )
+        try:
+            resolved_path.relative_to(root)
+        except ValueError as exc:
+            raise AppError(
+                code="cover_asset_set_incomplete",
+                message=(
+                    "Cover assets must be stored inside the report output directory"
+                ),
+                retryable=False,
+                context={"size": size},
+            ) from exc
+        paths_by_size[size] = str(resolved_path)
+    hashes = dependencies.hash_file_bundle(
+        FileBundleHashRequest(schema_version="1.0", paths=list(paths_by_size.values())),
+        ctx,
+    ).file_sha256
+    checksums = {size: hashes.get(path, "") for size, path in paths_by_size.items()}
+    if any(
+        len(checksum) != 64
+        or any(character not in "0123456789abcdef" for character in checksum)
+        for checksum in checksums.values()
+    ):
+        raise AppError(
+            code="cover_asset_checksum_missing",
+            message="Checksums for all generated cover assets are required",
+            retryable=False,
+        )
+    return checksums
 
 
 def _artifact_insights(artifacts: dict) -> tuple[dict[str, object], ...]:
@@ -315,7 +362,10 @@ def _report_card_assets_exist(
     ctx: RunContext,
 ) -> bool:
     root = report_output_dir.resolve()
+    asset_paths: list[str] = []
     for asset in (manifest.covers.small, manifest.covers.medium, manifest.covers.large):
+        if not asset.content_sha256:
+            return False
         asset_path = Path(asset.output_path)
         if asset_path.is_absolute() or ".." in asset_path.parts:
             return False
@@ -329,7 +379,18 @@ def _report_card_assets_exist(
         )
         if not stat.exists or not stat.is_file:
             return False
-    return True
+        asset_paths.append(str(resolved_path))
+    checksums = dependencies.hash_file_bundle(
+        FileBundleHashRequest(schema_version="1.0", paths=asset_paths), ctx
+    ).file_sha256
+    return all(
+        checksums.get(path) == asset.content_sha256
+        for path, asset in zip(
+            asset_paths,
+            (manifest.covers.small, manifest.covers.medium, manifest.covers.large),
+            strict=True,
+        )
+    )
 
 
 def _render_only_reuse_outcome(
@@ -1262,6 +1323,12 @@ def render_report_output(
                     covers=_relative_cover_assets(
                         cover_assets,
                         report_output_dir,
+                        _cover_asset_checksums(
+                            cover_assets,
+                            report_output_dir,
+                            dependencies,
+                            cover_ctx,
+                        ),
                     ),
                     cover_style_hash=cover_style_hash,
                 )

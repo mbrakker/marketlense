@@ -248,6 +248,11 @@ def _analysis(
 
 
 def _card_cover_assets(asset_dir: Path) -> CardCoverAssetSet:
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    for size in ("small", "medium", "large"):
+        (asset_dir / f"report-card-{size}.png").write_bytes(
+            f"cover-{size}".encode("ascii")
+        )
     return CardCoverAssetSet(
         "1.0",
         CardCoverAsset(

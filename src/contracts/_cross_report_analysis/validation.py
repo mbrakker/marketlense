@@ -66,5 +66,12 @@ def _validate_dataclass_instance(instance: object, *, path: str) -> None:
         if _field_is_list_typed(field_annotation) and field_value is None:
             _raise_invalid(field_path, field_def.name, "list field cannot be null")
         if _field_is_required(field_def) and _empty_required_value(field_value):
+            if (
+                type(instance).__name__ == "CrossReportPublishPackage"
+                and field_def.name == "prompt_hashes"
+                and getattr(instance, "target_route", "") == "wordpress:ml_signal"
+            ):
+                # Queue-generated Signals use approved candidates deterministically.
+                continue
             _raise_invalid(field_path, field_def.name, "required value is empty")
         _validate_contract_value(field_value, path=field_path)

@@ -35570,6 +35570,9 @@
     "src.contracts.report_cards.CardCoverAsset": {
       "additionalProperties": false,
       "properties": {
+        "content_sha256": {
+          "type": "string"
+        },
         "height": {
           "type": "integer"
         },
@@ -38323,6 +38326,37 @@
       ],
       "type": "object"
     },
+    "src.contracts.signal_candidates.SignalCandidateManifestSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group": {
+          "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+        },
+        "manifest_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_sha256",
+        "extraction_request_id",
+        "group",
+        "candidates"
+      ],
+      "type": "object"
+    },
     "src.contracts.signal_candidates.SignalCandidateReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -38352,6 +38386,9 @@
         },
         "limit": {
           "type": "integer"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -38401,6 +38438,9 @@
             "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
           },
           "type": "array"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -38506,6 +38546,12 @@
         },
         "group_count": {
           "type": "integer"
+        },
+        "manifest_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
@@ -48315,6 +48361,9 @@
           },
           "type": "array"
         },
+        "candidate_manifest_sha256": {
+          "type": "string"
+        },
         "category_filters": {
           "items": {
             "type": "string"
@@ -48519,6 +48568,9 @@
         "body_html": {
           "type": "string"
         },
+        "candidate_group_id": {
+          "type": "string"
+        },
         "card_content": {
           "$ref": "#/$defs/src.contracts.signal_cards.SignalCardContent"
         },
@@ -48548,6 +48600,12 @@
         },
         "slug": {
           "type": "string"
+        },
+        "source_attributions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_entities.SignalSourceAttribution"
+          },
+          "type": "array"
         },
         "source_report_ids": {
           "items": {
@@ -48602,6 +48660,24 @@
         "uncertainty",
         "validation_status",
         "card_content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalSourceAttribution": {
+      "additionalProperties": false,
+      "properties": {
+        "publisher": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id"
       ],
       "type": "object"
     },
@@ -53016,6 +53092,9 @@
           "type": "string"
         },
         "frozen_evidence_manifest": {
+          "type": "string"
+        },
+        "frozen_manifest_sha256": {
           "type": "string"
         },
         "input_content_hash": {

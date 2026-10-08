@@ -21,8 +21,12 @@ from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
     SignalPostGenerationRequest,
     SignalPublishProjection,
+    SignalSourceAttribution,
 )
 from src.generators.signal_post_generator import build_signal_publish_projection
+from src.orchestrators._publish_orchestrator.cross_report import (
+    _signal_projection_package,
+)
 from src.utils.errors import AppError
 
 
@@ -244,6 +248,10 @@ def test_signal_generator_builds_grounded_publish_projection(
     assert projection.topic_labels == ["Retail Strategy"]
     assert projection.tag_labels == ["AI Commerce"]
     assert projection.publisher_labels == ["Publisher A", "Publisher B"]
+    assert projection.source_attributions == [
+        SignalSourceAttribution(report_id="report-a", publisher="Publisher A"),
+        SignalSourceAttribution(report_id="report-b", publisher="Publisher B"),
+    ]
     assert projection.validation_status == "approved"
     assert projection.confidence >= 0.7
     assert projection.card_content.summary
@@ -254,6 +262,13 @@ def test_signal_generator_builds_grounded_publish_projection(
     assert "Publisher A AI Commerce Report, page 2" in projection.body_html
     assert "report-a:claim:1" not in projection.body_html
     assert "Publisher A" in projection.body_html
+    direct_package = _signal_projection_package(
+        projection, asdict(projection.card_content)
+    )
+    assert direct_package.source_metadata == [
+        {"report_id": "report-a", "publisher": "Publisher A"},
+        {"report_id": "report-b", "publisher": "Publisher B"},
+    ]
 
 
 def test_signal_generator_rejects_insufficient_grounding(run_context) -> None:
@@ -344,6 +359,41 @@ def test_frozen_multi_source_signal_uses_exact_manifest_and_replays_idempotently
     assert first.evidence_ids == ["report-a:claim:1", "report-b:claim:1"]
 
 
+def test_same_topic_frozen_signal_groups_have_distinct_publication_identities(
+    run_context,
+) -> None:
+    first_request = _frozen_request()
+    first_data = _frozen_candidate_data()
+    first = build_signal_publish_projection(
+        first_request, _projected_data(), run_context, candidate_data=first_data
+    )
+
+    candidate_id = "signal-candidate:ai-commerce:second"
+    group_id = "signal-group:ai-commerce:second"
+    second_request = _frozen_request(
+        candidate_ids=[candidate_id], candidate_group_id=group_id
+    )
+    second_candidate = replace(
+        first_data.candidates[0], candidate_id=candidate_id, group_id=group_id
+    )
+    second_group = replace(
+        first_data.groups[0],
+        group_id=group_id,
+        stable_key="ai-commerce:second",
+        candidate_ids=[candidate_id],
+    )
+    second_data = replace(
+        first_data, candidates=[second_candidate], groups=[second_group]
+    )
+    second = build_signal_publish_projection(
+        second_request, _projected_data(), run_context, candidate_data=second_data
+    )
+
+    assert first.title == second.title == "AI commerce checkout behavior signal"
+    assert first.slug != second.slug
+    assert first.file_id != second.file_id
+
+
 def test_frozen_signal_rejects_stored_manifest_changes(run_context) -> None:
     candidate_data = _frozen_candidate_data()
     changed_group = replace(
@@ -429,6 +479,49 @@ def test_frozen_signal_rejects_evidence_changed_after_approval(run_context) -> N
         )
 
     assert exc_info.value.code == "signal_frozen_manifest_evidence_changed"
+    assert exc_info.value.retryable is False
+
+
+def test_frozen_signal_rejects_source_content_changed_after_approval(
+    run_context,
+) -> None:
+    projected_data = _projected_data()
+    changed_source = replace(
+        projected_data.source_candidates[0],
+        content_hash="changed-report-content-hash",
+    )
+    changed_projected_data = replace(
+        projected_data,
+        source_candidates=[changed_source, *projected_data.source_candidates[1:]],
+    )
+    candidate_data = _frozen_candidate_data()
+    group = candidate_data.groups[0]
+    candidate_data = replace(
+        candidate_data,
+        groups=[
+            replace(
+                group,
+                raw_group_context={
+                    **group.raw_group_context,
+                    "source_content_hashes": {
+                        "report-a": "report-a-hash",
+                        "report-b": "report-b-hash",
+                    },
+                },
+            )
+        ],
+        manifest_sha256="a" * 64,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(candidate_manifest_sha256="a" * 64),
+            changed_projected_data,
+            run_context,
+            candidate_data=candidate_data,
+        )
+
+    assert exc_info.value.code == "signal_frozen_manifest_source_changed"
     assert exc_info.value.retryable is False
 
 

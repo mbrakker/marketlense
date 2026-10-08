@@ -155,6 +155,8 @@ def _seed_projected_signal_source(
     report_id: str,
     publisher: str,
     publisher_id: str,
+    claim_text: str = "Checkout trust signals are changing.",
+    evidence_text: str = "",
 ) -> None:
     lineage = ProjectionLineage(
         schema_version=PROJECTION_SCHEMA_VERSION,
@@ -194,9 +196,10 @@ def _seed_projected_signal_source(
                 schema_version=PROJECTION_SCHEMA_VERSION,
                 claim_uid=EntityUid(f"{report_id}:claim:1"),
                 report_id=report_key,
-                claim="Checkout trust signals are changing.",
+                claim=claim_text,
                 evidence_id=f"{report_id}:claim:1",
-                evidence=f"{publisher} observed a grounded checkout trust change.",
+                evidence=evidence_text
+                or f"{publisher} observed a grounded checkout trust change.",
                 pages=[2],
                 lineage=lineage,
             )

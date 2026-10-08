@@ -220,6 +220,7 @@ class SignalCandidatePayload(WorkflowQueuePayload):
 class SignalGenerationPayload(WorkflowQueuePayload):
     candidate_group_id: str = ""
     frozen_evidence_manifest: str = ""
+    frozen_manifest_sha256: str = ""
     model_routing_policy_version: str = ""
     extraction_request_id: str = ""
     topic: str = ""

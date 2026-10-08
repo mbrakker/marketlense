@@ -34,7 +34,10 @@ A render-only resume reuses report-card assets only when the complete validated
 report-card manifest is also retained. If that manifest is missing, the renderer
 regenerates the deterministic cover set and manifest before the package can
 reach the blocking publication boundary; it never reports a package as ready
-with orphaned card assets.
+with orphaned card assets. Each small, medium, and large cover records its own
+SHA-256. Warm reuse checks the saved bytes together with the safe path,
+dimensions, style, and semantic fingerprint; a checksum-less legacy asset or
+changed file is regenerated.
 The manifest must be written successfully before readiness can pass. When the
 summary abstains, final insights must retain at least one complete, directly
 supported sentence of 18 words or fewer for the compact card. If no such insight
