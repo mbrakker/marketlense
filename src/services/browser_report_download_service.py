@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 from src.contracts.browser_download import (
     BrowserExecutableAvailabilityRequest,
     BrowserExecutableAvailabilityResponse,
+    BrowserRuntimeAvailabilityResponse,
     BrowserDeveloperDiagnosticsRequest,
     BrowserDeveloperDiagnosticsResult,
     BrowserDownloadConfirmationEvidence,
@@ -32,6 +33,10 @@ from src.contracts.state import (
     StateArtifactAcquisitionCacheRecordRequest,
 )
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download._browser_runtime.runtime import (
+    load_browser_session_class,
+    load_browser_use_runtime,
+)
 from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
@@ -880,6 +885,27 @@ def preflight_browser_executable(
     """Inspect installed browser assets without launching a browser."""
 
     return _inspect_browser_executable(request, ctx)
+
+
+def preflight_browser_runtime(_ctx: RunContext) -> BrowserRuntimeAvailabilityResponse:
+    """Check the canonical installed-or-vendored browser runtime without launching it."""
+
+    try:
+        load_browser_use_runtime()
+        load_browser_session_class()
+    except AppError as exc:
+        if exc.code != "browser_use_unavailable":
+            raise
+        return BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=False,
+            reason_code="browser_runtime_dependency_missing",
+        )
+    return BrowserRuntimeAvailabilityResponse(
+        schema_version="1.0",
+        available=True,
+        reason_code="browser_runtime_available",
+    )
 
 
 def run_browser_developer_diagnostics(

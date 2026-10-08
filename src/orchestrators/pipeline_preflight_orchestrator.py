@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from src.contracts.browser_download import (
     BrowserExecutableAvailabilityRequest,
     BrowserExecutableAvailabilityResponse,
+    BrowserRuntimeAvailabilityResponse,
 )
 from src.contracts.drive import (
     DriveFolderCapabilityPreflightRequest,
@@ -222,6 +223,9 @@ class CapabilityPreflightDependencies:
         [BrowserExecutableAvailabilityRequest, RunContext],
         BrowserExecutableAvailabilityResponse,
     ]
+    preflight_browser_runtime: Callable[
+        [RunContext], BrowserRuntimeAvailabilityResponse
+    ]
     load_prompt_set: _Callable2
     preflight_openai_model: Callable[[OpenAIModelPreflightRequest, RunContext], object]
     preflight_openrouter_model: Callable[
@@ -243,6 +247,9 @@ def default_capability_preflight_dependencies() -> CapabilityPreflightDependenci
         inspect_executable=file_service.inspect_executable,
         preflight_browser_executable=(
             browser_report_download_service.preflight_browser_executable
+        ),
+        preflight_browser_runtime=(
+            browser_report_download_service.preflight_browser_runtime
         ),
         load_prompt_set=prompt_service.load_prompt_set,
         preflight_openai_model=llm_service.preflight_openai_model,
@@ -630,7 +637,7 @@ def run_capability_preflight(
 
     if browser_workflows:
         browser_check, calls = _check_browser_capability(
-            request, browser_workflows, deps, ctx
+            request, browser_workflows, checks, deps, ctx
         )
         checks.append(browser_check)
         provider_calls += calls
@@ -1322,10 +1329,6 @@ def _check_capability_dependencies(
                 ("googleapiclient", "google_auth_httplib2"),
             )
         )
-    if browser_workflows:
-        dependency_groups.append(
-            ("browser_dependencies", browser_workflows, ("browser_use", "playwright"))
-        )
     if wordpress_workflows:
         dependency_groups.append(
             ("wordpress_dependencies", wordpress_workflows, ("requests",))
@@ -1346,6 +1349,21 @@ def _check_capability_dependencies(
                 "Install the locked dependencies with the repository setup procedure"
                 if missing_packages
                 else "continue",
+                required=True,
+            )
+        )
+    if browser_workflows:
+        browser_runtime = deps.preflight_browser_runtime(ctx)
+        checks.append(
+            _capability_check(
+                "browser_dependencies",
+                browser_workflows,
+                "ready" if browser_runtime.available else "blocked",
+                browser_runtime.reason_code,
+                False,
+                "continue"
+                if browser_runtime.available
+                else "Install or restore the supported browser-use runtime using the local setup procedure",
                 required=True,
             )
         )
@@ -2218,6 +2236,7 @@ def _check_mailbox_capability(
 def _check_browser_capability(
     request: CapabilityPreflightRequest,
     workflows: tuple[str, ...],
+    checks: list[CapabilityPreflightCheck],
     deps: CapabilityPreflightDependencies,
     ctx: RunContext,
 ) -> tuple[CapabilityPreflightCheck, int]:
@@ -2249,18 +2268,23 @@ def _check_browser_capability(
             ),
             0,
         )
-    if (
-        importlib.util.find_spec("browser_use") is None
-        or importlib.util.find_spec("playwright") is None
-    ):
+    runtime_check = next(
+        (
+            check
+            for check in checks
+            if check.capability == "browser_dependencies" and check.status == "blocked"
+        ),
+        None,
+    )
+    if runtime_check is not None:
         return (
             _capability_check(
                 "browser",
                 workflows,
                 "blocked",
-                "browser_runtime_dependency_missing",
+                runtime_check.reason_code,
                 False,
-                "Install the locked browser-use and Playwright dependencies",
+                runtime_check.remediation,
                 required=True,
             ),
             0,

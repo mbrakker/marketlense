@@ -25,10 +25,11 @@ type, proof metadata, and publication capabilities. Publisher-discovery checks
 are included only when its queue is enabled; OpenAI candidate-screening checks
 are included only when that feature is enabled. It never generates with a
 model, reads mailbox messages, writes to Drive or WordPress, or launches a
-browser. Browser readiness checks the installed runtime and browser assets. In
-`--live` mode it also checks the configured browser-use OpenAI model when that
-provider is configured; an OpenRouter-only browser fallback is reported as
-`not_checked` because it has no metadata-only probe here. These metadata checks
+browser. Browser readiness loads the canonical installed or vendored browser-use
+runtime and checks browser assets; a separate Playwright package is not
+required. In `--live` mode it also checks the configured browser-use OpenAI
+model when that provider is configured; an OpenRouter-only browser fallback is
+reported as `not_checked` because it has no metadata-only probe here. These metadata checks
 do not make inference calls or verify provider billing/quota.
 
 The command uses the queues enabled by the selected profile. A missing optional

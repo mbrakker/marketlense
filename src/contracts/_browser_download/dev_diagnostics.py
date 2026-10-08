@@ -25,6 +25,36 @@ class BrowserExecutableAvailabilityResponse:
 
 
 @dataclass(frozen=True)
+class BrowserRuntimeAvailabilityResponse:
+    schema_version: str = field(
+        metadata={"doc": "Browser runtime availability response schema version."}
+    )
+    available: bool = field(
+        metadata={
+            "doc": "True when the canonical browser-use session runtime imports successfully."
+        }
+    )
+    reason_code: str = field(
+        metadata={"doc": "Stable browser runtime availability outcome code."}
+    )
+
+    def __post_init__(self) -> None:
+        if self.schema_version != BROWSER_DEVELOPER_DIAGNOSTICS_SCHEMA_VERSION:
+            raise ValueError(
+                "Browser runtime availability schema version is unsupported"
+            )
+        if not self.reason_code:
+            raise ValueError("Browser runtime availability reason code is required")
+        expected_reason = (
+            "browser_runtime_available"
+            if self.available
+            else "browser_runtime_dependency_missing"
+        )
+        if self.reason_code != expected_reason:
+            raise ValueError("Browser runtime availability reason code is inconsistent")
+
+
+@dataclass(frozen=True)
 class BrowserDeveloperDiagnosticsRequest:
     schema_version: str = field(
         metadata={"doc": "Browser developer diagnostics request schema version."}

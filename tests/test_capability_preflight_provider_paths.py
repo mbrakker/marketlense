@@ -7,6 +7,7 @@ import pytest
 
 from src.contracts._browser_download.dev_diagnostics import (
     BrowserExecutableAvailabilityResponse,
+    BrowserRuntimeAvailabilityResponse,
 )
 from src.contracts.browser_download import (
     BrowserDownloadIdentity,
@@ -141,6 +142,11 @@ def _dependencies(
         ),
         preflight_browser_executable=lambda _request, _ctx: (
             BrowserExecutableAvailabilityResponse(schema_version="1.0", available=True)
+        ),
+        preflight_browser_runtime=lambda _ctx: BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=True,
+            reason_code="browser_runtime_available",
         ),
         load_prompt_set=lambda _request, _ctx: object(),
         preflight_openai_model=unexpected_provider_call,

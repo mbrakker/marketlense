@@ -7,6 +7,7 @@ import pytest
 
 from src.contracts.config import AppSettings, ConfigLoadRequest
 from src.contracts.browser_download import (
+    BrowserRuntimeAvailabilityResponse,
     BrowserDownloadIdentity,
     BrowserDownloadSettings,
 )
@@ -20,6 +21,7 @@ from src.contracts.sqlite_migration import SqliteCapabilityInspectionResponse
 from src.contracts.workflow_queue import WORKFLOW_QUEUE_NAMES, WorkflowQueuePolicy
 from src.orchestrators.pipeline_preflight_orchestrator import (
     CapabilityPreflightDependencies,
+    default_capability_preflight_dependencies,
     run_capability_preflight,
 )
 from src.services.config_service import load_workflow_control_settings
@@ -156,6 +158,11 @@ def _dependencies(
         ),
         preflight_browser_executable=lambda _request, _ctx: (
             BrowserExecutableAvailabilityResponse(schema_version="1.0", available=True)
+        ),
+        preflight_browser_runtime=lambda _ctx: BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=True,
+            reason_code="browser_runtime_available",
         ),
         load_prompt_set=prompt_check or (lambda _request, _ctx: object()),
         preflight_openai_model=model_check or unexpected_provider_call,
@@ -745,5 +752,67 @@ def test_unknown_enabled_queue_fails_closed_without_provider_calls(
     assert registry.status == "blocked"
     assert registry.reason_code == "workflow_queue_capability_mapping_missing"
     assert registry.affected_workflows == ["unmapped_queue"]
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_browser_preflight_accepts_supported_vendored_runtime_without_playwright(
+    tmp_path: Path,
+) -> None:
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="autonomous_mvp",
+            settings=_settings(tmp_path),
+            workflow_control=_control("autonomous_mvp"),
+            queue_policies=_queues("report_acquisition"),
+            browser_settings=_browser_settings(str(tmp_path / "out")),
+            live_checks=False,
+        ),
+        _ctx(),
+        dependencies=default_capability_preflight_dependencies(),
+    )
+
+    browser_dependencies = next(
+        check for check in report.checks if check.capability == "browser_dependencies"
+    )
+    assert browser_dependencies.status == "ready"
+    assert browser_dependencies.reason_code == "browser_runtime_available"
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_browser_runtime_unavailable_is_scoped_and_blocks_browser_workflows(
+    tmp_path: Path,
+) -> None:
+    dependencies = replace(
+        default_capability_preflight_dependencies(),
+        preflight_browser_runtime=lambda _ctx: BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=False,
+            reason_code="browser_runtime_dependency_missing",
+        ),
+    )
+    report = run_capability_preflight(
+        CapabilityPreflightRequest(
+            schema_version="1.0",
+            profile_name="autonomous_mvp",
+            settings=_settings(tmp_path),
+            workflow_control=_control("autonomous_mvp"),
+            queue_policies=_queues("report_acquisition"),
+            browser_settings=_browser_settings(str(tmp_path / "out")),
+            live_checks=False,
+        ),
+        _ctx(),
+        dependencies=dependencies,
+    )
+
+    browser_dependencies = next(
+        check for check in report.checks if check.capability == "browser_dependencies"
+    )
+    browser = next(check for check in report.checks if check.capability == "browser")
+    assert browser_dependencies.status == "blocked"
+    assert browser_dependencies.affected_workflows == ["report_acquisition"]
+    assert browser.reason_code == "browser_runtime_dependency_missing"
     assert report.provider_calls == 0
     assert report.external_writes == 0

@@ -175,6 +175,26 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.dev_diagnostics.BrowserRuntimeAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "available",
+        "reason_code"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.forensics.FailedAcquisitionForensicsArtifact": {
       "additionalProperties": false,
       "properties": {
