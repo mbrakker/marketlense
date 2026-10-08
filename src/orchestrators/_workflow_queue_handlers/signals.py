@@ -46,6 +46,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
     SignalCandidateExtractionRequest,
+    SignalCandidateGroup,
 )
 from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
@@ -177,12 +178,6 @@ def _signal_candidate_handler(
     tag_filters = _string_list_attribute(payload, "tag_filters")
     max_source_reports = _positive_int_attribute(payload, "max_source_reports", 6)
     max_evidence_items = _positive_int_attribute(payload, "max_evidence_items", 48)
-    downstream_max_source_reports = _positive_int_attribute(
-        payload, "max_source_reports", 3
-    )
-    downstream_max_evidence_items = _positive_int_attribute(
-        payload, "max_evidence_items", 6
-    )
     max_signals = _positive_int_attribute(payload, "max_signals", 8)
     minimum_evidence_items = _positive_int_attribute(
         payload, "minimum_evidence_items", 2
@@ -236,10 +231,39 @@ def _signal_candidate_handler(
             db_path=app.signal_store_db or app.reports_db,
             max_evidence_items=max_evidence_items,
             max_signals=max_signals,
+            minimum_source_reports=minimum_source_reports,
+            minimum_evidence_items=minimum_evidence_items,
             state_db=app.state_db,
         ),
         ctx,
     )
+    held_groups = [
+        group
+        for group in outcome.batch.groups
+        if group.validation_status == "approved" and group.publication_status == "held"
+    ]
+    publication_hold_reason_counts: dict[str, int] = {}
+    for group in held_groups:
+        reason = group.publication_hold_reason
+        publication_hold_reason_counts[reason] = (
+            publication_hold_reason_counts.get(reason, 0) + 1
+        )
+
+    def _manifest_hash(group: SignalCandidateGroup) -> str:
+        return _digest(
+            "signal-candidate-group-manifest.v1",
+            group.extraction_request_id,
+            group.group_id,
+            group.topic,
+            *group.candidate_ids,
+            *group.source_report_ids,
+            *group.evidence_ids,
+            *group.topic_ids,
+            json.dumps(
+                group.source_category_ids, sort_keys=True, separators=(",", ":")
+            ),
+        )
+
     downstream = [
         WorkflowJobSubmission(
             schema_version="1.0",
@@ -249,8 +273,18 @@ def _signal_candidate_handler(
                 candidate_group_id=group.group_id,
                 frozen_evidence_manifest=f"signal-candidates:{outcome.extraction_request_id}:{group.group_id}",
                 model_routing_policy_version=payload.signal_selection_policy_version,
+                extraction_request_id=group.extraction_request_id,
+                topic=group.topic,
+                candidate_ids=list(group.candidate_ids),
+                source_report_ids=list(group.source_report_ids),
+                evidence_ids=list(group.evidence_ids),
+                topic_ids=list(group.topic_ids),
+                source_category_ids={
+                    report_id: list(category_ids)
+                    for report_id, category_ids in group.source_category_ids.items()
+                },
                 input_reference=app.signal_store_db or app.reports_db,
-                input_content_hash=_digest(*group.evidence_ids),
+                input_content_hash=_manifest_hash(group),
                 processing_version=payload.processing_version,
                 attributes={
                     "config_path": config_path,
@@ -259,19 +293,20 @@ def _signal_candidate_handler(
                     "date_range_start": str(
                         payload.attributes.get("date_range_start", "")
                     ),
-                    "max_evidence_items": downstream_max_evidence_items,
-                    "max_source_reports": downstream_max_source_reports,
+                    "max_evidence_items": max_evidence_items,
+                    "max_source_reports": max_source_reports,
                     "minimum_evidence_items": minimum_evidence_items,
                     "minimum_source_reports": minimum_source_reports,
                     "override_publishability": True,
-                    "publisher_filters": requested_publisher_filters,
-                    "topic": topic,
-                    "source_report_ids": group.source_report_ids,
+                    "publisher_filters": publisher_filters,
                     "tag_filters": tag_filters,
                 },
             ),
             idempotency_key=_digest(
-                "signal-generation", outcome.extraction_request_id, group.group_id
+                "signal-generation",
+                outcome.extraction_request_id,
+                group.group_id,
+                _manifest_hash(group),
             ),
             deduplication_scope="signal-candidate-group",
             root_workflow_id=job.root_workflow_id or job.job_id,
@@ -283,20 +318,28 @@ def _signal_candidate_handler(
             budget_profile="high_quality",
         )
         for group in outcome.batch.groups
-        if generate_signals and group.validation_status == "approved"
+        if generate_signals
+        and group.validation_status == "approved"
+        and group.publication_status == "eligible"
     ]
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
             output_reference=f"signal-candidates:{outcome.extraction_request_id}",
             output_content_hash=_digest(
                 outcome.extraction_request_id,
-                *[group.group_id for group in outcome.batch.groups],
+                *[_manifest_hash(group) for group in outcome.batch.groups],
             ),
             execution_plan_hash=job.execution_plan_hash,
             output_verified=outcome.status == "stored",
             summary={
                 "candidate_count": outcome.candidate_count,
                 "group_count": outcome.group_count,
+                "publication_hold_group_count": len(held_groups),
+                "publication_hold_reason_counts": json.dumps(
+                    publication_hold_reason_counts,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
             },
         ),
         downstream=downstream,
@@ -374,7 +417,7 @@ def _signal_generation_handler(
             message="Signal generation requires a candidate group and frozen evidence manifest",
             retryable=False,
         )
-    topic = str(payload.attributes.get("topic", "")).strip()
+    topic = str(payload.topic or "").strip()
     if not topic:
         raise AppError(
             code="workflow_queue_signal_topic_missing",
@@ -415,6 +458,16 @@ def _signal_generation_handler(
                 minimum_evidence_items=_positive_int_attribute(
                     payload, "minimum_evidence_items", 2
                 ),
+                candidate_group_id=payload.candidate_group_id,
+                extraction_request_id=payload.extraction_request_id,
+                candidate_ids=list(payload.candidate_ids),
+                source_report_ids=list(payload.source_report_ids),
+                evidence_ids=list(payload.evidence_ids),
+                topic_ids=list(payload.topic_ids),
+                source_category_ids={
+                    report_id: list(category_ids)
+                    for report_id, category_ids in payload.source_category_ids.items()
+                },
             ),
             db_path=app.reports_db,
             signal_store_db=app.signal_store_db or app.reports_db,

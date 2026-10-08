@@ -77,6 +77,11 @@ def _group(group_id: str, candidate_id: str) -> SignalCandidateGroup:
         validation_status="approved",
         extraction_request_id="extract-ai",
         generated_at_utc="2026-06-02T12:00:00Z",
+        topic="AI commerce",
+        topic_ids=["retail"],
+        source_category_ids={"report-a": ["retail"]},
+        publication_status="held",
+        publication_hold_reason="signal_grounding_insufficient",
     )
 
 
@@ -122,6 +127,11 @@ def test_signal_candidate_store_persists_lineage_and_idempotent_readback(
     ]
     assert readback.candidates[0] == candidate
     assert readback.groups[0] == group
+    assert readback.groups[0].topic == "AI commerce"
+    assert readback.groups[0].topic_ids == ["retail"]
+    assert readback.groups[0].source_category_ids == {"report-a": ["retail"]}
+    assert readback.groups[0].publication_status == "held"
+    assert readback.groups[0].publication_hold_reason == "signal_grounding_insufficient"
     with sqlite3.connect(db_path) as conn:
         candidate_count = conn.execute(
             "SELECT COUNT(*) FROM signal_candidates"

@@ -95,6 +95,16 @@ def _group_from_row(row: sqlite3.Row) -> SignalCandidateGroup:
         validation_status=cast(Any, row["validation_status"]),
         extraction_request_id=str(row["extraction_request_id"]),
         generated_at_utc=str(row["generated_at_utc"]),
+        topic=str(row["topic"] or ""),
+        topic_ids=[str(value) for value in json.loads(row["topic_ids_json"])],
+        source_category_ids={
+            str(report_id): [str(value) for value in category_ids]
+            for report_id, category_ids in json.loads(
+                row["source_category_ids_json"]
+            ).items()
+        },
+        publication_status=cast(Any, row["publication_status"]),
+        publication_hold_reason=cast(Any, row["publication_hold_reason"]),
     )
     validate_signal_candidate_contract(group)
     return group
@@ -141,9 +151,14 @@ def _upsert_signal_group(conn: sqlite3.Connection, group: SignalCandidateGroup) 
             group_id, extraction_request_id, stable_key, title, summary,
             support_level, candidate_ids_json, source_report_ids_json,
             evidence_ids_json, caveats_json, raw_group_context_json,
-            validation_status, schema_version, generated_at_utc, created_at, updated_at
+            topic, topic_ids_json, source_category_ids_json, publication_status,
+            publication_hold_reason, validation_status, schema_version,
+            generated_at_utc, created_at, updated_at
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s','now'), strftime('%s','now'))
+        VALUES(
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            strftime('%s','now'), strftime('%s','now')
+        )
         ON CONFLICT(group_id) DO UPDATE SET
             extraction_request_id=excluded.extraction_request_id,
             stable_key=excluded.stable_key,
@@ -155,6 +170,11 @@ def _upsert_signal_group(conn: sqlite3.Connection, group: SignalCandidateGroup) 
             evidence_ids_json=excluded.evidence_ids_json,
             caveats_json=excluded.caveats_json,
             raw_group_context_json=excluded.raw_group_context_json,
+            topic=excluded.topic,
+            topic_ids_json=excluded.topic_ids_json,
+            source_category_ids_json=excluded.source_category_ids_json,
+            publication_status=excluded.publication_status,
+            publication_hold_reason=excluded.publication_hold_reason,
             validation_status=excluded.validation_status,
             schema_version=excluded.schema_version,
             generated_at_utc=excluded.generated_at_utc,
@@ -172,6 +192,11 @@ def _upsert_signal_group(conn: sqlite3.Connection, group: SignalCandidateGroup) 
             _json(group.evidence_ids),
             _json(group.caveats),
             _json(group.raw_group_context),
+            group.topic,
+            _json(group.topic_ids),
+            _json(group.source_category_ids),
+            group.publication_status,
+            group.publication_hold_reason,
             group.validation_status,
             group.schema_version,
             group.generated_at_utc,

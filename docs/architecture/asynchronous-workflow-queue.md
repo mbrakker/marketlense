@@ -349,9 +349,17 @@ queue transition, retry state, idempotency identity, and cost outcome
 independently.
 `signal_candidate` delegates to the existing source-linked deterministic
 candidate extractor, retains candidates in the analytics store, and emits one
-deduplicated `signal_generation` job per approved candidate group. Both workers
-reject malformed bounded attributes before resolving application configuration
-or opening a projection or provider operation.
+deduplicated `signal_generation` job per publication-eligible candidate group.
+Semantic candidate approval alone does not make a group publication eligible:
+the group must meet a floor of two source reports and two evidence items and
+retain the exact topic/category relationship for every source. The generation
+payload freezes candidate, report, evidence, topic, and per-source category IDs.
+The worker reads and validates that exact set without reselecting under another
+limit.
+Removed or incompatible records fail with a typed manifest reason, and held
+groups never enter `signal_generation`. Both workers reject malformed bounded
+attributes before resolving application configuration or opening a projection
+or provider operation.
 
 `report_render` emits two independent durable handoffs: analytics projection and
 Report publication readiness. The Report handoff carries the exact rendered HTML

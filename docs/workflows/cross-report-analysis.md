@@ -2,7 +2,7 @@
 
 > **Documentation type:** Current reference
 > **Canonical topic:** Cross-report analysis workflow
-> **Update trigger:** Briefing selection, projection input, validation, or publication changes.
+> **Update trigger:** Briefing or Signal selection, projection input, validation, or publication changes.
 
 Cross-report analysis produces Briefings from persisted report projections and evidence. It remains inside the modular monolith and reuses the established prompt, LLM, storage, idempotency, and publication boundaries.
 
@@ -21,6 +21,24 @@ case-folded publisher, report date, and report ID. Candidate order does not
 change the selected sources or decision reasons.
 
 The WordPress publication target for a Briefing is `wordpress:ml_briefing`.
+
+Signal candidate extraction is also deterministic and uses the persisted
+projected source, candidate, category, and evidence records; Signal publication
+does not add a model call. A candidate group can remain semantically approved
+for review while being held from publication. Before `signal_generation` is
+queued, the candidate stage records one publication manifest with its exact
+candidate IDs, source report IDs, evidence IDs, topic, and per-source category
+IDs. The group must meet the configured minimum source and evidence counts and
+have a category relationship for every source. Those minimums cannot be lower
+than two source reports and two evidence items. A held group carries a typed
+reason and is not queued.
+
+The generation worker reads only the frozen candidate, source, and evidence
+IDs from that manifest. It does not select a replacement set under separate
+limits. If a frozen source, evidence row, category relationship, or compatible
+request filter has changed before generation, the worker fails with a typed
+manifest reason; it does not publish a reduced grounding set. Generated Signal
+provenance retains the exact source report and evidence IDs from the manifest.
 
 Queue-driven Briefings are formed only from a durable opportunity with a frozen
 set of projected source-content hashes. The generation worker filters the

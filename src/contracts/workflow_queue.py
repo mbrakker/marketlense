@@ -221,6 +221,13 @@ class SignalGenerationPayload(WorkflowQueuePayload):
     candidate_group_id: str = ""
     frozen_evidence_manifest: str = ""
     model_routing_policy_version: str = ""
+    extraction_request_id: str = ""
+    topic: str = ""
+    candidate_ids: list[str] = field(default_factory=list)
+    source_report_ids: list[str] = field(default_factory=list)
+    evidence_ids: list[str] = field(default_factory=list)
+    topic_ids: list[str] = field(default_factory=list)
+    source_category_ids: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

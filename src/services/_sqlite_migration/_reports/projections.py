@@ -394,6 +394,28 @@ def _reports_db_029_add_source_provenance_roles(conn: sqlite3.Connection) -> Non
         )
 
 
+def _reports_db_030_add_signal_publication_manifest(
+    conn: sqlite3.Connection,
+) -> None:
+    """Persist the topic relationship and publication decision on each Signal group."""
+    for column_name, column_type in (
+        ("topic", "TEXT NOT NULL DEFAULT ''"),
+        ("topic_ids_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("source_category_ids_json", "TEXT NOT NULL DEFAULT '{}'"),
+        ("publication_status", "TEXT NOT NULL DEFAULT 'held'"),
+        (
+            "publication_hold_reason",
+            "TEXT NOT NULL DEFAULT 'signal_publication_manifest_legacy'",
+        ),
+    ):
+        _add_column_if_missing(
+            conn,
+            table_name="signal_candidate_groups",
+            column_name=column_name,
+            column_type=column_type,
+        )
+
+
 def _reports_db_023_create_corpus_rehabilitation_campaigns(
     conn: sqlite3.Connection,
 ) -> None:

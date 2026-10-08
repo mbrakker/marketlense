@@ -115,6 +115,8 @@ def _run_signal_candidate_extraction(
                 "projected_data_db_path": request.projected_data_request.db_path,
                 "max_evidence_items": request.max_evidence_items,
                 "max_signals": request.max_signals,
+                "minimum_source_reports": request.minimum_source_reports,
+                "minimum_evidence_items": request.minimum_evidence_items,
             },
         )
     )
@@ -185,6 +187,8 @@ def _run_signal_candidate_extraction(
         agreement_result,
         ctx,
         generated_at_utc=generated_at_utc,
+        minimum_source_reports=request.minimum_source_reports,
+        minimum_evidence_items=request.minimum_evidence_items,
     )
     _log_transition(ctx, transitions, "candidates_built")
     store_request = SignalCandidateStoreRequest(

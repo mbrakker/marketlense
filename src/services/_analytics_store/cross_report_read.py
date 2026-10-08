@@ -394,6 +394,8 @@ def read_cross_report_projected_data(
                 "date_range_end": request.date_range_end,
                 "content_classes": sorted(requested_content_classes),
                 "minimum_projection_status": request.minimum_projection_status,
+                "source_report_id_count": len(request.source_report_ids),
+                "evidence_id_count": len(request.evidence_ids),
             },
         )
     )
@@ -415,6 +417,13 @@ def read_cross_report_projected_data(
                 for row in all_rows
                 if _row_text(row, "projection_status") in status_floor
             ]
+            requested_source_ids = set(request.source_report_ids)
+            if requested_source_ids:
+                status_rows = [
+                    row
+                    for row in status_rows
+                    if _row_text(row, "report_id") in requested_source_ids
+                ]
             status_report_ids = [_row_text(row, "report_id") for row in status_rows]
             tags_by_report = _fetch_grouped_rows(
                 conn, table="report_tags", report_ids=status_report_ids
@@ -486,6 +495,13 @@ def read_cross_report_projected_data(
                         _raw_metric(row, report_row=report_row)
                         for row in metrics_by_report.get(report_id, [])
                     )
+            if request.evidence_ids:
+                requested_evidence_ids = set(request.evidence_ids)
+                evidence = [
+                    item
+                    for item in evidence
+                    if item.evidence_id in requested_evidence_ids
+                ]
     except AppError:
         raise
     except sqlite3.Error as exc:
@@ -521,6 +537,8 @@ def read_cross_report_projected_data(
             fields={
                 "source_candidate_count": len(response.source_candidates),
                 "evidence_count": len(response.evidence),
+                "requested_source_report_id_count": len(request.source_report_ids),
+                "requested_evidence_id_count": len(request.evidence_ids),
                 "raw_metric_count": len(response.raw_metrics),
                 "excluded_report_counts": response.excluded_report_counts,
                 "selected_report_ids": [

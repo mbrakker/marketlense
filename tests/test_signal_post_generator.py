@@ -73,7 +73,10 @@ def _evidence(
         source_table="report_claims",
         entity_uid=f"{report_id}:claim:{evidence_id}",
         content_class="claim",
-        text=f"{publisher} reports that AI commerce adoption is changing checkout behavior.",
+        text=(
+            f"{publisher} reports that AI commerce adoption is changing checkout "
+            "behavior."
+        ),
         source_metadata={
             "pages": [2],
             "evidence": "projected claim",
@@ -117,6 +120,101 @@ def _request() -> SignalPostGenerationRequest:
         max_evidence_items=6,
         minimum_source_reports=2,
         minimum_evidence_items=2,
+    )
+
+
+def _frozen_request(**changes: object) -> SignalPostGenerationRequest:
+    request = SignalPostGenerationRequest(
+        **{
+            **_request().__dict__,
+            "candidate_group_id": "signal-group:ai-commerce",
+            "extraction_request_id": "extract-ai-commerce",
+            "candidate_ids": ["signal-candidate:ai-commerce"],
+            "source_report_ids": ["report-a", "report-b"],
+            "evidence_ids": ["report-a:claim:1", "report-b:claim:1"],
+            "topic_ids": ["retail-strategy"],
+            "source_category_ids": {
+                "report-a": ["retail-strategy"],
+                "report-b": ["retail-strategy"],
+            },
+        }
+    )
+    return SignalPostGenerationRequest(**{**request.__dict__, **changes})
+
+
+def _frozen_candidate_data(
+    *, publication_status: str = "eligible", hold_reason: str = ""
+) -> SignalCandidateReadResponse:
+    candidate = SignalCandidate(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        candidate_id="signal-candidate:ai-commerce",
+        candidate_type="market_signal",
+        title="AI commerce adoption",
+        summary="AI commerce adoption is changing checkout behavior.",
+        confidence=0.84,
+        strength=4.2,
+        support_level="multi_report_convergent",
+        caveats=["coverage_limited_to_selected_projected_reports"],
+        source_report_ids=["report-a", "report-b"],
+        evidence_ids=["report-a:claim:1", "report-b:claim:1"],
+        source_refs=[
+            SignalCandidateSourceRef(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                report_id="report-a",
+                evidence_id="report-a:claim:1",
+                source_table="report_claims",
+                entity_uid="report-a:claim:1",
+                content_class="claim",
+                page_refs=[2],
+                source_metadata={"pages": [2]},
+            ),
+            SignalCandidateSourceRef(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                report_id="report-b",
+                evidence_id="report-b:claim:1",
+                source_table="report_claims",
+                entity_uid="report-b:claim:1",
+                content_class="claim",
+                page_refs=[2],
+                source_metadata={"pages": [2]},
+            ),
+        ],
+        raw_source_context={"fixture": "frozen publication manifest"},
+        validation_status="approved",
+        validation_notes=["source_backed"],
+        group_id="signal-group:ai-commerce",
+        extraction_request_id="extract-ai-commerce",
+        generated_at_utc="2026-06-02T12:00:00Z",
+    )
+    group = SignalCandidateGroup(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        group_id="signal-group:ai-commerce",
+        stable_key="ai-commerce",
+        title="AI commerce adoption",
+        summary="AI commerce adoption is changing checkout behavior.",
+        support_level="multi_report_convergent",
+        candidate_ids=[candidate.candidate_id],
+        source_report_ids=["report-a", "report-b"],
+        evidence_ids=["report-a:claim:1", "report-b:claim:1"],
+        caveats=["coverage_limited_to_selected_projected_reports"],
+        raw_group_context={"agreement_type": "convergent"},
+        validation_status="approved",
+        extraction_request_id="extract-ai-commerce",
+        generated_at_utc="2026-06-02T12:00:00Z",
+        topic="AI commerce checkout behavior",
+        topic_ids=["retail-strategy"],
+        source_category_ids={
+            "report-a": ["retail-strategy"],
+            "report-b": ["retail-strategy"],
+        },
+        publication_status=publication_status,
+        publication_hold_reason=hold_reason,
+    )
+    return SignalCandidateReadResponse(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        db_path="state/signals.sqlite",
+        candidates=[candidate],
+        groups=[group],
     )
 
 
@@ -172,6 +270,171 @@ def test_signal_generator_rejects_insufficient_grounding(run_context) -> None:
     assert exc_info.value.code == "signal_grounding_insufficient"
     assert exc_info.value.retryable is False
     assert exc_info.value.severity == "error"
+
+
+def test_signal_generator_rejects_relaxed_single_source_minimum(run_context) -> None:
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+        source_candidates=[_candidate("report-a", publisher="Publisher A")],
+        evidence=[
+            _evidence(
+                "report-a:claim:1", report_id="report-a", publisher="Publisher A"
+            ),
+            _evidence(
+                "report-a:claim:2", report_id="report-a", publisher="Publisher A"
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _request()
+    request = SignalPostGenerationRequest(
+        **{**request.__dict__, "minimum_source_reports": 1}
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(request, projected_data, run_context)
+
+    assert exc_info.value.code == "signal_publication_minimum_invalid"
+    assert exc_info.value.retryable is False
+
+
+def test_frozen_multi_source_signal_uses_exact_manifest_and_replays_idempotently(
+    run_context,
+) -> None:
+    projected_data = _projected_data()
+    distractor = _candidate(
+        "report-c",
+        publisher="Publisher C",
+        evidence_count=20,
+        category_ids=["finance"],
+        category_labels=["Finance"],
+        tags=["Other topic"],
+    )
+    projected_data = CrossReportProjectedDataReadResponse(
+        schema_version=projected_data.schema_version,
+        source_candidates=[*projected_data.source_candidates, distractor],
+        evidence=[
+            *projected_data.evidence,
+            _evidence(
+                "report-c:claim:1", report_id="report-c", publisher="Publisher C"
+            ),
+        ],
+        raw_metrics=[],
+        content_hashes={},
+        excluded_report_counts={},
+    )
+    request = _frozen_request(max_source_reports=1, max_evidence_items=1)
+    candidate_data = _frozen_candidate_data()
+
+    first = build_signal_publish_projection(
+        request, projected_data, run_context, candidate_data=candidate_data
+    )
+    replay = build_signal_publish_projection(
+        request, projected_data, run_context, candidate_data=candidate_data
+    )
+
+    assert first == replay
+    assert first.source_report_ids == ["report-a", "report-b"]
+    assert first.evidence_ids == ["report-a:claim:1", "report-b:claim:1"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_code"),
+    [
+        ("source", "signal_frozen_manifest_source_missing"),
+        ("evidence", "signal_frozen_manifest_evidence_missing"),
+    ],
+)
+def test_frozen_signal_rejects_sources_or_evidence_removed_after_approval(
+    run_context, mutation: str, expected_code: str
+) -> None:
+    projected_data = _projected_data()
+    if mutation == "source":
+        projected_data = CrossReportProjectedDataReadResponse(
+            schema_version=projected_data.schema_version,
+            source_candidates=[projected_data.source_candidates[0]],
+            evidence=projected_data.evidence,
+            raw_metrics=[],
+            content_hashes={},
+            excluded_report_counts={},
+        )
+    else:
+        projected_data = CrossReportProjectedDataReadResponse(
+            schema_version=projected_data.schema_version,
+            source_candidates=projected_data.source_candidates,
+            evidence=projected_data.evidence[:1],
+            raw_metrics=[],
+            content_hashes={},
+            excluded_report_counts={},
+        )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(),
+            projected_data,
+            run_context,
+            candidate_data=_frozen_candidate_data(),
+        )
+
+    assert exc_info.value.code == expected_code
+    assert exc_info.value.retryable is False
+
+
+def test_frozen_signal_rejects_request_filters_incompatible_with_group(
+    run_context,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(category_filters=["Finance"]),
+            _projected_data(),
+            run_context,
+            candidate_data=_frozen_candidate_data(),
+        )
+
+    assert exc_info.value.code == "signal_frozen_manifest_filter_mismatch"
+    assert exc_info.value.retryable is False
+
+
+def test_single_source_group_is_rejected_with_typed_grounding_reason(
+    run_context,
+) -> None:
+    with pytest.raises(AppError) as exc_info:
+        build_signal_publish_projection(
+            _frozen_request(
+                source_report_ids=["report-a"],
+                evidence_ids=["report-a:claim:1", "report-a:claim:2"],
+                source_category_ids={"report-a": ["retail-strategy"]},
+            ),
+            CrossReportProjectedDataReadResponse(
+                schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+                source_candidates=[_candidate("report-a", publisher="Publisher A")],
+                evidence=[
+                    _evidence(
+                        "report-a:claim:1",
+                        report_id="report-a",
+                        publisher="Publisher A",
+                    ),
+                    _evidence(
+                        "report-a:claim:2",
+                        report_id="report-a",
+                        publisher="Publisher A",
+                    ),
+                ],
+                raw_metrics=[],
+                content_hashes={},
+                excluded_report_counts={},
+            ),
+            run_context,
+            candidate_data=_frozen_candidate_data(
+                publication_status="held",
+                hold_reason="signal_grounding_insufficient",
+            ),
+        )
+
+    assert exc_info.value.code == "signal_grounding_insufficient"
+    assert exc_info.value.retryable is False
 
 
 def test_signal_generator_reuses_stored_signal_candidates(run_context) -> None:

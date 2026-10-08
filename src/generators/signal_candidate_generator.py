@@ -22,6 +22,8 @@ from src.contracts.signal_candidates import (
     SignalCandidateSourceRef,
     SignalCandidateSupportLevel,
     SignalCandidateType,
+    SignalPublicationHoldReason,
+    SignalPublicationStatus,
     validate_signal_candidate_contract,
 )
 from src.utils.coercion import ordered_unique_strings as _unique_ordered
@@ -214,6 +216,10 @@ def _group_from_candidates(
     *,
     group: CrossReportEvidenceAgreementGroup,
     candidates: list[SignalCandidate],
+    request: CrossReportAnalysisRequest,
+    source_category_ids: dict[str, list[str]],
+    minimum_source_reports: int,
+    minimum_evidence_items: int,
     generated_at_utc: str,
 ) -> SignalCandidateGroup:
     if not candidates:
@@ -243,6 +249,57 @@ def _group_from_candidates(
     )
     support_level = candidates[0].support_level
     candidate_ids = [candidate.candidate_id for candidate in candidates]
+    candidate_pairs = {
+        (ref.report_id, ref.evidence_id)
+        for candidate in candidates
+        for ref in candidate.source_refs
+    }
+    expected_pairs = {
+        (item.get("report_id", ""), item.get("evidence_id", ""))
+        for item in candidates[0].raw_source_context.get("evidence", [])
+        if isinstance(item, dict)
+    }
+    for candidate in candidates[1:]:
+        expected_pairs.update(
+            (item.get("report_id", ""), item.get("evidence_id", ""))
+            for item in candidate.raw_source_context.get("evidence", [])
+            if isinstance(item, dict)
+        )
+    if (
+        candidate_pairs != expected_pairs
+        or set(source_report_ids) != {report_id for report_id, _ in candidate_pairs}
+        or set(evidence_ids) != {evidence_id for _, evidence_id in candidate_pairs}
+    ):
+        raise AppError(
+            code="signal_candidate_manifest_invalid",
+            message=(
+                "Signal candidate source and evidence IDs do not form an exact manifest"
+            ),
+            retryable=False,
+            severity="error",
+            context={"group_id": group.group_id},
+        )
+    group_source_categories = {
+        report_id: list(source_category_ids.get(report_id, []))
+        for report_id in source_report_ids
+    }
+    topic_ids = _unique_ordered(
+        [category_id for ids in group_source_categories.values() for category_id in ids]
+    )
+    publication_status: SignalPublicationStatus
+    publication_hold_reason: SignalPublicationHoldReason
+    if (
+        len(source_report_ids) < minimum_source_reports
+        or len(evidence_ids) < minimum_evidence_items
+    ):
+        publication_status = "held"
+        publication_hold_reason = "signal_grounding_insufficient"
+    elif any(not categories for categories in group_source_categories.values()):
+        publication_status = "held"
+        publication_hold_reason = "signal_topic_category_relationship_missing"
+    else:
+        publication_status = "eligible"
+        publication_hold_reason = ""
     signal_group = SignalCandidateGroup(
         schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
         group_id=f"signal-group:{group.group_id}",
@@ -262,6 +319,11 @@ def _group_from_candidates(
         validation_status="approved",
         extraction_request_id=candidates[0].extraction_request_id,
         generated_at_utc=generated_at_utc,
+        topic=request.topic,
+        topic_ids=topic_ids,
+        source_category_ids=group_source_categories,
+        publication_status=publication_status,
+        publication_hold_reason=publication_hold_reason,
     )
     validate_signal_candidate_contract(signal_group)
     return signal_group
@@ -275,7 +337,20 @@ def build_signal_candidate_batch(
     ctx: RunContext,
     *,
     generated_at_utc: str,
+    minimum_source_reports: int = 2,
+    minimum_evidence_items: int = 2,
 ) -> SignalCandidateBatch:
+    if minimum_source_reports < 2 or minimum_evidence_items < 2:
+        raise AppError(
+            code="signal_publication_minimum_invalid",
+            message="Signal publication grounding minimums cannot be below two",
+            retryable=False,
+            severity="error",
+            context={
+                "minimum_source_reports": minimum_source_reports,
+                "minimum_evidence_items": minimum_evidence_items,
+            },
+        )
     validate_cross_report_contract(request)
     validate_cross_report_contract(evidence_inputs)
     validate_cross_report_contract(signal_result)
@@ -322,6 +397,10 @@ def build_signal_candidate_batch(
     candidates_by_group: dict[str, list[SignalCandidate]] = {}
     for candidate in candidates:
         candidates_by_group.setdefault(candidate.group_id, []).append(candidate)
+    source_category_ids = {
+        source.report_id: _unique_ordered(list(source.category_ids))
+        for source in evidence_inputs.selected_sources
+    }
     groups = [
         _group_from_candidates(
             group=group,
@@ -329,6 +408,10 @@ def build_signal_candidate_batch(
                 candidates_by_group.get(f"signal-group:{group.group_id}", []),
                 key=lambda candidate: candidate.candidate_id,
             ),
+            request=request,
+            source_category_ids=source_category_ids,
+            minimum_source_reports=minimum_source_reports,
+            minimum_evidence_items=minimum_evidence_items,
             generated_at_utc=generated_at_utc,
         )
         for group in agreement_result.evidence_groups

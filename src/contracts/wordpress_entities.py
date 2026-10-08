@@ -163,6 +163,58 @@ class SignalPostGenerationRequest:
         default="wordpress:ml_signal",
         metadata={"doc": "Canonical WordPress route for generated Signal posts."},
     )
+    candidate_group_id: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Exact approved candidate group when generation consumes a frozen "
+                "queue manifest."
+            ),
+            "required": False,
+        },
+    )
+    extraction_request_id: str = field(
+        default="",
+        metadata={
+            "doc": "Candidate extraction identity frozen with the approved group.",
+            "required": False,
+        },
+    )
+    candidate_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact candidate IDs in the frozen approved group.",
+            "required": False,
+        },
+    )
+    source_report_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact source report IDs in the frozen approved group.",
+            "required": False,
+        },
+    )
+    evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact evidence IDs in the frozen approved group.",
+            "required": False,
+        },
+    )
+    topic_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact topic/category IDs linked to frozen source reports.",
+            "required": False,
+        },
+    )
+    source_category_ids: dict[str, List[str]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Exact category IDs linked to each frozen source report.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)

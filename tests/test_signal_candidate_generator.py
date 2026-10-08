@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -237,6 +238,132 @@ def test_signal_candidate_batch_captures_single_report_support_and_lineage(
     assert batch.groups[0].candidate_ids == [candidate.candidate_id]
 
 
+def test_single_source_group_is_held_before_publication_generation(run_context) -> None:
+    source = _source("report-a", "Publisher A", 1)
+    evidence = [
+        _evidence(
+            "report-a:claim:1",
+            report_id="report-a",
+            publisher="Publisher A",
+            text="AI commerce adoption is accelerating.",
+        ),
+        _evidence(
+            "report-a:claim:2",
+            report_id="report-a",
+            publisher="Publisher A",
+            text="Retailers are expanding AI-assisted checkout.",
+        ),
+    ]
+    evidence_inputs, signal_result, agreement_result = _batch_inputs(
+        evidence=evidence,
+        sources=[source],
+        agreement_type="thin_coverage",
+        uncertainty_reasons=["single_report_coverage"],
+    )
+
+    batch = build_signal_candidate_batch(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        run_context,
+        generated_at_utc="2026-06-02T12:00:00Z",
+        minimum_source_reports=2,
+        minimum_evidence_items=2,
+    )
+
+    group = batch.groups[0]
+    assert group.validation_status == "approved"
+    assert group.publication_status == "held"
+    assert group.publication_hold_reason == "signal_grounding_insufficient"
+    assert group.source_report_ids == ["report-a"]
+    assert group.evidence_ids == ["report-a:claim:1", "report-a:claim:2"]
+    assert group.topic == "AI commerce"
+    assert group.source_category_ids == {"report-a": ["retail"]}
+
+
+def test_signal_group_without_source_category_relationship_is_held(run_context) -> None:
+    sources = [
+        replace(_source("report-a", "Publisher A", 1), category_ids=[]),
+        replace(_source("report-b", "Publisher B", 2), category_ids=[]),
+    ]
+    evidence = [
+        _evidence(
+            "report-a:claim:1",
+            report_id="report-a",
+            publisher="Publisher A",
+            text="AI commerce adoption is increasing.",
+        ),
+        _evidence(
+            "report-b:claim:1",
+            report_id="report-b",
+            publisher="Publisher B",
+            text="AI commerce adoption is growing.",
+        ),
+    ]
+    evidence_inputs, signal_result, agreement_result = _batch_inputs(
+        evidence=evidence,
+        sources=sources,
+        agreement_type="convergent",
+        uncertainty_reasons=["test_category_relationship_missing"],
+    )
+
+    batch = build_signal_candidate_batch(
+        _request(),
+        evidence_inputs,
+        signal_result,
+        agreement_result,
+        run_context,
+        generated_at_utc="2026-06-02T12:00:00Z",
+    )
+
+    group = batch.groups[0]
+    assert group.validation_status == "approved"
+    assert group.publication_status == "held"
+    assert group.publication_hold_reason == "signal_topic_category_relationship_missing"
+    assert group.topic_ids == []
+    assert group.source_category_ids == {"report-a": [], "report-b": []}
+
+
+def test_signal_publication_grounding_minimums_cannot_be_relaxed(run_context) -> None:
+    source = _source("report-a", "Publisher A", 1)
+    evidence = [
+        _evidence(
+            "report-a:claim:1",
+            report_id="report-a",
+            publisher="Publisher A",
+            text="AI commerce adoption is increasing.",
+        ),
+        _evidence(
+            "report-a:claim:2",
+            report_id="report-a",
+            publisher="Publisher A",
+            text="Retailers are expanding AI-assisted checkout.",
+        ),
+    ]
+    evidence_inputs, signal_result, agreement_result = _batch_inputs(
+        evidence=evidence,
+        sources=[source],
+        agreement_type="thin_coverage",
+        uncertainty_reasons=["single_report_coverage"],
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        build_signal_candidate_batch(
+            _request(),
+            evidence_inputs,
+            signal_result,
+            agreement_result,
+            run_context,
+            generated_at_utc="2026-06-02T12:00:00Z",
+            minimum_source_reports=1,
+            minimum_evidence_items=2,
+        )
+
+    assert exc_info.value.code == "signal_publication_minimum_invalid"
+    assert exc_info.value.retryable is False
+
+
 def test_signal_candidate_batch_preserves_divergent_caveats_and_raw_context(
     run_context,
 ) -> None:
@@ -280,6 +407,15 @@ def test_signal_candidate_batch_preserves_divergent_caveats_and_raw_context(
     assert candidate.source_report_ids == ["report-a", "report-b"]
     assert candidate.source_refs[1].content_class == "finding"
     assert "opposed_directional_language" in candidate.caveats
+    group = batch.groups[0]
+    assert group.topic == "AI commerce"
+    assert group.topic_ids == ["retail"]
+    assert group.source_category_ids == {
+        "report-a": ["retail"],
+        "report-b": ["retail"],
+    }
+    assert group.publication_status == "eligible"
+    assert group.publication_hold_reason == ""
     encoded = json.dumps(candidate.raw_source_context, sort_keys=True)
     assert "AI commerce adoption is declining" in encoded
     assert "raw_metrics_preserved_without_normalization" in encoded

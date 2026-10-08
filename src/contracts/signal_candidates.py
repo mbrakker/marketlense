@@ -32,6 +32,13 @@ SignalCandidateSupportLevel = Literal[
 ]
 SignalCandidateValidationStatus = Literal["approved", "blocked"]
 SignalCandidateExtractionStatus = Literal["stored", "skipped", "failed"]
+SignalPublicationStatus = Literal["eligible", "held"]
+SignalPublicationHoldReason = Literal[
+    "",
+    "signal_grounding_insufficient",
+    "signal_topic_category_relationship_missing",
+    "signal_publication_manifest_legacy",
+]
 
 
 @dataclass(frozen=True)
@@ -146,6 +153,41 @@ class SignalCandidateGroup:
     )
     generated_at_utc: str = field(
         metadata={"doc": "UTC timestamp when the group was generated."}
+    )
+    topic: str = field(
+        default="",
+        metadata={
+            "doc": "Operator-selected topic that scoped this frozen candidate group.",
+            "required": False,
+        },
+    )
+    topic_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Exact projected topic/category IDs represented by this group.",
+            "required": False,
+        },
+    )
+    source_category_ids: Dict[str, List[str]] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Exact category IDs for each frozen source report ID.",
+            "required": False,
+        },
+    )
+    publication_status: SignalPublicationStatus = field(
+        default="held",
+        metadata={
+            "doc": "Whether the complete group meets Signal publication grounding.",
+            "required": False,
+        },
+    )
+    publication_hold_reason: SignalPublicationHoldReason = field(
+        default="signal_publication_manifest_legacy",
+        metadata={
+            "doc": "Typed reason for holding a group; empty only when eligible.",
+            "required": False,
+        },
     )
 
 
@@ -289,6 +331,18 @@ class SignalCandidateExtractionRequest:
         default=8,
         metadata={"doc": "Maximum Signal candidates retained."},
     )
+    minimum_source_reports: int = field(
+        default=2,
+        metadata={
+            "doc": "Minimum distinct reports required before a Signal group is queued.",
+        },
+    )
+    minimum_evidence_items: int = field(
+        default=2,
+        metadata={
+            "doc": "Minimum evidence rows needed before a Signal group is queued.",
+        },
+    )
     generated_at_utc: str = field(
         default="",
         metadata={
@@ -381,4 +435,51 @@ def _validate_dataclass_instance(instance: object, *, path: str) -> None:
             )
         if field_def.name == "limit" and int(field_value) < 1:
             _raise_invalid(field_path, field_def.name, "limit must be positive")
+        if (
+            field_def.name
+            in {
+                "minimum_source_reports",
+                "minimum_evidence_items",
+            }
+            and int(field_value) < 2
+        ):
+            _raise_invalid(
+                field_path,
+                field_def.name,
+                "Signal publication minimum cannot be below two",
+            )
+        if isinstance(instance, SignalCandidateGroup):
+            if field_def.name == "publication_status" and field_value not in {
+                "eligible",
+                "held",
+            }:
+                _raise_invalid(field_path, field_def.name, "invalid publication status")
+            if field_def.name == "publication_hold_reason" and field_value not in {
+                "",
+                "signal_grounding_insufficient",
+                "signal_topic_category_relationship_missing",
+                "signal_publication_manifest_legacy",
+            }:
+                _raise_invalid(
+                    field_path, field_def.name, "invalid publication hold reason"
+                )
         _validate_contract_value(field_value, path=field_path)
+    if isinstance(instance, SignalCandidateGroup):
+        if (
+            instance.publication_status == "eligible"
+            and instance.publication_hold_reason
+        ):
+            _raise_invalid(
+                path,
+                "publication_hold_reason",
+                "eligible groups cannot carry a hold reason",
+            )
+        if (
+            instance.publication_status == "held"
+            and not instance.publication_hold_reason
+        ):
+            _raise_invalid(
+                path,
+                "publication_hold_reason",
+                "held groups require a typed reason",
+            )

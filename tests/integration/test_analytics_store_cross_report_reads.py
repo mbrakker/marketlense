@@ -288,6 +288,63 @@ def test_cross_report_projected_data_read_filters_and_contracts(
 
 
 @pytest.mark.integration
+def test_cross_report_projected_data_read_honors_exact_frozen_source_and_evidence_ids(
+    tmp_path,
+) -> None:
+    db_path = str(tmp_path / "reports.sqlite")
+    ctx = _ctx()
+    for batch in (
+        _batch(
+            "report-a",
+            title="AI Commerce Outlook",
+            publisher="Publisher A",
+            publisher_id="publisher-a",
+            time_period="2026-05-01",
+            generated_at_utc="2026-05-01T00:00:00Z",
+            tag="AI",
+            category_id="retail",
+            category_label="Retail",
+        ),
+        _batch(
+            "report-b",
+            title="Payments Trust Monitor",
+            publisher="Publisher B",
+            publisher_id="publisher-b",
+            time_period="2026-05-02",
+            generated_at_utc="2026-05-02T00:00:00Z",
+            tag="Payments",
+            category_id="payments",
+            category_label="Payments",
+        ),
+    ):
+        upsert_projection(
+            AnalyticsProjectionUpsertRequest(
+                schema_version=PROJECTION_SCHEMA_VERSION,
+                db_path=db_path,
+                batch=batch,
+            ),
+            ctx,
+        )
+
+    response = read_cross_report_projected_data(
+        CrossReportProjectedDataReadRequest(
+            schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
+            db_path=db_path,
+            source_report_ids=["report-b"],
+            evidence_ids=["report-b:finding:1"],
+            content_classes=["claim", "finding", "quote"],
+            minimum_projection_status="projected",
+        ),
+        ctx,
+    )
+
+    assert [source.report_id for source in response.source_candidates] == ["report-b"]
+    assert [(item.report_id, item.evidence_id) for item in response.evidence] == [
+        ("report-b", "report-b:finding:1")
+    ]
+
+
+@pytest.mark.integration
 def test_cross_report_projected_data_date_filter_uses_report_period_not_projection_date(
     tmp_path,
 ) -> None:

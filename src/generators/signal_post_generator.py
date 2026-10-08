@@ -117,6 +117,17 @@ def _require_grounding(
     selected_evidence: list[CrossReportEvidenceReference],
     topic_ids: list[str],
 ) -> None:
+    if request.minimum_source_reports < 2 or request.minimum_evidence_items < 2:
+        raise AppError(
+            code="signal_publication_minimum_invalid",
+            message="Signal publication grounding minimums cannot be below two",
+            retryable=False,
+            severity="error",
+            context={
+                "minimum_source_reports": request.minimum_source_reports,
+                "minimum_evidence_items": request.minimum_evidence_items,
+            },
+        )
     if (
         len({source.report_id for source in selected_sources})
         < request.minimum_source_reports
@@ -302,6 +313,326 @@ def _candidate_groups(
     return [group for group in candidate_data.groups if group.group_id in wanted]
 
 
+def _frozen_manifest_inputs(
+    *,
+    request: SignalPostGenerationRequest,
+    projected_data: CrossReportProjectedDataReadResponse,
+    candidates: list[SignalCandidate],
+    groups: list[SignalCandidateGroup],
+) -> tuple[
+    list[SignalCandidate],
+    SignalCandidateGroup,
+    list[CrossReportSourceReportCandidate],
+    list[CrossReportEvidenceReference],
+]:
+    if not request.candidate_group_id:
+        raise AppError(
+            code="signal_frozen_manifest_incomplete",
+            message="Frozen Signal generation requires a candidate group ID",
+            retryable=False,
+            severity="error",
+        )
+    missing_fields = [
+        field_name
+        for field_name, value in (
+            ("extraction_request_id", request.extraction_request_id),
+            ("candidate_ids", request.candidate_ids),
+            ("source_report_ids", request.source_report_ids),
+            ("evidence_ids", request.evidence_ids),
+            ("topic_ids", request.topic_ids),
+            ("source_category_ids", request.source_category_ids),
+        )
+        if not value
+    ]
+    if missing_fields:
+        raise AppError(
+            code="signal_frozen_manifest_incomplete",
+            message=(
+                "Frozen Signal generation requires the complete approved "
+                "candidate manifest"
+            ),
+            retryable=False,
+            severity="error",
+            context={"missing_fields": missing_fields},
+        )
+    if any(
+        len(values) != len(set(values))
+        for values in (
+            request.candidate_ids,
+            request.source_report_ids,
+            request.evidence_ids,
+            request.topic_ids,
+        )
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_invalid",
+            message="Frozen Signal manifest contains duplicate identifiers",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    matching_groups = [
+        group for group in groups if group.group_id == request.candidate_group_id
+    ]
+    if len(matching_groups) != 1:
+        raise AppError(
+            code="signal_frozen_manifest_group_missing",
+            message="Frozen Signal candidate group is missing or ambiguous",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+    group = matching_groups[0]
+    if group.publication_status != "eligible":
+        reason = group.publication_hold_reason or "signal_publication_manifest_legacy"
+        raise AppError(
+            code=reason,
+            message="Signal candidate group is held from publication generation",
+            retryable=False,
+            severity="error",
+            context={
+                "candidate_group_id": request.candidate_group_id,
+                "publication_status": group.publication_status,
+            },
+        )
+    if group.validation_status != "approved":
+        raise AppError(
+            code="signal_frozen_manifest_candidate_not_approved",
+            message="Frozen Signal candidate group is no longer approved",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    manifest_matches = (
+        group.extraction_request_id == request.extraction_request_id
+        and group.candidate_ids == request.candidate_ids
+        and group.source_report_ids == request.source_report_ids
+        and group.evidence_ids == request.evidence_ids
+        and group.topic_ids == request.topic_ids
+        and group.source_category_ids == request.source_category_ids
+        and " ".join(group.topic.split()).casefold()
+        == " ".join(request.topic.split()).casefold()
+    )
+    if not manifest_matches:
+        raise AppError(
+            code="signal_frozen_manifest_changed",
+            message=(
+                "Stored Signal candidate group no longer matches its frozen "
+                "approved manifest"
+            ),
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    candidates_by_id = {candidate.candidate_id: candidate for candidate in candidates}
+    if (
+        len(candidates_by_id) != len(candidates)
+        or set(candidates_by_id) != set(request.candidate_ids)
+        or any(
+            candidates_by_id[candidate_id].group_id != request.candidate_group_id
+            or candidates_by_id[candidate_id].extraction_request_id
+            != request.extraction_request_id
+            for candidate_id in request.candidate_ids
+        )
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_candidate_missing",
+            message="Frozen Signal candidate rows no longer match the approved group",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+    ordered_candidates = [
+        candidates_by_id[candidate_id] for candidate_id in request.candidate_ids
+    ]
+    candidate_source_ids = _unique_ordered(
+        [
+            report_id
+            for candidate in ordered_candidates
+            for report_id in candidate.source_report_ids
+        ]
+    )
+    candidate_evidence_ids = _unique_ordered(
+        [
+            evidence_id
+            for candidate in ordered_candidates
+            for evidence_id in candidate.evidence_ids
+        ]
+    )
+    candidate_reference_pairs = {
+        (ref.report_id, ref.evidence_id)
+        for candidate in ordered_candidates
+        for ref in candidate.source_refs
+    }
+    if (
+        set(candidate_source_ids) != set(request.source_report_ids)
+        or set(candidate_evidence_ids) != set(request.evidence_ids)
+        or {report_id for report_id, _ in candidate_reference_pairs}
+        != set(request.source_report_ids)
+        or {evidence_id for _, evidence_id in candidate_reference_pairs}
+        != set(request.evidence_ids)
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_changed",
+            message=(
+                "Frozen Signal candidate provenance no longer matches its "
+                "source/evidence set"
+            ),
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    source_by_report_id = {
+        source.report_id: source for source in projected_data.source_candidates
+    }
+    if len(source_by_report_id) != len(projected_data.source_candidates):
+        raise AppError(
+            code="signal_frozen_manifest_invalid",
+            message="Frozen Signal source read returned duplicate report IDs",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+    missing_sources = [
+        report_id
+        for report_id in request.source_report_ids
+        if report_id not in source_by_report_id
+    ]
+    if missing_sources:
+        raise AppError(
+            code="signal_frozen_manifest_source_missing",
+            message=(
+                "A source report in the frozen Signal manifest is no longer projected"
+            ),
+            retryable=False,
+            severity="error",
+            context={
+                "candidate_group_id": request.candidate_group_id,
+                "missing_source_report_ids": missing_sources,
+            },
+        )
+    selected_sources = [
+        source_by_report_id[report_id] for report_id in request.source_report_ids
+    ]
+    if any(source.projection_status != "projected" for source in selected_sources):
+        raise AppError(
+            code="signal_frozen_manifest_source_missing",
+            message="A frozen Signal source report is no longer projected",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    normalized_topic = " ".join(request.topic.split()).casefold()
+    for source in selected_sources:
+        report_date = str(source.report_date or "")
+        if (
+            not _source_matches_request(source, request)
+            or (
+                request.date_range_start
+                and (not report_date or report_date < request.date_range_start)
+            )
+            or (
+                request.date_range_end
+                and (not report_date or report_date > request.date_range_end)
+            )
+        ):
+            raise AppError(
+                code="signal_frozen_manifest_filter_mismatch",
+                message=(
+                    "Signal request filters are incompatible with the frozen "
+                    "approved group"
+                ),
+                retryable=False,
+                severity="error",
+                context={"candidate_group_id": request.candidate_group_id},
+            )
+    if not normalized_topic:
+        raise AppError(
+            code="signal_frozen_manifest_filter_mismatch",
+            message=(
+                "Signal request topic is incompatible with the frozen approved group"
+            ),
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    for source in selected_sources:
+        if set(source.category_ids) != set(
+            request.source_category_ids.get(source.report_id, [])
+        ):
+            raise AppError(
+                code="signal_frozen_manifest_topic_category_changed",
+                message=(
+                    "Projected topic/category relationships changed after Signal "
+                    "approval"
+                ),
+                retryable=False,
+                severity="error",
+                context={"candidate_group_id": request.candidate_group_id},
+            )
+    projected_topic_ids = _unique_ordered(
+        [
+            category_id
+            for source in selected_sources
+            for category_id in source.category_ids
+        ]
+    )
+    if set(projected_topic_ids) != set(request.topic_ids):
+        raise AppError(
+            code="signal_frozen_manifest_topic_category_changed",
+            message="Projected topic/category IDs changed after Signal approval",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+
+    evidence_by_id = {
+        item.evidence_id: item
+        for item in projected_data.evidence
+        if item.evidence_id in set(request.evidence_ids)
+    }
+    if len(evidence_by_id) != len(request.evidence_ids):
+        missing_evidence = [
+            evidence_id
+            for evidence_id in request.evidence_ids
+            if evidence_id not in evidence_by_id
+        ]
+        raise AppError(
+            code="signal_frozen_manifest_evidence_missing",
+            message="Evidence in the frozen Signal manifest is no longer projected",
+            retryable=False,
+            severity="error",
+            context={
+                "candidate_group_id": request.candidate_group_id,
+                "missing_evidence_ids": missing_evidence,
+            },
+        )
+    selected_evidence = [
+        evidence_by_id[evidence_id] for evidence_id in request.evidence_ids
+    ]
+    if any(
+        (item.report_id, item.evidence_id) not in candidate_reference_pairs
+        or not str(item.text or "").strip()
+        for item in selected_evidence
+    ):
+        raise AppError(
+            code="signal_frozen_manifest_evidence_missing",
+            message=(
+                "Frozen Signal evidence no longer links to its approved source reports"
+            ),
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+    return ordered_candidates, group, selected_sources, selected_evidence
+
+
 def _projection_from_candidates(
     *,
     request: SignalPostGenerationRequest,
@@ -309,38 +640,57 @@ def _projection_from_candidates(
     candidates: list[SignalCandidate],
     groups: list[SignalCandidateGroup],
 ) -> SignalPublishProjection:
-    source_report_ids = _unique_ordered(
-        [
-            report_id
-            for candidate in candidates
-            for report_id in candidate.source_report_ids
+    if request.candidate_group_id:
+        candidates, group, selected_sources, selected_evidence = (
+            _frozen_manifest_inputs(
+                request=request,
+                projected_data=projected_data,
+                candidates=candidates,
+                groups=groups,
+            )
+        )
+        groups = [group]
+        source_report_ids = list(request.source_report_ids)
+        evidence_ids = list(request.evidence_ids)
+        topic_ids = list(request.topic_ids)
+    else:
+        source_report_ids = _unique_ordered(
+            [
+                report_id
+                for candidate in candidates
+                for report_id in candidate.source_report_ids
+            ]
+        )
+        source_by_report_id = {
+            source.report_id: source for source in projected_data.source_candidates
+        }
+        selected_sources = [
+            source_by_report_id[report_id]
+            for report_id in source_report_ids
+            if report_id in source_by_report_id
+            and source_by_report_id[report_id].projection_status == "projected"
+            and source_by_report_id[report_id].evidence_count > 0
+            and _source_matches_request(source_by_report_id[report_id], request)
         ]
-    )
-    source_by_report_id = {
-        source.report_id: source for source in projected_data.source_candidates
-    }
-    selected_sources = [
-        source_by_report_id[report_id]
-        for report_id in source_report_ids
-        if report_id in source_by_report_id
-        and source_by_report_id[report_id].projection_status == "projected"
-        and source_by_report_id[report_id].evidence_count > 0
-        and _source_matches_request(source_by_report_id[report_id], request)
-    ]
-    evidence_ids = _unique_ordered(
-        [
-            evidence_id
-            for candidate in candidates
-            for evidence_id in candidate.evidence_ids
+        evidence_ids = _unique_ordered(
+            [
+                evidence_id
+                for candidate in candidates
+                for evidence_id in candidate.evidence_ids
+            ]
+        )
+        topic_ids = _unique_ordered(
+            [
+                category_id
+                for source in selected_sources
+                for category_id in source.category_ids
+            ]
+        )
+        selected_evidence = [
+            item
+            for item in projected_data.evidence
+            if item.evidence_id in set(evidence_ids)
         ]
-    )
-    topic_ids = _unique_ordered(
-        [
-            category_id
-            for source in selected_sources
-            for category_id in source.category_ids
-        ]
-    )
     topic_labels = _unique_ordered(
         [
             category_label
@@ -351,18 +701,9 @@ def _projection_from_candidates(
     _require_grounding(
         request=request,
         selected_sources=selected_sources,
-        selected_evidence=[
-            item
-            for item in projected_data.evidence
-            if item.evidence_id in set(evidence_ids)
-        ],
+        selected_evidence=selected_evidence,
         topic_ids=topic_ids,
     )
-    selected_evidence = [
-        item
-        for item in projected_data.evidence
-        if item.evidence_id in set(evidence_ids)
-    ]
     title_topic = (
         " ".join(str(request.topic or "").strip().split()) or candidates[0].title
     )
@@ -443,11 +784,23 @@ def build_signal_publish_projection(
         )
     )
     stored_candidates = _approved_candidates(candidate_data)
+    if request.candidate_group_id and not stored_candidates:
+        raise AppError(
+            code="signal_frozen_manifest_candidate_missing",
+            message="Frozen Signal candidate rows are missing or no longer approved",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
     if stored_candidates:
         projection = _projection_from_candidates(
             request=request,
             projected_data=projected_data,
-            candidates=stored_candidates[: max(1, request.max_source_reports)],
+            candidates=(
+                stored_candidates
+                if request.candidate_group_id
+                else stored_candidates[: max(1, request.max_source_reports)]
+            ),
             groups=_candidate_groups(candidate_data, stored_candidates),
         )
         logger.info(

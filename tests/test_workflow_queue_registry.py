@@ -745,6 +745,75 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
     assert candidate_result.result.summary["candidate_count"] >= 1
     assert candidate_result.result.summary["group_count"] >= 1
     assert candidate_result.downstream
+    signal_generation_children = [
+        child
+        for child in candidate_result.downstream
+        if child.queue_name == "signal_generation"
+    ]
+    assert signal_generation_children
+    assert all(
+        child.payload.source_report_ids and child.payload.evidence_ids
+        for child in signal_generation_children
+    )
+    generation_submission = signal_generation_children[0]
+    generation_payload = replace(
+        generation_submission.payload,
+        attributes={
+            **generation_submission.payload.attributes,
+            "max_source_reports": 1,
+            "max_evidence_items": 1,
+        },
+    )
+    generation_result = queue_orchestrator._signal_generation_handler(
+        replace(
+            _workflow_job(
+                queue_name="signal_generation", job_type="signal_generation.v1"
+            ),
+            entity_type="signal",
+            entity_id=generation_payload.candidate_group_id,
+            input_reference=generation_payload.input_reference,
+            input_content_hash=generation_payload.input_content_hash,
+        ),
+        generation_payload,
+        _ctx(),
+    )
+    assert generation_result.result.output_verified is True
+    assert generation_result.downstream[0].queue_name == "cover_generation"
+    generated_package = queue_orchestrator._cross_report_package_from_artifact(
+        generation_result.result.output_reference, _ctx()
+    )
+    assert generated_package.selected_report_ids == generation_payload.source_report_ids
+    assert generated_package.evidence_reference_ids == generation_payload.evidence_ids
+    replayed_candidate_result = queue_orchestrator._signal_candidate_handler(
+        replace(
+            _workflow_job(
+                queue_name="signal_candidate", job_type="signal_candidate.v1"
+            ),
+            publisher_id="publisher-a",
+        ),
+        SignalCandidatePayload(
+            report_id="report-signal-a",
+            projection_reference="analytics:report:report-signal-a",
+            signal_selection_policy_version="signal-selection.v1",
+            input_reference="analytics:report:report-signal-a",
+            input_content_hash="projection-content-hash",
+            processing_version="signal-processing.v1",
+            attributes={
+                "config_path": str(config_path),
+                "topic": "Checkout trust",
+                "publisher_filters": ["publisher-a", "publisher-b"],
+                "generate_signals": True,
+            },
+        ),
+        _ctx(),
+    )
+    assert [
+        child.idempotency_key for child in replayed_candidate_result.downstream
+    ] == [child.idempotency_key for child in candidate_result.downstream]
+    assert [
+        child.payload.input_content_hash
+        for child in replayed_candidate_result.downstream
+    ] == [child.payload.input_content_hash for child in candidate_result.downstream]
     assert all(
         child.payload.attributes["config_path"] == str(config_path)
         for child in candidate_result.downstream
@@ -892,6 +961,54 @@ def test_signal_publish_adapter_retains_card_evidence_and_fallback_publishers(
             ),
             _ctx(),
         )
+
+
+def test_single_source_signal_candidate_is_held_before_generation_queue(
+    tmp_path: Path,
+) -> None:
+    config_path = _isolated_app_config(tmp_path)
+    reports_db = str(tmp_path / "reports.sqlite")
+    _seed_projected_signal_source(
+        reports_db,
+        report_id="report-single-source",
+        publisher="Publisher A",
+        publisher_id="publisher-a",
+    )
+    result = queue_orchestrator._signal_candidate_handler(
+        replace(
+            _workflow_job(
+                queue_name="signal_candidate", job_type="signal_candidate.v1"
+            ),
+            publisher_id="publisher-a",
+        ),
+        SignalCandidatePayload(
+            report_id="report-single-source",
+            projection_reference="analytics:report:report-single-source",
+            signal_selection_policy_version="signal-selection.v1",
+            input_reference="analytics:report:report-single-source",
+            input_content_hash="single-source-projection-hash",
+            processing_version="signal-processing.v1",
+            attributes={
+                "config_path": str(config_path),
+                "topic": "Checkout trust",
+                "publisher_filters": ["publisher-a"],
+                "generate_signals": True,
+                "minimum_source_reports": 2,
+                "minimum_evidence_items": 2,
+            },
+        ),
+        _ctx(),
+    )
+
+    assert result.result.summary["publication_hold_group_count"] >= 1
+    assert json.loads(result.result.summary["publication_hold_reason_counts"]) == {
+        "signal_grounding_insufficient": result.result.summary[
+            "publication_hold_group_count"
+        ]
+    }
+    assert not [
+        child for child in result.downstream if child.queue_name == "signal_generation"
+    ]
 
 
 def test_source_ingest_checkpoint_hands_off_to_report_selection(

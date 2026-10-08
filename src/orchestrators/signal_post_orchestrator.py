@@ -59,14 +59,19 @@ def _projected_data_request(
     request: SignalPostWorkflowRequest,
 ) -> CrossReportProjectedDataReadRequest:
     generation = request.generation_request
+    frozen_manifest = bool(generation.candidate_group_id)
     return CrossReportProjectedDataReadRequest(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         db_path=request.db_path,
-        publisher_filters=list(generation.publisher_filters),
-        date_range_start=generation.date_range_start,
-        date_range_end=generation.date_range_end,
-        category_filters=list(generation.category_filters),
-        tag_filters=list(generation.tag_filters),
+        source_report_ids=(
+            list(generation.source_report_ids) if frozen_manifest else []
+        ),
+        evidence_ids=list(generation.evidence_ids) if frozen_manifest else [],
+        publisher_filters=[] if frozen_manifest else list(generation.publisher_filters),
+        date_range_start=None if frozen_manifest else generation.date_range_start,
+        date_range_end=None if frozen_manifest else generation.date_range_end,
+        category_filters=[] if frozen_manifest else list(generation.category_filters),
+        tag_filters=[] if frozen_manifest else list(generation.tag_filters),
         content_classes=["claim", "finding", "quote"],
         minimum_projection_status="projected",
     )
@@ -184,8 +189,44 @@ def generate_signal_post_projection(
     projected_request = _projected_data_request(request)
     projected_data = read_projected_data_fn(projected_request, ctx)
     generation = request.generation_request
-    candidate_data = read_signal_candidates_fn(
-        SignalCandidateReadRequest(
+    if generation.candidate_group_id:
+        missing_manifest_fields = [
+            field_name
+            for field_name, values in (
+                ("extraction_request_id", generation.extraction_request_id),
+                ("candidate_ids", generation.candidate_ids),
+                ("source_report_ids", generation.source_report_ids),
+                ("evidence_ids", generation.evidence_ids),
+                ("topic_ids", generation.topic_ids),
+                ("source_category_ids", generation.source_category_ids),
+            )
+            if not values
+        ]
+        if missing_manifest_fields:
+            raise AppError(
+                code="signal_frozen_manifest_incomplete",
+                message=(
+                    "Frozen Signal generation requires the complete approved "
+                    "candidate manifest"
+                ),
+                retryable=False,
+                severity="error",
+                context={"missing_fields": missing_manifest_fields},
+            )
+        candidate_read_request = SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=request.signal_store_db or request.db_path,
+            extraction_request_id=generation.extraction_request_id,
+            candidate_ids=list(generation.candidate_ids),
+            group_ids=[generation.candidate_group_id],
+            validation_statuses=["approved"],
+            source_report_ids=list(generation.source_report_ids),
+            evidence_ids=list(generation.evidence_ids),
+            topic_filters=[],
+            limit=max(1, len(generation.candidate_ids)),
+        )
+    else:
+        candidate_read_request = SignalCandidateReadRequest(
             schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
             db_path=request.signal_store_db or request.db_path,
             validation_statuses=["approved"],
@@ -197,9 +238,8 @@ def generate_signal_post_projection(
                 *generation.category_filters,
             ],
             limit=max(1, generation.max_source_reports),
-        ),
-        ctx,
-    )
+        )
+    candidate_data = read_signal_candidates_fn(candidate_read_request, ctx)
     projection = build_signal_publish_projection(
         generation,
         projected_data,

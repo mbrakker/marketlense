@@ -95,6 +95,24 @@ class CrossReportProjectedDataReadRequest:
     db_path: str = field(
         metadata={"doc": "SQLite reports database path containing projection tables."}
     )
+    source_report_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Optional exact projected report IDs to read for frozen evidence use."
+            ),
+            "required": False,
+        },
+    )
+    evidence_ids: List[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Optional exact projected evidence IDs to read for frozen evidence use."
+            ),
+            "required": False,
+        },
+    )
     publisher_filters: List[str] = field(
         default_factory=list,
         metadata={"doc": "Case-insensitive publisher names or IDs to include."},
