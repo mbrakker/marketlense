@@ -157,6 +157,7 @@ def _report(
     *,
     live: bool,
     supervisor_enabled: bool = True,
+    without_preflight_profile: str | None = None,
     file_stat=None,
     drive_probe=None,
     mailbox_probe=None,
@@ -173,6 +174,10 @@ def _report(
             workflow_control,
             supervisor=replace(workflow_control.supervisor, enabled=False),
         )
+    if without_preflight_profile is not None:
+        profiles = dict(workflow_control.preflight_profiles)
+        profiles.pop(without_preflight_profile, None)
+        workflow_control = replace(workflow_control, preflight_profiles=profiles)
     return run_capability_preflight(
         CapabilityPreflightRequest(
             schema_version="1.0",
@@ -287,6 +292,27 @@ def test_disabled_autonomous_supervisor_is_a_global_blocker(
     assert check.status == "blocked"
     assert check.reason_code == "autonomous_supervisor_disabled"
     assert check.affected_workflows == []
+    assert report.provider_calls == 0
+    assert report.external_writes == 0
+
+
+def test_enabled_workflow_without_preflight_profile_is_scoped_blocked(
+    tmp_path: Path,
+) -> None:
+    report = _report(
+        tmp_path,
+        "report_acquisition",
+        live=False,
+        without_preflight_profile="report_download",
+    )
+    check = next(
+        item for item in report.checks if item.capability == "workflow_profile"
+    )
+
+    assert report.workflow_names == ["report_acquisition"]
+    assert report.workflow_statuses["report_acquisition"] == "blocked"
+    assert check.reason_code == "workflow_capability_profile_missing"
+    assert check.affected_workflows == ["report_acquisition"]
     assert report.provider_calls == 0
     assert report.external_writes == 0
 
