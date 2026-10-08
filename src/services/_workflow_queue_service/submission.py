@@ -113,8 +113,30 @@ def enqueue_workflow_job(
             (submission.deduplication_scope, submission.idempotency_key),
         ).fetchone()
         if existing is not None:
+            existing_job = _job_from_row(existing)
+            incompatible_fields = _incompatible_submission_fields(
+                existing_job,
+                submission,
+                queue_name=queue_name,
+                budget_profile=submission.budget_profile or control.budget_profile,
+                payload_data=payload_data,
+            )
+            if incompatible_fields:
+                conn.rollback()
+                raise AppError(
+                    code="workflow_queue_idempotency_conflict",
+                    message=(
+                        "Existing workflow job is incompatible with the duplicate submission"
+                    ),
+                    retryable=False,
+                    context={
+                        "deduplication_scope": submission.deduplication_scope,
+                        "existing_job_id": existing_job.job_id,
+                        "incompatible_fields": incompatible_fields,
+                    },
+                )
             conn.commit()
-            return _job_from_row(existing), False
+            return existing_job, False
         depth = conn.execute(
             "SELECT COUNT(*) FROM workflow_jobs WHERE queue_name=? AND status IN "
             "('pending','leased','running','retry_wait','budget_deferred','blocked')",
@@ -198,6 +220,71 @@ def enqueue_workflow_job(
         conn.commit()
     assert row is not None
     return _job_from_row(row), True
+
+
+def _incompatible_submission_fields(
+    existing: WorkflowJob,
+    submission: WorkflowJobSubmission,
+    *,
+    queue_name: str,
+    budget_profile: str,
+    payload_data: dict[str, object],
+) -> list[str]:
+    """Identify semantic differences while ignoring mutable scheduling fields."""
+    requested_values: dict[str, object] = {
+        "schema_version": submission.schema_version,
+        "queue_name": queue_name,
+        "job_type": submission.job_type,
+        "job_schema_version": submission.payload.schema_version,
+        "workflow_version": submission.workflow_version,
+        "entity_type": submission.entity_type,
+        "entity_id": submission.entity_id,
+        "publisher_id": submission.publisher_id,
+        "source_identity_id": submission.source_identity_id,
+        "report_id": submission.report_id,
+        "input_reference": submission.payload.input_reference,
+        "input_content_hash": submission.payload.input_content_hash,
+        "required_artifact_references": _json(
+            [asdict(item) for item in submission.payload.required_artifact_references]
+        ),
+        "budget_profile": budget_profile,
+        "execution_plan_hash": submission.execution_plan_hash,
+        "prompt_policy_version": submission.payload.prompt_policy_version,
+        "processing_version": submission.payload.processing_version,
+    }
+    existing_values: dict[str, object] = {
+        "schema_version": existing.schema_version,
+        "queue_name": existing.queue_name,
+        "job_type": existing.job_type,
+        "job_schema_version": existing.job_schema_version,
+        "workflow_version": existing.workflow_version,
+        "entity_type": existing.entity_type,
+        "entity_id": existing.entity_id,
+        "publisher_id": existing.publisher_id,
+        "source_identity_id": existing.source_identity_id,
+        "report_id": existing.report_id,
+        "input_reference": existing.input_reference,
+        "input_content_hash": existing.input_content_hash,
+        "required_artifact_references": _json(
+            [asdict(item) for item in existing.required_artifact_references]
+        ),
+        "budget_profile": existing.budget_profile,
+        "execution_plan_hash": existing.execution_plan_hash,
+        "prompt_policy_version": existing.prompt_policy_version,
+        "processing_version": existing.processing_version,
+    }
+    incompatible = [
+        name
+        for name, requested in requested_values.items()
+        if existing_values[name] != requested
+    ]
+    try:
+        existing_payload = json.loads(existing.payload_json)
+    except (TypeError, json.JSONDecodeError):
+        existing_payload = None
+    if not isinstance(existing_payload, dict) or existing_payload != payload_data:
+        incompatible.append("payload")
+    return incompatible
 
 
 def get_workflow_job(state_db: str, job_id: str, ctx: RunContext) -> WorkflowJob | None:

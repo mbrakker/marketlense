@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import ctypes
+import errno
 import json
 import logging
 import math
 import os
 import sys
+import tempfile
 import time
-import errno
-import ctypes
+import uuid
+from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, Optional
 
 from src.contracts.lock import (
     LockAcquireRequest,
@@ -26,6 +29,98 @@ from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.lock_service")
 DEFAULT_LOCK_TTL_SECONDS = 7200.0
+
+
+@contextmanager
+def _coordination_guard(lock_path: Path) -> Iterator[None]:
+    """Serialize lock-file operations with a persistent OS-locked sidecar."""
+    guard_path = Path(f"{lock_path}.coord")
+    handle = None
+    overlapped = None
+    try:
+        guard_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = guard_path.open("a+b")
+        if sys.platform == "win32":
+            import msvcrt
+            from ctypes import wintypes
+
+            class _Overlapped(ctypes.Structure):
+                _fields_ = [
+                    ("Internal", ctypes.c_void_p),
+                    ("InternalHigh", ctypes.c_void_p),
+                    ("Offset", wintypes.DWORD),
+                    ("OffsetHigh", wintypes.DWORD),
+                    ("hEvent", wintypes.HANDLE),
+                ]
+
+            overlapped = _Overlapped()
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            lock_file_ex = kernel32.LockFileEx
+            lock_file_ex.argtypes = [
+                wintypes.HANDLE,
+                wintypes.DWORD,
+                wintypes.DWORD,
+                wintypes.DWORD,
+                wintypes.DWORD,
+                ctypes.POINTER(_Overlapped),
+            ]
+            lock_file_ex.restype = wintypes.BOOL
+            handle_value = msvcrt.get_osfhandle(handle.fileno())
+            if not lock_file_ex(
+                handle_value,
+                0x00000002,  # LOCKFILE_EXCLUSIVE_LOCK; wait in the kernel.
+                0,
+                1,
+                0,
+                ctypes.byref(overlapped),
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if sys.platform == "win32":
+                import msvcrt
+                from ctypes import wintypes
+
+                kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                unlock_file_ex = kernel32.UnlockFileEx
+                unlock_file_ex.argtypes = [
+                    wintypes.HANDLE,
+                    wintypes.DWORD,
+                    wintypes.DWORD,
+                    wintypes.DWORD,
+                    ctypes.POINTER(type(overlapped)),
+                ]
+                unlock_file_ex.restype = wintypes.BOOL
+                if not unlock_file_ex(
+                    msvcrt.get_osfhandle(handle.fileno()),
+                    0,
+                    1,
+                    0,
+                    ctypes.byref(overlapped),
+                ):
+                    raise ctypes.WinError(ctypes.get_last_error())
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except AppError:
+        raise
+    except OSError as exc:
+        raise AppError(
+            code="lock_coordination_failed",
+            message="Failed to coordinate filesystem lock operations",
+            cause=exc,
+            retryable=True,
+            context={"lock_path": str(lock_path)},
+        ) from exc
+    finally:
+        if handle is not None:
+            handle.close()
 
 
 def _owner_pid_is_alive(pid: int) -> bool:
@@ -59,9 +154,7 @@ def _owner_pid_is_alive(pid: int) -> bool:
     except PermissionError:
         return True
     except OSError as exc:
-        if exc.errno == errno.ESRCH:
-            return False
-        return True
+        return exc.errno != errno.ESRCH
     return True
 
 
@@ -92,6 +185,7 @@ def _read_lock(path: str) -> Optional[LockInfo]:
     pid = data.get("pid")
     created_at = data.get("created_at")
     ttl_seconds = data.get("ttl_seconds", DEFAULT_LOCK_TTL_SECONDS)
+    generation = data.get("generation")
     if not isinstance(owner_id, str) or not owner_id.strip():
         raise _corrupt_lock_error(path, "invalid_owner_id")
     if type(pid) is not int or pid <= 0:
@@ -110,6 +204,10 @@ def _read_lock(path: str) -> Optional[LockInfo]:
         or ttl_seconds < 0
     ):
         raise _corrupt_lock_error(path, "invalid_ttl_seconds")
+    if generation is not None and (
+        not isinstance(generation, str) or not generation.strip()
+    ):
+        raise _corrupt_lock_error(path, "invalid_generation")
     return LockInfo(
         schema_version="1.0",
         lock_path=path,
@@ -117,6 +215,7 @@ def _read_lock(path: str) -> Optional[LockInfo]:
         pid=pid,
         created_at=float(created_at),
         ttl_seconds=float(ttl_seconds),
+        generation=generation,
     )
 
 
@@ -134,15 +233,15 @@ def _corrupt_lock_error(
 
 
 def _remove_created_lock_file(
-    lock_path: Path, identity: tuple[int, int] | None, ctx: RunContext
+    file_path: Path, identity: tuple[int, int] | None, ctx: RunContext
 ) -> None:
     if identity is None:
         return
     try:
-        current = lock_path.stat(follow_symlinks=False)
+        current = file_path.stat(follow_symlinks=False)
         if (int(current.st_dev), int(current.st_ino)) != identity:
             return
-        lock_path.unlink()
+        file_path.unlink()
     except FileNotFoundError:
         return
     except OSError:
@@ -152,9 +251,47 @@ def _remove_created_lock_file(
                 role="service",
                 event="lock_partial_file_cleanup_failed",
                 module=logger.name,
-                fields={"lock_path": str(lock_path)},
+                fields={"lock_path": str(file_path)},
             )
         )
+
+
+def _write_lock_atomically(
+    lock_path: Path,
+    payload: dict[str, object],
+    ctx: RunContext,
+) -> None:
+    fd: int | None = None
+    temp_path: Path | None = None
+    temp_identity: tuple[int, int] | None = None
+    try:
+        fd, raw_temp_path = tempfile.mkstemp(
+            prefix=f".{lock_path.name}.",
+            suffix=".tmp",
+            dir=lock_path.parent,
+        )
+        temp_path = Path(raw_temp_path)
+        temp_stat = os.fstat(fd)
+        temp_identity = (int(temp_stat.st_dev), int(temp_stat.st_ino))
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = None
+            json.dump(payload, handle, ensure_ascii=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, lock_path)
+    except (OSError, ValueError, TypeError) as exc:
+        if fd is not None:
+            with suppress(OSError):
+                os.close(fd)
+        if temp_path is not None:
+            _remove_created_lock_file(temp_path, temp_identity, ctx)
+        raise AppError(
+            code="lock_acquire_failed",
+            message=f"Failed to acquire lock at {lock_path}",
+            cause=exc,
+            retryable=False,
+            context={"lock_path": str(lock_path)},
+        ) from exc
 
 
 def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
@@ -167,7 +304,8 @@ def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
             fields={"lock_path": request.lock_path},
         )
     )
-    info = _read_lock(request.lock_path)
+    with _coordination_guard(Path(request.lock_path)):
+        info = _read_lock(request.lock_path)
     response = LockGetResponse(schema_version="1.0", found=info is not None, lock=info)
     logger.info(
         log_event(
@@ -202,148 +340,140 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         )
     )
     lock_path = Path(request.lock_path)
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
     requested_ttl = (
         float(request.ttl_seconds) if float(request.ttl_seconds) > 0 else None
     )
-
-    existing = _read_lock(request.lock_path)
-    now = time.time()
-    existing_ttl = (
-        float(existing.ttl_seconds) if existing and existing.ttl_seconds > 0 else None
-    )
-    stale_ttl = existing_ttl if existing_ttl is not None else requested_ttl
-    expired = bool(existing and stale_ttl and (now - existing.created_at) > stale_ttl)
-    dead_owner = bool(existing and not _owner_pid_is_alive(existing.pid))
-    if existing and (expired or dead_owner):
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="lock_dead_owner_evicted" if dead_owner else "lock_stale_evicted",
-                module=logger.name,
-                fields={
-                    "lock_path": request.lock_path,
-                    "owner_id": existing.owner_id,
-                    "pid": existing.pid,
-                    "age_seconds": now - existing.created_at,
-                    "eviction_reason": "dead_owner" if dead_owner else "ttl_expired",
-                },
-            )
-        )
+    with _coordination_guard(lock_path):
         try:
-            lock_path.unlink(missing_ok=True)
-        except OSError as exc:
-            raise AppError(
-                code="lock_stale_remove_failed",
-                message=f"Failed to remove stale lock at {request.lock_path}",
-                cause=exc,
-                retryable=False,
-                context={"lock_path": request.lock_path},
-            ) from exc
-        existing = None
-
-    if existing:
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="lock_conflict",
-                module=logger.name,
-                fields={
-                    "lock_path": request.lock_path,
-                    "existing_owner": existing.owner_id,
-                    "existing_pid": existing.pid,
-                    "created_at": existing.created_at,
-                },
+            existing = _read_lock(request.lock_path)
+        except AppError as exc:
+            if exc.code != "lock_file_corrupt":
+                raise
+            try:
+                lock_path.unlink(missing_ok=True)
+            except OSError:
+                raise exc from None
+            reason = (
+                str(exc.context.get("reason", "unknown"))
+                if isinstance(exc.context, dict)
+                else "unknown"
             )
-        )
-        return LockAcquireResponse(
-            schema_version="1.0",
-            acquired=False,
-            lock=None,
-            conflict=existing,
-        )
+            logger.warning(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="lock_malformed_record_recovered",
+                    module=logger.name,
+                    fields={"lock_path": request.lock_path, "reason": reason},
+                )
+            )
+            existing = None
 
-    fd: int | None = None
-    created_identity: tuple[int, int] | None = None
-    try:
-        fd = os.open(request.lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        created_stat = os.fstat(fd)
-        created_identity = (int(created_stat.st_dev), int(created_stat.st_ino))
-        payload = {
+        now = time.time()
+        existing_ttl = (
+            float(existing.ttl_seconds)
+            if existing and existing.ttl_seconds > 0
+            else None
+        )
+        stale_ttl = existing_ttl if existing_ttl is not None else requested_ttl
+        expired = bool(
+            existing and stale_ttl and (now - existing.created_at) > stale_ttl
+        )
+        dead_owner = bool(existing and not _owner_pid_is_alive(existing.pid))
+        if existing and (expired or dead_owner):
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event=(
+                        "lock_dead_owner_evicted"
+                        if dead_owner
+                        else "lock_stale_evicted"
+                    ),
+                    module=logger.name,
+                    fields={
+                        "lock_path": request.lock_path,
+                        "owner_id": existing.owner_id,
+                        "pid": existing.pid,
+                        "age_seconds": now - existing.created_at,
+                        "eviction_reason": (
+                            "dead_owner" if dead_owner else "ttl_expired"
+                        ),
+                    },
+                )
+            )
+            try:
+                lock_path.unlink(missing_ok=True)
+            except OSError as exc:
+                raise AppError(
+                    code="lock_stale_remove_failed",
+                    message=f"Failed to remove stale lock at {request.lock_path}",
+                    cause=exc,
+                    retryable=False,
+                    context={"lock_path": request.lock_path},
+                ) from exc
+            existing = None
+
+        if existing:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="lock_conflict",
+                    module=logger.name,
+                    fields={
+                        "lock_path": request.lock_path,
+                        "existing_owner": existing.owner_id,
+                        "existing_pid": existing.pid,
+                        "created_at": existing.created_at,
+                    },
+                )
+            )
+            return LockAcquireResponse(
+                schema_version="1.0",
+                acquired=False,
+                lock=None,
+                conflict=existing,
+            )
+
+        generation = uuid.uuid4().hex
+        payload: dict[str, object] = {
             "owner_id": request.owner_id,
             "pid": request.pid,
             "created_at": now,
+            "generation": generation,
         }
         if requested_ttl is not None:
             payload["ttl_seconds"] = requested_ttl
-        handle = os.fdopen(fd, "w", encoding="utf-8")
-        fd = None
-        with handle as fh:
-            json.dump(payload, fh, ensure_ascii=True)
-    except FileExistsError:
-        conflict = _read_lock(request.lock_path)
+        _write_lock_atomically(lock_path, payload, ctx)
+
+        info = LockInfo(
+            schema_version="1.0",
+            lock_path=request.lock_path,
+            owner_id=request.owner_id,
+            pid=request.pid,
+            created_at=now,
+            ttl_seconds=requested_ttl
+            if requested_ttl is not None
+            else DEFAULT_LOCK_TTL_SECONDS,
+            generation=generation,
+        )
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="lock_conflict",
+                event="lock_acquire_complete",
                 module=logger.name,
                 fields={
                     "lock_path": request.lock_path,
-                    "existing_owner": conflict.owner_id if conflict else None,
-                    "existing_pid": conflict.pid if conflict else None,
+                    "owner_id": request.owner_id,
+                    "pid": request.pid,
                 },
             )
         )
         return LockAcquireResponse(
-            schema_version="1.0",
-            acquired=False,
-            lock=None,
-            conflict=conflict,
+            schema_version="1.0", acquired=True, lock=info, conflict=None
         )
-    except (OSError, ValueError, TypeError) as exc:
-        if fd is not None:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        _remove_created_lock_file(lock_path, created_identity, ctx)
-        raise AppError(
-            code="lock_acquire_failed",
-            message=f"Failed to acquire lock at {request.lock_path}",
-            cause=exc,
-            retryable=False,
-            context={"lock_path": request.lock_path},
-        ) from exc
-
-    info = LockInfo(
-        schema_version="1.0",
-        lock_path=request.lock_path,
-        owner_id=request.owner_id,
-        pid=request.pid,
-        created_at=now,
-        ttl_seconds=requested_ttl
-        if requested_ttl is not None
-        else DEFAULT_LOCK_TTL_SECONDS,
-    )
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="lock_acquire_complete",
-            module=logger.name,
-            fields={
-                "lock_path": request.lock_path,
-                "owner_id": request.owner_id,
-                "pid": request.pid,
-            },
-        )
-    )
-    return LockAcquireResponse(
-        schema_version="1.0", acquired=True, lock=info, conflict=None
-    )
 
 
 def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseResponse:
@@ -361,59 +491,69 @@ def release_lock(request: LockReleaseRequest, ctx: RunContext) -> LockReleaseRes
         )
     )
     lock_path = Path(request.lock_path)
-    existing = _read_lock(request.lock_path)
-
-    if not lock_path.exists():
-        logger.info(
-            log_event(
-                ctx,
-                role="service",
-                event="lock_release_missing",
-                module=logger.name,
-                fields={"lock_path": request.lock_path},
+    with _coordination_guard(lock_path):
+        existing = _read_lock(request.lock_path)
+        if existing is None:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="lock_release_missing",
+                    module=logger.name,
+                    fields={"lock_path": request.lock_path},
+                )
             )
-        )
-        return LockReleaseResponse(schema_version="1.0", released=False)
+            return LockReleaseResponse(schema_version="1.0", released=False)
 
-    if existing and existing.owner_id and existing.owner_id != request.owner_id:
+        same_owner = (
+            existing.owner_id == request.owner_id and existing.pid == request.pid
+        )
+        same_generation = (
+            request.generation is None
+            if existing.generation is None
+            else request.generation == existing.generation
+        )
+        if not same_owner or not same_generation:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="lock_release_not_owner",
+                    module=logger.name,
+                    fields={
+                        "lock_path": request.lock_path,
+                        "owner_id": request.owner_id,
+                        "current_owner": existing.owner_id,
+                        "current_pid": existing.pid,
+                    },
+                )
+            )
+            return LockReleaseResponse(schema_version="1.0", released=False)
+
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            return LockReleaseResponse(schema_version="1.0", released=False)
+        except OSError as exc:
+            raise AppError(
+                code="lock_release_failed",
+                message=f"Failed to release lock at {request.lock_path}",
+                cause=exc,
+                retryable=False,
+                context={"lock_path": request.lock_path},
+            ) from exc
+
         logger.info(
             log_event(
                 ctx,
                 role="service",
-                event="lock_release_not_owner",
+                event="lock_release_complete",
                 module=logger.name,
                 fields={
                     "lock_path": request.lock_path,
                     "owner_id": request.owner_id,
-                    "current_owner": existing.owner_id,
-                    "current_pid": existing.pid,
+                    "pid": request.pid,
                 },
             )
         )
-        return LockReleaseResponse(schema_version="1.0", released=False)
-
-    try:
-        lock_path.unlink(missing_ok=True)
-    except OSError as exc:
-        raise AppError(
-            code="lock_release_failed",
-            message=f"Failed to release lock at {request.lock_path}",
-            cause=exc,
-            retryable=False,
-            context={"lock_path": request.lock_path},
-        ) from exc
-
-    logger.info(
-        log_event(
-            ctx,
-            role="service",
-            event="lock_release_complete",
-            module=logger.name,
-            fields={
-                "lock_path": request.lock_path,
-                "owner_id": request.owner_id,
-                "pid": request.pid,
-            },
-        )
-    )
-    return LockReleaseResponse(schema_version="1.0", released=True)
+        return LockReleaseResponse(schema_version="1.0", released=True)

@@ -38,6 +38,7 @@ from src.generators._artifact_generator.storage import (
 )
 from src.generators._artifact_generator.toc import build_toc_artifacts
 from src.generators.artifact_normalization import (
+    EDITORIAL_PLAN_TRANSFORM_VERSION,
     REQUIRED_REPORT_PAYLOAD_INSIGHTS,
     artifact_base_variables,
     artifact_quote_candidates,
@@ -132,6 +133,86 @@ _SOFT_COPY_NAMESPACES = {
     "report_vs/artifacts/expert_comment": "expert_comment",
     "report_vs/artifacts/linkedin_post": "linkedin_post",
 }
+_QUOTE_FAST_PATH_PRODUCER = "deterministic_quote_fast_path"
+_QUOTE_FAST_PATH_VERSION = "1.0"
+
+
+def _quote_candidate_pool_plan(
+    evidence_packs: Dict[str, Any],
+) -> tuple[str, list[dict[str, Any]], str, bool]:
+    raw_pack = evidence_packs.get("quote_candidates")
+    if not isinstance(raw_pack, dict):
+        return "held", [], "quote_candidate_pack_missing", False
+    raw_status = raw_pack.get("family_status")
+    if not isinstance(raw_status, dict):
+        # Preserve the legacy model path for older retained packs without status.
+        return "model", [], "quote_candidate_status_missing", True
+    if (
+        str(raw_status.get("family") or "") != "quote_candidates"
+        or str(raw_status.get("source") or "") != "evidence_pack"
+    ):
+        return "held", [], "quote_candidate_status_invalid", False
+    status = str(raw_status.get("status") or "").strip().casefold()
+    reason = str(raw_status.get("reason") or "").strip()
+    raw_candidates = raw_pack.get("quote_candidates")
+    if not isinstance(raw_candidates, list):
+        return "held", [], "quote_candidate_list_missing", False
+    if status == "abstained":
+        if not raw_candidates and reason:
+            return "complete_empty", [], "quote_candidates_not_found", False
+        return "held", [], "quote_abstention_incomplete", False
+    if status != "generated":
+        return "held", [], f"quote_candidate_status_{status or 'missing'}", False
+    if not raw_candidates:
+        return "held", [], "generated_quote_candidate_list_empty", False
+
+    eligible: list[dict[str, Any]] = []
+    by_id: dict[str, dict[str, Any]] = {}
+    by_text: dict[str, str] = {}
+    for raw_candidate in raw_candidates:
+        if not isinstance(raw_candidate, dict):
+            return "held", [], "quote_candidate_invalid", False
+        quote_id = str(
+            raw_candidate.get("id") or raw_candidate.get("evidence_id") or ""
+        ).strip()
+        text = str(raw_candidate.get("text") or "")
+        source = str(raw_candidate.get("source") or "").strip()
+        page = raw_candidate.get("page")
+        if (
+            not quote_id
+            or not text.strip()
+            or (
+                page is not None
+                and (not isinstance(page, int) or isinstance(page, bool))
+            )
+        ):
+            return "held", [], "quote_candidate_incomplete", False
+        if page is not None and page < 1:
+            return "held", [], "quote_candidate_location_invalid", False
+        if not source or source.casefold() in {"unknown", "unspecified"}:
+            return "model", [], "quote_attribution_ambiguous", False
+        candidate = {**raw_candidate, "id": quote_id, "source": source}
+        previous_id = by_id.get(quote_id)
+        if previous_id is not None:
+            if (
+                previous_id.get("text") == text
+                and str(previous_id.get("source") or "").casefold() == source.casefold()
+                and previous_id.get("page") == page
+            ):
+                continue
+            return "model", [], "quote_id_conflict", False
+        text_key = " ".join(text.split()).casefold()
+        previous_source = by_text.get(text_key)
+        if previous_source is not None:
+            if previous_source != source.casefold():
+                return "model", [], "quote_attribution_conflict", False
+            continue
+        by_id[quote_id] = candidate
+        by_text[text_key] = source.casefold()
+        eligible.append(candidate)
+    if len(eligible) > 3:
+        return "model", [], "quote_pool_exceeds_fast_path_limit", True
+    return "fast_path", eligible, "", False
 
 
 def _render_insights_candidates_or_defer_to_fallback(
@@ -918,11 +999,44 @@ def generate_artifacts(
             payload, editorial_plan_ctx
         ),
     )
+    raw_editorial_plan = editorial_plan_result.get("editorial_plan")
     editorial_plan = stabilize_broad_artifact_editorial_plan(
-        normalize_artifact_editorial_plan(editorial_plan_result.get("editorial_plan")),
+        normalize_artifact_editorial_plan(raw_editorial_plan),
         doc_map=safe_doc_map,
         evidence_packs=safe_evidence,
     )
+    editorial_plan_transform_identity = {
+        "transform": "normalize_and_stabilize_editorial_plan",
+        "version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+        "input_hash": sha256_json(raw_editorial_plan),
+        "output_hash": sha256_json(editorial_plan),
+    }
+    editorial_plan_identity = family_reuse["report_vs/artifacts/editorial_plan"]
+    editorial_plan_dependency_hash = sha256_json(
+        {
+            "family_id": "report_vs/artifacts/editorial_plan",
+            "producing_identity": {
+                key: editorial_plan_identity.get(key)
+                for key in (
+                    "family_schema_version",
+                    "processing_version",
+                    "prompt_content_hash",
+                    "execution_identity",
+                    "model_provider",
+                    "model_name",
+                    "model_policy_namespace",
+                    "routing_policy_version",
+                    "validator_version",
+                    "relevant_input_hash",
+                    "configuration_policy_hash",
+                )
+            },
+            "transform": editorial_plan_transform_identity,
+        }
+    )
+    editorial_plan_dependency_vars = {
+        "_editorial_plan_dependency_hash": editorial_plan_dependency_hash
+    }
     editorial_plan_json = _dump_json(editorial_plan)
     summary_evidence_json = _summary_prioritized_evidence_json(
         safe_evidence, editorial_plan
@@ -931,6 +1045,71 @@ def generate_artifacts(
     insights_final_ctx = child_context(ctx, task_id=f"{ctx.task_id}:insights_final")
 
     quote_candidates = artifact_quote_candidates(safe_evidence)
+    quote_plan, fast_path_quote_candidates, quote_reason, allow_quote_fallback = (
+        _quote_candidate_pool_plan(safe_evidence)
+    )
+    quote_model_required = quote_plan == "model"
+    deterministic_quote_plan = quote_plan in {"fast_path", "complete_empty", "held"}
+    quotes_final: List[Dict[str, Any]] = (
+        fallback_artifact_quotes_from_candidates(
+            {"quote_candidates": fast_path_quote_candidates}, limit=3
+        )
+        if quote_plan == "fast_path"
+        else []
+    )
+    quote_dependency_hash = sha256_json(safe_evidence.get("quote_candidates"))
+    quote_producer_identity = {
+        "producer": _QUOTE_FAST_PATH_PRODUCER,
+        "producer_version": _QUOTE_FAST_PATH_VERSION,
+        "dependency_hash": quote_dependency_hash,
+        "decision": quote_plan,
+        "reason_code": quote_reason,
+    }
+    if deterministic_quote_plan:
+        family_reuse["report_vs/artifacts/quotes"] = {
+            **quote_producer_identity,
+            "decision": ("deterministic" if quote_plan == "fast_path" else quote_plan),
+        }
+        if quote_plan == "fast_path":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_quotes_completed_deterministically",
+                    module=logger.name,
+                    fields={
+                        "quote_count": len(quotes_final),
+                        "producer_version": _QUOTE_FAST_PATH_VERSION,
+                    },
+                )
+            )
+        elif quote_plan == "complete_empty":
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_quotes_abstained_no_candidates",
+                    module=logger.name,
+                    fields={"reason_code": quote_reason},
+                )
+            )
+        else:
+            logger.info(
+                log_event(
+                    ctx,
+                    role="generator",
+                    event="artifact_quotes_held_incomplete_candidate_pool",
+                    module=logger.name,
+                    fields={"reason_code": quote_reason},
+                )
+            )
+    quote_family_variables = {
+        "quote_candidates_json": _dump_json(quote_candidates),
+        "doc_map_json": base_vars["doc_map_json"],
+        "evidence_json": _dump_json(
+            {"quote_candidates": safe_evidence.get("quote_candidates", {})}
+        ),
+    }
 
     toc_bundle = build_toc_artifacts(doc_map=safe_doc_map)
     toc_topics = [entry["display_title"] for entry in toc_bundle["toc_entries"]]
@@ -942,6 +1121,7 @@ def generate_artifacts(
             namespace="report_vs/artifacts/summary",
             variables={
                 **base_vars,
+                **editorial_plan_dependency_vars,
                 "evidence_json": summary_evidence_json,
                 "editorial_plan_json": editorial_plan_json,
             },
@@ -951,20 +1131,24 @@ def generate_artifacts(
             schema_version="1.0",
             step_name="insights_candidates",
             namespace="report_vs/artifacts/insights_candidates",
-            variables={**base_vars, "editorial_plan_json": editorial_plan_json},
+            variables={
+                **base_vars,
+                **editorial_plan_dependency_vars,
+                "editorial_plan_json": editorial_plan_json,
+            },
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:insights_candidates"),
         ),
-        ArtifactRenderTask(
+    ]
+    quote_task = None
+    if quote_model_required:
+        quote_task = ArtifactRenderTask(
             schema_version="1.0",
             step_name="quotes",
             namespace="report_vs/artifacts/quotes",
-            variables={
-                **base_vars,
-                "quote_candidates_json": _dump_json(quote_candidates),
-            },
+            variables=quote_family_variables,
             ctx=child_context(ctx, task_id=f"{ctx.task_id}:quotes"),
-        ),
-    ]
+        )
+        stage_one_tasks.append(quote_task)
     submit_artifact_task = cast(
         Optional[ArtifactTaskSubmitter],
         getattr(step_executor, "submit_task", None),
@@ -980,10 +1164,11 @@ def generate_artifacts(
             future = submit_artifact_task(task, render_task, ctx, batch_name)
             pending_artifact_tasks[task.step_name] = future
 
-        quote_task = stage_one_tasks[2]
-        quote_submitted = False
+        quote_submitted = quote_task is None
         first_stage_tasks = (
-            stage_one_tasks if dag_worker_limit >= 3 else stage_one_tasks[:2]
+            stage_one_tasks
+            if dag_worker_limit >= len(stage_one_tasks)
+            else stage_one_tasks[:2]
         )
         for task in first_stage_tasks:
             submit_dag_task(task, "stage_one")
@@ -1068,12 +1253,11 @@ def generate_artifacts(
                 },
             )
         )
-    quotes_final: List[Dict[str, Any]] = []
-    if not dependency_dag_enabled:
+    if quote_model_required and not dependency_dag_enabled:
         quotes_final = normalize_artifact_quotes(
             stage_one_results.get("quotes", {}).get("quotes_final")
         )
-        if not quotes_final:
+        if not quotes_final and allow_quote_fallback:
             quotes_final = fallback_artifact_quotes_from_candidates(
                 safe_evidence.get("quote_candidates")
             )
@@ -1090,6 +1274,7 @@ def generate_artifacts(
 
     insights_final_vars = {
         **base_vars,
+        **editorial_plan_dependency_vars,
         "editorial_plan_json": editorial_plan_json,
         "insights_candidates_json": _dump_json(insights_candidates),
         "final_insight_target_count": final_insight_target_count,
@@ -1109,7 +1294,7 @@ def generate_artifacts(
             ctx=insights_final_ctx,
         )
         submit_dag_task(insights_final_task, "insights_final")
-        if not quote_submitted:
+        if quote_task is not None and not quote_submitted:
             submit_dag_task(quote_task, "stage_one")
             quote_submitted = True
         while "insights_final" not in completed_artifact_tasks:
@@ -1213,6 +1398,7 @@ def generate_artifacts(
                 step_name="expert_comment",
                 namespace="report_vs/artifacts/expert_comment",
                 variables={
+                    **editorial_plan_dependency_vars,
                     "editorial_plan_json": editorial_plan_json,
                     "expert_synthesis_context_json": _dump_json(
                         expert_synthesis_context
@@ -1227,6 +1413,7 @@ def generate_artifacts(
                 step_name="linkedin_post",
                 namespace="report_vs/artifacts/linkedin_post",
                 variables={
+                    **editorial_plan_dependency_vars,
                     "editorial_plan_json": editorial_plan_json,
                     "doc_map_json": base_vars["doc_map_json"],
                     "insights_final_json": _dump_json(distribution_insights),
@@ -1263,11 +1450,13 @@ def generate_artifacts(
         stage_one_results = {
             name: completed_artifact_tasks[name]
             for name in ("summary", "insights_candidates", "quotes")
+            if name in completed_artifact_tasks
         }
-        quotes_final = normalize_artifact_quotes(
-            stage_one_results.get("quotes", {}).get("quotes_final")
-        )
-        if not quotes_final:
+        if quote_model_required:
+            quotes_final = normalize_artifact_quotes(
+                stage_one_results.get("quotes", {}).get("quotes_final")
+            )
+        if quote_model_required and not quotes_final and allow_quote_fallback:
             quotes_final = fallback_artifact_quotes_from_candidates(
                 safe_evidence.get("quote_candidates")
             )
@@ -1372,6 +1561,7 @@ def generate_artifacts(
                     step_name="expert_comment",
                     namespace="report_vs/artifacts/expert_comment",
                     variables={
+                        **editorial_plan_dependency_vars,
                         "editorial_plan_json": editorial_plan_json,
                         "expert_synthesis_context_json": _dump_json(
                             expert_synthesis_context
@@ -1386,6 +1576,7 @@ def generate_artifacts(
                     step_name="linkedin_post",
                     namespace="report_vs/artifacts/linkedin_post",
                     variables={
+                        **editorial_plan_dependency_vars,
                         "editorial_plan_json": editorial_plan_json,
                         "doc_map_json": base_vars["doc_map_json"],
                         "insights_final_json": _dump_json(insights_final),
@@ -1420,6 +1611,10 @@ def generate_artifacts(
         expert_comment=expert_comment,
         linkedin_post=linkedin_post,
     )
+    if deterministic_quote_plan:
+        record_family_output(
+            "report_vs/artifacts/quotes", {"quotes_final": quotes_final}
+        )
 
     family_order = tuple(_ARTIFACT_FAMILY_ROOTS)
     family_reuse = {
@@ -1491,6 +1686,11 @@ def generate_artifacts(
         if family in soft_copy_generation_attempts
     }
 
+    family_transformations = {
+        "report_vs/artifacts/editorial_plan": editorial_plan_transform_identity
+    }
+    if deterministic_quote_plan:
+        family_transformations["report_vs/artifacts/quotes"] = quote_producer_identity
     artifacts_payload = assemble_artifacts_payload(
         report_id=report_id,
         report_name=report_name,
@@ -1515,6 +1715,7 @@ def generate_artifacts(
             "family_reuse": family_reuse,
             "producing_prompt_identities": producing_prompt_identities,
             "family_outputs": family_outputs,
+            "family_transformations": family_transformations,
             "family_reuse_telemetry": family_reuse_telemetry,
         },
         soft_copy_claim_bindings=soft_copy_claim_bindings,

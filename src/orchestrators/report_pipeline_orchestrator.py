@@ -274,7 +274,7 @@ def _acquire_execution_lease(
     settings: IngestSettings,
     plan: MinimalExecutionPlan,
     ctx: RunContext,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Serialize writes for one retained plan without widening the ingest lock."""
     key = hashlib.sha256(
         f"{plan.report_id}:{plan.plan_hash}".encode("utf-8")
@@ -294,7 +294,14 @@ def _acquire_execution_lease(
         ctx,
     )
     if response.acquired:
-        return lock_path, owner_id
+        if response.lock is None or not response.lock.generation:
+            raise AppError(
+                code="minimal_execution_plan_lease_invalid",
+                message="Execution lease did not return an acquisition generation",
+                retryable=False,
+                context={"plan_hash": plan.plan_hash},
+            )
+        return lock_path, owner_id, response.lock.generation
     raise AppError(
         code="minimal_execution_plan_lease_conflict",
         message="Another run already owns the retained-artifact execution lease",
@@ -308,7 +315,9 @@ def _acquire_execution_lease(
     )
 
 
-def _release_execution_lease(lock_path: str, owner_id: str, ctx: RunContext) -> None:
+def _release_execution_lease(
+    lock_path: str, owner_id: str, generation: str, ctx: RunContext
+) -> None:
     if not lock_path:
         return
     lock_service.release_lock(
@@ -317,6 +326,7 @@ def _release_execution_lease(lock_path: str, owner_id: str, ctx: RunContext) -> 
             lock_path=lock_path,
             owner_id=owner_id,
             pid=os.getpid(),
+            generation=generation,
         ),
         ctx,
     )
@@ -1333,9 +1343,10 @@ def run_report_pipeline(
             )
     lease_path = ""
     lease_owner_id = ""
+    lease_generation = ""
     if normalized_plan_mode == "enforce" and minimal_plan is not None:
         try:
-            lease_path, lease_owner_id = _acquire_execution_lease(
+            lease_path, lease_owner_id, lease_generation = _acquire_execution_lease(
                 settings, minimal_plan, ctx
             )
         except AppError:
@@ -1425,7 +1436,7 @@ def run_report_pipeline(
                 ),
                 ctx,
             )
-        _release_execution_lease(lease_path, lease_owner_id, ctx)
+        _release_execution_lease(lease_path, lease_owner_id, lease_generation, ctx)
         raise
     if pdf_decision is not None and pdf_decision.reservation_key:
         finalize_budget_side_effect(
@@ -1480,7 +1491,7 @@ def run_report_pipeline(
             ctx,
         )
         if normalized_plan_mode == "enforce" and divergence:
-            _release_execution_lease(lease_path, lease_owner_id, ctx)
+            _release_execution_lease(lease_path, lease_owner_id, lease_generation, ctx)
             raise AppError(
                 code="minimal_execution_plan_diverged",
                 message="Actual report execution diverged from its enforced plan",
@@ -1494,5 +1505,5 @@ def run_report_pipeline(
         execution_result="succeeded" if outcome.status != "error" else "failed",
         ctx=ctx,
     )
-    _release_execution_lease(lease_path, lease_owner_id, ctx)
+    _release_execution_lease(lease_path, lease_owner_id, lease_generation, ctx)
     return outcome

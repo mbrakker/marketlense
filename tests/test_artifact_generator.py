@@ -14,3 +14,4 @@ from ._test_artifact_generator.cases_09_unknown_evidence import *  # noqa: F401,
 from ._test_artifact_generator.cases_10_soft_copy_finalization import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_11_soft_copy_binding_recovery import *  # noqa: F401,F403
 from ._test_artifact_generator.cases_12_dependency_dag import *  # noqa: F401,F403
+from ._test_artifact_generator.cases_13_quote_fast_path import *  # noqa: F401,F403

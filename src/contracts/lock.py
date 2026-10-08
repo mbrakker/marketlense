@@ -19,6 +19,12 @@ class LockInfo:
         default=7200.0,
         metadata={"doc": "Staleness TTL recorded by the lock owner in seconds."},
     )
+    generation: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Unique acquisition generation; absent only on legacy lock records."
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -36,7 +42,10 @@ class LockAcquireRequest:
     ttl_seconds: float = field(
         default=7200.0,
         metadata={
-            "doc": "Time in seconds before an existing lock is considered stale. <=0 disables stale eviction."
+            "doc": (
+                "Time in seconds before an existing lock is considered stale. "
+                "<=0 disables stale eviction."
+            )
         },
     )
 
@@ -68,6 +77,12 @@ class LockReleaseRequest:
     )
     pid: int = field(
         metadata={"doc": "Process ID of the requester releasing the lock."}
+    )
+    generation: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Acquisition generation required to release new-format locks."
+        },
     )
 
 

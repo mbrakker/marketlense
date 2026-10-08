@@ -30,6 +30,7 @@ from src.contracts.run_budget import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    MailDeliveryRequest,
     MailDeliveryRequestUpsertRequest,
     WorkflowControlObservationWriteRequest,
 )
@@ -601,7 +602,7 @@ def run_report_download(
         ctx=ctx,
         dependencies=deps,
     )
-    record_deferred_mail_delivery_request(
+    mail_delivery_request = record_deferred_mail_delivery_request(
         request=request,
         result=result,
         ctx=ctx,
@@ -670,6 +671,12 @@ def run_report_download(
         onsite_page_count=result.onsite_page_count,
         onsite_completeness_status=result.onsite_completeness_status,
         drive_uploads=drive_uploads,
+        mail_delivery_request_id=(
+            mail_delivery_request.request_id if mail_delivery_request else None
+        ),
+        mail_delivery_requested_after_utc=(
+            mail_delivery_request.requested_after_utc if mail_delivery_request else None
+        ),
     )
     logger.info(
         log_event(
@@ -1064,9 +1071,9 @@ def record_deferred_mail_delivery_request(
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
     run_started_at_utc: str,
-) -> None:
+) -> MailDeliveryRequest | None:
     if result.outcome != "email_requested":
-        return
+        return None
     if request.mailbox_settings is None:
         logger.info(
             log_event(
@@ -1081,7 +1088,7 @@ def record_deferred_mail_delivery_request(
                 },
             )
         )
-        return
+        return None
     delivery_email = _resolve_deferred_delivery_email(request)
     if not delivery_email:
         logger.info(
@@ -1097,12 +1104,14 @@ def record_deferred_mail_delivery_request(
                 },
             )
         )
-        return
+        return None
     publisher_name = _mail_delivery_publisher_name(request)
     report_title = _mail_delivery_report_title(request, result)
+    generation_id = request.mail_delivery_generation_id.strip()
     idempotency_key = "|".join(
         [
             "mail_delivery",
+            generation_id or "source-default",
             normalize_url(result.normalized_url or request.url),
             delivery_email.casefold(),
         ]
@@ -1165,6 +1174,7 @@ def record_deferred_mail_delivery_request(
             },
         )
     )
+    return upsert_response.request
 
 
 def _mail_delivery_report_title(

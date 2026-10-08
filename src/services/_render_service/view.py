@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from datetime import date
@@ -103,8 +104,7 @@ def _suppress_repeated_insight_advisory_items(
             decision[advisory_field] = [
                 item
                 for item in items
-                if re.sub(r"\s+", " ", _s(item)).strip().casefold()
-                not in insight_copy
+                if re.sub(r"\s+", " ", _s(item)).strip().casefold() not in insight_copy
             ]
 
 
@@ -146,6 +146,15 @@ def _build_figure_slides(
         page = asset.get("page")
         if (
             asset.get("crop_qa_accepted") is not True
+            or asset.get("crop_quality_profile") != "publication_strict"
+            or not _s(asset.get("crop_qa_sidecar_path")).strip()
+            or int(asset.get("crop_dpi") or 0) <= 0
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", _s(asset.get("crop_image_sha256")))
+            or not _figure_image_matches_hash(
+                image_path=image_path,
+                out_dir=out_dir,
+                expected_sha256=_s(asset.get("crop_image_sha256")),
+            )
             or not image_path
             or card is None
             or page is None
@@ -188,6 +197,25 @@ def _build_figure_slides(
     return slides
 
 
+def _figure_image_matches_hash(
+    *, image_path: str, out_dir: Path, expected_sha256: str
+) -> bool:
+    root = out_dir.resolve()
+    candidate = Path(str(image_path or ""))
+    if candidate.is_absolute():
+        return False
+    try:
+        resolved = (root / candidate).resolve()
+        resolved.relative_to(root)
+        digest = hashlib.sha256()
+        with resolved.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except (OSError, ValueError):
+        return False
+    return digest.hexdigest() == str(expected_sha256 or "").strip().casefold()
+
+
 def _build_render_view(
     request: RenderRequest, tag_acronym_map: dict[str, str]
 ) -> dict[str, Any]:
@@ -217,15 +245,9 @@ def _build_render_view(
     source_attribution_parts = [
         f"Publication: {publisher}" if publisher else "",
         f"Byline: {report_author}" if report_author else "",
-        (
-            f"Underlying data: {', '.join(provider_names)}"
-            if provider_names
-            else ""
-        ),
+        (f"Underlying data: {', '.join(provider_names)}" if provider_names else ""),
     ]
-    source_attribution = " · ".join(
-        part for part in source_attribution_parts if part
-    )
+    source_attribution = " · ".join(part for part in source_attribution_parts if part)
     region = _s(data.get("region"))
     time_period = _s(data.get("time_period"))
     focus_year = _extract_focus_year(

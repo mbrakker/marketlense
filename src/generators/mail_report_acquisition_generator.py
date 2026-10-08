@@ -10,6 +10,7 @@ from src.contracts.mailbox_acquisition import (
 )
 from src.contracts.run_context import RunContext
 from src.utils.logging import log_event
+from src.utils.url_utils import url_identity
 
 logger = logging.getLogger("market_lense.mail_report_acquisition_generator")
 
@@ -59,18 +60,32 @@ def select_mail_report_link_candidates(
         message_text = " ".join(
             [message.subject, message.sender, message.text_body]
         ).lower()
+        references_by_identity = {
+            url_identity(reference.url): reference
+            for reference in message.link_references
+        }
         for link in message.links:
             url = str(link or "").strip()
             if not _is_absolute_http_url(url):
                 continue
-            normalized_key = url.lower()
+            normalized_key = url_identity(url)
             if normalized_key in seen:
                 continue
             seen.add(normalized_key)
+            reference = references_by_identity.get(normalized_key)
+            link_context = " ".join(
+                part
+                for part in (
+                    str(getattr(reference, "anchor_text", "") or ""),
+                    str(getattr(reference, "nearby_text", "") or ""),
+                    _link_context(message_text=message_text, url=url),
+                )
+                if part
+            ).casefold()
             score, reasons, has_report_evidence = _score_link(
                 url=url,
                 message_text=message_text,
-                link_context=_link_context(message_text=message_text, url=url),
+                link_context=link_context,
                 source_host=source_host,
                 title_tokens=title_tokens,
                 publisher_tokens=publisher_tokens,
@@ -132,15 +147,14 @@ def _score_link(
     score = 0.0
     reasons: list[str] = []
     has_report_evidence = False
-    matched_title_in_message = title_tokens & _meaningful_tokens(message_text)
-    message_has_report_delivery_context = (
-        bool(matched_title_in_message)
-        and any(marker in message_text for marker in _REPORT_LINK_MARKERS)
+    matched_title_in_context = title_tokens & _meaningful_tokens(link_context)
+    message_has_report_delivery_context = bool(matched_title_in_context) and any(
+        marker in link_context for marker in _REPORT_LINK_MARKERS
     )
     link_is_publisher_related = _host_matches_source(
         host=host, source_host=source_host
     ) or bool(publisher_tokens & _meaningful_tokens(f"{host} {path_query}"))
-    matched_title = title_tokens & _meaningful_tokens(haystack)
+    matched_title = title_tokens & _meaningful_tokens(f"{haystack} {link_context}")
     matched_publisher = publisher_tokens & _meaningful_tokens(
         f"{haystack} {message_text}"
     )
@@ -221,9 +235,7 @@ def _link_context_has_report_cta(
 
 def _host_matches_source(*, host: str, source_host: str) -> bool:
     normalized_host = str(host or "").strip().lower().removeprefix("www.")
-    normalized_source_host = (
-        str(source_host or "").strip().lower().removeprefix("www.")
-    )
+    normalized_source_host = str(source_host or "").strip().lower().removeprefix("www.")
     if not normalized_host or not normalized_source_host:
         return False
     return normalized_host == normalized_source_host or normalized_host.endswith(

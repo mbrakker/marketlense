@@ -1417,6 +1417,9 @@
             }
           ]
         },
+        "mail_delivery_generation_id": {
+          "type": "string"
+        },
         "mailbox_settings": {
           "anyOf": [
             {},
@@ -1591,6 +1594,26 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "mail_delivery_request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mail_delivery_requested_after_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "normalized_url": {
           "type": "string"
@@ -25599,6 +25622,16 @@
         "created_at": {
           "type": "number"
         },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -25627,6 +25660,16 @@
     "src.contracts.lock.LockReleaseRequest": {
       "additionalProperties": false,
       "properties": {
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -26129,6 +26172,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.mailbox_acquisition.MailboxLinkReference": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_text": {
+          "type": "string"
+        },
+        "nearby_text": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "anchor_text",
+        "nearby_text"
+      ],
+      "type": "object"
+    },
     "src.contracts.mailbox_acquisition.MailboxMessage": {
       "additionalProperties": false,
       "properties": {
@@ -26146,6 +26213,12 @@
         },
         "html_body": {
           "type": "string"
+        },
+        "link_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxLinkReference"
+          },
+          "type": "array"
         },
         "links": {
           "items": {
@@ -34722,6 +34795,12 @@
           },
           "type": "object"
         },
+        "dpi": {
+          "type": "integer"
+        },
+        "image_sha256": {
+          "type": "string"
+        },
         "path": {
           "type": "string"
         },
@@ -34769,6 +34848,28 @@
           ],
           "type": "array"
         },
+        "full_page_target": {
+          "type": "boolean"
+        },
+        "original_bbox": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "page": {
           "type": "integer"
         },
@@ -34793,7 +34894,8 @@
         "schema_version",
         "pdf_path",
         "page",
-        "bbox"
+        "bbox",
+        "original_bbox"
       ],
       "type": "object"
     },
@@ -34818,6 +34920,9 @@
             }
           ],
           "type": "array"
+        },
+        "degradation_reason": {
+          "type": "string"
         },
         "page": {
           "type": "integer"
@@ -34941,14 +35046,105 @@
     "src.contracts.report_assets.CropRefinePageRenderResponse": {
       "additionalProperties": false,
       "properties": {
+        "coordinate_transform_version": {
+          "type": "string"
+        },
+        "crop_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_height": {
           "type": "integer"
         },
         "image_path": {
           "type": "string"
         },
+        "image_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_width": {
           "type": "integer"
+        },
+        "media_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "page": {
           "type": "integer"
@@ -34958,6 +35154,40 @@
         },
         "page_width": {
           "type": "number"
+        },
+        "pdf_page_height": {
+          "type": "number"
+        },
+        "pdf_page_width": {
+          "type": "number"
+        },
+        "pdf_to_display_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "rotation": {
+          "type": "integer"
         },
         "scale_x": {
           "type": "number"
@@ -34978,7 +35208,16 @@
         "page_width",
         "page_height",
         "scale_x",
-        "scale_y"
+        "scale_y",
+        "coordinate_transform_version",
+        "display_to_pdf_transform",
+        "pdf_to_display_transform",
+        "image_to_pdf_transform",
+        "rotation",
+        "crop_box",
+        "media_box",
+        "pdf_page_width",
+        "pdf_page_height"
       ],
       "type": "object"
     },
@@ -34994,11 +35233,39 @@
           },
           "type": "array"
         },
+        "coordinate_transform_version": {
+          "type": "string"
+        },
         "cost_daily_path": {
           "type": "string"
         },
         "cost_ledger_path": {
           "type": "string"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "execution_identity": {
           "type": "string"
@@ -36106,6 +36373,9 @@
     "src.contracts.report_cards.CardCoverAsset": {
       "additionalProperties": false,
       "properties": {
+        "content_sha256": {
+          "type": "string"
+        },
         "height": {
           "type": "integer"
         },
@@ -36231,6 +36501,9 @@
     "src.contracts.report_cards.ReportCardManifest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },
@@ -36319,6 +36592,9 @@
     "src.contracts.report_cards.ReportCardManifestRequest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },
@@ -37040,6 +37316,12 @@
           "type": "string"
         },
         "caption_source": {
+          "type": "string"
+        },
+        "crop_dpi": {
+          "type": "integer"
+        },
+        "crop_image_sha256": {
           "type": "string"
         },
         "crop_qa_accepted": {
@@ -38853,6 +39135,37 @@
       ],
       "type": "object"
     },
+    "src.contracts.signal_candidates.SignalCandidateManifestSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group": {
+          "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+        },
+        "manifest_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_sha256",
+        "extraction_request_id",
+        "group",
+        "candidates"
+      ],
+      "type": "object"
+    },
     "src.contracts.signal_candidates.SignalCandidateReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -38882,6 +39195,9 @@
         },
         "limit": {
           "type": "integer"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -38931,6 +39247,9 @@
             "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
           },
           "type": "array"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -39036,6 +39355,12 @@
         },
         "group_count": {
           "type": "integer"
+        },
+        "manifest_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
@@ -48940,6 +49265,9 @@
           },
           "type": "array"
         },
+        "candidate_manifest_sha256": {
+          "type": "string"
+        },
         "category_filters": {
           "items": {
             "type": "string"
@@ -49144,6 +49472,9 @@
         "body_html": {
           "type": "string"
         },
+        "candidate_group_id": {
+          "type": "string"
+        },
         "card_content": {
           "$ref": "#/$defs/src.contracts.signal_cards.SignalCardContent"
         },
@@ -49173,6 +49504,12 @@
         },
         "slug": {
           "type": "string"
+        },
+        "source_attributions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_entities.SignalSourceAttribution"
+          },
+          "type": "array"
         },
         "source_report_ids": {
           "items": {
@@ -49227,6 +49564,24 @@
         "uncertainty",
         "validation_status",
         "card_content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalSourceAttribution": {
+      "additionalProperties": false,
+      "properties": {
+        "publisher": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id"
       ],
       "type": "object"
     },
@@ -53641,6 +53996,9 @@
           "type": "string"
         },
         "frozen_evidence_manifest": {
+          "type": "string"
+        },
+        "frozen_manifest_sha256": {
           "type": "string"
         },
         "input_content_hash": {

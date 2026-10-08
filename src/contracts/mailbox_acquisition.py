@@ -73,7 +73,12 @@ class MailboxAccessPreflightResponse:
 class MailboxMessage:
     schema_version: str = field(metadata={"doc": "Mailbox message schema version."})
     provider_message_id: str = field(
-        metadata={"doc": "Provider-specific stable mailbox message ID."}
+        metadata={
+            "doc": (
+                "Opaque stable provider/account/mailbox-scoped message ID; IMAP IDs "
+                "include UIDVALIDITY and UID."
+            )
+        }
     )
     subject: str = field(metadata={"doc": "Message subject."})
     sender: str = field(metadata={"doc": "Message sender header."})
@@ -93,6 +98,26 @@ class MailboxMessage:
         metadata={
             "doc": "Materialized PDF artifacts extracted from message attachments."
         },
+    )
+    link_references: list["MailboxLinkReference"] = field(
+        default_factory=list,
+        metadata={
+            "doc": "Bounded anchor and nearby text for each extracted message link."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class MailboxLinkReference:
+    schema_version: str = field(
+        metadata={"doc": "Mailbox link reference schema version."}
+    )
+    url: str = field(metadata={"doc": "Literal absolute HTTP URL from the message."})
+    anchor_text: str = field(
+        metadata={"doc": "Visible HTML anchor text, when present."}
+    )
+    nearby_text: str = field(
+        metadata={"doc": "Bounded local text surrounding the link in the message."}
     )
 
 

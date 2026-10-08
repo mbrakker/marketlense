@@ -60,6 +60,11 @@ CROP_STRICT_EDGE_TRIM_OVERLAP_RATIO = 0.25
 CROP_STRICT_EDGE_TRIM_MARGIN = 1.0
 
 
+def _canonical_page_rect(page: fitz.Page) -> fitz.Rect:
+    """Bounds for extraction/crop bboxes in unrotated crop-relative coordinates."""
+    return fitz.Rect(0, 0, page.cropbox.width, page.cropbox.height)
+
+
 CROP_REFINE_EDGE_MAX_TRIM_FRAC = 0.035
 
 
@@ -161,7 +166,8 @@ def _chart_has_bottom_edge_text(
 ) -> bool:
     bottom_gap = min(LEGACY_CHART_BOTTOM_EDGE_TEXT_MAX_GAP, rect.height * 0.12)
     lower_bound = rect.y0 + rect.height * 0.45
-    page_center_x = page.rect.x0 + page.rect.width / 2.0
+    page_rect = _canonical_page_rect(page)
+    page_center_x = page_rect.x0 + page_rect.width / 2.0
     for block_rect, raw_text in get_page_text_block_pairs(
         page,
         cache=artifact_cache,
@@ -182,11 +188,11 @@ def _chart_has_bottom_edge_text(
             continue
         if _is_page_number_text(text):
             block_center_x = block_rect.x0 + block_rect.width / 2.0
-            near_page_bottom = block_rect.y0 >= page.rect.y1 - page.rect.height * 0.12
-            near_page_left = block_rect.x0 <= page.rect.x0 + page.rect.width * 0.12
-            near_page_right = block_rect.x1 >= page.rect.x1 - page.rect.width * 0.12
+            near_page_bottom = block_rect.y0 >= page_rect.y1 - page_rect.height * 0.12
+            near_page_left = block_rect.x0 <= page_rect.x0 + page_rect.width * 0.12
+            near_page_right = block_rect.x1 >= page_rect.x1 - page_rect.width * 0.12
             near_page_center = (
-                abs(block_center_x - page_center_x) <= page.rect.width * 0.08
+                abs(block_center_x - page_center_x) <= page_rect.width * 0.08
             )
             if near_page_bottom and (
                 near_page_left or near_page_right or near_page_center
@@ -255,6 +261,7 @@ def _expand_chart_top_to_nearby_fill_rect(
     page: fitz.Page, rect: fitz.Rect
 ) -> fitz.Rect:
     adjusted = fitz.Rect(rect)
+    page_rect = _canonical_page_rect(page)
     for draw in page.get_drawings():
         if draw.get("type") not in {"f", "fs"}:
             continue
@@ -279,7 +286,7 @@ def _expand_chart_top_to_nearby_fill_rect(
             continue
         adjusted.y0 = min(
             adjusted.y0,
-            max(page.rect.y0, draw_rect.y0 - LEGACY_CHART_FILL_TOP_EXPAND_PAD),
+            max(page_rect.y0, draw_rect.y0 - LEGACY_CHART_FILL_TOP_EXPAND_PAD),
         )
     return adjusted
 
@@ -325,7 +332,7 @@ def _tighten_crop_rect_for_strict_mode(
     page: fitz.Page, rect: fitz.Rect, *, mode: str
 ) -> fitz.Rect:
     adjusted = fitz.Rect(rect)
-    page_rect = page.rect
+    page_rect = _canonical_page_rect(page)
     blocks = _crop_refine_text_blocks(page)
 
     if blocks:
@@ -371,10 +378,10 @@ def _tighten_crop_rect_for_strict_mode(
 
 
 def _tighten_chart_crop_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
-    adjusted = fitz.Rect(rect) & page.rect
+    page_rect = _canonical_page_rect(page)
+    adjusted = fitz.Rect(rect) & page_rect
     if adjusted.is_empty:
         return adjusted
-    page_rect = page.rect
     ref_rect: Optional[fitz.Rect] = None
 
     cap_rect, cap_text = _nearest_caption_block(page, adjusted, CHART_CAPTION_HINTS)
@@ -424,13 +431,14 @@ def _tighten_chart_crop_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
 
 
 def _tighten_table_crop_rect(page: fitz.Page, rect: fitz.Rect) -> fitz.Rect:
-    adjusted = fitz.Rect(rect) & page.rect
+    page_rect = _canonical_page_rect(page)
+    adjusted = fitz.Rect(rect) & page_rect
     if adjusted.is_empty:
         return adjusted
-    adjusted = _trim_top_page_number(adjusted, page, None) & page.rect
-    adjusted = snap_table_rect_to_outer_rules(page, adjusted) & page.rect
+    adjusted = _trim_top_page_number(adjusted, page, None) & page_rect
+    adjusted = snap_table_rect_to_outer_rules(page, adjusted) & page_rect
     if adjusted.width < 1 or adjusted.height < 1:
-        return rect & page.rect
+        return rect & page_rect
     return adjusted
 
 
@@ -450,7 +458,9 @@ def _crop_refine_text_blocks(
 def _crop_refine_edge_guard_rect(
     page: fitz.Page, rect: fitz.Rect, *, artifact_cache=None
 ) -> fitz.Rect:
-    page_rect = page.rect
+    # Extraction and crop bboxes use unrotated, crop-relative PDF coordinates;
+    # page.rect is rotated for display and can have swapped dimensions.
+    page_rect = _canonical_page_rect(page)
     pad_x = min(
         max(page_rect.width * CROP_REFINE_BBOX_PAD_X_FRAC, CROP_REFINE_BBOX_PAD_MIN),
         CROP_REFINE_BBOX_PAD_MAX,
@@ -550,6 +560,7 @@ def _crop_refine_edge_guard_rect(
 
 
 __all__ = [
+    "_canonical_page_rect",
     "CROP_STRICT_EDGE_TOUCH_TOL",
     "CROP_STRICT_EDGE_MIN_OVERLAP",
     "CROP_STRICT_EDGE_TRIM_OVERLAP_RATIO",

@@ -12,3 +12,4 @@ from ._test_report_render_generator.cases_01_render_output_and_cards import (
     _source,
 )
 from ._test_report_render_generator.cases_01_render_output_and_cards import *  # noqa: F401,F403
+from ._test_report_render_generator.cases_02_cover_reuse import *  # noqa: F401,F403

@@ -154,6 +154,15 @@ class ReportAcquisitionPayload(WorkflowQueuePayload):
 
 @dataclass(frozen=True)
 class MailboxDeliveryPayload(WorkflowQueuePayload):
+    schema_version: str = field(
+        default="2.0",
+        metadata={
+            "doc": (
+                "Mailbox-delivery payload version; 2.0 requires a persisted request "
+                "ID and exact submission watermark."
+            )
+        },
+    )
     delivery_request_id: str = ""
     source_url: str = ""
     publisher_id: str = ""
@@ -220,6 +229,7 @@ class SignalCandidatePayload(WorkflowQueuePayload):
 class SignalGenerationPayload(WorkflowQueuePayload):
     candidate_group_id: str = ""
     frozen_evidence_manifest: str = ""
+    frozen_manifest_sha256: str = ""
     model_routing_policy_version: str = ""
     extraction_request_id: str = ""
     topic: str = ""

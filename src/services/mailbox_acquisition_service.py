@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import imaplib
 import io
 import logging
@@ -17,7 +18,6 @@ from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, cast
-from urllib.parse import unquote
 from uuid import uuid4
 
 from bs4 import BeautifulSoup
@@ -35,6 +35,7 @@ from src.contracts.mailbox_acquisition import (
     MailboxAttachmentMaterializeRequest,
     MailboxAttachmentMaterializeResponse,
     MailboxAccessPreflightResponse,
+    MailboxLinkReference,
     MailboxMessage,
     MailboxSearchRequest,
     MailboxSearchResult,
@@ -54,6 +55,7 @@ from src.services.llm_usage_ledger_service import (
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.url_utils import url_identity
 
 logger = logging.getLogger("market_lense.mailbox_acquisition_service")
 
@@ -161,6 +163,8 @@ def _finalize_mailbox_read(
 def search_mailbox_messages(
     request: MailboxSearchRequest,
     ctx: RunContext,
+    *,
+    imap_connection_factory: Callable[[str, int], Any] | None = None,
 ) -> MailboxSearchResult:
     settings = request.settings
     provider = str(settings.provider or "").strip().lower()
@@ -192,7 +196,9 @@ def search_mailbox_messages(
                     result = _search_gmail_messages(request, ctx)
                 elif selected_provider == "imap":
                     provider_attempts += 1
-                    result = _search_imap_messages(request, ctx)
+                    result = _search_imap_messages(
+                        request, ctx, connection_factory=imap_connection_factory
+                    )
                 else:
                     raise AppError(
                         code="mailbox_provider_unsupported",
@@ -621,6 +627,8 @@ def _search_gmail_messages(
 def _search_imap_messages(
     request: MailboxSearchRequest,
     ctx: RunContext,
+    *,
+    connection_factory: Callable[[str, int], Any] | None = None,
 ) -> MailboxSearchResult:
     settings = request.settings
     _validate_imap_settings(settings)
@@ -629,38 +637,96 @@ def _search_imap_messages(
     )
     since_token = since.strftime("%d-%b-%Y")
     query = f'SINCE "{since_token}"'
+    mailbox = settings.imap_mailbox or "INBOX"
+    account_scope = hashlib.sha256(
+        "\0".join(
+            (
+                settings.imap_host.casefold(),
+                str(settings.imap_port),
+                settings.imap_user,
+                mailbox,
+            )
+        ).encode("utf-8")
+    ).hexdigest()
+    message_id_prefix = f"imap:{account_scope}:"
+    seen_ids = _seen_message_ids(request)
+    prior_uidvalidities = {
+        identifier[len(message_id_prefix) :].split(":", 1)[0]
+        for identifier in seen_ids
+        if identifier.startswith(message_id_prefix)
+        and ":" in identifier[len(message_id_prefix) :]
+    }
+    legacy_seen_id_count = sum(1 for identifier in seen_ids if identifier.isdecimal())
     try:
-        with imaplib.IMAP4_SSL(settings.imap_host, settings.imap_port) as conn:
+        connect = connection_factory or imaplib.IMAP4_SSL
+        with connect(settings.imap_host, settings.imap_port) as conn:
             conn.login(settings.imap_user, settings.imap_password)
-            conn.select(settings.imap_mailbox or "INBOX")
-            status, data = conn.search(None, "SINCE", since_token)
+            status, _selection_data = conn.select(mailbox, readonly=True)
             if status != "OK":
-                raise RuntimeError(f"IMAP search returned {status}")
+                raise RuntimeError("IMAP mailbox could not be opened read-only")
+            _response_type, validity_data = conn.response("UIDVALIDITY")
+            uid_validity_raw = next((item for item in validity_data or [] if item), b"")
+            uid_validity = (
+                uid_validity_raw.decode("ascii", "ignore")
+                if isinstance(uid_validity_raw, bytes)
+                else str(uid_validity_raw)
+            ).strip()
+            if (
+                not uid_validity.isdecimal()
+                or not 1 <= int(uid_validity) <= 4_294_967_295
+            ):
+                raise AppError(
+                    code="mailbox_imap_uidvalidity_invalid",
+                    message="IMAP server did not provide a valid mailbox identity",
+                    retryable=True,
+                )
+            status, data = conn.uid("search", "SINCE", since_token)
+            if status != "OK":
+                raise RuntimeError("IMAP UID search failed")
             ids = (data[0] or b"").split()
-            seen_ids = _seen_message_ids(request)
             selected_ids = [
-                item
-                for item in list(reversed(ids))
-                if item.decode("ascii", "ignore").casefold() not in seen_ids
+                (item, f"{message_id_prefix}{uid_validity}:{item.decode('ascii')}")
+                for item in reversed(ids)
+                if item.isdigit()
+                and f"{message_id_prefix}{uid_validity}:{item.decode('ascii')}".casefold()
+                not in seen_ids
             ][: settings.max_results]
             messages: list[MailboxMessage] = []
-            for raw_id in selected_ids:
-                fetch_status, fetch_data = conn.fetch(raw_id, "(RFC822)")
+            invalid_internaldate_count = 0
+            for raw_uid, provider_message_id in selected_ids:
+                fetch_status, fetch_data = conn.uid(
+                    "fetch", raw_uid, "(INTERNALDATE BODY.PEEK[])"
+                )
                 if fetch_status != "OK":
                     continue
                 for payload in fetch_data:
                     if not isinstance(payload, tuple) or len(payload) < 2:
                         continue
+                    received_at_utc = _imap_internaldate_to_utc(payload[0])
+                    if not received_at_utc:
+                        invalid_internaldate_count += 1
+                        break
                     parsed = BytesParser(policy=policy.default).parsebytes(payload[1])
                     messages.append(
                         _adapt_email_message(
                             parsed,
-                            provider_message_id=raw_id.decode("ascii", "ignore"),
+                            provider_message_id=provider_message_id,
+                            received_at_utc=received_at_utc,
                             settings=settings,
                             ctx=ctx,
                         )
                     )
                     break
+            if invalid_internaldate_count:
+                logger.warning(
+                    log_event(
+                        ctx,
+                        role="service",
+                        event="mailbox_imap_invalid_internaldate_skipped",
+                        module=logger.name,
+                        fields={"message_count": invalid_internaldate_count},
+                    )
+                )
     except AppError:
         raise
     except Exception as exc:  # pragma: no cover - provider envelope
@@ -671,6 +737,35 @@ def _search_imap_messages(
             cause=exc,
             context={"host": settings.imap_host, "mailbox": settings.imap_mailbox},
         ) from exc
+    if prior_uidvalidities and any(
+        previous != uid_validity for previous in prior_uidvalidities
+    ):
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="mailbox_imap_uidvalidity_cursor_reset",
+                module=logger.name,
+                fields={
+                    "cursor_reset": True,
+                    "previous_uidvalidity_count": len(prior_uidvalidities),
+                    "uidvalidity": uid_validity,
+                },
+            )
+        )
+    if legacy_seen_id_count:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="mailbox_imap_legacy_sequence_cache_invalidated",
+                module=logger.name,
+                fields={
+                    "legacy_seen_id_count": legacy_seen_id_count,
+                    "cursor_reset": True,
+                },
+            )
+        )
     logger.info(
         log_event(
             ctx,
@@ -754,7 +849,7 @@ def _adapt_gmail_message(
     )
     internal_ms = int(str(payload.get("internalDate") or "0") or "0")
     received = datetime.fromtimestamp(internal_ms / 1000, tz=timezone.utc)
-    links = _extract_links(text_body=text_body, html_body=html_body)
+    link_references = _extract_link_references(text_body=text_body, html_body=html_body)
     artifacts = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
@@ -774,7 +869,8 @@ def _adapt_gmail_message(
         .replace("+00:00", "Z"),
         text_body=text_body[:_BODY_CHAR_LIMIT],
         html_body=html_body[:_BODY_CHAR_LIMIT],
-        links=links,
+        links=[reference.url for reference in link_references],
+        link_references=link_references,
         attachment_file_names=[attachment.file_name for attachment in attachments],
         attachment_artifacts=artifacts,
     )
@@ -874,6 +970,7 @@ def _adapt_email_message(
     message: Message | EmailMessage,
     *,
     provider_message_id: str,
+    received_at_utc: str,
     settings: MailboxAcquisitionSettings,
     ctx: RunContext,
 ) -> MailboxMessage:
@@ -914,9 +1011,9 @@ def _adapt_email_message(
             text_chunks.append(str(body))
         elif content_type == "text/html":
             html_chunks.append(str(body))
-    received_at = _message_date_to_utc(str(message.get("Date") or ""))
     text_body = "\n".join(text_chunks)[:_BODY_CHAR_LIMIT]
     html_body = "\n".join(html_chunks)[:_BODY_CHAR_LIMIT]
+    link_references = _extract_link_references(text_body=text_body, html_body=html_body)
     artifacts = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
@@ -931,10 +1028,11 @@ def _adapt_email_message(
         provider_message_id=provider_message_id,
         subject=str(message.get("Subject") or ""),
         sender=str(message.get("From") or ""),
-        received_at_utc=received_at,
+        received_at_utc=received_at_utc,
         text_body=text_body,
         html_body=html_body,
-        links=_extract_links(text_body=text_body, html_body=html_body),
+        links=[reference.url for reference in link_references],
+        link_references=link_references,
         attachment_file_names=_dedupe_strings(
             [attachment.file_name for attachment in attachments]
         ),
@@ -1249,36 +1347,118 @@ def _safe_file_name(value: str) -> str:
     return token or "attachment"
 
 
-def _message_date_to_utc(value: str) -> str:
+def _imap_internaldate_to_utc(value: bytes | str | None) -> str:
+    raw = value if isinstance(value, bytes) else str(value or "").encode("utf-8")
+    match = re.search(rb'INTERNALDATE\s+"([^"]+)"', raw, re.IGNORECASE)
+    if match is None:
+        return ""
     try:
-        parsed = parsedate_to_datetime(value)
+        parsed = parsedate_to_datetime(match.group(1).decode("ascii"))
         if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
+            return ""
         return (
             parsed.astimezone(timezone.utc)
             .replace(microsecond=0)
             .isoformat()
             .replace("+00:00", "Z")
         )
-    except Exception:
-        return utc_now_seconds_z()
+    except (UnicodeDecodeError, TypeError, ValueError, OverflowError):
+        return ""
 
 
 def _extract_links(*, text_body: str, html_body: str) -> list[str]:
-    links: list[str] = []
-    for match in _URL_RX.findall(text_body or ""):
-        links.append(_clean_url(match))
+    return [
+        reference.url
+        for reference in _extract_link_references(
+            text_body=text_body, html_body=html_body
+        )
+    ]
+
+
+def _extract_link_references(
+    *, text_body: str, html_body: str
+) -> list[MailboxLinkReference]:
+    references: list[MailboxLinkReference] = []
+    for match in _URL_RX.finditer(text_body or ""):
+        url = _clean_url(match.group(0))
+        if _is_absolute_http_url(url):
+            references.append(
+                MailboxLinkReference(
+                    schema_version="1.0",
+                    url=url,
+                    anchor_text="",
+                    nearby_text=_bounded_context(text_body, match.start(), match.end()),
+                )
+            )
     if html_body:
         soup = BeautifulSoup(html_body, "html.parser")
         for anchor in soup.find_all("a", href=True):
-            links.append(_clean_url(str(anchor.get("href") or "")))
-        for match in _URL_RX.findall(soup.get_text(" ")):
-            links.append(_clean_url(match))
-    return _dedupe_strings([link for link in links if _is_absolute_http_url(link)])
+            # An HTML href is already a delimited attribute; punctuation at
+            # its end can be part of a signed token and must remain intact.
+            url = str(anchor.get("href") or "").strip()
+            if not _is_absolute_http_url(url):
+                continue
+            anchor_text = str(anchor.get_text(" ", strip=True) or "")[:160]
+            parent_text = str(anchor.parent.get_text(" ", strip=True) or "")
+            anchor_index = parent_text.find(anchor_text) if anchor_text else -1
+            nearby_text = (
+                _bounded_context(
+                    parent_text,
+                    anchor_index,
+                    anchor_index + len(anchor_text),
+                )
+                if anchor_index >= 0
+                else anchor_text
+            )
+            references.append(
+                MailboxLinkReference(
+                    schema_version="1.0",
+                    url=url,
+                    anchor_text=anchor_text,
+                    nearby_text=nearby_text,
+                )
+            )
+        html_text = soup.get_text(" ")
+        for match in _URL_RX.finditer(html_text):
+            url = _clean_url(match.group(0))
+            if _is_absolute_http_url(url):
+                references.append(
+                    MailboxLinkReference(
+                        schema_version="1.0",
+                        url=url,
+                        anchor_text="",
+                        nearby_text=_bounded_context(
+                            html_text, match.start(), match.end()
+                        ),
+                    )
+                )
+    deduped: list[MailboxLinkReference] = []
+    seen: dict[str, int] = {}
+    for reference in references:
+        marker = url_identity(reference.url)
+        index = seen.get(marker)
+        if index is None:
+            seen[marker] = len(deduped)
+            deduped.append(reference)
+        elif not deduped[index].anchor_text and reference.anchor_text:
+            deduped[index] = reference
+    return deduped
 
 
 def _clean_url(value: str) -> str:
-    return unquote(str(value or "").strip().rstrip(".,;:)>]}'\""))
+    return str(value or "").strip().rstrip(".,;:)>]}'\"")
+
+
+def _bounded_context(text: str, start: int, end: int, *, limit: int = 360) -> str:
+    token = " ".join(str(text or "").split())
+    if not token:
+        return ""
+    # Matching offsets come from the pre-normalized source, so fall back to a
+    # bounded leading excerpt if whitespace normalization changed the length.
+    if start < 0 or end < start or end > len(token):
+        return token[:limit]
+    radius = max(0, (limit - (end - start)) // 2)
+    return token[max(0, start - radius) : min(len(token), end + radius)][:limit]
 
 
 def _is_absolute_http_url(url: str) -> bool:

@@ -1,5 +1,8 @@
-# ruff: noqa: F401,F403,F405
+# ruff: noqa: F401,F403,F405,I001
 from __future__ import annotations
+
+import hashlib
+
 from ._split_support_cases_01_render_output_and_cards import *  # noqa: F401,F403
 
 
@@ -161,8 +164,15 @@ def test_render_report_output_uses_html_cache_hit_and_skips_render(tmp_path):
 
     def _hash_bundle(req, ctx):
         del ctx
-        assert {Path(path).name for path in req.paths} == set(template_contents)
-        return SimpleNamespace(sha256=_template_bundle_sha(template_contents))
+        if {Path(path).name for path in req.paths} == set(template_contents):
+            return SimpleNamespace(sha256=_template_bundle_sha(template_contents))
+        return SimpleNamespace(
+            sha256="style-bundle",
+            file_sha256={
+                path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                for path in req.paths
+            },
+        )
 
     def _file_stat(req, ctx):
         del ctx
@@ -246,8 +256,17 @@ def test_render_report_output_invalidates_cache_when_css_template_changes(tmp_pa
 
     def _hash_bundle(req, ctx):
         del ctx
-        assert {Path(path).name for path in req.paths} == set(current_template_contents)
-        return SimpleNamespace(sha256=_template_bundle_sha(current_template_contents))
+        if {Path(path).name for path in req.paths} == set(current_template_contents):
+            return SimpleNamespace(
+                sha256=_template_bundle_sha(current_template_contents)
+            )
+        return SimpleNamespace(
+            sha256="style-bundle",
+            file_sha256={
+                path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                for path in req.paths
+            },
+        )
 
     def _render_report(req, ctx):
         del ctx
@@ -510,6 +529,8 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
     selection = _selection(runtime, source)
     baseline = _analysis(runtime, source, selection)
     generated_covers = []
+    rendered_bytes = []
+    written_manifests = []
     html_path = Path(tmp_path / "out" / "report.html")
     html_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -518,31 +539,59 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
         html_path.write_text("<html></html>", encoding="utf-8")
         return SimpleNamespace(schema_version="1.0", html_path=str(html_path))
 
+    def _generate_covers(request, ctx):
+        del ctx
+        generated_covers.append(request)
+        assets = _cover_assets(runtime)
+        outputs = (assets.small, assets.medium, assets.large)
+        for asset in outputs:
+            path = Path(asset.output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(
+                f"{request.reports[0].fingerprint.seed}:{asset.size}".encode()
+            )
+        rendered_bytes.append(
+            tuple(Path(asset.output_path).read_bytes() for asset in outputs)
+        )
+        return [SimpleNamespace(status="generated", assets=assets, error=None)]
+
     deps = _deps(
         render_report=_render_report,
-        generate_cover_images=lambda req, ctx: (
-            generated_covers.append(req)
-            or [
-                SimpleNamespace(
-                    status="generated", assets=_cover_assets(runtime), error=None
-                )
-            ]
-        ),
-        write_report_card_manifest=lambda req, ctx: SimpleNamespace(
-            manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+        generate_cover_images=_generate_covers,
+        write_report_card_manifest=lambda req, ctx: (
+            written_manifests.append(req.manifest)
+            or SimpleNamespace(
+                manifest_path=str(Path(req.output_dir) / "report-card-manifest.json")
+            )
         ),
     )
     preview = render_preview_asset(runtime, source, deps)
     payloads = [
-        {**baseline.artifacts_payload, "_cache": {"hit": False}},
-        {**baseline.artifacts_payload, "_cache": {"hit": True, "elapsed_ms": 17}},
+        {
+            **baseline.artifacts_payload,
+            "_cache": {
+                "hit": False,
+                "elapsed_ms": 17,
+                "usage": {"prompt_tokens": 20},
+                "reuse": "cold",
+            },
+        },
+        {
+            **baseline.artifacts_payload,
+            "_cache": {
+                "hit": True,
+                "elapsed_ms": 900,
+                "usage": {"prompt_tokens": 200, "completion_tokens": 30},
+                "reuse": "warm",
+            },
+        },
         {
             **baseline.artifacts_payload,
             "insights_final": [
                 {"text": "A changed first finding."},
                 baseline.artifacts_payload["insights_final"][1],
             ],
-            "_cache": {"hit": True, "elapsed_ms": 17},
+            "_cache": {"hit": True, "elapsed_ms": 900, "reuse": "warm"},
         },
     ]
 
@@ -556,10 +605,14 @@ def test_report_card_seed_ignores_runtime_cache_metadata_but_tracks_artifact_cha
             preview_resp=preview,
         )
 
-    seeds = [request.reports[0].fingerprint.seed for request in generated_covers]
-    assert len(seeds) == 3
-    assert seeds[0] == seeds[1]
-    assert seeds[2] != seeds[1]
+    fingerprints = [request.reports[0].fingerprint for request in generated_covers]
+    assert len(fingerprints) == 3
+    assert fingerprints[0] == fingerprints[1]
+    assert fingerprints[2] != fingerprints[1]
+    assert rendered_bytes[0] == rendered_bytes[1]
+    assert rendered_bytes[2] != rendered_bytes[1]
+    assert written_manifests[0] == written_manifests[1]
+    assert written_manifests[2] != written_manifests[1]
 
 
 def test_render_omits_ambiguous_retained_cover_period_before_card_generation(tmp_path):

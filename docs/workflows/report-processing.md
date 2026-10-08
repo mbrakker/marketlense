@@ -34,7 +34,10 @@ A render-only resume reuses report-card assets only when the complete validated
 report-card manifest is also retained. If that manifest is missing, the renderer
 regenerates the deterministic cover set and manifest before the package can
 reach the blocking publication boundary; it never reports a package as ready
-with orphaned card assets.
+with orphaned card assets. Each small, medium, and large cover records its own
+SHA-256. Warm reuse checks the saved bytes together with the safe path,
+dimensions, style, and semantic fingerprint; a checksum-less legacy asset or
+changed file is regenerated.
 The manifest must be written successfully before readiness can pass. When the
 summary abstains, final insights must retain at least one complete, directly
 supported sentence of 18 words or fewer for the compact card. If no such insight
@@ -58,6 +61,14 @@ unique temporary file followed by an atomic replace. A bounded retry absorbs
 transient Windows replacement contention. This makes the cache race-safe
 without treating a missing sidecar as a valid cache hit; an interrupted write
 is simply regenerated.
+Crop-refinement boxes use canonical unrotated, crop-relative PDF points. The
+page-render contract records the rotation/crop/media boxes and versioned affine
+maps between those points, the displayed page, and image pixels. The model sees
+candidate boxes in the displayed frame and returned boxes are mapped back once
+before PDF cropping. Invalid model geometry is rejected; out-of-page or
+near-page expansions fall back to the validated source candidate, unless its
+source metadata explicitly identifies a full-page target. Final crop rendering
+maps canonical boxes through page rotation before applying the image clip.
 Primary figure extraction applies the same 240-character absolute-path budget
 before asking PyMuPDF to write its image. Deep isolated runs deterministically
 compact the report asset directory and, when needed, the image filename with a
@@ -77,6 +88,13 @@ PDF cache paths use the same safety budget for both the final destination and
 the unique atomic-write temporary file. Deep isolated runs compact the cache
 directory and key filename together, so neither `os.replace` target exceeds
 the supported Windows path length.
+
+Final figure selection promotes only an accepted `publication_strict` crop
+rendered at the configured final DPI and carrying its QA sidecar and image
+SHA-256. Crop cache entries bind both the image and QA sidecar checksums;
+candidate previews are re-rendered at final DPI before selection. Legacy or
+embedded images without this proof are omitted, and the report renderer checks
+the selected image checksum before displaying it.
 Native extracted text remains keyed by the original source MD5 and extraction
 limits. OCR-derived text is keyed by the verified checksum of the rendered OCR
 PDF, extraction limits, and extractor generation; a legacy OCR-text entry

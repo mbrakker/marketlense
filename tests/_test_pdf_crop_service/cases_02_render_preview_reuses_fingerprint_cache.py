@@ -1,6 +1,7 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from os.path import relpath
 from pathlib import Path
@@ -123,6 +124,7 @@ def test_render_preview_reuses_fingerprint_cache_on_partial_change_rerun(
     events = _events(caplog, "market_lense.pdf_service.preview")
     assert any(event.get("event") == "preview_render_cache_hit" for event in events)
 
+
 def test_render_page_for_crop_refine_invalidates_stale_artifact_version(
     tmp_path, caplog
 ) -> None:
@@ -169,6 +171,7 @@ def test_render_page_for_crop_refine_invalidates_stale_artifact_version(
         and event["fields"].get("validity_reason") == "version_changed"
         for event in events
     )
+
 
 def test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun(
     tmp_path, caplog
@@ -264,7 +267,7 @@ def test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_pat
     assert len(str(sidecar_path.resolve())) <= 240
 
 
-def test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics(
+def test_publication_strict_cache_regenerates_tampered_qa_diagnostics(
     tmp_path, caplog
 ) -> None:
     pdf_path = tmp_path / "strict-cache.pdf"
@@ -301,13 +304,18 @@ def test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics(
     caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
     second = crop_regions(request, _ctx())
 
-    assert second.paths == []
+    assert second.paths == first.paths
     assert len(second.outcomes) == 1
-    assert second.outcomes[0].accepted is False
-    assert second.outcomes[0].path == ""
-    assert second.outcomes[0].rejection_reason == "neighbor_contamination"
+    assert second.outcomes[0].accepted is True
+    assert second.outcomes[0].path == first.paths[0]
+    assert second.outcomes[0].dpi == request.dpi
+    assert len(second.outcomes[0].image_sha256) == 64
     events = _events(caplog, "market_lense.pdf_service.crop")
-    assert any(event.get("event") == "crop_region_cache_rejected" for event in events)
+    assert any(
+        event.get("event") == "crop_region_cache_store"
+        and event.get("fields", {}).get("validity_reason") == "qa_sidecar_hash_changed"
+        for event in events
+    )
 
 
 @pytest.mark.parametrize("diagnostics_payload", [None, "not-json"])
@@ -352,8 +360,51 @@ def test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics(
     events = _events(caplog, "market_lense.pdf_service.crop")
     assert any(
         event.get("event") == "crop_region_cache_store"
-        and event.get("fields", {}).get("validity_reason")
-        == "qa_diagnostics_missing_or_invalid"
+        and event.get("fields", {}).get("validity_reason") == "qa_sidecar_hash_changed"
+        for event in events
+    )
+
+
+def test_publication_strict_cache_regenerates_tampered_crop_image(
+    tmp_path, caplog
+) -> None:
+    pdf_path = tmp_path / "strict-cache-image.pdf"
+    out_dir = tmp_path / "out"
+    _build_basic_pdf(pdf_path)
+    item = CropItem(
+        id="strict-figure",
+        type="figure",
+        score=91.0,
+        page=0,
+        bbox=(60, 90, 360, 280),
+    )
+    request = CropRequest(
+        schema_version="1.0",
+        pdf_path=pdf_path.as_posix(),
+        out_dir=out_dir.as_posix(),
+        report_name="report",
+        items=[item],
+        subdir="slices",
+        mode="publication_strict",
+    )
+
+    first = crop_regions(request, _ctx())
+    artifact_path = out_dir / first.paths[0]
+    tampered_image = artifact_path.read_bytes() + b"tampered"
+    tampered_sha256 = hashlib.sha256(tampered_image).hexdigest()
+    artifact_path.write_bytes(tampered_image)
+
+    caplog.set_level(logging.INFO, logger="market_lense.pdf_service.crop")
+    second = crop_regions(request, _ctx())
+
+    assert second.paths == first.paths
+    assert second.outcomes[0].accepted is True
+    assert second.outcomes[0].image_sha256 != ""
+    assert second.outcomes[0].image_sha256 != tampered_sha256
+    events = _events(caplog, "market_lense.pdf_service.crop")
+    assert any(
+        event.get("event") == "crop_region_cache_store"
+        and event.get("fields", {}).get("validity_reason") == "output_hash_changed"
         for event in events
     )
 
@@ -383,9 +434,7 @@ def test_publication_strict_cache_invalidates_old_crop_artifact_version(
 
     first = crop_regions(request, _ctx())
     artifact_path = out_dir / first.paths[0]
-    fingerprint_path = artifact_path.with_name(
-        f"{artifact_path.name}.fingerprint.json"
-    )
+    fingerprint_path = artifact_path.with_name(f"{artifact_path.name}.fingerprint.json")
     fingerprint = json.loads(fingerprint_path.read_text(encoding="utf-8"))
     fingerprint["artifact_version"] = "1.0"
     fingerprint_path.write_text(json.dumps(fingerprint), encoding="utf-8")
@@ -402,6 +451,7 @@ def test_publication_strict_cache_invalidates_old_crop_artifact_version(
         for event in events
     )
 
+
 __all__ = [
     "test_fingerprint_sidecar_write_is_safe_for_concurrent_same_artifact",
     "test_fingerprint_sidecar_resolves_relative_artifact_paths",
@@ -409,7 +459,8 @@ __all__ = [
     "test_render_page_for_crop_refine_invalidates_stale_artifact_version",
     "test_crop_regions_reuses_fingerprint_cache_on_partial_change_rerun",
     "test_crop_regions_bounds_filename_for_fingerprint_sidecar_in_deep_output_path",
-    "test_publication_strict_cache_rejects_cached_crop_from_qa_diagnostics",
+    "test_publication_strict_cache_regenerates_tampered_qa_diagnostics",
     "test_publication_strict_cache_regenerates_missing_or_invalid_qa_diagnostics",
+    "test_publication_strict_cache_regenerates_tampered_crop_image",
     "test_publication_strict_cache_invalidates_old_crop_artifact_version",
 ]

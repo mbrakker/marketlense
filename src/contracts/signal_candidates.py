@@ -16,6 +16,7 @@ from src.utils.errors import AppError
 
 
 SIGNAL_CANDIDATE_SCHEMA_VERSION = "1.0"
+SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION = "1.0"
 
 SignalCandidateType = Literal[
     "market_signal",
@@ -192,6 +193,25 @@ class SignalCandidateGroup:
 
 
 @dataclass(frozen=True)
+class SignalCandidateManifestSnapshot:
+    schema_version: str = field(
+        metadata={"doc": "Immutable Signal candidate snapshot schema version."}
+    )
+    manifest_sha256: str = field(
+        metadata={"doc": "Checksum of the complete approved semantic manifest."}
+    )
+    extraction_request_id: str = field(
+        metadata={"doc": "Extraction identity frozen with the candidate group."}
+    )
+    group: SignalCandidateGroup = field(
+        metadata={"doc": "Exact approved candidate-group record at enqueue time."}
+    )
+    candidates: List[SignalCandidate] = field(
+        metadata={"doc": "Exact candidate records referenced by the group."}
+    )
+
+
+@dataclass(frozen=True)
 class SignalCandidateBatch:
     schema_version: str = field(
         metadata={"doc": "Signal candidate batch schema version."}
@@ -244,6 +264,13 @@ class SignalCandidateStoreResponse:
     stale_group_count: int = field(
         metadata={"doc": "Number of stale group rows removed for this request."}
     )
+    manifest_hashes: Dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": "Immutable semantic snapshot checksum keyed by candidate-group ID.",
+            "required": False,
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -252,6 +279,13 @@ class SignalCandidateReadRequest:
         metadata={"doc": "Signal candidate read request schema version."}
     )
     db_path: str = field(metadata={"doc": "Analytics projection SQLite database path."})
+    manifest_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "Optional exact immutable candidate snapshot checksum.",
+            "required": False,
+        },
+    )
     extraction_request_id: str = field(
         default="",
         metadata={"doc": "Optional extraction request filter.", "required": False},
@@ -303,6 +337,13 @@ class SignalCandidateReadResponse:
     )
     groups: List[SignalCandidateGroup] = field(
         metadata={"doc": "Signal groups for returned candidates.", "required": False}
+    )
+    manifest_sha256: str = field(
+        default="",
+        metadata={
+            "doc": "Snapshot checksum read, empty for latest-view queries.",
+            "required": False,
+        },
     )
 
 
@@ -420,9 +461,10 @@ def _validate_dataclass_instance(instance: object, *, path: str) -> None:
         field_value = getattr(instance, field_def.name)
         field_path = f"{path}.{field_def.name}"
         field_annotation = type_hints.get(field_def.name, field_def.type)
-        if (
-            field_def.name == "schema_version"
-            and field_value != SIGNAL_CANDIDATE_SCHEMA_VERSION
+        if field_def.name == "schema_version" and field_value != (
+            SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION
+            if isinstance(instance, SignalCandidateManifestSnapshot)
+            else SIGNAL_CANDIDATE_SCHEMA_VERSION
         ):
             _raise_invalid(field_path, field_def.name, "unsupported schema version")
         if _field_is_list_typed(field_annotation) and field_value is None:
@@ -483,3 +525,23 @@ def _validate_dataclass_instance(instance: object, *, path: str) -> None:
                 "publication_hold_reason",
                 "held groups require a typed reason",
             )
+    if isinstance(instance, SignalCandidateManifestSnapshot):
+        if len(instance.manifest_sha256) != 64 or any(
+            character not in "0123456789abcdef"
+            for character in instance.manifest_sha256
+        ):
+            _raise_invalid(path, "manifest_sha256", "expected a lowercase SHA-256")
+        if instance.group.extraction_request_id != instance.extraction_request_id:
+            _raise_invalid(
+                path, "extraction_request_id", "does not match the frozen group"
+            )
+        if [candidate.candidate_id for candidate in instance.candidates] != (
+            instance.group.candidate_ids
+        ):
+            _raise_invalid(path, "candidates", "do not match the frozen group IDs")
+        if any(
+            candidate.group_id != instance.group.group_id
+            or candidate.extraction_request_id != instance.extraction_request_id
+            for candidate in instance.candidates
+        ):
+            _raise_invalid(path, "candidates", "do not belong to the frozen group")

@@ -19,6 +19,7 @@ from src.contracts.report_assets import CropOutcome, CropRequest, CropResponse
 from src.contracts.report_models import CropItem
 from src.contracts.run_context import RunContext
 from src.services._pdf._crop.geometry import (
+    _canonical_page_rect,
     _legacy_chart_border_trim,
     _tighten_chart_crop_rect,
     _tighten_crop_rect_for_strict_mode,
@@ -217,7 +218,9 @@ def _crop_regions(
             pno = it.page
             x0, y0, x1, y1 = it.bbox
             page = local_doc[pno]
-            rect = fitz.Rect(x0 - pad, y0 - pad, x1 + pad, y1 + pad) & page.rect
+            rect = fitz.Rect(
+                x0 - pad, y0 - pad, x1 + pad, y1 + pad
+            ) & _canonical_page_rect(page)
             effective_mode = _effective_crop_mode(mode, it.type)
             if effective_mode == "chart_strict" or it.type == "chart":
                 rect = _tighten_chart_crop_rect(page, rect)
@@ -382,6 +385,7 @@ def _crop_regions(
                             qa_sidecar_path=qa_sidecar_path,
                             qa_result=qa_result,
                             rejection_reason=_rejection_reason(qa_result),
+                            dpi=render_dpi,
                         )
                     )
                     if ctx is not None:
@@ -418,6 +422,8 @@ def _crop_regions(
                             else "",
                             qa_result=qa_result,
                             rejection_reason="",
+                            dpi=render_dpi,
+                            image_path=output_path,
                         )
                     )
                     if ctx is not None:
@@ -441,7 +447,7 @@ def _crop_regions(
             pix = _png_safe_pixmap(
                 page.get_pixmap(
                     matrix=fitz.Matrix(render_scale, render_scale),
-                    clip=region.rect,
+                    clip=region.rect * page.rotation_matrix,
                     alpha=False,
                 )
             )
@@ -632,6 +638,7 @@ def _crop_regions(
                             qa_sidecar_path=_qa_sidecar_rel_path(rel),
                             qa_result=qa_result,
                             rejection_reason=_rejection_reason(qa_result),
+                            dpi=render_dpi,
                         )
                     )
                     if ctx is not None:
@@ -685,6 +692,8 @@ def _crop_regions(
                     else "",
                     qa_result=qa_result,
                     rejection_reason="",
+                    dpi=render_dpi,
+                    image_path=output_path,
                 )
             )
     finally:
@@ -806,6 +815,8 @@ def _crop_outcome(
     qa_sidecar_path: str,
     qa_result: dict[str, object] | None,
     rejection_reason: str,
+    dpi: int,
+    image_path: Path | None = None,
 ) -> CropOutcome:
     qa = _qa_payload(qa_result)
     raw_score = qa.get("total_score")
@@ -839,7 +850,24 @@ def _crop_outcome(
         detector_summary=detector_summary,
         quality_profile=str(quality_profile or ""),
         rejection_reason=str(rejection_reason or ""),
+        dpi=max(0, int(dpi)),
+        image_sha256=(
+            _crop_image_sha256(image_path)
+            if accepted and image_path is not None
+            else ""
+        ),
     )
+
+
+def _crop_image_sha256(image_path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with image_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return ""
+    return digest.hexdigest()
 
 
 __all__ = [

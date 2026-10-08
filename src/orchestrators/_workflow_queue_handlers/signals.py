@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Callable
@@ -158,27 +158,19 @@ from .shared import (
 )
 
 
-def _signal_candidate_group_manifest_hash(
+def _signal_generation_input_hash(
     *,
-    extraction_request_id: str,
-    group_id: str,
-    topic: str,
-    candidate_ids: list[str],
-    source_report_ids: list[str],
-    evidence_ids: list[str],
-    topic_ids: list[str],
-    source_category_ids: dict[str, list[str]],
+    manifest_sha256: str,
+    model_routing_policy_version: str,
+    processing_version: str,
+    attributes: Mapping[str, object],
 ) -> str:
     return _digest(
-        "signal-candidate-group-manifest.v1",
-        extraction_request_id,
-        group_id,
-        topic,
-        *candidate_ids,
-        *source_report_ids,
-        *evidence_ids,
-        *topic_ids,
-        json.dumps(source_category_ids, sort_keys=True, separators=(",", ":")),
+        "signal-generation-input.v1",
+        manifest_sha256,
+        model_routing_policy_version,
+        processing_version,
+        json.dumps(attributes, sort_keys=True, separators=(",", ":")),
     )
 
 
@@ -272,100 +264,102 @@ def _signal_candidate_handler(
             publication_hold_reason_counts.get(reason, 0) + 1
         )
 
-    downstream = [
-        WorkflowJobSubmission(
-            schema_version="1.0",
-            queue_name="signal_generation",
-            job_type="signal_generation.v1",
-            payload=SignalGenerationPayload(
-                candidate_group_id=group.group_id,
-                frozen_evidence_manifest=f"signal-candidates:{outcome.extraction_request_id}:{group.group_id}",
-                model_routing_policy_version=payload.signal_selection_policy_version,
-                extraction_request_id=group.extraction_request_id,
-                topic=group.topic,
-                candidate_ids=list(group.candidate_ids),
-                source_report_ids=list(group.source_report_ids),
-                evidence_ids=list(group.evidence_ids),
-                topic_ids=list(group.topic_ids),
-                source_category_ids={
-                    report_id: list(category_ids)
-                    for report_id, category_ids in group.source_category_ids.items()
-                },
-                input_reference=app.signal_store_db or app.reports_db,
-                input_content_hash=_signal_candidate_group_manifest_hash(
-                    extraction_request_id=group.extraction_request_id,
-                    group_id=group.group_id,
-                    topic=group.topic,
-                    candidate_ids=group.candidate_ids,
-                    source_report_ids=group.source_report_ids,
-                    evidence_ids=group.evidence_ids,
-                    topic_ids=group.topic_ids,
-                    source_category_ids=group.source_category_ids,
-                ),
-                processing_version=payload.processing_version,
-                attributes={
-                    "config_path": config_path,
-                    "category_filters": category_filters,
-                    "date_range_end": str(payload.attributes.get("date_range_end", "")),
-                    "date_range_start": str(
-                        payload.attributes.get("date_range_start", "")
-                    ),
-                    "max_evidence_items": max_evidence_items,
-                    "max_source_reports": max_source_reports,
-                    "minimum_evidence_items": minimum_evidence_items,
-                    "minimum_source_reports": minimum_source_reports,
-                    "override_publishability": True,
-                    "publisher_filters": publisher_filters,
-                    "tag_filters": tag_filters,
-                },
-            ),
-            idempotency_key=_digest(
-                "signal-generation",
-                outcome.extraction_request_id,
-                group.group_id,
-                _signal_candidate_group_manifest_hash(
-                    extraction_request_id=group.extraction_request_id,
-                    group_id=group.group_id,
-                    topic=group.topic,
-                    candidate_ids=group.candidate_ids,
-                    source_report_ids=group.source_report_ids,
-                    evidence_ids=group.evidence_ids,
-                    topic_ids=group.topic_ids,
-                    source_category_ids=group.source_category_ids,
-                ),
-            ),
-            deduplication_scope="signal-candidate-group",
-            root_workflow_id=job.root_workflow_id or job.job_id,
-            parent_job_id=job.job_id,
-            trigger_event_id=job.trigger_event_id or job.job_id,
-            correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
-            entity_type="signal",
-            entity_id=group.group_id,
-            budget_profile="high_quality",
+    downstream: list[WorkflowJobSubmission] = []
+    manifest_hashes = outcome.stored_response.manifest_hashes
+    if any(
+        len(manifest_hashes.get(group.group_id, "")) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in manifest_hashes.get(group.group_id, "")
         )
         for group in outcome.batch.groups
-        if generate_signals
-        and group.validation_status == "approved"
-        and group.publication_status == "eligible"
-    ]
+    ):
+        raise AppError(
+            code="signal_candidate_manifest_missing",
+            message="Stored Signal candidate snapshot checksums are incomplete",
+            retryable=False,
+            severity="error",
+        )
+    for group in outcome.batch.groups:
+        if not (
+            generate_signals
+            and group.validation_status == "approved"
+            and group.publication_status == "eligible"
+        ):
+            continue
+        manifest_sha256 = manifest_hashes[group.group_id]
+        attributes: dict[str, str | int | bool | list[str]] = {
+            "config_path": config_path,
+            "category_filters": category_filters,
+            "date_range_end": str(payload.attributes.get("date_range_end", "")),
+            "date_range_start": str(payload.attributes.get("date_range_start", "")),
+            "max_evidence_items": max_evidence_items,
+            "max_source_reports": max_source_reports,
+            "minimum_evidence_items": minimum_evidence_items,
+            "minimum_source_reports": minimum_source_reports,
+            "override_publishability": True,
+            "publisher_filters": publisher_filters,
+            "tag_filters": tag_filters,
+        }
+        generation_input_hash = _signal_generation_input_hash(
+            manifest_sha256=manifest_sha256,
+            model_routing_policy_version=payload.signal_selection_policy_version,
+            processing_version=payload.processing_version,
+            attributes=attributes,
+        )
+        downstream.append(
+            WorkflowJobSubmission(
+                schema_version="1.0",
+                queue_name="signal_generation",
+                job_type="signal_generation.v1",
+                payload=SignalGenerationPayload(
+                    candidate_group_id=group.group_id,
+                    frozen_evidence_manifest=(
+                        f"signal-candidate-manifests:{group.extraction_request_id}:"
+                        f"{group.group_id}:{manifest_sha256}"
+                    ),
+                    frozen_manifest_sha256=manifest_sha256,
+                    model_routing_policy_version=payload.signal_selection_policy_version,
+                    extraction_request_id=group.extraction_request_id,
+                    topic=group.topic,
+                    candidate_ids=list(group.candidate_ids),
+                    source_report_ids=list(group.source_report_ids),
+                    evidence_ids=list(group.evidence_ids),
+                    topic_ids=list(group.topic_ids),
+                    source_category_ids={
+                        report_id: list(category_ids)
+                        for report_id, category_ids in group.source_category_ids.items()
+                    },
+                    input_reference=app.signal_store_db or app.reports_db,
+                    input_content_hash=generation_input_hash,
+                    processing_version=payload.processing_version,
+                    attributes=attributes,
+                ),
+                idempotency_key=_digest(
+                    "signal-generation",
+                    group.group_id,
+                    generation_input_hash,
+                ),
+                deduplication_scope="signal-candidate-group",
+                root_workflow_id=job.root_workflow_id or job.job_id,
+                parent_job_id=job.job_id,
+                trigger_event_id=job.trigger_event_id or job.job_id,
+                correlation_id=job.correlation_id or job.root_workflow_id or job.job_id,
+                entity_type="signal",
+                entity_id=group.group_id,
+                budget_profile="high_quality",
+            )
+        )
     return WorkflowQueueHandlerResult(
         result=WorkflowStageResult(
             output_reference=f"signal-candidates:{outcome.extraction_request_id}",
             output_content_hash=_digest(
+                "signal-candidate-batch.v1",
                 outcome.extraction_request_id,
-                *[
-                    _signal_candidate_group_manifest_hash(
-                        extraction_request_id=group.extraction_request_id,
-                        group_id=group.group_id,
-                        topic=group.topic,
-                        candidate_ids=group.candidate_ids,
-                        source_report_ids=group.source_report_ids,
-                        evidence_ids=group.evidence_ids,
-                        topic_ids=group.topic_ids,
-                        source_category_ids=group.source_category_ids,
-                    )
+                *sorted(
+                    f"{group.group_id}:{manifest_hashes[group.group_id]}"
                     for group in outcome.batch.groups
-                ],
+                ),
             ),
             execution_plan_hash=job.execution_plan_hash,
             output_verified=outcome.status == "stored",
@@ -403,7 +397,9 @@ def _signal_publish_package(
         "uncertainty": card.uncertainty,
     }
     source_report_ids = list(signal.source_report_ids)
-    publisher_labels = list(signal.publisher_labels)
+    publisher_by_report_id = {
+        item.report_id: item.publisher for item in signal.source_attributions
+    }
     return CrossReportPublishPackage(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         package_id=signal.file_id,
@@ -418,16 +414,14 @@ def _signal_publish_package(
         canonical_artifact_path=package_path,
         artifact_sha256="",
         validation_sha256=_digest("signal-validation", signal.validation_status),
-        selected_theme_id=group_id,
+        selected_theme_id=signal.candidate_group_id or group_id,
         selected_report_ids=source_report_ids,
         source_metadata=[
             {
                 "report_id": report_id,
-                "publisher": publisher_labels[index]
-                if index < len(publisher_labels)
-                else "",
+                "publisher": publisher_by_report_id.get(report_id, ""),
             }
-            for index, report_id in enumerate(source_report_ids)
+            for report_id in source_report_ids
         ],
         category_labels=list(signal.topic_labels),
         tag_labels=list(signal.tag_labels),
@@ -454,6 +448,7 @@ def _signal_generation_handler(
         for field_name, value in (
             ("candidate_group_id", payload.candidate_group_id),
             ("frozen_evidence_manifest", payload.frozen_evidence_manifest),
+            ("frozen_manifest_sha256", payload.frozen_manifest_sha256),
             ("extraction_request_id", payload.extraction_request_id),
             ("topic", payload.topic),
             ("candidate_ids", payload.candidate_ids),
@@ -473,20 +468,24 @@ def _signal_generation_handler(
             severity="error",
             context={"missing_fields": missing_manifest_fields},
         )
-    expected_manifest_reference = f"signal-candidates:{payload.extraction_request_id}:{payload.candidate_group_id}"
-    expected_manifest_hash = _signal_candidate_group_manifest_hash(
-        extraction_request_id=payload.extraction_request_id,
-        group_id=payload.candidate_group_id,
-        topic=payload.topic,
-        candidate_ids=payload.candidate_ids,
-        source_report_ids=payload.source_report_ids,
-        evidence_ids=payload.evidence_ids,
-        topic_ids=payload.topic_ids,
-        source_category_ids=payload.source_category_ids,
+    expected_manifest_reference = (
+        f"signal-candidate-manifests:{payload.extraction_request_id}:"
+        f"{payload.candidate_group_id}:{payload.frozen_manifest_sha256}"
+    )
+    expected_input_hash = _signal_generation_input_hash(
+        manifest_sha256=payload.frozen_manifest_sha256,
+        model_routing_policy_version=payload.model_routing_policy_version,
+        processing_version=payload.processing_version,
+        attributes=payload.attributes,
     )
     if (
-        payload.frozen_evidence_manifest != expected_manifest_reference
-        or payload.input_content_hash != expected_manifest_hash
+        len(payload.frozen_manifest_sha256) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in payload.frozen_manifest_sha256
+        )
+        or payload.frozen_evidence_manifest != expected_manifest_reference
+        or payload.input_content_hash != expected_input_hash
     ):
         raise AppError(
             code="signal_frozen_manifest_changed",
@@ -515,6 +514,7 @@ def _signal_generation_handler(
                     payload.input_content_hash,
                 ),
                 topic=topic,
+                candidate_manifest_sha256=payload.frozen_manifest_sha256,
                 category_filters=_string_list_attribute(payload, "category_filters"),
                 tag_filters=_string_list_attribute(payload, "tag_filters"),
                 publisher_filters=_string_list_attribute(payload, "publisher_filters"),

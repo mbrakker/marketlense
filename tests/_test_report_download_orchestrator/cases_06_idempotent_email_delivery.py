@@ -127,18 +127,20 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
         sleep_fn=lambda seconds: None,
     )
 
+    download_request = ReportDownloadOrchestratorRequest(
+        schema_version="1.0",
+        url="https://example.com/report",
+        settings=settings,
+        state_db=settings.state_db,
+        reports_db=settings.reports_db,
+        delivery_email="ops@example.com",
+        report_title="Retail Trends 2026",
+        publisher_name="Example Publisher",
+        mailbox_settings=mailbox_settings,
+        mail_delivery_generation_id="workflow-generation-1",
+    )
     response = run_report_download(
-        ReportDownloadOrchestratorRequest(
-            schema_version="1.0",
-            url="https://example.com/report",
-            settings=settings,
-            state_db=settings.state_db,
-            reports_db=settings.reports_db,
-            delivery_email="ops@example.com",
-            report_title="Retail Trends 2026",
-            publisher_name="Example Publisher",
-            mailbox_settings=mailbox_settings,
-        ),
+        download_request,
         ctx=run_context,
         dependencies=deps,
     )
@@ -151,6 +153,45 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
             limit=10,
         ),
         run_context,
+    )
+    acquisition_payload = ReportAcquisitionPayload(
+        source_identity_id="source-identity-1",
+        source_url="https://example.com/report",
+        publisher_id="publisher-1",
+        report_title="Retail Trends 2026",
+        publisher_name="Example Publisher",
+        delivery_email_reference="ops@example.com",
+        input_reference="https://example.com/report",
+        input_content_hash="source-hash",
+    )
+    mailbox_submission = build_mailbox_delivery_submission(
+        _workflow_job(
+            queue_name="report_acquisition", job_type="report_acquisition.v1"
+        ),
+        acquisition_payload,
+        response,
+    )
+    with pytest.raises(AppError) as unconfirmed_error:
+        build_mailbox_delivery_submission(
+            _workflow_job(
+                queue_name="report_acquisition",
+                job_type="report_acquisition.v1",
+            ),
+            acquisition_payload,
+            replace(response, outcome="email_required"),
+        )
+    mailbox_job, created = enqueue_workflow_job(
+        settings.state_db,
+        mailbox_submission,
+        run_context,
+    )
+    replayed_mailbox_job, replay_created = enqueue_workflow_job(
+        settings.state_db,
+        mailbox_submission,
+        run_context,
+    )
+    stored_mailbox_job = get_workflow_job(
+        settings.state_db, mailbox_job.job_id, run_context
     )
     observations = list_workflow_control_observations(
         WorkflowControlObservationListRequest(
@@ -170,6 +211,24 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
     assert due.requests[0].delivery_email == "ops@example.com"
     assert due.requests[0].status == "pending"
     assert due.requests[0].route_family == "browser_email_form"
+    assert response.mail_delivery_request_id == due.requests[0].request_id
+    assert response.mail_delivery_requested_after_utc == (
+        due.requests[0].requested_after_utc
+    )
+    assert mailbox_submission.payload.schema_version == "2.0"
+    assert unconfirmed_error.value.code == "workflow_queue_mail_submission_unconfirmed"
+    assert created is True
+    assert replay_created is False
+    assert replayed_mailbox_job.job_id == mailbox_job.job_id
+    assert stored_mailbox_job is not None
+    stored_mailbox_payload = json.loads(stored_mailbox_job.payload_json)
+    assert stored_mailbox_payload["delivery_request_id"] == str(
+        due.requests[0].request_id
+    )
+    assert (
+        stored_mailbox_payload["request_watermark"]
+        == due.requests[0].requested_after_utc
+    )
     assert len(observations.observations) == 1
     assert observations.observations[0].outcome == "deferred"
     assert observations.observations[0].route == "browser_email_form"
@@ -181,6 +240,31 @@ def test_run_report_download_enqueues_mail_delivery_request_for_email_outcome(
             """
         ).fetchone()
     assert resource_row == ("", "provisional")
+
+    retry_response = run_report_download(
+        download_request,
+        ctx=run_context,
+        dependencies=deps,
+    )
+    new_submission_response = run_report_download(
+        replace(download_request, mail_delivery_generation_id="workflow-generation-2"),
+        ctx=run_context,
+        dependencies=deps,
+    )
+    all_due = list_due_mail_delivery_requests(
+        MailDeliveryRequestListDueRequest(
+            schema_version="1.0",
+            state_db=settings.state_db,
+            now_utc="2099-01-01T00:00:00Z",
+            limit=10,
+        ),
+        run_context,
+    )
+    assert retry_response.mail_delivery_request_id == response.mail_delivery_request_id
+    assert new_submission_response.mail_delivery_request_id != (
+        response.mail_delivery_request_id
+    )
+    assert len(all_due.requests) == 2
 
 
 def test_run_report_download_does_not_enqueue_unconfirmed_email_required_outcome(
@@ -516,6 +600,42 @@ def test_run_report_download_preflights_mailbox_before_email_form_submission(
     assert exc_info.value.code == "mailbox_imap_credentials_missing"
 
 
+def test_mailbox_queue_holds_legacy_jobs_without_verified_request_identity(
+    tmp_path: Path,
+    run_context,
+) -> None:
+    state_db = str(tmp_path / "state.sqlite")
+    payload = MailboxDeliveryPayload(
+        schema_version="1.0",
+        delivery_request_id="source-identity-only",
+        source_url="https://example.com/report",
+        report_title="Retail Trends 2026",
+        request_watermark="",
+        input_reference="https://example.com/report",
+        input_content_hash="source-hash",
+        attributes={"publisher_name": "Example Publisher"},
+    )
+    job, created = enqueue_workflow_job(
+        state_db,
+        WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="mailbox_delivery",
+            job_type="mailbox_delivery.v1",
+            payload=payload,
+            idempotency_key="legacy-mailbox-job",
+            deduplication_scope="mailbox-delivery-request",
+        ),
+        run_context,
+    )
+
+    assert created is True
+    with pytest.raises(AppError) as exc_info:
+        execute_workflow_queue_handler(job, payload, run_context)
+
+    assert exc_info.value.code == "workflow_queue_mailbox_request_identity_missing"
+    assert exc_info.value.retryable is False
+
+
 def test_fresh_hard_blocker_suppresses_before_browser_preflight(
     tmp_path: Path,
     run_context,
@@ -627,5 +747,6 @@ __all__ = [
     "test_run_report_download_does_not_enqueue_unconfirmed_email_required_outcome",
     "test_run_report_download_uses_mailbox_account_for_unattended_email_submission",
     "test_run_report_download_preflights_mailbox_before_email_form_submission",
+    "test_mailbox_queue_holds_legacy_jobs_without_verified_request_identity",
     "test_fresh_hard_blocker_suppresses_before_browser_preflight",
 ]

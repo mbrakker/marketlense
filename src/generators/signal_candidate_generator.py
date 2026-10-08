@@ -218,6 +218,7 @@ def _group_from_candidates(
     candidates: list[SignalCandidate],
     request: CrossReportAnalysisRequest,
     source_category_ids: dict[str, list[str]],
+    source_content_hashes: dict[str, str],
     minimum_source_reports: int,
     minimum_evidence_items: int,
     generated_at_utc: str,
@@ -283,6 +284,18 @@ def _group_from_candidates(
         report_id: list(source_category_ids.get(report_id, []))
         for report_id in source_report_ids
     }
+    group_source_hashes = {
+        report_id: str(source_content_hashes.get(report_id, ""))
+        for report_id in source_report_ids
+    }
+    if any(not content_hash for content_hash in group_source_hashes.values()):
+        raise AppError(
+            code="signal_candidate_manifest_invalid",
+            message="Signal candidate group requires projected source content hashes.",
+            retryable=False,
+            severity="error",
+            context={"group_id": group.group_id},
+        )
     topic_ids = _unique_ordered(
         [category_id for ids in group_source_categories.values() for category_id in ids]
     )
@@ -313,6 +326,7 @@ def _group_from_candidates(
         caveats=caveats,
         raw_group_context={
             "agreement_type": group.agreement_type,
+            "source_content_hashes": group_source_hashes,
             "uncertainty_reasons": list(group.uncertainty_reasons),
             "raw_metric_policy": "raw_metrics_preserved_without_normalization",
         },
@@ -401,6 +415,10 @@ def build_signal_candidate_batch(
         source.report_id: _unique_ordered(list(source.category_ids))
         for source in evidence_inputs.selected_sources
     }
+    source_content_hashes = {
+        source.report_id: source.content_hash
+        for source in evidence_inputs.selected_sources
+    }
     groups = [
         _group_from_candidates(
             group=group,
@@ -410,6 +428,7 @@ def build_signal_candidate_batch(
             ),
             request=request,
             source_category_ids=source_category_ids,
+            source_content_hashes=source_content_hashes,
             minimum_source_reports=minimum_source_reports,
             minimum_evidence_items=minimum_evidence_items,
             generated_at_utc=generated_at_utc,

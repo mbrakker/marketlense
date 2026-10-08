@@ -50,6 +50,33 @@ def test_log_event_matches_unified_schema() -> None:
     assert "secret-token" not in payload
 
 
+def test_log_event_redacts_common_signed_url_parameters() -> None:
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="run-1",
+        task_id="task-1",
+        span_id="span-1",
+    )
+    payload = log_event(
+        ctx,
+        role="service",
+        event="signed_url_seen",
+        module="src.services.example",
+        fields={
+            "url": (
+                "https://example.test/file?X-Amz-Signature=aws-secret"
+                "&X-Goog-Signature=google-secret&Key-Pair-Id=pair-secret"
+                "&sig=azure-secret"
+            )
+        },
+    )
+
+    assert "aws-secret" not in payload
+    assert "google-secret" not in payload
+    assert "pair-secret" not in payload
+    assert "azure-secret" not in payload
+
+
 def test_child_context_preserves_trace_and_parent_span() -> None:
     root = new_run_context(task_id="root")
     child = child_context(root, task_id="child")

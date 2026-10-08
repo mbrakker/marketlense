@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import sys
-import logging
 from pathlib import Path
 
 import pytest
@@ -46,6 +46,7 @@ def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
         _ctx(),
     )
     assert acquired.acquired is True
+    assert acquired.lock is not None
     current = get_lock(
         LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx()
     )
@@ -59,6 +60,7 @@ def test_get_lock_reflects_lock_lifecycle(tmp_path: Path) -> None:
             lock_path=str(lock_path),
             owner_id="owner-1",
             pid=1001,
+            generation=acquired.lock.generation,
         ),
         _ctx(),
     )
@@ -166,6 +168,117 @@ def test_acquire_lock_reclaims_a_dead_local_owner_before_ttl_expiry(
     assert acquired.lock.owner_id == "replacement-owner"
 
 
+def test_stale_generation_release_cannot_remove_replacement_owner(
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / "generation.lock"
+    dead_owner = subprocess.Popen([sys.executable, "-c", "pass"])
+    dead_owner.wait(timeout=5)
+    first = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="first-owner",
+            pid=dead_owner.pid,
+            ttl_seconds=3600,
+        ),
+        _ctx(),
+    )
+    assert first.acquired is True
+    assert first.lock is not None
+    assert first.lock.generation
+
+    replacement = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="replacement-owner",
+            pid=os.getpid(),
+            ttl_seconds=3600,
+        ),
+        _ctx(),
+    )
+    assert replacement.acquired is True
+    assert replacement.lock is not None
+    assert replacement.lock.generation != first.lock.generation
+
+    stale_release = release_lock(
+        LockReleaseRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id=first.lock.owner_id,
+            pid=first.lock.pid,
+            generation=first.lock.generation,
+        ),
+        _ctx(),
+    )
+
+    assert stale_release.released is False
+    current = get_lock(
+        LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx()
+    )
+    assert current.lock is not None
+    assert current.lock.owner_id == "replacement-owner"
+    assert current.lock.generation == replacement.lock.generation
+
+
+def test_legacy_release_is_exact_and_cannot_release_new_generation(
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / "legacy.lock"
+    lock_path.write_text(
+        '{"owner_id":"legacy-owner","pid":' + str(os.getpid()) + ',"created_at":1.0}',
+        encoding="utf-8",
+    )
+    legacy_release = release_lock(
+        LockReleaseRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="legacy-owner",
+            pid=os.getpid(),
+        ),
+        _ctx(),
+    )
+    assert legacy_release.released is True
+
+    current = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="current-owner",
+            pid=os.getpid(),
+            ttl_seconds=3600,
+        ),
+        _ctx(),
+    )
+    assert current.acquired is True
+    assert current.lock is not None
+
+    tokenless_release = release_lock(
+        LockReleaseRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="current-owner",
+            pid=os.getpid(),
+        ),
+        _ctx(),
+    )
+    assert tokenless_release.released is False
+
+    wrong_generation_release = release_lock(
+        LockReleaseRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="current-owner",
+            pid=os.getpid(),
+            generation="not-current",
+        ),
+        _ctx(),
+    )
+    assert wrong_generation_release.released is False
+    assert lock_path.exists()
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -176,43 +289,45 @@ def test_acquire_lock_reclaims_a_dead_local_owner_before_ttl_expiry(
         '{"owner_id":"private-lock-marker","pid":1,"created_at":NaN}',
     ],
 )
-def test_acquire_lock_fails_closed_on_corrupt_existing_lock(
+def test_get_lock_diagnoses_and_acquire_recovers_corrupt_existing_lock(
     payload: str, tmp_path: Path, caplog
 ) -> None:
     lock_path = tmp_path / "ingest.lock"
     lock_path.write_text(payload, encoding="utf-8")
     caplog.set_level(logging.INFO)
 
-    with pytest.raises(AppError) as exc_info:
-        acquire_lock(
-            LockAcquireRequest(
-                schema_version="1.0",
-                lock_path=str(lock_path),
-                owner_id="replacement-owner",
-                pid=os.getpid(),
-                ttl_seconds=3600,
-            ),
-            _ctx(),
-        )
+    with pytest.raises(AppError) as read_error:
+        get_lock(LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx())
 
-    assert exc_info.value.code == "lock_file_corrupt"
-    assert exc_info.value.retryable is False
-    assert "private-lock-marker" not in str(exc_info.value)
-    assert "private-lock-marker" not in str(exc_info.value.context)
+    assert read_error.value.code == "lock_file_corrupt"
+    acquired = acquire_lock(
+        LockAcquireRequest(
+            schema_version="1.0",
+            lock_path=str(lock_path),
+            owner_id="replacement-owner",
+            pid=os.getpid(),
+            ttl_seconds=3600,
+        ),
+        _ctx(),
+    )
+
+    assert acquired.acquired is True
+    assert acquired.lock is not None
+    assert acquired.lock.owner_id == "replacement-owner"
     assert "private-lock-marker" not in caplog.text
-    assert lock_path.read_text(encoding="utf-8") == payload
 
 
 def test_failed_initial_lock_write_removes_only_the_created_file(
     tmp_path: Path, external_boundary_mocks_only
 ) -> None:
     lock_path = tmp_path / "ingest.lock"
+    unrelated_file = tmp_path / ".ingest.lock.unrelated.tmp"
+    unrelated_file.write_text("preserve", encoding="utf-8")
 
-    def fail_fdopen(fd: int, *args, **kwargs):
-        os.close(fd)
-        raise OSError("simulated lock write setup failure")
+    def fail_replace(source, destination):
+        raise OSError("simulated atomic lock write failure")
 
-    external_boundary_mocks_only.setattr(lock_service.os, "fdopen", fail_fdopen)
+    external_boundary_mocks_only.setattr(lock_service.os, "replace", fail_replace)
 
     with pytest.raises(AppError) as exc_info:
         acquire_lock(
@@ -228,3 +343,5 @@ def test_failed_initial_lock_write_removes_only_the_created_file(
 
     assert exc_info.value.code == "lock_acquire_failed"
     assert lock_path.exists() is False
+    assert unrelated_file.read_text(encoding="utf-8") == "preserve"
+    assert list(tmp_path.glob(".ingest.lock.*.tmp")) == [unrelated_file]

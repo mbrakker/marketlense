@@ -745,6 +745,16 @@ CREATE TABLE IF NOT EXISTS signal_candidate_groups (
 );
 """
 
+_SIGNAL_CANDIDATE_MANIFESTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS signal_candidate_manifests (
+  manifest_sha256 TEXT PRIMARY KEY,
+  extraction_request_id TEXT NOT NULL,
+  group_id TEXT NOT NULL,
+  manifest_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+"""
+
 _CORPUS_REHABILITATION_CAMPAIGNS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS corpus_rehabilitation_campaigns (
   campaign_id TEXT PRIMARY KEY,

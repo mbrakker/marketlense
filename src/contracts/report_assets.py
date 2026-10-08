@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -9,6 +10,26 @@ from src.contracts.report_models import CropItem, RankedCandidate
 from src.contracts.run_budget import RunBudget
 
 REPORT_ASSETS_SCHEMA_VERSION = "1.0"
+CROP_REFINE_COORDINATE_TRANSFORM_VERSION = "pdf-page-affine-v1"
+
+
+def _validate_bbox_contract(
+    bbox: Tuple[float, float, float, float], *, field_name: str
+) -> None:
+    if len(bbox) != 4 or not all(math.isfinite(float(value)) for value in bbox):
+        raise ValueError(f"{field_name} must contain four finite coordinates")
+    x0, y0, x1, y1 = (float(value) for value in bbox)
+    if x0 >= x1 or y0 >= y1:
+        raise ValueError(f"{field_name} must be ordered and non-degenerate")
+
+
+def _validate_affine_contract(
+    transform: Tuple[float, float, float, float, float, float], *, field_name: str
+) -> None:
+    if len(transform) != 6 or not all(
+        math.isfinite(float(value)) for value in transform
+    ):
+        raise ValueError(f"{field_name} must contain six finite affine coefficients")
 
 
 @dataclass(frozen=True)
@@ -295,6 +316,12 @@ class CropOutcome:
     rejection_reason: str = field(
         default="", metadata={"doc": "Typed rejection reason for rejected crops."}
     )
+    dpi: int = field(
+        default=0, metadata={"doc": "Render DPI of the accepted crop artifact."}
+    )
+    image_sha256: str = field(
+        default="", metadata={"doc": "SHA-256 of the materialized crop image."}
+    )
 
 
 @dataclass(frozen=True)
@@ -334,6 +361,67 @@ class CropRefinePageRenderResponse:
     scale_y: float = field(
         metadata={"doc": "Vertical conversion scale from PDF points to image pixels."}
     )
+    coordinate_transform_version: str = field(
+        metadata={"doc": "Version of the page/image-to-canonical-PDF affine maps."}
+    )
+    display_to_pdf_transform: Tuple[float, float, float, float, float, float] = field(
+        metadata={
+            "doc": "Affine map from rotated displayed page points to canonical unrotated crop-relative PDF points."
+        }
+    )
+    pdf_to_display_transform: Tuple[float, float, float, float, float, float] = field(
+        metadata={
+            "doc": "Affine map from canonical unrotated crop-relative PDF points to displayed page points."
+        }
+    )
+    image_to_pdf_transform: Tuple[float, float, float, float, float, float] = field(
+        metadata={
+            "doc": "Affine map from rendered image pixels to canonical unrotated crop-relative PDF points."
+        }
+    )
+    rotation: int = field(metadata={"doc": "PDF page rotation in degrees clockwise."})
+    crop_box: Tuple[float, float, float, float] = field(
+        metadata={"doc": "PDF crop box in source page coordinates."}
+    )
+    media_box: Tuple[float, float, float, float] = field(
+        metadata={"doc": "PDF media box in source page coordinates."}
+    )
+    pdf_page_width: float = field(
+        metadata={"doc": "Canonical unrotated crop-relative page width in points."}
+    )
+    pdf_page_height: float = field(
+        metadata={"doc": "Canonical unrotated crop-relative page height in points."}
+    )
+
+    def __post_init__(self) -> None:
+        if (
+            self.coordinate_transform_version
+            != CROP_REFINE_COORDINATE_TRANSFORM_VERSION
+        ):
+            raise ValueError("unsupported crop-refine coordinate transform version")
+        _validate_affine_contract(
+            self.display_to_pdf_transform, field_name="display_to_pdf_transform"
+        )
+        _validate_affine_contract(
+            self.pdf_to_display_transform, field_name="pdf_to_display_transform"
+        )
+        _validate_affine_contract(
+            self.image_to_pdf_transform, field_name="image_to_pdf_transform"
+        )
+        _validate_bbox_contract(self.crop_box, field_name="crop_box")
+        _validate_bbox_contract(self.media_box, field_name="media_box")
+        if self.rotation not in {0, 90, 180, 270}:
+            raise ValueError("rotation must be a right angle")
+        if (
+            min(
+                self.image_width,
+                self.image_height,
+                self.pdf_page_width,
+                self.pdf_page_height,
+            )
+            <= 0
+        ):
+            raise ValueError("crop-refine page dimensions must be positive")
 
 
 @dataclass(frozen=True)
@@ -346,10 +434,25 @@ class CropRefineBBoxApplyRequest:
     bbox: Tuple[float, float, float, float] = field(
         metadata={"doc": "Proposed PDF-space bbox to clamp."}
     )
+    original_bbox: Tuple[float, float, float, float] = field(
+        metadata={
+            "doc": "Validated source candidate bbox used when the refined proposal is unsafe."
+        }
+    )
     pdf_context: Optional[PdfContext] = field(
         default=None,
         metadata={"doc": "Optional pre-opened PDF context to reuse handles."},
     )
+    full_page_target: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether source candidate metadata explicitly identifies a full-page target."
+        },
+    )
+
+    def __post_init__(self) -> None:
+        _validate_bbox_contract(self.bbox, field_name="bbox")
+        _validate_bbox_contract(self.original_bbox, field_name="original_bbox")
 
 
 @dataclass(frozen=True)
@@ -360,6 +463,12 @@ class CropRefineBBoxApplyResponse:
     page: int = field(metadata={"doc": "Zero-based page index for clamped bbox."})
     bbox: Tuple[float, float, float, float] = field(
         metadata={"doc": "Clamped and normalized PDF-space bbox."}
+    )
+    degradation_reason: str = field(
+        default="",
+        metadata={
+            "doc": "Stable reason an unsafe proposal fell back to its source bbox."
+        },
     )
 
 
@@ -415,6 +524,9 @@ class CropRefineResult:
         default="", metadata={"doc": "Model-provided reason for decision."}
     )
 
+    def __post_init__(self) -> None:
+        _validate_bbox_contract(self.refined_bbox, field_name="refined_bbox")
+
 
 @dataclass(frozen=True)
 class CropRefineRequest:
@@ -438,8 +550,12 @@ class CropRefineRequest:
     page: int = field(
         metadata={"doc": "Zero-based page index for supplied image context."}
     )
-    page_width: float = field(metadata={"doc": "Original PDF page width in points."})
-    page_height: float = field(metadata={"doc": "Original PDF page height in points."})
+    page_width: float = field(
+        metadata={"doc": "Displayed page width in PDF points after rotation/crop."}
+    )
+    page_height: float = field(
+        metadata={"doc": "Displayed page height in PDF points after rotation/crop."}
+    )
     candidates: List[CropRefineCandidate] = field(
         metadata={"doc": "Candidates to evaluate and refine on this page."}
     )
@@ -447,6 +563,16 @@ class CropRefineRequest:
         metadata={
             "doc": "Canonical budget that governs this crop-refinement provider call."
         }
+    )
+    coordinate_transform_version: str = field(
+        default=CROP_REFINE_COORDINATE_TRANSFORM_VERSION,
+        metadata={"doc": "Version of the displayed-page to canonical-PDF affine map."},
+    )
+    display_to_pdf_transform: Tuple[float, float, float, float, float, float] = field(
+        default=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        metadata={
+            "doc": "Affine map from model-reported displayed page points to canonical PDF points."
+        },
     )
     reasoning_effort: str = field(
         default="", metadata={"doc": "Resolved provider reasoning effort."}
@@ -500,6 +626,16 @@ class CropRefineRequest:
     execution_policy_hash: str = field(default="")
     execution_policy: dict = field(default_factory=dict)
     execution_policy_source: str = field(default="")
+
+    def __post_init__(self) -> None:
+        if (
+            self.coordinate_transform_version
+            != CROP_REFINE_COORDINATE_TRANSFORM_VERSION
+        ):
+            raise ValueError("unsupported crop-refine coordinate transform version")
+        _validate_affine_contract(
+            self.display_to_pdf_transform, field_name="display_to_pdf_transform"
+        )
 
 
 @dataclass(frozen=True)

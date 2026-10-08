@@ -4,14 +4,17 @@ import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from threading import Barrier
 
 import pytest
 
 from src.contracts.workflow_queue import (
     BriefingGenerationPayload,
     PublisherDiscoveryPayload,
+    SourceIngestPayload,
     ReportAcquisitionPayload,
     WordPressPublishPayload,
+    WorkflowArtifactReference,
     WorkflowJobSubmission,
     WorkflowStageResult,
 )
@@ -31,6 +34,7 @@ from src.services.workflow_queue_service import (
     record_publication_readiness,
     release_expired_workflow_leases,
     requeue_workflow_job,
+    reconcile_workflow_queue,
     set_workflow_queue_control,
     start_workflow_job,
     upsert_briefing_opportunity,
@@ -99,6 +103,148 @@ def test_enqueue_deduplicates_concurrent_submissions(tmp_path) -> None:
 
     assert len({item[0] for item in results}) == 1
     assert sum(1 for _, created in results if created) == 1
+
+
+def test_enqueue_rejects_same_key_with_incompatible_input(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    original, created = enqueue_workflow_job(db, _submission(key="same-key"), _ctx())
+    incompatible = replace(
+        _submission(key="same-key"),
+        payload=replace(
+            _submission(key="same-key").payload,
+            input_content_hash="different-source-hash",
+        ),
+    )
+
+    assert created is True
+    with pytest.raises(AppError) as error:
+        enqueue_workflow_job(db, incompatible, _ctx())
+
+    assert error.value.code == "workflow_queue_idempotency_conflict"
+    assert error.value.retryable is False
+    assert "input_content_hash" in error.value.context["incompatible_fields"]
+    persisted = get_workflow_job(db, original.job_id, _ctx())
+    assert persisted is not None
+    assert persisted.input_content_hash == "source-hash"
+
+
+def test_enqueue_reuses_compatible_job_when_only_schedule_changes(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    original, _ = enqueue_workflow_job(
+        db,
+        _submission(key="same-key", priority=1),
+        _ctx(),
+        now_utc="2026-07-18T00:00:00+00:00",
+    )
+    compatible = replace(
+        _submission(
+            key="same-key",
+            priority=9,
+            available_at_utc="2026-07-18T00:05:00+00:00",
+        ),
+        max_attempts=7,
+    )
+
+    reused, created = enqueue_workflow_job(
+        db, compatible, _ctx(), now_utc="2026-07-18T00:01:00+00:00"
+    )
+
+    assert (reused.job_id, created) == (original.job_id, False)
+
+
+@pytest.mark.parametrize(
+    ("changed_field", "expected_field"),
+    [
+        ("queue_name", "queue_name"),
+        ("job_type", "job_type"),
+        ("policy_version", "payload"),
+        ("artifact_reference", "required_artifact_references"),
+        ("entity_identity", "publisher_id"),
+    ],
+)
+def test_enqueue_rejects_reused_key_for_semantic_changes(
+    tmp_path, changed_field: str, expected_field: str
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    key = f"semantic-change-{changed_field}"
+    original = _submission(key=key)
+    enqueue_workflow_job(db, original, _ctx())
+    if changed_field == "queue_name":
+        changed = replace(
+            original,
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
+            payload=SourceIngestPayload(
+                source_identity_id="identity-1",
+                source_artifact_reference="artifact:source.pdf",
+                source_content_hash="source-hash",
+                report_id="report-1",
+                input_reference="snapshot:report-1",
+                input_content_hash="source-hash",
+            ),
+        )
+    elif changed_field == "job_type":
+        changed = replace(original, job_type="publisher_discovery.v2")
+    elif changed_field == "policy_version":
+        changed = replace(
+            original,
+            payload=replace(original.payload, discovery_policy_version="v2"),
+        )
+    elif changed_field == "artifact_reference":
+        changed = replace(
+            original,
+            payload=replace(
+                original.payload,
+                required_artifact_references=[
+                    WorkflowArtifactReference(
+                        kind="source_pdf",
+                        reference="artifact:new.pdf",
+                        content_hash="new-hash",
+                    )
+                ],
+            ),
+        )
+    else:
+        changed = replace(original, publisher_id="publisher-2")
+
+    with pytest.raises(AppError) as error:
+        enqueue_workflow_job(db, changed, _ctx())
+
+    assert error.value.code == "workflow_queue_idempotency_conflict"
+    assert expected_field in error.value.context["incompatible_fields"]
+
+
+def test_concurrent_incompatible_submissions_keep_one_immutable_job(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    barrier = Barrier(2)
+
+    def submit(content_hash: str):
+        submission = replace(
+            _submission(key="concurrent-semantic-change"),
+            payload=replace(
+                _submission(key="concurrent-semantic-change").payload,
+                input_content_hash=content_hash,
+            ),
+        )
+        barrier.wait()
+        try:
+            job, created = enqueue_workflow_job(db, submission, _ctx())
+            return ("created" if created else "reused", job.job_id, content_hash)
+        except AppError as exc:
+            return ("conflict", exc.code, content_hash)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(submit, ["hash-a", "hash-b"]))
+
+    assert sorted(item[0] for item in outcomes) == ["conflict", "created"]
+    assert next(item[1] for item in outcomes if item[0] == "conflict") == (
+        "workflow_queue_idempotency_conflict"
+    )
+    persisted = get_workflow_job(db, outcomes[0][1], _ctx())
+    if persisted is None:
+        persisted = get_workflow_job(db, outcomes[1][1], _ctx())
+    assert persisted is not None
+    assert persisted.input_content_hash in {"hash-a", "hash-b"}
 
 
 def test_claim_orders_by_priority_then_due_time(tmp_path) -> None:
@@ -472,6 +618,244 @@ def test_completion_outbox_materialises_one_effective_child(tmp_path) -> None:
     assert len(materialised) == 1
     assert materialize_workflow_outbox(db, "outbox-worker", _ctx()) == []
     assert get_workflow_job(db, materialised[0], _ctx()).parent_job_id == parent.job_id
+
+
+@pytest.mark.parametrize(
+    ("attempt_count", "max_attempts", "expected_status"),
+    [(0, 3, "retry_wait"), (2, 3, "dead_letter")],
+)
+def test_reconciliation_reclaims_expired_outbox_lease(
+    tmp_path, attempt_count: int, max_attempts: int, expected_status: str
+) -> None:
+    db = str(tmp_path / "state.sqlite")
+    parent, _ = enqueue_workflow_job(db, _submission(), _ctx())
+    _start(db, parent.job_id)
+    child = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="report_acquisition",
+        job_type="report_acquisition.v1",
+        payload=ReportAcquisitionPayload(
+            source_url="https://example.test/report.pdf",
+            acquisition_policy_version="v1",
+            input_reference="source:https://example.test/report.pdf",
+            input_content_hash="source-hash",
+        ),
+        idempotency_key="source:v1",
+        deduplication_scope="report_acquisition",
+        root_workflow_id=parent.root_workflow_id,
+        parent_job_id=parent.job_id,
+    )
+    complete_workflow_job(
+        db,
+        parent.job_id,
+        "worker-1",
+        WorkflowStageResult(
+            output_reference="snapshot",
+            output_content_hash="snapshot-hash",
+            output_verified=True,
+        ),
+        [child],
+        _ctx(),
+        now_utc="2026-07-18T00:00:03+00:00",
+    )
+    with sqlite3.connect(db) as conn:
+        event_id = conn.execute("SELECT event_id FROM workflow_outbox").fetchone()[0]
+        conn.execute(
+            "UPDATE workflow_outbox SET status='leased',lease_owner='crashed-worker',"
+            "lease_expires_at_utc='2026-07-18T00:01:00+00:00',attempt_count=?,"
+            "max_attempts=? "
+            "WHERE event_id=?",
+            (attempt_count, max_attempts, event_id),
+        )
+
+    reconcile_workflow_queue(db, _ctx(), now_utc="2026-07-18T00:01:01+00:00")
+
+    with sqlite3.connect(db) as conn:
+        status, attempts, error_code = conn.execute(
+            "SELECT status,attempt_count,error_code FROM workflow_outbox "
+            "WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+    assert (status, attempts, error_code) == (
+        expected_status,
+        attempt_count + 1,
+        "workflow_outbox_lease_expired",
+    )
+    if expected_status == "retry_wait":
+        materialised = materialize_workflow_outbox(
+            db,
+            "outbox-recovery-worker",
+            _ctx(),
+            now_utc="2026-07-18T00:02:02+00:00",
+        )
+        assert len(materialised) == 1
+        assert (
+            materialize_workflow_outbox(
+                db,
+                "outbox-recovery-worker",
+                _ctx(),
+                now_utc="2026-07-18T00:02:03+00:00",
+            )
+            == []
+        )
+        with sqlite3.connect(db) as conn:
+            status, job_id, child_count = conn.execute(
+                "SELECT o.status,o.materialised_job_id,"
+                "(SELECT COUNT(*) FROM workflow_jobs WHERE deduplication_scope=? "
+                "AND idempotency_key=?) FROM workflow_outbox o WHERE o.event_id=?",
+                (child.deduplication_scope, child.idempotency_key, event_id),
+            ).fetchone()
+        assert status == "materialised"
+        assert job_id == materialised[0]
+        assert child_count == 1
+
+
+def test_reconciliation_links_child_created_before_outbox_ack(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    parent, _ = enqueue_workflow_job(db, _submission(), _ctx())
+    _start(db, parent.job_id)
+    child = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="report_acquisition",
+        job_type="report_acquisition.v1",
+        payload=ReportAcquisitionPayload(
+            source_url="https://example.test/report.pdf",
+            acquisition_policy_version="v1",
+            input_reference="source:https://example.test/report.pdf",
+            input_content_hash="source-hash",
+        ),
+        idempotency_key="source:v1",
+        deduplication_scope="report_acquisition",
+        root_workflow_id=parent.root_workflow_id,
+        parent_job_id=parent.job_id,
+    )
+    complete_workflow_job(
+        db,
+        parent.job_id,
+        "worker-1",
+        WorkflowStageResult(
+            output_reference="snapshot",
+            output_content_hash="snapshot-hash",
+            output_verified=True,
+        ),
+        [child],
+        _ctx(),
+        now_utc="2026-07-18T00:00:03+00:00",
+    )
+    existing_child, created = enqueue_workflow_job(db, child, _ctx())
+    assert created is True
+    with sqlite3.connect(db) as conn:
+        event_id = conn.execute("SELECT event_id FROM workflow_outbox").fetchone()[0]
+        conn.execute(
+            "UPDATE workflow_outbox SET status='leased',lease_owner='crashed-worker',"
+            "lease_expires_at_utc='2026-07-18T00:01:00+00:00',attempt_count=2,"
+            "max_attempts=3 WHERE event_id=?",
+            (event_id,),
+        )
+
+    reconcile_workflow_queue(db, _ctx(), now_utc="2026-07-18T00:01:01+00:00")
+
+    with sqlite3.connect(db) as conn:
+        status, job_id, attempts = conn.execute(
+            "SELECT status,materialised_job_id,attempt_count FROM workflow_outbox "
+            "WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        child_count = conn.execute(
+            "SELECT COUNT(*) FROM workflow_jobs WHERE deduplication_scope=? "
+            "AND idempotency_key=?",
+            (child.deduplication_scope, child.idempotency_key),
+        ).fetchone()[0]
+    assert (status, job_id, attempts, child_count) == (
+        "materialised",
+        existing_child.job_id,
+        3,
+        1,
+    )
+
+
+def test_outbox_materializer_cannot_ack_a_renewed_lease(tmp_path) -> None:
+    db = str(tmp_path / "state.sqlite")
+    parent, _ = enqueue_workflow_job(db, _submission(), _ctx())
+    _start(db, parent.job_id)
+    child = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="report_acquisition",
+        job_type="report_acquisition.v1",
+        payload=ReportAcquisitionPayload(
+            source_url="https://example.test/report.pdf",
+            acquisition_policy_version="v1",
+            input_reference="source:https://example.test/report.pdf",
+            input_content_hash="source-hash",
+        ),
+        idempotency_key="source:v1",
+        deduplication_scope="report_acquisition",
+        root_workflow_id=parent.root_workflow_id,
+        parent_job_id=parent.job_id,
+    )
+    complete_workflow_job(
+        db,
+        parent.job_id,
+        "worker-1",
+        WorkflowStageResult(
+            output_reference="snapshot",
+            output_content_hash="snapshot-hash",
+            output_verified=True,
+        ),
+        [child],
+        _ctx(),
+        now_utc="2026-07-18T00:00:03+00:00",
+    )
+    with sqlite3.connect(db) as conn:
+        event_id = conn.execute("SELECT event_id FROM workflow_outbox").fetchone()[0]
+        conn.execute(
+            """CREATE TRIGGER renew_outbox_lease_after_child_insert
+            AFTER INSERT ON workflow_jobs
+            BEGIN
+                UPDATE workflow_outbox
+                SET lease_owner='renewed-owner',
+                    lease_expires_at_utc='2026-07-18T00:05:00+00:00'
+                WHERE event_id='"""
+            + str(event_id)
+            + """' AND status='leased';
+            END;"""
+        )
+
+    assert (
+        materialize_workflow_outbox(
+            db,
+            "outbox-worker",
+            _ctx(),
+            now_utc="2026-07-18T00:01:00+00:00",
+        )
+        == []
+    )
+    with sqlite3.connect(db) as conn:
+        status, owner, job_id = conn.execute(
+            "SELECT status,lease_owner,materialised_job_id FROM workflow_outbox "
+            "WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+    assert (status, owner, job_id) == ("leased", "renewed-owner", "")
+
+    reconcile_workflow_queue(db, _ctx(), now_utc="2026-07-18T00:05:01+00:00")
+    recovered = materialize_workflow_outbox(
+        db,
+        "outbox-worker-2",
+        _ctx(),
+        now_utc="2026-07-18T00:06:02+00:00",
+    )
+    assert len(recovered) == 1
+    with sqlite3.connect(db) as conn:
+        status, job_id, child_count = conn.execute(
+            "SELECT o.status,o.materialised_job_id,"
+            "(SELECT COUNT(*) FROM workflow_jobs WHERE deduplication_scope=? "
+            "AND idempotency_key=?) FROM workflow_outbox o WHERE o.event_id=?",
+            (child.deduplication_scope, child.idempotency_key, event_id),
+        ).fetchone()
+    assert status == "materialised"
+    assert job_id == recovered[0]
+    assert child_count == 1
 
 
 def test_approval_and_briefing_opportunity_are_durable_and_idempotent(tmp_path) -> None:

@@ -643,6 +643,35 @@ def test_mail_report_link_candidates_reject_unrelated_marketo_report_delivery(
     assert candidates == []
 
 
+def test_mail_report_link_candidates_keep_case_sensitive_paths_distinct(run_context):
+    upper_path_url = "https://about.bigcommerce.com/report/Annual.pdf?token=CaseA"
+    lower_path_url = "https://about.bigcommerce.com/report/annual.pdf?token=casea"
+    message = MailboxMessage(
+        schema_version="1.0",
+        provider_message_id="msg-bigcommerce-case-sensitive",
+        subject="Your annual report is ready",
+        sender="BigCommerce <reports@bigcommerce.com>",
+        received_at_utc="2026-07-06T08:01:00Z",
+        text_body="Your annual report links are below.",
+        html_body="",
+        links=[upper_path_url, lower_path_url],
+        attachment_file_names=[],
+    )
+
+    candidates = select_mail_report_link_candidates(
+        messages=[message],
+        source_url="https://www.bigcommerce.com/resources/report-request",
+        report_title="Annual Report",
+        publisher_name="BigCommerce",
+        ctx=run_context,
+    )
+
+    assert [candidate.url for candidate in candidates] == [
+        upper_path_url,
+        lower_path_url,
+    ]
+
+
 def test_mail_report_acquisition_ignores_matching_messages_before_request_watermark(
     tmp_path, run_context
 ):

@@ -1,5 +1,6 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -11,7 +12,9 @@ import json
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+
 import pytest
+
 from src.contracts.claim_validation import CLAIM_GROUNDING_VALIDATOR_VERSION
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
@@ -21,6 +24,7 @@ from src.contracts.report_analysis import AnalysisStorePackRequest
 from src.contracts.report_cards import (
     CardCoverAsset,
     CardCoverAssetSet,
+    ReportCardManifest,
     ReportCardManifestWriteResponse,
 )
 from src.contracts.report_generation import (
@@ -55,6 +59,7 @@ from src.generators.report_render_generator import (
     render_preview_asset,
     render_report_output,
 )
+from src.services.file_service import write_report_card_manifest
 from src.services.report_analysis_store_service import store_pack
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
@@ -74,6 +79,8 @@ def _template_bundle_sha(template_contents: dict[str, str]) -> str:
 
 
 def _runtime(tmp_path: Path, *, md5: str | None) -> ReportRuntimeState:
+    cover_style_path = tmp_path / "cover.yaml"
+    cover_style_path.write_text("style: test\n", encoding="utf-8")
     file = DriveFile(
         schema_version="1.0",
         file_id="file-1",
@@ -93,7 +100,7 @@ def _runtime(tmp_path: Path, *, md5: str | None) -> ReportRuntimeState:
         state_db=str(tmp_path / "state.sqlite"),
         reports_db=str(tmp_path / "reports.sqlite"),
         category_mapping_path=str(tmp_path / "cats.yaml"),
-        cover_style_path=str(tmp_path / "cover.yaml"),
+        cover_style_path=str(cover_style_path),
         ingest_lock_path=str(tmp_path / "lock"),
         temperature=0.0,
         report_worker_limit=1,
@@ -241,6 +248,11 @@ def _analysis(
 
 
 def _card_cover_assets(asset_dir: Path) -> CardCoverAssetSet:
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    for size in ("small", "medium", "large"):
+        (asset_dir / f"report-card-{size}.png").write_bytes(
+            f"cover-{size}".encode("ascii")
+        )
     return CardCoverAssetSet(
         "1.0",
         CardCoverAsset(

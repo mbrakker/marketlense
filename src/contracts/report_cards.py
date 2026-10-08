@@ -111,6 +111,15 @@ class CardCoverAsset:
     output_path: str = field(metadata={"doc": "Relative or absolute cover image path."})
     width: int = field(metadata={"doc": "Cover image width in pixels."})
     height: int = field(metadata={"doc": "Cover image height in pixels."})
+    content_sha256: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "SHA-256 of the rendered cover bytes; empty only in legacy manifests."
+            ),
+            "required": False,
+        },
+    )
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> "CardCoverAsset":
@@ -140,6 +149,16 @@ class CardCoverAsset:
                     "expected_height": expected_height,
                 },
             )
+        content_sha256 = str(payload.get("content_sha256") or "").strip()
+        if content_sha256 and (
+            len(content_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in content_sha256)
+        ):
+            raise _invalid(
+                "cover_asset_set_incomplete",
+                "Cover asset checksum must be a lowercase SHA-256",
+                context={"size": size},
+            )
         return cls(
             schema_version=_text(
                 payload.get("schema_version"),
@@ -154,6 +173,7 @@ class CardCoverAsset:
             ),
             width=expected_width,
             height=expected_height,
+            content_sha256=content_sha256,
         )
 
 
@@ -324,6 +344,10 @@ class ReportCardManifestRequest:
     source_publication_date_status: str = field(
         default="unknown", metadata={"doc": "Canonical publication-date status."}
     )
+    cover_style_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 identity of the style used to render covers."},
+    )
 
 
 @dataclass(frozen=True)
@@ -370,6 +394,10 @@ class ReportCardManifest:
     )
     source_publication_date_status: str = field(
         default="unknown", metadata={"doc": "Canonical publication-date status."}
+    )
+    cover_style_hash: str = field(
+        default="",
+        metadata={"doc": "SHA-256 identity of the style used to render covers."},
     )
 
     @classmethod
@@ -503,6 +531,12 @@ class ReportCardManifest:
                 payload.get("source_publication_date_status") or "unknown",
                 code="cover_fingerprint_invalid",
                 field_name="source_publication_date_status",
+            ),
+            cover_style_hash=_text(
+                payload.get("cover_style_hash"),
+                code="cover_fingerprint_invalid",
+                field_name="cover_style_hash",
+                allow_empty=True,
             ),
         )
 

@@ -6,6 +6,32 @@ import threading
 from ._shared import *  # noqa: F401,F403
 
 
+def _accepted_crop_response(request):
+    paths = [
+        f"report/{request.subdir or 'slices'}/{item.id}-{int(request.dpi)}.png"
+        for item in request.items
+    ]
+    return SimpleNamespace(
+        paths=paths,
+        outcomes=[
+            SimpleNamespace(
+                candidate_id=item.id,
+                path=path,
+                accepted=True,
+                quality_profile="publication_strict",
+                qa_sidecar_path=f"{path}.qa.json",
+                score=0.99,
+                defects=[],
+                detector_summary={},
+                rejection_reason="",
+                dpi=int(request.dpi),
+                image_sha256="a" * 64,
+            )
+            for item, path in zip(request.items, paths, strict=True)
+        ],
+    )
+
+
 def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_exists(
     tmp_path,
 ):
@@ -61,9 +87,7 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
                     [str(item.id or "") for item in req.items],
                 )
             )
-            or SimpleNamespace(
-                paths=[f"report/{req.subdir or 'slices'}/{req.items[0].id}.png"]
-            )
+            or _accepted_crop_response(req)
         ),
     )
     payload = ReportPayload(
@@ -96,8 +120,9 @@ def test_select_report_figures_skips_legacy_best_figure_when_candidate_gallery_e
 
     assert figure_calls == []
     assert crop_calls == [("slices", "publication_strict", ["chart_keep"])]
-    assert selection.payload._figure_gallery == ["report/slices/chart_keep.png"]
-    assert selection.payload._figure_top == "report/slices/chart_keep.png"
+    expected_crop = f"report/slices/chart_keep-{int(settings.final_crop_dpi)}.png"
+    assert selection.payload._figure_gallery == [expected_crop]
+    assert selection.payload._figure_top == expected_crop
     assert selection.payload._figure_section_enabled is True
 
 
@@ -136,9 +161,7 @@ def test_select_report_figures_uses_configured_final_crop_dpi_for_selected_galle
                 [str(item.id or "") for item in req.items],
             )
         )
-        return SimpleNamespace(
-            paths=[f"report/slices/{item.id}-{int(req.dpi)}.png" for item in req.items]
-        )
+        return _accepted_crop_response(req)
 
     deps = _deps(
         collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[table, chart]),
@@ -206,8 +229,8 @@ def test_select_report_figures_uses_configured_final_crop_dpi_for_selected_galle
         ("publication_strict", 216, ["table_keep", "chart_keep"]),
     ]
     assert selection.payload._figure_gallery == [
-        "report/slices/table_keep-216.png",
-        "report/slices/chart_keep-216.png",
+        f"report/slices/table_keep-{int(settings.final_crop_dpi)}.png",
+        f"report/slices/chart_keep-{int(settings.final_crop_dpi)}.png",
     ]
 
 
@@ -527,9 +550,7 @@ def test_select_report_figures_ranks_table_and_chart_batches_concurrently(
         collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[table, chart]),
         render_prompt=_render_prompt,
         rank_candidates=_rank_candidates,
-        crop_regions=lambda req, ctx: SimpleNamespace(
-            paths=[f"report/{item.id}.png" for item in req.items]
-        ),
+        crop_regions=lambda req, ctx: _accepted_crop_response(req),
     )
     payload = ReportPayload(
         tldr="",
@@ -581,6 +602,32 @@ def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gall
         meta={"area_frac": 0.2, "text_ratio": 0.2},
     )
     figure_calls: list[str] = []
+    crop_calls: list[tuple[str, int, list[str]]] = []
+
+    def _crop_regions(req, ctx):
+        crop_calls.append(
+            (str(req.mode), int(req.dpi), [item.id for item in req.items])
+        )
+        path = "report/candidates/chart_keep-final.png"
+        return SimpleNamespace(
+            paths=[path],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id="chart_keep",
+                    path=path,
+                    accepted=True,
+                    quality_profile="publication_strict",
+                    qa_sidecar_path=f"{path}.qa.json",
+                    score=0.99,
+                    defects=[],
+                    detector_summary={},
+                    rejection_reason="",
+                    dpi=int(req.dpi),
+                    image_sha256="a" * 64,
+                )
+            ],
+        )
+
     deps = _deps(
         collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[candidate]),
         extract_best_figure=lambda req, ctx: (
@@ -611,9 +658,7 @@ def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gall
                 ],
             },
         ),
-        crop_regions=lambda req, ctx: (_ for _ in ()).throw(
-            AssertionError("fallback crop pass should be skipped when crop paths exist")
-        ),
+        crop_regions=_crop_regions,
     )
     payload = ReportPayload(
         tldr="",
@@ -644,8 +689,13 @@ def test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gall
     selection = rsg.select_report_figures(runtime, source, deps)
 
     assert figure_calls == []
-    assert selection.payload._figure_gallery == ["report/candidates/chart_keep.png"]
-    assert selection.payload._figure_top == "report/candidates/chart_keep.png"
+    assert crop_calls == [
+        ("publication_strict", int(settings.final_crop_dpi), ["chart_keep"])
+    ]
+    assert selection.payload._figure_gallery == [
+        "report/candidates/chart_keep-final.png"
+    ]
+    assert selection.payload._figure_top == "report/candidates/chart_keep-final.png"
     assert selection.payload._figure_section_enabled is True
 
 
@@ -672,7 +722,7 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
         caption="Figure 2. Strong chart",
         meta={"area_frac": 0.18, "text_ratio": 0.2},
     )
-    crop_calls: list[tuple[str, str, list[str]]] = []
+    crop_calls: list[tuple[str, int, list[str]]] = []
     deps = _deps(
         collect_candidates=lambda req, ctx: SimpleNamespace(
             candidates=[table_candidate, chart_candidate]
@@ -703,12 +753,35 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
         crop_regions=lambda req, ctx: (
             crop_calls.append(
                 (
-                    str(req.subdir or ""),
                     str(req.mode or ""),
+                    int(req.dpi),
                     [str(item.id or "") for item in req.items],
                 )
             )
-            or SimpleNamespace(paths=["report/candidates/table_keep.png"])
+            or SimpleNamespace(
+                paths=[
+                    f"report/candidates/{item.id}-{int(req.dpi)}.png"
+                    for item in req.items
+                ],
+                outcomes=[
+                    SimpleNamespace(
+                        candidate_id=item.id,
+                        path=f"report/candidates/{item.id}-{int(req.dpi)}.png",
+                        accepted=True,
+                        quality_profile="publication_strict",
+                        qa_sidecar_path=(
+                            f"report/candidates/{item.id}-{int(req.dpi)}.png.qa.json"
+                        ),
+                        score=0.99,
+                        defects=[],
+                        detector_summary={},
+                        rejection_reason="",
+                        dpi=int(req.dpi),
+                        image_sha256="a" * 64,
+                    )
+                    for item in req.items
+                ],
+            )
         ),
     )
     payload = ReportPayload(
@@ -739,13 +812,170 @@ def test_select_report_figures_crops_only_missing_fallback_candidates_after_reus
 
     selection = rsg.select_report_figures(runtime, source, deps)
 
-    assert crop_calls == [("candidates", "publication_strict", ["table_keep"])]
-    assert selection.payload._figure_gallery == [
-        "report/candidates/table_keep.png",
-        "report/candidates/chart_keep.png",
+    assert crop_calls == [
+        (
+            "publication_strict",
+            int(settings.final_crop_dpi),
+            ["table_keep", "chart_keep"],
+        )
     ]
-    assert selection.payload._figure_top == "report/candidates/table_keep.png"
+    assert selection.payload._figure_gallery == [
+        f"report/candidates/table_keep-{int(settings.final_crop_dpi)}.png",
+        f"report/candidates/chart_keep-{int(settings.final_crop_dpi)}.png",
+    ]
+    assert selection.payload._figure_top == (
+        f"report/candidates/table_keep-{int(settings.final_crop_dpi)}.png"
+    )
     assert selection.payload._figure_section_enabled is True
+
+
+def test_select_report_figures_rerenders_unproven_fallback_at_final_dpi(tmp_path):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+        final_crop_dpi=216,
+        rank_selected_max=1,
+        rank_max_candidates=4,
+    )
+    candidate = _candidate(
+        cid="chart_keep",
+        kind="chart",
+        page=0,
+        caption="Figure 1. Strong chart",
+        meta={"area_frac": 0.2, "text_ratio": 0.2},
+    )
+    crop_calls = []
+
+    def _crop_regions(req, ctx):
+        crop_calls.append((req.mode, req.dpi, req.items[0].id))
+        return SimpleNamespace(
+            paths=["report/candidates/chart_keep-216.png"],
+            outcomes=[
+                SimpleNamespace(
+                    candidate_id="chart_keep",
+                    path="report/candidates/chart_keep-216.png",
+                    accepted=True,
+                    quality_profile="publication_strict",
+                    qa_sidecar_path="report/candidates/chart_keep-216.png.qa.json",
+                    score=0.99,
+                    defects=[],
+                    detector_summary={},
+                    rejection_reason="",
+                    dpi=216,
+                    image_sha256="a" * 64,
+                )
+            ],
+        )
+
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[candidate]),
+        extract_best_figure=lambda req, ctx: SimpleNamespace(
+            image_path="report/assets/legacy.png", caption="legacy", page=0
+        ),
+        rank_candidates=lambda req, ctx: SimpleNamespace(
+            results=[],
+            prompt_tokens=None,
+            completion_tokens=None,
+            total_tokens=None,
+            request_id="rank",
+            raw_content="[]",
+        ),
+        read_json_object_cache=lambda req, ctx: SimpleNamespace(
+            found=True,
+            payload={
+                "schema_version": "1.0",
+                "candidates": [
+                    {
+                        "id": "chart_keep",
+                        "crop_path": "report/candidates/chart_keep-110.png",
+                    }
+                ],
+            },
+        ),
+        crop_regions=_crop_regions,
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert crop_calls == [("publication_strict", 216, "chart_keep")]
+    assert selection.payload._figure_gallery == ["report/candidates/chart_keep-216.png"]
+    assert selection.payload._figure_assets[0].crop_qa_accepted is True
+
+
+def test_select_report_figures_omits_legacy_image_without_strict_crop_proof(
+    tmp_path,
+):
+    settings = _settings(
+        tmp_path,
+        crop_refine_enabled=False,
+        crop_refine_mode="off",
+    )
+    deps = _deps(
+        collect_candidates=lambda req, ctx: SimpleNamespace(candidates=[]),
+        extract_best_figure=lambda req, ctx: SimpleNamespace(
+            image_path="report/assets/legacy.png",
+            caption="Legacy embedded bitmap",
+            page=2,
+        ),
+    )
+    payload = ReportPayload(
+        tldr="",
+        title="Report",
+        insights=[],
+        quote=Quote(text="q"),
+        figure=Figure(title="", evidence=""),
+        commentary="",
+        source="",
+    )
+    runtime = SimpleNamespace(
+        local_pdf_path=_pdf_path(tmp_path),
+        settings=settings,
+        report_name="report",
+        file=SimpleNamespace(file_id="file"),
+        md5=None,
+        ctx=_ctx(),
+        report_worker_limit=1,
+        parallel_within_file=False,
+    )
+    source = SimpleNamespace(
+        payload=payload,
+        contents_page_number=0,
+        pdf_context=None,
+        pdf_context_for_tasks=None,
+    )
+
+    selection = rsg.select_report_figures(runtime, source, deps)
+
+    assert selection.payload._figure_assets == []
+    assert selection.payload._figure_image == ""
+    assert selection.payload._figure_top == ""
+    assert selection.payload._figure_section_enabled is False
 
 
 __all__ = [
@@ -754,4 +984,6 @@ __all__ = [
     "test_select_report_figures_ranks_table_and_chart_batches_concurrently",
     "test_select_report_figures_reuses_existing_candidate_crops_for_fallback_gallery",
     "test_select_report_figures_crops_only_missing_fallback_candidates_after_reuse",
+    "test_select_report_figures_rerenders_unproven_fallback_at_final_dpi",
+    "test_select_report_figures_omits_legacy_image_without_strict_crop_proof",
 ]

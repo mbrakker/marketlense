@@ -28,6 +28,7 @@ from src.services._sqlite_migration._reports.projections import (
     _reports_db_028_add_source_reuse_attribution_statuses,
     _reports_db_029_add_source_provenance_roles,
     _reports_db_030_add_signal_publication_manifest,
+    _reports_db_031_create_immutable_signal_candidate_manifests,
 )
 from src.services._sqlite_migration._reports.routing import (
     _reports_db_006_create_or_upgrade_download_route_history,
@@ -227,5 +228,10 @@ _REPORTS_DB_MIGRATIONS: tuple[_MigrationSpec, ...] = (
         migration_id="reports_db_030_add_signal_publication_manifest",
         version=30,
         apply_fn=_reports_db_030_add_signal_publication_manifest,
+    ),
+    _MigrationSpec(
+        migration_id="reports_db_031_create_immutable_signal_candidate_manifests",
+        version=31,
+        apply_fn=_reports_db_031_create_immutable_signal_candidate_manifests,
     ),
 )
