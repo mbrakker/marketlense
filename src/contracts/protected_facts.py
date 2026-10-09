@@ -535,17 +535,22 @@ def _subjects(text: str) -> tuple[str, ...]:
     discourse_subject_starts = {
         "a",
         "an",
+        "and",
         "as",
         "because",
+        "but",
         "expected",
         "expect",
         "forecast",
         "from",
         "not",
         "of",
+        "or",
         "reported",
         "that",
         "to",
+        "whereas",
+        "while",
     }
     quantities = extract_quantities(text)
     subjects: list[str] = []
@@ -554,7 +559,9 @@ def _subjects(text: str) -> tuple[str, ...]:
         if (
             not subject
             or subject.split()[0] in discourse_subject_starts
-            or re.search(r"\b(?:expect|expected|expectation|reported|forecast)\b", subject)
+            or re.search(
+                r"\b(?:expect|expected|expectation|reported|forecast)\b", subject
+            )
         ):
             continue
         if any(

@@ -33,7 +33,8 @@ text: |
     `grounding_package.quarantined_evidence_ids`.
   - If the approved evidence cannot support a distinct two-finding synthesis,
     return an empty Expert View rather than reuse the failed evidence or claim.
-  - Develop the editorial plan's report thesis and themes without introducing a competing frame.
+  - Use the plan to select, not prove, an angle; omit unsupported cross-section
+    links or centrality.
   - A non-empty Expert View must connect at least two distinct supported findings or themes; do not restate one finding or summary sentence.
   - Do not add claims that are absent from the supplied editorial plan, synthesis context, or grounding package.
   - Treat `so_what` fields as interpretation cues, not independent factual evidence, and preserve limitations and counter-signals as constraints.

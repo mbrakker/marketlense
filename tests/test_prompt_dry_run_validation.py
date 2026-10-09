@@ -206,13 +206,80 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "both tldrs are report-level leads" in prompt_text
     assert "must share the most material supported finding" in prompt_text
     assert "prefer a decision-useful metric" in prompt_text
-    assert "if findings are empty, use the supported priority-one theme" in prompt_text
-    assert "direct quote tied to it" in prompt_text
+    assert "directly supported docmap point" in prompt_text
+    assert "priority is selection guidance, not evidence" in prompt_text
+    assert "abstain if unsupported" in prompt_text
     assert (
         "lead executive_summary from a finding tied to the priority-one theme"
         in prompt_text
     )
     assert "avoid section descriptions when stronger evidence exists" in prompt_text
+
+
+def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "priority is selection guidance, not evidence" in prompt_text
+    assert "directly supported docmap point" in prompt_text
+    assert "abstain if unsupported" in prompt_text
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/regenerate/summary",
+        "report_vs/artifacts/regenerate/expert_comment",
+    ],
+)
+def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
+    namespace: str,
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0", namespace=namespace, force_reload=True
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(
+        f"{prompt_set.system.text} {prompt_set.user.text}".split()
+    ).lower()
+
+    if namespace == "report_vs/artifacts/summary":
+        assert "priority is selection guidance, not evidence" in prompt_text
+    elif namespace == "report_vs/artifacts/regenerate/summary":
+        assert "selection guidance, not evidence" in prompt_text
+        assert "section-scoped" in prompt_text
+    elif namespace == "report_vs/artifacts/expert_comment":
+        assert "cross-section links or report-wide centrality" in prompt_text
+    else:
+        assert "use the plan to select, not prove" in prompt_text
+        assert "unsupported cross-section links or centrality" in prompt_text
+
+
+def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "preserve mechanisms, causes, and contrasts" in prompt_text
+    assert "section-scoped `key_points`" in prompt_text
+    assert "do not flatten them to themes" in prompt_text
 
 
 @pytest.mark.parametrize(

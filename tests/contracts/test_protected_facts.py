@@ -133,6 +133,28 @@ def test_protected_direction_does_not_read_growth_noun_as_direction() -> None:
     assert comparison.dimension("direction").status == "incompatible"
 
 
+def test_discourse_but_is_not_misread_as_a_population() -> None:
+    claim = (
+        "Strategy games showed stronger session growth despite flat installs; "
+        "casino and slots had install growth, but sessions declined."
+    )
+    evidence = (
+        "This subsection compares gaming installs, sessions, retention, and CPI, "
+        "including differences across regions and genres. The discussion emphasizes "
+        "that install growth does not always translate into session growth and that "
+        "churn can require targeted retention tactics. Strategy games showed stronger "
+        "session growth despite flat installs, while casino and slots had install "
+        "growth alongside declining sessions. The report suggests welcome "
+        "notifications, benefits, streaks, and attribution dashboards to address "
+        "churn and assess user value. Gaming retention changed little overall; "
+        "hyper-casual retention declined more sharply over the days after install."
+    )
+
+    comparison = compare_protected_fact_texts(claim, evidence)
+
+    assert comparison.dimension("population").status != "incompatible"
+
+
 @pytest.mark.parametrize(
     ("claim", "evidence"),
     [
