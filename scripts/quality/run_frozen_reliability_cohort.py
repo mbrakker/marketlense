@@ -380,11 +380,20 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         cross_report.get("briefing_validated_multireport_provider_usage") or {}
     )
     briefing_cost = briefing_usage.get("estimated_cost_usd")
+    briefing_duration = cross_report.get(
+        "briefing_validated_multireport_execution_seconds"
+    )
     briefing_cost_valid = (
         isinstance(briefing_cost, (int, float))
         and not isinstance(briefing_cost, bool)
         and briefing_cost >= 0
         and (not isinstance(briefing_cost, float) or math.isfinite(briefing_cost))
+    )
+    briefing_duration_valid = (
+        isinstance(briefing_duration, (int, float))
+        and not isinstance(briefing_duration, bool)
+        and math.isfinite(float(briefing_duration))
+        and briefing_duration > 0
     )
     return bool(
         replay.get("status") == "verified"
@@ -398,12 +407,9 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and cross_report.get("queue_terminal") is True
         and cross_report.get("queue_terminal_failure_count") == 0
         and cross_report.get("queue_nonterminal_outbox_count") == 0
+        and cross_report.get("queue_dead_letter_outbox_count", 0) == 0
         and cross_report.get("briefing_validated_multireport_count", 0) >= 1
-        and isinstance(
-            cross_report.get("briefing_validated_multireport_execution_seconds"),
-            (int, float),
-        )
-        and cross_report.get("briefing_validated_multireport_execution_seconds", 0) > 0
+        and briefing_duration_valid
         and isinstance(briefing_usage.get("provider_calls"), int)
         and briefing_usage.get("provider_calls", 0) > 0
         and briefing_usage.get("cost_available") is True
@@ -413,9 +419,12 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         == cross_report.get("signal_manifest_count")
         and cross_report.get("signal_manifest_replay_verified_count")
         == cross_report.get("signal_manifest_count")
+        and cross_report.get("signal_manifest_mutation_probe_count")
+        == cross_report.get("signal_manifest_count")
+        and cross_report.get("signal_manifest_mutation_verified_count")
+        == cross_report.get("signal_manifest_count")
         and cross_report.get("signal_manifest_mutation_preserved") is True
-        and cross_report.get("signal_manifest_mutation_probe_scope")
-        == "representative_manifest"
+        and cross_report.get("signal_manifest_mutation_probe_scope") == "every_manifest"
         and cross_report.get("signal_single_source_group_count", 0) > 0
         and cross_report.get(
             "signal_single_source_insufficient_grounding_hold_count", 0

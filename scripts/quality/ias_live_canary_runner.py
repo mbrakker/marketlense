@@ -560,15 +560,21 @@ def _wordpress_publication_evidence(
         "media_associations",
     }
     readback_checks = outcome.get("readback_checks")
-    verified_readback_checks = (
-        {
-            str(check.get("name"))
-            for check in readback_checks
-            if isinstance(check, dict) and check.get("status") == "verified"
-        }
-        if isinstance(readback_checks, list)
-        else set()
-    )
+    verified_readback_checks: set[str] = set()
+    readback_checks_well_formed = isinstance(readback_checks, list)
+    seen_readback_checks: set[str] = set()
+    if isinstance(readback_checks, list):
+        for check in readback_checks:
+            if not isinstance(check, dict):
+                readback_checks_well_formed = False
+                continue
+            name = str(check.get("name") or "").strip()
+            status = str(check.get("status") or "").strip()
+            if not name or name in seen_readback_checks:
+                readback_checks_well_formed = False
+            seen_readback_checks.add(name)
+            if status == "verified":
+                verified_readback_checks.add(name)
     actual_write_count = outcome.get("actual_write_count")
     created = (
         wordpress_post_id is not None
@@ -586,6 +592,7 @@ def _wordpress_publication_evidence(
     )
     readback = (
         created
+        and readback_checks_well_formed
         and outcome.get("authenticated_readback_verified") is True
         and required_readback_checks.issubset(verified_readback_checks)
     )
@@ -1894,6 +1901,16 @@ def _collect_cross_report_handoff_evidence(
                 (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
             ).fetchone()[0]
         )
+        outbox_dead_letter_count = int(
+            conn.execute(
+                f"""
+                SELECT COUNT(*) FROM workflow_outbox
+                WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+                  AND status='dead_letter'
+                """,
+                (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+            ).fetchone()[0]
+        )
         signal_publication_job_count = int(
             conn.execute(
                 """SELECT COUNT(*) FROM workflow_jobs
@@ -1920,6 +1937,7 @@ def _collect_cross_report_handoff_evidence(
     terminal_failure_count = sum(
         1 for row in job_rows if str(row[2]) in {"blocked", "dead_letter", "cancelled"}
     )
+    terminal_failure_count += outbox_dead_letter_count
 
     opportunities_by_job = {
         str(job_id): (
@@ -1953,6 +1971,8 @@ def _collect_cross_report_handoff_evidence(
     signal_manifest_readback_count = 0
     signal_manifest_replay_count = 0
     signal_manifest_mutation_preserved = False
+    signal_manifest_mutation_probe_count = 0
+    signal_manifest_mutation_verified_count = 0
     single_source_group_count = 0
     single_source_hold_count = 0
     single_source_unsafe_count = 0
@@ -2014,14 +2034,21 @@ def _collect_cross_report_handoff_evidence(
                     single_source_unsafe_count += 1
             elif source_count >= 2:
                 signal_multireport_group_count += 1
-        if manifest_rows:
-            signal_manifest_mutation_preserved = _verify_signal_manifest_immutable(
-                signal_store_db=signal_store_db,
-                manifest_hash=str(manifest_rows[0][0]),
-                extraction_request_id=str(manifest_rows[0][1]),
-                group_id=str(manifest_rows[0][2]),
-                ctx=ctx,
+        signal_manifest_mutation_probe_count = len(manifest_rows)
+        for manifest_hash, extraction_request_id, group_id in manifest_rows:
+            signal_manifest_mutation_verified_count += int(
+                _verify_signal_manifest_immutable(
+                    signal_store_db=signal_store_db,
+                    manifest_hash=str(manifest_hash),
+                    extraction_request_id=str(extraction_request_id),
+                    group_id=str(group_id),
+                    ctx=ctx,
+                )
             )
+        signal_manifest_mutation_preserved = bool(manifest_rows) and (
+            signal_manifest_mutation_verified_count
+            == signal_manifest_mutation_probe_count
+        )
 
     cross_job_ids = [
         str(row[0])
@@ -2055,6 +2082,7 @@ def _collect_cross_report_handoff_evidence(
         "queue_terminal": queue_terminal,
         "queue_terminal_failure_count": terminal_failure_count,
         "queue_nonterminal_outbox_count": outbox_nonterminal_count,
+        "queue_dead_letter_outbox_count": outbox_dead_letter_count,
         "job_status_counts": job_status_counts,
         "briefing_generation_success_count": briefing_generation_success_count,
         "briefing_validated_multireport_count": briefing_valid_multireport_count,
@@ -2066,7 +2094,11 @@ def _collect_cross_report_handoff_evidence(
         "signal_manifest_hashes": signal_manifest_hashes,
         "signal_manifest_readback_verified_count": signal_manifest_readback_count,
         "signal_manifest_replay_verified_count": signal_manifest_replay_count,
-        "signal_manifest_mutation_probe_scope": "representative_manifest",
+        "signal_manifest_mutation_probe_count": signal_manifest_mutation_probe_count,
+        "signal_manifest_mutation_verified_count": (
+            signal_manifest_mutation_verified_count
+        ),
+        "signal_manifest_mutation_probe_scope": "every_manifest",
         "signal_manifest_mutation_preserved": signal_manifest_mutation_preserved,
         "signal_single_source_group_count": single_source_group_count,
         "signal_single_source_insufficient_grounding_hold_count": (
@@ -3272,8 +3304,12 @@ def summarize_frozen_cohort_results(
         ),
     }
     if cohort_metrics is not None:
+        report_attribution_modes = {
+            "per_report_isolated_workflow",
+            "canonical_run_and_report_id",
+        }
         per_report_attribution = bool(results) and all(
-            item.get("metric_attribution") == "per_report_isolated_workflow"
+            item.get("metric_attribution") in report_attribution_modes
             for item in results
         )
         summary.update(
@@ -3288,6 +3324,11 @@ def summarize_frozen_cohort_results(
                 ),
                 "cohort_input_tokens": cohort_metrics.get("input_tokens"),
                 "cohort_output_tokens": cohort_metrics.get("output_tokens"),
+                "per_report_metric_scope": (
+                    "report_scoped_excludes_shared_handoffs"
+                    if per_report_attribution
+                    else "unavailable"
+                ),
                 "bounded_repair_rate": (
                     summary["bounded_repair_rate"]
                     if per_report_attribution

@@ -636,6 +636,68 @@ def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
     assert not any("financial leverage" in message.lower() for message in messages)
 
 
+@pytest.mark.parametrize("retained_claim_matches", [True, False])
+def test_summary_quality_warning_uses_unique_retained_claim_identity(
+    tmp_path, retained_claim_matches: bool
+):
+    tldr = (
+        "The report states that more than 112.1 billion apps were downloaded in "
+        "2025, as reported in its introduction."
+    )
+    retained_text = (
+        tldr
+        if retained_claim_matches
+        else "A different retained sentence with its own provenance."
+    )
+    claims = build_soft_copy_claim_provenance(
+        artifact_family="summary",
+        text=retained_text,
+        declared_claims=[
+            {
+                "claim": retained_text,
+                "classification": "factual",
+                "evidence_ids": ["intro-downloads"],
+            }
+        ],
+        evidence_span_index={},
+        producing_prompt_identity={},
+        generation_attempt=1,
+        regeneration_attempt=0,
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-summary-retained-claim",
+            report=_report(),
+            artifacts={
+                "summary": {"tldr": tldr, "claim_evidence_map": []},
+                "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
+                    claims
+                ),
+            },
+            evidence_packs={},
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=FakeOpenAI({"unsupported": []}),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    warning = next(
+        issue
+        for issue in result.issues
+        if issue.rule_id == "artifact_quality"
+        and issue.affected_section == "summary.tldr"
+        and "opens without a concrete metric" in issue.message
+    )
+    assert warning.entity_id == (
+        claims[0].claim_id if retained_claim_matches else "summary.tldr"
+    )
+
+
 def test_artifact_quality_uses_a_source_topic_heading_as_public_category(tmp_path):
     settings = _settings(tmp_path)
     result = validate_report(

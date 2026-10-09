@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from typing import Any, Iterable, List
 
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationIssue
 from src.generators.validation.models import ValidationRuntime
 from src.utils.coercion import string_value as _s
+from src.utils.errors import AppError
 
 RULE_ID = "artifact_quality"
 
@@ -67,6 +72,11 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
             and not has_structured_category
             and not _has_concrete_signal(first_sentence)
         ):
+            claim_id = _summary_opening_claim_id(
+                artifacts=artifacts,
+                path=path,
+                sentence=first_sentence,
+            )
             issues.append(
                 ValidationIssue(
                     schema_version="1.0",
@@ -75,10 +85,34 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
                     affected_section=path,
                     rule_id=RULE_ID,
                     repair_target="artifact_copy",
-                    entity_id=path,
+                    entity_id=claim_id or path,
                 )
             )
     return issues
+
+
+def _summary_opening_claim_id(*, artifacts: dict, path: str, sentence: str) -> str:
+    """Attribute a summary opening warning only to one exact retained claim."""
+
+    if path not in {
+        "summary.tldr",
+        "summary.card_tldr_compact",
+        "summary.executive_summary",
+    }:
+        return ""
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except (AppError, TypeError, ValueError):
+        return ""
+    text_hash = hashlib.sha256(" ".join(sentence.split()).encode("utf-8")).hexdigest()
+    matches = [
+        claim
+        for claim in claims
+        if claim.artifact_family == "summary" and claim.text_hash == text_hash
+    ]
+    return matches[0].claim_id if len(matches) == 1 else ""
 
 
 def _artifact_copy_fields(artifacts: dict) -> Iterable[tuple[str, str, bool]]:
