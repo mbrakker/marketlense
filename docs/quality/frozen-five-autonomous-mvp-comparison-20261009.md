@@ -2,7 +2,9 @@
 
 **Recommendation: NO-GO for autonomous publication.** The final frozen five-report staging canary admitted all five exact sources, but only 1/5 completed staging draft creation, authenticated readback, and duplicate-job replay. Three reports reached report readiness but failed at the WordPress target with `wordpress_target_installation_redirect`; Adjust failed report validation with three unresolved retained factual claims. The separate cross-report Briefing job also failed validation. The site was confirmed as staging at `http://marketlense.medianewsonline.com`; no production publish occurred.
 
-The authoritative unattended run is on source SHA `fca1234ea6bfa6492dbcff0726dd69a423876e15`, using manifest SHA-256 `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`. It reached terminal outcomes for all five reports with zero operator interventions and zero queue retries. One staging draft was created. Initial post-run reads returned a setup redirect; a later authenticated read confirmed the exact draft, and cleanup moved only that verified test post to Trash and verified its status. The Briefing output retry classification was fixed afterward in code commit `5acc7970b1a3005ce869a3dff63457e3c84c162a`; that fix has focused regression coverage but was not exercised in another live Briefing run.
+The authoritative unattended run is on source SHA `fca1234ea6bfa6492dbcff0726dd69a423876e15`, using manifest SHA-256 `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`. It reached terminal outcomes for all five reports with zero operator interventions and zero queue retries. One staging draft was created. Initial post-run reads returned a setup redirect; a later authenticated read confirmed the exact draft, and cleanup moved only that verified test post to Trash and verified its status. The Briefing output retry classification was fixed afterward in code commit `5acc7970b1a3005ce869a3dff63457e3c84c162a`; a later interrupted post-fix shared batch produced one valid Briefing on its first attempt, as recorded below.
+
+Follow-up runs below diagnose post-fix behavior; none replaces the `fca1234e…` primary cohort or the report-by-report scorecard. The latest implementation fixes now include the Briefing shape retry, WordPress file-ID lookup, and isolated-drain metrics defect. A fresh exact five-report staging run on the implementation SHA is still required before GO can be considered.
 
 Earlier runs and their detailed scorecards are preserved below for chronology. They do not replace or override the final staging canary.
 
@@ -12,7 +14,8 @@ Earlier runs and their detailed scorecards are preserved below for chronology. T
 - Final report workflow results were: Capgemini, Activate, KPMG, and Reuters Institute passed report validation/readiness; Adjust did not. WordPress staging succeeded only for KPMG.
 - The staging preflight on code SHA `5acc7970…` was ready, with 23 workflow statuses ready, WordPress capability ready, 11 metadata calls, and zero external writes. This did not prevent three per-report WordPress publish jobs from receiving `wordpress_target_installation_redirect` during the canary.
 - Signal readback/replay/mutation verification passed for all 32 manifests; all remained single-report holds. No multi-report Signal was generated. The only Briefing generation job failed because `executive_takeaways` contained fewer than two populated strings.
-- The current Briefing shape failure is now classified as retryable so the existing queue can make its configured bounded second attempt. Evidence remains local: focused generator tests and queue retry tests passed; no live post-fix retry was run.
+- The current Briefing shape failure is now classified as retryable so the existing queue can make its configured bounded second attempt. Focused generator and queue retry tests passed. The post-fix live Briefing completed on its first attempt, so no retry was required; the enclosing five-report run was interrupted before terminal cohort evidence.
+- A later five-source post-fix staging attempt completed one Briefing generation on its first attempt, then ended during Adjust analysis without a terminal cohort result. This is partial handoff evidence only; it does not establish full-cohort completion.
 - Paired review found weaker specificity in the Reuters Institute and KPMG output; Activate retained a broadly equivalent quantified lead with a less specific core signal. Adjust has no final HTML. This review is a single-reviewer warning signal, not formal human scoring.
 - The final run used a three-worker supervisor cap versus five at baseline, and Adjust failed before completing. Elapsed-time and token-cost reductions are not evidence of a quality-preserving speed improvement.
 
@@ -52,6 +55,14 @@ The live KPMG post exposed a separate idempotency-lookup defect: the REST reques
 
 A separate one-report Adjust diagnostic on code SHA `5acc7970b1a3005ce869a3dff63457e3c84c162a` first hit the runner's output-path budget. Its required failing-process rerun used the unused short root `C:\p5adj5`, completed the report workflow, and retained `validation.json` with `status=pass`. The wrapper nevertheless recorded `frozen_cohort_runner_defect` and omitted report metrics. That diagnostic is not counted as an end-to-end success or used to replace the primary cohort result.
 
+### Post-fix follow-up diagnostics
+
+The first exact five-source post-fix shared-batch attempt used source SHA `dc78a08ed2f7137a12ae28f1d26a98aaf6393027`, the pinned manifest, staging drafts, HTTP opt-in, and cross-report analysis. All five ingests and selections completed; three report-analysis jobs completed, Adjust analysis remained active at attempt 1/2, Reuters analysis was pending, and the Briefing job succeeded on its first attempt. The Python runner disappeared about 44 minutes after launch, well before its two-hour per-report drain bound. No `cohort_members.json` or `cohort_result.json` was written, so this attempt has no terminal cohort result and is excluded from acceptance metrics. Its queue had two WordPress jobs pending and no WordPress writes had occurred. Retained state is under ignored `tmp/p5postfix/frozen-reliability-ibyz0gx5/`; the missing process exit/stderr record prevents a more specific cause for that abrupt termination.
+
+One-report diagnostics on the same SHA exposed a separate deterministic result-reporting bug for runs with cross-report draining disabled. `_drain_report_paths` passed `0.0` as `round()` precision, raising `TypeError` after the report queues reached terminal state and masking their outcomes and usage metrics as `frozen_cohort_runner_defect`. The fix moves the conditional outside `round()`. A production-queue regression test first failed on zero reported provider calls, then passed after the fix. The code and test are in commit `16c8dbd4c9016cffa830f349094078a1a1dc008f`.
+
+The required failing-process Adjust rerun on that clean implementation SHA used the pinned source and an isolated, non-staging queue. It completed in 505.713 seconds end to end (497.000 seconds core), with report validation/readiness pass, `awaiting_review`, zero unsupported and unresolved retained factual claims, three bounded repairs, zero queue retries, and zero operator interventions. It used 39 provider calls, 326,912 input tokens, 79,078 output tokens, and estimated cost $0.082817. Its `cohort_result.json` is retained under ignored `tmp/p5adjustpostfix/frozen-reliability-pbpsrdt5/`. This single-report diagnostic confirms Adjust can complete on the fixed implementation, but it is not a substitute for the required five-report shared-batch staging canary.
+
 ### Paired output review
 
 | Report | Paired review finding |
@@ -60,7 +71,7 @@ A separate one-report Adjust diagnostic on code SHA `5acc7970b1a3005ce869a3dff63
 | Activate | Both runs lead with roughly $300B revenue growth over four years outpacing GDP; the current core signal omits the baseline's more exact amount and period. |
 | KPMG | The current lead broadly covers execution and 2026 themes; the baseline more clearly identifies carve-outs and the 2025 M&A pipeline. |
 | Reuters Institute | The current recommendation is broad (clarify value/adapt formats); the baseline's AI-search and referral-traffic risk was more specific and decision-relevant. |
-| Adjust | Validation failed before final HTML; no paired rendered-output judgement is possible for this canary. |
+| Adjust | The authoritative shared-batch canary failed before final HTML. A later one-report diagnostic on the fixed implementation passed validation/readiness and rendered, but is not substituted into the primary scorecard. |
 
 This is a paired assistant-assisted review of retained output, not the repository's formal blinded human score procedure. Deterministic readiness does not measure decision value or editorial distinctiveness.
 
@@ -206,9 +217,9 @@ In the earlier run, Briefing opportunity handoffs succeeded for the rendered rep
 
 | Priority | Blocker | Effect |
 | --- | --- | --- |
-| P0 | Three of four ready-report jobs received `wordpress_target_installation_redirect` during the canary, although later read-only requests recovered and the KPMG test draft was verified and moved to Trash | Staging target stability during a full cohort remains unproven; those original terminal failures still count. |
-| P0 | Adjust failed validation with three unresolved retained factual claims; the separate short-path diagnostic's wrapper returned `frozen_cohort_runner_defect` despite a persisted validation artifact of `pass` | The complete first-attempt report path remains 4/5; the auxiliary diagnostic cannot be counted as a recovered end-to-end pass. |
-| P1 | Cross-report Briefing generation dead-lettered on malformed `executive_takeaways`; no multi-report Signal group was eligible | No valid Briefing was produced. The bounded retry classification was fixed locally but not confirmed in a post-fix live run. |
+| P0 | The authoritative shared-batch canary recorded Adjust validation failure with three unresolved claims; a post-fix isolated rerun passed after three bounded repairs | The primary five-report result remains 4/5; the isolated success shows run-to-run variability but does not replace the cohort outcome. |
+| P0 | Three reports in the authoritative canary received `wordpress_target_installation_redirect`; only KPMG completed draft creation/readback/replay | Full-cohort staging reliability remains unproven after the lookup fix; post-fix five-report staging confirmation is pending. |
+| P1 | Cross-report Briefing failed validation in the authoritative canary; one later interrupted post-fix batch produced a first-attempt Briefing success | Post-fix success is partial because the exact five-report run did not reach a terminal result; no valid multi-report Signal group was eligible. |
 | P1 | Paired output review found less decision-specific content for Reuters Institute and KPMG; no formal blinded human scoring was run | Editorial equivalence and value remain unproven. |
 | P2 | Live capability preflight was ready with zero writes, while local autonomous preflight remained degraded; report run used supervisor capacity 3 versus baseline 5 | Preflight readiness does not establish reliable report publication or controlled performance equivalence. |
 
