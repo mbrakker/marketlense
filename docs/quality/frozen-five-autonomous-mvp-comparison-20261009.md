@@ -1,18 +1,68 @@
 # Frozen Five-Report Autonomous MVP Comparison — 2026-10-09
 
-**Recommendation: NO-GO for autonomous publication.** The matching first-attempt batch completed 4/5 report paths; one report failed before render. Readiness passed for the four rendered reports, and the failure passed on a separate diagnostic rerun. Paired output review found lower lead specificity in some current outputs and meaningful variation between runs. The autonomous-MVP preflight is blocked, and no WordPress sandbox was available for create, authenticated readback, or replay evidence.
+**Recommendation: NO-GO for autonomous publication.** The final frozen five-report staging canary admitted all five exact sources, but only 1/5 completed staging draft creation, authenticated readback, and duplicate-job replay. Three reports reached report readiness but failed at the WordPress target with `wordpress_target_installation_redirect`; Adjust failed report validation with three unresolved retained factual claims. The separate cross-report Briefing job also failed validation. The site was confirmed as staging at `http://marketlense.medianewsonline.com`; no production publish occurred.
 
-No production publication was attempted. All cohort runs used fresh isolated state and disabled the WordPress publish queue. The five reports reached terminal outcomes without operator intervention; no queue retry occurred.
+The authoritative unattended run is on source SHA `fca1234ea6bfa6492dbcff0726dd69a423876e15`, using manifest SHA-256 `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`. It reached terminal outcomes for all five reports with zero operator interventions and zero queue retries. One staging draft was created. Initial post-run reads returned a setup redirect; a later authenticated read confirmed the exact draft, and cleanup moved only that verified test post to Trash and verified its status. The Briefing output retry classification was fixed afterward in code commit `5acc7970b1a3005ce869a3dff63457e3c84c162a`; that fix has focused regression coverage but was not exercised in another live Briefing run.
+
+Earlier runs and their detailed scorecards are preserved below for chronology. They do not replace or override the final staging canary.
 
 ## Decision summary
 
-- The cohort identity and source checksums match the retained baseline exactly.
-- The crop-boundary fix in source commit `4161d8e5fc4c537f6397c1e51f9f06cd6dda73f7` resolved the four initial crop-refinement failures: rerunning only those four reports produced 4/4 passes. A separate same-SHA, per-report run also completed 5/5.
-- In the comparable shared-queue batch on that SHA, Capgemini failed with `card_tldr_compact_invalid`; Activate, KPMG, Reuters Institute, and Adjust reached `awaiting_review` with readiness pass. Capgemini passed a fresh isolated diagnostic, but that does not erase the shared-batch first-attempt failure.
-- Deterministic source-fidelity checks passed for every rendered report: zero retained unsupported or unresolved claims, zero hard editorial failures, and all 16 readiness rules passed. Those checks do not measure whether a lead finding is sufficiently specific or useful.
-- A paired assistant review of actual HTML found a material lead-quality regression for Activate. A second complete five-report run found lower lead specificity in four reports. Different current runs selected materially different leads for Reuters and Adjust, so this is a quality-variance concern rather than a confirmed deterministic code defect.
-- Current primary-batch wall time increased 8.3%, throughput fell 7.6%, and estimated cost fell 1.6%. The current supervisor capacity changed from 5 to 3, and measured queue wait rose substantially, so the timing comparison is not a controlled configuration match.
-- Local and bounded live `autonomous_mvp` preflights are blocked. WordPress publish/readback/replay was not run because no sandbox URL was supplied and the only configured URL may target production.
+- The frozen manifest and all five source checksums match the retained baseline exactly.
+- Final report workflow results were: Capgemini, Activate, KPMG, and Reuters Institute passed report validation/readiness; Adjust did not. WordPress staging succeeded only for KPMG.
+- The staging preflight on code SHA `5acc7970…` was ready, with 23 workflow statuses ready, WordPress capability ready, 11 metadata calls, and zero external writes. This did not prevent three per-report WordPress publish jobs from receiving `wordpress_target_installation_redirect` during the canary.
+- Signal readback/replay/mutation verification passed for all 32 manifests; all remained single-report holds. No multi-report Signal was generated. The only Briefing generation job failed because `executive_takeaways` contained fewer than two populated strings.
+- The current Briefing shape failure is now classified as retryable so the existing queue can make its configured bounded second attempt. Evidence remains local: focused generator tests and queue retry tests passed; no live post-fix retry was run.
+- Paired review found weaker specificity in the Reuters Institute and KPMG output; Activate retained a broadly equivalent quantified lead with a less specific core signal. Adjust has no final HTML. This review is a single-reviewer warning signal, not formal human scoring.
+- The final run used a three-worker supervisor cap versus five at baseline, and Adjust failed before completing. Elapsed-time and token-cost reductions are not evidence of a quality-preserving speed improvement.
+
+## Final shared-batch staging canary
+
+The canonical runner used the frozen manifest with shared batching, WordPress staging enabled, cross-report analysis enabled, and an explicit HTTP opt-in. Configuration targeted the user-confirmed staging host and draft status. The exact source run used SHA `fca1234ea6bfa6492dbcff0726dd69a423876e15`; the later code fix is recorded separately below. The primary result is retained at `tmp/p5final/fca-run/frozen-reliability-3hylkks1/cohort_result.json`.
+
+| Report | Report validation/readiness | Duration | Provider calls | Input/output tokens | Cost USD | Staging outcome |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Capgemini | pass / pass | 569s | 34 | 252,324 / 54,709 | 0.064333 | Failed `wordpress_target_installation_redirect` |
+| Activate | pass / pass | 832s | 48 | 269,760 / 59,887 | 0.068501 | Failed `wordpress_target_installation_redirect` |
+| KPMG | pass / pass | 488s | 38 | 254,985 / 67,158 | 0.076000 | Draft created, authenticated readback and replay verified; post ID 2050 |
+| Reuters Institute | pass / pass | 740s | 30 | 359,957 / 61,476 | 0.085651 | Failed `wordpress_target_installation_redirect` |
+| Adjust | fail / fail | 371s, partial | 40 | 289,975 / 77,962 | 0.081402 | Held before WordPress; three unresolved retained factual claims, zero unsupported |
+
+| Cohort measure | Baseline | Final canary | Result |
+| --- | ---: | ---: | --- |
+| Exact reports admitted / terminal | 5/5 | 5/5 | Same cohort; complete terminal accounting |
+| Report validation and readiness | 5/5 | 4/5 | One semantic `claim_support` failure on Adjust |
+| Staging draft/readback/replay | Not exercised | 1/5 | KPMG only; 3 target redirects; Adjust held |
+| Report provider calls | 215 | 190 | −11.6% |
+| Report input/output tokens | 1,879,211 / 399,097 | 1,427,001 / 321,192 | −24.1% / −19.5% |
+| Report estimated cost | $0.441918 | $0.375887 | −14.9%; not a quality-adjusted improvement |
+| Queue retries / operator interventions | 0 / 0 | 0 / 0 | No manual repair or requeue |
+
+The shared handoffs added one Briefing provider call (9,987 input / 5,006 output tokens; $0.003502). Combined report-plus-Briefing totals were 191 calls, 1,436,988 input tokens, 326,198 output tokens, and $0.379389. Report workflow wall time was 851.491 seconds; it is not comparable as a throughput win because the supervisor cap differed from baseline and Adjust ended early. Six bounded automatic report repairs occurred; 32 File Search calls were recorded.
+
+### Staging effects and cross-report handoffs
+
+The KPMG staging draft used post type `ml_report` and draft status. Its in-run authenticated readback succeeded, and replaying the same durable job preserved the job ID and attempt count with `additional_wordpress_writes=0`. Initial post-run collection and by-ID reads returned HTTP 302 to the site's setup route (`wordpress_target_installation_redirect`). A later read returned HTTP 200 and verified post ID 2050 as `ml_report`, status `draft`, with the exact KPMG report ID in `ml_file_id`. The corrected canonical file-ID lookup then found that same post. Cleanup moved it to Trash without force deletion; authenticated Trash readback succeeded and active file-ID lookup no longer returned it. No production write occurred.
+
+All 32 immutable Signal candidate manifests passed readback, replay, and mutation verification. All 32 were held with `signal_grounding_insufficient`; there were zero unsafe or multi-report Signal groups. The single Briefing generation job dead-lettered on `cross_report_analysis_output_invalid` because the model returned fewer than two populated `executive_takeaways`. No validated multi-report Briefing was produced.
+
+The local fix makes only that exact output-cardinality/populated-string failure retryable. Existing `briefing_generation` queue policy allows two total attempts; grounding or evidence failures remain non-retryable. Added regression coverage verifies the typed error and bounded queue retry mechanics; the live canary predates the fix, so successful post-fix Briefing generation remains unproven.
+
+The live KPMG post exposed a separate idempotency-lookup defect: the REST request combined exact `ml_file_id` metadata filtering with a text `search`, which made WordPress require both filters and return no match for a post whose metadata was correct. The canonical lookup now sends the exact metadata filter without the contradictory search filter. Before cleanup, the old lookup returned not-found while authenticated by-ID readback showed matching metadata; after the fix, the canonical lookup found the same post. `tests/test_wordpress_service.py` now covers a metadata match whose rendered content does not contain the file ID. Focused service and public-render tests passed (32 passed).
+
+A separate one-report Adjust diagnostic on code SHA `5acc7970b1a3005ce869a3dff63457e3c84c162a` first hit the runner's output-path budget. Its required failing-process rerun used the unused short root `C:\p5adj5`, completed the report workflow, and retained `validation.json` with `status=pass`. The wrapper nevertheless recorded `frozen_cohort_runner_defect` and omitted report metrics. That diagnostic is not counted as an end-to-end success or used to replace the primary cohort result.
+
+### Paired output review
+
+| Report | Paired review finding |
+| --- | --- |
+| Capgemini | The current lead retains the 71% brand-switch finding; its core signal is broader than the baseline's quantified switching-intent signal. |
+| Activate | Both runs lead with roughly $300B revenue growth over four years outpacing GDP; the current core signal omits the baseline's more exact amount and period. |
+| KPMG | The current lead broadly covers execution and 2026 themes; the baseline more clearly identifies carve-outs and the 2025 M&A pipeline. |
+| Reuters Institute | The current recommendation is broad (clarify value/adapt formats); the baseline's AI-search and referral-traffic risk was more specific and decision-relevant. |
+| Adjust | Validation failed before final HTML; no paired rendered-output judgement is possible for this canary. |
+
+This is a paired assistant-assisted review of retained output, not the repository's formal blinded human score procedure. Deterministic readiness does not measure decision value or editorial distinctiveness.
 
 ## Cohort identity and retained evidence
 
@@ -26,9 +76,11 @@ No production publication was attempted. All cohort runs used fresh isolated sta
 
 The frozen manifest is `docs/quality/reliability-cohort-20261001-next-five/frozen_cohort.json`, SHA-256 `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`. The runner verified all five source MD5s before submission. The historical baseline is preserved at commit `0ec3cdff841e16df7044f6645fe8379a464f41ca`, with its accepted record at `docs/quality/frozen-five-systematic-fixes-baseline-20261005.json`. Its original Temp run directory and HTML outputs were read without modification.
 
-The primary current batch summary is retained at `out/frozen-five-comparable-batch-20261009.stdout.jsonl`; its isolated run is under `tmp/p5b/ias-first-attempt-c9et0s5k/`. The full current per-report-isolated cohort is under `tmp/p5f/`; the Capgemini diagnostic is under `tmp/p5diag/` and its redacted result is at `out/frozen-five-capgemini-diagnostic-20261009.stdout.jsonl`. Redacted preflight records are under `out/`. Render copies and screenshots used for visual comparison are under ignored `tmp/p5evalview-20261009/`. Raw model responses, prompts, source extracts, and credentials are not included in this report or commit.
+The earlier comparison's primary batch summary is retained at `out/frozen-five-comparable-batch-20261009.stdout.jsonl`; its isolated run is under `tmp/p5b/ias-first-attempt-c9et0s5k/`. The earlier full per-report-isolated cohort is under `tmp/p5f/`; its Capgemini diagnostic is under `tmp/p5diag/` and redacted result at `out/frozen-five-capgemini-diagnostic-20261009.stdout.jsonl`. Redacted preflight records are under `out/`. Render copies and screenshots used for that visual comparison are under ignored `tmp/p5evalview-20261009/`. Raw model responses, prompts, source extracts, and credentials are not included in this report or commit.
 
-## Configuration and comparability
+## Earlier configuration and comparability
+
+The configuration and table in this section describe the `4161d8e5…` comparison, not the final staging canary above.
 
 | Item | Historical baseline | Current primary batch |
 | --- | --- | --- |
@@ -44,7 +96,9 @@ The static source diff from baseline changes one prompt resource: `src/prompts/r
 
 Each run used fresh isolated application state; no historical analysis or editorial output was reused. Provider-side cached input tokens were present in both ledgers (117,267 baseline; 168,848 current), so this was a fresh application-cache run, not a provider-cache-free run. The policy hash and model were constant. Rendered prompt hashes also vary with each run's dynamic evidence and optional repair path; they are not treated as static prompt-version changes. Provider request timing was unavailable.
 
-## Comparable shared-queue performance and reliability
+## Earlier comparable shared-queue performance and reliability
+
+This section records the earlier source SHA `4161d8e5fc4c537f6397c1e51f9f06cd6dda73f7` comparison. The later live staging canary and the acceptance decision are recorded above; its outcomes supersede this section for final Prompt 5 acceptance.
 
 Per-report elapsed time is measured from the first `source_ingest` start to the last core-stage completion. It includes queue wait and overlaps across reports. The Capgemini current duration ends at its typed failure and is not a successful-processing timing.
 
@@ -85,7 +139,7 @@ Current report-analysis jobs reached at most three concurrent workers, versus fi
 
 The same-SHA full per-report-isolated run completed all five reports with readiness pass, zero queue retries, zero interventions, 200 calls, 1,509,808 input tokens, 380,925 output tokens, estimated cost $0.402331, and 2,115.447 seconds summed across five independent executions. This sum is not a batch wall-time comparison. The separate Capgemini diagnostic passed in 411.317 seconds, with 32 calls, 267,068 input tokens, 59,730 output tokens, and estimated cost $0.068152.
 
-## Paired factual, grounding, editorial, and visual review
+## Earlier paired factual, grounding, editorial, and visual review
 
 Baseline and current retained outputs were reviewed side by side against the same source identities. Deterministic validation is reported separately from editorial judgement; a validator-version or readiness pass is not treated as proof of editorial improvement.
 
@@ -134,27 +188,28 @@ Verification on source SHA `4161d8e5fc4c537f6397c1e51f9f06cd6dda73f7`:
 - `python scripts/ci/check_pdf_crop_refine_benchmark.py --output-json out/frozen-five-autonomous-mvp-20261009/pdf-crop-refine-benchmark.json` — passed; golden signatures unchanged.
 - Full GitHub CI for source SHA `4161d8e5fc4c537f6397c1e51f9f06cd6dda73f7` passed: [run 37892129872](https://github.com/mbrakker/marketlense/actions/runs/37892129872).
 
-## Autonomous approval, WordPress, Signal, and Briefing
+## Earlier autonomous approval, WordPress, Signal, and Briefing evidence
 
-The current-SHA local `autonomous_mvp` capability preflight is **blocked** with 11 blocking checks: isolated state, Signal-store, and reports databases are missing; the isolated LLM-usage database has an incompatible schema; and the required Drive OAuth token is absent. The bounded live preflight is **blocked** with 6 checks, 5 read-only provider metadata calls, and 0 external writes. The WordPress site URL was explicitly blanked for this probe because the available configured URL may target production; WordPress capability consequently reported `publish_configuration_invalid`. The frozen runner separately admitted the exact 5/5 cohort under its isolated admission path.
+The blocked preflight and no-sandbox statements below describe the earlier `4161d8e5…` validation. The later confirmed staging target, live preflight, draft/readback/replay, route redirects, and cross-report outcome are documented in the final-canary section above.
 
-The automated-publication tests passed and cover checksum-bound approval, readiness/grounding holds, changed or stale packages, override-based manual approval, and duplicate ready-report replay leaving one approval/outbox record. This is local test evidence only. The current cohort itself used the base profile and all successful reports remained `awaiting_review`; no live autonomous approval event was produced.
+In the earlier run, the local `autonomous_mvp` capability preflight was **blocked** with 11 blocking checks: isolated state, Signal-store, and reports databases were missing; the isolated LLM-usage database had an incompatible schema; and the required Drive OAuth token was absent. Its bounded live preflight was **blocked** with 6 checks, 5 read-only provider metadata calls, and 0 external writes. The WordPress site URL was explicitly blanked for that probe because the available configured URL could target production; WordPress capability consequently reported `publish_configuration_invalid`. The frozen runner separately admitted the exact 5/5 cohort under its isolated admission path.
 
-No approved WordPress sandbox URL or sandbox credentials were available. No WordPress create, authenticated readback, or durable-job replay was attempted. The publish queue was disabled in baseline and current runs; both recorded zero WordPress writes. A local duplicate-approval test is not evidence of zero-write replay against WordPress.
+The automated-publication tests passed and cover checksum-bound approval, readiness/grounding holds, changed or stale packages, override-based manual approval, and duplicate ready-report replay leaving one approval/outbox record. This is local test evidence only. The earlier cohort used the base profile and all successful reports remained `awaiting_review`; no live autonomous approval event was produced in that run.
 
-In the current isolated five-report cohort, 37 immutable Signal candidate manifests were read back through the canonical service and passed hash/contract validation; all 37 groups referenced one report and remained held with `signal_grounding_insufficient`. The primary batch had 32/32 such manifests pass readback; all were single-report holds. No Signal post was generated or published, preserving the human-review restriction. The baseline had 38 Signal-generation dead letters (`signal_grounding_insufficient`) and 2 pending Signal-generation jobs.
+At the time of that earlier run, no approved WordPress sandbox URL or sandbox credentials were available. No WordPress create, authenticated readback, or durable-job replay was attempted, and the publish queue was disabled in baseline and current runs. A local duplicate-approval test is not evidence of zero-write replay against WordPress.
 
-Briefing opportunity handoffs succeeded for the rendered current reports. The current batch's only Briefing-generation job ended in `cross_report_analysis_disabled`, matching the baseline hold. No valid multi-report Briefing or Signal generation ran because cross-report analysis is disabled in the base config. Integration and unit tests verify immutable Signal snapshots, mutation rejection, held single-source candidates, and idempotent readback; they do not substitute for an enabled live multi-report generation run. Neither current batch had a transient queue failure or retry, so bounded retry/recovery behavior was not exercised live.
+In the earlier isolated five-report cohort, 37 immutable Signal candidate manifests were read back through the canonical service and passed hash/contract validation; all 37 groups referenced one report and remained held with `signal_grounding_insufficient`. Its primary batch had 32/32 such manifests pass readback; all were single-report holds. No Signal post was generated or published, preserving the human-review restriction. The baseline had 38 Signal-generation dead letters (`signal_grounding_insufficient`) and 2 pending Signal-generation jobs.
+
+In the earlier run, Briefing opportunity handoffs succeeded for the rendered reports, but its only Briefing-generation job ended in `cross_report_analysis_disabled`, matching the baseline hold. No valid multi-report Briefing or Signal generation ran in that run because cross-report analysis was disabled in the base config. Integration and unit tests verify immutable Signal snapshots, mutation rejection, held single-source candidates, and idempotent readback; they do not substitute for the enabled live multi-report run recorded above. Neither earlier batch had a transient queue failure or retry, so bounded retry/recovery behavior was not exercised live there.
 
 ## Remaining blockers and acceptance status
 
 | Priority | Blocker | Effect |
 | --- | --- | --- |
-| P0 | No confirmed WordPress sandbox URL/account; the only known URL may target production | Cannot safely demonstrate fresh create, authenticated readback, or zero-write replay. |
-| P1 | Local/live `autonomous_mvp` preflight blocked on isolated databases/schema, Drive OAuth, and WordPress configuration | Autonomous operation is not ready in the tested environment. |
-| P1 | Primary shared batch completed 4/5 successfully; Capgemini failed before render | First-attempt reliability and readiness did not match the baseline 5/5. |
-| P1 | Assistant paired review found lower lead specificity in several current outputs, and current run variants disagree | Equivalent editorial quality is not established; formal blind human scoring is still required. |
-| P1 | Cross-report analysis remains disabled; no live multi-report Signal/Briefing generation or publication ran | Those end-to-end handoffs remain unverified. |
-| P2 | Current supervisor capacity is 3 versus baseline 5; wall time rose 8.3% and queue wait increased | Current speed result is not a controlled apples-to-apples implementation comparison. |
+| P0 | Three of four ready-report jobs received `wordpress_target_installation_redirect` during the canary, although later read-only requests recovered and the KPMG test draft was verified and moved to Trash | Staging target stability during a full cohort remains unproven; those original terminal failures still count. |
+| P0 | Adjust failed validation with three unresolved retained factual claims; the separate short-path diagnostic's wrapper returned `frozen_cohort_runner_defect` despite a persisted validation artifact of `pass` | The complete first-attempt report path remains 4/5; the auxiliary diagnostic cannot be counted as a recovered end-to-end pass. |
+| P1 | Cross-report Briefing generation dead-lettered on malformed `executive_takeaways`; no multi-report Signal group was eligible | No valid Briefing was produced. The bounded retry classification was fixed locally but not confirmed in a post-fix live run. |
+| P1 | Paired output review found less decision-specific content for Reuters Institute and KPMG; no formal blinded human scoring was run | Editorial equivalence and value remain unproven. |
+| P2 | Live capability preflight was ready with zero writes, while local autonomous preflight remained degraded; report run used supervisor capacity 3 versus baseline 5 | Preflight readiness does not establish reliable report publication or controlled performance equivalence. |
 
-The evidence supports **NO-GO for autonomous MVP publication**. The tested implementation can produce reviewable reports with passing readiness on successful attempts, and the crop regression is fixed for this frozen cohort. It does not yet demonstrate first-attempt 5/5 reliability, equivalent editorial quality, unblocked autonomous capability preflight, or safe sandbox publication/readback/replay. Do not use production WordPress for the missing sandbox acceptance step.
+The evidence supports **NO-GO for autonomous MVP publication**. The run demonstrated one safe staging draft, readback, and duplicate-job replay with no additional write, but three other report publishes failed and the successful post's current status cannot now be verified. Report validation/readiness passed for four of five reports, the Briefing did not validate, and the primary outputs do not establish equivalent editorial decision value. The staging target is authorized only for reversible draft testing; no production publication was attempted. Do not merge this branch until the Prompt 5 GO criteria are met.
