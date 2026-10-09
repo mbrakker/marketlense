@@ -29,8 +29,8 @@ text: |
   }
   `claim_provenance` is retained metadata only: cover every material sentence or claim from the public summary fields with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
-  - Lead executive_summary from a finding tied to the priority-one theme, preserving exact bindings. If absent, use the strongest supported evidence for that theme, including a direct quote; stay descriptive without a complete numeric binding. Bind the lead in claim map and provenance.
-  - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
+  - Lead executive_summary with the strongest decision-useful supported finding, even outside the priority-one theme. Use the plan for coherence, not to suppress stronger evidence; preserve exact bindings and map the lead in claim map and provenance.
+  - Follow the report thesis, but do not let its priority order exclude a stronger supported result or imply cross-section links or centrality.
   - Facts must stay within evidence. Non-contradictory interpretation may explain why a finding matters; advice may be conditional MarketLense guidance tied to it. Add no new factual premise, promised outcome, or false source attribution.
   - Numbers require linked finding evidence or a direct quote candidate to show and support the value and subject. Paraphrased finding text alone is insufficient; omit unsupported numbers and map the source.
   - State dataset population or methodology only when linked evidence says so; keep its wording and date range exact. Do not add qualifiers such as "primarily" or extend a performance-chart period to report coverage. A report topic or data owner does not establish population or coverage.

@@ -209,10 +209,9 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "directly supported docmap point" in prompt_text
     assert "priority is selection guidance, not evidence" in prompt_text
     assert "abstain if unsupported" in prompt_text
-    assert (
-        "lead executive_summary from a finding tied to the priority-one theme"
-        in prompt_text
-    )
+    assert "strongest decision-useful supported finding" in prompt_text
+    assert "even outside the priority-one theme" in prompt_text
+    assert "not to suppress stronger evidence" in prompt_text
     assert "avoid section descriptions when stronger evidence exists" in prompt_text
 
 
@@ -286,6 +285,8 @@ def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in prompt_text
     )
+    assert "including continuation pages" in prompt_text
+    assert "every explicit printed page containing section evidence" in prompt_text
     assert "all explicit printed pages" in prompt_text
 
 
@@ -301,8 +302,9 @@ def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "use the plan for coherence" in prompt_text
-    assert "prioritize specific, decision-useful commercial findings" in prompt_text
-    assert "preserve exact linked values and comparisons" in prompt_text
+    assert "rank specific, decision-useful commercial results" in prompt_text
+    assert "above sample details or section descriptions" in prompt_text
+    assert "preserve exact values and comparisons" in prompt_text
 
 
 def test_editorial_prompts_preserve_specific_measured_findings() -> None:
@@ -332,14 +334,13 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in doc_map_text
     )
-    assert "commercially relevant market, performance, or decision results" in (
-        findings_text
-    )
-    assert "survey-profile or methodology facts unless central" in findings_text
-    assert "a bare percentage and label do not establish a share" in findings_text
+    assert "strongest commercial results" in findings_text
+    assert "opening, sample, or methodology fact" in findings_text
+    assert "stronger substantive results are present" in findings_text
+    assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
     assert "keep its wording and date range exact" in summary_text
-    assert "preserve exact linked values and comparisons" in candidates_text
+    assert "preserve exact values and comparisons" in candidates_text
     assert "preserve candidates' exact values, comparisons" in final_text
 
 

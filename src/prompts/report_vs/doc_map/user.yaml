@@ -15,6 +15,8 @@ text: |
     - Each populated role needs a short exact `source_excerpt` in `evidence`.
   - Use `publisher` only for an explicitly named publisher or organization that is the publisher/publication identity. Leave it empty if source evidence is ambiguous; do not infer it from a filename, taxonomy, cited provider, or byline.
   - Capture all major report sections in source order.
+  - Read each section through the next heading, including continuation pages;
+    list every explicit printed page containing section evidence, not only its opener.
   - For each section, include:
     - id
     - title

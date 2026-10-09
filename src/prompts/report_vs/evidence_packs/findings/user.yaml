@@ -1,6 +1,8 @@
 text: |
-  Search DocMap section pages for commercially relevant market, performance, or
-  decision results; exclude survey-profile or methodology facts unless central.
+  Search all listed DocMap section pages, including continuations, for the
+  strongest commercial results (market, revenue, performance, behavior, or
+  decisions). Do not return only an opening, sample, or methodology fact when
+  stronger substantive results are present.
 
   {{ doc_map_sections_json }}
 
@@ -12,18 +14,14 @@ text: |
 
   {{ source_temporal_relationships_json }}
 
-  For charts/tables, bind each value to measure, subject/cohort, geography, and
-  period. A bare percentage and label do not establish a share or its
-  population; state a share only when the source names its base. Nearby values
-  cannot support other rows, cohorts, or categories. Omit uncertain tuples.
+  Bind chart/table values to measure, subject/cohort, geography, and period. A
+  bare percentage/label proves no share; state a share only when the source
+  names its base. Nearby values cannot support another row or cohort. Omit
+  uncertain tuples.
 
-  Prefer distinct supported sections when the report contains multiple major
-  themes. When materially different or counterbalancing major DocMap sections
-  exist and file_search supports them, retrieve evidence from both sides. Do
-  not treat multiple close subtopics from one side as sufficient coverage when
-  another material side is supported. Do not manufacture a counterpoint or pad
-  a narrow, sparse, or one-sided report: return only the findings the
-  file_search evidence supports.
+  Cover materially distinct or counterbalancing major sections when
+  file_search supports them; close subtopics from one side do not replace
+  another supported side. Never invent a counterpoint or pad sparse reports.
 
   Retain a source-backed publisher forecast when it is materially central to
   the report's stated argument and supported by substantive synthesis such as
