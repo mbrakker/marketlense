@@ -203,16 +203,18 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "both tldrs are report-level leads" in prompt_text
-    assert "must share the most material supported finding" in prompt_text
-    assert "prefer a decision-useful metric" in prompt_text
+    assert (
+        "both tldrs must share the report's most material supported finding"
+        in prompt_text
+    )
+    assert "prefer decision-useful metrics" in prompt_text
     assert "directly supported docmap point" in prompt_text
-    assert "priority is selection guidance, not evidence" in prompt_text
+    assert "plan guides selection, not evidence" in prompt_text
     assert "abstain if unsupported" in prompt_text
     assert "strongest decision-useful supported finding" in prompt_text
     assert "even outside the priority-one theme" in prompt_text
     assert "priority order cannot exclude stronger evidence" in prompt_text
-    assert "avoid section descriptions when stronger evidence exists" in prompt_text
+    assert "exact comparisons over section descriptions" in prompt_text
 
 
 def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
@@ -226,7 +228,7 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "priority is selection guidance, not evidence" in prompt_text
+    assert "plan guides selection, not evidence" in prompt_text
     assert "directly supported docmap point" in prompt_text
     assert "abstain if unsupported" in prompt_text
 
@@ -254,7 +256,7 @@ def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
     ).lower()
 
     if namespace == "report_vs/artifacts/summary":
-        assert "priority is selection guidance, not evidence" in prompt_text
+        assert "plan guides selection, not evidence" in prompt_text
     elif namespace == "report_vs/artifacts/regenerate/summary":
         assert "selection guidance, not evidence" in prompt_text
         assert "section-scoped" in prompt_text
@@ -334,13 +336,12 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in doc_map_text
     )
-    assert (
-        "search commercial body sections before the executive summary"
-        in findings_text
-    )
-    assert "query file_search with each title and page span" in findings_text
-    assert "use key_points as clues, not evidence" in findings_text
-    assert "refine toward body results" in findings_text
+    assert "search body sections via file_search by title/page" in findings_text
+    assert "key-point metric/subject/period/value when present" in findings_text
+    assert "for themes, search body results" in findings_text
+    assert "docmap/temporal pairs are clues, not evidence" in findings_text
+    assert "keep chart values exact" in findings_text
+    assert "refine summary-only searches" in findings_text
     assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
     assert "keep its wording and date range exact" in summary_text
