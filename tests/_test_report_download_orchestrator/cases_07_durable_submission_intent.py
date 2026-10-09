@@ -141,9 +141,11 @@ def test_mail_submission_intent_precedes_browser_and_replay_does_not_resubmit(
     assert len(browser_calls) == 1
 
 
+@pytest.mark.parametrize("mailbox_settings_enabled", [True, False])
 def test_direct_email_submission_has_durable_identity_before_browser(
     tmp_path: Path,
     run_context,
+    mailbox_settings_enabled: bool,
 ) -> None:
     settings = _settings(tmp_path)
     mailbox_settings = MailboxAcquisitionSettings(
@@ -172,7 +174,7 @@ def test_direct_email_submission_has_durable_identity_before_browser(
         delivery_email="ops@example.com",
         report_title="Retail Trends 2026",
         publisher_name="Example Publisher",
-        mailbox_settings=mailbox_settings,
+        mailbox_settings=mailbox_settings if mailbox_settings_enabled else None,
         mail_delivery_generation_id="workflow-generation-direct-caller",
     )
     source_identity_id = hashlib.sha256(request.url.encode()).hexdigest()

@@ -21,7 +21,7 @@ from src.contracts.state import (
     MailDeliveryRequestUpsertResponse,
 )
 from src.services._state_service.common import _state_conn, logger
-from src.utils.clock import utc_now_seconds_z
+from src.utils.clock import is_utc_timestamp_z, utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -224,11 +224,30 @@ def list_due_mail_delivery_requests(
             """
             SELECT * FROM mail_delivery_requests
             WHERE status='pending' AND next_attempt_after_utc <= ?
+              AND trim(publisher_id) <> ''
+              AND trim(source_identity_id) <> ''
+              AND trim(submission_confirmed_at_utc) <> ''
+              AND requested_after_utc = submission_confirmed_at_utc
             ORDER BY next_attempt_after_utc ASC, id ASC
             LIMIT ?
             """,
             (now, limit),
         ).fetchall()
+        held_unverified_count = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) FROM mail_delivery_requests
+                WHERE status='pending' AND next_attempt_after_utc <= ?
+                  AND (
+                    trim(publisher_id) = ''
+                    OR trim(source_identity_id) = ''
+                    OR trim(submission_confirmed_at_utc) = ''
+                    OR requested_after_utc <> submission_confirmed_at_utc
+                  )
+                """,
+                (now,),
+            ).fetchone()[0]
+        )
     response = MailDeliveryRequestListDueResponse(
         schema_version="1.0",
         requests=[_row_to_mail_delivery_request(row) for row in rows],
@@ -239,7 +258,11 @@ def list_due_mail_delivery_requests(
             role="service",
             event="mail_delivery_request_list_due_complete",
             module=logger.name,
-            fields={"state_db": request.state_db, "count": len(response.requests)},
+            fields={
+                "state_db": request.state_db,
+                "count": len(response.requests),
+                "held_unverified_count": held_unverified_count,
+            },
         )
     )
     return response
@@ -439,6 +462,10 @@ def _validate_upsert_request(request: MailDeliveryRequestUpsertRequest) -> None:
         missing.append("idempotency_key")
     if not str(request.source_url or "").strip():
         missing.append("source_url")
+    if not str(request.publisher_id or "").strip():
+        missing.append("publisher_id")
+    if not str(request.source_identity_id or "").strip():
+        missing.append("source_identity_id")
     if request.status not in {"submission_started", "pending"}:
         missing.append("status")
     if (
@@ -450,6 +477,17 @@ def _validate_upsert_request(request: MailDeliveryRequestUpsertRequest) -> None:
         request.requested_after_utc or request.submission_confirmed_at_utc
     ):
         missing.append("unconfirmed_submission_watermark")
+    if (
+        request.status == "pending"
+        and not str(request.submission_confirmed_at_utc or "").strip()
+    ):
+        missing.append("submission_confirmed_at_utc")
+    if (
+        request.status == "pending"
+        and request.submission_confirmed_at_utc
+        and (not is_utc_timestamp_z(request.submission_confirmed_at_utc))
+    ):
+        missing.append("submission_confirmed_at_utc_invalid")
     if (
         request.submission_confirmed_at_utc
         and request.requested_after_utc != request.submission_confirmed_at_utc

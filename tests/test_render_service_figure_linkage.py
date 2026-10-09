@@ -164,6 +164,8 @@ def test_render_accepts_a_real_publication_strict_crop(tmp_path):
         ("wrong_dpi", "qa_dpi_mismatch"),
         ("modified_image", "crop_image_hash_mismatch"),
         ("candidate_mismatch", "qa_candidate_mismatch"),
+        ("fractional_dpi", "crop_dpi_invalid"),
+        ("fractional_page", "source_page_invalid"),
         ("sidecar_path_mismatch", "qa_sidecar_path_mismatch"),
         ("other_candidate_sidecar", "qa_sidecar_path_mismatch"),
         ("configured_dpi_mismatch", "configured_crop_dpi_mismatch"),
@@ -202,6 +204,10 @@ def test_render_rejects_invalid_crop_qa_proof_with_a_reason(
         qa = json.loads(sidecar.read_text(encoding="utf-8"))
         qa["candidate_id"] = "another-candidate"
         sidecar.write_text(json.dumps(qa), encoding="utf-8")
+    elif mutation == "fractional_dpi":
+        asset["crop_dpi"] = 216.5
+    elif mutation == "fractional_page":
+        asset["page"] = 0.5
     elif mutation == "other_candidate_sidecar":
         other_asset = _strict_crop(tmp_path, candidate_id="another-candidate")
         asset["crop_qa_sidecar_path"] = other_asset["crop_qa_sidecar_path"]

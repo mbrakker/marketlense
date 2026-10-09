@@ -874,6 +874,32 @@ def test_mail_delivery_request_roundtrip_is_idempotent_and_tracks_incremental_st
     assert replayed.request.submission_confirmed_at_utc == "2026-07-04T11:08:00Z"
 
 
+def test_mail_delivery_pending_upsert_requires_verified_identity_and_watermark(
+    tmp_path: Path,
+) -> None:
+    request = MailDeliveryRequestUpsertRequest(
+        schema_version="1.0",
+        state_db=str(tmp_path / "state.sqlite"),
+        idempotency_key="legacy-unverified-request",
+        source_url="https://example.com/report",
+        report_title="Retail Trends 2026",
+        publisher_name="Example Publisher",
+        delivery_email="reports@example.com",
+        requested_after_utc="2026-07-04T11:08:00Z",
+        route_family="browser_email_form",
+    )
+
+    with pytest.raises(AppError) as error:
+        upsert_mail_delivery_request(request, _ctx())
+
+    assert error.value.code == "mail_delivery_request_invalid"
+    assert error.value.context["missing"] == [
+        "publisher_id",
+        "source_identity_id",
+        "submission_confirmed_at_utc",
+    ]
+
+
 def test_mailbox_candidate_rejection_persists_sanitized_request_scoped_evidence(
     tmp_path: Path,
 ) -> None:

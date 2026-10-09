@@ -157,12 +157,11 @@ def _build_figure_slides(
         image_path = _s(asset.get("image_path"))
         page = asset.get("page")
         sidecar_path = _s(asset.get("crop_qa_sidecar_path")).strip()
-        try:
-            dpi = int(asset.get("crop_dpi") or 0)
-            source_page = int(page) if page is not None else -1
-        except (TypeError, ValueError):
-            dpi = 0
-            source_page = -1
+        raw_dpi = asset.get("crop_dpi")
+        parsed_dpi = _exact_integer(raw_dpi)
+        parsed_source_page = _exact_integer(page)
+        dpi = parsed_dpi if parsed_dpi is not None else 0
+        source_page = parsed_source_page if parsed_source_page is not None else -1
         rejection_reason = ""
         if not candidate_id:
             rejection_reason = "candidate_id_missing"
@@ -172,8 +171,12 @@ def _build_figure_slides(
             rejection_reason = "crop_profile_not_strict"
         elif not sidecar_path:
             rejection_reason = "qa_sidecar_path_missing"
+        elif raw_dpi not in (None, "") and parsed_dpi is None:
+            rejection_reason = "crop_dpi_invalid"
         elif dpi <= 0:
             rejection_reason = "crop_dpi_missing"
+        elif page is not None and parsed_source_page is None:
+            rejection_reason = "source_page_invalid"
         elif expected_final_dpi <= 0:
             rejection_reason = "configured_crop_dpi_missing"
         elif dpi != expected_final_dpi:
@@ -252,6 +255,24 @@ def _build_figure_slides(
             )
         )
     return slides
+
+
+def _exact_integer(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    if isinstance(value, str):
+        token = value.strip()
+        if not token:
+            return None
+        try:
+            return int(token)
+        except ValueError:
+            return None
+    return None
 
 
 def _build_render_view(

@@ -4,7 +4,6 @@ import hashlib
 import logging
 import time
 from dataclasses import replace
-from datetime import datetime
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
@@ -85,7 +84,7 @@ from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     finalize_budget_side_effect,
 )
-from src.utils.clock import utc_now_seconds_z
+from src.utils.clock import is_utc_timestamp_z, utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.idempotency import mail_delivery_request_idempotency_key
 from src.utils.logging import log_event
@@ -1082,43 +1081,19 @@ def record_deferred_mail_delivery_request(
 ) -> MailDeliveryRequest | None:
     if result.outcome != "email_requested":
         return None
-    if request.mailbox_settings is None:
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="report_download_mail_delivery_request_skipped",
-                module=logger.name,
-                fields={
-                    "normalized_url": result.normalized_url,
-                    "reason": "mailbox_settings_missing",
-                    "outcome": result.outcome,
-                },
-            )
-        )
-        return None
     delivery_email = resolve_deferred_delivery_email(request)
     if not delivery_email:
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="report_download_mail_delivery_request_skipped",
-                module=logger.name,
-                fields={
-                    "normalized_url": result.normalized_url,
-                    "reason": "delivery_email_missing",
-                    "outcome": result.outcome,
-                },
-            )
+        raise AppError(
+            code="mail_delivery_recipient_missing",
+            message="Verified email submission has no durable recipient identity",
+            retryable=False,
         )
-        return None
     publisher_name = _mail_delivery_publisher_name(request)
     report_title = _mail_delivery_report_title(request, result)
     submission_confirmed_at_utc = str(
         result.confirmation_evidence.submission_confirmed_at_utc or ""
     ).strip()
-    if not _is_utc_submission_timestamp(submission_confirmed_at_utc):
+    if not is_utc_timestamp_z(submission_confirmed_at_utc):
         raise AppError(
             code="mail_delivery_submission_timestamp_missing",
             message="Verified email submission has no valid confirmation timestamp",
@@ -1215,17 +1190,6 @@ def record_deferred_mail_delivery_request(
     return upsert_response.request
 
 
-def _is_utc_submission_timestamp(value: str) -> bool:
-    token = str(value or "").strip()
-    if not token.endswith("Z"):
-        return False
-    try:
-        datetime.fromisoformat(token[:-1] + "+00:00")
-    except ValueError:
-        return False
-    return True
-
-
 def _mail_delivery_report_title(
     request: ReportDownloadOrchestratorRequest,
     result: BrowserReportDownloadResult,
@@ -1270,14 +1234,15 @@ def _prepare_mail_delivery_submission_intent(
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
 ) -> None:
-    if (
-        planned_step.route_family != "browser_email_form"
-        or request.mailbox_settings is None
-    ):
+    if planned_step.route_family != "browser_email_form":
         return
     delivery_email = resolve_deferred_delivery_email(request)
     if not delivery_email:
-        return
+        raise AppError(
+            code="mail_delivery_recipient_missing",
+            message="Email submission requires a durable recipient identity",
+            retryable=False,
+        )
     publisher_id, source_identity_id = _mail_delivery_identity_values(
         request, normalized_url
     )
