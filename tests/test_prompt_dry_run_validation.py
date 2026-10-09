@@ -277,9 +277,28 @@ def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "preserve mechanisms, causes, and contrasts" in prompt_text
+    assert (
+        "retain exact metrics, periods, causes, mechanisms, and contrasts"
+        in prompt_text
+    )
     assert "section-scoped `key_points`" in prompt_text
     assert "do not flatten them to themes" in prompt_text
+    assert "all explicit printed pages" in prompt_text
+
+
+def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "use the plan for coherence" in prompt_text
+    assert "rank specific, decision-relevant findings above broad themes" in prompt_text
 
 
 @pytest.mark.parametrize(

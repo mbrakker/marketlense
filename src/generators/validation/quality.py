@@ -46,6 +46,12 @@ _QUANTITATIVE_SIGNAL = re.compile(
     r"\b\d[\d,.]*\s+(?:thousand|million|billion|trillion)\b)",
     re.IGNORECASE,
 )
+_QUANTITATIVE_METRIC_CONTEXT = re.compile(
+    r"\b(?:revenue|sales|download(?:s|ed|ing)?|installs?|sessions?|traffic|referrals?|"
+    r"conversions?|retention|churn|spending|spend|costs?|prices?|margins?|"
+    r"profits?|orders?|transactions?|market share|time spent|engagement|GDP)\b",
+    re.IGNORECASE,
+)
 _QUALITATIVE_ACTOR = re.compile(
     r"\b(?:advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
     r"corporates?|creators?|developers?|households?|investors?|marketers?|"
@@ -262,7 +268,9 @@ def _first_sentence(text: str) -> str:
 def _has_concrete_signal(sentence: str) -> bool:
     if any(pattern.search(sentence) for pattern in _TECHNICAL_ALLOWLIST):
         return True
-    if _QUANTITATIVE_SIGNAL.search(sentence):
+    if _QUANTITATIVE_SIGNAL.search(sentence) and _QUANTITATIVE_METRIC_CONTEXT.search(
+        sentence
+    ):
         return True
     return bool(
         _QUALITATIVE_ACTOR.search(sentence)

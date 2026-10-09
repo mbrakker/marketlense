@@ -637,13 +637,17 @@ def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
 
 
 @pytest.mark.parametrize("retained_claim_matches", [True, False])
-def test_generic_summary_lead_warning_identifies_claim_and_stronger_finding(
-    tmp_path, retained_claim_matches: bool
-):
-    tldr = (
+@pytest.mark.parametrize(
+    "tldr",
+    [
         "The outlook forecasts consumer internet and media revenue growth "
-        "across segments in 2026."
-    )
+        "across segments in 2026.",
+        "Market growth reaches 12 percent next year.",
+    ],
+)
+def test_generic_summary_lead_warning_identifies_claim_and_stronger_finding(
+    tmp_path, retained_claim_matches: bool, tldr: str
+):
     retained_text = (
         tldr
         if retained_claim_matches
