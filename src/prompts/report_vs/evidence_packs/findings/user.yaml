@@ -1,8 +1,8 @@
 text: |
-  Search all listed DocMap section pages, including continuations, for the
-  strongest commercial results (market, revenue, performance, behavior, or
-  decisions). Do not return only an opening, sample, or methodology fact when
-  stronger substantive results are present.
+  Search commercial body sections before the executive summary. Query
+  file_search with each title and page span; use key_points as clues, not
+  evidence. If results are only intro, sample, or methodology, refine toward
+  body results. Require direct source excerpts.
 
   {{ doc_map_sections_json }}
 

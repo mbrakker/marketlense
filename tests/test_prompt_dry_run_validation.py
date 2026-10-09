@@ -211,7 +211,7 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "abstain if unsupported" in prompt_text
     assert "strongest decision-useful supported finding" in prompt_text
     assert "even outside the priority-one theme" in prompt_text
-    assert "not to suppress stronger evidence" in prompt_text
+    assert "priority order cannot exclude stronger evidence" in prompt_text
     assert "avoid section descriptions when stronger evidence exists" in prompt_text
 
 
@@ -285,8 +285,8 @@ def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in prompt_text
     )
-    assert "including continuation pages" in prompt_text
-    assert "every explicit printed page containing section evidence" in prompt_text
+    assert "final body page before the next heading" in prompt_text
+    assert "full page span, not only the opener" in prompt_text
     assert "all explicit printed pages" in prompt_text
 
 
@@ -334,9 +334,13 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in doc_map_text
     )
-    assert "strongest commercial results" in findings_text
-    assert "opening, sample, or methodology fact" in findings_text
-    assert "stronger substantive results are present" in findings_text
+    assert (
+        "search commercial body sections before the executive summary"
+        in findings_text
+    )
+    assert "query file_search with each title and page span" in findings_text
+    assert "use key_points as clues, not evidence" in findings_text
+    assert "refine toward body results" in findings_text
     assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
     assert "keep its wording and date range exact" in summary_text
