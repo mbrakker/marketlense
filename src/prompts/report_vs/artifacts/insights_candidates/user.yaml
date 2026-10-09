@@ -14,9 +14,9 @@ text: |
   - For numeric claims, prefer a finding ID. Use a quote ID only if its exact
     text states the value, subject, and period/status. Never use a DocMap ID as
     numeric evidence.
-  - Bind each value to its metric, subject/cohort, geography, and period/status
-    in one source. Include a denominator only when source-defined; omit
-    unsupported bindings.
+  - Keep each value's role (level, change, forecast, or cumulative) and bind it
+    to its metric, population, geography, period, and any stated denominator.
+    Leave unclear bindings empty.
 
   Source-of-truth candidate insight schema:
   {{ insights_candidates_schema }}
@@ -38,8 +38,9 @@ text: |
   - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   In `so_what` and `now_what`, avoid repeating numbers and ranked-group labels
   from `text`; omit counts absent from the linked evidence.
-  Use the plan for coherence; rank specific, decision-relevant findings first.
-  Preserve exact linked values and comparisons.
+  Use the plan for coherence; prioritize specific, decision-useful commercial
+  findings over sample-profile details. Preserve exact linked values and
+  comparisons.
   Make both fields audience-specific, non-generic, and non-contradictory; add
   no factual premise. Use numbers only when linked finding evidence or the
   exact quote states value, subject, and period/status. A paraphrased finding

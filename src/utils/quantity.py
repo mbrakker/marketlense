@@ -387,13 +387,11 @@ def should_ground_quantity(
     explicit_unit = quantity.unit_family != "unknown" or bool(quantity.unit)
     metric_context = _has_metric_context(sentence_norm)
     if strict_section or section_policy == "strict":
-        if (
+        return not (
             _looks_like_non_metric_token(quantity, sentence_norm)
             and not metric_context
             and not explicit_unit
-        ):
-            return False
-        return True
+        )
     if quantity.unit_family == "time" and not metric_context:
         return False
     if explicit_unit:
@@ -449,31 +447,35 @@ def _extract_ranges(text: str) -> List[Quantity]:
         if low is None or high is None:
             continue
         unit = _clean_unit(match.group("unit"))
+        low_is_year = bool(
+            re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip())
+        )
+        high_is_year = bool(
+            re.fullmatch(r"(?:19|20)\d{2}", match.group("high").strip())
+        )
+        starts_with_currency = (
+            match.start() > 0 and text[match.start() - 1] in "$€£¥"
+        )
+        duration_unit_follows = re.match(
+            r"\s*(?:minutes?|hours?|days?|weeks?|months?|years?)\b",
+            text[match.end() :],
+            re.IGNORECASE,
+        )
         if (
-            not unit
-            and re.fullmatch(r"20\d{2}", match.group("low").strip())
-            and re.fullmatch(r"20\d{2}", match.group("high").strip())
+            low_is_year
+            and not starts_with_currency
+            and (high_is_year or unit or duration_unit_follows)
         ):
-            # A pair of calendar years is a timeframe, not a numeric range.
+            # A calendar year followed by another year or a unit-qualified
+            # value is temporal context, not a metric range endpoint.
             continue
         if (
             not unit
-            and re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip())
+            and low_is_year
             and re.fullmatch(r"\d{2}", match.group("high").strip())
         ):
             # A compact year range such as 2015–20 is temporal context; its
             # abbreviated endpoint is not an independently groundable value.
-            continue
-        if unit in {
-            "%",
-            "percent",
-            "pct",
-            "pp",
-            "percentage point",
-            "percentage points",
-        } and re.fullmatch(r"20\d{2}", match.group("low").strip()):
-            # "from 16.3% in 2024 to 17.8%" is a time comparison, not a
-            # 2024-to-17.8 percent range.
             continue
         family, canonical_unit, magnitude = _resolve_unit_family(
             unit=unit,
@@ -1041,9 +1043,7 @@ def _looks_like_non_metric_token(quantity: Quantity, sentence: str) -> bool:
         and not _has_metric_context(sentence)
     ):
         return True
-    if any(token in sentence for token in ("page ", "p.", "pp.")):
-        return True
-    return False
+    return any(token in sentence for token in ("page ", "p.", "pp."))
 
 
 def _normalize_comparator(raw: str) -> Comparator:

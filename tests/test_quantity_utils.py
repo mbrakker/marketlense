@@ -254,6 +254,22 @@ def test_extract_quantities_does_not_treat_year_to_percent_as_a_range() -> None:
     assert any(q.value == 17.8 and q.unit_family == "percent" for q in parsed)
 
 
+def test_extract_quantities_does_not_join_a_year_to_a_timed_measurement() -> None:
+    """A period year must not pair with the next timed value as a range."""
+
+    parsed = extract_quantities(
+        "Session length declined from 10.04 minutes in 2024 to 9.6 minutes "
+        "in 2025."
+    )
+
+    assert not any(quantity.value == 1016.8 for quantity in parsed)
+    assert [
+        (quantity.value, quantity.unit_family)
+        for quantity in parsed
+        if quantity.unit_family == "time"
+    ] == [(10.04, "time"), (9.6, "time")]
+
+
 def test_quantity_match_normalizes_hyphenated_user_count_noun() -> None:
     """A hyphenated user-count noun must retain the same source quantity."""
 

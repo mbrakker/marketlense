@@ -1,6 +1,6 @@
 text: |
-  Search quantitative DocMap points on cited pages; retain only file_search-verified
-  results.
+  Search DocMap section pages for commercially relevant market, performance, or
+  decision results; exclude survey-profile or methodology facts unless central.
 
   {{ doc_map_sections_json }}
 
@@ -12,12 +12,10 @@ text: |
 
   {{ source_temporal_relationships_json }}
 
-  For charts/tables, verify value, metric/category, subject/cohort, geography,
-  and period/status in the source. Require a denominator only when defined or
-  needed; never infer it.
-  A number visible elsewhere in the same chart is not evidence for a different
-  row, cohort, category, or denominator. Omit a numeric finding when the exact
-  tuple cannot be established.
+  For charts/tables, bind each value to measure, subject/cohort, geography, and
+  period. A bare percentage and label do not establish a share or its
+  population; state a share only when the source names its base. Nearby values
+  cannot support other rows, cohorts, or categories. Omit uncertain tuples.
 
   Prefer distinct supported sections when the report contains multiple major
   themes. When materially different or counterbalancing major DocMap sections

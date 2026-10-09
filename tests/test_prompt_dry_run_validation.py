@@ -301,7 +301,7 @@ def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "use the plan for coherence" in prompt_text
-    assert "rank specific, decision-relevant findings first" in prompt_text
+    assert "prioritize specific, decision-useful commercial findings" in prompt_text
     assert "preserve exact linked values and comparisons" in prompt_text
 
 
@@ -324,13 +324,21 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     final_text = " ".join(
         load("report_vs/artifacts/insights_final").user.text.split()
     ).lower()
+    summary_text = " ".join(
+        load("report_vs/artifacts/summary").user.text.split()
+    ).lower()
 
     assert (
         "state its strongest source result in `key_points`, not just its theme"
         in doc_map_text
     )
-    assert "search quantitative docmap points on cited pages" in findings_text
-    assert "denominator only when defined or needed" in findings_text
+    assert "commercially relevant market, performance, or decision results" in (
+        findings_text
+    )
+    assert "survey-profile or methodology facts unless central" in findings_text
+    assert "a bare percentage and label do not establish a share" in findings_text
+    assert "keep each value's role" in candidates_text
+    assert "keep its wording and date range exact" in summary_text
     assert "preserve exact linked values and comparisons" in candidates_text
     assert "preserve candidates' exact values, comparisons" in final_text
 
