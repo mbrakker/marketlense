@@ -30,6 +30,7 @@ def _load_members(
         raise ValueError(
             "Frozen reliability cohort must contain exactly 5, 10, or 20 members"
         )
+    enforce_sources_root = sources_root is not None
     root = (
         Path(__file__).resolve().parents[2]
         if sources_root is None
@@ -66,6 +67,8 @@ def _load_members(
             if source_path.is_absolute()
             else (root / source_path).resolve()
         )
+    if enforce_sources_root and any(not path.is_relative_to(root) for path in paths):
+        raise ValueError("Frozen cohort source is outside the configured sources root")
     if any(not path.is_file() for path in paths):
         raise ValueError("Frozen reliability cohort has a missing source artifact")
     if any(
@@ -90,6 +93,7 @@ def run_frozen_reliability_cohort(
     shared_batch: bool = False,
     publish_to_wordpress_staging: bool = False,
     staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
     enable_cross_report_analysis: bool = False,
     run_cohort_once: Callable[..., dict[str, Any]] = run_frozen_cohort_once,
 ) -> dict[str, Any]:
@@ -101,8 +105,16 @@ def run_frozen_reliability_cohort(
         raise ValueError(
             "Staging publication and cross-report analysis require --shared-batch"
         )
+    if publish_to_wordpress_staging and not enable_cross_report_analysis:
+        raise ValueError(
+            "Staging publication requires cross-report handoff verification"
+        )
     if staging_hostname and not publish_to_wordpress_staging:
         raise ValueError("--staging-host requires staging publication to be enabled")
+    if allow_insecure_staging_http and not publish_to_wordpress_staging:
+        raise ValueError(
+            "--allow-insecure-staging-http requires staging publication to be enabled"
+        )
     members = _load_members(sources_manifest, sources_root=sources_root)
     selected_members = _select_members(members, report_ids)
     runs_root.mkdir(parents=True, exist_ok=True)
@@ -136,6 +148,8 @@ def run_frozen_reliability_cohort(
                     "staging_hostname": staging_hostname,
                 }
             )
+            if allow_insecure_staging_http:
+                run_kwargs["allow_insecure_staging_http"] = True
         if enable_cross_report_analysis:
             run_kwargs["enable_cross_report_analysis"] = True
         execution = run_cohort_once(**run_kwargs)
@@ -261,6 +275,84 @@ def _select_members(
     return [by_id[report_id] for report_id in requested]
 
 
+def _shared_batch_passes(result: dict[str, Any]) -> bool:
+    """Require all five first-attempt draft creates, readbacks, and safe replay."""
+
+    reports = list(result.get("reports") or [])
+    if (
+        result.get("shared_batch") is not True
+        or result.get("cohort_size") != 5
+        or len(reports) != 5
+    ):
+        return False
+    for report in reports:
+        if (
+            report.get("admission_outcome") != "admitted"
+            or report.get("final_state") != "published"
+            or report.get("terminal_failure_code")
+            or report.get("workflow_attempt_count") != 1
+            or report.get("workflow_retry_count") != 0
+            or report.get("validation") != "pass"
+            or report.get("publication_readiness") != "pass"
+            or report.get("wordpress_post_type") != "ml_report"
+            or report.get("wordpress_created_this_run") is not True
+            or report.get("wordpress_authenticated_readback") is not True
+        ):
+            return False
+    metrics = dict(result.get("cohort_metrics") or {})
+    if (
+        metrics.get("bounded_automatic_repair") is not False
+        or metrics.get("workflow_retry_count") != 0
+        or metrics.get("operator_intervention_count") != 0
+    ):
+        return False
+    preflight = dict(metrics.get("wordpress_staging_preflight") or {})
+    capabilities = set(preflight.get("verified_capabilities") or [])
+    if not (
+        preflight.get("hostname") == "marketlense.medianewsonline.com"
+        and preflight.get("scheme") in {"http", "https"}
+        and (
+            preflight.get("scheme") == "https"
+            or preflight.get("insecure_http_opt_in") is True
+        )
+        and preflight.get("reachable") is True
+        and preflight.get("authenticated") is True
+        and preflight.get("post_status") == "draft"
+        and preflight.get("post_type") == "ml_report"
+        and "create_posts" in capabilities
+    ):
+        return False
+    replay = dict(metrics.get("wordpress_replay") or {})
+    cross_report = dict(metrics.get("cross_report_handoffs") or {})
+    return bool(
+        replay.get("status") == "verified"
+        and replay.get("duplicate_submissions") == 5
+        and replay.get("first_attempt_publication_jobs") == 5
+        and replay.get("created_duplicate_jobs") == 0
+        and replay.get("attempt_counts_unchanged") is True
+        and replay.get("published_rows_unchanged") is True
+        and replay.get("additional_wordpress_writes") == 0
+        and cross_report.get("enabled") is True
+        and cross_report.get("queue_terminal") is True
+        and cross_report.get("queue_terminal_failure_count") == 0
+        and cross_report.get("queue_nonterminal_outbox_count") == 0
+        and cross_report.get("briefing_validated_multireport_count", 0) >= 1
+        and cross_report.get("signal_manifest_count", 0) > 0
+        and cross_report.get("signal_manifest_readback_verified_count")
+        == cross_report.get("signal_manifest_count")
+        and cross_report.get("signal_manifest_replay_verified_count")
+        == cross_report.get("signal_manifest_count")
+        and cross_report.get("signal_manifest_mutation_preserved") is True
+        and cross_report.get("signal_single_source_group_count", 0) > 0
+        and cross_report.get(
+            "signal_single_source_insufficient_grounding_hold_count", 0
+        )
+        > 0
+        and cross_report.get("signal_single_source_unsafe_group_count") == 0
+        and cross_report.get("signal_or_briefing_publication_job_count") == 0
+    )
+
+
 def _aggregate_per_report_metrics(
     executions: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -366,6 +458,11 @@ def main() -> int:
         help="Enable autonomous approval and WordPress drafts for the confirmed staging host",
     )
     parser.add_argument("--staging-host", default="")
+    parser.add_argument(
+        "--allow-insecure-staging-http",
+        action="store_true",
+        help="Allow HTTP only for the explicitly confirmed staging host",
+    )
     parser.add_argument("--enable-cross-report-analysis", action="store_true")
     args = parser.parse_args()
     try:
@@ -377,6 +474,10 @@ def main() -> int:
             )
         if args.staging_host and not args.enable_wordpress_staging:
             parser.error("--staging-host requires --enable-wordpress-staging")
+        if args.allow_insecure_staging_http and not args.enable_wordpress_staging:
+            parser.error(
+                "--allow-insecure-staging-http requires --enable-wordpress-staging"
+            )
         result = (
             preflight_frozen_reliability_cohort(
                 sources_manifest=args.sources_manifest,
@@ -393,6 +494,7 @@ def main() -> int:
                 shared_batch=args.shared_batch,
                 publish_to_wordpress_staging=args.enable_wordpress_staging,
                 staging_hostname=args.staging_host,
+                allow_insecure_staging_http=args.allow_insecure_staging_http,
                 enable_cross_report_analysis=args.enable_cross_report_analysis,
             )
         )
@@ -401,6 +503,20 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    if args.shared_batch and args.enable_wordpress_staging:
+        return 0 if _shared_batch_passes(result) else 1
+    if args.shared_batch:
+        reports = list(result.get("reports") or [])
+        passed = (
+            bool(reports)
+            and len(reports) == result.get("cohort_size")
+            and all(
+                report.get("final_state") in {"published", "awaiting_review"}
+                and not report.get("terminal_failure_code")
+                for report in reports
+            )
+        )
+        return 0 if passed else 1
     return 0
 
 

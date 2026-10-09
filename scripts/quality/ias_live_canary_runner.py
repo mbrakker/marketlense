@@ -16,7 +16,7 @@ from pathlib import Path
 from statistics import median
 from types import TracebackType
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 import yaml
 
@@ -31,6 +31,11 @@ from src.contracts.report_store import (
     SourceIdentityObservationRecordRequest,
 )
 from src.contracts.semantic_ids import ReportId
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateReadRequest,
+    SignalCandidateStoreRequest,
+)
 from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationCohortSubmissionRequest,
     PreselectedFrozenValidationSource,
@@ -60,6 +65,10 @@ from src.services.config_service import (
 )
 from src.services._config_service.yaml_mapping import deep_merge_mappings
 from src.services.llm_usage_ledger_service import read_usage_run_summary
+from src.services.analytics_store_service import (
+    read_signal_candidates,
+    upsert_signal_candidates,
+)
 from src.services.report_analysis_store_service import (
     pack_path as resolve_report_analysis_pack_path,
 )
@@ -282,6 +291,21 @@ _FROZEN_REPORT_QUEUE_STAGES = (
     "report_render",
     "publication_readiness",
 )
+_CROSS_REPORT_QUEUE_NAMES = (
+    "analytics_projection",
+    "signal_candidate",
+    "signal_generation",
+    "briefing_opportunity",
+    "briefing_generation",
+)
+_CROSS_REPORT_DESCENDANT_QUEUE_NAMES = (
+    *_CROSS_REPORT_QUEUE_NAMES,
+    "cover_generation",
+    "publication_readiness",
+    "wordpress_publish",
+    "wordpress_projection",
+)
+_CROSS_REPORT_TERMINAL_STATUSES = {"succeeded", "blocked", "dead_letter", "cancelled"}
 _CONFIRMED_WORDPRESS_STAGING_HOST = "marketlense.medianewsonline.com"
 
 
@@ -290,6 +314,7 @@ def prepare_isolated_canary_run(
     runs_root: Path,
     publish_to_wordpress_staging: bool = False,
     staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
     enable_cross_report_analysis: bool = False,
 ) -> IsolatedCanaryRun:
     """Create a unique run root and config whose mutable paths stay within it."""
@@ -297,6 +322,7 @@ def prepare_isolated_canary_run(
     _validate_staging_mode(
         publish_to_wordpress_staging=publish_to_wordpress_staging,
         staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
     )
 
     root_parent = runs_root.resolve()
@@ -451,7 +477,10 @@ def _isolated_config(
 
 
 def _validate_staging_mode(
-    *, publish_to_wordpress_staging: bool, staging_hostname: str
+    *,
+    publish_to_wordpress_staging: bool,
+    staging_hostname: str,
+    allow_insecure_staging_http: bool = False,
 ) -> None:
     normalized_host = str(staging_hostname or "").strip().lower().rstrip(".")
     if publish_to_wordpress_staging:
@@ -463,6 +492,93 @@ def _validate_staging_mode(
         raise ValueError(
             "A staging hostname is only accepted when staging publication is enabled"
         )
+    if allow_insecure_staging_http and not publish_to_wordpress_staging:
+        raise ValueError(
+            "HTTP staging opt-in requires WordPress staging publication to be enabled"
+        )
+
+
+def _validate_wordpress_staging_origin(
+    site_url: str,
+    *,
+    staging_hostname: str,
+    allow_insecure_http: bool,
+) -> SplitResult:
+    """Validate a credentialed WordPress target against the pinned staging origin."""
+
+    expected_host = str(staging_hostname or "").strip().lower().rstrip(".")
+    if expected_host != _CONFIRMED_WORDPRESS_STAGING_HOST:
+        raise ValueError("WordPress target is not the confirmed staging host")
+    raw_site_url = str(site_url or "").strip()
+    try:
+        site = urlsplit(raw_site_url)
+        scheme = site.scheme.lower()
+        hostname = (site.hostname or "").lower().rstrip(".")
+        port = site.port
+    except ValueError as exc:
+        raise ValueError("WordPress staging URL is invalid") from exc
+    if (
+        scheme not in {"http", "https"}
+        or hostname != expected_host
+        or site.username is not None
+        or site.password is not None
+        or "?" in raw_site_url
+        or "#" in raw_site_url
+    ):
+        raise ValueError("WordPress target is not the confirmed staging origin")
+    expected_port = 80 if scheme == "http" else 443
+    if port not in {None, expected_port}:
+        raise ValueError("WordPress staging URL uses an unapproved port")
+    if scheme == "http" and not allow_insecure_http:
+        raise ValueError("HTTP WordPress staging requires explicit opt-in")
+    return site
+
+
+def _wordpress_publication_evidence(
+    *,
+    stage_rows: tuple[tuple[int, str, str, str], ...],
+    wordpress_post_id: int | None,
+) -> dict[str, bool]:
+    """Count only a first-attempt write and matching authenticated readback."""
+
+    if wordpress_post_id is None:
+        return {
+            "wordpress_created_this_run": False,
+            "wordpress_authenticated_readback": False,
+        }
+    expected_post_id = str(wordpress_post_id)
+    first_attempt = {
+        stage: (outcome, artifact_ids_json)
+        for attempt_number, stage, outcome, artifact_ids_json in stage_rows
+        if attempt_number == 1
+        and stage in {"wordpress_write", "authenticated_readback"}
+    }
+
+    def contains_post_id(stage: str) -> bool:
+        record = first_attempt.get(stage)
+        if record is None:
+            return False
+        try:
+            artifact_ids = json.loads(record[1])
+        except (TypeError, json.JSONDecodeError):
+            return False
+        return isinstance(artifact_ids, list) and expected_post_id in {
+            str(value) for value in artifact_ids
+        }
+
+    created = first_attempt.get("wordpress_write", ("", ""))[
+        0
+    ] == "succeeded" and contains_post_id("wordpress_write")
+    readback = (
+        created
+        and first_attempt.get("authenticated_readback", ("", ""))[0]
+        == "published_verified"
+        and contains_post_id("authenticated_readback")
+    )
+    return {
+        "wordpress_created_this_run": created,
+        "wordpress_authenticated_readback": readback,
+    }
 
 
 def ensure_isolated_publication_queue_disabled(
@@ -902,6 +1018,7 @@ def run_frozen_cohort_once(
     max_duration_seconds: int = 7_200,
     publish_to_wordpress_staging: bool = False,
     staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
     enable_cross_report_analysis: bool = False,
 ) -> dict[str, Any]:
     """Submit one immutable retained cohort through the production queue once."""
@@ -909,7 +1026,12 @@ def run_frozen_cohort_once(
     _validate_staging_mode(
         publish_to_wordpress_staging=publish_to_wordpress_staging,
         staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
     )
+    if publish_to_wordpress_staging and not enable_cross_report_analysis:
+        raise ValueError(
+            "Staging publication requires cross-report handoff verification"
+        )
     git_sha = _require_clean_git_sha()
     run_started_at_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     started_at = time.monotonic()
@@ -917,6 +1039,7 @@ def run_frozen_cohort_once(
         runs_root=runs_root,
         publish_to_wordpress_staging=publish_to_wordpress_staging,
         staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
         enable_cross_report_analysis=enable_cross_report_analysis,
     )
     reuse_events_path = run.root / "validation_claim_reuse_decisions.jsonl"
@@ -928,12 +1051,11 @@ def run_frozen_cohort_once(
         "bounded_automatic_repair": None,
         "wordpress_staging_preflight": None,
         "wordpress_replay": None,
-        "duration_measurement": (
-            "time.monotonic from runner entry to all reports terminal"
-        ),
+        "duration_measurement": "runner entry to all five report workflows terminal",
     }
     terminal_observed_at_utc = ""
     terminal_observed_monotonic: float | None = None
+    report_terminal_observed_monotonic: float | None = None
     for result in results:
         result["git_sha"] = git_sha
     prepared_sources: list[PreselectedFrozenValidationSource] = []
@@ -954,17 +1076,18 @@ def run_frozen_cohort_once(
                 ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
                 ctx,
             )
-            site = urlsplit(publish_settings.wp.site_url)
-            if (
-                site.scheme.lower() != "https"
-                or (site.hostname or "").lower().rstrip(".")
-                != _CONFIRMED_WORDPRESS_STAGING_HOST
-            ):
+            try:
+                site = _validate_wordpress_staging_origin(
+                    publish_settings.wp.site_url,
+                    staging_hostname=staging_hostname,
+                    allow_insecure_http=allow_insecure_staging_http,
+                )
+            except ValueError as exc:
                 raise AppError(
                     code="wordpress_staging_host_mismatch",
                     message="Resolved WordPress target is not the confirmed staging host",
                     retryable=False,
-                )
+                ) from exc
             if publish_settings.wp.post_status.strip().lower() != "draft":
                 raise AppError(
                     code="wordpress_staging_status_unsafe",
@@ -985,6 +1108,8 @@ def run_frozen_cohort_once(
                 )
             cohort_metrics["wordpress_staging_preflight"] = {
                 "hostname": site.hostname,
+                "scheme": site.scheme.lower(),
+                "insecure_http_opt_in": allow_insecure_staging_http,
                 "post_type": publish_settings.wp.post_type,
                 "post_status": publish_settings.wp.post_status,
                 "authenticated": preflight.authenticated,
@@ -1066,7 +1191,7 @@ def run_frozen_cohort_once(
             for result in results:
                 result["workflow_root_id"] = root_workflow_id
             with _ValidationReuseEventCapture(reuse_events_path) as reuse_event_handler:
-                _drain_report_paths(
+                drain_timing = _drain_report_paths(
                     state_db=settings.state_db,
                     usage_db_path=settings.usage_db_path,
                     config_path=run.config_path,
@@ -1074,7 +1199,11 @@ def run_frozen_cohort_once(
                     root_workflow_id=root_workflow_id,
                     ctx=ctx,
                     max_duration_seconds=max_duration_seconds,
+                    drain_cross_report_handoffs=enable_cross_report_analysis,
                 )
+            report_terminal_observed_monotonic = drain_timing[
+                "core_reports_terminal_monotonic"
+            ]
             terminal_observed_monotonic = time.monotonic()
             terminal_observed_at_utc = datetime.now(timezone.utc).isoformat(
                 timespec="milliseconds"
@@ -1098,7 +1227,19 @@ def run_frozen_cohort_once(
                         "max_total_jobs": supervisor_capacity.max_total_jobs,
                     },
                     "runner_started_at_utc": run_started_at_utc,
-                    "all_reports_terminal_observed_at_utc": terminal_observed_at_utc,
+                    "all_reports_terminal_observed_at_utc": drain_timing[
+                        "core_reports_terminal_at_utc"
+                    ],
+                    "all_handoffs_terminal_observed_at_utc": terminal_observed_at_utc,
+                    "core_reports_terminal_wall_seconds": drain_timing[
+                        "core_reports_terminal_wall_seconds"
+                    ],
+                    "cross_report_handoff_drain_wall_seconds": drain_timing[
+                        "cross_report_handoff_drain_wall_seconds"
+                    ],
+                    "cross_report_handoffs_terminal": drain_timing[
+                        "cross_report_handoffs_terminal"
+                    ],
                     "runner_to_terminal_wall_seconds": round(
                         terminal_observed_monotonic - started_at, 3
                     ),
@@ -1138,12 +1279,56 @@ def run_frozen_cohort_once(
                     report_ids=tuple(str(result["report_id"]) for result in results),
                     ctx=ctx,
                 )
+            cross_report_provider_usage = {
+                "provider_calls": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "estimated_cost_usd": 0.0,
+            }
+            if enable_cross_report_analysis:
+                cross_report_evidence = _collect_cross_report_handoff_evidence(
+                    state_db=settings.state_db,
+                    signal_store_db=settings.signal_store_db,
+                    usage_db_path=settings.usage_db_path,
+                    root_workflow_id=root_workflow_id,
+                    ctx=ctx,
+                )
+                cohort_metrics["cross_report_handoffs"] = cross_report_evidence
+                cross_report_provider_usage = dict(
+                    cross_report_evidence["provider_usage"]
+                )
+            total_provider_calls = results[0]["model_provider_calls"]
+            total_input_tokens = results[0]["input_tokens"]
+            total_output_tokens = results[0]["output_tokens"]
+            total_cost = results[0]["cost"]
+
+            def report_scope_usage(total, cross_report):
+                if total is None or cross_report > total:
+                    return None
+                return total - cross_report
+
             cohort_metrics.update(
                 {
-                    "model_provider_calls": results[0]["model_provider_calls"],
-                    "input_tokens": results[0]["input_tokens"],
-                    "output_tokens": results[0]["output_tokens"],
-                    "cost_usd": results[0]["cost"],
+                    "model_provider_calls": report_scope_usage(
+                        total_provider_calls,
+                        cross_report_provider_usage["provider_calls"],
+                    ),
+                    "input_tokens": report_scope_usage(
+                        total_input_tokens,
+                        cross_report_provider_usage["input_tokens"],
+                    ),
+                    "output_tokens": report_scope_usage(
+                        total_output_tokens,
+                        cross_report_provider_usage["output_tokens"],
+                    ),
+                    "cost_usd": report_scope_usage(
+                        total_cost,
+                        cross_report_provider_usage["estimated_cost_usd"],
+                    ),
+                    "combined_run_provider_calls": total_provider_calls,
+                    "combined_run_input_tokens": total_input_tokens,
+                    "combined_run_output_tokens": total_output_tokens,
+                    "combined_run_cost_usd": total_cost,
                     "file_search_calls": results[0]["file_search_calls"],
                     "bounded_automatic_repair": any(
                         bool(result["bounded_automatic_repair"]) for result in results
@@ -1179,11 +1364,20 @@ def run_frozen_cohort_once(
                 )
             )
         cohort_metrics["duration_seconds"] = (
-            round(terminal_observed_monotonic - started_at, 3)
+            round(
+                (report_terminal_observed_monotonic or terminal_observed_monotonic)
+                - started_at,
+                3,
+            )
             if terminal_observed_monotonic is not None
             else _finish_frozen_cohort_results(
                 results, started_at, retain_member_duration=False
             )
+        )
+        cohort_metrics["end_to_end_duration_seconds"] = (
+            round(terminal_observed_monotonic - started_at, 3)
+            if terminal_observed_monotonic is not None
+            else cohort_metrics["duration_seconds"]
         )
         for result in results:
             # Usage and repair records are scoped to the one batch root workflow.
@@ -1511,13 +1705,17 @@ def _drain_report_paths(
     root_workflow_id: str,
     ctx,
     max_duration_seconds: int,
-) -> None:
-    """Drive the canonical supervisor until every submitted report is terminal."""
+    drain_cross_report_handoffs: bool = False,
+) -> dict[str, Any]:
+    """Drain the report cohort and, when enabled, its isolated handoff queues."""
 
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
     )
     deadline = time.monotonic() + max(1, max_duration_seconds)
+    started_at = time.monotonic()
+    reports_terminal_at: float | None = None
+    reports_terminal_at_utc = ""
     worker_id = f"ias-live-canary:{root_workflow_id}"
     while time.monotonic() < deadline:
         supervisor = run_supervisor_once(
@@ -1539,13 +1737,394 @@ def _drain_report_paths(
             )
             for report_id in report_ids
         }
-        if all(
+        reports_terminal = all(
             state in {"awaiting_review", "published", "failed"}
             for state in states.values()
-        ):
-            return
+        )
+        now = time.monotonic()
+        if reports_terminal and reports_terminal_at is None:
+            reports_terminal_at = now
+            reports_terminal_at_utc = datetime.now(timezone.utc).isoformat(
+                timespec="milliseconds"
+            )
+        handoffs_terminal = (
+            _cross_report_handoffs_terminal(
+                state_db=state_db, root_workflow_id=root_workflow_id
+            )
+            if drain_cross_report_handoffs and reports_terminal
+            else not drain_cross_report_handoffs
+        )
+        if reports_terminal and handoffs_terminal:
+            return {
+                "core_reports_terminal_wall_seconds": round(
+                    (reports_terminal_at or now) - started_at, 3
+                ),
+                "core_reports_terminal_monotonic": reports_terminal_at,
+                "core_reports_terminal_at_utc": reports_terminal_at_utc,
+                "cross_report_handoff_drain_wall_seconds": round(
+                    max(0.0, now - reports_terminal_at),
+                    3
+                    if drain_cross_report_handoffs and reports_terminal_at is not None
+                    else 0.0,
+                ),
+                "cross_report_handoffs_terminal": handoffs_terminal,
+            }
         if supervisor.completed_job_count == 0:
             time.sleep(1)
+    return {
+        "core_reports_terminal_wall_seconds": (
+            round(reports_terminal_at - started_at, 3)
+            if reports_terminal_at is not None
+            else None
+        ),
+        "core_reports_terminal_monotonic": reports_terminal_at,
+        "core_reports_terminal_at_utc": reports_terminal_at_utc,
+        "cross_report_handoff_drain_wall_seconds": (
+            round(max(0.0, time.monotonic() - reports_terminal_at), 3)
+            if drain_cross_report_handoffs and reports_terminal_at is not None
+            else 0.0
+        ),
+        "cross_report_handoffs_terminal": (
+            _cross_report_handoffs_terminal(
+                state_db=state_db, root_workflow_id=root_workflow_id
+            )
+            if drain_cross_report_handoffs
+            else True
+        ),
+    }
+
+
+def _cross_report_handoffs_terminal(*, state_db: str, root_workflow_id: str) -> bool:
+    """Require cohort handoff jobs and outbox rows to reach durable terminal state."""
+
+    handoff_marks = ",".join("?" for _ in _CROSS_REPORT_QUEUE_NAMES)
+    descendant_marks = ",".join("?" for _ in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            f"""
+            SELECT status FROM workflow_jobs
+            WHERE root_workflow_id=? AND (
+              queue_name IN ({handoff_marks})
+              OR (queue_name IN ({descendant_marks})
+                  AND (entity_type IN ('briefing','signal')
+                       OR queue_name='wordpress_projection'))
+            )
+            """,
+            (
+                root_workflow_id,
+                *_CROSS_REPORT_QUEUE_NAMES,
+                *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES,
+            ),
+        ).fetchall()
+        outbox_rows = conn.execute(
+            f"""
+            SELECT status FROM workflow_outbox
+            WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+            """,
+            (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+        ).fetchall()
+    return all(
+        str(row[0]) in _CROSS_REPORT_TERMINAL_STATUSES for row in job_rows
+    ) and all(str(row[0]) in {"materialised", "dead_letter"} for row in outbox_rows)
+
+
+def _collect_cross_report_handoff_evidence(
+    *,
+    state_db: str,
+    signal_store_db: str,
+    usage_db_path: str,
+    root_workflow_id: str,
+    ctx,
+) -> dict[str, Any]:
+    """Retain bounded queue, Briefing, Signal-manifest, and usage evidence."""
+
+    handoff_marks = ",".join("?" for _ in _CROSS_REPORT_QUEUE_NAMES)
+    descendant_marks = ",".join("?" for _ in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            f"""
+            SELECT job_id,queue_name,status,entity_type,attempt_count,
+                   output_reference,output_content_hash
+            FROM workflow_jobs
+            WHERE root_workflow_id=? AND (
+              queue_name IN ({handoff_marks})
+              OR (queue_name IN ({descendant_marks})
+                  AND (entity_type IN ('briefing','signal')
+                       OR queue_name='wordpress_projection'))
+            )
+            ORDER BY queue_name,job_id
+            """,
+            (
+                root_workflow_id,
+                *_CROSS_REPORT_QUEUE_NAMES,
+                *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES,
+            ),
+        ).fetchall()
+        outbox_nonterminal_count = int(
+            conn.execute(
+                f"""
+                SELECT COUNT(*) FROM workflow_outbox
+                WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+                  AND status NOT IN ('materialised','dead_letter')
+                """,
+                (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+            ).fetchone()[0]
+        )
+        signal_publication_job_count = int(
+            conn.execute(
+                """SELECT COUNT(*) FROM workflow_jobs
+                WHERE root_workflow_id=? AND queue_name='wordpress_publish'
+                  AND entity_type IN ('signal','briefing')""",
+                (root_workflow_id,),
+            ).fetchone()[0]
+        )
+        opportunity_rows = conn.execute(
+            """SELECT generation_job_id,source_hashes_json,publisher_ids_json
+            FROM workflow_briefing_opportunities
+            WHERE generation_job_id<>''"""
+        ).fetchall()
+    job_status_counts: dict[str, dict[str, int]] = {}
+    job_ids: list[str] = []
+    for row in job_rows:
+        job_id, queue_name, status = str(row[0]), str(row[1]), str(row[2])
+        job_ids.append(job_id)
+        status_counts = job_status_counts.setdefault(queue_name, {})
+        status_counts[status] = status_counts.get(status, 0) + 1
+    queue_terminal = _cross_report_handoffs_terminal(
+        state_db=state_db, root_workflow_id=root_workflow_id
+    )
+    terminal_failure_count = sum(
+        1 for row in job_rows if str(row[2]) in {"blocked", "dead_letter", "cancelled"}
+    )
+
+    opportunities_by_job = {
+        str(job_id): (
+            _json_string_set(source_hashes_json),
+            _json_string_set(publisher_ids_json),
+        )
+        for job_id, source_hashes_json, publisher_ids_json in opportunity_rows
+    }
+    briefing_generation_rows = [
+        row for row in job_rows if str(row[1]) == "briefing_generation"
+    ]
+    briefing_valid_multireport_count = 0
+    for row in briefing_generation_rows:
+        job_id = str(row[0])
+        if str(row[2]) != "succeeded" or not str(row[5]) or not str(row[6]):
+            continue
+        source_hashes, publishers = opportunities_by_job.get(job_id, (set(), set()))
+        if len(source_hashes) >= 2 and len(publishers) >= 2:
+            briefing_valid_multireport_count += 1
+
+    signal_manifest_hashes: list[str] = []
+    signal_manifest_readback_count = 0
+    signal_manifest_replay_count = 0
+    signal_manifest_mutation_preserved = False
+    single_source_group_count = 0
+    single_source_hold_count = 0
+    single_source_unsafe_count = 0
+    signal_multireport_group_count = 0
+    signal_hold_reason_counts: dict[str, int] = {}
+    signal_path = Path(signal_store_db)
+    if signal_path.is_file():
+        with sqlite3.connect(signal_path) as conn:
+            table_exists = conn.execute(
+                """SELECT 1 FROM sqlite_master
+                WHERE type='table' AND name='signal_candidate_manifests'"""
+            ).fetchone()
+            manifest_rows = (
+                conn.execute(
+                    """SELECT manifest_sha256,extraction_request_id,group_id
+                    FROM signal_candidate_manifests ORDER BY manifest_sha256"""
+                ).fetchall()
+                if table_exists
+                else []
+            )
+        for manifest_hash, extraction_request_id, group_id in manifest_rows:
+            manifest_hash = str(manifest_hash)
+            signal_manifest_hashes.append(manifest_hash)
+            request = SignalCandidateReadRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=signal_store_db,
+                manifest_sha256=manifest_hash,
+                extraction_request_id=str(extraction_request_id),
+                group_ids=[str(group_id)],
+            )
+            snapshot = read_signal_candidates(request, ctx)
+            replayed_snapshot = read_signal_candidates(request, ctx)
+            if (
+                snapshot.manifest_sha256 != manifest_hash
+                or len(snapshot.groups) != 1
+                or snapshot.candidates != replayed_snapshot.candidates
+                or snapshot.groups != replayed_snapshot.groups
+                or replayed_snapshot.manifest_sha256 != manifest_hash
+            ):
+                continue
+            signal_manifest_readback_count += 1
+            signal_manifest_replay_count += 1
+            group = snapshot.groups[0]
+            source_count = len(set(group.source_report_ids))
+            if source_count == 1:
+                single_source_group_count += 1
+                if (
+                    group.publication_status == "held"
+                    and group.publication_hold_reason == "signal_grounding_insufficient"
+                ):
+                    single_source_hold_count += 1
+                    signal_hold_reason_counts["signal_grounding_insufficient"] = (
+                        signal_hold_reason_counts.get(
+                            "signal_grounding_insufficient", 0
+                        )
+                        + 1
+                    )
+                else:
+                    single_source_unsafe_count += 1
+            elif source_count >= 2:
+                signal_multireport_group_count += 1
+        if manifest_rows:
+            signal_manifest_mutation_preserved = _verify_signal_manifest_immutable(
+                signal_store_db=signal_store_db,
+                manifest_hash=str(manifest_rows[0][0]),
+                extraction_request_id=str(manifest_rows[0][1]),
+                group_id=str(manifest_rows[0][2]),
+                ctx=ctx,
+            )
+
+    cross_job_ids = [
+        str(row[0])
+        for row in job_rows
+        if str(row[1]) in _CROSS_REPORT_QUEUE_NAMES
+        or (
+            str(row[1]) in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES
+            and (
+                str(row[3]) in {"briefing", "signal"}
+                or str(row[1]) == "wordpress_projection"
+            )
+        )
+    ]
+    usage = _read_workflow_job_usage(usage_db_path, cross_job_ids)
+    briefing_generation_success_count = sum(
+        1 for row in briefing_generation_rows if str(row[2]) == "succeeded"
+    )
+    return {
+        "enabled": True,
+        "queue_terminal": queue_terminal,
+        "queue_terminal_failure_count": terminal_failure_count,
+        "queue_nonterminal_outbox_count": outbox_nonterminal_count,
+        "job_status_counts": job_status_counts,
+        "briefing_generation_success_count": briefing_generation_success_count,
+        "briefing_validated_multireport_count": briefing_valid_multireport_count,
+        "signal_manifest_count": len(signal_manifest_hashes),
+        "signal_manifest_hashes": signal_manifest_hashes,
+        "signal_manifest_readback_verified_count": signal_manifest_readback_count,
+        "signal_manifest_replay_verified_count": signal_manifest_replay_count,
+        "signal_manifest_mutation_preserved": signal_manifest_mutation_preserved,
+        "signal_single_source_group_count": single_source_group_count,
+        "signal_single_source_insufficient_grounding_hold_count": (
+            single_source_hold_count
+        ),
+        "signal_single_source_unsafe_group_count": single_source_unsafe_count,
+        "signal_multireport_group_count": signal_multireport_group_count,
+        "signal_hold_reason_counts": signal_hold_reason_counts,
+        "signal_or_briefing_publication_job_count": signal_publication_job_count,
+        "provider_usage": usage,
+    }
+
+
+def _json_string_set(raw: object) -> set[str]:
+    try:
+        values = json.loads(str(raw or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return set()
+    if not isinstance(values, list):
+        return set()
+    return {str(value).strip() for value in values if str(value).strip()}
+
+
+def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str, Any]:
+    if not job_ids or not Path(usage_db_path).is_file():
+        return {
+            "provider_calls": 0,
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "tool_calls": 0,
+            "estimated_cost_usd": 0.0,
+        }
+    marks = ",".join("?" for _ in job_ids)
+    task_ids = tuple(f"workflow_job:{job_id}" for job_id in job_ids)
+    with sqlite3.connect(usage_db_path) as conn:
+        row = conn.execute(
+            f"""SELECT COUNT(*),COALESCE(SUM(input_tokens),0),
+                       COALESCE(SUM(cached_input_tokens),0),
+                       COALESCE(SUM(output_tokens),0),COALESCE(SUM(tool_calls),0),
+                       COALESCE(SUM(estimated_cost_usd),0.0)
+                FROM llm_usage_events WHERE task_id IN ({marks})""",
+            task_ids,
+        ).fetchone()
+    return {
+        "provider_calls": int(row[0]),
+        "input_tokens": int(row[1]),
+        "cached_input_tokens": int(row[2]),
+        "output_tokens": int(row[3]),
+        "tool_calls": int(row[4]),
+        "estimated_cost_usd": round(float(row[5]), 6),
+    }
+
+
+def _verify_signal_manifest_immutable(
+    *,
+    signal_store_db: str,
+    manifest_hash: str,
+    extraction_request_id: str,
+    group_id: str,
+    ctx,
+) -> bool:
+    """Prove a changed current view cannot alter an existing frozen manifest."""
+
+    source_path = Path(signal_store_db)
+    with tempfile.TemporaryDirectory(
+        prefix="signal-manifest-mutation-", dir=source_path.parent
+    ) as temp_root:
+        isolated_db = str(Path(temp_root) / "signals.sqlite")
+        with sqlite3.connect(source_path) as source_conn:
+            with sqlite3.connect(isolated_db) as copy_conn:
+                source_conn.backup(copy_conn)
+        request = SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=isolated_db,
+            manifest_sha256=manifest_hash,
+            extraction_request_id=extraction_request_id,
+            group_ids=[group_id],
+        )
+        original = read_signal_candidates(request, ctx)
+        if len(original.groups) != 1 or not original.candidates:
+            return False
+        changed_summary = "Mutation probe for isolated frozen-manifest verification."
+        changed_candidates = [
+            replace(candidate, summary=changed_summary)
+            for candidate in original.candidates
+        ]
+        changed_groups = [
+            replace(group, summary=changed_summary) for group in original.groups
+        ]
+        changed = upsert_signal_candidates(
+            SignalCandidateStoreRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=isolated_db,
+                extraction_request_id=extraction_request_id,
+                candidates=changed_candidates,
+                groups=changed_groups,
+            ),
+            ctx,
+        )
+        replayed = read_signal_candidates(request, ctx)
+        return bool(
+            changed.manifest_hashes.get(group_id) != manifest_hash
+            and replayed.manifest_sha256 == manifest_hash
+            and replayed.candidates == original.candidates
+            and replayed.groups == original.groups
+        )
 
 
 def _queue_terminal_state(
@@ -1671,6 +2250,27 @@ def _read_result(
                 (validation_run_id, report_id),
             ).fetchone()[0]
         )
+        wordpress_stage_rows = tuple(
+            (
+                int(attempt_number),
+                str(stage),
+                str(terminal_outcome),
+                str(output_artifact_ids_json or "[]"),
+            )
+            for attempt_number, stage, terminal_outcome, output_artifact_ids_json in conn.execute(
+                """
+                SELECT attempts.attempt_number, stages.stage,
+                       stages.terminal_outcome, stages.output_artifact_ids_json
+                FROM validation_run_entity_attempts AS attempts
+                JOIN validation_run_stage_records AS stages
+                  ON stages.attempt_id=attempts.attempt_id
+                WHERE attempts.validation_run_id=? AND attempts.report_id=?
+                  AND stages.stage IN ('wordpress_write','authenticated_readback')
+                ORDER BY attempts.attempt_number, stages.stage
+                """,
+                (validation_run_id, report_id),
+            ).fetchall()
+        )
         repair_disposition_rows = conn.execute(
             """
             SELECT stages.repair_disposition,COUNT(*)
@@ -1743,6 +2343,10 @@ def _read_result(
         else {}
     )
     report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
+    publication_evidence = _wordpress_publication_evidence(
+        stage_rows=wordpress_stage_rows,
+        wordpress_post_id=int(published_post[0]) if published_post else None,
+    )
     return {
         "workflow_attempt_count": attempts,
         "final_state": final_state,
@@ -1750,9 +2354,7 @@ def _read_result(
         "published": final_state == "published",
         "wordpress_post_id": int(published_post[0]) if published_post else None,
         "wordpress_post_type": str(published_post[1]) if published_post else "",
-        "wordpress_authenticated_readback": bool(
-            final_state == "published" and published_post
-        ),
+        **publication_evidence,
         "bounded_automatic_repair": (
             automatic_repair_count > 0
             or workflow_retry_count > 0
@@ -2244,6 +2846,7 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
         "published": False,
         "wordpress_post_id": None,
         "wordpress_post_type": "",
+        "wordpress_created_this_run": False,
         "wordpress_authenticated_readback": False,
         "bounded_automatic_repair": False,
         "operator_intervention": False,

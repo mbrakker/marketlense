@@ -12,9 +12,12 @@ import yaml
 import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
     _collect_frozen_cohort_queue_timing_evidence,
+    _cross_report_handoffs_terminal,
     _queue_terminal_state,
     _replay_completed_wordpress_jobs,
     _read_retained_claim_counts,
+    _wordpress_publication_evidence,
+    _validate_wordpress_staging_origin,
     _seed_isolated_workflow_queue_controls,
     ensure_isolated_publication_queue_disabled,
     prepare_isolated_canary_run,
@@ -100,6 +103,7 @@ def test_isolated_canary_staging_mode_is_explicit_draft_only_and_host_pinned(
         runs_root=tmp_path,
         publish_to_wordpress_staging=True,
         staging_hostname="marketlense.medianewsonline.com",
+        allow_insecure_staging_http=True,
         enable_cross_report_analysis=True,
     )
 
@@ -134,6 +138,118 @@ def test_isolated_canary_refuses_an_unconfirmed_publication_host(
             publish_to_wordpress_staging=True,
             staging_hostname="production.example",
         )
+
+
+def test_isolated_canary_refuses_http_opt_in_without_staging_publication(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="requires WordPress staging publication"):
+        prepare_isolated_canary_run(
+            runs_root=tmp_path,
+            allow_insecure_staging_http=True,
+        )
+
+
+def test_wordpress_staging_origin_allows_http_only_with_explicit_host_pinned_opt_in() -> (
+    None
+):
+    origin = _validate_wordpress_staging_origin(
+        "http://marketlense.medianewsonline.com",
+        staging_hostname="marketlense.medianewsonline.com",
+        allow_insecure_http=True,
+    )
+
+    assert origin.scheme == "http"
+    assert origin.hostname == "marketlense.medianewsonline.com"
+
+
+@pytest.mark.parametrize(
+    ("site_url", "hostname", "allow_insecure_http"),
+    [
+        (
+            "http://marketlense.medianewsonline.com",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com:8443",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://user@marketlense.medianewsonline.com",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com?next=evil",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com?",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com/#fragment",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com/#",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        ("https://other.example", "marketlense.medianewsonline.com", False),
+    ],
+)
+def test_wordpress_staging_origin_rejects_unapproved_or_ambiguous_targets(
+    site_url: str, hostname: str, allow_insecure_http: bool
+) -> None:
+    with pytest.raises(ValueError):
+        _validate_wordpress_staging_origin(
+            site_url,
+            staging_hostname=hostname,
+            allow_insecure_http=allow_insecure_http,
+        )
+
+
+@pytest.mark.parametrize(
+    (
+        "write_outcome",
+        "readback_outcome",
+        "attempt_number",
+        "wordpress_post_id",
+        "expected",
+    ),
+    [
+        ("succeeded", "published_verified", 1, 42, (True, True)),
+        ("skipped", "published_verified", 1, 42, (False, False)),
+        ("succeeded", "published_verified", 2, 42, (False, False)),
+        ("succeeded", "blocked", 1, 42, (True, False)),
+        ("succeeded", "published_verified", 1, 99, (False, False)),
+    ],
+)
+def test_wordpress_publication_evidence_requires_first_attempt_create_and_matching_readback(
+    write_outcome: str,
+    readback_outcome: str,
+    attempt_number: int,
+    wordpress_post_id: int,
+    expected: tuple[bool, bool],
+) -> None:
+    evidence = _wordpress_publication_evidence(
+        stage_rows=(
+            (attempt_number, "wordpress_write", write_outcome, '["42"]'),
+            (attempt_number, "authenticated_readback", readback_outcome, '["42"]'),
+        ),
+        wordpress_post_id=wordpress_post_id,
+    )
+
+    assert (
+        evidence["wordpress_created_this_run"],
+        evidence["wordpress_authenticated_readback"],
+    ) == expected
 
 
 def test_queue_terminal_state_accepts_a_published_autonomous_report(
@@ -271,6 +387,77 @@ def test_completed_wordpress_job_duplicate_submission_reuses_record_without_writ
         assert (
             conn.execute("SELECT COUNT(*) FROM workflow_job_attempts").fetchone()[0]
             == 1
+        )
+
+
+def test_cross_report_drain_waits_for_child_jobs_and_outbox_materialization(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "cross-report-queues.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_jobs (
+              root_workflow_id TEXT, queue_name TEXT, entity_type TEXT, status TEXT
+            );
+            CREATE TABLE workflow_outbox (
+              root_workflow_id TEXT, queue_name TEXT, status TEXT
+            );
+            INSERT INTO workflow_jobs VALUES
+              ('root-1', 'briefing_generation', 'briefing', 'pending'),
+              ('root-1', 'wordpress_projection', 'report', 'pending');
+            INSERT INTO workflow_outbox VALUES
+              ('root-1', 'signal_candidate', 'pending');
+            """
+        )
+
+    assert (
+        _cross_report_handoffs_terminal(
+            state_db=str(state_db), root_workflow_id="root-1"
+        )
+        is False
+    )
+
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            "UPDATE workflow_jobs SET status='succeeded' WHERE queue_name='briefing_generation'"
+        )
+        conn.execute("UPDATE workflow_outbox SET status='materialised'")
+
+    assert (
+        _cross_report_handoffs_terminal(
+            state_db=str(state_db), root_workflow_id="root-1"
+        )
+        is False
+    )
+
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            "UPDATE workflow_jobs SET status='succeeded' WHERE queue_name='wordpress_projection'"
+        )
+
+    assert (
+        _cross_report_handoffs_terminal(
+            state_db=str(state_db), root_workflow_id="root-1"
+        )
+        is True
+    )
+
+
+def test_staging_batch_requires_cross_report_handoff_verification(
+    tmp_path: Path,
+) -> None:
+    from scripts.quality.run_frozen_reliability_cohort import (
+        run_frozen_reliability_cohort,
+    )
+
+    with pytest.raises(ValueError, match="cross-report handoff"):
+        run_frozen_reliability_cohort(
+            sources_manifest=tmp_path / "not-loaded.json",
+            runs_root=tmp_path / "runs",
+            shared_batch=True,
+            publish_to_wordpress_staging=True,
+            staging_hostname="marketlense.medianewsonline.com",
         )
 
 

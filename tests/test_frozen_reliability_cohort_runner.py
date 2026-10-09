@@ -6,6 +6,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from scripts.quality.ias_live_canary_runner import (
     _ValidationReuseEventCapture,
     _read_failure_diagnostic,
@@ -15,6 +17,7 @@ from scripts.quality.ias_live_canary_runner import (
 )
 from scripts.quality.run_frozen_reliability_cohort import (
     DEFAULT_SOURCES_MANIFEST,
+    _shared_batch_passes,
     _load_members,
     run_frozen_reliability_cohort,
 )
@@ -586,6 +589,124 @@ def test_frozen_manifest_resolves_sources_from_an_explicit_workspace_root(
     ]
 
 
+@pytest.mark.parametrize("escape_kind", ["parent", "absolute"])
+def test_frozen_manifest_rejects_sources_outside_explicit_workspace_root(
+    tmp_path: Path, escape_kind: str
+) -> None:
+    source_root = tmp_path / "source-workspace"
+    source_root.mkdir()
+    outside = tmp_path / "outside.pdf"
+    content = b"source outside frozen root"
+    outside.write_bytes(content)
+    source_path = (
+        Path("../outside.pdf") if escape_kind == "parent" else outside.resolve()
+    )
+    member = {
+        "source_path": str(source_path),
+        "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+        "source_domain": "publisher.example",
+        "report_name": "Frozen fixture",
+        "landing_page_url": "https://publisher.example/report",
+        "source_page_url": "https://publisher.example/reports",
+        "publisher_name": "Fixture Publisher",
+        "downloaded_at_utc": "2026-10-01T00:00:00Z",
+    }
+    manifest = tmp_path / "frozen.json"
+    manifest.write_text(json.dumps({"members": [member] * 5}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="outside the configured sources root"):
+        _load_members(manifest, sources_root=source_root)
+
+
+def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() -> None:
+    report = {
+        "admission_outcome": "admitted",
+        "final_state": "published",
+        "workflow_attempt_count": 1,
+        "workflow_retry_count": 0,
+        "operator_intervention": False,
+        "bounded_automatic_repair": False,
+        "publication_readiness": "pass",
+        "validation": "pass",
+        "terminal_failure_code": "",
+        "wordpress_post_type": "ml_report",
+        "wordpress_created_this_run": True,
+        "wordpress_authenticated_readback": True,
+    }
+    result = {
+        "shared_batch": True,
+        "cohort_size": 5,
+        "reports": [dict(report) for _ in range(5)],
+        "cohort_metrics": {
+            "bounded_automatic_repair": False,
+            "workflow_retry_count": 0,
+            "operator_intervention_count": 0,
+            "wordpress_staging_preflight": {
+                "hostname": "marketlense.medianewsonline.com",
+                "scheme": "http",
+                "insecure_http_opt_in": True,
+                "authenticated": True,
+                "reachable": True,
+                "post_status": "draft",
+                "post_type": "ml_report",
+                "verified_capabilities": ["create_posts"],
+            },
+            "wordpress_replay": {
+                "status": "verified",
+                "duplicate_submissions": 5,
+                "first_attempt_publication_jobs": 5,
+                "created_duplicate_jobs": 0,
+                "attempt_counts_unchanged": True,
+                "published_rows_unchanged": True,
+                "additional_wordpress_writes": 0,
+            },
+            "cross_report_handoffs": {
+                "enabled": True,
+                "queue_terminal": True,
+                "queue_terminal_failure_count": 0,
+                "queue_nonterminal_outbox_count": 0,
+                "briefing_validated_multireport_count": 1,
+                "signal_manifest_count": 4,
+                "signal_manifest_readback_verified_count": 4,
+                "signal_manifest_replay_verified_count": 4,
+                "signal_manifest_mutation_preserved": True,
+                "signal_single_source_group_count": 4,
+                "signal_single_source_insufficient_grounding_hold_count": 4,
+                "signal_single_source_unsafe_group_count": 0,
+                "signal_or_briefing_publication_job_count": 0,
+            },
+        },
+    }
+
+    assert _shared_batch_passes(result) is True
+
+    failed = json.loads(json.dumps(result))
+    failed["reports"][0]["wordpress_created_this_run"] = False
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["wordpress_replay"]["additional_wordpress_writes"] = 1
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["wordpress_staging_preflight"]["insecure_http_opt_in"] = (
+        False
+    )
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["wordpress_staging_preflight"]["hostname"] = (
+        "other.example"
+    )
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["cross_report_handoffs"][
+        "signal_single_source_unsafe_group_count"
+    ] = 1
+    assert _shared_batch_passes(failed) is False
+
+
 def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() -> None:
     manifest = Path(
         "docs/quality/reliability-cohort-20260927-grounding/"
@@ -792,6 +913,7 @@ def test_frozen_cohort_can_run_one_shared_staging_batch_with_all_members(
         shared_batch=True,
         publish_to_wordpress_staging=True,
         staging_hostname="marketlense.medianewsonline.com",
+        allow_insecure_staging_http=True,
         enable_cross_report_analysis=True,
         run_cohort_once=run_once,
     )
@@ -800,6 +922,7 @@ def test_frozen_cohort_can_run_one_shared_staging_batch_with_all_members(
     assert len(captured[0]["sources"]) == 5
     assert captured[0]["publish_to_wordpress_staging"] is True
     assert captured[0]["staging_hostname"] == "marketlense.medianewsonline.com"
+    assert captured[0]["allow_insecure_staging_http"] is True
     assert captured[0]["enable_cross_report_analysis"] is True
     assert result["cohort_size"] == 5
     assert result["summary"]["published_report_count"] == 5
