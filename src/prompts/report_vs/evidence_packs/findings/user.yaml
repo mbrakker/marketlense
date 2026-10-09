@@ -1,7 +1,6 @@
 text: |
-  Extract concise findings from file_search evidence using the following DocMap
-  major sections to guide retrieval. The DocMap is planning context only: every
-  finding and its evidence must still be grounded in file_search.
+  Use DocMap key takeaways as search cues; retain distinctive findings only
+  when file_search verifies them.
 
   {{ doc_map_sections_json }}
 

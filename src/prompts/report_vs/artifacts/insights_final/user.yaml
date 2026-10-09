@@ -23,7 +23,7 @@ text: |
   evidence for a numeric value.
   Keep a number only when linked finding `evidence` contains and supports its
   value and subject; paraphrased finding `text` alone is not numeric evidence.
-  Selection rule: follow editorial-plan priority order and select one supported representative for each plan theme using only that theme's linked evidence IDs. If the target count exceeds the number of plan themes, fill the remaining slots with distinct, supported candidates from the supplied candidate set; preserve the plan's priority order and do not pad with near-duplicates. Within a theme, maximize strategic value using decision_relevance_score, metric_strength_score, novelty_score, and coverage_role.
+  Use plan priority for coherence, not fixed rank: put the strongest supported, decision-useful insight first using existing candidate scores and coverage_role; keep each linked evidence ID, preserve distinct material themes, and do not favor a metric solely for being numeric.
   Tighten wording for executive relevance but do not change the underlying facts.
   Keep so_what a specific, non-contradictory MarketLense interpretation of why
   the finding matters. Keep now_what a specific conditional decision or

@@ -238,11 +238,14 @@ def _build_core_signal(
                         }
                     )
 
-    ranked_candidates = sorted(
-        enumerate(candidates),
-        key=lambda item: (-_core_signal_score(item[1]["body"]), item[0]),
+    selected = next(
+        (
+            candidate
+            for candidate in candidates
+            if not _CORE_SIGNAL_ANNOTATION.search(candidate["body"])
+        ),
+        candidates[0] if candidates else {},
     )
-    selected = ranked_candidates[0][1] if ranked_candidates else {}
     body = _s(selected.get("body"))
     heading = _core_signal_heading(body) if body else ""
     return {
@@ -283,28 +286,6 @@ _CORE_SIGNAL_ANNOTATION = re.compile(
     r"describes?|outlines?|examines?|covers?)\b",
     re.IGNORECASE,
 )
-_CORE_SIGNAL_MARKERS = re.compile(
-    r"\b(?:adoption|accelerat(?:e|es|ed|ing)|barrier|constrain(?:t|ed|s)|"
-    r"declin(?:e|es|ed|ing)|demand|driv(?:e|es|en|ing)|forecast|growth|"
-    r"increas(?:e|es|ed|ing)|majority|market|monetiz(?:e|ation)|revenue|"
-    r"shift|subscription|under\s+\d+|more\s+than)\b|%|\b\d[\d,.]*\b",
-    re.IGNORECASE,
-)
-
-
-def _core_signal_score(text: str) -> int:
-    """Prefer a substantive source sentence over a report-description sentence."""
-    normalized = _s(text)
-    if not normalized:
-        return -10
-    score = min(4, len(_CORE_SIGNAL_MARKERS.findall(normalized)))
-    if 55 <= len(normalized) <= 185:
-        score += 1
-    if _CORE_SIGNAL_ANNOTATION.search(normalized):
-        score -= 5
-    return score
-
-
 def _extract_focus_year(*values: object) -> str:
     for value in values:
         candidate = _s(value)

@@ -637,12 +637,12 @@ def test_artifact_quality_flags_banned_generic_copy_and_allows_technical_terms(
 
 
 @pytest.mark.parametrize("retained_claim_matches", [True, False])
-def test_summary_quality_warning_uses_unique_retained_claim_identity(
+def test_generic_summary_lead_warning_identifies_claim_and_stronger_finding(
     tmp_path, retained_claim_matches: bool
 ):
     tldr = (
-        "The report states that more than 112.1 billion apps were downloaded in "
-        "2025, as reported in its introduction."
+        "The outlook forecasts consumer internet and media revenue growth "
+        "across segments in 2026."
     )
     retained_text = (
         tldr
@@ -670,12 +670,54 @@ def test_summary_quality_warning_uses_unique_retained_claim_identity(
             report_id="quality-summary-retained-claim",
             report=_report(),
             artifacts={
-                "summary": {"tldr": tldr, "claim_evidence_map": []},
+                "summary": {
+                    "tldr": tldr,
+                    "claim_evidence_map": [
+                        {
+                            "claim": tldr,
+                            "evidence_id": "intro-downloads",
+                            "evidence": tldr,
+                            "pages": [],
+                        }
+                    ],
+                },
+                "insights_final": [
+                    {
+                        "id": "ai-referrals",
+                        "text": (
+                            "AI answer engines divert readers from publisher sites, "
+                            "weakening referral traffic."
+                        ),
+                        "evidence_id": "finding-ai-referrals",
+                        "evidence": (
+                            "AI answer engines answer queries directly, reducing "
+                            "publisher referrals."
+                        ),
+                    }
+                ],
                 "soft_copy_claim_provenance": soft_copy_claim_provenance_to_payload(
                     claims
                 ),
             },
-            evidence_packs={},
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "intro-downloads",
+                            "text": tldr,
+                            "evidence": tldr,
+                        },
+                        {
+                            "id": "finding-ai-referrals",
+                            "text": "AI answer engines reduce publisher referrals.",
+                            "evidence": (
+                                "AI answer engines answer queries directly, reducing "
+                                "publisher referrals."
+                            ),
+                        },
+                    ]
+                }
+            },
             vector_store_id=None,
             validation_mode="inline_deterministic",
         ),
@@ -691,10 +733,173 @@ def test_summary_quality_warning_uses_unique_retained_claim_identity(
         for issue in result.issues
         if issue.rule_id == "artifact_quality"
         and issue.affected_section == "summary.tldr"
-        and "opens without a concrete metric" in issue.message
+        and "broader than a retained source-supported finding" in issue.message
     )
+    assert warning.severity == "warning"
     assert warning.entity_id == (
         claims[0].claim_id if retained_claim_matches else "summary.tldr"
+    )
+    assert warning.evidence_ids == ["finding-ai-referrals"]
+
+
+def test_summary_quality_accepts_a_strong_quantitative_lead(tmp_path):
+    tldr = (
+        "The report states that more than 112.1 billion apps were downloaded "
+        "in 2025."
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-summary-quantitative-lead",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": tldr,
+                    "claim_evidence_map": [
+                        {
+                            "claim": tldr,
+                            "evidence_id": "intro-downloads",
+                            "evidence": tldr,
+                            "pages": [],
+                        }
+                    ],
+                },
+                "insights_final": [
+                    {
+                        "id": "ai-referrals",
+                        "text": (
+                            "AI answer engines divert readers from publisher sites, "
+                            "weakening referral traffic."
+                        ),
+                        "evidence_id": "finding-ai-referrals",
+                        "evidence": (
+                            "AI answer engines answer queries directly, reducing "
+                            "publisher referrals."
+                        ),
+                    }
+                ],
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "intro-downloads",
+                            "text": tldr,
+                            "evidence": tldr,
+                        },
+                        {
+                            "id": "finding-ai-referrals",
+                            "text": "AI answer engines reduce publisher referrals.",
+                            "evidence": (
+                                "AI answer engines answer queries directly, reducing "
+                                "publisher referrals."
+                            ),
+                        },
+                    ]
+                }
+            },
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "artifact_quality"
+        and issue.affected_section == "summary.tldr"
+        for issue in result.issues
+    )
+
+
+def test_summary_quality_accepts_a_strong_qualitative_lead(tmp_path):
+    tldr = (
+        "Publishers lose search referrals when AI answer engines satisfy user "
+        "queries directly."
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-summary-qualitative-lead",
+            report=_report(),
+            artifacts={
+                "summary": {
+                    "tldr": tldr,
+                    "claim_evidence_map": [
+                        {
+                            "claim": tldr,
+                            "evidence_id": "finding-ai-referrals",
+                            "evidence": tldr,
+                            "pages": [],
+                        }
+                    ],
+                },
+                "insights_final": [
+                    {
+                        "id": "ai-referrals",
+                        "text": tldr,
+                        "evidence_id": "finding-ai-referrals",
+                        "evidence": tldr,
+                    }
+                ],
+            },
+            evidence_packs={
+                "findings": {
+                    "findings": [
+                        {
+                            "id": "finding-ai-referrals",
+                            "text": tldr,
+                            "evidence": tldr,
+                        }
+                    ]
+                }
+            },
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "artifact_quality"
+        and issue.affected_section == "summary.tldr"
+        for issue in result.issues
+    )
+
+
+def test_generic_summary_lead_is_not_flagged_without_a_stronger_finding(tmp_path):
+    tldr = (
+        "The outlook forecasts consumer internet and media revenue growth "
+        "across segments in 2026."
+    )
+    result = validate_report(
+        ValidationRequest(
+            schema_version="1.0",
+            report_id="quality-summary-no-stronger-finding",
+            report=_report(),
+            artifacts={"summary": {"tldr": tldr, "claim_evidence_map": []}},
+            evidence_packs={},
+            vector_store_id=None,
+            validation_mode="inline_deterministic",
+        ),
+        _settings(tmp_path),
+        _ctx(),
+        prompt_client=FakePromptClient(),
+        openai_client=None,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert not any(
+        issue.rule_id == "artifact_quality"
+        and issue.affected_section == "summary.tldr"
+        for issue in result.issues
     )
 
 
