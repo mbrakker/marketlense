@@ -1,6 +1,9 @@
 # ruff: noqa: F405
 from __future__ import annotations
 
+from src.contracts.report_assets import CropRefineBBoxApplyRequest
+from src.services.pdf_service import apply_crop_refine_bbox
+
 from .builders import *  # noqa: F401,F403
 
 
@@ -89,6 +92,64 @@ def test_collect_candidates_returns_chart_and_table_contracts(
     assert response.stats.page_triage_evaluated_count == len(
         response.stats.page_triage_records
     )
+
+
+def test_collect_candidates_keeps_note_expansion_inside_page_bounds(tmp_path):
+    pdf_path = tmp_path / "candidate-note-at-page-edge.pdf"
+    out_dir = tmp_path / "out"
+    doc = fitz.open()
+    page = doc.new_page(width=620, height=900)
+    page.insert_text(
+        (60, 105),
+        "Figure 1. Projected market growth by segment and region",
+        fontsize=15,
+    )
+    page.insert_image(
+        fitz.Rect(60, 125, 580, 485),
+        stream=_chart_image_bytes(),
+    )
+    page.insert_text(
+        (590, 500),
+        "Note: Source data as reported by participants with adjusted seasonal figures.",
+        fontsize=12,
+    )
+    doc.save(pdf_path.as_posix())
+    doc.close()
+
+    response = collect_candidates(
+        ExtractCandidatesRequest(
+            schema_version="1.0",
+            pdf_path=pdf_path.as_posix(),
+            out_dir=out_dir.as_posix(),
+            report_name="edge-note",
+            parallel_workers=1,
+        ),
+        _ctx(),
+    )
+
+    assert response.candidates
+    source_doc = fitz.open(pdf_path.as_posix())
+    page_bounds = fitz.Rect(
+        0.0,
+        0.0,
+        source_doc[0].cropbox.width,
+        source_doc[0].cropbox.height,
+    )
+    source_doc.close()
+    for candidate in response.candidates:
+        x0, y0, x1, y1 = candidate.bbox
+        assert page_bounds.x0 <= x0 < x1 <= page_bounds.x1
+        assert page_bounds.y0 <= y0 < y1 <= page_bounds.y1
+        apply_crop_refine_bbox(
+            CropRefineBBoxApplyRequest(
+                schema_version="1.1",
+                pdf_path=pdf_path.as_posix(),
+                page=candidate.page,
+                bbox=candidate.bbox,
+                original_bbox=candidate.bbox,
+            ),
+            _ctx(),
+        )
 
 
 def test_pdf_page_artifact_cache_reused_across_candidate_and_crop_passes(

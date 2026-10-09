@@ -671,6 +671,55 @@ def test_apply_crop_refine_bbox_clamps_to_page_bounds(tmp_path):
     assert y1 - y0 < 250.0
 
 
+def test_apply_crop_refine_bbox_accepts_fractional_in_page_source_bbox(tmp_path):
+    pdf_path = tmp_path / "bbox-fractional.pdf"
+    _build_basic_pdf(pdf_path)
+    bbox = (60.123456789, 90.234567891, 220.345678912, 220.456789123)
+
+    response = apply_crop_refine_bbox(
+        CropRefineBBoxApplyRequest(
+            schema_version="1.1",
+            pdf_path=pdf_path.as_posix(),
+            page=0,
+            bbox=bbox,
+            original_bbox=bbox,
+        ),
+        _ctx(),
+    )
+
+    assert response.page == 0
+    assert response.degradation_reason == ""
+    assert response.bbox[0] >= 0.0
+    assert response.bbox[1] >= 0.0
+    assert response.bbox[2] <= 420.0
+    assert response.bbox[3] <= 560.0
+
+
+def test_apply_crop_refine_bbox_rejects_source_bbox_outside_page(
+    tmp_path, assert_app_error
+):
+    pdf_path = tmp_path / "bbox-source-outside.pdf"
+    _build_basic_pdf(pdf_path)
+
+    with pytest.raises(AppError) as exc_info:
+        apply_crop_refine_bbox(
+            CropRefineBBoxApplyRequest(
+                schema_version="1.1",
+                pdf_path=pdf_path.as_posix(),
+                page=0,
+                bbox=(60.0, 90.0, 220.0, 220.0),
+                original_bbox=(-1.0, 90.0, 220.0, 220.0),
+            ),
+            _ctx(),
+        )
+
+    assert_app_error(
+        exc_info.value,
+        code="crop_refine_original_bbox_invalid",
+        retryable=False,
+    )
+
+
 def test_apply_crop_refine_bbox_rejects_near_page_expansion(tmp_path):
     pdf_path = tmp_path / "bbox-expansion.pdf"
     _build_basic_pdf(pdf_path)
@@ -935,6 +984,8 @@ __all__ = [
     "test_render_preview_and_crop_refine_page_render_create_assets",
     "test_render_preview_compacts_filename_for_long_report_slug",
     "test_apply_crop_refine_bbox_clamps_to_page_bounds",
+    "test_apply_crop_refine_bbox_accepts_fractional_in_page_source_bbox",
+    "test_apply_crop_refine_bbox_rejects_source_bbox_outside_page",
     "test_apply_crop_refine_bbox_rejects_near_page_expansion",
     "test_apply_crop_refine_bbox_allows_source_labelled_full_page",
     "test_crop_refine_render_exposes_reversible_page_transforms",

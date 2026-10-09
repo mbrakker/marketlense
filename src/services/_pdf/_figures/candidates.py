@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -32,6 +32,7 @@ from .triage import (
     _plan_candidate_pages,
     _resolve_page_gate_recall_floor,
 )
+
 
 def _extract_charts_sequential(
     pdf_path: str,
@@ -114,6 +115,7 @@ def _extract_tables(
         artifact_cache=artifact_cache,
     )
 
+
 @dataclass
 class _CandidateExtractionArtifacts:
     charts: List[Candidate]
@@ -151,6 +153,7 @@ def _open_candidate_triage_doc(
         return fitz.open(pdf_path), True
     except PDF_FIGURE_EXCEPTIONS:
         return None, False
+
 
 def _extract_candidate_artifacts(
     request: ExtractCandidatesRequest,
@@ -269,6 +272,49 @@ def _annotate_degraded_candidates(
     return annotated
 
 
+def _clip_candidates_to_page_bounds(
+    candidates: List[Candidate],
+    *,
+    doc: fitz.Document,
+) -> tuple[List[Candidate], int, int, float]:
+    clipped_candidates: List[Candidate] = []
+    clipped_count = 0
+    dropped_count = 0
+    max_overrun_points = 0.0
+    for candidate in candidates:
+        if candidate.page < 0 or candidate.page >= doc.page_count:
+            clipped_candidates.append(candidate)
+            continue
+        page = doc[int(candidate.page)]
+        page_width = float(page.cropbox.width)
+        page_height = float(page.cropbox.height)
+        x0, y0, x1, y1 = (float(value) for value in candidate.bbox)
+        overrun = max(
+            0.0,
+            -x0,
+            -y0,
+            x1 - page_width,
+            y1 - page_height,
+        )
+        if overrun <= 0.0:
+            clipped_candidates.append(candidate)
+            continue
+        clipped_bbox = (
+            max(0.0, x0),
+            max(0.0, y0),
+            min(page_width, x1),
+            min(page_height, y1),
+        )
+        if clipped_bbox[0] >= clipped_bbox[2] or clipped_bbox[1] >= clipped_bbox[3]:
+            dropped_count += 1
+            max_overrun_points = max(max_overrun_points, overrun)
+            continue
+        clipped_candidates.append(replace(candidate, bbox=clipped_bbox))
+        clipped_count += 1
+        max_overrun_points = max(max_overrun_points, overrun)
+    return clipped_candidates, clipped_count, dropped_count, max_overrun_points
+
+
 def collect_candidates(
     request: ExtractCandidatesRequest, ctx: RunContext
 ) -> ExtractCandidatesResponse:
@@ -293,9 +339,7 @@ def collect_candidates(
                 "exclude_page_indices": sorted(excluded_pages),
                 "page_gate_enabled": bool(request.page_gate_enabled),
                 "page_gate_min_score": round(float(request.page_gate_min_score), 3),
-                "page_gate_min_recall_pages": int(
-                    request.page_gate_min_recall_pages
-                ),
+                "page_gate_min_recall_pages": int(request.page_gate_min_recall_pages),
                 "page_gate_min_recall_page_fraction": round(
                     float(request.page_gate_min_recall_page_fraction), 3
                 ),
@@ -330,6 +374,9 @@ def collect_candidates(
         table_stats=_initial_table_candidate_stats(),
     )
     candidates: List[Candidate] = []
+    page_bounds_clipped_count = 0
+    page_bounds_dropped_count = 0
+    page_bounds_max_overrun_points = 0.0
     try:
         triage_doc, close_doc = _open_candidate_triage_doc(request.pdf_path, shared_doc)
         if triage_doc is not None:
@@ -373,6 +420,13 @@ def collect_candidates(
             artifacts.charts + artifacts.tables,
             page_plan.degraded_pages,
         )
+        if triage_doc is not None and candidates:
+            (
+                candidates,
+                page_bounds_clipped_count,
+                page_bounds_dropped_count,
+                page_bounds_max_overrun_points,
+            ) = _clip_candidates_to_page_bounds(candidates, doc=triage_doc)
     finally:
         if close_doc and triage_doc is not None:
             try:
@@ -426,6 +480,11 @@ def collect_candidates(
                     for item in page_plan.page_triage_records
                 ],
                 "degraded_page_count": len(page_plan.degraded_pages),
+                "page_bounds_clipped_candidate_count": page_bounds_clipped_count,
+                "page_bounds_dropped_candidate_count": page_bounds_dropped_count,
+                "page_bounds_max_overrun_points": round(
+                    page_bounds_max_overrun_points, 3
+                ),
                 "degraded_pages": [
                     {
                         "page": item.page,

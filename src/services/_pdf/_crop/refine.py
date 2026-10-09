@@ -264,9 +264,22 @@ def apply_crop_refine_bbox(
         original_rect = fitz.Rect(*(float(value) for value in request.original_bbox))
         degradation_reason = ""
         rect = input_rect & page_bounds
-        outside_page = rect.is_empty or tuple(rect) != tuple(input_rect)
+        outside_page = (
+            rect.is_empty
+            or input_rect.x0 < page_bounds.x0
+            or input_rect.y0 < page_bounds.y0
+            or input_rect.x1 > page_bounds.x1
+            or input_rect.y1 > page_bounds.y1
+        )
         original_clipped = original_rect & page_bounds
-        if original_clipped.is_empty or tuple(original_clipped) != tuple(original_rect):
+        original_outside_page = (
+            original_clipped.is_empty
+            or original_rect.x0 < page_bounds.x0
+            or original_rect.y0 < page_bounds.y0
+            or original_rect.x1 > page_bounds.x1
+            or original_rect.y1 > page_bounds.y1
+        )
+        if original_outside_page:
             raise AppError(
                 code="crop_refine_original_bbox_invalid",
                 message="Crop refine source candidate geometry is outside the page",
