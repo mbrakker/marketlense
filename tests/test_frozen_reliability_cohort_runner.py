@@ -364,6 +364,7 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
         "workflow_retry_count": 0,
         "operator_intervention": False,
         "bounded_automatic_repair": False,
+        "automatic_repair_count": 0,
         "publication_readiness": "pass",
         "validation": "pass",
         "terminal_failure_code": "",
@@ -381,6 +382,7 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
         ],
         "cohort_metrics": {
             "bounded_automatic_repair": False,
+            "automatic_repair_count": 0,
             "workflow_retry_count": 0,
             "operator_intervention_count": 0,
             "wordpress_staging_preflight": {
@@ -406,6 +408,8 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
                 "enabled": True,
                 "queue_terminal": True,
                 "queue_terminal_failure_count": 0,
+                "queue_expected_policy_hold_count": 0,
+                "queue_unclassified_terminal_failure_count": 0,
                 "queue_nonterminal_outbox_count": 0,
                 "briefing_validated_multireport_count": 1,
                 "briefing_validated_multireport_execution_seconds": 2.5,
@@ -431,11 +435,47 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
                 "signal_single_source_insufficient_grounding_hold_count": 4,
                 "signal_single_source_unsafe_group_count": 0,
                 "signal_or_briefing_publication_job_count": 0,
+                "signal_or_briefing_publication_status_counts": {},
+                "signal_or_briefing_publication_policy_hold_count": 0,
+                "signal_or_briefing_publication_unexpected_job_count": 0,
             },
         },
     }
 
     assert _shared_batch_passes(result) is True
+
+    bounded_repairs = json.loads(json.dumps(result))
+    bounded_repairs["cohort_metrics"]["bounded_automatic_repair"] = True
+    bounded_repairs["cohort_metrics"]["automatic_repair_count"] = 3
+    bounded_repairs["reports"][0]["bounded_automatic_repair"] = True
+    bounded_repairs["reports"][0]["automatic_repair_count"] = 3
+    assert _shared_batch_passes(bounded_repairs) is True
+
+    safe_review_hold = json.loads(json.dumps(result))
+    cross_report = safe_review_hold["cohort_metrics"]["cross_report_handoffs"]
+    cross_report["queue_terminal_failure_count"] = 1
+    cross_report["queue_expected_policy_hold_count"] = 1
+    cross_report["signal_or_briefing_publication_job_count"] = 1
+    cross_report["signal_or_briefing_publication_status_counts"] = {"blocked": 1}
+    cross_report["signal_or_briefing_publication_policy_hold_count"] = 1
+    assert _shared_batch_passes(safe_review_hold) is True
+
+    unexpected_cross_report_failure = json.loads(json.dumps(safe_review_hold))
+    cross_report = unexpected_cross_report_failure["cohort_metrics"][
+        "cross_report_handoffs"
+    ]
+    cross_report["queue_terminal_failure_count"] = 2
+    cross_report["queue_unclassified_terminal_failure_count"] = 1
+    assert _shared_batch_passes(unexpected_cross_report_failure) is False
+
+    unsafe_cross_report_publication = json.loads(json.dumps(result))
+    cross_report = unsafe_cross_report_publication["cohort_metrics"][
+        "cross_report_handoffs"
+    ]
+    cross_report["signal_or_briefing_publication_job_count"] = 1
+    cross_report["signal_or_briefing_publication_status_counts"] = {"succeeded": 1}
+    cross_report["signal_or_briefing_publication_unexpected_job_count"] = 1
+    assert _shared_batch_passes(unsafe_cross_report_publication) is False
 
     failed = json.loads(json.dumps(result))
     failed["reports"][0]["wordpress_created_this_run"] = False

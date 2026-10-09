@@ -338,12 +338,18 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
     ):
         return False
     for report in reports:
+        report_repair_count = report.get("automatic_repair_count")
         if (
             report.get("admission_outcome") != "admitted"
             or report.get("final_state") != "published"
             or report.get("terminal_failure_code")
             or report.get("workflow_attempt_count") != 1
             or report.get("workflow_retry_count") != 0
+            or report.get("operator_intervention") is not False
+            or not isinstance(report.get("bounded_automatic_repair"), bool)
+            or not isinstance(report_repair_count, int)
+            or isinstance(report_repair_count, bool)
+            or report_repair_count < 0
             or report.get("validation") != "pass"
             or report.get("publication_readiness") != "pass"
             or report.get("wordpress_post_type") != "ml_report"
@@ -352,8 +358,16 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         ):
             return False
     metrics = dict(result.get("cohort_metrics") or {})
+    automatic_repair_count = metrics.get("automatic_repair_count")
+    bounded_automatic_repair = metrics.get("bounded_automatic_repair")
     if (
-        metrics.get("bounded_automatic_repair") is not False
+        not isinstance(bounded_automatic_repair, bool)
+        or not isinstance(automatic_repair_count, int)
+        or isinstance(automatic_repair_count, bool)
+        or automatic_repair_count
+        != sum(int(report["automatic_repair_count"]) for report in reports)
+        or bounded_automatic_repair
+        != any(bool(report["bounded_automatic_repair"]) for report in reports)
         or metrics.get("workflow_retry_count") != 0
         or metrics.get("operator_intervention_count") != 0
     ):
@@ -395,6 +409,45 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and math.isfinite(float(briefing_duration))
         and briefing_duration > 0
     )
+    expected_policy_hold_count = cross_report.get("queue_expected_policy_hold_count")
+    queue_terminal_failure_count = cross_report.get("queue_terminal_failure_count")
+    unclassified_terminal_failure_count = cross_report.get(
+        "queue_unclassified_terminal_failure_count"
+    )
+    publication_job_count = cross_report.get("signal_or_briefing_publication_job_count")
+    publication_policy_hold_count = cross_report.get(
+        "signal_or_briefing_publication_policy_hold_count"
+    )
+    unexpected_publication_job_count = cross_report.get(
+        "signal_or_briefing_publication_unexpected_job_count"
+    )
+    publication_status_counts = cross_report.get(
+        "signal_or_briefing_publication_status_counts"
+    )
+    safety_counts = (
+        expected_policy_hold_count,
+        queue_terminal_failure_count,
+        unclassified_terminal_failure_count,
+        publication_job_count,
+        publication_policy_hold_count,
+        unexpected_publication_job_count,
+    )
+    if any(
+        not isinstance(value, int) or isinstance(value, bool) or value < 0
+        for value in safety_counts
+    ):
+        return False
+    if not isinstance(publication_status_counts, dict) or any(
+        not isinstance(status, str)
+        or not isinstance(count, int)
+        or isinstance(count, bool)
+        or count < 0
+        for status, count in publication_status_counts.items()
+    ):
+        return False
+    expected_publication_status_counts = (
+        {"blocked": expected_policy_hold_count} if expected_policy_hold_count else {}
+    )
     return bool(
         replay.get("status") == "verified"
         and replay.get("duplicate_submissions") == 5
@@ -405,7 +458,8 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and replay.get("additional_wordpress_writes") == 0
         and cross_report.get("enabled") is True
         and cross_report.get("queue_terminal") is True
-        and cross_report.get("queue_terminal_failure_count") == 0
+        and queue_terminal_failure_count == expected_policy_hold_count
+        and unclassified_terminal_failure_count == 0
         and cross_report.get("queue_nonterminal_outbox_count") == 0
         and cross_report.get("queue_dead_letter_outbox_count", 0) == 0
         and cross_report.get("briefing_validated_multireport_count", 0) >= 1
@@ -431,7 +485,10 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         )
         > 0
         and cross_report.get("signal_single_source_unsafe_group_count") == 0
-        and cross_report.get("signal_or_briefing_publication_job_count") == 0
+        and publication_job_count == expected_policy_hold_count
+        and publication_policy_hold_count == expected_policy_hold_count
+        and unexpected_publication_job_count == 0
+        and publication_status_counts == expected_publication_status_counts
     )
 
 

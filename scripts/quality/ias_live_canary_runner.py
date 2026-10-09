@@ -1875,7 +1875,7 @@ def _collect_cross_report_handoff_evidence(
             f"""
             SELECT job_id,queue_name,status,entity_type,attempt_count,
                    output_reference,output_content_hash,started_at_utc,
-                   completed_at_utc
+                   completed_at_utc,error_code
             FROM workflow_jobs
             WHERE root_workflow_id=? AND (
               queue_name IN ({handoff_marks})
@@ -1911,14 +1911,6 @@ def _collect_cross_report_handoff_evidence(
                 (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
             ).fetchone()[0]
         )
-        signal_publication_job_count = int(
-            conn.execute(
-                """SELECT COUNT(*) FROM workflow_jobs
-                WHERE root_workflow_id=? AND queue_name='wordpress_publish'
-                  AND entity_type IN ('signal','briefing')""",
-                (root_workflow_id,),
-            ).fetchone()[0]
-        )
         opportunity_rows = conn.execute(
             """SELECT generation_job_id,source_hashes_json,publisher_ids_json
             FROM workflow_briefing_opportunities
@@ -1938,6 +1930,26 @@ def _collect_cross_report_handoff_evidence(
         1 for row in job_rows if str(row[2]) in {"blocked", "dead_letter", "cancelled"}
     )
     terminal_failure_count += outbox_dead_letter_count
+    signal_or_briefing_publication_rows = [
+        row
+        for row in job_rows
+        if str(row[1]) == "wordpress_publish" and str(row[3]) in {"signal", "briefing"}
+    ]
+    signal_or_briefing_publication_status_counts: dict[str, int] = {}
+    for row in signal_or_briefing_publication_rows:
+        status = str(row[2])
+        signal_or_briefing_publication_status_counts[status] = (
+            signal_or_briefing_publication_status_counts.get(status, 0) + 1
+        )
+    expected_publication_policy_hold_count = sum(
+        1
+        for row in signal_or_briefing_publication_rows
+        if str(row[2]) == "blocked"
+        and str(row[9]) == "cross_report_publish_live_disabled"
+    )
+    unclassified_terminal_failure_count = (
+        terminal_failure_count - expected_publication_policy_hold_count
+    )
 
     opportunities_by_job = {
         str(job_id): (
@@ -1949,6 +1961,43 @@ def _collect_cross_report_handoff_evidence(
     briefing_generation_rows = [
         row for row in job_rows if str(row[1]) == "briefing_generation"
     ]
+    briefing_generation_job_ids = {
+        str(row[0])
+        for row in briefing_generation_rows
+        if str(row[2]) == "succeeded" and str(row[5]) and str(row[6])
+    }
+    briefing_wall_time_ms_by_job: dict[str, list[int]] = {}
+    if briefing_generation_job_ids:
+        with sqlite3.connect(state_db) as conn:
+            telemetry_tables = {
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
+                    "('performance_telemetry_spans', "
+                    "'performance_telemetry_measurements')"
+                )
+            }
+            if len(telemetry_tables) == 2:
+                telemetry_rows = conn.execute(
+                    """SELECT s.attributes_json,m.status,m.integer_value
+                    FROM performance_telemetry_spans AS s
+                    JOIN performance_telemetry_measurements AS m
+                      ON m.span_id=s.span_id
+                    WHERE s.stage='briefing_generation' AND m.metric='wall_time_ms'"""
+                ).fetchall()
+            else:
+                telemetry_rows = []
+        for attributes_json, metric_status, wall_time_ms in telemetry_rows:
+            if metric_status != "observed" or wall_time_ms is None:
+                continue
+            try:
+                attributes = json.loads(str(attributes_json or "{}"))
+                job_id = str(attributes.get("job_id") or "")
+                measured_ms = int(wall_time_ms)
+            except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if job_id in briefing_generation_job_ids and measured_ms >= 0:
+                briefing_wall_time_ms_by_job.setdefault(job_id, []).append(measured_ms)
     briefing_valid_multireport_count = 0
     briefing_valid_multireport_job_ids: list[str] = []
     briefing_valid_multireport_execution_seconds: list[float] = []
@@ -1961,7 +2010,14 @@ def _collect_cross_report_handoff_evidence(
         if len(source_hashes) >= 2 and len(publishers) >= 2:
             briefing_valid_multireport_count += 1
             briefing_valid_multireport_job_ids.append(job_id)
-            elapsed_seconds = _workflow_job_elapsed_seconds(row[7], row[8])
+            measured_ms = briefing_wall_time_ms_by_job.get(job_id, [])
+            elapsed_seconds = (
+                round(sum(measured_ms) / 1000, 3)
+                if measured_ms
+                else _workflow_job_elapsed_seconds(row[7], row[8])
+            )
+            if elapsed_seconds == 0:
+                elapsed_seconds = None
             if elapsed_seconds is None:
                 briefing_duration_complete = False
             else:
@@ -2081,6 +2137,10 @@ def _collect_cross_report_handoff_evidence(
         "enabled": True,
         "queue_terminal": queue_terminal,
         "queue_terminal_failure_count": terminal_failure_count,
+        "queue_expected_policy_hold_count": expected_publication_policy_hold_count,
+        "queue_unclassified_terminal_failure_count": (
+            unclassified_terminal_failure_count
+        ),
         "queue_nonterminal_outbox_count": outbox_nonterminal_count,
         "queue_dead_letter_outbox_count": outbox_dead_letter_count,
         "job_status_counts": job_status_counts,
@@ -2107,7 +2167,19 @@ def _collect_cross_report_handoff_evidence(
         "signal_single_source_unsafe_group_count": single_source_unsafe_count,
         "signal_multireport_group_count": signal_multireport_group_count,
         "signal_hold_reason_counts": signal_hold_reason_counts,
-        "signal_or_briefing_publication_job_count": signal_publication_job_count,
+        "signal_or_briefing_publication_job_count": len(
+            signal_or_briefing_publication_rows
+        ),
+        "signal_or_briefing_publication_status_counts": (
+            signal_or_briefing_publication_status_counts
+        ),
+        "signal_or_briefing_publication_policy_hold_count": (
+            expected_publication_policy_hold_count
+        ),
+        "signal_or_briefing_publication_unexpected_job_count": (
+            len(signal_or_briefing_publication_rows)
+            - expected_publication_policy_hold_count
+        ),
         "provider_usage": usage,
     }
 

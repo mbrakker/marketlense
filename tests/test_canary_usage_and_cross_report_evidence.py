@@ -89,7 +89,8 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
             CREATE TABLE workflow_jobs (
               job_id TEXT, root_workflow_id TEXT, queue_name TEXT, status TEXT,
               entity_type TEXT, attempt_count INTEGER, output_reference TEXT,
-              output_content_hash TEXT, started_at_utc TEXT, completed_at_utc TEXT
+              output_content_hash TEXT, started_at_utc TEXT, completed_at_utc TEXT,
+              error_code TEXT
             );
             CREATE TABLE workflow_outbox (
               root_workflow_id TEXT, queue_name TEXT, status TEXT
@@ -100,12 +101,25 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
             INSERT INTO workflow_jobs VALUES (
               'brief-job-1', 'root-1', 'briefing_generation', 'succeeded',
               'briefing', 1, 'briefing/artifact.json', 'briefing-hash',
-              '2026-10-09T10:00:00.000+00:00',
-              '2026-10-09T10:00:02.500+00:00'
+              '2026-10-09T10:00:02+00:00',
+              '2026-10-09T10:00:02+00:00', ''
             );
             INSERT INTO workflow_briefing_opportunities VALUES (
               'brief-job-1', '["source-hash-1", "source-hash-2"]',
               '["publisher-1", "publisher-2"]'
+            );
+            CREATE TABLE performance_telemetry_spans (
+              span_id TEXT, stage TEXT, attributes_json TEXT
+            );
+            CREATE TABLE performance_telemetry_measurements (
+              span_id TEXT, metric TEXT, status TEXT, integer_value INTEGER
+            );
+            INSERT INTO performance_telemetry_spans VALUES (
+              'brief-span-1', 'briefing_generation',
+              '{"job_id": "brief-job-1"}'
+            );
+            INSERT INTO performance_telemetry_measurements VALUES (
+              'brief-span-1', 'wall_time_ms', 'observed', 28618
             );
             """
         )
@@ -196,7 +210,7 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
     )
 
     assert evidence["briefing_validated_multireport_count"] == 1
-    assert evidence["briefing_validated_multireport_execution_seconds"] == 2.5
+    assert evidence["briefing_validated_multireport_execution_seconds"] == 28.618
     assert evidence["signal_manifest_count"] == 2
     assert evidence["signal_manifest_readback_verified_count"] == 2
     assert evidence["signal_manifest_replay_verified_count"] == 2
@@ -215,6 +229,77 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
         "unpriced_provider_call_count": 0,
         "cost_available": True,
     }
+
+
+def test_cross_report_evidence_classifies_blocked_briefing_publish_as_review_hold(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "cross-report-policy-hold.sqlite"
+    usage_db = tmp_path / "usage.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_jobs (
+              job_id TEXT, root_workflow_id TEXT, queue_name TEXT, status TEXT,
+              entity_type TEXT, attempt_count INTEGER, output_reference TEXT,
+              output_content_hash TEXT, started_at_utc TEXT, completed_at_utc TEXT,
+              error_code TEXT
+            );
+            CREATE TABLE workflow_outbox (
+              root_workflow_id TEXT, queue_name TEXT, status TEXT
+            );
+            CREATE TABLE workflow_briefing_opportunities (
+              generation_job_id TEXT, source_hashes_json TEXT, publisher_ids_json TEXT
+            );
+            INSERT INTO workflow_jobs VALUES (
+              'briefing-publish-1', 'root-1', 'wordpress_publish', 'blocked',
+              'briefing', 1, '', '', '', '', 'cross_report_publish_live_disabled'
+            );
+            """
+        )
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              task_id TEXT, input_tokens INTEGER, cached_input_tokens INTEGER,
+              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL,
+              pricing_status TEXT
+            )"""
+        )
+
+    evidence = _collect_cross_report_handoff_evidence(
+        state_db=str(state_db),
+        signal_store_db=str(tmp_path / "missing-signals.sqlite"),
+        usage_db_path=str(usage_db),
+        root_workflow_id="root-1",
+        ctx=new_runtime_context(task_id="briefing-policy-hold-test"),
+    )
+
+    assert evidence["queue_terminal"] is True
+    assert evidence["queue_terminal_failure_count"] == 1
+    assert evidence["queue_expected_policy_hold_count"] == 1
+    assert evidence["queue_unclassified_terminal_failure_count"] == 0
+    assert evidence["signal_or_briefing_publication_job_count"] == 1
+    assert evidence["signal_or_briefing_publication_status_counts"] == {"blocked": 1}
+    assert evidence["signal_or_briefing_publication_policy_hold_count"] == 1
+    assert evidence["signal_or_briefing_publication_unexpected_job_count"] == 0
+
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            "UPDATE workflow_jobs SET status='succeeded',error_code='' "
+            "WHERE job_id='briefing-publish-1'"
+        )
+    unsafe_evidence = _collect_cross_report_handoff_evidence(
+        state_db=str(state_db),
+        signal_store_db=str(tmp_path / "missing-signals.sqlite"),
+        usage_db_path=str(usage_db),
+        root_workflow_id="root-1",
+        ctx=new_runtime_context(task_id="briefing-publication-safety-test"),
+    )
+    assert unsafe_evidence["signal_or_briefing_publication_status_counts"] == {
+        "succeeded": 1
+    }
+    assert unsafe_evidence["signal_or_briefing_publication_policy_hold_count"] == 0
+    assert unsafe_evidence["signal_or_briefing_publication_unexpected_job_count"] == 1
 
 
 def test_workflow_job_usage_marks_cost_unavailable_for_unresolved_pricing(
