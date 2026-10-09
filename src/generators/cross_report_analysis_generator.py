@@ -771,8 +771,9 @@ def generate_cross_report_analysis(
         raise AppError(
             code="cross_report_analysis_output_invalid",
             message="executive_takeaways must contain exactly two populated strings",
-            retryable=False,
+            retryable=True,
             severity="error",
+            context={"field": "executive_takeaways"},
         )
     takeaways = [_required_text({"value": item}, "value") for item in raw_takeaways]
     known_evidence = _known_evidence_ids(evidence_inputs)
