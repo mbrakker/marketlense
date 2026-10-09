@@ -817,6 +817,13 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
     ]["cost_available"] = False
     assert _shared_batch_passes(failed) is False
 
+    for invalid_cost in (float("inf"), float("nan"), -0.001, True):
+        failed = json.loads(json.dumps(result))
+        failed["cohort_metrics"]["cross_report_handoffs"][
+            "briefing_validated_multireport_provider_usage"
+        ]["estimated_cost_usd"] = invalid_cost
+        assert _shared_batch_passes(failed) is False
+
     failed = json.loads(json.dumps(result))
     del failed["cohort_metrics"]["cross_report_handoffs"][
         "signal_manifest_mutation_probe_scope"

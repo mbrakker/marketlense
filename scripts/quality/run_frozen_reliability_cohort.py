@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 import tempfile
 from pathlib import Path
@@ -378,6 +379,13 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
     briefing_usage = dict(
         cross_report.get("briefing_validated_multireport_provider_usage") or {}
     )
+    briefing_cost = briefing_usage.get("estimated_cost_usd")
+    briefing_cost_valid = (
+        isinstance(briefing_cost, (int, float))
+        and not isinstance(briefing_cost, bool)
+        and briefing_cost >= 0
+        and (not isinstance(briefing_cost, float) or math.isfinite(briefing_cost))
+    )
     return bool(
         replay.get("status") == "verified"
         and replay.get("duplicate_submissions") == 5
@@ -399,7 +407,7 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and isinstance(briefing_usage.get("provider_calls"), int)
         and briefing_usage.get("provider_calls", 0) > 0
         and briefing_usage.get("cost_available") is True
-        and isinstance(briefing_usage.get("estimated_cost_usd"), (int, float))
+        and briefing_cost_valid
         and cross_report.get("signal_manifest_count", 0) > 0
         and cross_report.get("signal_manifest_readback_verified_count")
         == cross_report.get("signal_manifest_count")
