@@ -278,11 +278,14 @@ def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert (
-        "retain exact metrics, periods, causes, mechanisms, and contrasts"
+        "preserve exact metrics, periods, causes, mechanisms, and contrasts"
         in prompt_text
     )
-    assert "section-scoped `key_points`" in prompt_text
-    assert "do not flatten them to themes" in prompt_text
+    assert "in `key_points`" in prompt_text
+    assert (
+        "state its strongest source result in `key_points`, not just its theme"
+        in prompt_text
+    )
     assert "all explicit printed pages" in prompt_text
 
 
@@ -298,7 +301,38 @@ def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "use the plan for coherence" in prompt_text
-    assert "rank specific, decision-relevant findings above broad themes" in prompt_text
+    assert "rank specific, decision-relevant findings first" in prompt_text
+    assert "preserve exact linked values and comparisons" in prompt_text
+
+
+def test_editorial_prompts_preserve_specific_measured_findings() -> None:
+    def load(namespace: str):
+        return prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0", namespace=namespace, force_reload=True
+            ),
+            _ctx(),
+        )
+
+    doc_map_text = " ".join(load("report_vs/doc_map").user.text.split()).lower()
+    findings_text = " ".join(
+        load("report_vs/evidence_packs/findings").user.text.split()
+    ).lower()
+    candidates_text = " ".join(
+        load("report_vs/artifacts/insights_candidates").user.text.split()
+    ).lower()
+    final_text = " ".join(
+        load("report_vs/artifacts/insights_final").user.text.split()
+    ).lower()
+
+    assert (
+        "state its strongest source result in `key_points`, not just its theme"
+        in doc_map_text
+    )
+    assert "search quantitative docmap points on cited pages" in findings_text
+    assert "denominator only when defined or needed" in findings_text
+    assert "preserve exact linked values and comparisons" in candidates_text
+    assert "preserve candidates' exact values, comparisons" in final_text
 
 
 @pytest.mark.parametrize(

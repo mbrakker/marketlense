@@ -1,6 +1,6 @@
 text: |
-  Use DocMap key takeaways as search cues; retain distinctive findings only
-  when file_search verifies them.
+  Search quantitative DocMap points on cited pages; retain only file_search-verified
+  results.
 
   {{ doc_map_sections_json }}
 
@@ -12,9 +12,9 @@ text: |
 
   {{ source_temporal_relationships_json }}
 
-  For a chart or table finding, verify one complete source tuple before writing
-  it: value, metric/category, subject or cohort, denominator, geography, and
-  period/status. Use file_search to inspect the actual row, column, or legend.
+  For charts/tables, verify value, metric/category, subject/cohort, geography,
+  and period/status in the source. Require a denominator only when defined or
+  needed; never infer it.
   A number visible elsewhere in the same chart is not evidence for a different
   row, cohort, category, or denominator. Omit a numeric finding when the exact
   tuple cannot be established.

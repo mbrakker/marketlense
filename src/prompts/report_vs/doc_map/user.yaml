@@ -21,8 +21,9 @@ text: |
     - summary (1-2 concise, specific sentences)
     - key_points (2-4 short strings when available)
     - pages and references (all explicit printed pages)
-  - Retain exact metrics, periods, causes, mechanisms, and contrasts in
-    section-scoped `key_points`; do not flatten them to themes.
+  - For each section, state its strongest source result in `key_points`, not
+    just its theme, when present. Preserve exact metrics, periods, causes,
+    mechanisms, and contrasts beyond the summary.
   - Keep inclusive page ranges intact; never infer missing endpoints.
   - Use schema field names exactly (for example `title`, not `document_title`).
   - Do not substitute runtime metadata for report content. Report IDs, vector-store IDs,

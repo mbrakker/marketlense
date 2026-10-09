@@ -22,7 +22,8 @@ text: |
   must state value, subject, and period/status; do not expand scope. DocMap IDs
   are not numeric evidence.
   Use plan priority for coherence, not fixed rank: put the strongest supported, decision-useful insight first using existing candidate scores and coverage_role; keep each linked evidence ID, preserve distinct material themes, and do not favor a metric solely for being numeric.
-  Tighten wording for executive relevance but do not change the underlying facts.
+  Tighten for brevity; preserve candidates' exact values, comparisons,
+  qualifications, and scope.
   Keep so_what a specific, non-contradictory MarketLense interpretation of why
   the finding matters. Keep now_what a specific conditional decision or
   follow-up tied to it. Neither may add a factual premise or false attribution
