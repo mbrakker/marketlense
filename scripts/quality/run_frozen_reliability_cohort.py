@@ -37,9 +37,14 @@ STAGING_FROZEN_COHORT_REPORT_IDS = frozenset(
 
 
 def _load_members(
-    manifest_path: Path, *, sources_root: Path | None = None
+    manifest_path: Path,
+    *,
+    sources_root: Path | None = None,
+    manifest_bytes: bytes | None = None,
 ) -> list[dict[str, Any]]:
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload = json.loads(
+        manifest_path.read_bytes() if manifest_bytes is None else manifest_bytes
+    )
     members = payload.get("members") if isinstance(payload, dict) else None
     if not isinstance(members, list) or len(members) not in {5, 10, 20}:
         raise ValueError(
@@ -129,33 +134,24 @@ def run_frozen_reliability_cohort(
         raise ValueError(
             "--allow-insecure-staging-http requires staging publication to be enabled"
         )
-    manifest_sha256 = hashlib.sha256(sources_manifest.read_bytes()).hexdigest()
+    manifest_bytes = sources_manifest.read_bytes()
+    manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
     if (
         publish_to_wordpress_staging
         and manifest_sha256 != STAGING_FROZEN_COHORT_MANIFEST_SHA256
     ):
         raise ValueError("WordPress staging requires the pinned five-report manifest")
-    members = _load_members(sources_manifest, sources_root=sources_root)
+    members = _load_members(
+        sources_manifest,
+        sources_root=sources_root,
+        manifest_bytes=manifest_bytes,
+    )
     selected_members = _select_members(members, report_ids)
     if publish_to_wordpress_staging:
-        member_hashes = {str(member["content_md5"]).lower() for member in members}
-        selected_hashes = {
-            str(member["content_md5"]).lower() for member in selected_members
-        }
-        if (
-            len(members) != 5
-            or member_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
-            or len(selected_members) != 5
-            or selected_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
-        ):
-            raise ValueError(
-                "WordPress staging requires all five pinned frozen reports"
-            )
+        _require_exact_staging_members(members, selected_members)
     runs_root.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="frozen-reliability-", dir=runs_root))
-    root.joinpath("frozen_cohort.json").write_text(
-        sources_manifest.read_text(encoding="utf-8"), encoding="utf-8"
-    )
+    root.joinpath("frozen_cohort.json").write_bytes(manifest_bytes)
     selected_ids = [
         f"cohort-{str(member['content_md5']).lower()[:20]}"
         for member in selected_members
@@ -307,6 +303,22 @@ def _select_members(
     return [by_id[report_id] for report_id in requested]
 
 
+def _require_exact_staging_members(
+    members: list[dict[str, Any]], selected_members: list[dict[str, Any]]
+) -> None:
+    member_hashes = {str(member["content_md5"]).lower() for member in members}
+    selected_hashes = {
+        str(member["content_md5"]).lower() for member in selected_members
+    }
+    if (
+        len(members) != 5
+        or member_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
+        or len(selected_members) != 5
+        or selected_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
+    ):
+        raise ValueError("WordPress staging requires all five pinned frozen reports")
+
+
 def _shared_batch_passes(result: dict[str, Any]) -> bool:
     """Require all five first-attempt draft creates, readbacks, and safe replay."""
 
@@ -386,6 +398,7 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and cross_report.get("briefing_validated_multireport_execution_seconds", 0) > 0
         and isinstance(briefing_usage.get("provider_calls"), int)
         and briefing_usage.get("provider_calls", 0) > 0
+        and briefing_usage.get("cost_available") is True
         and isinstance(briefing_usage.get("estimated_cost_usd"), (int, float))
         and cross_report.get("signal_manifest_count", 0) > 0
         and cross_report.get("signal_manifest_readback_verified_count")
@@ -393,6 +406,8 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and cross_report.get("signal_manifest_replay_verified_count")
         == cross_report.get("signal_manifest_count")
         and cross_report.get("signal_manifest_mutation_preserved") is True
+        and cross_report.get("signal_manifest_mutation_probe_scope")
+        == "representative_manifest"
         and cross_report.get("signal_single_source_group_count", 0) > 0
         and cross_report.get(
             "signal_single_source_insufficient_grounding_hold_count", 0

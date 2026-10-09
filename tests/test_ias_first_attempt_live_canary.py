@@ -17,6 +17,7 @@ from scripts.quality.ias_live_canary_runner import (
     _queue_terminal_state,
     _replay_completed_wordpress_jobs,
     _read_retained_claim_counts,
+    _read_workflow_job_usage,
     _wordpress_publication_evidence,
     _validate_wordpress_staging_origin,
     _seed_isolated_workflow_queue_controls,
@@ -483,12 +484,13 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
         conn.execute(
             """CREATE TABLE llm_usage_events (
               task_id TEXT, input_tokens INTEGER, cached_input_tokens INTEGER,
-              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL
+              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL,
+              pricing_status TEXT
             )"""
         )
         conn.execute(
-            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?)",
-            ("workflow_job:brief-job-1", 200, 20, 50, 0, 0.0125),
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("workflow_job:brief-job-1", 200, 20, 50, 0, 0.0125, "matched"),
         )
 
     evidence = _collect_cross_report_handoff_evidence(
@@ -509,7 +511,61 @@ def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
         "output_tokens": 50,
         "tool_calls": 0,
         "estimated_cost_usd": 0.0125,
+        "pricing_status_counts": {"matched": 1},
+        "unpriced_provider_call_count": 0,
+        "cost_available": True,
     }
+
+
+def test_workflow_job_usage_marks_cost_unavailable_for_unresolved_pricing(
+    tmp_path: Path,
+) -> None:
+    usage_db = tmp_path / "usage.sqlite"
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              task_id TEXT, input_tokens INTEGER, cached_input_tokens INTEGER,
+              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL,
+              pricing_status TEXT
+            )"""
+        )
+        conn.executemany(
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("workflow_job:brief-job-1", 10, 0, 5, 0, 0.001, "matched"),
+                ("workflow_job:brief-job-2", 10, 0, 5, 0, 0.0, "missing"),
+            ],
+        )
+
+    usage = _read_workflow_job_usage(str(usage_db), ["brief-job-1", "brief-job-2"])
+
+    assert usage["provider_calls"] == 2
+    assert usage["pricing_status_counts"] == {"matched": 1, "missing": 1}
+    assert usage["unpriced_provider_call_count"] == 1
+    assert usage["cost_available"] is False
+
+
+def test_workflow_job_usage_marks_cost_unavailable_without_pricing_column(
+    tmp_path: Path,
+) -> None:
+    usage_db = tmp_path / "legacy-usage.sqlite"
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              task_id TEXT, input_tokens INTEGER, cached_input_tokens INTEGER,
+              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL
+            )"""
+        )
+        conn.execute(
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?)",
+            ("workflow_job:brief-job-1", 10, 0, 5, 0, 0.0),
+        )
+
+    usage = _read_workflow_job_usage(str(usage_db), ["brief-job-1"])
+
+    assert usage["provider_calls"] == 1
+    assert usage["unpriced_provider_call_count"] == 1
+    assert usage["cost_available"] is False
 
 
 def test_staging_batch_requires_cross_report_handoff_verification(

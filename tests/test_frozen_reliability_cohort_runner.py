@@ -590,6 +590,56 @@ def test_frozen_manifest_resolves_sources_from_an_explicit_workspace_root(
     ]
 
 
+def test_frozen_manifest_loader_uses_the_supplied_byte_snapshot(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"manifest snapshot source")
+    member = {
+        "source_path": source.name,
+        "content_md5": hashlib.md5(
+            source.read_bytes(), usedforsecurity=False
+        ).hexdigest(),
+        "source_domain": "publisher.example",
+        "report_name": "Frozen fixture",
+        "landing_page_url": "https://publisher.example/report",
+        "source_page_url": "https://publisher.example/reports",
+        "publisher_name": "Fixture Publisher",
+        "downloaded_at_utc": "2026-10-01T00:00:00Z",
+    }
+    snapshot = json.dumps({"members": [member] * 5}).encode("utf-8")
+    manifest = tmp_path / "frozen.json"
+    manifest.write_bytes(b'{"members": []}')
+
+    loaded = _load_members(manifest, sources_root=tmp_path, manifest_bytes=snapshot)
+
+    assert len(loaded) == 5
+    assert all(item["report_name"] == "Frozen fixture" for item in loaded)
+
+
+def test_staging_member_gate_rejects_partial_selection() -> None:
+    from scripts.quality.run_frozen_reliability_cohort import (
+        _require_exact_staging_members,
+    )
+
+    members = [
+        {"content_md5": digest}
+        for digest in sorted(
+            {
+                "81af3890cd84ece81ef16e1aabda8027",
+                "cbb6e7df67412186b8bc094a424ac890",
+                "2acb4a56e14add5d7717f34c378f9091",
+                "4b763ae2286ca69fe8acb63b17508dfb",
+                "b638414df0b1fccea1cd8a93eaf8f5aa",
+            }
+        )
+    ]
+
+    _require_exact_staging_members(members, members)
+    with pytest.raises(ValueError, match="all five pinned frozen reports"):
+        _require_exact_staging_members(members, members[:4])
+
+
 @pytest.mark.parametrize("escape_kind", ["parent", "absolute"])
 def test_frozen_manifest_rejects_sources_outside_explicit_workspace_root(
     tmp_path: Path, escape_kind: str
@@ -702,11 +752,15 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
                     "output_tokens": 5,
                     "tool_calls": 0,
                     "estimated_cost_usd": 0.001,
+                    "pricing_status_counts": {"matched": 1},
+                    "unpriced_provider_call_count": 0,
+                    "cost_available": True,
                 },
                 "signal_manifest_count": 4,
                 "signal_manifest_readback_verified_count": 4,
                 "signal_manifest_replay_verified_count": 4,
                 "signal_manifest_mutation_preserved": True,
+                "signal_manifest_mutation_probe_scope": "representative_manifest",
                 "signal_single_source_group_count": 4,
                 "signal_single_source_insufficient_grounding_hold_count": 4,
                 "signal_single_source_unsafe_group_count": 0,
@@ -755,6 +809,18 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
     failed["cohort_metrics"]["cross_report_handoffs"][
         "briefing_validated_multireport_provider_usage"
     ]["provider_calls"] = 0
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["cross_report_handoffs"][
+        "briefing_validated_multireport_provider_usage"
+    ]["cost_available"] = False
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    del failed["cohort_metrics"]["cross_report_handoffs"][
+        "signal_manifest_mutation_probe_scope"
+    ]
     assert _shared_batch_passes(failed) is False
 
 

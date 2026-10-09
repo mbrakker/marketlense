@@ -2093,11 +2093,17 @@ def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str
             "cached_input_tokens": 0,
             "output_tokens": 0,
             "tool_calls": 0,
-            "estimated_cost_usd": 0.0,
+            "estimated_cost_usd": None,
+            "pricing_status_counts": {},
+            "unpriced_provider_call_count": 0,
+            "cost_available": False,
         }
     marks = ",".join("?" for _ in job_ids)
     task_ids = tuple(f"workflow_job:{job_id}" for job_id in job_ids)
     with sqlite3.connect(usage_db_path) as conn:
+        columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(llm_usage_events)")
+        }
         row = conn.execute(
             f"""SELECT COUNT(*),COALESCE(SUM(input_tokens),0),
                        COALESCE(SUM(cached_input_tokens),0),
@@ -2106,13 +2112,37 @@ def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str
                 FROM llm_usage_events WHERE task_id IN ({marks})""",
             task_ids,
         ).fetchone()
+        pricing_status_counts: dict[str, int] = {}
+        if "pricing_status" in columns:
+            pricing_rows = conn.execute(
+                f"""SELECT pricing_status, COUNT(*)
+                    FROM llm_usage_events WHERE task_id IN ({marks})
+                    GROUP BY pricing_status""",
+                task_ids,
+            ).fetchall()
+            pricing_status_counts = {
+                str(status or "unknown").strip().lower(): int(count)
+                for status, count in pricing_rows
+            }
+        elif int(row[0]):
+            pricing_status_counts = {"unknown": int(row[0])}
+    priced_statuses = {"matched", "alias_matched"}
+    unpriced_provider_calls = sum(
+        count
+        for status, count in pricing_status_counts.items()
+        if status not in priced_statuses
+    )
+    cost_available = int(row[0]) > 0 and unpriced_provider_calls == 0
     return {
         "provider_calls": int(row[0]),
         "input_tokens": int(row[1]),
         "cached_input_tokens": int(row[2]),
         "output_tokens": int(row[3]),
         "tool_calls": int(row[4]),
-        "estimated_cost_usd": round(float(row[5]), 6),
+        "estimated_cost_usd": round(float(row[5]), 6) if cost_available else None,
+        "pricing_status_counts": pricing_status_counts,
+        "unpriced_provider_call_count": unpriced_provider_calls,
+        "cost_available": cost_available,
     }
 
 
