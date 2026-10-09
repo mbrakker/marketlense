@@ -1,0 +1,196 @@
+{
+  "schema_version": "1.0.0",
+  "evidence_kind": "redacted_frozen_five_autonomous_mvp_canary",
+  "run_date": "2026-10-09",
+  "implementation_sha": "31f6afe9c568be5fc271bff6ec3b56ef3d7f5ee5",
+  "baseline_sha": "0ec3cdff841e16df7044f6645fe8379a464f41ca",
+  "source_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+  "raw_result": {
+    "retained_at": "ignored:tmp/p5finalsha/frozen-reliability-_w2jy5qt/cohort_result.json",
+    "sha256": "4c991aa9dd977e882eb001d6d70b45c57102af3ac69c1ab8a1c1d29e06b456f1"
+  },
+  "execution": {
+    "canonical_runner": true,
+    "shared_batch": true,
+    "isolated_application_state": true,
+    "staging_host": "marketlense.medianewsonline.com",
+    "transport": "http",
+    "wordpress_post_type": "ml_report",
+    "wordpress_status": "draft",
+    "model_provider": "OpenAI",
+    "model": "gpt-6-luna",
+    "model_policy_sha256": "b7743c06f02b644720c2541b317e4adac7093c5f6c522f9078080becd0cdc3e7",
+    "current_app_config_sha256": "e69e45292073ca9334a5ba85d061f4ee9e52cb51aec357588ba094c69040dd32",
+    "baseline_app_config_sha256": "b90a2242728d985b5697e5faae0e0320714659c41ee9ded9c4a463227da9558d",
+    "current_supervisor_worker_cap": 3,
+    "baseline_supervisor_worker_cap": 5,
+    "provider_cache_input_tokens": {
+      "baseline": 117267,
+      "current_including_briefing": 65426
+    },
+    "provider_request_timing_available": false
+  },
+  "frozen_sources": [
+    {"report": "Capgemini Research Institute", "md5": "81af3890cd84ece81ef16e1aabda8027"},
+    {"report": "Activate", "md5": "cbb6e7df67412186b8bc094a424ac890"},
+    {"report": "KPMG", "md5": "2acb4a56e14add5d7717f34c378f9091"},
+    {"report": "Reuters Institute", "md5": "4b763ae2286ca69fe8acb63b17508dfb"},
+    {"report": "Adjust", "md5": "b638414df0b1fccea1cd8a93eaf8f5aa"}
+  ],
+  "reports": [
+    {
+      "report": "Capgemini Research Institute",
+      "validation": "pass",
+      "readiness": "pass",
+      "unsupported_claims": 0,
+      "unresolved_claims": 0,
+      "baseline": {"core_seconds": 1178, "provider_calls": 39, "input_tokens": 364300, "output_tokens": 79343, "llm_cost_usd": 0.089357},
+      "current": {"core_seconds": 791, "provider_calls": 34, "input_tokens": 237919, "output_tokens": 54578, "llm_cost_usd": 0.060328},
+      "editorial_direction": "down",
+      "html_sha256": {
+        "baseline": "c2d0656309fe437e03a590f0c3c47e9fa7c11ea9cd6fd01526cffe69656b209d",
+        "current": "297a3f72e1db083751c49c1ecd165165fdf9571eae6edca364a11a53503e2e54"
+      },
+      "wordpress_post_id": 2071,
+      "wordpress_draft_readback": true,
+      "duplicate_replay_additional_writes": 0
+    },
+    {
+      "report": "Activate",
+      "validation": "pass",
+      "readiness": "pass",
+      "unsupported_claims": 0,
+      "unresolved_claims": 0,
+      "baseline": {"core_seconds": 760, "provider_calls": 49, "input_tokens": 380564, "output_tokens": 68154, "llm_cost_usd": 0.088718},
+      "current": {"core_seconds": 989, "provider_calls": 49, "input_tokens": 313456, "output_tokens": 75785, "llm_cost_usd": 0.088321},
+      "editorial_direction": "slightly_down",
+      "html_sha256": {
+        "baseline": "31fab659d08b34a6faaf34a88e42481081ecfde4138503ad419e9e48db195c5e",
+        "current": "a5bd20ea72c572489b264ac274c49dc8f804fd8345ad40ede2b0bb7a7791bbbb"
+      },
+      "wordpress_post_id": 2076,
+      "wordpress_draft_readback": true,
+      "duplicate_replay_additional_writes": 0
+    },
+    {
+      "report": "KPMG",
+      "validation": "pass",
+      "readiness": "pass",
+      "unsupported_claims": 0,
+      "unresolved_claims": 0,
+      "baseline": {"core_seconds": 748, "provider_calls": 37, "input_tokens": 337873, "output_tokens": 63750, "llm_cost_usd": 0.074580},
+      "current": {"core_seconds": 509, "provider_calls": 34, "input_tokens": 251674, "output_tokens": 64572, "llm_cost_usd": 0.088871},
+      "editorial_direction": "modestly_down",
+      "html_sha256": {
+        "baseline": "e590e5023b0c8ceeb38564d242717786c6dc4b64eb579b6796ffc7c4f24fef1b",
+        "current": "433959db2b0ffb9c12fca065a2092e639c7f0094c5173da208983d2043a382ff"
+      },
+      "wordpress_post_id": 2056,
+      "wordpress_draft_readback": true,
+      "duplicate_replay_additional_writes": 0
+    },
+    {
+      "report": "Reuters Institute",
+      "validation": "pass",
+      "readiness": "pass",
+      "unsupported_claims": 0,
+      "unresolved_claims": 0,
+      "baseline": {"core_seconds": 1183, "provider_calls": 53, "input_tokens": 478390, "output_tokens": 124566, "llm_cost_usd": 0.116891},
+      "current": {"core_seconds": 641, "provider_calls": 33, "input_tokens": 349440, "output_tokens": 56156, "llm_cost_usd": 0.079439},
+      "editorial_direction": "mixed",
+      "html_sha256": {
+        "baseline": "f427da67cf919eff2cf1e90ec71dbe541d693ece05d55571c110802af2f0051d",
+        "current": "1d566e407dfbe4e4462974542500b2a47700836142de8ddf2fc94555d300fac1"
+      },
+      "wordpress_post_id": 2066,
+      "wordpress_draft_readback": true,
+      "duplicate_replay_additional_writes": 0
+    },
+    {
+      "report": "Adjust",
+      "validation": "pass",
+      "readiness": "pass",
+      "unsupported_claims": 0,
+      "unresolved_claims": 0,
+      "baseline": {"core_seconds": 675, "provider_calls": 37, "input_tokens": 318084, "output_tokens": 63284, "llm_cost_usd": 0.072372},
+      "current": {"core_seconds": 595, "provider_calls": 34, "input_tokens": 212888, "output_tokens": 59577, "llm_cost_usd": 0.059034},
+      "editorial_direction": "strongly_down",
+      "html_sha256": {
+        "baseline": "8152cf9cd194977ad4db07d9be3240ca88b2ebfd11683492bdc8ab59c2b515bc",
+        "current": "c0cf614d37a264bd815337c31443eb20e9bad8811b849dcd1b4105dba90befdf"
+      },
+      "wordpress_post_id": 2061,
+      "wordpress_draft_readback": true,
+      "duplicate_replay_additional_writes": 0
+    }
+  ],
+  "cohort": {
+    "reports_expected": 5,
+    "reports_terminal_success": 5,
+    "validation_pass": 5,
+    "readiness_pass": 5,
+    "report_provider_calls": {"baseline": 215, "current": 184, "delta_percent": -14.4},
+    "report_input_tokens": {"baseline": 1879211, "current": 1365377, "delta_percent": -27.3},
+    "report_output_tokens": {"baseline": 399097, "current": 310668, "delta_percent": -22.2},
+    "report_llm_cost_usd": {"baseline": 0.441918, "current": 0.375993, "delta_percent": -14.9},
+    "core_batch_wall_seconds": {"baseline": 1201.19, "current": 1011.413, "delta_percent": -15.8},
+    "measured_reports_per_hour": {"baseline": 14.985, "current": 17.799, "delta_percent": 18.8, "causal_performance_claim": false},
+    "file_search_calls": {"baseline": 26, "current": 36},
+    "automatic_repairs": {"baseline": 6, "current": 0},
+    "queue_retries": 0,
+    "operator_interventions": 0,
+    "run_to_reports_and_handoffs_terminal_seconds": 1019.169,
+    "briefing": {"attempts": 1, "validation": "pass", "provider_calls": 1, "input_tokens": 6592, "output_tokens": 4951, "llm_cost_usd": 0.003135, "live_publication": "held_by_cross_report_publish_live_disabled"},
+    "combined_report_and_briefing": {"provider_calls": 185, "input_tokens": 1371969, "output_tokens": 315619, "llm_cost_usd": 0.379128},
+    "signal": {"manifests": 40, "readback_replay_mutation_checks_passed": 40, "held_reason": "signal_grounding_insufficient", "unsafe_groups": 0, "valid_multi_report_groups": 0}
+  },
+  "capability_preflight": {
+    "local": {"status": "degraded", "unchecked_live_probes": ["llm", "embedding", "browser", "wordpress"], "provider_calls": 0, "external_writes": 0},
+    "live": {"status": "ready", "provider_metadata_calls": 11, "external_writes": 0},
+    "wordpress_staging": {"authenticated": true, "reachable": true, "create_posts": true, "required_status": "draft"}
+  },
+  "wordpress_replay_and_cleanup": {
+    "first_attempt_draft_creates": 5,
+    "authenticated_readbacks": 5,
+    "duplicate_replays": 5,
+    "duplicate_jobs_created": 0,
+    "additional_writes_on_replay": 0,
+    "briefing_publish_job": "blocked_by_cross_report_publish_live_disabled",
+    "test_posts_moved_to_trash": 5,
+    "trash_post_ids": [2056, 2061, 2066, 2071, 2076],
+    "trash_readback_verified_by_id_type_status": 5,
+    "canonical_active_file_id_matches_after_cleanup": 0,
+    "delete_response_envelope_mismatch": true,
+    "delete_retried": false,
+    "no_production_writes": true
+  },
+  "quality_review": {
+    "method": "paired_retained_html_review_with_frozen_source_spot_checks",
+    "reviewer_mode": "assistant_assisted_single_reviewer_not_blinded",
+    "confirmed_factual_errors": 0,
+    "final_public_editorial_quality_issues_per_report": 0,
+    "direction_by_report": {
+      "Capgemini Research Institute": "down",
+      "Activate": "slightly_down",
+      "KPMG": "modestly_down",
+      "Reuters Institute": "mixed",
+      "Adjust": "strongly_down"
+    },
+    "reproducible_numeric_rubric_anchors_available": false,
+    "acceptance_finding": "lead_specificity_regression_requires_follow_up"
+  },
+  "release_decision": {
+    "technical_canary": "pass",
+    "editorial_acceptance": "fail",
+    "recommendation": "NO-GO",
+    "merge": "withheld",
+    "reason": "Four reports had lower lead specificity and Reuters was mixed; no confirmed factual error, but the acceptance quality gate is not met.",
+    "production_publication_attempted": false
+  },
+  "redaction": {
+    "contains_credentials": false,
+    "contains_raw_model_responses": false,
+    "contains_rendered_prompts": false,
+    "contains_personal_actor_metadata": false
+  }
+}
