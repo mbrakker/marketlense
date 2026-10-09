@@ -90,6 +90,8 @@ def test_first_attempt_canary_uses_production_submission_and_supervisor_path(
     assert result["admission_outcome"] == "admitted"
     assert result["workflow_root_id"]
     assert result["final_state"] in {"awaiting_review", "failed"}
+    assert result["model_provider_calls"] > 0
+    assert result["metric_attribution"] == "canonical_run_and_report_id"
     assert Path(result["run_directory"]).joinpath("cohort", "source.json").is_file()
     with sqlite3.connect(
         Path(result["run_directory"]) / "state" / "workflow.sqlite"

@@ -1791,11 +1791,10 @@ def _drain_report_paths(
                 ),
                 "core_reports_terminal_monotonic": reports_terminal_at,
                 "core_reports_terminal_at_utc": reports_terminal_at_utc,
-                "cross_report_handoff_drain_wall_seconds": round(
-                    max(0.0, now - reports_terminal_at),
-                    3
+                "cross_report_handoff_drain_wall_seconds": (
+                    round(max(0.0, now - reports_terminal_at), 3)
                     if drain_cross_report_handoffs and reports_terminal_at is not None
-                    else 0.0,
+                    else 0.0
                 ),
                 "cross_report_handoffs_terminal": handoffs_terminal,
             }
