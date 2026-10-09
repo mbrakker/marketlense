@@ -21,14 +21,20 @@ from scripts.quality.ias_live_canary_runner import (
 DEFAULT_SOURCES_MANIFEST = Path(__file__).with_name("frozen_reliability_cohort_10.json")
 
 
-def _load_members(manifest_path: Path) -> list[dict[str, Any]]:
+def _load_members(
+    manifest_path: Path, *, sources_root: Path | None = None
+) -> list[dict[str, Any]]:
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     members = payload.get("members") if isinstance(payload, dict) else None
     if not isinstance(members, list) or len(members) not in {5, 10, 20}:
         raise ValueError(
             "Frozen reliability cohort must contain exactly 5, 10, or 20 members"
         )
-    root = Path(__file__).resolve().parents[2]
+    root = (
+        Path(__file__).resolve().parents[2]
+        if sources_root is None
+        else sources_root.expanduser().resolve()
+    )
     required = {
         "source_path",
         "content_md5",
@@ -52,7 +58,14 @@ def _load_members(manifest_path: Path) -> list[dict[str, Any]]:
         for item in members
     ):
         raise ValueError("Frozen reliability cohort has an invalid source checksum")
-    paths = [root / str(item["source_path"]) for item in members]
+    paths = []
+    for item in members:
+        source_path = Path(str(item["source_path"])).expanduser()
+        paths.append(
+            source_path.resolve()
+            if source_path.is_absolute()
+            else (root / source_path).resolve()
+        )
     if any(not path.is_file() for path in paths):
         raise ValueError("Frozen reliability cohort has a missing source artifact")
     if any(
@@ -73,11 +86,24 @@ def run_frozen_reliability_cohort(
     runs_root: Path,
     max_duration_seconds: int = 7_200,
     report_ids: tuple[str, ...] | None = None,
+    sources_root: Path | None = None,
+    shared_batch: bool = False,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    enable_cross_report_analysis: bool = False,
     run_cohort_once: Callable[..., dict[str, Any]] = run_frozen_cohort_once,
 ) -> dict[str, Any]:
     """Run each selected frozen member with an independent isolated deadline."""
 
-    members = _load_members(sources_manifest)
+    if (
+        publish_to_wordpress_staging or enable_cross_report_analysis
+    ) and not shared_batch:
+        raise ValueError(
+            "Staging publication and cross-report analysis require --shared-batch"
+        )
+    if staging_hostname and not publish_to_wordpress_staging:
+        raise ValueError("--staging-host requires staging publication to be enabled")
+    members = _load_members(sources_manifest, sources_root=sources_root)
     selected_members = _select_members(members, report_ids)
     runs_root.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="frozen-reliability-", dir=runs_root))
@@ -96,6 +122,53 @@ def run_frozen_reliability_cohort(
         ),
         encoding="utf-8",
     )
+
+    if shared_batch:
+        run_kwargs: dict[str, Any] = {
+            "runs_root": root / "members",
+            "sources": selected_members,
+            "max_duration_seconds": max_duration_seconds,
+        }
+        if publish_to_wordpress_staging:
+            run_kwargs.update(
+                {
+                    "publish_to_wordpress_staging": True,
+                    "staging_hostname": staging_hostname,
+                }
+            )
+        if enable_cross_report_analysis:
+            run_kwargs["enable_cross_report_analysis"] = True
+        execution = run_cohort_once(**run_kwargs)
+        report_results = list(execution.get("reports") or [])
+        if len(report_results) != len(selected_members):
+            raise RuntimeError("Shared frozen cohort execution omitted a report")
+        git_sha = str(execution.get("git_sha") or "")
+        if len(git_sha) != 40 or any(
+            character not in "0123456789abcdef" for character in git_sha
+        ):
+            raise RuntimeError("Shared frozen cohort execution lacks a clean git SHA")
+        result = {
+            "schema_version": "1.0",
+            "git_sha": git_sha,
+            "source_manifest_sha256": hashlib.sha256(
+                sources_manifest.read_bytes()
+            ).hexdigest(),
+            "cohort_size": len(report_results),
+            "shared_batch": True,
+            "cohort_directory": str(root),
+            "production_run_directory": str(execution.get("run_directory") or ""),
+            "cohort_metrics": dict(execution.get("cohort_metrics") or {}),
+            "reports": report_results,
+            "summary": summarize_frozen_cohort_results(
+                report_results,
+                cohort_metrics=dict(execution.get("cohort_metrics") or {}),
+            ),
+        }
+        root.joinpath("cohort_result.json").write_text(
+            json.dumps(result, sort_keys=True, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        return result
 
     results: list[dict[str, Any]] = []
     executions: list[dict[str, Any]] = []
@@ -222,10 +295,10 @@ def _aggregate_per_report_metrics(
 
 
 def preflight_frozen_reliability_cohort(
-    *, sources_manifest: Path, runs_root: Path
+    *, sources_manifest: Path, runs_root: Path, sources_root: Path | None = None
 ) -> dict[str, Any]:
     """Validate frozen provenance and production admission before live work."""
-    members = _load_members(sources_manifest)
+    members = _load_members(sources_manifest, sources_root=sources_root)
     runs_root.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="frozen-reliability-preflight-", dir=runs_root))
     results = [
@@ -264,6 +337,12 @@ def main() -> int:
     )
     parser.add_argument("--runs-root", type=Path, required=True)
     parser.add_argument(
+        "--sources-root",
+        type=Path,
+        default=None,
+        help="Workspace root containing relative source paths from the manifest",
+    )
+    parser.add_argument(
         "--max-duration",
         type=int,
         default=7_200,
@@ -276,11 +355,33 @@ def main() -> int:
         help=("Optional stable report IDs to run; defaults to every manifest member"),
     )
     parser.add_argument("--preflight-only", action="store_true")
+    parser.add_argument(
+        "--shared-batch",
+        action="store_true",
+        help="Submit all selected reports together through one isolated workflow",
+    )
+    parser.add_argument(
+        "--enable-wordpress-staging",
+        action="store_true",
+        help="Enable autonomous approval and WordPress drafts for the confirmed staging host",
+    )
+    parser.add_argument("--staging-host", default="")
+    parser.add_argument("--enable-cross-report-analysis", action="store_true")
     args = parser.parse_args()
     try:
+        if (
+            args.enable_wordpress_staging or args.enable_cross_report_analysis
+        ) and not args.shared_batch:
+            parser.error(
+                "staging publication and cross-report analysis require --shared-batch"
+            )
+        if args.staging_host and not args.enable_wordpress_staging:
+            parser.error("--staging-host requires --enable-wordpress-staging")
         result = (
             preflight_frozen_reliability_cohort(
-                sources_manifest=args.sources_manifest, runs_root=args.runs_root
+                sources_manifest=args.sources_manifest,
+                runs_root=args.runs_root,
+                sources_root=args.sources_root,
             )
             if args.preflight_only
             else run_frozen_reliability_cohort(
@@ -288,6 +389,11 @@ def main() -> int:
                 runs_root=args.runs_root,
                 max_duration_seconds=args.max_duration,
                 report_ids=(tuple(args.report_ids) if args.report_ids else None),
+                sources_root=args.sources_root,
+                shared_batch=args.shared_batch,
+                publish_to_wordpress_staging=args.enable_wordpress_staging,
+                staging_hostname=args.staging_host,
+                enable_cross_report_analysis=args.enable_cross_report_analysis,
             )
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:

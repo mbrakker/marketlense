@@ -340,11 +340,27 @@ def assemble_artifacts_payload(
             or summary_current_text_has_exact_retained_lineage
         )
     )
+    repaired_compact_tldr_invalid = False
+    if summary_repair_in_progress:
+        try:
+            _validate_complete_tldr(
+                summary.get("card_tldr_compact"),
+                limit=18,
+                code="card_tldr_compact_invalid",
+                field_name="summary.card_tldr_compact",
+            )
+        except AppError as exc:
+            if exc.code != "card_tldr_compact_invalid":
+                raise
+            repaired_compact_tldr_invalid = True
     try:
         summary_fallback_applied = (
-            False
-            if summary_repair_in_progress
-            else constrain_summary_to_source_backed_claims(summary)
+            constrain_summary_to_source_backed_claims(
+                summary,
+                require_direct_fallback=repaired_compact_tldr_invalid,
+            )
+            if not summary_repair_in_progress or repaired_compact_tldr_invalid
+            else False
         )
     except AppError as exc:
         if exc.code != "card_tldr_compact_invalid":
@@ -355,6 +371,12 @@ def assemble_artifacts_payload(
         )
         soft_copy_claim_bindings["summary"] = []
         summary_fallback_applied = False
+    if repaired_compact_tldr_invalid and not summary_fallback_applied:
+        _abstain_summary_without_short_direct_claim(
+            summary=summary,
+            family_status=family_status,
+        )
+        soft_copy_claim_bindings["summary"] = []
     pre_correction_soft_copy = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,

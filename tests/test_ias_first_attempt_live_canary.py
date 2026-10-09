@@ -3,11 +3,17 @@ import json
 import sqlite3
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
+import yaml
 
 import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
     _collect_frozen_cohort_queue_timing_evidence,
+    _queue_terminal_state,
+    _replay_completed_wordpress_jobs,
     _read_retained_claim_counts,
     _seed_isolated_workflow_queue_controls,
     ensure_isolated_publication_queue_disabled,
@@ -17,6 +23,11 @@ from scripts.quality.ias_live_canary_runner import (
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.semantic_ids import ReportId
+from src.contracts.workflow_queue import (
+    WordPressPublishPayload,
+    WorkflowJobSubmission,
+    WorkflowStageResult,
+)
 from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
@@ -25,6 +36,12 @@ from src.services.config_service import (
 )
 from src.services.report_analysis_store_service import pack_path
 from src.services.workflow_queue_service import get_workflow_queue_control
+from src.services.workflow_queue_service import (
+    claim_next_workflow_job,
+    complete_workflow_job,
+    enqueue_workflow_job,
+    start_workflow_job,
+)
 
 
 def _long_test_output_root(tmp_path: Path) -> Path:
@@ -68,11 +85,193 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     assert control.supervisor.max_parallel_workers == 3
     assert control.supervisor.max_jobs_per_queue == 3
     assert control.supervisor.max_total_jobs == 60
+    assert control.autonomous_publication_policy.enabled is False
     queues = load_workflow_queue_policies(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
         new_runtime_context(task_id="isolated-canary-queue-test"),
     )
     assert queues["wordpress_publish"].enabled is False
+
+
+def test_isolated_canary_staging_mode_is_explicit_draft_only_and_host_pinned(
+    tmp_path: Path,
+) -> None:
+    run = prepare_isolated_canary_run(
+        runs_root=tmp_path,
+        publish_to_wordpress_staging=True,
+        staging_hostname="marketlense.medianewsonline.com",
+        enable_cross_report_analysis=True,
+    )
+
+    config = yaml.safe_load(run.config_path.read_text(encoding="utf-8"))
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-staging-policy-test"),
+    )
+    queues = load_workflow_queue_policies(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-staging-queue-test"),
+    )
+
+    assert control.autonomous_publication_policy.enabled is True
+    assert control.supervisor.deferred_work_enabled is True
+    assert control.supervisor.remediation_enabled is True
+    assert queues["wordpress_publish"].enabled is True
+    assert queues["publisher_discovery"].enabled is False
+    assert queues["report_acquisition"].enabled is False
+    assert queues["mailbox_delivery"].enabled is False
+    assert config["publish"]["wp"]["post_status"] == "draft"
+    assert config["cross_report_analysis"]["enabled"] is True
+    assert config["cross_report_analysis"]["publish_enabled"] is False
+
+
+def test_isolated_canary_refuses_an_unconfirmed_publication_host(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="confirmed WordPress staging host"):
+        prepare_isolated_canary_run(
+            runs_root=tmp_path,
+            publish_to_wordpress_staging=True,
+            staging_hostname="production.example",
+        )
+
+
+def test_queue_terminal_state_accepts_a_published_autonomous_report(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_publication_readiness (
+              package_checksum TEXT, readiness_status TEXT
+            );
+            CREATE TABLE workflow_jobs (
+              queue_name TEXT, output_content_hash TEXT, report_id TEXT,
+              root_workflow_id TEXT, status TEXT, error_code TEXT,
+              completed_at_utc TEXT
+            );
+            CREATE TABLE published (
+              file_id TEXT PRIMARY KEY, md5 TEXT NOT NULL,
+              published_at INTEGER NOT NULL, wp_post_id INTEGER NOT NULL,
+              wp_post_url TEXT NOT NULL, post_type TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO workflow_publication_readiness VALUES ('pkg', 'approved');
+            INSERT INTO workflow_jobs VALUES
+              ('publication_readiness', 'pkg', 'report-1', 'root-1', 'succeeded', '', '');
+            INSERT INTO published VALUES
+              ('report-1', 'source-hash', 1, 42, 'https://staging.example/posts/42', 'ml_report');
+            """
+        )
+
+    state = _queue_terminal_state(
+        state_db=str(state_db), report_id="report-1", root_workflow_id="root-1"
+    )
+
+    assert state == "published"
+
+
+def test_completed_wordpress_job_duplicate_submission_reuses_record_without_writes(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    ctx = new_runtime_context(task_id="wordpress-job-replay-test")
+    get_workflow_queue_control(state_db, "wordpress_publish", ctx)
+    available = datetime.now(timezone.utc) + timedelta(seconds=1)
+    claim_time = available + timedelta(seconds=1)
+    start_time = claim_time + timedelta(seconds=1)
+    complete_time = start_time + timedelta(seconds=1)
+
+    def as_iso(value: datetime) -> str:
+        return value.isoformat(timespec="seconds")
+
+    submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="wordpress_publish",
+        job_type="wordpress_publish.v1",
+        payload=WordPressPublishPayload(
+            schema_version="1.0",
+            entity_type="report",
+            entity_package_reference="report.html",
+            package_checksum="package-hash",
+            approval_id="approval-id",
+            target_site="https://marketlense.medianewsonline.com",
+        ),
+        idempotency_key="publish:report-1:package-hash",
+        deduplication_scope="wordpress_publish",
+        root_workflow_id="root-1",
+        report_id="report-1",
+        available_at_utc=as_iso(available),
+    )
+    job, created = enqueue_workflow_job(state_db, submission, ctx)
+    assert created is True
+    claimed = claim_next_workflow_job(
+        state_db,
+        "wordpress_publish",
+        "replay-test-worker",
+        ctx,
+        now_utc=as_iso(claim_time),
+    )
+    assert claimed is not None
+    start_workflow_job(
+        state_db,
+        claimed.job_id,
+        "replay-test-worker",
+        ctx,
+        now_utc=as_iso(start_time),
+    )
+    complete_workflow_job(
+        state_db,
+        claimed.job_id,
+        "replay-test-worker",
+        WorkflowStageResult(
+            output_reference="https://marketlense.medianewsonline.com/report/42",
+            output_content_hash="package-hash",
+            output_verified=True,
+        ),
+        [],
+        ctx,
+        now_utc=as_iso(complete_time),
+        external_effects=["wordpress"],
+    )
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            "INSERT INTO published VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "report-1",
+                "source-hash",
+                1,
+                42,
+                "https://marketlense.medianewsonline.com/report/42",
+                "ml_report",
+            ),
+        )
+
+    replay = _replay_completed_wordpress_jobs(
+        state_db=str(state_db),
+        root_workflow_id="root-1",
+        report_ids=("report-1",),
+        ctx=ctx,
+    )
+
+    assert replay["status"] == "verified"
+    assert replay["duplicate_submissions"] == 1
+    assert replay["first_attempt_publication_jobs"] == 1
+    assert replay["created_duplicate_jobs"] == 0
+    assert replay["attempt_counts_unchanged"] is True
+    assert replay["published_rows_unchanged"] is True
+    assert replay["additional_wordpress_writes"] == 0
+    with sqlite3.connect(state_db) as conn:
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM workflow_jobs WHERE queue_name='wordpress_publish'"
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            conn.execute("SELECT COUNT(*) FROM workflow_job_attempts").fetchone()[0]
+            == 1
+        )
 
 
 def test_isolated_canary_persists_publication_queue_disabled_without_changing_limits(

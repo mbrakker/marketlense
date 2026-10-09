@@ -552,6 +552,40 @@ def test_frozen_manifest_accepts_the_pinned_five_report_grounding_cohort(
     assert all(Path(item["resolved_source_path"]).is_file() for item in loaded)
 
 
+def test_frozen_manifest_resolves_sources_from_an_explicit_workspace_root(
+    tmp_path: Path,
+) -> None:
+    source_root = tmp_path / "source-workspace"
+    source_root.mkdir()
+    members = []
+    for index in range(5):
+        relative_path = Path("out") / f"frozen-{index}.pdf"
+        source_path = source_root / relative_path
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        content = f"frozen-source-root-{index}".encode("utf-8")
+        source_path.write_bytes(content)
+        members.append(
+            {
+                "source_path": relative_path.as_posix(),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Frozen report {index}",
+                "landing_page_url": f"https://publisher.example/reports/{index}",
+                "source_page_url": "https://publisher.example/reports",
+                "publisher_name": "Fixture Publisher",
+                "downloaded_at_utc": "2026-10-01T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "frozen.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+
+    loaded = _load_members(manifest, sources_root=source_root)
+
+    assert [Path(item["resolved_source_path"]) for item in loaded] == [
+        source_root / item["source_path"] for item in members
+    ]
+
+
 def test_retained_package_lifecycle_manifest_contains_only_the_pinned_reports() -> None:
     manifest = Path(
         "docs/quality/reliability-cohort-20260927-grounding/"
@@ -694,6 +728,84 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     )
 
 
+def test_frozen_cohort_can_run_one_shared_staging_batch_with_all_members(
+    tmp_path: Path,
+) -> None:
+    source_root = tmp_path / "source-workspace"
+    source_root.mkdir()
+    members = []
+    for index in range(5):
+        relative_path = Path("out") / f"frozen-{index}.pdf"
+        source_path = source_root / relative_path
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        content = f"shared-staging-cohort-{index}".encode("utf-8")
+        source_path.write_bytes(content)
+        members.append(
+            {
+                "source_path": relative_path.as_posix(),
+                "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+                "source_domain": "publisher.example",
+                "report_name": f"Frozen report {index}",
+                "landing_page_url": f"https://publisher.example/reports/{index}",
+                "source_page_url": "https://publisher.example/reports",
+                "publisher_name": "Fixture Publisher",
+                "downloaded_at_utc": "2026-10-01T00:00:00Z",
+            }
+        )
+    manifest = tmp_path / "frozen.json"
+    manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
+    captured: list[dict[str, object]] = []
+
+    def run_once(**kwargs):
+        captured.append(kwargs)
+        reports = [
+            {
+                "report_id": f"cohort-{item['content_md5'][:20]}",
+                "admission_outcome": "admitted",
+                "final_state": "published",
+                "awaiting_review": False,
+                "published": True,
+                "workflow_attempt_count": 1,
+                "publication_readiness": "pass",
+                "terminal_failure_code": "",
+            }
+            for item in kwargs["sources"]
+        ]
+        return {
+            "git_sha": "b" * 40,
+            "run_directory": str(kwargs["runs_root"] / "isolated-run"),
+            "reports": reports,
+            "cohort_metrics": {
+                "model_provider_calls": 5,
+                "input_tokens": 500,
+                "output_tokens": 100,
+                "cost_usd": 0.25,
+                "duration_seconds": 90.0,
+                "operator_intervention_count": 0,
+            },
+        }
+
+    result = run_frozen_reliability_cohort(
+        sources_manifest=manifest,
+        sources_root=source_root,
+        runs_root=tmp_path / "runs",
+        shared_batch=True,
+        publish_to_wordpress_staging=True,
+        staging_hostname="marketlense.medianewsonline.com",
+        enable_cross_report_analysis=True,
+        run_cohort_once=run_once,
+    )
+
+    assert len(captured) == 1
+    assert len(captured[0]["sources"]) == 5
+    assert captured[0]["publish_to_wordpress_staging"] is True
+    assert captured[0]["staging_hostname"] == "marketlense.medianewsonline.com"
+    assert captured[0]["enable_cross_report_analysis"] is True
+    assert result["cohort_size"] == 5
+    assert result["summary"]["published_report_count"] == 5
+    assert Path(result["cohort_directory"], "cohort_result.json").is_file()
+
+
 def test_cohort_summary_retains_batch_metrics_only_at_cohort_scope() -> None:
     summary = summarize_frozen_cohort_results(
         [
@@ -770,6 +882,8 @@ def test_cohort_summary_keeps_failed_admitted_reports_in_its_denominator() -> No
         "cohort_admission_rate": 2 / 3,
         "workflow_denominator": 2,
         "first_attempt_awaiting_review_rate": 1 / 2,
+        "published_report_count": 0,
+        "first_attempt_published_rate": 0.0,
         "publication_readiness_rate": 1 / 2,
         "bounded_repair_rate": 1 / 2,
         "workflow_failure_rate": 1 / 2,

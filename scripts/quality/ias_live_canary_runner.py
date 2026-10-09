@@ -16,6 +16,7 @@ from pathlib import Path
 from statistics import median
 from types import TracebackType
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -36,6 +37,7 @@ from src.contracts.validation_run_manifest import (
 )
 from src.contracts.workflow_control import SupervisorRunRequest
 from src.contracts.workflow_queue import WorkflowQueueControl
+from src.contracts.workflow_queue import WorkflowJobSubmission
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -51,10 +53,12 @@ from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_on
 from src.services.config_service import (
     build_ingest_settings,
     load_settings,
+    load_publish_settings,
     load_workflow_control_settings,
     load_workflow_queue_policies,
     new_runtime_context,
 )
+from src.services._config_service.yaml_mapping import deep_merge_mappings
 from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.services.report_analysis_store_service import (
     pack_path as resolve_report_analysis_pack_path,
@@ -64,10 +68,14 @@ from src.services.report_store_service import (
     record_source_identity_observation,
 )
 from src.services.workflow_queue_service import (
+    enqueue_workflow_job,
     get_workflow_queue_control,
+    get_workflow_job,
+    load_workflow_job_payload,
     seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
+from src.services.wordpress_service import preflight_publish_capability
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
@@ -274,10 +282,22 @@ _FROZEN_REPORT_QUEUE_STAGES = (
     "report_render",
     "publication_readiness",
 )
+_CONFIRMED_WORDPRESS_STAGING_HOST = "marketlense.medianewsonline.com"
 
 
-def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
+def prepare_isolated_canary_run(
+    *,
+    runs_root: Path,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    enable_cross_report_analysis: bool = False,
+) -> IsolatedCanaryRun:
     """Create a unique run root and config whose mutable paths stay within it."""
+
+    _validate_staging_mode(
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+    )
 
     root_parent = runs_root.resolve()
     root_parent.mkdir(parents=True, exist_ok=True)
@@ -314,7 +334,13 @@ def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
         root / "state" / "projection_cost_daily.json",
         root / "state" / "projection_cost_ledger.jsonl",
     )
-    config = _isolated_config(root=root, paths=paths, cost_paths=cost_paths)
+    config = _isolated_config(
+        root=root,
+        paths=paths,
+        cost_paths=cost_paths,
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        enable_cross_report_analysis=enable_cross_report_analysis,
+    )
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return IsolatedCanaryRun(
@@ -325,14 +351,27 @@ def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
 
 
 def _isolated_config(
-    *, root: Path, paths: dict[str, Path], cost_paths: dict[str, Path]
+    *,
+    root: Path,
+    paths: dict[str, Path],
+    cost_paths: dict[str, Path],
+    publish_to_wordpress_staging: bool = False,
+    enable_cross_report_analysis: bool = False,
 ) -> dict[str, Any]:
     base_config_path = (
         Path(__file__).resolve().parents[2] / "src" / "config" / "app.yaml"
     )
-    config = copy.deepcopy(yaml.safe_load(base_config_path.read_text(encoding="utf-8")))
+    config = yaml.safe_load(base_config_path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
         raise RuntimeError("Base application configuration must be a mapping")
+    if publish_to_wordpress_staging:
+        profile_path = base_config_path.with_name("app.autonomous_mvp.yaml")
+        profile = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
+        if not isinstance(profile, dict):
+            raise RuntimeError("Autonomous MVP configuration must be a mapping")
+        config = deep_merge_mappings(config, profile)
+    else:
+        config = copy.deepcopy(config)
     config["paths"] = {
         **dict(config.get("paths") or {}),
         **{name: str(path) for name, path in paths.items()},
@@ -377,14 +416,53 @@ def _isolated_config(
         "enabled": True,
         "worker_batches_enabled": True,
     }
+    if publish_to_wordpress_staging:
+        workflow_control["autonomous_publication_policy"] = {
+            **dict(workflow_control.get("autonomous_publication_policy") or {}),
+            "enabled": True,
+        }
     config["workflow_control"] = workflow_control
     workflow_queues = dict(config.get("workflow_queues") or {})
     workflow_queues["wordpress_publish"] = {
         **dict(workflow_queues.get("wordpress_publish") or {}),
-        "enabled": False,
+        "enabled": publish_to_wordpress_staging,
     }
+    if publish_to_wordpress_staging:
+        for queue_name in (
+            "publisher_discovery",
+            "report_acquisition",
+            "mailbox_delivery",
+        ):
+            workflow_queues[queue_name] = {
+                **dict(workflow_queues.get(queue_name) or {}),
+                "enabled": False,
+            }
     config["workflow_queues"] = workflow_queues
+    publish = dict(config.get("publish") or {})
+    wp = dict(publish.get("wp") or {})
+    if publish_to_wordpress_staging:
+        wp["post_status"] = "draft"
+    publish["wp"] = wp
+    config["publish"] = publish
+    cross_report = dict(config.get("cross_report_analysis") or {})
+    cross_report["enabled"] = enable_cross_report_analysis
+    config["cross_report_analysis"] = cross_report
     return config
+
+
+def _validate_staging_mode(
+    *, publish_to_wordpress_staging: bool, staging_hostname: str
+) -> None:
+    normalized_host = str(staging_hostname or "").strip().lower().rstrip(".")
+    if publish_to_wordpress_staging:
+        if normalized_host != _CONFIRMED_WORDPRESS_STAGING_HOST:
+            raise ValueError(
+                "WordPress publication requires the confirmed WordPress staging host"
+            )
+    elif normalized_host:
+        raise ValueError(
+            "A staging hostname is only accepted when staging publication is enabled"
+        )
 
 
 def ensure_isolated_publication_queue_disabled(
@@ -822,13 +900,25 @@ def run_frozen_cohort_once(
     runs_root: Path,
     sources: list[dict[str, Any]],
     max_duration_seconds: int = 7_200,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    enable_cross_report_analysis: bool = False,
 ) -> dict[str, Any]:
     """Submit one immutable retained cohort through the production queue once."""
 
+    _validate_staging_mode(
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+    )
     git_sha = _require_clean_git_sha()
     run_started_at_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     started_at = time.monotonic()
-    run = prepare_isolated_canary_run(runs_root=runs_root)
+    run = prepare_isolated_canary_run(
+        runs_root=runs_root,
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+        enable_cross_report_analysis=enable_cross_report_analysis,
+    )
     reuse_events_path = run.root / "validation_claim_reuse_decisions.jsonl"
     reuse_event_handler: _ValidationReuseDecisionHandler | None = None
     results = [_empty_result(run, started_at) for _ in sources]
@@ -836,6 +926,8 @@ def run_frozen_cohort_once(
         "cost_usd": None,
         "duration_seconds": None,
         "bounded_automatic_repair": None,
+        "wordpress_staging_preflight": None,
+        "wordpress_replay": None,
         "duration_measurement": (
             "time.monotonic from runner entry to all reports terminal"
         ),
@@ -857,13 +949,59 @@ def run_frozen_cohort_once(
             ),
             ctx,
         )
+        if publish_to_wordpress_staging:
+            publish_settings = load_publish_settings(
+                ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+                ctx,
+            )
+            site = urlsplit(publish_settings.wp.site_url)
+            if (
+                site.scheme.lower() != "https"
+                or (site.hostname or "").lower().rstrip(".")
+                != _CONFIRMED_WORDPRESS_STAGING_HOST
+            ):
+                raise AppError(
+                    code="wordpress_staging_host_mismatch",
+                    message="Resolved WordPress target is not the confirmed staging host",
+                    retryable=False,
+                )
+            if publish_settings.wp.post_status.strip().lower() != "draft":
+                raise AppError(
+                    code="wordpress_staging_status_unsafe",
+                    message="The isolated WordPress canary must create drafts",
+                    retryable=False,
+                )
+            preflight = preflight_publish_capability(publish_settings, ctx)
+            if (
+                not preflight.reachable
+                or not preflight.authenticated
+                or "create_posts" not in preflight.verified_capabilities
+                or publish_settings.wp.post_type not in preflight.verified_post_types
+            ):
+                raise AppError(
+                    code="wordpress_staging_capability_unavailable",
+                    message="WordPress staging did not confirm draft publication capability",
+                    retryable=True,
+                )
+            cohort_metrics["wordpress_staging_preflight"] = {
+                "hostname": site.hostname,
+                "post_type": publish_settings.wp.post_type,
+                "post_status": publish_settings.wp.post_status,
+                "authenticated": preflight.authenticated,
+                "reachable": preflight.reachable,
+                "verified_capabilities": list(preflight.verified_capabilities),
+                "provider_calls": preflight.provider_calls,
+            }
         _assert_empty_stores(run=run, settings=settings)
         seeded_controls = _seed_isolated_workflow_queue_controls(
             state_db=settings.state_db,
             config_path=run.config_path,
             ctx=ctx,
         )
-        ensure_isolated_publication_queue_disabled(state_db=settings.state_db, ctx=ctx)
+        if not publish_to_wordpress_staging:
+            ensure_isolated_publication_queue_disabled(
+                state_db=settings.state_db, ctx=ctx
+            )
         for result, source in zip(results, sources, strict=True):
             source_path = Path(str(source["resolved_source_path"]))
             if not source_path.is_file():
@@ -992,6 +1130,13 @@ def run_frozen_cohort_once(
                         root_workflow_id=root_workflow_id,
                         ctx=ctx,
                     )
+                )
+            if publish_to_wordpress_staging:
+                cohort_metrics["wordpress_replay"] = _replay_completed_wordpress_jobs(
+                    state_db=settings.state_db,
+                    root_workflow_id=root_workflow_id,
+                    report_ids=tuple(str(result["report_id"]) for result in results),
+                    ctx=ctx,
                 )
             cohort_metrics.update(
                 {
@@ -1394,7 +1539,10 @@ def _drain_report_paths(
             )
             for report_id in report_ids
         }
-        if all(state in {"awaiting_review", "failed"} for state in states.values()):
+        if all(
+            state in {"awaiting_review", "published", "failed"}
+            for state in states.values()
+        ):
             return
         if supervisor.completed_job_count == 0:
             time.sleep(1)
@@ -1416,9 +1564,26 @@ def _queue_terminal_state(
             """,
             (report_id, root_workflow_id),
         ).fetchone()
-        if readiness and str(readiness[0]) == "awaiting_review":
-            return "awaiting_review"
         if readiness:
+            readiness_status = str(readiness[0])
+            if readiness_status == "awaiting_review":
+                return "awaiting_review"
+            if readiness_status == "approved":
+                published = conn.execute(
+                    "SELECT 1 FROM published WHERE file_id=? LIMIT 1",
+                    (report_id,),
+                ).fetchone()
+                if published:
+                    return "published"
+                failed_publish = conn.execute(
+                    """SELECT 1 FROM workflow_jobs
+                    WHERE report_id=? AND root_workflow_id=?
+                      AND queue_name='wordpress_publish'
+                      AND status IN ('dead_letter','blocked','cancelled')
+                    LIMIT 1""",
+                    (report_id, root_workflow_id),
+                ).fetchone()
+                return "failed" if failed_publish else "publishing"
             return "failed"
         failure = conn.execute(
             """
@@ -1491,6 +1656,10 @@ def _read_result(
             """,
             (report_id, root_workflow_id),
         ).fetchone()
+        published_post = conn.execute(
+            "SELECT wp_post_id,post_type FROM published WHERE file_id=? LIMIT 1",
+            (report_id,),
+        ).fetchone()
     with sqlite3.connect(settings.reports_db) as conn:
         attempts = int(
             conn.execute(
@@ -1555,7 +1724,7 @@ def _read_result(
     )
     terminal_failure = ""
     final_state = status
-    if status != "awaiting_review":
+    if status not in {"awaiting_review", "published"}:
         # A bounded supervisor drain cannot leave a submitted member in a
         # non-terminal result. Preserve an observed queue failure when present;
         # otherwise make the elapsed bound explicit and typed.
@@ -1578,6 +1747,12 @@ def _read_result(
         "workflow_attempt_count": attempts,
         "final_state": final_state,
         "awaiting_review": final_state == "awaiting_review",
+        "published": final_state == "published",
+        "wordpress_post_id": int(published_post[0]) if published_post else None,
+        "wordpress_post_type": str(published_post[1]) if published_post else "",
+        "wordpress_authenticated_readback": bool(
+            final_state == "published" and published_post
+        ),
         "bounded_automatic_repair": (
             automatic_repair_count > 0
             or workflow_retry_count > 0
@@ -1606,6 +1781,117 @@ def _read_result(
         "terminal_failure_code": terminal_failure,
         **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
+
+
+def _replay_completed_wordpress_jobs(
+    *, state_db: str, root_workflow_id: str, report_ids: tuple[str, ...], ctx
+) -> dict[str, Any]:
+    """Repeat completed durable submissions and prove they cause no new write."""
+
+    if not report_ids:
+        return {"status": "not_run", "reason": "no_report_ids"}
+    marks = ",".join("?" for _ in report_ids)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            """SELECT job_id,status,attempt_count FROM workflow_jobs
+            WHERE queue_name='wordpress_publish' AND root_workflow_id=?
+              AND report_id IN ("""
+            + marks
+            + ") ORDER BY job_id",
+            (root_workflow_id, *report_ids),
+        ).fetchall()
+    completed = [row for row in job_rows if str(row[1]) == "succeeded"]
+    before_publications = _published_snapshot(state_db, report_ids)
+    replayed_job_ids: list[str] = []
+    same_job_count = 0
+    created_job_count = 0
+    for job_id, _, _ in completed:
+        job = get_workflow_job(state_db, str(job_id), ctx)
+        if job is None or job.status != "succeeded":
+            continue
+        duplicate, created = enqueue_workflow_job(
+            state_db,
+            WorkflowJobSubmission(
+                schema_version=job.schema_version,
+                queue_name=job.queue_name,
+                job_type=job.job_type,
+                payload=load_workflow_job_payload(job),
+                idempotency_key=job.idempotency_key,
+                deduplication_scope=job.deduplication_scope,
+                workflow_version=job.workflow_version,
+                root_workflow_id=job.root_workflow_id,
+                parent_job_id=job.parent_job_id,
+                trigger_event_id=job.trigger_event_id,
+                correlation_id=job.correlation_id,
+                entity_type=job.entity_type,
+                entity_id=job.entity_id,
+                publisher_id=job.publisher_id,
+                source_identity_id=job.source_identity_id,
+                report_id=job.report_id,
+                priority=job.priority,
+                max_attempts=job.max_attempts,
+                budget_profile=job.budget_profile,
+                execution_plan_hash=job.execution_plan_hash,
+            ),
+            ctx,
+        )
+        created_job_count += int(created)
+        if duplicate.job_id == job.job_id:
+            same_job_count += 1
+            replayed_job_ids.append(job.job_id)
+    after_publications = _published_snapshot(state_db, report_ids)
+    with sqlite3.connect(state_db) as conn:
+        after_attempts = conn.execute(
+            """SELECT job_id,status,attempt_count FROM workflow_jobs
+            WHERE queue_name='wordpress_publish' AND root_workflow_id=?
+              AND report_id IN ("""
+            + marks
+            + ") ORDER BY job_id",
+            (root_workflow_id, *report_ids),
+        ).fetchall()
+    attempt_counts_unchanged = [
+        (str(row[0]), str(row[1]), int(row[2])) for row in job_rows
+    ] == [(str(row[0]), str(row[1]), int(row[2])) for row in after_attempts]
+    publication_rows_unchanged = before_publications == after_publications
+    status = (
+        "verified"
+        if completed
+        and len(completed) == len(before_publications)
+        and len(replayed_job_ids) == len(completed)
+        and created_job_count == 0
+        and attempt_counts_unchanged
+        and publication_rows_unchanged
+        else "not_run"
+        if not completed
+        else "failed"
+    )
+    return {
+        "status": status,
+        "completed_publication_jobs": len(completed),
+        "first_attempt_publication_jobs": sum(int(row[2]) == 1 for row in completed),
+        "duplicate_submissions": len(replayed_job_ids),
+        "same_job_ids": same_job_count == len(completed),
+        "created_duplicate_jobs": created_job_count,
+        "attempt_counts_unchanged": attempt_counts_unchanged,
+        "published_rows_unchanged": publication_rows_unchanged,
+        "wordpress_post_ids": [row[1] for row in before_publications],
+        "additional_wordpress_writes": (0 if status == "verified" else None),
+    }
+
+
+def _published_snapshot(
+    state_db: str, report_ids: tuple[str, ...]
+) -> list[tuple[str, int, str]]:
+    if not report_ids:
+        return []
+    marks = ",".join("?" for _ in report_ids)
+    with sqlite3.connect(state_db) as conn:
+        rows = conn.execute(
+            f"SELECT file_id,wp_post_id,post_type FROM published "
+            f"WHERE file_id IN ({marks}) ORDER BY file_id",
+            report_ids,
+        ).fetchall()
+    return [(str(row[0]), int(row[1]), str(row[2])) for row in rows]
 
 
 def _read_failure_diagnostic(
@@ -1955,6 +2241,10 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
         "isolated_fresh_state": True,
         "final_state": "failed",
         "awaiting_review": False,
+        "published": False,
+        "wordpress_post_id": None,
+        "wordpress_post_type": "",
+        "wordpress_authenticated_readback": False,
         "bounded_automatic_repair": False,
         "operator_intervention": False,
         "publication_readiness": "fail",
@@ -1984,7 +2274,7 @@ def _finish_frozen_cohort_results(
 
     duration = round(time.monotonic() - started_at, 3)
     for result in results:
-        if result["final_state"] not in {"awaiting_review", "failed"}:
+        if result["final_state"] not in {"awaiting_review", "published", "failed"}:
             result["final_state"] = "failed"
         if result["final_state"] == "failed" and not result["terminal_failure_code"]:
             result["terminal_failure_code"] = "frozen_cohort_terminal_outcome_missing"
@@ -2059,7 +2349,7 @@ def summarize_frozen_cohort_results(
         for item in results
         if str(item.get("terminal_failure_code") or "")
     ]
-    terminal_states = {"awaiting_review", "failed"}
+    terminal_states = {"awaiting_review", "published", "failed"}
     missing_terminal_report_ids = sorted(
         str(item.get("report_id") or "")
         for item in results
@@ -2080,6 +2370,15 @@ def summarize_frozen_cohort_results(
             for item in admitted
         )
         / workflow_denominator,
+        "published_report_count": sum(
+            item.get("final_state") == "published" for item in admitted
+        ),
+        "first_attempt_published_rate": sum(
+            item.get("final_state") == "published"
+            and int(item.get("workflow_attempt_count") or 1) == 1
+            for item in admitted
+        )
+        / workflow_denominator,
         "publication_readiness_rate": sum(
             item.get("publication_readiness") == "pass" for item in admitted
         )
@@ -2089,11 +2388,12 @@ def summarize_frozen_cohort_results(
         )
         / workflow_denominator,
         "workflow_failure_rate": sum(
-            item.get("final_state") != "awaiting_review" for item in admitted
+            item.get("final_state") not in {"awaiting_review", "published"}
+            for item in admitted
         )
         / workflow_denominator,
         "typed_terminal_rate": sum(
-            item.get("final_state") in {"awaiting_review", "failed"}
+            item.get("final_state") in {"awaiting_review", "published", "failed"}
             for item in admitted
         )
         / workflow_denominator,

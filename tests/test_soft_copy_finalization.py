@@ -111,9 +111,7 @@ def test_regenerated_repair_binding_follows_final_source_corrected_sentence() ->
                 }
             ]
         },
-        existing_soft_copy_claim_provenance=original[
-            "soft_copy_claim_provenance"
-        ],
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
         replaced_soft_copy_claim_ids={"expert_comment": [original_claim["claim_id"]]},
         soft_copy_repair_texts={"expert_comment": [stale_sentence]},
     )
@@ -499,6 +497,77 @@ def test_finalization_uses_direct_summary_fallback_for_unbound_copy() -> None:
     assert_retained_soft_copy_claims_match_public_copy(payload)
 
 
+def test_repaired_summary_with_invalid_compact_tldr_uses_direct_source_claim() -> None:
+    direct = "Revenue reached 7.30%."
+    invalid_compact = "Revenue reached 7.30%..."
+    payload = _assemble_soft_copy(
+        summary={
+            "tldr": direct,
+            "card_tldr_compact": invalid_compact,
+            "executive_summary": direct,
+            "claim_evidence_map": [
+                {
+                    "claim": direct,
+                    "evidence_id": "f1",
+                    "evidence": direct,
+                    "evidence_spans": [
+                        {"evidence_id": "f1", "source_pack": "findings"}
+                    ],
+                }
+            ],
+        },
+        evidence_packs={
+            "findings": {"findings": [{"id": "f1", "evidence": direct, "pages": [1]}]}
+        },
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": direct,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+                {
+                    "claim": invalid_compact,
+                    "classification": "factual",
+                    "evidence_ids": ["f1"],
+                },
+            ]
+        },
+        soft_copy_repair_texts={"summary": [invalid_compact]},
+    )
+
+    assert payload["summary"]["card_tldr_compact"] == direct
+    assert payload["summary"]["tldr"] == direct
+    assert payload["summary"]["executive_summary"] == direct
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
+def test_repaired_summary_with_invalid_compact_tldr_abstains_without_direct_claim() -> (
+    None
+):
+    payload = _assemble_soft_copy(
+        summary={
+            "tldr": "The report describes several market conditions.",
+            "card_tldr_compact": "An incomplete compact summary...",
+            "executive_summary": "The report describes several market conditions.",
+            "claim_evidence_map": [],
+        },
+        soft_copy_repair_texts={"summary": ["An incomplete compact summary..."]},
+    )
+
+    assert payload["summary"] == {
+        "tldr": "",
+        "card_tldr_compact": "",
+        "executive_summary": "",
+        "claim_evidence_map": [],
+    }
+    assert payload["family_status"]["summary"]["status"] == "abstained"
+    assert payload["family_status"]["summary"]["reason"] == (
+        "summary_no_short_direct_claim"
+    )
+    assert_retained_soft_copy_claims_match_public_copy(payload)
+
+
 def test_finalization_abstains_when_unbound_summary_has_no_direct_claims() -> None:
     """Unsupported Summary copy is removed when no direct claim can replace it."""
     payload = _assemble_soft_copy(
@@ -704,9 +773,7 @@ def test_targeted_summary_removal_preserves_unrelated_claim_text() -> None:
                 ]
             }
         },
-        existing_soft_copy_claim_provenance=original[
-            "soft_copy_claim_provenance"
-        ],
+        existing_soft_copy_claim_provenance=original["soft_copy_claim_provenance"],
         replaced_soft_copy_claim_ids={"summary": [removed_claim_id]},
     )
 
