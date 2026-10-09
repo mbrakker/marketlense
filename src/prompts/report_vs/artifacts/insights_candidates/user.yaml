@@ -11,13 +11,12 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Evidence identity rules:
-  - Use DocMap for section selection and nonnumeric coverage only. For a
-    source-backed numeric claim, `evidence_id` must equal the `id` of the
-    supporting entry in the `findings` evidence pack. Never use a DocMap section
-    id as `evidence_id` for a numeric claim.
-  - Keep each value beside its explicitly labeled metric/category, subject or
-    cohort, denominator, geography, and period/status from that same finding.
-    Omit the metric if the finding does not state the complete relationship.
+  - For numeric claims, prefer a finding ID. Use a quote ID only if its exact
+    text states the value, subject, and period/status. Never use a DocMap ID as
+    numeric evidence.
+  - Keep each value bound to its metric/category, subject or cohort,
+    denominator, geography, and period/status in the same linked source. Omit
+    the metric if that source omits a required binding.
 
   Source-of-truth candidate insight schema:
   {{ insights_candidates_schema }}
@@ -39,12 +38,12 @@ text: |
   - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   In `so_what` and `now_what`, avoid repeating numbers and ranked-group labels
   from `text`; omit counts absent from the linked evidence.
-  Produce candidates for the editorial plan's themes and retain their linked evidence IDs; do not independently introduce another theme set.
+  Use the plan for coverage, not as a ceiling. When supported, retain specific
+  mechanisms or contrasts and score them above generic overviews.
   Make both fields audience-specific, non-generic, and non-contradictory; add
-  no factual premise. Use a number only when the linked finding's `evidence`
-  excerpt contains and supports its value and subject. The finding's
-  paraphrased `text` alone is not numeric evidence; otherwise omit the number
-  and keep only supported qualitative content.
+  no factual premise. Use numbers only when linked finding evidence or the
+  exact quote states value, subject, and period/status. A paraphrased finding
+  alone is not numeric evidence; otherwise omit the number.
   Do not hallucinate numbers; lift them from the provided context only.
   For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. When `metric.value` is present, `metric.label` is required: make it a concise human-readable description of that exact source-backed metric (for example, `Digital video revenue growth`, `Monthly U.S. adult generative AI users`, or `Global eCommerce sales`), never a general insight or search statement. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.
   When the retained evidence supplies them, preserve the exact numeric binding in `metric.subject`, `metric.cohort`, `metric.denominator`, and `metric.observation_status` (`observed`, `forecast`, or `estimate`). Leave a field empty rather than inferring it.

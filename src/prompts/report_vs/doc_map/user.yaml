@@ -21,6 +21,8 @@ text: |
     - summary (1-2 concise, specific sentences)
     - key_points (2-4 short strings when available)
     - pages and references (when explicit)
+  - Preserve specific mechanisms and metric contrasts in `key_points`; do not
+    flatten them into generic themes.
   - Preserve explicit inclusive page ranges; never shorten known ranges or infer a missing end page.
   - Use schema field names exactly (for example `title`, not `document_title`).
   - Do not substitute runtime metadata for report content. Report IDs, vector-store IDs,

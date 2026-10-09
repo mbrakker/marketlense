@@ -163,7 +163,7 @@ def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() ->
         assert required_rule in prompt_text
 
 
-def test_numeric_artifact_claims_require_values_in_linked_finding_evidence() -> None:
+def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> None:
     def load(namespace: str):
         return prompt_service.load_prompt_set(
             PromptLoadRequest(
@@ -181,9 +181,13 @@ def test_numeric_artifact_claims_require_values_in_linked_finding_evidence() -> 
     summary_text = " ".join(summary.user.text.split())
     findings_text = " ".join(findings.system.text.split())
 
-    assert "paraphrased `text` alone is not numeric evidence" in candidates_text
-    assert "linked finding `evidence` contains" in final_text
-    assert "finding's direct `evidence` excerpt" in summary_text
+    assert "A paraphrased finding alone is not numeric evidence" in candidates_text
+    assert "Use a quote ID only if its exact text states" in candidates_text
+    assert "value, subject, and period/status" in candidates_text
+    assert "finding/quote ID and page" in final_text
+    assert "do not expand scope" in final_text
+    assert "direct quote candidate" in summary_text
+    assert "Paraphrased finding text alone is insufficient" in summary_text
     assert "Each number in `text` must appear" in findings_text
     assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
 
