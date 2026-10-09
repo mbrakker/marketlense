@@ -6,10 +6,12 @@ import copy
 import hashlib
 import json
 import logging
+import math
 import sqlite3
 import subprocess
 import tempfile
 import time
+from contextlib import closing
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,7 +25,6 @@ import yaml
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
 from src.contracts.logging import REQUIRED_LOG_EVENT_FIELDS
-from src.contracts.llm_usage import LLMUsageRunSummaryRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_store import (
     ReportSourceRecordRequest,
@@ -41,8 +42,7 @@ from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationSource,
 )
 from src.contracts.workflow_control import SupervisorRunRequest
-from src.contracts.workflow_queue import WorkflowQueueControl
-from src.contracts.workflow_queue import WorkflowJobSubmission
+from src.contracts.workflow_queue import WorkflowJobSubmission, WorkflowQueueControl
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -55,19 +55,18 @@ from src.orchestrators.ingest_orchestrator import (
 )
 from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
 from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
-from src.services.config_service import (
-    build_ingest_settings,
-    load_settings,
-    load_publish_settings,
-    load_workflow_control_settings,
-    load_workflow_queue_policies,
-    new_runtime_context,
-)
 from src.services._config_service.yaml_mapping import deep_merge_mappings
-from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.services.analytics_store_service import (
     read_signal_candidates,
     upsert_signal_candidates,
+)
+from src.services.config_service import (
+    build_ingest_settings,
+    load_publish_settings,
+    load_settings,
+    load_workflow_control_settings,
+    load_workflow_queue_policies,
+    new_runtime_context,
 )
 from src.services.report_analysis_store_service import (
     pack_path as resolve_report_analysis_pack_path,
@@ -76,15 +75,15 @@ from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
 )
+from src.services.wordpress_service import preflight_publish_capability
 from src.services.workflow_queue_service import (
     enqueue_workflow_job,
-    get_workflow_queue_control,
     get_workflow_job,
+    get_workflow_queue_control,
     load_workflow_job_payload,
     seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
-from src.services.wordpress_service import preflight_publish_capability
 from src.utils.errors import AppError
 from src.utils.slugify import slugify
 
@@ -241,7 +240,7 @@ def _validation_reuse_telemetry_summary(
                 continue
             if isinstance(event, dict):
                 events.append(event)
-    totals = {name: 0 for name in _VALIDATION_REUSE_COUNTER_FIELDS}
+    totals = dict.fromkeys(_VALIDATION_REUSE_COUNTER_FIELDS, 0)
     fallback_totals: dict[str, int] = {}
     for event in events:
         fields = event.get("fields")
@@ -536,44 +535,59 @@ def _validate_wordpress_staging_origin(
 
 def _wordpress_publication_evidence(
     *,
-    stage_rows: tuple[tuple[int, str, str, str], ...],
+    publication_outcome: dict[str, Any] | None,
+    workflow_status: str,
+    workflow_attempt_count: int,
     wordpress_post_id: int | None,
+    expected_file_id: str,
+    expected_post_type: str,
 ) -> dict[str, bool]:
-    """Count only a first-attempt write and matching authenticated readback."""
+    """Count only a first-attempt create with durable authenticated-readback proof."""
 
-    if wordpress_post_id is None:
-        return {
-            "wordpress_created_this_run": False,
-            "wordpress_authenticated_readback": False,
-        }
-    expected_post_id = str(wordpress_post_id)
-    first_attempt = {
-        stage: (outcome, artifact_ids_json)
-        for attempt_number, stage, outcome, artifact_ids_json in stage_rows
-        if attempt_number == 1
-        and stage in {"wordpress_write", "authenticated_readback"}
+    outcome = publication_outcome or {}
+    expectation = outcome.get("readback_expectation")
+    expectation = expectation if isinstance(expectation, dict) else {}
+    required_readback_checks = {
+        "post_id",
+        "report_file_identity",
+        "canonical_url",
+        "post_type",
+        "status",
+        "content_checksum",
+        "source_attribution",
+        "metadata",
+        "taxonomy_assignments",
+        "media_associations",
     }
-
-    def contains_post_id(stage: str) -> bool:
-        record = first_attempt.get(stage)
-        if record is None:
-            return False
-        try:
-            artifact_ids = json.loads(record[1])
-        except (TypeError, json.JSONDecodeError):
-            return False
-        return isinstance(artifact_ids, list) and expected_post_id in {
-            str(value) for value in artifact_ids
+    readback_checks = outcome.get("readback_checks")
+    verified_readback_checks = (
+        {
+            str(check.get("name"))
+            for check in readback_checks
+            if isinstance(check, dict) and check.get("status") == "verified"
         }
-
-    created = first_attempt.get("wordpress_write", ("", ""))[
-        0
-    ] == "succeeded" and contains_post_id("wordpress_write")
+        if isinstance(readback_checks, list)
+        else set()
+    )
+    actual_write_count = outcome.get("actual_write_count")
+    created = (
+        wordpress_post_id is not None
+        and workflow_status == "succeeded"
+        and workflow_attempt_count == 1
+        and outcome.get("status") == "published"
+        and outcome.get("publication_outcome") == "post_created"
+        and isinstance(actual_write_count, int)
+        and not isinstance(actual_write_count, bool)
+        and actual_write_count == 1
+        and outcome.get("file_id") == expected_file_id
+        and outcome.get("post_id") == wordpress_post_id
+        and expectation.get("file_id") == expected_file_id
+        and expectation.get("post_type") == expected_post_type
+    )
     readback = (
         created
-        and first_attempt.get("authenticated_readback", ("", ""))[0]
-        == "published_verified"
-        and contains_post_id("authenticated_readback")
+        and outcome.get("authenticated_readback_verified") is True
+        and required_readback_checks.issubset(verified_readback_checks)
     )
     return {
         "wordpress_created_this_run": created,
@@ -1085,7 +1099,9 @@ def run_frozen_cohort_once(
             except ValueError as exc:
                 raise AppError(
                     code="wordpress_staging_host_mismatch",
-                    message="Resolved WordPress target is not the confirmed staging host",
+                    message=(
+                        "Resolved WordPress target is not the confirmed staging host"
+                    ),
                     retryable=False,
                 ) from exc
             if publish_settings.wp.post_status.strip().lower() != "draft":
@@ -1103,7 +1119,9 @@ def run_frozen_cohort_once(
             ):
                 raise AppError(
                     code="wordpress_staging_capability_unavailable",
-                    message="WordPress staging did not confirm draft publication capability",
+                    message=(
+                        "WordPress staging did not confirm draft publication capability"
+                    ),
                     retryable=True,
                 )
             cohort_metrics["wordpress_staging_preflight"] = {
@@ -1297,39 +1315,54 @@ def run_frozen_cohort_once(
                 cross_report_provider_usage = dict(
                     cross_report_evidence["provider_usage"]
                 )
-            total_provider_calls = results[0]["model_provider_calls"]
-            total_input_tokens = results[0]["input_tokens"]
-            total_output_tokens = results[0]["output_tokens"]
-            total_cost = results[0]["cost"]
-
-            def report_scope_usage(total, cross_report):
-                if total is None or cross_report > total:
-                    return None
-                return total - cross_report
+            report_provider_calls = _sum_member_metric(results, "model_provider_calls")
+            report_input_tokens = _sum_member_metric(results, "input_tokens")
+            report_output_tokens = _sum_member_metric(results, "output_tokens")
+            report_cost = _sum_member_metric(results, "cost")
+            report_tool_calls = _sum_member_metric(results, "file_search_calls")
+            cross_calls = int(cross_report_provider_usage.get("provider_calls", 0))
+            cross_cost = cross_report_provider_usage.get("estimated_cost_usd")
+            combined_cost = (
+                round(
+                    float(report_cost) + (float(cross_cost) if cross_calls else 0.0),
+                    6,
+                )
+                if report_cost is not None
+                and (
+                    cross_calls == 0
+                    or (
+                        cross_report_provider_usage.get("cost_available")
+                        and cross_cost is not None
+                    )
+                )
+                else None
+            )
 
             cohort_metrics.update(
                 {
-                    "model_provider_calls": report_scope_usage(
-                        total_provider_calls,
-                        cross_report_provider_usage["provider_calls"],
+                    "model_provider_calls": report_provider_calls,
+                    "input_tokens": report_input_tokens,
+                    "output_tokens": report_output_tokens,
+                    "cost_usd": report_cost,
+                    "file_search_calls": report_tool_calls,
+                    "combined_run_provider_calls": (
+                        report_provider_calls + cross_calls
+                        if report_provider_calls is not None
+                        else None
                     ),
-                    "input_tokens": report_scope_usage(
-                        total_input_tokens,
-                        cross_report_provider_usage["input_tokens"],
+                    "combined_run_input_tokens": (
+                        report_input_tokens
+                        + int(cross_report_provider_usage.get("input_tokens", 0))
+                        if report_input_tokens is not None
+                        else None
                     ),
-                    "output_tokens": report_scope_usage(
-                        total_output_tokens,
-                        cross_report_provider_usage["output_tokens"],
+                    "combined_run_output_tokens": (
+                        report_output_tokens
+                        + int(cross_report_provider_usage.get("output_tokens", 0))
+                        if report_output_tokens is not None
+                        else None
                     ),
-                    "cost_usd": report_scope_usage(
-                        total_cost,
-                        cross_report_provider_usage["estimated_cost_usd"],
-                    ),
-                    "combined_run_provider_calls": total_provider_calls,
-                    "combined_run_input_tokens": total_input_tokens,
-                    "combined_run_output_tokens": total_output_tokens,
-                    "combined_run_cost_usd": total_cost,
-                    "file_search_calls": results[0]["file_search_calls"],
+                    "combined_run_cost_usd": combined_cost,
                     "bounded_automatic_repair": any(
                         bool(result["bounded_automatic_repair"]) for result in results
                     ),
@@ -1380,22 +1413,12 @@ def run_frozen_cohort_once(
             else cohort_metrics["duration_seconds"]
         )
         for result in results:
-            # Usage and repair records are scoped to the one batch root workflow.
-            # They cannot be attributed to an individual member without retained
-            # report-specific telemetry, so never duplicate them into members.
-            result.update(
-                {
-                    "bounded_automatic_repair": None,
-                    "operator_intervention": None,
-                    "model_provider_calls": None,
-                    "file_search_calls": None,
-                    "input_tokens": None,
-                    "output_tokens": None,
-                    "cost": None,
-                    "total_duration_seconds": None,
-                    "metric_attribution": "unavailable",
-                }
-            )
+            if result.get("core_processing_duration_seconds") is not None:
+                result["total_duration_seconds"] = result[
+                    "core_processing_duration_seconds"
+                ]
+            else:
+                result["total_duration_seconds"] = None
         _write_result(run.root / "cohort_members.json", {"reports": results})
     return {
         "git_sha": git_sha,
@@ -2146,6 +2169,145 @@ def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str
     }
 
 
+def _read_report_usage_summary(
+    *, usage_db_path: str, run_id: str, report_id: str
+) -> dict[str, Any] | None:
+    """Read provider totals attributed to one report in the isolated run."""
+
+    path = Path(usage_db_path)
+    if not path.is_file() or not run_id.strip() or not report_id.strip():
+        return None
+    try:
+        with closing(sqlite3.connect(path)) as conn:
+            columns = {
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(llm_usage_events)")
+            }
+            required = {
+                "run_id",
+                "report_id",
+                "input_tokens",
+                "cached_input_tokens",
+                "output_tokens",
+                "tool_calls",
+                "estimated_cost_usd",
+            }
+            if not required.issubset(columns):
+                return None
+            row = conn.execute(
+                """SELECT COUNT(*),COALESCE(SUM(input_tokens),0),
+                          COALESCE(SUM(cached_input_tokens),0),
+                          COALESCE(SUM(output_tokens),0),
+                          COALESCE(SUM(tool_calls),0),
+                          COALESCE(SUM(estimated_cost_usd),0.0)
+                   FROM llm_usage_events WHERE run_id=? AND report_id=?""",
+                (run_id, report_id),
+            ).fetchone()
+            pricing_status_counts: dict[str, int] = {}
+            if "pricing_status" in columns:
+                pricing_rows = conn.execute(
+                    """SELECT pricing_status,COUNT(*) FROM llm_usage_events
+                       WHERE run_id=? AND report_id=? GROUP BY pricing_status""",
+                    (run_id, report_id),
+                ).fetchall()
+                pricing_status_counts = {
+                    str(status or "unknown").strip().lower(): int(count)
+                    for status, count in pricing_rows
+                }
+            elif int(row[0]):
+                pricing_status_counts = {"unknown": int(row[0])}
+    except sqlite3.Error:
+        return None
+    priced_statuses = {"matched", "alias_matched"}
+    unpriced_provider_calls = sum(
+        count
+        for status, count in pricing_status_counts.items()
+        if status not in priced_statuses
+    )
+    cost_available = int(row[0]) > 0 and unpriced_provider_calls == 0
+    return {
+        "provider_calls": int(row[0]),
+        "input_tokens": int(row[1]),
+        "cached_input_tokens": int(row[2]),
+        "output_tokens": int(row[3]),
+        "tool_calls": int(row[4]),
+        "estimated_cost_usd": round(float(row[5]), 6) if cost_available else None,
+        "pricing_status_counts": pricing_status_counts,
+        "unpriced_provider_call_count": unpriced_provider_calls,
+        "cost_available": cost_available,
+    }
+
+
+def _read_report_core_duration(
+    *, state_db: str, report_id: str, root_workflow_id: str
+) -> dict[str, Any]:
+    """Measure source-ingest start through this report's final core stage."""
+
+    unavailable = {
+        "core_processing_duration_seconds": None,
+        "core_processing_duration_scope": "unavailable",
+    }
+    path = Path(state_db)
+    if not path.is_file() or not report_id.strip() or not root_workflow_id.strip():
+        return unavailable
+    marks = ",".join("?" for _ in _FROZEN_REPORT_QUEUE_STAGES)
+    try:
+        with closing(sqlite3.connect(path)) as conn:
+            rows = conn.execute(
+                """SELECT queue_name,status,started_at_utc,completed_at_utc
+                   FROM workflow_jobs WHERE root_workflow_id=? AND report_id=?
+                     AND queue_name IN ("""
+                + marks
+                + ")",
+                (root_workflow_id, report_id, *_FROZEN_REPORT_QUEUE_STAGES),
+            ).fetchall()
+    except sqlite3.Error:
+        return unavailable
+    ingest_starts = [
+        parsed
+        for queue, _, started, _ in rows
+        if str(queue) == "source_ingest"
+        and (parsed := _parse_telemetry_time(str(started or ""))) is not None
+    ]
+    completions = [
+        (str(queue), str(status), parsed)
+        for queue, status, _, completed in rows
+        if (parsed := _parse_telemetry_time(str(completed or ""))) is not None
+    ]
+    if not ingest_starts or not completions:
+        return unavailable
+    started_at = min(ingest_starts)
+    finished_at = max(item[2] for item in completions)
+    elapsed = (finished_at - started_at).total_seconds()
+    if elapsed < 0:
+        return unavailable
+    is_complete = any(
+        queue == "publication_readiness" and status == "succeeded"
+        for queue, status, _ in completions
+    )
+    return {
+        "core_processing_duration_seconds": round(elapsed, 3),
+        "core_processing_duration_scope": "complete" if is_complete else "partial",
+    }
+
+
+def _sum_member_metric(results: list[dict[str, Any]], field: str) -> int | float | None:
+    values = [result.get(field) for result in results]
+    if not values or any(
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        for value in values
+    ):
+        return None
+    total = sum(values)
+    return (
+        round(float(total), 6)
+        if any(isinstance(value, float) for value in values)
+        else int(total)
+    )
+
+
 def _verify_signal_manifest_immutable(
     *,
     signal_store_db: str,
@@ -2161,9 +2323,11 @@ def _verify_signal_manifest_immutable(
         prefix="signal-manifest-mutation-", dir=source_path.parent
     ) as temp_root:
         isolated_db = str(Path(temp_root) / "signals.sqlite")
-        with sqlite3.connect(source_path) as source_conn:
-            with sqlite3.connect(isolated_db) as copy_conn:
-                source_conn.backup(copy_conn)
+        with (
+            closing(sqlite3.connect(source_path)) as source_conn,
+            closing(sqlite3.connect(isolated_db)) as copy_conn,
+        ):
+            source_conn.backup(copy_conn)
         request = SignalCandidateReadRequest(
             schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
             db_path=isolated_db,
@@ -2283,11 +2447,11 @@ def _read_result(
                 """
                 SELECT 1 FROM workflow_job_transitions AS transition
                 JOIN workflow_jobs AS job ON job.job_id=transition.job_id
-                WHERE job.root_workflow_id=?
+                WHERE job.root_workflow_id=? AND job.report_id=?
                   AND transition.reason IN ('operator_requeue','queue-requeue')
                 LIMIT 1
                 """,
-                (root_workflow_id,),
+                (root_workflow_id, report_id),
             ).fetchone()
         )
         workflow_retry_count = int(
@@ -2313,6 +2477,47 @@ def _read_result(
             "SELECT wp_post_id,post_type FROM published WHERE file_id=? LIMIT 1",
             (report_id,),
         ).fetchone()
+        idempotency_table_exists = conn.execute(
+            """SELECT 1 FROM sqlite_master
+            WHERE type='table' AND name='orchestrator_idempotency'"""
+        ).fetchone()
+        publication_outcome_row = (
+            conn.execute(
+                """
+                SELECT outcome_json FROM orchestrator_idempotency
+                WHERE scope='publish_orchestrator.publish_html'
+                  AND idempotency_key=?
+                """,
+                (f"{str(published_post[1]) if published_post else ''}:{report_id}",),
+            ).fetchone()
+            if idempotency_table_exists
+            else None
+        )
+        publication_job_rows = conn.execute(
+            """
+            SELECT job.status,COUNT(attempt.attempt_id)
+            FROM workflow_jobs AS job
+            LEFT JOIN workflow_job_attempts AS attempt ON attempt.job_id=job.job_id
+            WHERE job.queue_name='wordpress_publish'
+              AND job.report_id=? AND job.root_workflow_id=?
+            GROUP BY job.job_id
+            """,
+            (report_id, root_workflow_id),
+        ).fetchall()
+    publication_outcome: dict[str, Any] | None = None
+    if publication_outcome_row is not None:
+        try:
+            decoded_outcome = json.loads(publication_outcome_row[0])
+            if isinstance(decoded_outcome, dict):
+                publication_outcome = decoded_outcome
+        except (TypeError, json.JSONDecodeError):
+            publication_outcome = None
+    publication_workflow_status = (
+        str(publication_job_rows[0][0]) if len(publication_job_rows) == 1 else ""
+    )
+    publication_workflow_attempt_count = (
+        int(publication_job_rows[0][1]) if len(publication_job_rows) == 1 else 0
+    )
     with sqlite3.connect(settings.reports_db) as conn:
         attempts = int(
             conn.execute(
@@ -2323,27 +2528,6 @@ def _read_result(
                 """,
                 (validation_run_id, report_id),
             ).fetchone()[0]
-        )
-        wordpress_stage_rows = tuple(
-            (
-                int(attempt_number),
-                str(stage),
-                str(terminal_outcome),
-                str(output_artifact_ids_json or "[]"),
-            )
-            for attempt_number, stage, terminal_outcome, output_artifact_ids_json in conn.execute(
-                """
-                SELECT attempts.attempt_number, stages.stage,
-                       stages.terminal_outcome, stages.output_artifact_ids_json
-                FROM validation_run_entity_attempts AS attempts
-                JOIN validation_run_stage_records AS stages
-                  ON stages.attempt_id=attempts.attempt_id
-                WHERE attempts.validation_run_id=? AND attempts.report_id=?
-                  AND stages.stage IN ('wordpress_write','authenticated_readback')
-                ORDER BY attempts.attempt_number, stages.stage
-                """,
-                (validation_run_id, report_id),
-            ).fetchall()
         )
         repair_disposition_rows = conn.execute(
             """
@@ -2376,16 +2560,16 @@ def _read_result(
                 ).fetchone()[0]
             )
     readiness_payload = _read_readiness_payload(readiness_job)
-    usage = read_usage_run_summary(
-        LLMUsageRunSummaryRequest(
-            schema_version="1.0",
-            db_path=settings.usage_db_path,
-            run_id=root_workflow_id,
-        ),
-        ctx,
+    usage = _read_report_usage_summary(
+        usage_db_path=settings.usage_db_path,
+        run_id=root_workflow_id,
+        report_id=report_id,
     )
-    file_search_calls = _read_usage_tool_call_count(
-        usage_db_path=settings.usage_db_path, run_id=root_workflow_id
+    usage_metrics = usage or {}
+    core_duration = _read_report_core_duration(
+        state_db=settings.state_db,
+        report_id=report_id,
+        root_workflow_id=root_workflow_id,
     )
     validation_pass = report_validation_passed(
         Path(settings.output_dir), source_path, report_id=report_id, ctx=ctx
@@ -2418,8 +2602,12 @@ def _read_result(
     )
     report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
     publication_evidence = _wordpress_publication_evidence(
-        stage_rows=wordpress_stage_rows,
+        publication_outcome=publication_outcome,
+        workflow_status=publication_workflow_status,
+        workflow_attempt_count=publication_workflow_attempt_count,
         wordpress_post_id=int(published_post[0]) if published_post else None,
+        expected_file_id=report_id,
+        expected_post_type=str(published_post[1]) if published_post else "",
     )
     return {
         "workflow_attempt_count": attempts,
@@ -2449,11 +2637,16 @@ def _read_result(
         "unresolved_retained_factual_claims": (
             retained_claim_counts[1] if retained_claim_counts is not None else None
         ),
-        "model_provider_calls": usage.call_count,
-        "file_search_calls": file_search_calls,
-        "input_tokens": usage.input_tokens,
-        "output_tokens": usage.output_tokens,
-        "cost": usage.estimated_cost_usd,
+        "model_provider_calls": usage_metrics.get("provider_calls"),
+        "file_search_calls": usage_metrics.get("tool_calls"),
+        "input_tokens": usage_metrics.get("input_tokens"),
+        "output_tokens": usage_metrics.get("output_tokens"),
+        "cost": usage_metrics.get("estimated_cost_usd"),
+        "cost_attribution_available": bool(usage_metrics.get("cost_available", False)),
+        "metric_attribution": (
+            "canonical_run_and_report_id" if usage is not None else "unavailable"
+        ),
+        **core_duration,
         "terminal_failure_code": terminal_failure,
         **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
@@ -2887,21 +3080,6 @@ def _read_retained_claim_counts(
         int(payload["unsupported_factual_count"]),
         int(payload["unresolved_factual_count"]),
     )
-
-
-def _read_usage_tool_call_count(*, usage_db_path: str, run_id: str) -> int:
-    """Read existing provider tool calls from the canonical LLM usage ledger."""
-
-    if not Path(usage_db_path).is_file():
-        return 0
-    with sqlite3.connect(usage_db_path) as conn:
-        return int(
-            conn.execute(
-                "SELECT COALESCE(SUM(tool_calls),0) "
-                "FROM llm_usage_events WHERE run_id=?",
-                (run_id,),
-            ).fetchone()[0]
-        )
 
 
 def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:

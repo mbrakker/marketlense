@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from src.contracts.llm_usage import LLMUsageProjectionStatusRequest
 from src.contracts.publish import PublishSettings
 from src.contracts.run_budget import (
     RunBudget,
@@ -12,6 +13,7 @@ from src.contracts.run_budget import (
 from src.contracts.run_context import RunContext
 from src.services.llm_usage_ledger_service import (
     append_run_budget_side_effect,
+    finalize_usage_projection,
     read_run_budget_usage,
 )
 from src.utils.errors import AppError
@@ -48,12 +50,22 @@ def read_publish_budget_usage(
 ) -> RunBudgetUsage | None:
     """Read release-ready canonical usage before a final publication write.
 
-    The SQLite ledger remains authoritative for the numbers.  Derived exports are
-    nevertheless release evidence: a missing, invalid, or materially stale
-    projection must stop a public write rather than being silently discarded.
+    The SQLite ledger remains authoritative for the numbers.  Bring configured
+    derived exports current before checking them as release evidence; a failed
+    refresh or invalid result still stops a public write.
     """
     if budget is None:
         return None
+    if budget.projection_ledger_path and budget.projection_daily_path:
+        finalize_usage_projection(
+            LLMUsageProjectionStatusRequest(
+                schema_version="1.0",
+                db_path=budget.usage_db_path,
+                ledger_path=budget.projection_ledger_path,
+                daily_path=budget.projection_daily_path,
+            ),
+            ctx,
+        )
     response = read_run_budget_usage(
         RunBudgetUsageReadRequest(schema_version="1.0", budget=budget), ctx
     )

@@ -15,12 +15,15 @@ from scripts.quality.ias_live_canary_runner import (
     _collect_frozen_cohort_queue_timing_evidence,
     _cross_report_handoffs_terminal,
     _queue_terminal_state,
-    _replay_completed_wordpress_jobs,
+    _read_report_core_duration,
+    _read_report_usage_summary,
     _read_retained_claim_counts,
     _read_workflow_job_usage,
-    _wordpress_publication_evidence,
-    _validate_wordpress_staging_origin,
+    _replay_completed_wordpress_jobs,
     _seed_isolated_workflow_queue_controls,
+    _sum_member_metric,
+    _validate_wordpress_staging_origin,
+    _wordpress_publication_evidence,
     ensure_isolated_publication_queue_disabled,
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
@@ -28,11 +31,19 @@ from scripts.quality.ias_live_canary_runner import (
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.semantic_ids import ReportId
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidate,
+    SignalCandidateGroup,
+    SignalCandidateSourceRef,
+    SignalCandidateStoreRequest,
+)
 from src.contracts.workflow_queue import (
     WordPressPublishPayload,
     WorkflowJobSubmission,
     WorkflowStageResult,
 )
+from src.services.analytics_store_service import upsert_signal_candidates
 from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
@@ -40,11 +51,11 @@ from src.services.config_service import (
     new_runtime_context,
 )
 from src.services.report_analysis_store_service import pack_path
-from src.services.workflow_queue_service import get_workflow_queue_control
 from src.services.workflow_queue_service import (
     claim_next_workflow_job,
     complete_workflow_job,
     enqueue_workflow_job,
+    get_workflow_queue_control,
     start_workflow_job,
 )
 
@@ -152,9 +163,7 @@ def test_isolated_canary_refuses_http_opt_in_without_staging_publication(
         )
 
 
-def test_wordpress_staging_origin_allows_http_only_with_explicit_host_pinned_opt_in() -> (
-    None
-):
+def test_wordpress_staging_origin_allows_pinned_http_opt_in() -> None:
     origin = _validate_wordpress_staging_origin(
         "http://marketlense.medianewsonline.com",
         staging_hostname="marketlense.medianewsonline.com",
@@ -219,39 +228,174 @@ def test_wordpress_staging_origin_rejects_unapproved_or_ambiguous_targets(
 
 @pytest.mark.parametrize(
     (
-        "write_outcome",
-        "readback_outcome",
-        "attempt_number",
+        "write_count",
+        "readback_verified",
+        "workflow_attempt_count",
         "wordpress_post_id",
         "expected",
     ),
     [
-        ("succeeded", "published_verified", 1, 42, (True, True)),
-        ("skipped", "published_verified", 1, 42, (False, False)),
-        ("succeeded", "published_verified", 2, 42, (False, False)),
-        ("succeeded", "blocked", 1, 42, (True, False)),
-        ("succeeded", "published_verified", 1, 99, (False, False)),
+        (1, True, 1, 42, (True, True)),
+        (0, True, 1, 42, (False, False)),
+        (1, True, 2, 42, (False, False)),
+        (1, False, 1, 42, (True, False)),
+        (1, True, 1, 99, (False, False)),
     ],
 )
-def test_wordpress_publication_evidence_requires_first_attempt_create_and_matching_readback(
-    write_outcome: str,
-    readback_outcome: str,
-    attempt_number: int,
+def test_wordpress_publication_evidence_requires_first_attempt_create_and_readback(
+    write_count: int,
+    readback_verified: bool,
+    workflow_attempt_count: int,
     wordpress_post_id: int,
     expected: tuple[bool, bool],
 ) -> None:
     evidence = _wordpress_publication_evidence(
-        stage_rows=(
-            (attempt_number, "wordpress_write", write_outcome, '["42"]'),
-            (attempt_number, "authenticated_readback", readback_outcome, '["42"]'),
-        ),
+        publication_outcome={
+            "status": "published",
+            "publication_outcome": "post_created",
+            "file_id": "report-1",
+            "post_id": 42,
+            "actual_write_count": write_count,
+            "authenticated_readback_verified": readback_verified,
+            "readback_expectation": {
+                "file_id": "report-1",
+                "post_type": "ml_report",
+            },
+            "readback_checks": [
+                {"name": name, "status": "verified"}
+                for name in (
+                    "post_id",
+                    "report_file_identity",
+                    "canonical_url",
+                    "post_type",
+                    "status",
+                    "content_checksum",
+                    "source_attribution",
+                    "metadata",
+                    "taxonomy_assignments",
+                    "media_associations",
+                )
+            ],
+        },
+        workflow_status="succeeded",
+        workflow_attempt_count=workflow_attempt_count,
         wordpress_post_id=wordpress_post_id,
+        expected_file_id="report-1",
+        expected_post_type="ml_report",
     )
 
     assert (
         evidence["wordpress_created_this_run"],
         evidence["wordpress_authenticated_readback"],
     ) == expected
+
+
+def test_wordpress_publication_evidence_requires_verified_metadata_readback() -> None:
+    outcome = {
+        "status": "published",
+        "publication_outcome": "post_created",
+        "file_id": "report-1",
+        "post_id": 42,
+        "actual_write_count": 1,
+        "authenticated_readback_verified": True,
+        "readback_expectation": {"file_id": "report-1", "post_type": "ml_report"},
+        "readback_checks": [
+            {"name": "post_id", "status": "verified"},
+            {"name": "metadata", "status": "not_verified"},
+        ],
+    }
+
+    evidence = _wordpress_publication_evidence(
+        publication_outcome=outcome,
+        workflow_status="succeeded",
+        workflow_attempt_count=1,
+        wordpress_post_id=42,
+        expected_file_id="report-1",
+        expected_post_type="ml_report",
+    )
+
+    assert evidence == {
+        "wordpress_created_this_run": True,
+        "wordpress_authenticated_readback": False,
+    }
+
+
+def test_signal_manifest_mutation_probe_closes_temporary_sqlite_handles(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "signals.sqlite"
+    ctx = new_runtime_context(task_id="signal-manifest-close-test")
+    group_id = "signal-group:test"
+    candidate_id = "signal-candidate:test"
+    source_ref = SignalCandidateSourceRef(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        report_id="report-1",
+        evidence_id="report-1:claim:1",
+        source_table="report_claims",
+        entity_uid="report-1:claim:1",
+        content_class="claim",
+        page_refs=[1],
+        source_metadata={"pages": [1], "evidence": "A retained source claim."},
+    )
+    candidate = SignalCandidate(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        candidate_id=candidate_id,
+        candidate_type="market_signal",
+        title="Test signal",
+        summary="A source-backed signal for the mutation probe.",
+        confidence=0.8,
+        strength=1.0,
+        support_level="single_report",
+        caveats=["single_report_coverage"],
+        source_report_ids=["report-1"],
+        evidence_ids=["report-1:claim:1"],
+        source_refs=[source_ref],
+        raw_source_context={"fixture": "focused-test"},
+        validation_status="approved",
+        validation_notes=["source_backed"],
+        group_id=group_id,
+        extraction_request_id="extract-1",
+        generated_at_utc="2026-10-09T10:00:00Z",
+    )
+    group = SignalCandidateGroup(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        group_id=group_id,
+        stable_key="test:signal",
+        title="Test signal",
+        summary="A source-backed signal for the mutation probe.",
+        support_level="single_report",
+        candidate_ids=[candidate_id],
+        source_report_ids=["report-1"],
+        evidence_ids=["report-1:claim:1"],
+        caveats=["single_report_coverage"],
+        raw_group_context={"agreement_type": "thin_coverage"},
+        validation_status="approved",
+        extraction_request_id="extract-1",
+        generated_at_utc="2026-10-09T10:00:00Z",
+        publication_status="held",
+        publication_hold_reason="signal_grounding_insufficient",
+    )
+    stored = upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            extraction_request_id="extract-1",
+            candidates=[candidate],
+            groups=[group],
+        ),
+        ctx,
+    )
+
+    verified = canary_runner._verify_signal_manifest_immutable(
+        signal_store_db=str(db_path),
+        manifest_hash=stored.manifest_hashes[group_id],
+        extraction_request_id="extract-1",
+        group_id=group_id,
+        ctx=ctx,
+    )
+
+    assert verified is True
+    assert list(tmp_path.glob("signal-manifest-mutation-*")) == []
 
 
 def test_queue_terminal_state_accepts_a_published_autonomous_report(
@@ -276,9 +420,11 @@ def test_queue_terminal_state_accepts_a_published_autonomous_report(
             );
             INSERT INTO workflow_publication_readiness VALUES ('pkg', 'approved');
             INSERT INTO workflow_jobs VALUES
-              ('publication_readiness', 'pkg', 'report-1', 'root-1', 'succeeded', '', '');
+              ('publication_readiness', 'pkg', 'report-1', 'root-1',
+               'succeeded', '', '');
             INSERT INTO published VALUES
-              ('report-1', 'source-hash', 1, 42, 'https://staging.example/posts/42', 'ml_report');
+              ('report-1', 'source-hash', 1, 42,
+               'https://staging.example/posts/42', 'ml_report');
             """
         )
 
@@ -382,7 +528,8 @@ def test_completed_wordpress_job_duplicate_submission_reuses_record_without_writ
     with sqlite3.connect(state_db) as conn:
         assert (
             conn.execute(
-                "SELECT COUNT(*) FROM workflow_jobs WHERE queue_name='wordpress_publish'"
+                "SELECT COUNT(*) FROM workflow_jobs "
+                "WHERE queue_name='wordpress_publish'"
             ).fetchone()[0]
             == 1
         )
@@ -422,7 +569,8 @@ def test_cross_report_drain_waits_for_child_jobs_and_outbox_materialization(
 
     with sqlite3.connect(state_db) as conn:
         conn.execute(
-            "UPDATE workflow_jobs SET status='succeeded' WHERE queue_name='briefing_generation'"
+            "UPDATE workflow_jobs SET status='succeeded' "
+            "WHERE queue_name='briefing_generation'"
         )
         conn.execute("UPDATE workflow_outbox SET status='materialised'")
 
@@ -435,7 +583,8 @@ def test_cross_report_drain_waits_for_child_jobs_and_outbox_materialization(
 
     with sqlite3.connect(state_db) as conn:
         conn.execute(
-            "UPDATE workflow_jobs SET status='succeeded' WHERE queue_name='wordpress_projection'"
+            "UPDATE workflow_jobs SET status='succeeded' "
+            "WHERE queue_name='wordpress_projection'"
         )
 
     assert (
@@ -566,6 +715,151 @@ def test_workflow_job_usage_marks_cost_unavailable_without_pricing_column(
     assert usage["provider_calls"] == 1
     assert usage["unpriced_provider_call_count"] == 1
     assert usage["cost_available"] is False
+
+
+def test_report_usage_summary_is_scoped_to_run_and_report(tmp_path: Path) -> None:
+    usage_db = tmp_path / "usage.sqlite"
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              run_id TEXT, report_id TEXT, input_tokens INTEGER,
+              cached_input_tokens INTEGER, output_tokens INTEGER,
+              tool_calls INTEGER, estimated_cost_usd REAL, pricing_status TEXT
+            )"""
+        )
+        conn.executemany(
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("run-1", "report-1", 10, 2, 5, 1, 0.01, "matched"),
+                ("run-1", "report-2", 100, 20, 50, 3, 0.1, "matched"),
+                ("run-2", "report-1", 1000, 200, 500, 9, 1.0, "matched"),
+            ],
+        )
+
+    usage = _read_report_usage_summary(
+        usage_db_path=str(usage_db), run_id="run-1", report_id="report-1"
+    )
+
+    assert usage == {
+        "provider_calls": 1,
+        "input_tokens": 10,
+        "cached_input_tokens": 2,
+        "output_tokens": 5,
+        "tool_calls": 1,
+        "estimated_cost_usd": 0.01,
+        "pricing_status_counts": {"matched": 1},
+        "unpriced_provider_call_count": 0,
+        "cost_available": True,
+    }
+
+
+def test_report_usage_summary_marks_unresolved_pricing_unavailable(
+    tmp_path: Path,
+) -> None:
+    usage_db = tmp_path / "usage.sqlite"
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              run_id TEXT, report_id TEXT, input_tokens INTEGER,
+              cached_input_tokens INTEGER, output_tokens INTEGER,
+              tool_calls INTEGER, estimated_cost_usd REAL, pricing_status TEXT
+            )"""
+        )
+        conn.execute(
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ("run-1", "report-1", 10, 0, 5, 0, 0.0, "missing"),
+        )
+
+    usage = _read_report_usage_summary(
+        usage_db_path=str(usage_db), run_id="run-1", report_id="report-1"
+    )
+
+    assert usage["provider_calls"] == 1
+    assert usage["pricing_status_counts"] == {"missing": 1}
+    assert usage["estimated_cost_usd"] is None
+    assert usage["cost_available"] is False
+
+
+def test_report_usage_summary_does_not_invent_zeroes_without_a_ledger(
+    tmp_path: Path,
+) -> None:
+    usage = _read_report_usage_summary(
+        usage_db_path=str(tmp_path / "missing.sqlite"),
+        run_id="run-1",
+        report_id="report-1",
+    )
+
+    assert usage is None
+
+
+def test_report_core_duration_uses_its_first_ingest_and_readiness_completion(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            """CREATE TABLE workflow_jobs (
+              queue_name TEXT, report_id TEXT, root_workflow_id TEXT,
+              status TEXT, started_at_utc TEXT, completed_at_utc TEXT
+            )"""
+        )
+        conn.executemany(
+            "INSERT INTO workflow_jobs VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    "source_ingest",
+                    "report-1",
+                    "root-1",
+                    "succeeded",
+                    "2026-10-09T10:00:00+00:00",
+                    "2026-10-09T10:00:10+00:00",
+                ),
+                (
+                    "report_analysis",
+                    "report-1",
+                    "root-1",
+                    "succeeded",
+                    "2026-10-09T10:00:20+00:00",
+                    "2026-10-09T10:00:50+00:00",
+                ),
+                (
+                    "publication_readiness",
+                    "report-1",
+                    "root-1",
+                    "succeeded",
+                    "2026-10-09T10:00:51+00:00",
+                    "2026-10-09T10:01:05+00:00",
+                ),
+                (
+                    "publication_readiness",
+                    "report-2",
+                    "root-1",
+                    "succeeded",
+                    "2026-10-09T10:01:20+00:00",
+                    "2026-10-09T10:02:00+00:00",
+                ),
+            ],
+        )
+
+    evidence = _read_report_core_duration(
+        state_db=str(state_db), report_id="report-1", root_workflow_id="root-1"
+    )
+
+    assert evidence == {
+        "core_processing_duration_seconds": 65.0,
+        "core_processing_duration_scope": "complete",
+    }
+
+
+def test_member_metric_sum_requires_every_report_value() -> None:
+    reports = [
+        {"cost": 0.01, "model_provider_calls": 1},
+        {"cost": 0.02, "model_provider_calls": 2},
+    ]
+
+    assert _sum_member_metric(reports, "cost") == 0.03
+    assert _sum_member_metric(reports, "model_provider_calls") == 3
+    assert _sum_member_metric([*reports, {"cost": None}], "cost") is None
 
 
 def test_staging_batch_requires_cross_report_handoff_verification(
