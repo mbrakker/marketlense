@@ -204,11 +204,15 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "both tldrs are report-level leads" in prompt_text
-    assert "choose the most material directly supported finding" in prompt_text
-    assert "prioritize a decision-relevant metric when available" in prompt_text
+    assert "must share the most material supported finding" in prompt_text
+    assert "prefer a decision-useful metric" in prompt_text
+    assert "if findings are empty, use the supported priority-one theme" in prompt_text
+    assert "direct quote tied to it" in prompt_text
     assert (
-        "avoid section/topic descriptions when stronger findings exist" in prompt_text
+        "lead executive_summary from a finding tied to the priority-one theme"
+        in prompt_text
     )
+    assert "avoid section descriptions when stronger evidence exists" in prompt_text
 
 
 @pytest.mark.parametrize(
