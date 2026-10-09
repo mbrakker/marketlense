@@ -17,6 +17,7 @@ from scripts.quality.ias_live_canary_runner import (
 )
 from scripts.quality.run_frozen_reliability_cohort import (
     DEFAULT_SOURCES_MANIFEST,
+    STAGING_FROZEN_COHORT_REPORT_IDS,
     _shared_batch_passes,
     _load_members,
     run_frozen_reliability_cohort,
@@ -514,7 +515,7 @@ def test_frozen_manifest_accepts_the_future_ten_report_cohort_size(
     manifest = tmp_path / "cohort.json"
     manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
 
-    loaded = _load_members(manifest)
+    loaded = _load_members(manifest, sources_root=tmp_path)
 
     assert len(loaded) == 10
 
@@ -549,7 +550,7 @@ def test_frozen_manifest_accepts_the_pinned_five_report_grounding_cohort(
     manifest = tmp_path / "pinned-five.json"
     manifest.write_text(json.dumps({"members": members}), encoding="utf-8")
 
-    loaded = _load_members(manifest)
+    loaded = _load_members(manifest, sources_root=tmp_path)
 
     assert [item["publisher_name"] for item in loaded] == publishers
     assert all(Path(item["resolved_source_path"]).is_file() for item in loaded)
@@ -618,6 +619,29 @@ def test_frozen_manifest_rejects_sources_outside_explicit_workspace_root(
         _load_members(manifest, sources_root=source_root)
 
 
+def test_frozen_manifest_rejects_sources_outside_default_workspace_root(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path / "outside.pdf"
+    content = b"source outside default frozen root"
+    outside.write_bytes(content)
+    member = {
+        "source_path": str(outside.resolve()),
+        "content_md5": hashlib.md5(content, usedforsecurity=False).hexdigest(),
+        "source_domain": "publisher.example",
+        "report_name": "Frozen fixture",
+        "landing_page_url": "https://publisher.example/report",
+        "source_page_url": "https://publisher.example/reports",
+        "publisher_name": "Fixture Publisher",
+        "downloaded_at_utc": "2026-10-01T00:00:00Z",
+    }
+    manifest = tmp_path / "frozen.json"
+    manifest.write_text(json.dumps({"members": [member] * 5}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="outside the configured sources root"):
+        _load_members(manifest)
+
+
 def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() -> None:
     report = {
         "admission_outcome": "admitted",
@@ -636,7 +660,11 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
     result = {
         "shared_batch": True,
         "cohort_size": 5,
-        "reports": [dict(report) for _ in range(5)],
+        "source_manifest_sha256": "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7",
+        "reports": [
+            {**report, "report_id": report_id}
+            for report_id in sorted(STAGING_FROZEN_COHORT_REPORT_IDS)
+        ],
         "cohort_metrics": {
             "bounded_automatic_repair": False,
             "workflow_retry_count": 0,
@@ -666,6 +694,15 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
                 "queue_terminal_failure_count": 0,
                 "queue_nonterminal_outbox_count": 0,
                 "briefing_validated_multireport_count": 1,
+                "briefing_validated_multireport_execution_seconds": 2.5,
+                "briefing_validated_multireport_provider_usage": {
+                    "provider_calls": 1,
+                    "input_tokens": 20,
+                    "cached_input_tokens": 0,
+                    "output_tokens": 5,
+                    "tool_calls": 0,
+                    "estimated_cost_usd": 0.001,
+                },
                 "signal_manifest_count": 4,
                 "signal_manifest_readback_verified_count": 4,
                 "signal_manifest_replay_verified_count": 4,
@@ -704,6 +741,20 @@ def test_shared_batch_acceptance_requires_real_first_attempt_staging_evidence() 
     failed["cohort_metrics"]["cross_report_handoffs"][
         "signal_single_source_unsafe_group_count"
     ] = 1
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["source_manifest_sha256"] = "0" * 64
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["reports"][0]["report_id"] = failed["reports"][1]["report_id"]
+    assert _shared_batch_passes(failed) is False
+
+    failed = json.loads(json.dumps(result))
+    failed["cohort_metrics"]["cross_report_handoffs"][
+        "briefing_validated_multireport_provider_usage"
+    ]["provider_calls"] = 0
     assert _shared_batch_passes(failed) is False
 
 
@@ -812,6 +863,7 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
 
     result = run_frozen_reliability_cohort(
         sources_manifest=manifest,
+        sources_root=tmp_path,
         runs_root=tmp_path,
         report_ids=tuple(report_ids),
         max_duration_seconds=984,
@@ -849,7 +901,7 @@ def test_frozen_cohort_runs_selected_members_with_independent_report_deadlines(
     )
 
 
-def test_frozen_cohort_can_run_one_shared_staging_batch_with_all_members(
+def test_frozen_cohort_can_run_one_shared_cross_report_batch_with_all_members(
     tmp_path: Path,
 ) -> None:
     source_root = tmp_path / "source-workspace"
@@ -911,22 +963,39 @@ def test_frozen_cohort_can_run_one_shared_staging_batch_with_all_members(
         sources_root=source_root,
         runs_root=tmp_path / "runs",
         shared_batch=True,
-        publish_to_wordpress_staging=True,
-        staging_hostname="marketlense.medianewsonline.com",
-        allow_insecure_staging_http=True,
         enable_cross_report_analysis=True,
         run_cohort_once=run_once,
     )
 
     assert len(captured) == 1
     assert len(captured[0]["sources"]) == 5
-    assert captured[0]["publish_to_wordpress_staging"] is True
-    assert captured[0]["staging_hostname"] == "marketlense.medianewsonline.com"
-    assert captured[0]["allow_insecure_staging_http"] is True
     assert captured[0]["enable_cross_report_analysis"] is True
     assert result["cohort_size"] == 5
     assert result["summary"]["published_report_count"] == 5
     assert Path(result["cohort_directory"], "cohort_result.json").is_file()
+
+
+def test_staging_rejects_noncanonical_manifest_before_run_cohort_once(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "other-cohort.json"
+    manifest.write_text(json.dumps({"members": []}), encoding="utf-8")
+    calls: list[dict[str, object]] = []
+
+    with pytest.raises(ValueError, match="pinned five-report manifest"):
+        run_frozen_reliability_cohort(
+            sources_manifest=manifest,
+            runs_root=tmp_path / "runs",
+            shared_batch=True,
+            publish_to_wordpress_staging=True,
+            staging_hostname="marketlense.medianewsonline.com",
+            allow_insecure_staging_http=True,
+            enable_cross_report_analysis=True,
+            run_cohort_once=lambda **kwargs: calls.append(kwargs),
+        )
+
+    assert calls == []
+    assert not (tmp_path / "runs").exists()
 
 
 def test_cohort_summary_retains_batch_metrics_only_at_cohort_scope() -> None:

@@ -1844,7 +1844,8 @@ def _collect_cross_report_handoff_evidence(
         job_rows = conn.execute(
             f"""
             SELECT job_id,queue_name,status,entity_type,attempt_count,
-                   output_reference,output_content_hash
+                   output_reference,output_content_hash,started_at_utc,
+                   completed_at_utc
             FROM workflow_jobs
             WHERE root_workflow_id=? AND (
               queue_name IN ({handoff_marks})
@@ -1908,6 +1909,9 @@ def _collect_cross_report_handoff_evidence(
         row for row in job_rows if str(row[1]) == "briefing_generation"
     ]
     briefing_valid_multireport_count = 0
+    briefing_valid_multireport_job_ids: list[str] = []
+    briefing_valid_multireport_execution_seconds: list[float] = []
+    briefing_duration_complete = True
     for row in briefing_generation_rows:
         job_id = str(row[0])
         if str(row[2]) != "succeeded" or not str(row[5]) or not str(row[6]):
@@ -1915,6 +1919,12 @@ def _collect_cross_report_handoff_evidence(
         source_hashes, publishers = opportunities_by_job.get(job_id, (set(), set()))
         if len(source_hashes) >= 2 and len(publishers) >= 2:
             briefing_valid_multireport_count += 1
+            briefing_valid_multireport_job_ids.append(job_id)
+            elapsed_seconds = _workflow_job_elapsed_seconds(row[7], row[8])
+            if elapsed_seconds is None:
+                briefing_duration_complete = False
+            else:
+                briefing_valid_multireport_execution_seconds.append(elapsed_seconds)
 
     signal_manifest_hashes: list[str] = []
     signal_manifest_readback_count = 0
@@ -2003,6 +2013,17 @@ def _collect_cross_report_handoff_evidence(
         )
     ]
     usage = _read_workflow_job_usage(usage_db_path, cross_job_ids)
+    briefing_usage = _read_workflow_job_usage(
+        usage_db_path, briefing_valid_multireport_job_ids
+    )
+    briefing_execution_seconds = (
+        round(sum(briefing_valid_multireport_execution_seconds), 3)
+        if briefing_duration_complete
+        and briefing_valid_multireport_count > 0
+        and len(briefing_valid_multireport_execution_seconds)
+        == briefing_valid_multireport_count
+        else None
+    )
     briefing_generation_success_count = sum(
         1 for row in briefing_generation_rows if str(row[2]) == "succeeded"
     )
@@ -2014,10 +2035,15 @@ def _collect_cross_report_handoff_evidence(
         "job_status_counts": job_status_counts,
         "briefing_generation_success_count": briefing_generation_success_count,
         "briefing_validated_multireport_count": briefing_valid_multireport_count,
+        "briefing_validated_multireport_execution_seconds": (
+            briefing_execution_seconds
+        ),
+        "briefing_validated_multireport_provider_usage": briefing_usage,
         "signal_manifest_count": len(signal_manifest_hashes),
         "signal_manifest_hashes": signal_manifest_hashes,
         "signal_manifest_readback_verified_count": signal_manifest_readback_count,
         "signal_manifest_replay_verified_count": signal_manifest_replay_count,
+        "signal_manifest_mutation_probe_scope": "representative_manifest",
         "signal_manifest_mutation_preserved": signal_manifest_mutation_preserved,
         "signal_single_source_group_count": single_source_group_count,
         "signal_single_source_insufficient_grounding_hold_count": (
@@ -2039,6 +2065,24 @@ def _json_string_set(raw: object) -> set[str]:
     if not isinstance(values, list):
         return set()
     return {str(value).strip() for value in values if str(value).strip()}
+
+
+def _workflow_job_elapsed_seconds(
+    started_at: object, completed_at: object
+) -> float | None:
+    if not str(started_at or "").strip() or not str(completed_at or "").strip():
+        return None
+    try:
+        started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+        completed = datetime.fromisoformat(str(completed_at).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    if completed.tzinfo is None:
+        completed = completed.replace(tzinfo=timezone.utc)
+    elapsed = (completed - started).total_seconds()
+    return round(elapsed, 3) if elapsed >= 0 else None
 
 
 def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str, Any]:

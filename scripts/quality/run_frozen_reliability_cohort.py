@@ -19,6 +19,21 @@ from scripts.quality.ias_live_canary_runner import (
 )
 
 DEFAULT_SOURCES_MANIFEST = Path(__file__).with_name("frozen_reliability_cohort_10.json")
+STAGING_FROZEN_COHORT_MANIFEST_SHA256 = (
+    "744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7"
+)
+STAGING_FROZEN_COHORT_CONTENT_MD5S = frozenset(
+    {
+        "81af3890cd84ece81ef16e1aabda8027",
+        "cbb6e7df67412186b8bc094a424ac890",
+        "2acb4a56e14add5d7717f34c378f9091",
+        "4b763ae2286ca69fe8acb63b17508dfb",
+        "b638414df0b1fccea1cd8a93eaf8f5aa",
+    }
+)
+STAGING_FROZEN_COHORT_REPORT_IDS = frozenset(
+    f"cohort-{content_md5[:20]}" for content_md5 in STAGING_FROZEN_COHORT_CONTENT_MD5S
+)
 
 
 def _load_members(
@@ -30,7 +45,6 @@ def _load_members(
         raise ValueError(
             "Frozen reliability cohort must contain exactly 5, 10, or 20 members"
         )
-    enforce_sources_root = sources_root is not None
     root = (
         Path(__file__).resolve().parents[2]
         if sources_root is None
@@ -67,7 +81,7 @@ def _load_members(
             if source_path.is_absolute()
             else (root / source_path).resolve()
         )
-    if enforce_sources_root and any(not path.is_relative_to(root) for path in paths):
+    if any(not path.is_relative_to(root) for path in paths):
         raise ValueError("Frozen cohort source is outside the configured sources root")
     if any(not path.is_file() for path in paths):
         raise ValueError("Frozen reliability cohort has a missing source artifact")
@@ -115,8 +129,28 @@ def run_frozen_reliability_cohort(
         raise ValueError(
             "--allow-insecure-staging-http requires staging publication to be enabled"
         )
+    manifest_sha256 = hashlib.sha256(sources_manifest.read_bytes()).hexdigest()
+    if (
+        publish_to_wordpress_staging
+        and manifest_sha256 != STAGING_FROZEN_COHORT_MANIFEST_SHA256
+    ):
+        raise ValueError("WordPress staging requires the pinned five-report manifest")
     members = _load_members(sources_manifest, sources_root=sources_root)
     selected_members = _select_members(members, report_ids)
+    if publish_to_wordpress_staging:
+        member_hashes = {str(member["content_md5"]).lower() for member in members}
+        selected_hashes = {
+            str(member["content_md5"]).lower() for member in selected_members
+        }
+        if (
+            len(members) != 5
+            or member_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
+            or len(selected_members) != 5
+            or selected_hashes != STAGING_FROZEN_COHORT_CONTENT_MD5S
+        ):
+            raise ValueError(
+                "WordPress staging requires all five pinned frozen reports"
+            )
     runs_root.mkdir(parents=True, exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix="frozen-reliability-", dir=runs_root))
     root.joinpath("frozen_cohort.json").write_text(
@@ -164,9 +198,7 @@ def run_frozen_reliability_cohort(
         result = {
             "schema_version": "1.0",
             "git_sha": git_sha,
-            "source_manifest_sha256": hashlib.sha256(
-                sources_manifest.read_bytes()
-            ).hexdigest(),
+            "source_manifest_sha256": manifest_sha256,
             "cohort_size": len(report_results),
             "shared_batch": True,
             "cohort_directory": str(root),
@@ -283,6 +315,13 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         result.get("shared_batch") is not True
         or result.get("cohort_size") != 5
         or len(reports) != 5
+        or result.get("source_manifest_sha256") != STAGING_FROZEN_COHORT_MANIFEST_SHA256
+        or {
+            str(report.get("report_id") or "")
+            for report in reports
+            if isinstance(report, dict)
+        }
+        != STAGING_FROZEN_COHORT_REPORT_IDS
     ):
         return False
     for report in reports:
@@ -324,6 +363,9 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         return False
     replay = dict(metrics.get("wordpress_replay") or {})
     cross_report = dict(metrics.get("cross_report_handoffs") or {})
+    briefing_usage = dict(
+        cross_report.get("briefing_validated_multireport_provider_usage") or {}
+    )
     return bool(
         replay.get("status") == "verified"
         and replay.get("duplicate_submissions") == 5
@@ -337,6 +379,14 @@ def _shared_batch_passes(result: dict[str, Any]) -> bool:
         and cross_report.get("queue_terminal_failure_count") == 0
         and cross_report.get("queue_nonterminal_outbox_count") == 0
         and cross_report.get("briefing_validated_multireport_count", 0) >= 1
+        and isinstance(
+            cross_report.get("briefing_validated_multireport_execution_seconds"),
+            (int, float),
+        )
+        and cross_report.get("briefing_validated_multireport_execution_seconds", 0) > 0
+        and isinstance(briefing_usage.get("provider_calls"), int)
+        and briefing_usage.get("provider_calls", 0) > 0
+        and isinstance(briefing_usage.get("estimated_cost_usd"), (int, float))
         and cross_report.get("signal_manifest_count", 0) > 0
         and cross_report.get("signal_manifest_readback_verified_count")
         == cross_report.get("signal_manifest_count")

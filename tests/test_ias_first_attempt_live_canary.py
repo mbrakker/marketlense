@@ -11,6 +11,7 @@ import yaml
 
 import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
+    _collect_cross_report_handoff_evidence,
     _collect_frozen_cohort_queue_timing_evidence,
     _cross_report_handoffs_terminal,
     _queue_terminal_state,
@@ -442,6 +443,73 @@ def test_cross_report_drain_waits_for_child_jobs_and_outbox_materialization(
         )
         is True
     )
+
+
+def test_cross_report_evidence_separates_validated_briefing_usage_and_duration(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "briefing-evidence.sqlite"
+    signal_store_db = tmp_path / "signals.sqlite"
+    usage_db = tmp_path / "usage.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_jobs (
+              job_id TEXT, root_workflow_id TEXT, queue_name TEXT, status TEXT,
+              entity_type TEXT, attempt_count INTEGER, output_reference TEXT,
+              output_content_hash TEXT, started_at_utc TEXT, completed_at_utc TEXT
+            );
+            CREATE TABLE workflow_outbox (
+              root_workflow_id TEXT, queue_name TEXT, status TEXT
+            );
+            CREATE TABLE workflow_briefing_opportunities (
+              generation_job_id TEXT, source_hashes_json TEXT, publisher_ids_json TEXT
+            );
+            INSERT INTO workflow_jobs VALUES (
+              'brief-job-1', 'root-1', 'briefing_generation', 'succeeded',
+              'briefing', 1, 'briefing/artifact.json', 'briefing-hash',
+              '2026-10-09T10:00:00.000+00:00',
+              '2026-10-09T10:00:02.500+00:00'
+            );
+            INSERT INTO workflow_briefing_opportunities VALUES (
+              'brief-job-1', '["source-hash-1", "source-hash-2"]',
+              '["publisher-1", "publisher-2"]'
+            );
+            """
+        )
+    with sqlite3.connect(signal_store_db):
+        pass
+    with sqlite3.connect(usage_db) as conn:
+        conn.execute(
+            """CREATE TABLE llm_usage_events (
+              task_id TEXT, input_tokens INTEGER, cached_input_tokens INTEGER,
+              output_tokens INTEGER, tool_calls INTEGER, estimated_cost_usd REAL
+            )"""
+        )
+        conn.execute(
+            "INSERT INTO llm_usage_events VALUES (?, ?, ?, ?, ?, ?)",
+            ("workflow_job:brief-job-1", 200, 20, 50, 0, 0.0125),
+        )
+
+    evidence = _collect_cross_report_handoff_evidence(
+        state_db=str(state_db),
+        signal_store_db=str(signal_store_db),
+        usage_db_path=str(usage_db),
+        root_workflow_id="root-1",
+        ctx=new_runtime_context(task_id="briefing-evidence-test"),
+    )
+
+    assert evidence["briefing_validated_multireport_count"] == 1
+    assert evidence["briefing_validated_multireport_execution_seconds"] == 2.5
+    assert evidence["signal_manifest_mutation_probe_scope"] == "representative_manifest"
+    assert evidence["briefing_validated_multireport_provider_usage"] == {
+        "provider_calls": 1,
+        "input_tokens": 200,
+        "cached_input_tokens": 20,
+        "output_tokens": 50,
+        "tool_calls": 0,
+        "estimated_cost_usd": 0.0125,
+    }
 
 
 def test_staging_batch_requires_cross_report_handoff_verification(
