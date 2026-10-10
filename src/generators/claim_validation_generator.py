@@ -1002,7 +1002,9 @@ def _has_printed_page_label(page_text: str, page_number: int) -> bool:
             return True
         if re.fullmatch(rf"(?i)(?:page|p\.?)\s*{number}(?:\s+of\s+\d+)?", line):
             return True
-        if len(line) <= 120 and re.search(rf"(?:^|[\s\-–—]){number}$", line):
+        if re.match(rf"^{number}[©�]\s+\d{{4}}\s+copyright\b", line, re.I):
+            return True
+        if len(line) <= 120 and re.search(rf"[•·|\-–—]\s*{number}$", line):
             return True
     return False
 

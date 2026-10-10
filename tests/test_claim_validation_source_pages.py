@@ -9,6 +9,7 @@ from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.validation import ValidationRequest
 from src.generators.claim_validation_generator import (
+    _has_printed_page_label,
     apply_retained_claim_semantic_results,
     attach_claim_validation_execution_identity,
     materialize_retained_claim_package,
@@ -236,6 +237,15 @@ def test_doc_map_printed_page_resolves_from_trailing_pdf_header_label():
 
     assert len(semantic_inputs) == 1
     assert printed_page_six in semantic_inputs[0].evidence_texts
+
+
+def test_printed_page_label_recognizes_kpmg_footer_and_ignores_contents_entries():
+    assert _has_printed_page_label(
+        "19© 2026 Copyright owned by KPMG International entities.", 19
+    )
+    assert not _has_printed_page_label(
+        "Portfolio simplification as a value creation strategy 18", 18
+    )
 
 
 def test_grounding_rule_can_validate_claim_against_its_cited_source_page(tmp_path):

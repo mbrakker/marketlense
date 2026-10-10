@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, replace
 from hashlib import sha256
@@ -36,6 +37,7 @@ from src.generators.analysis_store_adapter import (
 )
 from src.generators.claim_validation_generator import (
     _evidence_fidelity_candidates,
+    _has_printed_page_label,
     _source_index,
     exclude_untrusted_evidence,
     validate_evidence_fidelity,
@@ -55,6 +57,9 @@ from src.generators.evidence_packs.registry import (
     PACK_STRATEGIES,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
+from src.generators.public_editorial_quality_generator import (
+    _metric_label_relationship_explanation,
+)
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -81,6 +86,7 @@ from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
@@ -95,15 +101,16 @@ _OPTIONAL_EVIDENCE_PACKS = {
 
 _MAX_FINDINGS_RETRIEVAL_TARGETS = 8
 _MAX_FINDINGS_FALLBACK_TARGETS = 2
-_MAX_FINDINGS_TARGET_KEY_POINTS = 1
+_MAX_FINDINGS_TARGET_KEY_POINTS = 3
 _MAX_FINDINGS_TARGET_SOURCE_PAGES = 12
 _MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS = 5000
 _MAX_FINDINGS_TARGET_SOURCE_CHARS = 32000
 _FINDINGS_TARGET_METADATA_TITLE = re.compile(
     r"\b(?:about the research|research methodology|survey methodology|"
-    r"methodology|respondent profiles?|survey scope|foreword|"
-    r"acknowledg(?:e)?ments?|references|contents|about adjust|"
-    r"about the author)\b",
+    r"methodology|respondent profiles?|survey scope|foreword|authors?|"
+    r"acknowledg(?:e)?ments?|references|contents|"
+    r"about the author|who should read(?: this report)?|"
+    r"about this report)\b",
     re.IGNORECASE,
 )
 _FINDINGS_TARGET_OVERVIEW_TITLE = re.compile(
@@ -112,35 +119,53 @@ _FINDINGS_TARGET_OVERVIEW_TITLE = re.compile(
     r"key takeaways)\b",
     re.IGNORECASE,
 )
-_FINDINGS_TARGET_TERMS = (
-    "corporate",
-    "deal",
-    "buyer",
-    "carve-out",
-    "carve out",
-    "portfolio",
-    "simplification",
-    "value creation",
-    "revenue",
-    "growth",
-    "market",
-    "cagr",
-    "gdp",
-    "install",
-    "session",
-    "gaming",
-    "casino",
-    "slots",
-    "retention",
-    "cpi",
-    "switch",
-    "consumer",
-    "traffic",
-    "referral",
-    "publisher",
-    "forecast",
-    "cost",
-    "margin",
+_FINDINGS_TARGET_COMPARISON = re.compile(
+    r"\b(?:versus|vs\.?|compared with|compared to|while|whereas|"
+    r"higher|lower|outpac(?:e|es|ed|ing)|differ(?:s|ed|ence|ences)?)\b",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_RESULT = re.compile(
+    r"\b(?:grew|growth|increas(?:e|es|ed|ing)|rose|rising|declin(?:e|es|ed|ing)|"
+    r"decreas(?:e|es|ed|ing)|fell|falling|drop(?:s|ped|ping)?|down|up|"
+    r"accounts? for|positions?|positioned|positioning|represents?|reached|"
+    r"reaches|forecast|project(?:s|ed|ion))\b",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_NEGATIVE_DIRECTION = re.compile(
+    r"\b(?:declin(?:e|es|ed|ing)|decreas(?:e|s|ed|ing)|fell|falling|"
+    r"drop(?:s|ped|ping)?|down|lost|loss)\b",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_STOP_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "between",
+        "by",
+        "for",
+        "from",
+        "in",
+        "into",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "the",
+        "that",
+        "this",
+        "to",
+        "was",
+        "were",
+        "while",
+        "with",
+    }
 )
 _FINDINGS_TARGET_NUMBER = re.compile(
     r"(?<![\w\d])[+\-−]?\s*"
@@ -186,19 +211,55 @@ def _findings_target_number_markers(value: str) -> set[str]:
     return markers
 
 
+def _findings_target_number_occurrences(
+    value: str, *, include_years: bool = False
+) -> list[str]:
+    normalized = _FINDINGS_TARGET_YEAR_RANGE.sub(
+        r"\g<start> to \g<end>", value.replace("−", "-")
+    )
+    occurrences: list[str] = []
+    for match in _FINDINGS_TARGET_NUMBER.finditer(normalized):
+        number = match.group("number").replace(",", "")
+        unit = str(match.group("unit") or "").strip().casefold()
+        unit = {
+            "percent": "%",
+            "percentage point": "pp",
+            "percentage points": "pp",
+            "thousand": "k",
+            "million": "m",
+            "billion": "b",
+            "trillion": "t",
+        }.get(unit, unit)
+        is_year = unit in {"", "e"} and number.isdigit() and 1900 <= int(number) <= 2100
+        if is_year and not include_years:
+            continue
+        preceding_text = normalized[max(0, match.start() - 100) : match.start()]
+        preceding_text = re.split(r"[;.!?\n]", preceding_text)[-1]
+        is_negative = match.group(0).strip().startswith("-") or (
+            not match.group(0).strip().startswith("+")
+            and bool(_FINDINGS_TARGET_NEGATIVE_DIRECTION.search(preceding_text))
+        )
+        occurrences.append(f"{'-' if is_negative else ''}{number}{unit}")
+    return occurrences
+
+
 def _findings_target_score(value: str, title: str = "") -> float:
-    lowered = value.casefold()
-    title_lowered = title.casefold()
-    number_count = sum(
-        not (marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100)
-        for marker in _findings_target_number_markers(value)
+    number_count = len(set(_findings_target_number_occurrences(value)))
+    comparison_score = min(len(_FINDINGS_TARGET_COMPARISON.findall(value)), 2) * 1.5
+    result_score = min(len(_FINDINGS_TARGET_RESULT.findall(value)), 2) * 0.5
+    content_words = {
+        word
+        for word in re.findall(r"[a-z]{3,}", f"{title} {value}".casefold())
+        if word not in _FINDINGS_TARGET_STOP_WORDS
+    }
+    information_score = min(len(content_words), 12) * 0.08
+    score = (
+        1.0
+        + min(number_count, 12) * 1.25
+        + comparison_score
+        + result_score
+        + information_score
     )
-    term_score = sum(
-        (1.2 if term in title_lowered else 0.7)
-        for term in _FINDINGS_TARGET_TERMS
-        if term in lowered or term in title_lowered
-    )
-    score = min(number_count, 12) * 1.5 + term_score
     return score * (0.5 if _FINDINGS_TARGET_OVERVIEW_TITLE.search(title) else 1.0)
 
 
@@ -218,11 +279,19 @@ def _findings_target_key_points(target: dict[str, object]) -> list[str]:
     return normalize_year_ranges([point]) if point else []
 
 
+def _findings_target_pages(target: dict[str, object]) -> list[int]:
+    raw_pages = target.get("pages")
+    if not isinstance(raw_pages, list):
+        return []
+    return [
+        page
+        for page in raw_pages
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0
+    ]
+
+
 def _findings_target_key_point_score(value: str, title: str = "") -> float:
-    score = _findings_target_score(value, title)
-    lowered = value.casefold()
-    score += sum(2.5 for term in ("casino", "slots") if term in lowered)
-    return score + sum(2.0 for term in ("install", "session") if term in lowered)
+    return _findings_target_score(value, title)
 
 
 def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
@@ -257,18 +326,25 @@ def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
         summary = str(raw_section.get("summary") or "").strip()
         if not key_points and not summary:
             continue
-        section_text = " ".join([title, summary, *key_points])
-        score = _findings_target_score(section_text, title)
-        if score <= 0:
-            continue
+        target_key_points = key_points or [summary]
         priority_key_points = sorted(
-            enumerate(key_points or [summary]),
+            enumerate(target_key_points),
             key=lambda item: (
                 -_findings_target_key_point_score(item[1], title),
                 item[0],
             ),
-        )[:_MAX_FINDINGS_TARGET_KEY_POINTS]
-        selected_key_points = [point for _point_index, point in priority_key_points]
+        )
+        selected_key_points = [target_key_points[0]]
+        for _point_index, point in priority_key_points:
+            if point in selected_key_points:
+                continue
+            selected_key_points.append(point)
+            if len(selected_key_points) >= _MAX_FINDINGS_TARGET_KEY_POINTS:
+                break
+        point_scores = sorted(
+            _findings_target_score(point, title) for point in selected_key_points
+        )
+        score = point_scores[len(point_scores) // 2]
         ranked.append(
             (
                 score,
@@ -293,30 +369,21 @@ def _findings_target_source_pages(
 ) -> list[dict[str, object]]:
     """Return bounded PDF page text for missed DocMap targets, never DocMap proof."""
 
-    page_text: dict[int, str] = {}
+    page_spans: dict[int, list[tuple[str, str]]] = {}
     for span in source_spans:
         if not isinstance(span, dict):
             continue
         page = span.get("page")
         text = str(span.get("text") or "").strip()
         if isinstance(page, int) and not isinstance(page, bool) and page > 0 and text:
-            page_text.setdefault(page, text)
+            span_id = str(span.get("id") or "").strip()
+            page_spans.setdefault(page, []).append((span_id, text))
 
     selected: list[dict[str, object]] = []
     seen_pages: set[int] = set()
     total_chars = 0
     for target in targets:
-        target_pages = target.get("pages")
-        if not isinstance(target_pages, list):
-            continue
-        candidate_pages = [
-            page
-            for page in target_pages
-            if isinstance(page, int)
-            and not isinstance(page, bool)
-            and page > 0
-            and page in page_text
-        ]
+        candidate_pages = _findings_target_physical_source_pages(target, page_spans)
         expected_numbers = {
             marker
             for key_point in _findings_target_key_points(target)
@@ -330,7 +397,9 @@ def _findings_target_source_pages(
                 page
                 for page in candidate_pages
                 if expected_numbers.issubset(
-                    _findings_target_number_markers(page_text[page])
+                    _findings_target_number_markers(
+                        "\n".join(text for _span_id, text in page_spans[page])
+                    )
                 )
             ]
             if complete_relationship_pages:
@@ -341,21 +410,167 @@ def _findings_target_source_pages(
                 or isinstance(page, bool)
                 or page <= 0
                 or page in seen_pages
-                or page not in page_text
+                or page not in page_spans
                 or len(selected) >= _MAX_FINDINGS_TARGET_SOURCE_PAGES
                 or total_chars >= _MAX_FINDINGS_TARGET_SOURCE_CHARS
             ):
                 continue
             remaining_chars = _MAX_FINDINGS_TARGET_SOURCE_CHARS - total_chars
-            excerpt = page_text[page][
-                : min(_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS, remaining_chars)
-            ]
+            page_content = "\n".join(
+                text for _span_id, text in page_spans[page]
+            )
+            excerpt_limit = min(_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS, remaining_chars)
+            excerpt_start = _findings_relevant_excerpt_start(
+                page_content, target, excerpt_limit
+            )
+            excerpt = page_content[excerpt_start : excerpt_start + excerpt_limit]
             if not excerpt:
                 continue
-            selected.append({"page": page, "text": excerpt})
+            excerpt_end = excerpt_start + len(excerpt)
+            span_ids: list[str] = []
+            span_offset = 0
+            for span_id, text in page_spans[page]:
+                span_end = span_offset + len(text)
+                if span_offset < excerpt_end and span_end > excerpt_start and span_id:
+                    span_ids.append(span_id)
+                span_offset = span_end + 1
+            selected.append(
+                {"page": page, "text": excerpt, "source_span_ids": span_ids}
+            )
             seen_pages.add(page)
             total_chars += len(excerpt)
     return selected
+
+
+def _findings_target_physical_source_pages(
+    target: dict[str, object], page_spans: dict[int, list[tuple[str, str]]]
+) -> list[int]:
+    """Resolve printed DocMap labels to physical pages, then rank relevant text."""
+
+    printed_labels = _findings_target_pages(target)
+    mapped_labels: dict[int, int] = {}
+    for printed_label in printed_labels:
+        matches = [
+            physical_page
+            for physical_page, spans in page_spans.items()
+            if _has_printed_page_label(
+                "\n".join(text for _span_id, text in spans), printed_label
+            )
+        ]
+        if len(matches) == 1:
+            mapped_labels[printed_label] = matches[0]
+    offsets = Counter(
+        physical_page - printed_label
+        for printed_label, physical_page in mapped_labels.items()
+    )
+    if offsets:
+        offset, count = offsets.most_common(1)[0]
+        next_count = offsets.most_common(2)[1][1] if len(offsets) > 1 else 0
+        if count >= 2 and count > next_count:
+            for printed_label in printed_labels:
+                if printed_label in mapped_labels:
+                    continue
+                inferred_physical_page = printed_label + offset
+                if inferred_physical_page in page_spans:
+                    mapped_labels[printed_label] = inferred_physical_page
+
+    matched_pages = [
+        mapped_labels[printed_label]
+        for printed_label in printed_labels
+        if printed_label in mapped_labels
+    ]
+    if matched_pages:
+        resolved_pages = list(dict.fromkeys(matched_pages))
+        ranked_pages = _rank_findings_target_source_pages(
+            target, page_spans, resolved_pages
+        )
+        return ranked_pages[: min(3, len(ranked_pages))] or resolved_pages[:2]
+
+    # Extraction may omit a printed footer. In that case, use DocMap wording and
+    # numeric markers to find a small physical-page candidate set. These pages
+    # remain retrieval context; evidence-fidelity validation still decides support.
+    return _rank_findings_target_source_pages(
+        target, page_spans, list(page_spans)
+    )[:2]
+
+
+def _rank_findings_target_source_pages(
+    target: dict[str, object],
+    page_spans: dict[int, list[tuple[str, str]]],
+    candidate_pages: list[int],
+) -> list[int]:
+    key_points = _findings_target_key_points(target)
+    query_words = _findings_target_content_words(target)
+    expected_numbers = {
+        marker
+        for point in key_points
+        for marker in _findings_target_number_markers(point)
+        if not (
+            marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100
+        )
+    }
+    if not query_words and not expected_numbers:
+        return []
+
+    ranked_pages: list[tuple[int, int, int]] = []
+    for physical_page in candidate_pages:
+        spans = page_spans.get(physical_page, [])
+        if not spans:
+            continue
+        page_content = "\n".join(text for _span_id, text in spans)
+        page_words = set(re.findall(r"[a-z]{3,}", page_content.casefold()))
+        word_overlap = len(query_words & page_words)
+        page_numbers = _findings_target_number_markers(page_content)
+        number_overlap = len(expected_numbers & page_numbers)
+        has_complete_numbers = bool(expected_numbers) and expected_numbers.issubset(
+            page_numbers
+        )
+        if word_overlap < 2 and not (has_complete_numbers and word_overlap >= 1):
+            continue
+        score = word_overlap + 3 * number_overlap + (4 if has_complete_numbers else 0)
+        ranked_pages.append((score, word_overlap, physical_page))
+    ranked_pages.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return [page for _score, _overlap, page in ranked_pages]
+
+
+def _findings_target_content_words(target: dict[str, object]) -> set[str]:
+    return {
+        word
+        for word in re.findall(
+            r"[a-z]{3,}",
+            " ".join(
+                [str(target.get("title") or ""), *_findings_target_key_points(target)]
+            ).casefold(),
+        )
+        if word not in _FINDINGS_TARGET_STOP_WORDS
+    }
+
+
+def _findings_relevant_excerpt_start(
+    page_text: str, target: dict[str, object], excerpt_limit: int
+) -> int:
+    if len(page_text) <= excerpt_limit:
+        return 0
+    key_points = _findings_target_key_points(target)
+    query_words = _findings_target_content_words(target)
+    expected_numbers = set().union(
+        *(_findings_target_number_markers(point) for point in key_points)
+    ) if key_points else set()
+    step = max(1, excerpt_limit // 4)
+    starts = list(range(0, max(1, len(page_text) - excerpt_limit + 1), step))
+    starts.append(max(0, len(page_text) - excerpt_limit))
+    normalized_page = page_text.casefold()
+    best_start = 0
+    best_score = -1
+    for start in dict.fromkeys(starts):
+        excerpt = normalized_page[start : start + excerpt_limit]
+        score = sum(word in excerpt for word in query_words)
+        excerpt_numbers = _findings_target_number_markers(excerpt)
+        score += 2 * len(expected_numbers & excerpt_numbers)
+        if score > best_score:
+            best_start = start
+            best_score = score
+    return best_start
 
 
 def _findings_section_matches_target(
@@ -378,67 +593,180 @@ def _findings_section_matches_target(
     ]
     if len(same_title_targets) < 2:
         return True
-    finding_pages = {
-        page
-        for page in finding.get("pages", [])
-        if isinstance(page, int) and not isinstance(page, bool) and page > 0
-    }
-    target_pages = {
-        page
-        for page in target.get("pages", [])
-        if isinstance(page, int) and not isinstance(page, bool) and page > 0
-    }
+    finding_pages = set(_findings_target_pages(finding))
+    target_pages = set(_findings_target_pages(target))
     return bool(finding_pages.intersection(target_pages))
 
 
 def _findings_is_subset_of_fallback(
     finding: dict[str, object], fallback_finding: dict[str, object]
 ) -> bool:
-    """Drop a partial primary item only when fallback restates it completely."""
+    """Drop a primary item only when a supported fallback preserves its facts."""
 
     finding_section_id = str(finding.get("section_id") or "").strip()
     fallback_section_id = str(fallback_finding.get("section_id") or "").strip()
-    finding_section_title = str(finding.get("section_title") or "").strip()
-    fallback_section_title = str(fallback_finding.get("section_title") or "").strip()
     if finding_section_id and fallback_section_id:
         same_section = finding_section_id == fallback_section_id
     else:
-        finding_pages = {
-            page
-            for page in finding.get("pages", [])
-            if isinstance(page, int) and not isinstance(page, bool) and page > 0
-        }
-        fallback_pages = {
-            page
-            for page in fallback_finding.get("pages", [])
-            if isinstance(page, int) and not isinstance(page, bool) and page > 0
-        }
         same_section = bool(
-            finding_section_title
-            and finding_section_title.casefold() == fallback_section_title.casefold()
-            and finding_pages.intersection(fallback_pages)
+            str(finding.get("section_title") or "").strip().casefold()
+            == str(fallback_finding.get("section_title") or "").strip().casefold()
+            and set(_findings_target_pages(finding))
+            & set(_findings_target_pages(fallback_finding))
         )
     if not same_section:
         return False
-    claim = str(finding.get("text") or "").casefold()
-    fallback_claim = str(fallback_finding.get("text") or "").casefold()
-    evidence = str(finding.get("evidence") or "").casefold()
-    fallback_evidence = str(fallback_finding.get("evidence") or "").casefold()
-    words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", claim))
-    fallback_words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_claim))
-    evidence_words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", evidence))
-    fallback_evidence_words = set(
-        re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_evidence)
+
+    for key in ("text", "evidence"):
+        primary_text = str(finding.get(key) or "")
+        fallback_text = str(fallback_finding.get(key) or "")
+        primary_words = set(
+            re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", primary_text.casefold())
+        )
+        fallback_words = set(
+            re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_text.casefold())
+        )
+        if not primary_words or not primary_words.issubset(fallback_words):
+            return False
+        if Counter(_findings_target_number_occurrences(primary_text)) - Counter(
+            _findings_target_number_occurrences(fallback_text)
+        ):
+            return False
+        if Counter(
+            _findings_target_number_occurrences(primary_text, include_years=True)
+        ) - Counter(
+            _findings_target_number_occurrences(fallback_text, include_years=True)
+        ):
+            return False
+        if _metric_label_relationship_explanation(primary_text, fallback_text):
+            return False
+    return set(_findings_target_pages(finding)).issubset(
+        set(_findings_target_pages(fallback_finding))
     )
-    numbers = _findings_target_number_markers(claim)
-    fallback_numbers = _findings_target_number_markers(fallback_claim)
-    return bool(
-        words
-        and evidence_words
-        and words.issubset(fallback_words)
-        and evidence_words.issubset(fallback_evidence_words)
-        and numbers.issubset(fallback_numbers)
+
+
+def _findings_target_point_covered(
+    key_point: str, findings: list[dict[str, object]]
+) -> bool:
+    clauses = [
+        clause.strip()
+        for clause in re.split(r";", key_point)
+        if clause.strip()
+    ]
+    expected_years = {
+        marker
+        for marker in _findings_target_number_occurrences(
+            key_point, include_years=True
+        )
+        if marker.rstrip("e").isdigit()
+        and 1900 <= int(marker.rstrip("e")) <= 2100
+    }
+    return bool(clauses) and all(
+        _findings_target_clause_covered(clause, findings, expected_years)
+        for clause in clauses
     )
+
+
+def _findings_target_numeric_occurrences(
+    value: str,
+) -> list[tuple[str, Quantity]]:
+    markers = _findings_target_number_occurrences(value)
+    quantities = [
+        quantity
+        for quantity in extract_quantities(value)
+        if not (
+            quantity.value.is_integer()
+            and 1900 <= int(quantity.value) <= 2100
+            and quantity.unit_family == "unknown"
+        )
+    ]
+    if len(markers) != len(quantities):
+        return []
+    return [
+        (
+            marker,
+            replace(
+                quantity,
+                value=abs(quantity.value) * (-1 if marker.startswith("-") else 1),
+            ),
+        )
+        for marker, quantity in zip(markers, quantities, strict=True)
+    ]
+
+
+def _findings_target_numeric_values_covered(target_text: str, actual_text: str) -> bool:
+    expected_markers = _findings_target_number_occurrences(target_text)
+    if not expected_markers:
+        return True
+    actual_markers = _findings_target_number_occurrences(actual_text)
+    if not (Counter(expected_markers) - Counter(actual_markers)):
+        return True
+
+    expected = _findings_target_numeric_occurrences(target_text)
+    actual = _findings_target_numeric_occurrences(actual_text)
+    if len(expected) != len(expected_markers) or len(actual) != len(actual_markers):
+        return False
+    remaining = list(actual)
+    for expected_marker, expected_quantity in expected:
+        match_index = next(
+            (
+                index
+                for index, (actual_marker, actual_quantity) in enumerate(remaining)
+                if expected_marker.startswith("-") == actual_marker.startswith("-")
+                and quantities_match(expected_quantity, actual_quantity)
+            ),
+            None,
+        )
+        if match_index is None:
+            return False
+        remaining.pop(match_index)
+    return True
+
+
+def _findings_target_clause_covered(
+    key_point: str,
+    findings: list[dict[str, object]],
+    required_years: set[str],
+) -> bool:
+    expected_numbers = Counter(_findings_target_number_occurrences(key_point))
+    key_point_words = {
+        word
+        for word in re.findall(r"[a-z]{3,}", key_point.casefold())
+        if word not in _FINDINGS_TARGET_STOP_WORDS
+    }
+    for finding in findings:
+        claim = str(finding.get("text") or "")
+        evidence = str(finding.get("evidence") or "")
+        if not _findings_target_numeric_values_covered(key_point, claim):
+            continue
+        if not _findings_target_numeric_values_covered(key_point, evidence):
+            continue
+        claim_markers = set(
+            _findings_target_number_occurrences(claim, include_years=True)
+        )
+        evidence_markers = set(
+            _findings_target_number_occurrences(evidence, include_years=True)
+        )
+        if required_years - claim_markers or required_years - evidence_markers:
+            continue
+        if key_point_words and len(expected_numbers) == 0:
+            finding_words = set(
+                re.findall(r"[a-z]{3,}", f"{claim} {evidence}".casefold())
+            )
+            if len(key_point_words & finding_words) < min(2, len(key_point_words)):
+                continue
+        if any(
+            any(variant in key_point.casefold() for variant in variants)
+            and not any(variant in claim.casefold() for variant in variants)
+            for _name, variants in _FINDINGS_TARGET_QUALIFIERS
+        ):
+            continue
+        if _metric_label_relationship_explanation(key_point, claim):
+            continue
+        if _metric_label_relationship_explanation(claim, evidence):
+            continue
+        return True
+    return False
 
 
 def _findings_target_is_covered(
@@ -455,73 +783,11 @@ def _findings_target_is_covered(
     ]
     if not matched:
         return False
-    if not any(
-        any(
-            isinstance(page, int) and not isinstance(page, bool) and page > 0
-            for page in finding.get("pages", [])
-        )
-        for finding in matched
-        if isinstance(finding.get("pages"), list)
-    ):
+    if not any(_findings_target_pages(finding) for finding in matched):
         return False
-    target_pages = {
-        page
-        for page in target.get("pages", [])
-        if isinstance(page, int) and not isinstance(page, bool) and page > 0
-    }
-    if target_pages and not any(
-        target_pages.intersection(
-            {
-                page
-                for page in finding.get("pages", [])
-                if isinstance(page, int) and not isinstance(page, bool) and page > 0
-            }
-        )
-        for finding in matched
-        if isinstance(finding.get("pages"), list)
-    ):
-        return False
-    claim_text = " ".join(
-        str(finding.get("text") or "") for finding in matched
-    ).casefold()
-    claim_numbers = set().union(
-        *(
-            _findings_target_number_markers(str(finding.get("text") or ""))
-            for finding in matched
-        )
-    )
-    evidence_numbers = set().union(
-        *(
-            _findings_target_number_markers(str(finding.get("evidence") or ""))
-            for finding in matched
-        )
-    )
-    for key_point in _findings_target_key_points(target):
-        expected_numbers = _findings_target_number_markers(key_point)
-        if expected_numbers and (
-            not expected_numbers.issubset(claim_numbers)
-            or not expected_numbers.issubset(evidence_numbers)
-        ):
-            return False
-        for _name, variants in _FINDINGS_TARGET_QUALIFIERS:
-            if any(variant in key_point.casefold() for variant in variants) and not any(
-                variant in claim_text for variant in variants
-            ):
-                return False
-    return True
-
-
-def _findings_target_is_strategic_and_qualitative(
-    target: dict[str, object],
-) -> bool:
-    key_point = str(target.get("key_point") or "")
-    return bool(
-        not _findings_target_number_markers(key_point)
-        and _findings_target_score(
-            f"{target.get('title', '')} {key_point}",
-            str(target.get("title") or ""),
-        )
-        >= 3.0
+    return all(
+        _findings_target_point_covered(key_point, matched)
+        for key_point in _findings_target_key_points(target)
     )
 
 
@@ -568,13 +834,11 @@ def _missing_findings_retrieval_targets(
 ) -> list[dict[str, object]]:
     """Return at most two missed high-priority targets for one fallback."""
 
-    priority_targets = targets[:_MAX_FINDINGS_FALLBACK_TARGETS]
     missing = []
-    for index, target in enumerate(priority_targets):
+    for target in targets:
         if _findings_target_is_covered(target, findings, grounded_finding_ids, targets):
             continue
-        if index == 0 or _findings_target_is_strategic_and_qualitative(target):
-            missing.append(target)
+        missing.append(target)
     return missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
 
 
@@ -590,13 +854,7 @@ def _normalize_m_and_a_deal_quantities(text: str) -> str:
 
 
 def _normalize_targeted_finding_text(text: str) -> str:
-    normalized = _normalize_m_and_a_deal_quantities(text)
-    return re.sub(
-        r"\b(casino|slots)\s+games(?:[\uFFFD'’])?\s+installs\b",
-        r"\1 installs",
-        normalized,
-        flags=re.IGNORECASE,
-    )
+    return _normalize_m_and_a_deal_quantities(text)
 
 
 def _findings_prompt_user_variables(
@@ -1170,6 +1428,17 @@ def generate_evidence_packs(
             if initial_fidelity.unresolved_factual_count
             else initial_fidelity
         )
+        findings_pack = results.get("findings")
+        if isinstance(findings_pack, dict) and isinstance(
+            findings_pack.get("findings"), list
+        ):
+            findings = [
+                finding
+                for finding in findings_pack["findings"]
+                if isinstance(finding, dict)
+            ]
+            _attach_verified_finding_pages(findings, fidelity)
+            findings_pack["findings"] = findings
         results = exclude_untrusted_evidence(results, fidelity)
         for pack_name in ("findings", "quote_candidates"):
             if pack_name in results:
@@ -1378,6 +1647,7 @@ def _generate_pack(
         )
         return _attach_pack_family_status(pack_name, normalized)
 
+    reused_findings_for_target_recovery: Optional[dict] = None
     # Missing canonical identity disables retained-family reuse; never
     # substitute the source MD5 for this identity.
     if (
@@ -1410,24 +1680,79 @@ def _generate_pack(
         )
         if reuse.reusable:
             reused_payload = normalize_and_validate_reused(reuse.output_payload)
-            defer_family_materialization(
-                reused_payload,
-                relevant_hash=relevant_input_hash,
-                always_materialize=False,
-            )
-            logger.info(
-                log_event(
-                    ctx,
-                    role="generator",
-                    event="evidence_pack_prompt_family_reused",
-                    module=logger.name,
-                    fields={
-                        "family_id": prompt_namespace,
-                        "artifact_id": reuse.artifact_id,
-                    },
+            if pack_name == "findings" and source_spans and findings_retrieval_targets:
+                reused_findings = [
+                    item
+                    for item in reused_payload.get("findings", [])
+                    if isinstance(item, dict)
+                ]
+                reused_fidelity = validate_evidence_fidelity(
+                    {"findings": {"findings": reused_findings}},
+                    source_spans=source_spans,
                 )
-            )
-            return reused_payload
+                reused_grounded_ids = _attach_verified_finding_pages(
+                    reused_findings, reused_fidelity
+                )
+                reused_payload["findings"] = reused_findings
+                cached_gaps = _missing_findings_retrieval_targets(
+                    findings_retrieval_targets,
+                    reused_findings,
+                    reused_grounded_ids,
+                )
+                if cached_gaps:
+                    reused_findings_for_target_recovery = reused_payload
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="findings_cached_pack_target_gap",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "target_count": len(cached_gaps),
+                                "finding_count": len(reused_findings),
+                                "grounded_finding_count": len(reused_grounded_ids),
+                            },
+                        )
+                    )
+                else:
+                    defer_family_materialization(
+                        reused_payload,
+                        relevant_hash=relevant_input_hash,
+                        always_materialize=False,
+                    )
+                    logger.info(
+                        log_event(
+                            ctx,
+                            role="generator",
+                            event="evidence_pack_prompt_family_reused",
+                            module=logger.name,
+                            fields={
+                                "family_id": prompt_namespace,
+                                "artifact_id": reuse.artifact_id,
+                            },
+                        )
+                    )
+                    return reused_payload
+            else:
+                defer_family_materialization(
+                    reused_payload,
+                    relevant_hash=relevant_input_hash,
+                    always_materialize=False,
+                )
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="evidence_pack_prompt_family_reused",
+                        module=logger.name,
+                        fields={
+                            "family_id": prompt_namespace,
+                            "artifact_id": reuse.artifact_id,
+                        },
+                    )
+                )
+                return reused_payload
     cache_meta = None
     cache_key = ""
     # The former pack-level cache lacks lineage, output-hash, and vector-content
@@ -1463,7 +1788,11 @@ def _generate_pack(
     ):
         nonlocal recovery_attempted, doc_map_retrieval_results
         call_ctx = context_override or ctx
-        if mode != "primary":
+        if mode not in {
+            "primary",
+            "targeted_fallback",
+            "targeted_fallback_source_pages",
+        }:
             recovery_attempted = True
         doc_map_context_json = (
             serialize_shared_retrieval_context(doc_map_retrieval_results)
@@ -1624,25 +1953,32 @@ def _generate_pack(
         ),
     )
 
-    recovery = execute_structured_output(
-        execution_request,
-        ctx,
-        call_model=call_model,
-        normalize_payload=normalize_payload,
-        validate_payload=lambda payload: validate_schema(
-            SchemaValidateRequest(
-                schema_version="1.0", payload=payload, schema_name=schema_name
-            ),
+    if reused_findings_for_target_recovery is not None:
+        result_payload = reused_findings_for_target_recovery
+        primary_attempts = 0
+    else:
+        recovery = execute_structured_output(
+            execution_request,
             ctx,
-        ),
-        is_substantive=lambda payload: _pack_confidence_score(pack_name, payload) > 0.0,
-        model_pricing=settings.model_pricing,
-        is_formal_abstention=lambda payload: bool(
-            isinstance(payload, dict)
-            and str(payload.get("not_found_reason") or "").strip()
-        ),
-    )
-    result_payload = recovery.payload
+            call_model=call_model,
+            normalize_payload=normalize_payload,
+            validate_payload=lambda payload: validate_schema(
+                SchemaValidateRequest(
+                    schema_version="1.0", payload=payload, schema_name=schema_name
+                ),
+                ctx,
+            ),
+            is_substantive=lambda payload: (
+                _pack_confidence_score(pack_name, payload) > 0.0
+            ),
+            model_pricing=settings.model_pricing,
+            is_formal_abstention=lambda payload: bool(
+                isinstance(payload, dict)
+                and str(payload.get("not_found_reason") or "").strip()
+            ),
+        )
+        result_payload = recovery.payload
+        primary_attempts = recovery.attempts
     fallback_attempts = 0
     if pack_name == "findings" and source_spans:
         findings = [
@@ -1711,14 +2047,13 @@ def _generate_pack(
                             "title": str(target.get("title") or ""),
                             "summary": "",
                             "key_points": _findings_target_key_points(target),
-                            "pages": list(target.get("pages") or []),
+                            "pages": _findings_target_pages(target),
                         }
                         for target in missing_targets
                         if str(target.get("id") or "") in fallback_target_ids
                     ],
                     ensure_ascii=False,
                 )
-                fallback_variables["source_temporal_relationships_json"] = "[]"
                 fallback_variables["findings_targeted_fallback_instruction"] = (
                     "Bounded recovery: the DocMap sections below guide retrieval "
                     "but are not evidence. Use only the independently extracted "
@@ -1802,6 +2137,19 @@ def _generate_pack(
                         for target in missing_targets
                     }
                     fallback_findings: list[dict[str, object]] = []
+                    existing_ids = {
+                        str(item.get("id") or "").strip()
+                        for item in findings
+                        if str(item.get("id") or "").strip()
+                    }
+                    seen_signatures = {
+                        (
+                            str(item.get("section_id") or "").casefold(),
+                            str(item.get("text") or "").casefold(),
+                            str(item.get("evidence") or "").casefold(),
+                        )
+                        for item in findings
+                    }
                     for raw_item in fallback.payload.get("findings", []):
                         if not isinstance(raw_item, dict):
                             continue
@@ -1827,9 +2175,29 @@ def _generate_pack(
                         item["text"] = _normalize_targeted_finding_text(
                             str(item.get("text") or "")
                         )
+                        signature = (
+                            str(item.get("section_id") or "").casefold(),
+                            str(item.get("text") or "").casefold(),
+                            str(item.get("evidence") or "").casefold(),
+                        )
+                        if signature in seen_signatures:
+                            continue
+                        item_id = str(item.get("id") or "").strip()
+                        if not item_id or item_id in existing_ids:
+                            base_id = item_id or str(
+                                item.get("section_id") or "finding"
+                            )
+                            suffix = 1
+                            item_id = f"{base_id}-targeted-{suffix}"
+                            while item_id in existing_ids:
+                                suffix += 1
+                                item_id = f"{base_id}-targeted-{suffix}"
+                            item["id"] = item_id
+                        existing_ids.add(item_id)
+                        seen_signatures.add(signature)
                         fallback_findings.append(item)
+                    supported_fallback_findings: list[dict[str, object]] = []
                     if fallback_findings:
-                        merged = dict(result_payload)
                         fallback_fidelity = validate_evidence_fidelity(
                             {"findings": {"findings": fallback_findings}},
                             source_spans=source_spans,
@@ -1839,47 +2207,61 @@ def _generate_pack(
                                 fallback_findings, fallback_fidelity
                             )
                         )
+                        supported_fallback_findings = [
+                            item
+                            for item in fallback_findings
+                            if str(item.get("id") or "").strip()
+                            in directly_supported_fallback_ids
+                        ]
                         merged_findings = [
                             item
                             for item in findings
                             if not any(
                                 str(fallback_item.get("id") or "").strip()
                                 in directly_supported_fallback_ids
-                                and _findings_is_subset_of_fallback(item, fallback_item)
-                                for fallback_item in fallback_findings
+                                and _findings_is_subset_of_fallback(
+                                    item, fallback_item
+                                )
+                                for fallback_item in supported_fallback_findings
                             )
                         ]
-                        existing_ids = {
+                        merged_ids = {
                             str(item.get("id") or "").strip()
                             for item in merged_findings
+                            if str(item.get("id") or "").strip()
                         }
-                        signatures = {
+                        merged_signatures = {
                             (
                                 str(item.get("section_id") or "").casefold(),
                                 str(item.get("text") or "").casefold(),
                                 str(item.get("evidence") or "").casefold(),
-                                tuple(item.get("pages") or []),
                             )
                             for item in merged_findings
                         }
-                        for index, item in enumerate(fallback_findings, start=1):
+                        for item in supported_fallback_findings:
                             signature = (
                                 str(item.get("section_id") or "").casefold(),
                                 str(item.get("text") or "").casefold(),
                                 str(item.get("evidence") or "").casefold(),
-                                tuple(item.get("pages") or []),
                             )
-                            if signature in signatures:
+                            if signature in merged_signatures:
                                 continue
                             item = dict(item)
                             item_id = str(item.get("id") or "").strip()
-                            if item_id in existing_ids:
-                                item_id = f"{item_id}-targeted-{index}"
+                            if item_id in merged_ids:
+                                suffix = 1
+                                base_id = item_id
+                                item_id = f"{base_id}-targeted-{suffix}"
+                                while item_id in existing_ids or item_id in merged_ids:
+                                    suffix += 1
+                                    item_id = f"{base_id}-targeted-{suffix}"
                                 item["id"] = item_id
                             existing_ids.add(item_id)
-                            signatures.add(signature)
+                            merged_ids.add(item_id)
+                            merged_signatures.add(signature)
                             merged_findings.append(item)
                         if merged_findings != findings:
+                            merged = dict(result_payload)
                             merged["findings"] = merged_findings
                             merged["not_found_reason"] = ""
                             result_payload = merged
@@ -1894,6 +2276,9 @@ def _generate_pack(
                                 "attempts": fallback.attempts,
                                 "target_count": len(missing_targets),
                                 "returned_findings": len(fallback_findings),
+                                "supported_findings": len(
+                                    supported_fallback_findings
+                                ),
                                 "merged_findings": max(
                                     0,
                                     len(result_payload.get("findings", []))
@@ -1903,7 +2288,7 @@ def _generate_pack(
                         )
                     )
     not_found_reason = str(result_payload.get("not_found_reason") or "")
-    attempts_used = recovery.attempts + fallback_attempts
+    attempts_used = primary_attempts + fallback_attempts
     max_attempts = 3 + (1 if fallback_attempts else 0)
     result_payload = _attach_pack_family_status(pack_name, result_payload)
     if cache_meta and isinstance(result_payload, dict):

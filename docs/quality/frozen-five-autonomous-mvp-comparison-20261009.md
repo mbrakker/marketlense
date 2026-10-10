@@ -372,6 +372,41 @@ In the earlier isolated five-report cohort, 37 immutable Signal candidate manife
 
 In the earlier run, Briefing opportunity handoffs succeeded for the rendered reports, but its only Briefing-generation job ended in `cross_report_analysis_disabled`, matching the baseline hold. No valid multi-report Briefing or Signal generation ran in that run because cross-report analysis was disabled in the base config. Integration and unit tests verify immutable Signal snapshots, mutation rejection, held single-source candidates, and idempotent readback; they do not substitute for the enabled live multi-report run recorded above. Neither earlier batch had a transient queue failure or retry, so bounded retry/recovery behavior was not exercised live there.
 
+## 2026-10-10 Step 1: DocMap-guided findings retrieval correction
+
+This retrieval-only follow-up used the unchanged Activate, KPMG, Adjust, Capgemini, and Reuters PDFs through `generate_evidence_packs` and its existing evidence-fidelity validator. It did not run the autonomous publication canary or change editorial selection, summary generation, readiness, or publication gates. The final-code five-report artifacts are under ignored `tmp/substantive-findings-retrieval-eval/correction-final-coverage/`; Reuters was rerun once with isolated state under `correction-final-reuters-repeat/` after its first targeted fallback returned invalid structured output.
+
+The primary cause was a page-coordinate mismatch: DocMap `pages` are printed page labels, while extracted source spans use physical PDF indexes. Activate's printed page 4 therefore pointed at the contents page at physical page 4 instead of the chart at physical page 5. Broad suffix matching could also mistake contents entries for labels. Retrieval now resolves labels with the existing header/footer matcher, recognizes KPMG's copyright footer, infers a missing label only from a consistent offset across at least two resolved labels, and ranks bounded physical-page excerpts by target wording and numbers. It aggregates all spans on a page and retains source-span provenance.
+
+The bounded fallback also checks all eight selected DocMap targets, preserves complete numeric relationships and their subjects/periods, and searches no more than two missing targets in one pass. Introductory statistics remain eligible when substantive, while reader-profile, author, methodology, survey-scope, and similar metadata are excluded as retrieval targets. DocMap only guides retrieval: independently extracted PDF evidence must pass the existing fidelity checks before it is retained. The fallback response that failed structured validation was rejected; no DocMap-only or unsupported claim was promoted.
+
+### Exact-PDF retrieval results
+
+| Report | Validated result | Grounding / qualification |
+| --- | --- | --- |
+| Activate | Global Internet and media revenues: $1.7T in 2017E to $2.0T in 2021E, +$302B, 4.1% CAGR versus about 3% global GDP CAGR. | Physical p. 5; supported. Segment CAGRs also passed. |
+| KPMG | 2026 planned M&A means: 5.2 deals for corporates versus 7.3 for private equity. | Combined finding on physical p. 15; supported. A portfolio-simplification candidate was proposed but did not enter the validated pack, so it is not claimed as recovered. |
+| Adjust | Global 2025 casino installs +22% with sessions −5%; slots installs +46% with sessions −5%. | Each subject, paired measures, and period are preserved on physical p. 19; both supported. The same 46-finding pack retains substantive body results alongside the introductory AI-adoption statistics; no methodology evidence was promoted. |
+| Capgemini control | The lower-price switching result remains. The pack also retains 63%/56% personalization/data-sharing and 74%/54%, 66%/40% human-interaction loyalty comparisons. | 22 final findings, all supported; physical pp. 11, 41, and 45. No reader-profile finding was retained. Some fallback findings duplicate the primary wording. |
+| Reuters control | A fresh repeat supports publishers' expected search-traffic change of −43% over three years, alongside other report-body findings. | Physical p. 12; the source labels this as the average expected score, not observed traffic. A separate first final-code run returned invalid fallback JSON and did not retain this target. The successful repeat did not retain the historical Facebook/X referral decline finding. |
+
+The Reuters run-to-run result is a material variability caveat: the source supports the target, one bounded fallback failed structured validation, and a fresh isolated run recovered it with a supported claim. A prior retained retrieval run also recovered the historical Facebook/X referral decline from physical p. 20. The latest repeat did not, so this evidence does not establish identical Reuters pack membership across runs.
+
+The prior isolated comparison artifacts were `current16` for Activate, KPMG, Adjust, and Capgemini, and `current17` for Reuters. Counts below are evidence-pack generation only. File Search calls count provider tool calls. Wall time includes measured provider latency and local validation; it is not a causal code-performance benchmark.
+
+| Report | Queries, prior → final | File Search calls, prior → final | Input/output tokens, prior → final | Cost, prior → final | Wall seconds, prior → final |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Activate | 20 → 20 | 4 → 4 | 39,399/7,223 → 44,556/12,721 | $0.017552 → $0.020815 | 66.399 → 133.073 |
+| KPMG | 15 → 25 | 3 → 5 | 23,165/3,303 → 26,373/2,987 | $0.011469 → $0.016631 | 37.210 → 47.265 |
+| Adjust | 15 → 10 | 3 → 2 | 35,159/6,788 → 27,192/10,658 | $0.014411 → $0.013047 | 55.726 → 103.165 |
+| Capgemini | 15 → 15 | 3 → 3 | 40,322/4,885 → 45,600/9,719 | $0.013975 → $0.016919 | 38.974 → 94.803 |
+| Reuters | 10 → 10 | 2 → 2 | 35,900/10,932 → 43,424/15,206 | $0.014056 → $0.016945 | 110.239 → 144.747 |
+| **Total** | **75 → 80** | **15 → 16** | **173,945/33,131 → 187,145/51,291** | **$0.071463 → $0.084357** | **308.548 → 523.053** |
+
+The selected final runs cost 18.0% more than `current16/current17`, used 6.7% more File Search calls, 7.6% more input tokens and 54.8% more output tokens, and took 69.5% more aggregate wall time. They recovered the requested Activate, KPMG buyer-comparison, and Adjust findings; the cost and latency increase is measured, while the benefit is the retention of those source-supported body findings. Provider elapsed time accounts for most of the measured wall time; this cohort does not establish local-code slowdown. Reuters required a separate repeat, which cost $0.016945 and took 144.747 seconds; that repeat is excluded from the per-report final table above.
+
+Focused verification after the final code changes: `python -m pytest -q tests/test_evidence_pack_generator.py tests/test_claim_validation_source_pages.py` passed (76 tests); Ruff passed for the changed source and test modules; `python scripts/ci/run_type_check.py` passed with zero tracked baseline errors; `git diff --check` passed. `tests/test_long_test_file_ownership.py::test_first_party_test_modules_stay_below_long_file_threshold` still fails only on the unchanged `tests/test_soft_copy_finalization.py` at 1,023 lines (HEAD is also 1,023 lines); no limit or allowlist was changed. The full five-report autonomous publication canary remains unrun by design.
+
 ## Remaining blockers and acceptance status
 
 | Priority | Remaining issue | Effect |
