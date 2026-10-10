@@ -137,10 +137,25 @@ def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> N
         prompt_set.user.text
     )
     assert "repair_context_json.allowed_paths" in prompt_set.user.text
+    assert "repair_context_json.allowed_evidence_ids" in prompt_set.user.text
     assert "do not patch map siblings, public" in prompt_set.user.text
     assert "not established by the linked evidence" in prompt_set.user.text
     assert "neighboring" in prompt_set.user.text
     assert "never return null" in prompt_set.user.text
+
+
+def test_insight_candidate_repair_prompt_uses_explicit_evidence_whitelist() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "repair_context_json.allowed_evidence_ids" in prompt_set.user.text
+    assert "Cite only supporting IDs from" in prompt_set.user.text
 
 
 def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (

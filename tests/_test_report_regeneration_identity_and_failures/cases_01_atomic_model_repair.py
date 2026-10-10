@@ -142,6 +142,7 @@ def test_model_repair_applies_one_validated_atomic_patch_in_one_call(tmp_path) -
     prompt_variables = _parse_fixture_variables(client.calls[0].user_prompt)
     repair_context = json.loads(prompt_variables["repair_context_json"])
     assert repair_context["allowed_paths"] == ["insights_final[item=insight-1].text"]
+    assert repair_context["allowed_evidence_ids"] == ["f1"]
     assert "required_protected_fields" not in repair_context
     assert repaired[0]["text"] == "Repaired final insight"
     assert repaired[0]["metric"] == before[0]["metric"]
@@ -490,6 +491,9 @@ def test_model_repair_rejects_quarantined_evidence_before_candidate_write(
 
     assert error.value.code == "regeneration_repair_decision_invalid"
     assert len(client.calls) == 1
+    prompt_variables = _parse_fixture_variables(client.calls[0].user_prompt)
+    repair_context = json.loads(prompt_variables["repair_context_json"])
+    assert "f1" not in repair_context["allowed_evidence_ids"]
     assert not list((tmp_path / "out").rglob("artifacts_regen_candidate_1.json"))
 
 
