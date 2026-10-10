@@ -16,7 +16,8 @@ text: |
 
   Target final insight count: {{ final_insight_target_count }}.
 
-  Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve and propagate their evidence_id fields as single IDs. Return a JSON object with `insights_final` as an array matching the candidate shape, including scores, coverage_role, so_what, now_what, and report_type_lens.
+  Task: Choose {{ final_insight_target_count }} strongest, non-overlapping insights. Preserve one `evidence_id` per insight. Return JSON with an `insights_final` array of candidate-shaped entries containing scores, coverage_role, so_what, now_what, and report_type_lens.
+  Reuse selected candidate IDs; keep IDs unique.
   Keep one complete, source-backed insight sentence at 18 words or fewer for compact cards; preserve its material scope and never clip it.
   For numeric insights, keep the finding/quote ID and page. Its direct evidence
   must state value, subject, and period/status; do not expand scope. DocMap IDs

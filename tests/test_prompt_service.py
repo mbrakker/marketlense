@@ -446,6 +446,12 @@ def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> 
         for rule in shared_rules:
             assert rule in normalized_text
 
+    final_insights_text = " ".join(prompts[1].user.text.split())
+    assert (
+        "Reuse selected candidate IDs; keep IDs unique."
+        in final_insights_text
+    )
+
     summary_text = " ".join(prompts[0].user.text.split())
     assert "Target 20-30 words for `tldr` (hard limit: 45)" in summary_text
     assert "exactly one terminal punctuation mark" in summary_text
