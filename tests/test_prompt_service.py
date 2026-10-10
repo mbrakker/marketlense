@@ -101,6 +101,7 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     assert (
         "do not join it with separate evidence or preferences." in prompt_set.user.text
     )
+    assert "Keep each metric's source label before its value" in prompt_set.user.text
     assert any(
         path.replace("\\", "/").endswith(
             "report_vs/artifacts/_partials/editorial_constitution.yaml"

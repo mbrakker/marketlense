@@ -22,7 +22,7 @@ text: |
     observation to implication and a conditional MarketLense-authored action or
     watchpoint in direct prose. Do not force an action or watchpoint; do not emit
     labels such as "Observation:", "Implication:", or "Executive action:"
-  - If metrics conflict or are too weakly contextualized, state the supported tension instead of smoothing it over
+  - Keep each metric's source label before its value. If metrics conflict or lack context, state the supported tension.
   - No emojis, no hashtags
 
   Content constraints (strict):
