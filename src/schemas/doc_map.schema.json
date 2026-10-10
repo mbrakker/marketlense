@@ -71,7 +71,8 @@
           },
           "pages": {
             "type": "array",
-            "items": { "type": "integer" }
+            "description": "One-based printed page labels in the source document, not physical PDF page indexes.",
+            "items": { "type": "integer", "minimum": 1 }
           },
           "references": {
             "type": "array",

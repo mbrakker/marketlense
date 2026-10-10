@@ -36,6 +36,14 @@ receives a compact JSON projection of its major sections (`id`, `title`,
 report themes without adding per-section model calls. The projection is planning
 context only: each finding remains grounded in file-search evidence.
 
+Page fields have distinct meanings: `doc_map.sections[].pages` contains
+one-based printed page labels from the report, while `findings.findings[].pages`
+and `quote_candidates.quote_candidates[].page` contain one-based physical PDF
+page indexes. Never copy a DocMap page label into a findings or quote page
+field. Findings `evidence` must be a verbatim source-body excerpt; evidence
+fidelity resolves a sufficiently specific exact excerpt to its physical page
+before validating the claim.
+
 `doc_map.sections[]` requires:
 
 - `id`

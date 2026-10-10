@@ -276,6 +276,38 @@ def test_evidence_fidelity_recovers_page_provenance_from_exact_source_text() -> 
     assert package.results[0].candidate.evidence_references[0].page == 4
 
 
+def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page() -> None:
+    excerpt = (
+        "Among survey respondents, confidence in journalism prospects was "
+        "38% in 2026."
+    )
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": excerpt,
+                        "evidence": excerpt,
+                        "pages": [3],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:3",
+                "page": 3,
+                "text": "Contents\n1. Pressures on Journalism Mount\n2. Answer Engines",
+            },
+            {"id": "source:page:5", "page": 5, "text": excerpt},
+        ],
+    )
+
+    assert package.results[0].candidate.evidence_references[0].page == 5
+    assert package.results[0].status == "supported"
+
+
 def test_evidence_fidelity_does_not_treat_explanatory_evidence_as_the_claim() -> None:
     package = validate_evidence_fidelity(
         {

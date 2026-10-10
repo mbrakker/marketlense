@@ -8,6 +8,7 @@ text: |
     "not_found_reason": ""
   }
 
-  Each quote candidate should include id, text, source, and page.
+  Each quote candidate should include id, text, source, and the physical PDF
+  page index when available; do not use a printed page label.
   If none are grounded in evidence:
   {"quote_candidates": [], "not_found_reason": "quote_candidates_not_found"}

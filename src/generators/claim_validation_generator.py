@@ -1963,6 +1963,13 @@ def _source_references(
         for value in pages
         if isinstance(value, int) and not isinstance(value, bool) and value > 0
     ]
+    exact_evidence_pages = _exact_evidence_pages(
+        _item_direct_evidence_text(raw), source_evidence
+    )
+    if exact_evidence_pages:
+        page_values = [page for page in page_values if page in exact_evidence_pages]
+        if not page_values:
+            page_values = exact_evidence_pages[:1]
     has_page_provenance = any(
         source_page is not None
         for _source_id, (_pack, _text, source_page) in source_evidence.items()
@@ -1987,6 +1994,43 @@ def _source_references(
         )
         for source_id in sorted(matching)
     ]
+
+
+def _item_direct_evidence_text(raw: dict) -> str:
+    """Return the item’s direct excerpt, falling back to its quote text."""
+
+    for key in ("evidence", "quote", "snippet", "excerpt", "text"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _exact_evidence_pages(
+    evidence_text: str,
+    source_evidence: dict[str, tuple[str, str, int | None]],
+) -> list[int]:
+    """Resolve a specific direct excerpt to its physical PDF page.
+
+    Pack page values can be copied from DocMap's printed labels. Exact source
+    text is authoritative when it identifies a physical page, while short
+    fragments remain too ambiguous to override an explicit page value.
+    """
+
+    normalized = normalize_for_lookup(evidence_text)
+    if not normalized or (
+        len(_recovery_tokens(evidence_text)) < 5
+        and len(_recovery_quantity_values(evidence_text)) < 2
+    ):
+        return []
+    return sorted(
+        {
+            page
+            for _source_id, (_pack, source_text, page) in source_evidence.items()
+            if page is not None
+            and normalized in normalize_for_lookup(source_text)
+        }
+    )
 
 
 def _matched_source_pages(

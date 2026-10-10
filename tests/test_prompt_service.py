@@ -209,8 +209,12 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
         "include the displayed title and period/timeframe from the same page in `evidence`"
         in (normalized_findings_system)
     )
-    prompt_text = findings_prompt.user.text.casefold()
+    assert "verbatim source-body excerpt" in normalized_findings_system
+    assert "one-based physical PDF page indexes" in normalized_findings_system
+    prompt_text = " ".join(findings_prompt.user.text.casefold().split())
 
+    assert "docmap pages are printed labels" in prompt_text
+    assert "physical pdf page index" in prompt_text
     assert "materially central" in prompt_text
     assert "publisher forecast" in prompt_text
     assert "promotional" in prompt_text
@@ -388,7 +392,10 @@ def test_findings_prompt_keeps_each_proposition_bound_to_direct_evidence() -> No
         "one finding states one independently verifiable proposition; split distinct measures"
         in prompt_text
     )
-    assert "must directly establish all material details in `text`" in prompt_text
+    assert (
+        "must be a verbatim source-body excerpt that directly establishes all material details in `text`"
+        in prompt_text
+    )
 
 
 def test_grounding_prompt_uses_chart_layout_not_extraction_order_for_bindings() -> None:

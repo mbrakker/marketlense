@@ -1,34 +1,29 @@
 text: |
-  Search file_search by section/page for key-point metrics, subjects, values,
-  periods, and directional outcomes. DocMap is a clue, not evidence; cite body
-  excerpts.
+  Search file_search for body evidence using DocMap sections/pages as retrieval
+  guidance. Copy a verbatim excerpt into evidence and use its physical PDF page
+  index in pages; DocMap pages are printed labels, not PDF offsets.
 
   {{ doc_map_sections_json }}
 
-  The following deterministic source label/value relationships are binding
-  whenever a finding uses the listed period and value. They are extracted from
-  the retained source text, so they take precedence over an ambiguous
-  file_search rendering of the same chart. Do not omit, reorder, or reassociate
-  a listed pair; if it cannot be supported, omit the metric from the finding.
+  For listed periods, deterministic retained-source label/value pairs bind
+  findings. They override ambiguous file_search chart rendering; preserve
+  each pair and order, or omit it if unsupported.
 
   {{ source_temporal_relationships_json }}
 
-  Bind chart/table values to measure, subject/cohort, geography, and period. A
-  bare percentage/label proves no share; state a share only when the source
-  names its base. Nearby values cannot support another row or cohort. Omit
-  uncertain tuples.
+  Bind each chart/table value to measure, subject/cohort, geography, and period.
+  Percentages do not establish a share; require its stated base. Nearby values
+  cannot support another row/cohort. Omit uncertain tuples.
 
-  Cover materially distinct or counterbalancing major sections when
-  file_search supports them; close subtopics from one side do not replace
-  another supported side. Never invent a counterpoint or pad sparse reports.
+  Cover distinct or counterbalancing major sections when supported; related
+  subtopics do not replace another supported side. Do not invent counterpoints
+  or pad sparse reports.
 
-  Retain a source-backed publisher forecast when it is materially central to
-  the report's stated argument and supported by substantive synthesis such as
-  executive-summary or opening-takeaway repetition. Keep it explicitly framed
-  as a forecast, name the publisher when the source identifies it, and retain
-  any source caveat. A central forecast may remain alongside a current-state
-  metric on the same theme. Page position, repetition alone, and promotional
-  copy are not sufficient.
+  Retain a source-backed, materially central publisher forecast only with
+  substantive synthesis (e.g., executive summary/opening takeaway). Mark it as
+  forecast; name the publisher if identified and keep caveats. It may accompany
+  current-state data. Page position, repetition, or promotional copy alone do
+  not establish centrality.
 
   For each finding include:
   - id

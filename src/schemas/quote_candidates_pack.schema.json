@@ -16,7 +16,11 @@
           "id": { "type": "string" },
           "text": { "type": "string" },
           "source": { "type": "string" },
-          "page": { "type": ["integer", "null"] }
+          "page": {
+            "description": "One-based physical PDF page index containing the quote, or null when unknown.",
+            "type": ["integer", "null"],
+            "minimum": 1
+          }
         }
       }
     },
