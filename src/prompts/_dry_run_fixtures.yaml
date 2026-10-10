@@ -522,8 +522,10 @@ fixtures:
     benchmark: *benchmark_report_extract
     system_variables: {}
     user_variables:
+      findings_targeted_fallback_instruction: ""
       doc_map_sections_json: >-
         [{"id":"overview","title":"Executive overview","summary":"Summary of the report central market theme.","key_points":["Demand is shifting toward measurable outcomes."],"pages":[1]}]
+      findings_target_source_pages_json: "[]"
       source_temporal_relationships_json: >-
         [{"period":"2023","value":"0:48"},{"period":"2024e","value":"0:52"},{"period":"2028e","value":"0:57"}]
   - namespace: "report_vs/evidence_packs/limitations"

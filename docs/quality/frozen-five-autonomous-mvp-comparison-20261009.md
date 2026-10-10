@@ -380,6 +380,8 @@ The primary cause was a page-coordinate mismatch: DocMap `pages` are printed pag
 
 The bounded fallback also checks all eight selected DocMap targets, preserves complete numeric relationships and their subjects/periods, and searches no more than two missing targets in one pass. Introductory statistics remain eligible when substantive, while reader-profile, author, methodology, survey-scope, and similar metadata are excluded as retrieval targets. DocMap only guides retrieval: independently extracted PDF evidence must pass the existing fidelity checks before it is retained. The fallback response that failed structured validation was rejected; no DocMap-only or unsupported claim was promoted.
 
+The findings prompt's dry-run fixture supplies empty defaults for its two optional fallback variables (instruction and source-page excerpts), so repository-wide prompt rendering exercises the updated template contract.
+
 ### Exact-PDF retrieval results
 
 | Report | Validated result | Grounding / qualification |
@@ -405,7 +407,7 @@ The prior isolated comparison artifacts were `current16` for Activate, KPMG, Adj
 
 The selected final runs cost 18.0% more than `current16/current17`, used 6.7% more File Search calls, 7.6% more input tokens and 54.8% more output tokens, and took 69.5% more aggregate wall time. They recovered the requested Activate, KPMG buyer-comparison, and Adjust findings; the cost and latency increase is measured, while the benefit is the retention of those source-supported body findings. Provider elapsed time accounts for most of the measured wall time; this cohort does not establish local-code slowdown. Reuters required a separate repeat, which cost $0.016945 and took 144.747 seconds; that repeat is excluded from the per-report final table above.
 
-Focused verification after the final code changes: `python -m pytest -q tests/test_evidence_pack_generator.py tests/test_claim_validation_source_pages.py` passed (76 tests); Ruff passed for the changed source and test modules; `python scripts/ci/run_type_check.py` passed with zero tracked baseline errors; `git diff --check` passed. `tests/test_long_test_file_ownership.py::test_first_party_test_modules_stay_below_long_file_threshold` still fails only on the unchanged `tests/test_soft_copy_finalization.py` at 1,023 lines (HEAD is also 1,023 lines); no limit or allowlist was changed. The full five-report autonomous publication canary remains unrun by design.
+Focused verification after the final changes: `python -m pytest -q tests/test_prompt_dry_run_validation.py tests/test_evidence_pack_generator.py tests/test_claim_validation_source_pages.py` passed (116 tests); Ruff passed for the changed source and test modules; `python scripts/ci/run_type_check.py` passed with zero tracked baseline errors; `git diff --check` passed. `tests/test_long_test_file_ownership.py::test_first_party_test_modules_stay_below_long_file_threshold` still fails only on the unchanged `tests/test_soft_copy_finalization.py` at 1,023 lines (HEAD is also 1,023 lines); no limit or allowlist was changed. The full five-report autonomous publication canary remains unrun by design.
 
 ## Remaining blockers and acceptance status
 
