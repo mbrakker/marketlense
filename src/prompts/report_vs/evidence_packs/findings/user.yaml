@@ -1,7 +1,10 @@
 text: |
-  Search file_search for body evidence using DocMap sections/pages as retrieval
-  guidance. Copy a verbatim excerpt into evidence and use its physical PDF page
-  index in pages; DocMap pages are printed labels, not PDF offsets.
+  Search file_search by section/title/page and each key-point metric. Search for
+  directional body outcomes, including the stated subject, value, and period.
+  If results contain only an introduction, sample, or methodology, refine the
+  query into the mapped body section. DocMap is a clue, not evidence; its
+  printed page labels guide retrieval but are not PDF offsets. Copy a verbatim
+  body excerpt into evidence and use its physical PDF page index in pages.
 
   {{ doc_map_sections_json }}
 
@@ -12,8 +15,9 @@ text: |
   {{ source_temporal_relationships_json }}
 
   Bind each chart/table value to measure, subject/cohort, geography, and period.
-  Percentages do not establish a share; require its stated base. Nearby values
-  cannot support another row/cohort. Omit uncertain tuples.
+  Keep chart values exact. Percentages do not establish a share; state a share
+  only when the source names its base. Nearby values cannot support another
+  row/cohort. Omit uncertain tuples.
 
   Cover distinct or counterbalancing major sections when supported; related
   subtopics do not replace another supported side. Do not invent counterpoints
@@ -40,6 +44,7 @@ text: |
     "not_found_reason": ""
   }
 
-  If body evidence supports a material key point, include it as a finding;
-  otherwise return empty with "findings_not_found":
+  If body evidence supports a material key point, include it as a finding.
+  Exhaust body searches before summary-only findings. Return empty only if
+  body searches find no direct support, with "findings_not_found":
   {"findings": [], "not_found_reason": "findings_not_found"}

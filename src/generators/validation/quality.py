@@ -53,7 +53,7 @@ _QUANTITATIVE_METRIC_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 _QUALITATIVE_ACTOR = re.compile(
-    r"\b(?:advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
+    r"\b(?:AI|advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
     r"corporates?|creators?|developers?|households?|investors?|marketers?|"
     r"merchants?|operators?|publishers?|retailers?|users?|apps?|games?|gaming|"
     r"casino|slots?|installs?|sessions?|referrals?|traffic|pipelines?|"
@@ -61,11 +61,20 @@ _QUALITATIVE_ACTOR = re.compile(
     re.IGNORECASE,
 )
 _QUALITATIVE_RELATION = re.compile(
-    r"\b(?:account for|adopt|choose|constrain|decline|depend|divert|drive|"
-    r"disrupt|erode|exceed|fall|fell|gain|generate|grow|grew|increase|lead to|"
-    r"lose|outpace|prefer|push|reduce|redirect|reshape|rise|rose|shift|"
-    r"substitute|switch|trade off|value|weigh|while|whereas|rather than|"
+    r"\b(?:account for|adopt|choose|constrain|decline(?:s|d|ing)?|depend|"
+    r"divert|drive|disrupt|erode|exceed|fall|fell|gain(?:s|ed|ing)?|"
+    r"generate|grow|grew|increase(?:s|d|ing)?|lead to|lose|outpace|prefer|"
+    r"push|raise(?:s|d|ing)?|reduce|redirect|reshape|rise|rose|shift|"
+    r"substitute|switch|trade off|weigh|while|whereas|rather than|"
     r"instead of|more likely|less likely)\b",
+    re.IGNORECASE,
+)
+_QUALITATIVE_VALUE_VERB = re.compile(
+    r"\b(?:advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
+    r"corporates?|creators?|developers?|households?|investors?|marketers?|"
+    r"merchants?|operators?|publishers?|retailers?|users?)\s+"
+    r"(?:(?:also|can|increasingly|may|often|should|sometimes|will)\s+)?"
+    r"values?\b",
     re.IGNORECASE,
 )
 
@@ -305,7 +314,11 @@ def _has_concrete_signal(sentence: str) -> bool:
     ):
         return True
     return bool(
-        _QUALITATIVE_ACTOR.search(sentence) and _QUALITATIVE_RELATION.search(sentence)
+        _QUALITATIVE_ACTOR.search(sentence)
+        and (
+            _QUALITATIVE_RELATION.search(sentence)
+            or _QUALITATIVE_VALUE_VERB.search(sentence)
+        )
     )
 
 

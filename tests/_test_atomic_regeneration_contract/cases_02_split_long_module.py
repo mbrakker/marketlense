@@ -246,6 +246,7 @@ def test_model_writable_path_preflight_fails_before_provider_for_non_string_leaf
         ),
         state=state,
         target=target,
+        grounding_package={},
     )
 
     with pytest.raises(AppError) as error:
@@ -284,6 +285,7 @@ def test_model_writable_path_preflight_rejects_ambiguous_and_duplicate_paths() -
         ),
         state=state,
         target=ambiguous,
+        grounding_package={},
     )
     with pytest.raises(AppError) as error:
         _render_regeneration_model(

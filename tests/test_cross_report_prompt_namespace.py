@@ -48,8 +48,12 @@ def test_cross_report_synthesis_prompt_namespace_dry_run_logs_hashes(
     assert "raw_metric_policy" in result.rendered_user_prompt
     assert "divergent" in result.rendered_user_prompt
     assert "industry expert" in result.rendered_system_prompt
-    assert "boardroom-ready editorial article" in result.rendered_user_prompt
-    assert "consulting-grade synthesis" in result.rendered_user_prompt
+    normalized_user_prompt = " ".join(result.rendered_user_prompt.split())
+    assert (
+        "concise, analytical, thesis-led consulting article for senior decision makers"
+        in normalized_user_prompt
+    )
+    assert "Use executive-facing section headings." in normalized_user_prompt
     assert "full_report_text" not in result.rendered_user_prompt
 
     events = _events(caplog)
