@@ -110,6 +110,19 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     )
 
 
+def test_cross_report_prompt_requires_two_populated_takeaways() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="cross_report_analysis/synthesis",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "exactly two non-empty `executive_takeaways`" in prompt_set.user.text
+
+
 def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> None:
     prompt_set = load_prompt_set(
         PromptLoadRequest(
@@ -454,6 +467,7 @@ def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> 
     )
 
     summary_text = " ".join(prompts[0].user.text.split())
+    assert '"claim": "<non-empty claim string>"' in summary_text
     assert "Target 20-30 words for `tldr` (hard limit: 45)" in summary_text
     assert "exactly one terminal punctuation mark" in summary_text
 

@@ -26,12 +26,10 @@ text: |
   {{ generation_policy_json }}
 
   Task:
-  - Generate a boardroom-ready editorial article as a concise cross-report
-    analysis artifact.
-  - Make it a consulting-grade synthesis: thesis-led, analytical, specific to
-    the topic's industry context, and written for senior decision makers.
-  - Include convergences, divergences, source notes, and raw metric appendix
-    discussion only where the supplied inputs support them.
+  - Produce a concise, analytical, thesis-led consulting article for senior
+    decision makers in the topic's industry.
+  - Return exactly two non-empty `executive_takeaways`.
+  - Include supported convergences, divergences, source notes, and raw metrics.
   - Use executive-facing section headings. Favor sections such as the strategic
     thesis, where sources converge, where they diverge, what the pattern implies,
     and what the evidence cannot yet prove.
