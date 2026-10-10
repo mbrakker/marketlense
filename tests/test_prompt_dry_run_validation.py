@@ -247,9 +247,7 @@ def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
     namespace: str,
 ) -> None:
     prompt_set = prompt_service.load_prompt_set(
-        PromptLoadRequest(
-            schema_version="1.0", namespace=namespace, force_reload=True
-        ),
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
         _ctx(),
     )
     prompt_text = " ".join(
@@ -337,14 +335,19 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         "state its strongest source result in `key_points`, not just its theme"
         in doc_map_text
     )
-    assert "search body sections via file_search by title/page" in findings_text
-    assert "key-point metric/subject/period/value when present" in findings_text
-    assert "for themes, search body results" in findings_text
+    assert (
+        "search file_search by section/title/page and exact key-point metric"
+        in findings_text
+    )
+    assert "exhaust body searches before summary-only findings" in findings_text
     assert "docmap/temporal pairs are clues, not evidence" in findings_text
     assert "keep chart values exact" in findings_text
-    assert "refine summary-only searches" in findings_text
     assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
+    assert (
+        "from key points and comparisons, including nonnumeric relationships"
+        in candidates_text
+    )
     assert "keep its wording and date range exact" in summary_text
     assert "preserve exact values and comparisons" in candidates_text
     assert "preserve candidates' exact values, comparisons" in final_text

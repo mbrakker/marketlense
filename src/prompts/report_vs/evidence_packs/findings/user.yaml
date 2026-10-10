@@ -1,8 +1,8 @@
 text: |
-  Search body sections via file_search by title/page and key-point
-  metric/subject/period/value when present; for themes, search body results.
-  DocMap/temporal pairs are clues, not evidence. Keep chart values exact; refine
-  summary-only searches and cite direct excerpts.
+  Search file_search by section/title/page and exact key-point metric, subject,
+  value, and period; exhaust body searches before summary-only findings.
+  DocMap/temporal pairs are clues, not evidence. Keep chart values exact; cite
+  direct excerpts.
 
   {{ doc_map_sections_json }}
 
