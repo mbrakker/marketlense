@@ -104,8 +104,8 @@ def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
             ],
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("unused")
         ),
     )
 
@@ -142,6 +142,68 @@ def test_evidence_fidelity_rejects_a_generated_finding_with_the_wrong_number() -
     assert package.results[0].status == "unsupported"
     assert any(
         check.reason == "quantity_not_entailed" for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_treats_year_over_year_endpoint_as_timeframe() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Across 2025 year over year, adoption grew 10%.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Adoption grew 10% over YoY 2024-2025, while average session "
+                    "length was 4 minutes."
+                ),
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_rejects_wrong_year_over_year_endpoint() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Across 2026 year over year, adoption grew 10%.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Adoption grew 10% over YoY 2024-2025, while average session "
+                    "length was 4 minutes."
+                ),
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert any(
+        check.reason == "protected_fact_timeframe_incompatible"
+        for check in package.results[0].checks
     )
 
 
@@ -276,10 +338,11 @@ def test_evidence_fidelity_recovers_page_provenance_from_exact_source_text() -> 
     assert package.results[0].candidate.evidence_references[0].page == 4
 
 
-def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page() -> None:
+def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page() -> (
+    None
+):
     excerpt = (
-        "Among survey respondents, confidence in journalism prospects was "
-        "38% in 2026."
+        "Among survey respondents, confidence in journalism prospects was 38% in 2026."
     )
     package = validate_evidence_fidelity(
         {
@@ -629,9 +692,7 @@ def test_evidence_fidelity_batches_identical_evidence_and_fails_closed() -> None
     assert by_id["evidence:findings:f1"].status == "supported"
     assert by_id["evidence:findings:f2"].status == "unsupported"
     assert by_id["evidence:findings:f3"].status == "unsupported"
-    assert by_id["evidence:findings:f3"].reasons == [
-        "semantic_support_not_established"
-    ]
+    assert by_id["evidence:findings:f3"].reasons == ["semantic_support_not_established"]
     assert package.semantic_validation_count == 3
     assert package.semantic_execution_identities == ["semantic-batch-1"]
 
@@ -775,8 +836,8 @@ def test_changed_numeric_claim_blocks_readiness_without_model_call() -> None:
             }
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("unused")
         ),
     )
 

@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v12"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v13"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -92,7 +92,9 @@ def test_ordered_category_value_series_rejects_swapped_values_and_categories() -
     )
 
 
-def test_region_metric_values_allow_value_before_region_without_losing_binding() -> None:
+def test_region_metric_values_allow_value_before_region_without_losing_binding() -> (
+    None
+):
     evidence = (
         "The Global Quality Benchmarks table lists Q1 2026 Brand Suitability "
         "Violation Rates of APAC 8.0%, EMEA 6.3%, LATAM 6.0%, and North America 3.7%."
@@ -148,12 +150,8 @@ def test_grouped_regions_keep_the_preceding_value_binding() -> None:
         ),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
-        valid
-    )
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
-        swapped
-    )
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
 def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:

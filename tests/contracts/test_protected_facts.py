@@ -40,6 +40,20 @@ def test_protected_fact_comparison_does_not_mark_a_missing_value_compatible() ->
     assert comparison.dimension("timeframe").status == "unknown"
 
 
+@pytest.mark.parametrize(
+    ("claim_year", "expected"), [(2025, "compatible"), (2026, "incompatible")]
+)
+def test_across_year_over_year_period_is_checked_against_source_range(
+    claim_year: int, expected: str
+) -> None:
+    comparison = compare_protected_fact_texts(
+        f"Across {claim_year} year over year, adoption grew 10%.",
+        "Adoption grew 10% over YoY 2024-2025.",
+    )
+
+    assert comparison.dimension("timeframe").status == expected
+
+
 def test_percentage_unit_is_not_mistaken_for_population_before_increase() -> None:
     claim = (
         "Increase in retail-site traffic from generative AI tools Retail-site "

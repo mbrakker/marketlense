@@ -377,7 +377,7 @@ def assemble_artifacts_payload(
             family_status=family_status,
         )
         soft_copy_claim_bindings["summary"] = []
-    pre_correction_soft_copy = {
+    pre_correction_soft_copy: Dict[str, Any] = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,

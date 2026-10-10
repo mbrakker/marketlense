@@ -541,7 +541,7 @@ def test_grounding_revalidates_only_changed_claims_and_avoids_a_batch(tmp_path) 
         "report_id": report_id,
         "source_id": _CONTEXT["source_id"],
         "source_md5": "",
-        "claim_validation_validator_version": "retained_claim_validation:v3",
+        "claim_validation_validator_version": "retained_claim_validation:v4",
         "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
         "configuration_hash": str(ctx.configuration_hash or ""),
         "policy_hash": str(ctx.policy_hash or ""),

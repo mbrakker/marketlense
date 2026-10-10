@@ -84,7 +84,7 @@ class ProtectedFactComparison:
 
 _YEAR = r"(?:19|20)\d{2}"
 _OBSERVATION_YEAR_RE = re.compile(
-    rf"\b(?:in|during|for|as of|as at|collected(?: in)?|fielded(?: in)?|"
+    rf"\b(?:in|during|for|across(?: the)?|as of|as at|collected(?: in)?|fielded(?: in)?|"
     rf"survey(?:ed)?(?: in)?|observed(?: in)?|reported(?: in)?|"
     rf"data(?: gathered| collected)?(?: in| for)?|year ended(?: in)?)\s+"
     rf"(?:the\s+)?(?P<year>{_YEAR})(?:e)?\b"
@@ -222,9 +222,7 @@ def compare_protected_fact_texts(
         payload["value"] = {
             "claim_value": claim_value,
             "evidence_value": evidence_value or None,
-            "status": _quantity_dimension_status(
-                claim_quantities, evidence_quantities
-            ),
+            "status": _quantity_dimension_status(claim_quantities, evidence_quantities),
         }
         explicit_claim_quantities = [
             item for item in claim_quantities if item.unit_family != "unknown"
@@ -250,14 +248,10 @@ def compare_protected_fact_texts(
     if claim_years:
         evidence_ranges = _observation_year_range_facts(evidence_text)
         same_status_facts = [
-            (year, status)
-            for year, status in claim_year_facts
-            if status != "unknown"
+            (year, status) for year, status in claim_year_facts if status != "unknown"
         ]
         same_status_evidence = {
-            status
-            for _year, status in evidence_year_facts
-            if status != "unknown"
+            status for _year, status in evidence_year_facts if status != "unknown"
         }
         covered = {
             (year, status)

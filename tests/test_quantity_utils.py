@@ -258,8 +258,7 @@ def test_extract_quantities_does_not_join_a_year_to_a_timed_measurement() -> Non
     """A period year must not pair with the next timed value as a range."""
 
     parsed = extract_quantities(
-        "Session length declined from 10.04 minutes in 2024 to 9.6 minutes "
-        "in 2025."
+        "Session length declined from 10.04 minutes in 2024 to 9.6 minutes in 2025."
     )
 
     assert not any(quantity.value == 1016.8 for quantity in parsed)
@@ -268,6 +267,34 @@ def test_extract_quantities_does_not_join_a_year_to_a_timed_measurement() -> Non
         for quantity in parsed
         if quantity.unit_family == "time"
     ] == [(10.04, "time"), (9.6, "time")]
+
+
+def test_extract_quantities_inherits_a_time_unit_for_a_direct_to_endpoint() -> None:
+    """A paired time measurement may state its unit only on the first value."""
+
+    for text in (
+        "Session length declined from 10.04 minutes to 9.6.",
+        "Session length declined from 10.04 minutes in 2024 to 9.6 in 2025.",
+    ):
+        parsed = extract_quantities(text)
+
+        assert [
+            (quantity.value, quantity.unit_family, quantity.unit)
+            for quantity in parsed
+            if quantity.value in {10.04, 9.6}
+        ] == [(10.04, "time", "minutes"), (9.6, "time", "minutes")]
+
+
+def test_extract_quantities_does_not_inherit_a_time_unit_outside_a_direct_pair() -> (
+    None
+):
+    """A nearby time unit does not assign units to a separate bare number."""
+
+    parsed = extract_quantities("Session length was 10.04 minutes; adoption was 9.6.")
+
+    assert not any(
+        quantity.value == 9.6 and quantity.unit_family == "time" for quantity in parsed
+    )
 
 
 def test_quantity_match_normalizes_hyphenated_user_count_noun() -> None:

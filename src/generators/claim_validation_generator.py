@@ -2027,8 +2027,7 @@ def _exact_evidence_pages(
         {
             page
             for _source_id, (_pack, source_text, page) in source_evidence.items()
-            if page is not None
-            and normalized in normalize_for_lookup(source_text)
+            if page is not None and normalized in normalize_for_lookup(source_text)
         }
     )
 
@@ -2144,6 +2143,16 @@ def _numeric_evidence_status(
     claim_quantities: Sequence[Quantity], evidence_quantities: Sequence[Quantity]
 ) -> tuple[Literal["passed", "failed", "not_applicable"], str]:
     """Separate absent quantitative evidence from a comparable contradiction."""
+    claim_quantities = [
+        quantity
+        for quantity in claim_quantities
+        if not _is_calendar_year_quantity(quantity)
+    ]
+    evidence_quantities = [
+        quantity
+        for quantity in evidence_quantities
+        if not _is_calendar_year_quantity(quantity)
+    ]
     if not claim_quantities:
         return "failed", "quantity_not_entailed"
     if all(
@@ -2171,6 +2180,17 @@ def _numeric_evidence_status(
             return "failed", "quantity_not_entailed"
 
     return "not_applicable", "quantity_not_established"
+
+
+def _is_calendar_year_quantity(quantity: Quantity) -> bool:
+    """Let protected timeframe validation handle explicit calendar years."""
+
+    return (
+        quantity.unit_family == "time"
+        and quantity.unit.casefold() in {"year", "years"}
+        and quantity.value.is_integer()
+        and 1900 <= int(quantity.value) <= 2100
+    )
 
 
 def _evidence_fidelity_candidates(

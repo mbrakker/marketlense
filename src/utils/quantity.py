@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, Tuple
 
 from src.utils.text_normalization import (
@@ -276,6 +276,7 @@ def extract_quantities(text: str) -> List[Quantity]:
         _extract_main(normalized, ignored_number_spans=compact_year_end_spans)
     )
     quantities.extend(_extract_multipliers(normalized))
+    quantities = _inherit_time_unit_to_endpoint(normalized, quantities)
     return _dedupe_quantities(quantities)
 
 
@@ -447,15 +448,11 @@ def _extract_ranges(text: str) -> List[Quantity]:
         if low is None or high is None:
             continue
         unit = _clean_unit(match.group("unit"))
-        low_is_year = bool(
-            re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip())
-        )
+        low_is_year = bool(re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip()))
         high_is_year = bool(
             re.fullmatch(r"(?:19|20)\d{2}", match.group("high").strip())
         )
-        starts_with_currency = (
-            match.start() > 0 and text[match.start() - 1] in "$€£¥"
-        )
+        starts_with_currency = match.start() > 0 and text[match.start() - 1] in "$€£¥"
         duration_unit_follows = re.match(
             r"\s*(?:minutes?|hours?|days?|weeks?|months?|years?)\b",
             text[match.end() :],
@@ -468,6 +465,16 @@ def _extract_ranges(text: str) -> List[Quantity]:
         ):
             # A calendar year followed by another year or a unit-qualified
             # value is temporal context, not a metric range endpoint.
+            continue
+        if (
+            low_is_year
+            and not starts_with_currency
+            and not unit
+            and re.search(r"\b(?:in|during|for)\s+$", text[: match.start("low")])
+            and re.search(r"\bto\b", match.group(0), re.IGNORECASE)
+        ):
+            # A period year followed by an unqualified measurement is not a
+            # numeric range (for example, "in 2024 to 9.6 minutes").
             continue
         if (
             not unit
@@ -507,6 +514,52 @@ def _extract_ranges(text: str) -> List[Quantity]:
             )
         )
     return output
+
+
+def _inherit_time_unit_to_endpoint(
+    text: str, quantities: Sequence[Quantity]
+) -> List[Quantity]:
+    """Carry a time unit across a direct ``from X unit to Y`` measurement."""
+
+    time_units = r"minutes?|hours?|days?|weeks?|months?|years?"
+    endpoint_re = re.compile(
+        rf"\bfrom\s+(?P<first>{_NUMBER_RE})\s+(?P<unit>{time_units})\b"
+        rf"(?:\s+in\s+(?:19|20)\d{{2}})?\s+to\s+(?P<second>{_NUMBER_RE})\b"
+        rf"(?!\s*{time_units}\b)",
+        re.IGNORECASE,
+    )
+    updated = list(quantities)
+    for match in endpoint_re.finditer(text):
+        first_start, first_end = match.span("first")
+        second_start, second_end = match.span("second")
+        first = next(
+            (
+                quantity
+                for quantity in quantities
+                if quantity.start <= first_start
+                and first_end <= quantity.end
+                and quantity.unit_family == "time"
+            ),
+            None,
+        )
+        if first is None:
+            continue
+        for index, quantity in enumerate(updated):
+            if not (
+                quantity.start <= second_start
+                and second_end <= quantity.end
+                and quantity.unit_family == "unknown"
+            ):
+                continue
+            updated[index] = replace(
+                quantity,
+                unit_family=first.unit_family,
+                unit=first.unit,
+                magnitude=first.magnitude,
+                confidence=min(first.confidence, 0.9),
+            )
+            break
+    return updated
 
 
 def _extract_ratios(text: str) -> List[Quantity]:
@@ -614,9 +667,7 @@ def _extract_main(
     ignored_number_spans: Sequence[tuple[int, int]] = (),
 ) -> List[Quantity]:
     output: List[Quantity] = []
-    sample_size_spans = tuple(
-        match.span("n") for match in _N_EQUALS_RE.finditer(text)
-    )
+    sample_size_spans = tuple(match.span("n") for match in _N_EQUALS_RE.finditer(text))
     for match in _MAIN_RE.finditer(text):
         if _is_duration_component(text, match.start("number"), match.end("number")):
             continue
