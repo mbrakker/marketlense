@@ -407,7 +407,50 @@ The prior isolated comparison artifacts were `current16` for Activate, KPMG, Adj
 
 The selected final runs cost 18.0% more than `current16/current17`, used 6.7% more File Search calls, 7.6% more input tokens and 54.8% more output tokens, and took 69.5% more aggregate wall time. They recovered the requested Activate, KPMG buyer-comparison, and Adjust findings; the cost and latency increase is measured, while the benefit is the retention of those source-supported body findings. Provider elapsed time accounts for most of the measured wall time; this cohort does not establish local-code slowdown. Reuters required a separate repeat, which cost $0.016945 and took 144.747 seconds; that repeat is excluded from the per-report final table above.
 
-Focused verification after the final changes: `python -m pytest -q tests/test_prompt_dry_run_validation.py tests/test_evidence_pack_generator.py tests/test_claim_validation_source_pages.py` passed (116 tests); Ruff passed for the changed source and test modules; `python scripts/ci/run_type_check.py` passed with zero tracked baseline errors; `git diff --check` passed. `tests/test_long_test_file_ownership.py::test_first_party_test_modules_stay_below_long_file_threshold` still fails only on the unchanged `tests/test_soft_copy_finalization.py` at 1,023 lines (HEAD is also 1,023 lines); no limit or allowlist was changed. The full five-report autonomous publication canary remains unrun by design.
+Focused verification recorded for this earlier retrieval run: `python -m pytest -q tests/test_prompt_dry_run_validation.py tests/test_evidence_pack_generator.py tests/test_claim_validation_source_pages.py` passed (116 tests); Ruff passed for the changed source and test modules; `python scripts/ci/run_type_check.py` passed with zero tracked baseline errors; `git diff --check` passed. At that point the file-ownership test still failed on `tests/test_soft_copy_finalization.py` at 1,023 lines; the closure below resolves that failure without changing the limit or allowlist. The full five-report autonomous publication canary remains unrun by design.
+
+## 2026-10-10 Closure: CI, Reuters recovery, and retrieval overhead
+
+This closure pass resolves the CI failure and makes fallback deduplication operate only on independently validated findings. It does not change editorial selection, summary generation, readiness, publication gates, or the autonomous publication canary.
+
+### CI failure and Reuters structured-output failure
+
+GitHub Actions run [38080281874](https://github.com/mbrakker/marketlense/actions/runs/38080281874) failed only in the default pytest suite: 7,204 passed and `test_first_party_test_modules_stay_below_long_file_threshold` failed because `tests/test_soft_copy_finalization.py` had 1,023 lines against the existing 1,000-line limit. All earlier workflow gates passed. The last three existing tests (18 parameterized cases) were moved to `tests/test_soft_copy_finalization_followups.py`; the original module is now 829 lines and the new module is 205 lines. The limit and allowlist are unchanged.
+
+The failed Reuters fallback response was not retained by the run harness, so its malformed text cannot be inspected or quoted. The captured metadata shows an 8,192-token output, `evidence_pack_invalid_json`, and `deterministic_repair_invalid`. The fallback has `allow_model_recovery=False` to preserve the one-targeted-call ceiling, so deterministic repair rejected it without another model call or promotion of the DocMap summary. The token-ceiling correlation makes output truncation the leading explanation, but the missing raw response prevents proving the exact failure point. A regression now feeds the recovery path a partial JSON response at that 8,192-token ceiling and verifies that it is rejected, the original grounded findings remain, and only one targeted call is made. The closure Reuters run returned valid structured output at 3,431 output tokens; its validated pack included the −43% publisher search-traffic outlook and the Chartbeat referral relationships.
+
+### Retrieval and duplicate handling
+
+The fallback remains bounded to one call per findings pack and at most two missing high-priority DocMap sections. It reuses extracted physical-page evidence and existing evidence-fidelity validation; the fallback adds no File Search call. Fallback findings are discarded when already-grounded findings in the same section cover their quantitative content and material wording. This also handles one validated comparison represented as separate supported claims, while retaining a comparison if any value is missing. Regression cases cover both full and incomplete numeric coverage. The final wording-normalization adjustment was made after the captured provider run and is verified against the retained Capgemini Figure 9 result; it is post-validation filtering only and makes no additional provider call.
+
+All five unchanged PDFs were run through `generate_evidence_packs` and the existing evidence-fidelity validator with the same GPT-6-Luna configuration and isolated per-report state. Their MD5s were Activate `cbb6e7df67412186b8bc094a424ac890`, KPMG `2acb4a56e14add5d7717f34c378f9091`, Adjust `b638414df0b1fccea1cd8a93eaf8f5aa`, Capgemini `81af3890cd84ece81ef16e1aabda8027`, and Reuters `4b763ae2286ca69fe8acb63b17508dfb`. Every retained finding in the captured packs passed existing factual/semantic validation. The targeted relationships were:
+
+| Report | Validated body result | Evidence reference |
+| --- | --- | --- |
+| Activate | $1.7T in 2017E to $2.0T in 2021E, +$302B, 4.1% CAGR versus approximately 3% global GDP CAGR. | Physical p. 5 |
+| KPMG | 2026 planned mean of 5.2 M&A deals for corporates versus 7.3 for private equity; the pack also retained buyer-confidence differences. | Physical p. 15 |
+| Adjust | Global 2024–2025 subvertical comparison retained casino installs +22% / sessions −5% and slots installs +46% / sessions −5%, with other genre relationships in the same finding. | Physical p. 19 |
+| Capgemini | The pack retained the 54% fewer-impulse-purchases result versus 71% last year, lower-price switching, and human-interaction loyalty comparisons. The duplicated Figure 9 summary is removed when the three independently supported promotion findings already cover its values. | Physical pp. 11, 21, 24, and 45 |
+| Reuters | Publishers expect search-engine traffic to almost halve (−43%) over three years; supported Chartbeat referral changes retained their source period, geography, and channel relationships. | Physical pp. 12–13 |
+
+The introductory AI-adoption findings in Adjust remained supported but did not displace the report-body gaming and finance results. No methodology or survey-scope metadata was promoted in KPMG or Reuters. Capgemini and Reuters retained substantive body findings. The final code’s duplicate regression checks preserve the combined Adjust relationship and drop already-covered restatements; the provider-run artifact itself predates the last wording-normalization adjustment noted above.
+
+### Measured retrieval performance
+
+Counts are findings-pack generation only. Queries are distinct File Search queries captured by the harness; File Search calls are provider tool calls. Tokens include the model calls used by retrieval and validation. Wall time includes provider latency and local work. One closure run is not a causal benchmark; provider query and response behavior varied between retained runs.
+
+| Report | Documented benchmark → closure run: queries / File Search calls | Input/output tokens | Cost USD | Wall seconds |
+| --- | ---: | ---: | ---: | ---: |
+| Activate | 20 / 4 → 15 / 3 | 44,556/12,721 → 30,322/8,359 | 0.020815 → 0.014712 | 133.073 → 120.498 |
+| KPMG | 25 / 5 → 30 / 7 | 26,373/2,987 → 35,819/3,785 | 0.016631 → 0.022975 | 47.265 → 69.156 |
+| Adjust | 10 / 2 → 15 / 3 | 27,192/10,658 → 37,456/8,286 | 0.013047 → 0.015388 | 103.165 → 102.042 |
+| Capgemini | 15 / 3 → 15 / 3 | 45,600/9,719 → 45,020/11,125 | 0.016919 → 0.017564 | 94.803 → 142.896 |
+| Reuters | 10 / 2 → 10 / 2 | 43,424/15,206 → 44,855/10,508 | 0.016945 → 0.014739 | 144.747 → 128.291 |
+| **Total** | **80 / 16 → 85 / 18** | **187,145/51,291 → 193,472/42,063** | **0.084357 → 0.085378** | **523.053 → 562.883** |
+
+The closure run used 2 more File Search calls, 3.4% more input tokens, 18.0% fewer output tokens, 1.2% more cost, and 7.6% more wall time than the documented benchmark. Activate and Reuters used less measured work, while KPMG and Capgemini took more. Each of the five closure packs met the missing-grounded-target trigger and used exactly one bounded fallback; the test suite verifies that a sufficiently complete grounded target skips fallback, but this cohort does not measure a no-fallback report. A separate exact-PDF run immediately before the final closure captured 75 queries / 15 File Search calls, 187,890/41,415 tokens, $0.076997, and 475.081 seconds, demonstrating material run-to-run variation. No performance improvement is claimed; the slight aggregate cost increase is paired with recovery of the requested source-supported body results.
+
+Focused checks pass, including the full evidence-pack generator module, prompt dry-run validation, physical source-page validation, file-ownership checks, and both soft-copy test modules. `python -m pytest -q` passed: 7,210 passed, 1 skipped, 31 deselected, and 24 subtests passed in 826.88 seconds, with 22 existing deprecation warnings. Type checking passes across 773 source files. The five-report autonomous publication canary remains deliberately unrun. Once retrieval closure is confirmed, the next bounded step is to verify that these recovered findings survive editorial selection, summaries, and final rendered output.
 
 ## Remaining blockers and acceptance status
 

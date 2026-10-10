@@ -6,8 +6,6 @@ text: |
   printed page labels guide retrieval but are not PDF offsets. Copy a verbatim
   body excerpt into evidence and use its physical PDF page index in pages.
 
-  {{ findings_targeted_fallback_instruction }}
-
   {{ doc_map_sections_json }}
 
   {{ findings_target_source_pages_json }}
@@ -52,3 +50,5 @@ text: |
   Exhaust body searches before summary-only findings. Return empty only if
   body searches find no direct support, with "findings_not_found":
   {"findings": [], "not_found_reason": "findings_not_found"}
+
+  {{ findings_targeted_fallback_instruction }}

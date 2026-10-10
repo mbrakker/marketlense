@@ -7,3 +7,4 @@ from ._test_evidence_pack_generator.cases_02_generates_variety_packs_when_enable
 from ._test_evidence_pack_generator.cases_03_docmap_normalization import *  # noqa: F401,F403
 from ._test_evidence_pack_generator.cases_04_retained_safety_and_quotes import *  # noqa: F401,F403
 from ._test_evidence_pack_generator.cases_05_findings_targeted_retrieval import *  # noqa: F401,F403
+from ._test_evidence_pack_generator.cases_06_findings_fallback_recovery import *  # noqa: F401,F403

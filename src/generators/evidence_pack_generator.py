@@ -167,6 +167,34 @@ _FINDINGS_TARGET_STOP_WORDS = frozenset(
         "with",
     }
 )
+_FINDINGS_DUPLICATE_BOILERPLATE_WORDS = frozenset(
+    {"making", "report", "reports", "says", "states", "stated"}
+)
+_FINDINGS_DUPLICATE_EQUIVALENT_WORDS = frozenset(
+    {
+        "categories",
+        "category",
+        "each",
+        "figure",
+        "followed",
+        "most",
+        "rated",
+        "reported",
+        "reporting",
+        "respectively",
+    }
+)
+_FINDINGS_DUPLICATE_WORD_ALIASES = {
+    "offer": "promotion",
+    "offers": "promotion",
+    "promotions": "promotion",
+    "globally": "global",
+    "fell": "decrease",
+    "decreased": "decrease",
+    "declined": "decrease",
+    "days": "day",
+    "represented": "accounted",
+}
 _FINDINGS_TARGET_NUMBER = re.compile(
     r"(?<![\w\d])[+\-−]?\s*"
     r"(?P<number>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
@@ -214,8 +242,14 @@ def _findings_target_number_markers(value: str) -> set[str]:
 def _findings_target_number_occurrences(
     value: str, *, include_years: bool = False
 ) -> list[str]:
+    without_chart_identifiers = re.sub(
+        r"\b(?:fig(?:ure)?|chart|table)\s*[A-Z]?\s*\d+\b",
+        " ",
+        value,
+        flags=re.IGNORECASE,
+    )
     normalized = _FINDINGS_TARGET_YEAR_RANGE.sub(
-        r"\g<start> to \g<end>", value.replace("−", "-")
+        r"\g<start> to \g<end>", without_chart_identifiers.replace("−", "-")
     )
     occurrences: list[str] = []
     for match in _FINDINGS_TARGET_NUMBER.finditer(normalized):
@@ -641,6 +675,86 @@ def _findings_is_subset_of_fallback(
     return set(_findings_target_pages(finding)).issubset(
         set(_findings_target_pages(fallback_finding))
     )
+
+
+def _findings_grounded_claim_signature(
+    finding: dict[str, object],
+) -> Optional[tuple[str, tuple[int, ...], tuple[str, ...], tuple[str, ...]]]:
+    """Return a conservative claim signature for same-page duplicate removal."""
+
+    section_id = str(finding.get("section_id") or "").strip().casefold()
+    pages = tuple(sorted(_findings_target_pages(finding)))
+    text = str(finding.get("text") or "").casefold()
+    words = tuple(
+        sorted(
+            {
+                word
+                for word in re.findall(r"[a-z]{3,}", text)
+                if word
+                not in _FINDINGS_TARGET_STOP_WORDS
+                | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
+            }
+        )
+    )
+    numbers = tuple(_findings_target_number_occurrences(text, include_years=True))
+    if not section_id or not pages or not words or not numbers:
+        return None
+    return section_id, pages, words, numbers
+
+
+def _findings_claim_covered_by_grounded_findings(
+    finding: dict[str, object], grounded_findings: list[dict[str, object]]
+) -> bool:
+    """Return whether grounded same-section findings already cover this claim."""
+
+    section_id = str(finding.get("section_id") or "").strip().casefold()
+    text = str(finding.get("text") or "").casefold()
+    if not section_id:
+        return False
+    claim_words = {
+        word
+        for word in re.findall(r"[a-z]{3,}", text)
+        if word
+        not in _FINDINGS_TARGET_STOP_WORDS
+        | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
+        | _FINDINGS_DUPLICATE_EQUIVALENT_WORDS
+    }
+    claim_words = {
+        _FINDINGS_DUPLICATE_WORD_ALIASES.get(word, word) for word in claim_words
+    }
+    claim_numbers = Counter(
+        _findings_target_number_occurrences(text, include_years=True)
+    )
+    matching_findings = [
+        item
+        for item in grounded_findings
+        if str(item.get("section_id") or "").strip().casefold() == section_id
+    ]
+    if not claim_words or not claim_numbers or not matching_findings:
+        return False
+
+    grounded_text = " ".join(str(item.get("text") or "") for item in matching_findings)
+    grounded_words = {
+        word
+        for word in re.findall(r"[a-z]{3,}", grounded_text.casefold())
+        if word
+        not in _FINDINGS_TARGET_STOP_WORDS
+        | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
+        | _FINDINGS_DUPLICATE_EQUIVALENT_WORDS
+    }
+    grounded_words = {
+        _FINDINGS_DUPLICATE_WORD_ALIASES.get(word, word) for word in grounded_words
+    }
+    grounded_numbers: Counter[str] = Counter()
+    for item in matching_findings:
+        grounded_numbers.update(
+            _findings_target_number_occurrences(
+                str(item.get("text") or ""), include_years=True
+            )
+        )
+    if claim_words - grounded_words or claim_numbers - grounded_numbers:
+        return False
+    return not _metric_label_relationship_explanation(text, grounded_text)
 
 
 def _findings_target_point_covered(
@@ -2046,17 +2160,22 @@ def _generate_pack(
                     ensure_ascii=False,
                 )
                 fallback_variables["findings_targeted_fallback_instruction"] = (
-                    "Bounded recovery: the DocMap sections below guide retrieval "
-                    "but are not evidence. Use only the independently extracted "
-                    "source-page excerpts below as evidence, and cite their physical "
-                    "page numbers. Return only findings needed to complete the listed "
-                    "target key points. Preserve each subject, period, denominator, "
-                    "and numeric relationship; omit unsupported parts. Keep paired "
-                    "measures for one subject or cohort in the same finding. For a "
-                    "two-year YoY range, write 'year over year between [start year] "
-                    "and [end year]' instead of copying the dash. For a numeric M&A "
-                    "deal count, phrase the count before the acronym, such as "
-                    "'5.2 deals in M&A'. Do not expand into unrelated findings."
+                    "Bounded recovery: DocMap sections guide retrieval but are not "
+                    "evidence. Use only the independently extracted source-page "
+                    "excerpts below, citing physical page numbers. Return only "
+                    "findings: at most one concise finding per listed key point, with "
+                    "no more than three per target. Address only those listed key "
+                    "points and no unrelated sections. Keep "
+                    "each claim to one concise sentence and evidence to the shortest "
+                    "verbatim excerpt that supports every included detail. Preserve "
+                    "subjects, periods, denominators, and numeric relationships; omit "
+                    "any target whose full relationship is not supported. Keep paired "
+                    "measures together. For two-year YoY ranges, write 'year over "
+                    "year between [start year] and [end year]'. For numeric M&A deal "
+                    "counts, "
+                    "write '5.2 deals in M&A'. Follow this output limit over the "
+                    "report-wide coverage instructions above; return no unrelated "
+                    "findings and only the requested JSON object."
                 )
                 fallback_source_pages = _findings_target_source_pages(
                     missing_targets, source_spans
@@ -2204,13 +2323,112 @@ def _generate_pack(
                             if str(item.get("id") or "").strip()
                             in directly_supported_fallback_ids
                         ]
+
+                        def repeats_grounded_target_points(
+                            fallback_item: dict[str, object],
+                        ) -> bool:
+                            matched_target = next(
+                                (
+                                    target
+                                    for target in missing_targets
+                                    if _findings_section_matches_target(
+                                        fallback_item, target, missing_targets
+                                    )
+                                ),
+                                None,
+                            )
+                            if matched_target is None:
+                                return False
+                            fallback_pages = set(_findings_target_pages(fallback_item))
+                            covered_points = [
+                                key_point
+                                for key_point in _findings_target_key_points(
+                                    matched_target
+                                )
+                                if _findings_target_point_covered(
+                                    key_point, [fallback_item]
+                                )
+                            ]
+                            return bool(covered_points) and all(
+                                any(
+                                    str(existing.get("id") or "").strip()
+                                    in grounded_finding_ids
+                                    and _findings_section_matches_target(
+                                        existing, matched_target, missing_targets
+                                    )
+                                    and bool(
+                                        fallback_pages
+                                        & set(_findings_target_pages(existing))
+                                    )
+                                    and _findings_target_point_covered(
+                                        key_point, [existing]
+                                    )
+                                    for existing in findings
+                                )
+                                for key_point in covered_points
+                            )
+
+                        grounded_claim_signatures = set()
+                        grounded_primary_findings = []
+                        for finding in findings:
+                            if (
+                                str(finding.get("id") or "").strip()
+                                not in grounded_finding_ids
+                            ):
+                                continue
+                            grounded_primary_findings.append(finding)
+                            claim_signature = _findings_grounded_claim_signature(
+                                finding
+                            )
+                            if claim_signature is not None:
+                                grounded_claim_signatures.add(claim_signature)
+                        deduplicated_fallback_findings: list[dict[str, object]] = []
+                        for index, item in enumerate(supported_fallback_findings):
+                            if repeats_grounded_target_points(item):
+                                continue
+                            if _findings_claim_covered_by_grounded_findings(
+                                item, grounded_primary_findings
+                            ):
+                                continue
+                            covered_by_another_fallback = any(
+                                other_index != index
+                                and _findings_claim_covered_by_grounded_findings(
+                                    item, [other]
+                                )
+                                and (
+                                    not _findings_claim_covered_by_grounded_findings(
+                                        other, [item]
+                                    )
+                                    or other_index < index
+                                )
+                                for other_index, other in enumerate(
+                                    supported_fallback_findings
+                                )
+                            )
+                            if covered_by_another_fallback:
+                                continue
+                            claim_signature = _findings_grounded_claim_signature(item)
+                            if (
+                                claim_signature is not None
+                                and claim_signature in grounded_claim_signatures
+                            ):
+                                continue
+                            if claim_signature is not None:
+                                grounded_claim_signatures.add(claim_signature)
+                            deduplicated_fallback_findings.append(item)
+                        supported_fallback_findings = deduplicated_fallback_findings
                         merged_findings = [
                             item
                             for item in findings
                             if not any(
                                 str(fallback_item.get("id") or "").strip()
                                 in directly_supported_fallback_ids
-                                and _findings_is_subset_of_fallback(item, fallback_item)
+                                and (
+                                    _findings_is_subset_of_fallback(item, fallback_item)
+                                    or _findings_claim_covered_by_grounded_findings(
+                                        item, [fallback_item]
+                                    )
+                                )
                                 for fallback_item in supported_fallback_findings
                             )
                         ]

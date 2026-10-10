@@ -581,6 +581,18 @@ def test_findings_target_coverage_requires_each_numeric_relationship():
     )
 
 
+def test_findings_target_numbers_ignore_chart_identifiers():
+    from src.generators.evidence_pack_generator import (
+        _findings_target_number_occurrences,
+    )
+
+    assert _findings_target_number_occurrences(
+        "Figure 9, October 2025: money-off promotions 75%, percentage-off 74%, "
+        "and buy-one-get-one-free 73%.",
+        include_years=True,
+    ) == ["2025", "75%", "74%", "73%"]
+
+
 def test_findings_target_coverage_allows_complete_relationships_across_findings():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
 

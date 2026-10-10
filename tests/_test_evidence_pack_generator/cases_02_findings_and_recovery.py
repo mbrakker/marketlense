@@ -84,7 +84,19 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
 def test_generate_evidence_packs_passes_source_temporal_relationships_to_findings(
     tmp_path,
 ):
-    prompt_client = RecordingPromptClient()
+    class PrimaryFindingsPromptClient(FakePromptClient):
+        def __init__(self):
+            self.findings_variables = None
+
+        def render_prompt(self, request, ctx):
+            if (
+                self.findings_variables is None
+                and "doc_map_sections_json" in request.variables
+            ):
+                self.findings_variables = dict(request.variables)
+            return super().render_prompt(request, ctx)
+
+    prompt_client = PrimaryFindingsPromptClient()
     generate_evidence_packs(
         report_id="source-temporal-pairs",
         report_name="Source temporal pairs",
