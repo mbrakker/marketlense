@@ -38,9 +38,7 @@ def _page_grounded_claim_case():
                     "id": "survey-period",
                     "claim": claim,
                     "evidence_id": "methodology",
-                    "evidence_spans": [
-                        {"evidence_id": "methodology", "page": 78}
-                    ],
+                    "evidence_spans": [{"evidence_id": "methodology", "page": 78}],
                 }
             ]
         }
@@ -146,9 +144,7 @@ def test_doc_map_printed_page_resolves_to_physical_pdf_page():
                     "id": "conclusion",
                     "claim": claim,
                     "evidence_id": "conclusions",
-                    "evidence_spans": [
-                        {"evidence_id": "conclusions", "page": 42}
-                    ],
+                    "evidence_spans": [{"evidence_id": "conclusions", "page": 42}],
                 }
             ]
         }
@@ -201,9 +197,7 @@ def test_doc_map_printed_page_resolves_from_trailing_pdf_header_label():
                     "id": "stewardship",
                     "claim": "The report describes stewardship work entering 2026.",
                     "evidence_id": "introduction",
-                    "evidence_spans": [
-                        {"evidence_id": "introduction", "page": 6}
-                    ],
+                    "evidence_spans": [{"evidence_id": "introduction", "page": 6}],
                 }
             ]
         }
@@ -265,9 +259,7 @@ def test_grounding_rule_can_validate_claim_against_its_cited_source_page(tmp_pat
                         "id": "survey-period",
                         "claim": claim,
                         "evidence_id": "methodology",
-                        "evidence_spans": [
-                            {"evidence_id": "methodology", "page": 78}
-                        ],
+                        "evidence_spans": [{"evidence_id": "methodology", "page": 78}],
                     }
                 ]
             }

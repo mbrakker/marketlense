@@ -177,26 +177,6 @@ def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_pat
     ]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplog):
     from dataclasses import replace
 
@@ -251,9 +231,7 @@ def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplo
             else:
                 self.findings_calls += 1
                 payload = (
-                    misleading
-                    if self.findings_calls > 1
-                    else supported_source_finding
+                    misleading if self.findings_calls > 1 else supported_source_finding
                 )
             return OpenAIResponseResult(
                 schema_version="1.0",
@@ -590,12 +568,9 @@ def test_complete_numeric_lead_does_not_trigger_secondary_numeric_fallback():
         }
     ]
 
-    assert (
-        _missing_findings_retrieval_targets(
-            targets, findings, {"internet-media-revenue-forecast"}
-        )
-        == [targets[1]]
-    )
+    assert _missing_findings_retrieval_targets(
+        targets, findings, {"internet-media-revenue-forecast"}
+    ) == [targets[1]]
 
 
 def test_incomplete_numeric_lead_does_not_expand_to_secondary_numeric_target():
@@ -684,26 +659,6 @@ def test_same_section_title_does_not_match_a_different_docmap_section_id():
     assert _missing_findings_retrieval_targets(
         [target], [ecommerce_finding], {"ecommerce-session-outcome"}
     ) == [target]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):

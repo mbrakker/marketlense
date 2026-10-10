@@ -416,9 +416,7 @@ def _findings_target_source_pages(
             ):
                 continue
             remaining_chars = _MAX_FINDINGS_TARGET_SOURCE_CHARS - total_chars
-            page_content = "\n".join(
-                text for _span_id, text in page_spans[page]
-            )
+            page_content = "\n".join(text for _span_id, text in page_spans[page])
             excerpt_limit = min(_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS, remaining_chars)
             excerpt_start = _findings_relevant_excerpt_start(
                 page_content, target, excerpt_limit
@@ -489,9 +487,7 @@ def _findings_target_physical_source_pages(
     # Extraction may omit a printed footer. In that case, use DocMap wording and
     # numeric markers to find a small physical-page candidate set. These pages
     # remain retrieval context; evidence-fidelity validation still decides support.
-    return _rank_findings_target_source_pages(
-        target, page_spans, list(page_spans)
-    )[:2]
+    return _rank_findings_target_source_pages(target, page_spans, list(page_spans))[:2]
 
 
 def _rank_findings_target_source_pages(
@@ -553,9 +549,11 @@ def _findings_relevant_excerpt_start(
         return 0
     key_points = _findings_target_key_points(target)
     query_words = _findings_target_content_words(target)
-    expected_numbers = set().union(
-        *(_findings_target_number_markers(point) for point in key_points)
-    ) if key_points else set()
+    expected_numbers = (
+        set().union(*(_findings_target_number_markers(point) for point in key_points))
+        if key_points
+        else set()
+    )
     step = max(1, excerpt_limit // 4)
     starts = list(range(0, max(1, len(page_text) - excerpt_limit + 1), step))
     starts.append(max(0, len(page_text) - excerpt_limit))
@@ -648,18 +646,11 @@ def _findings_is_subset_of_fallback(
 def _findings_target_point_covered(
     key_point: str, findings: list[dict[str, object]]
 ) -> bool:
-    clauses = [
-        clause.strip()
-        for clause in re.split(r";", key_point)
-        if clause.strip()
-    ]
+    clauses = [clause.strip() for clause in re.split(r";", key_point) if clause.strip()]
     expected_years = {
         marker
-        for marker in _findings_target_number_occurrences(
-            key_point, include_years=True
-        )
-        if marker.rstrip("e").isdigit()
-        and 1900 <= int(marker.rstrip("e")) <= 2100
+        for marker in _findings_target_number_occurrences(key_point, include_years=True)
+        if marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100
     }
     return bool(clauses) and all(
         _findings_target_clause_covered(clause, findings, expected_years)
@@ -2219,9 +2210,7 @@ def _generate_pack(
                             if not any(
                                 str(fallback_item.get("id") or "").strip()
                                 in directly_supported_fallback_ids
-                                and _findings_is_subset_of_fallback(
-                                    item, fallback_item
-                                )
+                                and _findings_is_subset_of_fallback(item, fallback_item)
                                 for fallback_item in supported_fallback_findings
                             )
                         ]
@@ -2276,9 +2265,7 @@ def _generate_pack(
                                 "attempts": fallback.attempts,
                                 "target_count": len(missing_targets),
                                 "returned_findings": len(fallback_findings),
-                                "supported_findings": len(
-                                    supported_fallback_findings
-                                ),
+                                "supported_findings": len(supported_fallback_findings),
                                 "merged_findings": max(
                                     0,
                                     len(result_payload.get("findings", []))

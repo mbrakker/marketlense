@@ -195,6 +195,7 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
     assert packs["evidence_fidelity"]["deterministic_pass_count"] >= 1
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
 
+
 def test_findings_targeted_fallback_keeps_ma_means_as_deal_counts(tmp_path):
     from dataclasses import replace
 
@@ -314,6 +315,7 @@ def test_findings_targeted_fallback_keeps_ma_means_as_deal_counts(tmp_path):
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
     assert packs["evidence_fidelity"]["deterministic_pass_count"] >= 2
 
+
 def test_findings_target_source_page_context_is_bounded_and_page_scoped():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
 
@@ -334,6 +336,7 @@ def test_findings_target_source_page_context_is_bounded_and_page_scoped():
         excerpt["text"] == f"Page {excerpt['page']} evidence.\n{excerpt['page']}"
         for excerpt in excerpts
     )
+
 
 def test_findings_target_source_pages_select_complete_numeric_relationship_page():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
@@ -362,6 +365,7 @@ def test_findings_target_source_pages_select_complete_numeric_relationship_page(
             "source_span_ids": ["pdf:p19"],
         }
     ]
+
 
 def test_findings_target_source_pages_resolve_printed_label_to_physical_pdf_page():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
@@ -398,6 +402,7 @@ def test_findings_target_source_pages_resolve_printed_label_to_physical_pdf_page
     assert excerpts[0]["source_span_ids"] == ["pdf:p5"]
     assert all(value in excerpts[0]["text"] for value in ("$302B", "4.1%", "3%"))
 
+
 def test_findings_target_source_pages_infer_one_missing_label_from_page_sequence():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
 
@@ -423,6 +428,7 @@ def test_findings_target_source_pages_infer_one_missing_label_from_page_sequence
     assert 5 in [excerpt["page"] for excerpt in excerpts]
     assert any("$302B" in excerpt["text"] for excerpt in excerpts)
 
+
 def test_findings_target_source_pages_aggregate_spans_and_find_page_end_evidence():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
 
@@ -447,6 +453,7 @@ def test_findings_target_source_pages_aggregate_spans_and_find_page_end_evidence
     assert excerpts[0]["page"] == 19
     assert "Casino installs +22% and sessions -5%" in excerpts[0]["text"]
     assert excerpts[0]["source_span_ids"] == ["pdf:p19:span1", "pdf:p19:span2"]
+
 
 def test_findings_retrieval_target_keeps_multiple_high_value_key_points():
     from src.generators.evidence_pack_generator import _findings_retrieval_targets
@@ -489,6 +496,7 @@ def test_findings_retrieval_target_keeps_multiple_high_value_key_points():
     assert regional in target["key_points"]
     assert len(target["key_points"]) == 3
 
+
 def test_findings_target_significance_does_not_boost_report_topics():
     from src.generators.evidence_pack_generator import _findings_target_key_point_score
 
@@ -502,6 +510,7 @@ def test_findings_target_significance_does_not_boost_report_topics():
     assert _findings_target_key_point_score(
         app_metrics
     ) == _findings_target_key_point_score(retail_metrics)
+
 
 def test_findings_targets_skip_reader_metadata_but_keep_substantive_summaries():
     from src.generators.evidence_pack_generator import _findings_retrieval_targets
@@ -542,6 +551,7 @@ def test_findings_targets_skip_reader_metadata_but_keep_substantive_summaries():
         "executive-summary",
     }
 
+
 def test_findings_target_coverage_requires_each_numeric_relationship():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
 
@@ -560,8 +570,7 @@ def test_findings_target_coverage_requires_each_numeric_relationship():
             "section_id": "gaming",
             "text": "Casino installs grew 22%; slots installs grew 46%.",
             "evidence": (
-                "Casino installs +22%, sessions -5%; slots installs +46%, "
-                "sessions -5%."
+                "Casino installs +22%, sessions -5%; slots installs +46%, sessions -5%."
             ),
             "pages": [19],
         }
@@ -570,6 +579,7 @@ def test_findings_target_coverage_requires_each_numeric_relationship():
     assert not _findings_target_is_covered(
         target, findings, {"only-casino-pair"}, [target]
     )
+
 
 def test_findings_target_coverage_allows_complete_relationships_across_findings():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
@@ -604,6 +614,7 @@ def test_findings_target_coverage_allows_complete_relationships_across_findings(
         target, findings, {"casino-pair", "slots-pair"}, [target]
     )
 
+
 def test_findings_target_coverage_accepts_equivalent_numeric_formatting():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
 
@@ -626,6 +637,7 @@ def test_findings_target_coverage_accepts_equivalent_numeric_formatting():
     assert _findings_target_is_covered(
         target, findings, {"market-growth-2025"}, [target]
     )
+
 
 def test_findings_target_coverage_accepts_supported_qualitative_paraphrase():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
@@ -654,9 +666,8 @@ def test_findings_target_coverage_accepts_supported_qualitative_paraphrase():
         }
     ]
 
-    assert _findings_target_is_covered(
-        target, findings, {"carve-out-value"}, [target]
-    )
+    assert _findings_target_is_covered(target, findings, {"carve-out-value"}, [target])
+
 
 def test_findings_target_coverage_does_not_compare_printed_and_physical_page_numbers():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
@@ -681,6 +692,7 @@ def test_findings_target_coverage_does_not_compare_printed_and_physical_page_num
         target, findings, {"revenue-growth-2025"}, [target]
     )
 
+
 def test_findings_target_coverage_rejects_values_swapped_between_subjects():
     from src.generators.evidence_pack_generator import _findings_target_is_covered
 
@@ -703,6 +715,7 @@ def test_findings_target_coverage_rejects_values_swapped_between_subjects():
     assert not _findings_target_is_covered(
         target, findings, {"swapped-categories"}, [target]
     )
+
 
 def test_missing_findings_targets_checks_all_bounded_targets_and_returns_two():
     from src.generators.evidence_pack_generator import (
@@ -729,9 +742,13 @@ def test_missing_findings_targets_checks_all_bounded_targets_and_returns_two():
         for index in (1, 2)
     ]
 
-    assert _missing_findings_retrieval_targets(
-        targets, findings, {"finding-1", "finding-2"}
-    ) == targets[2:4]
+    assert (
+        _missing_findings_retrieval_targets(
+            targets, findings, {"finding-1", "finding-2"}
+        )
+        == targets[2:4]
+    )
+
 
 def test_bounded_recovery_prioritizes_specific_strategy_over_broad_focus():
     from src.generators.evidence_pack_generator import (
@@ -783,6 +800,7 @@ def test_bounded_recovery_prioritizes_specific_strategy_over_broad_focus():
         "portfolio-simplification",
     ]
 
+
 def test_target_selection_keeps_section_lead_ahead_of_dense_charts():
     from src.generators.evidence_pack_generator import _findings_retrieval_targets
 
@@ -833,7 +851,7 @@ def test_target_selection_keeps_section_lead_ahead_of_dense_charts():
                         "US -35%, Europe -38%; X Global -46%, US -46%, Europe -66%.",
                         "On licensing revenue in three years, respondents expected "
                         "main source 0%, significant 20%, minor 49%, no income 20%, "
-                        "and did not know 11%."
+                        "and did not know 11%.",
                     ],
                     "pages": [10, 11, 12, 13, 14],
                 },
@@ -844,6 +862,7 @@ def test_target_selection_keeps_section_lead_ahead_of_dense_charts():
     search_target = next(target for target in targets if target["id"] == "section-02")
     assert targets.index(search_target) < 2
     assert any("more than 40%" in point for point in search_target["key_points"])
+
 
 def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
     tmp_path, caplog, assert_logs_have_required_fields
