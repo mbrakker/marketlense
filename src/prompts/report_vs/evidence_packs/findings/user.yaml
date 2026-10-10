@@ -46,5 +46,5 @@ text: |
     "not_found_reason": ""
   }
 
-  If no findings are supported by evidence:
+  Return empty only if body searches find no direct support:
   {"findings": [], "not_found_reason": "findings_not_found"}

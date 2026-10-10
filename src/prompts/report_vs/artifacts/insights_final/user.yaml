@@ -21,9 +21,10 @@ text: |
   For numeric insights, keep the finding/quote ID and page. Its direct evidence
   must state value, subject, and period/status; do not expand scope. DocMap IDs
   are not numeric evidence.
-  Rank by candidate score and decision relevance first; use plan priority for coherence or ties. Put the most specific, commercially useful insight first; preserve linked IDs and distinct themes, and do not favor metrics just for being numeric.
-  Tighten for brevity; preserve candidates' exact values, comparisons,
-  qualifications, and scope.
+  Choose the first insight by direct evidence strength, source specificity, and
+  decision relevance; scores break close choices. Put a concrete outcome or
+  mechanism ahead of abstract context on the same theme. Preserve exact values,
+  comparisons, scope, periods, and evidence IDs; do not round or relativize them.
   Keep so_what a specific, non-contradictory MarketLense interpretation of why
   the finding matters. Keep now_what a specific conditional decision or
   follow-up tied to it. Neither may add a factual premise or false attribution

@@ -35,7 +35,12 @@ text: |
   - Numbers require linked finding evidence or a direct quote candidate to show and support the value and subject. Paraphrased finding text alone is insufficient; omit unsupported numbers and map the source.
   - State dataset population or methodology only when linked evidence says so; keep its wording and date range exact. Do not add qualifiers such as "primarily" or extend a performance-chart period to report coverage. A report topic or data owner does not establish population or coverage.
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
-  - Both TLDRs lead with the strongest supported body outcome and preserve exact comparisons. If findings lack it, state the DocMap relationship without numbers; abstain only when no clear outcome exists. The plan guides selection, not evidence.
+  - Both TLDRs lead with the strongest supported body outcome. Preserve exact
+    values and periods when direct finding/quote evidence supports them;
+    otherwise use a specific DocMap relationship without numbers. Abstain only
+    if no clear outcome exists. The plan guides selection, not evidence.
+  - Do not round exact source values or replace explicit periods with relative
+    timeframes.
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - Target 20-30 words for `tldr` (hard limit: 45). Use one simple complete sentence and exactly one terminal punctuation mark; never use an ellipsis or attach a second topic to fill space.
