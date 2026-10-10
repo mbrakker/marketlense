@@ -155,6 +155,25 @@ def test_discourse_but_is_not_misread_as_a_population() -> None:
     assert comparison.dimension("population").status != "incompatible"
 
 
+def test_conjoined_finance_metrics_ignore_discourse_words_as_population() -> None:
+    claim = (
+        "For finance apps in LATAM, installs rose 76% and sessions rose 57% "
+        "year over year in 2024-2025, according to the benchmark."
+    )
+    evidence = (
+        "Analyzes finance-app growth, engagement, retention, CPI, and paid-versus-"
+        "organic acquisition across regions and subverticals. It contrasts strong "
+        "LATAM growth and longer global sessions with falling retention and lower "
+        "CPI, alongside increased reliance on paid acquisition. Finance app install "
+        "and session growth, YoY 2024-2025: LATAM installs 76% and sessions 57%. "
+        "Global finance-app session length increased 8% to 7.18 minutes in 2025."
+    )
+
+    comparison = compare_protected_fact_texts(claim, evidence)
+
+    assert comparison.dimension("population").status == "compatible"
+
+
 @pytest.mark.parametrize(
     ("claim", "evidence"),
     [

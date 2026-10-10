@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v11"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v12"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -801,6 +801,37 @@ def test_chart_line_break_does_not_bind_growth_heading_to_adjacent_value() -> No
     )
 
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
+
+
+def test_metric_labels_bind_values_before_for_in_mixed_case_categories() -> None:
+    evidence = (
+        "Where publishers plan to put more and less effort in 2026 "
+        "(net difference): YouTube +74; AI platforms +61; TikTok +56."
+    )
+    valid = evaluate_public_editorial_quality(
+        report_id="reuters-mixed-case-category-values",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Publishers' 2026 effort plans have net differences of +74 for "
+                "YouTube, +61 for AI platforms, and +56 for TikTok."
+            ),
+            evidence=evidence,
+        ),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="reuters-swapped-category-values",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Publishers' 2026 effort plans have net differences of +61 for "
+                "YouTube, +74 for AI platforms, and +56 for TikTok."
+            ),
+            evidence=evidence,
+        ),
+    )
+
+    assert ("ai platforms", "+61") in _structured_category_value_pairs(evidence)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
 def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown() -> (

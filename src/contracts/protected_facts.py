@@ -552,10 +552,15 @@ def _subjects(text: str) -> tuple[str, ...]:
         "whereas",
         "while",
     }
+    leading_discourse_connectors = {"and", "or", "alongside"}
     quantities = extract_quantities(text)
     subjects: list[str] = []
     for match in _SUBJECT_RE.finditer(text):
         subject = re.sub(r"\s+", " ", match.group(1).casefold()).strip()
+        subject_words = subject.split()
+        while subject_words and subject_words[0] in leading_discourse_connectors:
+            subject_words.pop(0)
+        subject = " ".join(subject_words)
         if (
             not subject
             or subject.split()[0] in discourse_subject_starts

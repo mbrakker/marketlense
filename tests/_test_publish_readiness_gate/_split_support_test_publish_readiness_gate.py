@@ -218,7 +218,7 @@ def _retained_claim_package(
             "report_id": "report-1",
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v2",
+            "claim_validation_validator_version": "retained_claim_validation:v3",
             "grounding_validator_version": "grounding_validation_output:1.5",
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
@@ -231,7 +231,7 @@ def _retained_claim_package(
             "evidence_pack_hash": sha256_json(evidence_packs),
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v2",
+            "claim_validation_validator_version": "retained_claim_validation:v3",
             "grounding_validator_version": "grounding_validation_output:1.5",
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []

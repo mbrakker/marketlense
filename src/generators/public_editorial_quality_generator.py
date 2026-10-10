@@ -178,6 +178,11 @@ _CAPITALIZED_CATEGORY_VALUE_PAIR = re.compile(
     rf"(?:[ \t]*(?::|is|has|accounts\s+for|at|reaches)[ \t]*|[ \t]+)"
     rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
+_DELIMITED_SPACE_CATEGORY_VALUE_PAIR = re.compile(
+    rf";\s*(?P<label>[A-Za-z][A-Za-z0-9&/-]*"
+    rf"(?:\s+[A-Za-z][A-Za-z0-9&/-]*){{1,4}})"
+    rf"[ \t]+(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+)
 _DELIMITED_CATEGORY_VALUE_PAIR = re.compile(
     rf"(?:^|[;,\n])\s*(?P<label>[A-Za-z][A-Za-z0-9&/ -]{{0,48}}?)"
     rf"\s*(?::|=)\s*(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
@@ -1668,6 +1673,7 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
     pairs: set[tuple[str, str]] = set()
     for pattern in (
         _CAPITALIZED_CATEGORY_VALUE_PAIR,
+        _DELIMITED_SPACE_CATEGORY_VALUE_PAIR,
         _DELIMITED_CATEGORY_VALUE_PAIR,
     ):
         for match in pattern.finditer(text):
@@ -1758,7 +1764,7 @@ def _values_near_label(
                 continue
             prefix = fragment[: label_match.start()]
             preceding_value = re.search(
-                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+$",
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+(?:in|for)\s+$",
                 prefix,
                 re.IGNORECASE,
             )
