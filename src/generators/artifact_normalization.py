@@ -1063,7 +1063,7 @@ def select_artifact_insights(
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Keep theme coverage, then fill the report's required grounded insight slots.
+    """Lead with the strongest evidence-bound insight and retain theme coverage.
 
     When a final insight shares a stable ID with a chosen candidate, the
     candidate is the evidence-anchored source of the protected factual fields
@@ -1084,6 +1084,15 @@ def select_artifact_insights(
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[str] = set()
+    # A high-scored final claim may still lack its source binding; allow only
+    # evidence-bound candidates to bypass the editorial plan's coverage order.
+    grounded_ranked = [
+        item for item in ranked if _s(item[1].get("evidence_id")).strip()
+    ]
+    if grounded_ranked:
+        _append_distinct_insight(
+            selected, selected_keys, _best_ranked_insight(grounded_ranked)[1]
+        )
     for theme in plan["themes"]:
         evidence_ids = {
             normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
