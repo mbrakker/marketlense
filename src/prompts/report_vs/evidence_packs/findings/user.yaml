@@ -1,54 +1,42 @@
 text: |
-  Search file_search by section/title/page and each key-point metric. Search for
-  directional body outcomes, including the stated subject, value, and period.
-  If results contain only an introduction, sample, or methodology, refine the
-  query into the mapped body section. DocMap is a clue, not evidence; its
-  printed page labels guide retrieval but are not PDF offsets. Copy a verbatim
-  body excerpt into evidence and use its physical PDF page index in pages.
+  Search file_search by section/title/page and each key-point metric; search for
+  directional body outcomes with subject, value, and period. If hits show only
+  introduction, sample, or methodology, refine to mapped body. DocMap is a clue,
+  not evidence; printed page labels guide retrieval but are not PDF offsets.
+  Quote verbatim body evidence; cite the physical PDF page index in pages.
 
   {{ doc_map_sections_json }}
 
   {{ findings_target_source_pages_json }}
 
-  For listed periods, deterministic retained-source label/value pairs bind
-  findings. They override ambiguous file_search chart rendering; preserve
-  each pair and order, or omit it if unsupported.
+  Deterministic retained-source label/value pairs bind periods and override
+  ambiguous file_search chart readings; preserve order or omit unsupported
+  pairs.
 
   {{ source_temporal_relationships_json }}
 
-  Bind each chart/table value to measure, subject/cohort, geography, and period.
+  Bind chart/table values to measure, subject/cohort, geography, and period.
   Keep chart values exact. Percentages do not establish a share; state a share
-  only when the source names its base. Nearby values cannot support another
-  row/cohort. Omit uncertain tuples.
+  only when the source names its base. Do not transfer nearby values across
+  rows/cohorts; omit uncertain tuples.
 
-  Cover distinct or counterbalancing major sections when supported; related
-  subtopics do not replace another supported side. Do not invent counterpoints
-  or pad sparse reports.
+  Cover distinct or counterbalancing supported sections; related subtopics
+  cannot replace supported sides. Do not invent counterpoints or pad sparse
+  reports.
 
-  Retain a source-backed, materially central publisher forecast only with
-  substantive synthesis (e.g., executive summary/opening takeaway). Mark it as
-  forecast; name the publisher if identified and keep caveats. It may accompany
-  current-state data. Page position, repetition, or promotional copy alone do
-  not establish centrality.
+  Retain only materially central, source-backed publisher forecasts with
+  substantive synthesis (e.g., an opening takeaway). Label forecasts; name the
+  publisher if identified, keep caveats, and allow alongside current-state
+  data. Page position, repetition, or promotional copy alone do not establish
+  centrality.
 
-  For each finding include:
-  - id
-  - text
-  - evidence
-  - confidence
-  - section_id (copy the matching DocMap id, or "")
-  - section_title (copy the matching DocMap title, or "")
-  - pages
+  Each finding: id, text, evidence, confidence, DocMap section_id/title (or ""),
+  and pages.
 
-  Return JSON only:
-  {
-    "findings": [],
-    "not_found_reason": ""
-  }
+  Return JSON only: {"findings": [], "not_found_reason": ""}
 
   If body evidence supports a material key point, include it as a finding.
-  Exhaust body searches before summary-only findings. Return empty only if
-  body searches find no direct support, with "findings_not_found":
-  {"findings": [], "not_found_reason": "findings_not_found"}
+  Exhaust body searches before summary-only findings. Return empty only if body
+  searches find no direct support; set not_found_reason to findings_not_found.
 
   {{ findings_targeted_fallback_instruction }}
