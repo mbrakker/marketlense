@@ -207,14 +207,15 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
         "both tldrs must share the report's most material supported finding"
         in prompt_text
     )
-    assert "prefer decision-useful metrics" in prompt_text
+    assert "prefer decision-useful body outcomes over broad context" in prompt_text
     assert "directly supported docmap point" in prompt_text
     assert "plan guides selection, not evidence" in prompt_text
     assert "abstain if unsupported" in prompt_text
     assert "strongest decision-useful supported finding" in prompt_text
     assert "even outside the priority-one theme" in prompt_text
     assert "priority order cannot exclude stronger evidence" in prompt_text
-    assert "exact comparisons over section descriptions" in prompt_text
+    assert "preserve exact comparisons" in prompt_text
+    assert "findings omit a stronger body result" in prompt_text
 
 
 def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
@@ -347,6 +348,9 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "keep its wording and date range exact" in summary_text
     assert "preserve exact values and comparisons" in candidates_text
     assert "preserve candidates' exact values, comparisons" in final_text
+    assert "rank by candidate score and decision relevance first" in final_text
+    assert "use plan priority for coherence or ties" in final_text
+    assert "most specific, commercially useful insight first" in final_text
 
 
 @pytest.mark.parametrize(
