@@ -27,7 +27,7 @@ text: |
       {"claim": "<material sentence quoted from tldr, card_tldr_compact, or executive_summary>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<existing evidence id>"]}
     ]
   }
-  `claim_provenance` is retained metadata only: cover every material sentence or claim from the public summary fields with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
+  `claim_provenance` is retained metadata only. Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and `executive_summary` once. Copy each `claim` verbatim from the public sentence, including punctuation; do not combine or paraphrase sentences or omit any. Use exact existing IDs, keep IDs out of public prose, and give every factual binding at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
   - Lead executive_summary with the strongest decision-useful supported finding, even outside the priority-one theme; use the plan for coherence and preserve exact bindings in claim map and provenance.
   - Follow the report thesis; priority order cannot exclude stronger evidence or imply cross-section links or centrality.

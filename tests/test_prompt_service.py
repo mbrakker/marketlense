@@ -296,6 +296,16 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
         "State dataset population or methodology only when linked evidence says so"
         in summary_prompt.user.text
     )
+    normalized_summary_prompt = " ".join(summary_prompt.user.text.split())
+    assert (
+        "Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and "
+        "`executive_summary` once"
+        in normalized_summary_prompt
+    )
+    assert (
+        "Copy each `claim` verbatim from the public sentence, including punctuation"
+        in normalized_summary_prompt
+    )
     assert "use the most specific supplied evidence ID that states that detail" in (
         linkedin_prompt.user.text
     )
