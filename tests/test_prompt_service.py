@@ -228,7 +228,8 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
     assert "one-based physical PDF page indexes" in normalized_findings_system
     prompt_text = " ".join(findings_prompt.user.text.casefold().split())
 
-    assert "docmap pages are printed labels" in prompt_text
+    assert "docmap is a clue, not evidence" in prompt_text
+    assert "printed page labels guide retrieval but are not pdf offsets" in prompt_text
     assert "physical pdf page index" in prompt_text
     assert "materially central" in prompt_text
     assert "publisher forecast" in prompt_text
@@ -337,8 +338,7 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     normalized_summary_prompt = " ".join(summary_prompt.user.text.split())
     assert (
         "Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and "
-        "`executive_summary` once"
-        in normalized_summary_prompt
+        "`executive_summary` once" in normalized_summary_prompt
     )
     assert (
         "Copy each `claim` verbatim from the public sentence, including punctuation"
@@ -488,10 +488,7 @@ def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> 
             assert rule in normalized_text
 
     final_insights_text = " ".join(prompts[1].user.text.split())
-    assert (
-        "Reuse selected candidate IDs; keep IDs unique."
-        in final_insights_text
-    )
+    assert "Reuse selected candidate IDs; keep IDs unique." in final_insights_text
 
     summary_text = " ".join(prompts[0].user.text.split())
     assert '"claim": "<non-empty claim string>"' in summary_text
