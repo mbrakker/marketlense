@@ -90,6 +90,47 @@ def test_bain_compact_year_range_keeps_supported_shares() -> None:
     assert not any(issue.rule_id == "numbers" for issue in issues)
 
 
+def test_number_validation_matches_values_under_the_same_explicit_yoy_range() -> None:
+    claim = "Casual-game session growth was +37% YoY 2024–2025."
+    evidence = (
+        "Gaming app install and session growth percentages, YoY 2024–2025 (Global): "
+        "casual games, installs +19% and sessions +37%."
+    )
+
+    issues = validate_new_numbers(
+        artifacts={"expert_comment": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=build_evidence_windows([evidence]),
+    )
+
+    assert not any(issue.rule_id == "numbers" for issue in issues)
+
+
+def test_number_validation_rejects_same_value_under_a_different_yoy_range() -> None:
+    claim = "Casual-game session growth was +37% YoY 2024–2025."
+    evidence = (
+        "Gaming app install and session growth percentages, YoY 2023–2024 (Global): "
+        "casual games, installs +19% and sessions +37%."
+    )
+
+    issues = validate_new_numbers(
+        artifacts={"expert_comment": claim},
+        insights=[],
+        report=_report(),
+        evidence_texts=[evidence],
+        evidence_windows=build_evidence_windows([evidence]),
+    )
+
+    assert any(
+        issue.rule_id == "numbers"
+        and issue.affected_section == "expert_comment"
+        and "Number 37.0 not present" in issue.message
+        for issue in issues
+    )
+
+
 def test_number_validation_matches_only_the_supported_hyphenated_duration() -> None:
     evidence = (
         "The next 12 months are expected to bring higher programmatic video ad spend."
@@ -237,8 +278,9 @@ def test_number_validation_grounds_rank_labels_in_linked_insight_evidence() -> N
     assert any("Number 26.0 not present" in message for message in rejected_messages)
 
 
-def test_number_validation_still_rejects_exact_key_figure_from_threshold_evidence(
-) -> None:
+def test_number_validation_still_rejects_exact_key_figure_from_threshold_evidence() -> (
+    None
+):
     evidence = "At least 50% of the ad must be in view for one second."
     figure = {
         "figure_id": "display-viewability-duration-criterion-retained-5",
@@ -256,7 +298,6 @@ def test_number_validation_still_rejects_exact_key_figure_from_threshold_evidenc
     )
 
     assert any(
-        issue.rule_id == "numbers"
-        and issue.affected_section == "key_figures:1.figure"
+        issue.rule_id == "numbers" and issue.affected_section == "key_figures:1.figure"
         for issue in issues
     )

@@ -292,7 +292,7 @@ def test_render_materializes_final_retained_claim_package_with_current_lineage(
     assert retained["lineage"]["source_md5"] == "source-md5"
     assert retained["lineage"]["source_id"] == "source:report-1"
     assert retained["lineage"]["claim_validation_validator_version"] == (
-        "retained_claim_validation:v4"
+        "retained_claim_validation:v5"
     )
     assert retained["lineage"]["grounding_validator_version"] == (
         CLAIM_GROUNDING_VALIDATOR_VERSION

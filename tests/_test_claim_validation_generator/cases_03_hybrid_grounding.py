@@ -592,7 +592,7 @@ def test_final_claim_package_rejects_stale_validation_identity(
         "report_id": "report-1",
         "source_id": "source-1",
         "source_md5": "source-md5",
-        "claim_validation_validator_version": "retained_claim_validation:v4",
+        "claim_validation_validator_version": "retained_claim_validation:v5",
         "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
         "configuration_hash": "config-1",
         "policy_hash": "policy-1",

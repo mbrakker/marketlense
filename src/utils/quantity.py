@@ -69,6 +69,8 @@ _TIMEFRAME_RE = re.compile(
     r"\b(?:"
     r"q[1-4]\s*20\d{2}|20\d{2}\s*q[1-4]|"
     r"fy\s*20\d{2}|20\d{2}\s*forecast|"
+    r"(?:yoy|year\s+over\s+year)\s+(?:19|20)\d{2}"
+    r"(?:\s*[-–—]\s*|\s+)(?:19|20)\d{2}|"
     r"ytd|mtd|qtd|yoy|mom|qoq|"
     r"[a-z]{3,9}\s+\d{1,2}\s*-\s*[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
     r"[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
