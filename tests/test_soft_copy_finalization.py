@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from hashlib import sha256
 
 import pytest
@@ -124,6 +125,135 @@ def test_regenerated_repair_binding_follows_final_source_corrected_sentence() ->
     )
     assert claim["text_hash"] == sha256(source_sentence.encode()).hexdigest()
     assert claim["evidence_ids"] == ["finance-retention"]
+    assert_retained_soft_copy_claims_match_public_copy(finalized)
+
+
+def test_summary_repair_carries_retained_binding_through_source_display_correction() -> (
+    None
+):
+    old_metric_sentence = "Global eCommerce is forecast to add over $3T."
+    corrected_metric_sentence = "Global eCommerce is forecast to add over $3.0T."
+    old_compact = "Consumers consider the market outlook."
+    repaired_compact = "Flexible choices guide planning decisions."
+    evidence_packs = {
+        "findings": {
+            "findings": [
+                {"id": "market-growth", "evidence": old_metric_sentence, "pages": [1]},
+                {
+                    "id": "consumer-outlook",
+                    "evidence": "Consumer preferences are shifting.",
+                    "pages": [2],
+                },
+                {
+                    "id": "compact-outlook",
+                    "evidence": "Consumers consider the market outlook.",
+                    "pages": [3],
+                },
+                {
+                    "id": "planning",
+                    "evidence": "Flexible choices guide planning decisions.",
+                    "pages": [4],
+                },
+            ]
+        }
+    }
+    initial = _assemble_soft_copy(
+        summary={
+            "tldr": "Consumer preferences are shifting.",
+            "card_tldr_compact": old_compact,
+            "executive_summary": f"{old_metric_sentence} Retail planning remains focused.",
+            "claim_evidence_map": [
+                {
+                    "claim": old_metric_sentence,
+                    "evidence_id": "market-growth",
+                    "evidence": old_metric_sentence,
+                },
+                {
+                    "claim": "Consumer preferences are shifting.",
+                    "evidence_id": "consumer-outlook",
+                    "evidence": "Consumer preferences are shifting.",
+                },
+                {
+                    "claim": old_compact,
+                    "evidence_id": "compact-outlook",
+                    "evidence": old_compact,
+                },
+                {
+                    "claim": "Retail planning remains focused.",
+                    "evidence_id": "planning",
+                    "evidence": "Retail planning remains focused.",
+                },
+            ],
+        },
+        evidence_packs=evidence_packs,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": "Consumer preferences are shifting.",
+                    "classification": "factual",
+                    "evidence_ids": ["consumer-outlook"],
+                },
+                {
+                    "claim": old_compact,
+                    "classification": "factual",
+                    "evidence_ids": ["compact-outlook"],
+                },
+                {
+                    "claim": old_metric_sentence,
+                    "classification": "factual",
+                    "evidence_ids": ["market-growth"],
+                },
+                {
+                    "claim": "Retail planning remains focused.",
+                    "classification": "interpretive",
+                    "evidence_ids": ["planning"],
+                },
+            ]
+        },
+    )
+    old_compact_claim = next(
+        claim
+        for claim in initial["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "summary"
+        and claim["text_hash"] == sha256(old_compact.encode()).hexdigest()
+    )
+    repaired_summary = deepcopy(initial["summary"])
+    repaired_summary["card_tldr_compact"] = repaired_compact
+    repaired_summary["claim_evidence_map"][0]["evidence"] = corrected_metric_sentence
+    updated_evidence_packs = deepcopy(evidence_packs)
+    updated_evidence_packs["findings"]["findings"][0]["evidence"] = (
+        corrected_metric_sentence
+    )
+
+    finalized = _assemble_soft_copy(
+        summary=repaired_summary,
+        evidence_packs=updated_evidence_packs,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": repaired_compact,
+                    "classification": "factual",
+                    "evidence_ids": ["planning"],
+                }
+            ]
+        },
+        existing_soft_copy_claim_provenance=initial["soft_copy_claim_provenance"],
+        replaced_soft_copy_claim_ids={"summary": [old_compact_claim["claim_id"]]},
+        soft_copy_repair_texts={"summary": [repaired_compact]},
+    )
+
+    assert finalized["summary"]["executive_summary"].startswith(
+        corrected_metric_sentence
+    )
+    corrected_hash = sha256(corrected_metric_sentence.encode()).hexdigest()
+    corrected_claim = next(
+        claim
+        for claim in finalized["soft_copy_claim_provenance"]["claims"]
+        if claim["artifact_family"] == "summary"
+        and claim["text_hash"] == corrected_hash
+    )
+    assert corrected_claim["classification"] == "factual"
+    assert corrected_claim["evidence_ids"] == ["market-growth"]
     assert_retained_soft_copy_claims_match_public_copy(finalized)
 
 

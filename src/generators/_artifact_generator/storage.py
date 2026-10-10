@@ -383,6 +383,12 @@ def assemble_artifacts_payload(
         "linkedin_post": linkedin_post,
     }
     pre_correction_bindings = deepcopy(soft_copy_claim_bindings)
+    if (soft_copy_repair_texts or {}).get("summary") and retained_summary_claims:
+        pre_correction_bindings["summary"] = _summary_bindings_with_retained_claims(
+            summary=pre_correction_soft_copy["summary"],
+            bindings=pre_correction_bindings.get("summary", []),
+            retained_claims=retained_summary_after_replacements,
+        )
     if (
         evidence_span_stats.get("bound_count", 0) > 0
         or evidence_span_stats.get("unbound_count", 0) > 0
@@ -812,6 +818,49 @@ def _soft_copy_claim_provenance_payload(
                 context={"artifact_family": family},
             )
     return soft_copy_claim_provenance_to_payload(claims)
+
+
+def _summary_bindings_with_retained_claims(
+    *,
+    summary: Dict[str, Any],
+    bindings: List[Dict[str, Any]],
+    retained_claims: List[SoftCopyClaimProvenance],
+) -> List[Dict[str, Any]]:
+    """Carry retained summary semantics across later deterministic corrections."""
+
+    public_text = soft_copy_public_text("summary", summary)
+    aligned = align_soft_copy_claim_bindings_to_text(
+        artifact_family="summary",
+        text=public_text,
+        claim_bindings=bindings,
+    )
+    covered_sentences = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    claims_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in retained_claims:
+        claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+    result = [dict(binding) for binding in bindings if isinstance(binding, dict)]
+    for sentence in soft_copy_material_sentences(public_text):
+        normalized = " ".join(sentence.split())
+        if normalized in covered_sentences:
+            continue
+        sentence_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        matches = claims_by_hash.get(sentence_hash, [])
+        if len(matches) != 1:
+            continue
+        claim = matches[0]
+        result.append(
+            {
+                "claim": normalized,
+                "classification": claim.classification,
+                "evidence_ids": list(claim.evidence_ids),
+            }
+        )
+        covered_sentences.add(normalized)
+    return result
 
 
 def _complete_summary_bindings_from_exact_direct_claims(
