@@ -1,8 +1,7 @@
 text: |
-  Search file_search by section/title/page and each key-point metric, subject,
-  value, and period; search for directional body outcomes. Exhaust body
-  searches before summary-only findings. DocMap is a clue, not evidence. Keep
-  chart values exact; cite direct excerpts.
+  Search file_search by section/page for key-point metrics, subjects, values,
+  periods, and directional outcomes. DocMap is a clue, not evidence; cite body
+  excerpts.
 
   {{ doc_map_sections_json }}
 
@@ -46,5 +45,6 @@ text: |
     "not_found_reason": ""
   }
 
-  Return empty only if body searches find no direct support:
+  If body evidence supports a material key point, include it as a finding;
+  otherwise return empty with "findings_not_found":
   {"findings": [], "not_found_reason": "findings_not_found"}

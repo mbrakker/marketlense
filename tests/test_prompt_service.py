@@ -169,6 +169,11 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
     assert "counterbalancing" in editorial_plan_prompt.user.text
     assert "executive-summary" in editorial_plan_prompt.user.text
     assert "counterbalancing" in findings_prompt.user.text
+    findings_text = " ".join(findings_prompt.user.text.split()).casefold()
+    assert (
+        "if body evidence supports a material key point, include it as a finding"
+        in findings_text
+    )
 
 
 def test_editorial_plan_prompt_retains_substantive_central_forecasts() -> None:
