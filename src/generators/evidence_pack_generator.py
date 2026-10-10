@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, replace
 from hashlib import sha256
@@ -80,6 +81,7 @@ from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
+from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
 
@@ -90,6 +92,511 @@ _OPTIONAL_EVIDENCE_PACKS = {
     "limitations",
     "quote_candidates",
 }
+
+_MAX_FINDINGS_RETRIEVAL_TARGETS = 8
+_MAX_FINDINGS_FALLBACK_TARGETS = 2
+_MAX_FINDINGS_TARGET_KEY_POINTS = 1
+_MAX_FINDINGS_TARGET_SOURCE_PAGES = 12
+_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS = 5000
+_MAX_FINDINGS_TARGET_SOURCE_CHARS = 32000
+_FINDINGS_TARGET_METADATA_TITLE = re.compile(
+    r"\b(?:about the research|research methodology|survey methodology|"
+    r"methodology|respondent profiles?|survey scope|foreword|"
+    r"acknowledg(?:e)?ments?|references|contents|about adjust|"
+    r"about the author)\b",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_OVERVIEW_TITLE = re.compile(
+    r"\b(?:executive summary|introduction|drivers? shaping|"
+    r"retrospective and .* outlook|outlook overview|report overview|"
+    r"key takeaways)\b",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_TERMS = (
+    "corporate",
+    "deal",
+    "buyer",
+    "carve-out",
+    "carve out",
+    "portfolio",
+    "simplification",
+    "value creation",
+    "revenue",
+    "growth",
+    "market",
+    "cagr",
+    "gdp",
+    "install",
+    "session",
+    "gaming",
+    "casino",
+    "slots",
+    "retention",
+    "cpi",
+    "switch",
+    "consumer",
+    "traffic",
+    "referral",
+    "publisher",
+    "forecast",
+    "cost",
+    "margin",
+)
+_FINDINGS_TARGET_NUMBER = re.compile(
+    r"(?<![\w\d])[+\-−]?\s*"
+    r"(?P<number>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
+    r"\s*(?P<unit>%|percent(?:age points?)?|pp|[kmbtn]|"
+    r"thousand|million|billion|trillion|[eE])?(?![\w&])",
+    re.IGNORECASE,
+)
+_FINDINGS_TARGET_QUALIFIERS = (
+    ("approximate", ("approximately", "approx.", "around", "about", "roughly", "~")),
+    ("at_least", ("at least", "more than", "over")),
+    ("at_most", ("at most", "less than", "under")),
+)
+_FINDINGS_TARGET_YEAR_RANGE = re.compile(
+    r"\b(?P<start>(?:19|20)\d{2})\s*[-–—−\uFFFD]\s*"
+    r"(?P<end>(?:19|20)\d{2})\b"
+)
+
+
+def _findings_target_number_markers(value: str) -> set[str]:
+    markers: set[str] = set()
+    normalized = re.sub(
+        r"\b(?:fig(?:ure)?|chart|table)\s*[A-Z]?\s*\d+\b",
+        " ",
+        value,
+        flags=re.IGNORECASE,
+    ).replace("−", "-")
+    for match in _FINDINGS_TARGET_NUMBER.finditer(normalized):
+        raw = match.group(0).strip().replace(",", "")
+        sign = "-" if raw.startswith("-") else ""
+        number = match.group("number").replace(",", "")
+        unit = str(match.group("unit") or "").strip().casefold()
+        unit = {
+            "percent": "%",
+            "percentage point": "pp",
+            "percentage points": "pp",
+            "thousand": "k",
+            "million": "m",
+            "billion": "b",
+            "trillion": "t",
+        }.get(unit, unit)
+        markers.add(f"{sign}{number}{unit}")
+    return markers
+
+
+def _findings_target_score(value: str, title: str = "") -> float:
+    lowered = value.casefold()
+    title_lowered = title.casefold()
+    number_count = sum(
+        not (marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100)
+        for marker in _findings_target_number_markers(value)
+    )
+    term_score = sum(
+        (1.2 if term in title_lowered else 0.7)
+        for term in _FINDINGS_TARGET_TERMS
+        if term in lowered or term in title_lowered
+    )
+    score = min(number_count, 12) * 1.5 + term_score
+    return score * (0.5 if _FINDINGS_TARGET_OVERVIEW_TITLE.search(title) else 1.0)
+
+
+def _findings_target_key_points(target: dict[str, object]) -> list[str]:
+    def normalize_year_ranges(points: list[str]) -> list[str]:
+        return [
+            _FINDINGS_TARGET_YEAR_RANGE.sub(r"\g<start> to \g<end>", point)
+            for point in points
+        ]
+
+    raw_points = target.get("key_points")
+    if isinstance(raw_points, list):
+        points = [str(point).strip() for point in raw_points if str(point).strip()]
+        if points:
+            return normalize_year_ranges(points)
+    point = str(target.get("key_point") or "").strip()
+    return normalize_year_ranges([point]) if point else []
+
+
+def _findings_target_key_point_score(value: str, title: str = "") -> float:
+    score = _findings_target_score(value, title)
+    lowered = value.casefold()
+    score += sum(2.5 for term in ("casino", "slots") if term in lowered)
+    return score + sum(2.0 for term in ("install", "session") if term in lowered)
+
+
+def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
+    """Select bounded substantive sections as retrieval targets, never evidence."""
+
+    raw_sections = doc_map.get("sections")
+    if not isinstance(raw_sections, list):
+        return []
+    ranked: list[tuple[float, int, dict[str, object]]] = []
+    for index, raw_section in enumerate(raw_sections):
+        if not isinstance(raw_section, dict):
+            continue
+        section_id = str(raw_section.get("id") or "").strip()
+        title = str(raw_section.get("title") or "").strip()
+        if not section_id or not title or _FINDINGS_TARGET_METADATA_TITLE.search(title):
+            continue
+        pages = (
+            [
+                page
+                for page in raw_section.get("pages", [])
+                if isinstance(page, int) and not isinstance(page, bool) and page > 0
+            ]
+            if isinstance(raw_section.get("pages"), list)
+            else []
+        )
+        raw_points = raw_section.get("key_points")
+        key_points = (
+            [str(point).strip() for point in raw_points if str(point).strip()]
+            if isinstance(raw_points, list)
+            else []
+        )
+        summary = str(raw_section.get("summary") or "").strip()
+        if not key_points and not summary:
+            continue
+        section_text = " ".join([title, summary, *key_points])
+        score = _findings_target_score(section_text, title)
+        if score <= 0:
+            continue
+        priority_key_points = sorted(
+            enumerate(key_points or [summary]),
+            key=lambda item: (
+                -_findings_target_key_point_score(item[1], title),
+                item[0],
+            ),
+        )[:_MAX_FINDINGS_TARGET_KEY_POINTS]
+        selected_key_points = [point for _point_index, point in priority_key_points]
+        ranked.append(
+            (
+                score,
+                index,
+                {
+                    "id": section_id,
+                    "title": title,
+                    "pages": pages,
+                    "key_point": selected_key_points[0],
+                    "key_points": selected_key_points,
+                },
+            )
+        )
+    ranked.sort(key=lambda item: (-item[0], item[1]))
+    return [
+        target for _score, _index, target in ranked[:_MAX_FINDINGS_RETRIEVAL_TARGETS]
+    ]
+
+
+def _findings_target_source_pages(
+    targets: list[dict[str, object]], source_spans: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    """Return bounded PDF page text for missed DocMap targets, never DocMap proof."""
+
+    page_text: dict[int, str] = {}
+    for span in source_spans:
+        if not isinstance(span, dict):
+            continue
+        page = span.get("page")
+        text = str(span.get("text") or "").strip()
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0 and text:
+            page_text.setdefault(page, text)
+
+    selected: list[dict[str, object]] = []
+    seen_pages: set[int] = set()
+    total_chars = 0
+    for target in targets:
+        target_pages = target.get("pages")
+        if not isinstance(target_pages, list):
+            continue
+        candidate_pages = [
+            page
+            for page in target_pages
+            if isinstance(page, int)
+            and not isinstance(page, bool)
+            and page > 0
+            and page in page_text
+        ]
+        expected_numbers = {
+            marker
+            for key_point in _findings_target_key_points(target)
+            for marker in _findings_target_number_markers(key_point)
+            if not (
+                marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100
+            )
+        }
+        if expected_numbers:
+            complete_relationship_pages = [
+                page
+                for page in candidate_pages
+                if expected_numbers.issubset(
+                    _findings_target_number_markers(page_text[page])
+                )
+            ]
+            if complete_relationship_pages:
+                candidate_pages = complete_relationship_pages
+        for page in candidate_pages:
+            if (
+                not isinstance(page, int)
+                or isinstance(page, bool)
+                or page <= 0
+                or page in seen_pages
+                or page not in page_text
+                or len(selected) >= _MAX_FINDINGS_TARGET_SOURCE_PAGES
+                or total_chars >= _MAX_FINDINGS_TARGET_SOURCE_CHARS
+            ):
+                continue
+            remaining_chars = _MAX_FINDINGS_TARGET_SOURCE_CHARS - total_chars
+            excerpt = page_text[page][
+                : min(_MAX_FINDINGS_TARGET_SOURCE_PAGE_CHARS, remaining_chars)
+            ]
+            if not excerpt:
+                continue
+            selected.append({"page": page, "text": excerpt})
+            seen_pages.add(page)
+            total_chars += len(excerpt)
+    return selected
+
+
+def _findings_section_matches_target(
+    finding: dict[str, object],
+    target: dict[str, object],
+    targets: Optional[list[dict[str, object]]] = None,
+) -> bool:
+    finding_id = str(finding.get("section_id") or "").strip()
+    target_id = str(target.get("id") or "").strip()
+    if finding_id:
+        return finding_id == target_id
+    finding_title = str(finding.get("section_title") or "").strip().casefold()
+    target_title = str(target.get("title") or "").strip().casefold()
+    if not finding_title or finding_title != target_title:
+        return False
+    same_title_targets = [
+        item
+        for item in (targets or [target])
+        if str(item.get("title") or "").strip().casefold() == target_title
+    ]
+    if len(same_title_targets) < 2:
+        return True
+    finding_pages = {
+        page
+        for page in finding.get("pages", [])
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0
+    }
+    target_pages = {
+        page
+        for page in target.get("pages", [])
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0
+    }
+    return bool(finding_pages.intersection(target_pages))
+
+
+def _findings_is_subset_of_fallback(
+    finding: dict[str, object], fallback_finding: dict[str, object]
+) -> bool:
+    """Drop a partial primary item only when fallback restates it completely."""
+
+    finding_section_id = str(finding.get("section_id") or "").strip()
+    fallback_section_id = str(fallback_finding.get("section_id") or "").strip()
+    finding_section_title = str(finding.get("section_title") or "").strip()
+    fallback_section_title = str(fallback_finding.get("section_title") or "").strip()
+    if finding_section_id and fallback_section_id:
+        same_section = finding_section_id == fallback_section_id
+    else:
+        finding_pages = {
+            page
+            for page in finding.get("pages", [])
+            if isinstance(page, int) and not isinstance(page, bool) and page > 0
+        }
+        fallback_pages = {
+            page
+            for page in fallback_finding.get("pages", [])
+            if isinstance(page, int) and not isinstance(page, bool) and page > 0
+        }
+        same_section = bool(
+            finding_section_title
+            and finding_section_title.casefold() == fallback_section_title.casefold()
+            and finding_pages.intersection(fallback_pages)
+        )
+    if not same_section:
+        return False
+    claim = str(finding.get("text") or "").casefold()
+    fallback_claim = str(fallback_finding.get("text") or "").casefold()
+    evidence = str(finding.get("evidence") or "").casefold()
+    fallback_evidence = str(fallback_finding.get("evidence") or "").casefold()
+    words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", claim))
+    fallback_words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_claim))
+    evidence_words = set(re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", evidence))
+    fallback_evidence_words = set(
+        re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_evidence)
+    )
+    numbers = _findings_target_number_markers(claim)
+    fallback_numbers = _findings_target_number_markers(fallback_claim)
+    return bool(
+        words
+        and evidence_words
+        and words.issubset(fallback_words)
+        and evidence_words.issubset(fallback_evidence_words)
+        and numbers.issubset(fallback_numbers)
+    )
+
+
+def _findings_target_is_covered(
+    target: dict[str, object],
+    findings: list[dict[str, object]],
+    grounded_finding_ids: set[str],
+    targets: Optional[list[dict[str, object]]] = None,
+) -> bool:
+    matched = [
+        finding
+        for finding in findings
+        if _findings_section_matches_target(finding, target, targets)
+        and str(finding.get("id") or "").strip() in grounded_finding_ids
+    ]
+    if not matched:
+        return False
+    if not any(
+        any(
+            isinstance(page, int) and not isinstance(page, bool) and page > 0
+            for page in finding.get("pages", [])
+        )
+        for finding in matched
+        if isinstance(finding.get("pages"), list)
+    ):
+        return False
+    target_pages = {
+        page
+        for page in target.get("pages", [])
+        if isinstance(page, int) and not isinstance(page, bool) and page > 0
+    }
+    if target_pages and not any(
+        target_pages.intersection(
+            {
+                page
+                for page in finding.get("pages", [])
+                if isinstance(page, int) and not isinstance(page, bool) and page > 0
+            }
+        )
+        for finding in matched
+        if isinstance(finding.get("pages"), list)
+    ):
+        return False
+    claim_text = " ".join(
+        str(finding.get("text") or "") for finding in matched
+    ).casefold()
+    claim_numbers = set().union(
+        *(
+            _findings_target_number_markers(str(finding.get("text") or ""))
+            for finding in matched
+        )
+    )
+    evidence_numbers = set().union(
+        *(
+            _findings_target_number_markers(str(finding.get("evidence") or ""))
+            for finding in matched
+        )
+    )
+    for key_point in _findings_target_key_points(target):
+        expected_numbers = _findings_target_number_markers(key_point)
+        if expected_numbers and (
+            not expected_numbers.issubset(claim_numbers)
+            or not expected_numbers.issubset(evidence_numbers)
+        ):
+            return False
+        for _name, variants in _FINDINGS_TARGET_QUALIFIERS:
+            if any(variant in key_point.casefold() for variant in variants) and not any(
+                variant in claim_text for variant in variants
+            ):
+                return False
+    return True
+
+
+def _findings_target_is_strategic_and_qualitative(
+    target: dict[str, object],
+) -> bool:
+    key_point = str(target.get("key_point") or "")
+    return bool(
+        not _findings_target_number_markers(key_point)
+        and _findings_target_score(
+            f"{target.get('title', '')} {key_point}",
+            str(target.get("title") or ""),
+        )
+        >= 3.0
+    )
+
+
+def _attach_verified_finding_pages(
+    findings: list[dict[str, object]], fidelity
+) -> set[str]:
+    """Bind supported findings to physical pages found in their source evidence."""
+
+    findings_by_id = {
+        str(finding.get("id") or "").strip(): finding
+        for finding in findings
+        if str(finding.get("id") or "").strip()
+    }
+    supported_ids: set[str] = set()
+    for result in fidelity.results:
+        claim_id = str(result.candidate.claim_id)
+        if result.status != "supported" or not claim_id.startswith(
+            "evidence:findings:"
+        ):
+            continue
+        finding_id = claim_id.removeprefix("evidence:findings:")
+        finding = findings_by_id.get(finding_id)
+        if finding is None:
+            continue
+        pages = sorted(
+            {
+                int(reference.page)
+                for reference in result.candidate.evidence_references
+                if isinstance(getattr(reference, "page", None), int)
+                and not isinstance(reference.page, bool)
+                and reference.page > 0
+            }
+        )
+        if pages:
+            finding["pages"] = pages
+            supported_ids.add(finding_id)
+    return supported_ids
+
+
+def _missing_findings_retrieval_targets(
+    targets: list[dict[str, object]],
+    findings: list[dict[str, object]],
+    grounded_finding_ids: set[str],
+) -> list[dict[str, object]]:
+    """Return at most two missed high-priority targets for one fallback."""
+
+    priority_targets = targets[:_MAX_FINDINGS_FALLBACK_TARGETS]
+    missing = []
+    for index, target in enumerate(priority_targets):
+        if _findings_target_is_covered(target, findings, grounded_finding_ids, targets):
+            continue
+        if index == 0 or _findings_target_is_strategic_and_qualitative(target):
+            missing.append(target)
+    return missing[:_MAX_FINDINGS_FALLBACK_TARGETS]
+
+
+def _normalize_m_and_a_deal_quantities(text: str) -> str:
+    """Keep M&A from being parsed as a magnitude in numeric deal findings."""
+
+    return re.sub(
+        r"\b(\d+(?:\.\d+)?)\s+M\s*&\s*A\s+(deals?)\b",
+        r"\1 \2 in M&A",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+
+def _normalize_targeted_finding_text(text: str) -> str:
+    normalized = _normalize_m_and_a_deal_quantities(text)
+    return re.sub(
+        r"\b(casino|slots)\s+games(?:[\uFFFD'’])?\s+installs\b",
+        r"\1 installs",
+        normalized,
+        flags=re.IGNORECASE,
+    )
 
 
 def _findings_prompt_user_variables(
@@ -135,6 +642,8 @@ def _findings_prompt_user_variables(
         "source_temporal_relationships_json": json.dumps(
             source_temporal_relationships, ensure_ascii=False
         ),
+        "findings_target_source_pages_json": "",
+        "findings_targeted_fallback_instruction": "",
     }
 
 
@@ -310,12 +819,16 @@ def generate_evidence_packs(
     prompt_family_reuse_reader=read_reusable_prompt_family,
     prompt_family_materializer=materialize_prompt_family,
     retrieval_results_observer=None,
+    findings_retrieval_results_observer=None,
 ) -> Dict[str, dict]:
     ctx = ctx or new_run_context(task_id=f"evidence_pack:{report_id}")
     source_identity_id = str(ctx.source_identity_id or "").strip()
     openai_client = require_injected_model_client(
         openai_client,
         scope="evidence_pack_generator",
+    )
+    validated_source_spans = source_spans or (
+        [{"id": "source:document", "text": source_text}] if source_text.strip() else []
     )
     logger.info(
         log_event(
@@ -448,10 +961,12 @@ def generate_evidence_packs(
 
     parallel_strategies = strategies[1:]
     findings_prompt_user_variables: Dict[str, str] = {}
+    findings_retrieval_targets: list[dict[str, object]] = []
     if any(strategy.pack_name == "findings" for strategy in parallel_strategies):
         findings_prompt_user_variables = _findings_prompt_user_variables(
             results["doc_map"], source_text
         )
+        findings_retrieval_targets = _findings_retrieval_targets(results["doc_map"])
         logger.info(
             log_event(
                 step_ctx,
@@ -501,6 +1016,21 @@ def generate_evidence_packs(
                         findings_prompt_user_variables
                         if strategy.pack_name == "findings"
                         else {}
+                    ),
+                    source_spans=(
+                        validated_source_spans
+                        if strategy.pack_name == "findings"
+                        else None
+                    ),
+                    findings_retrieval_results_observer=(
+                        findings_retrieval_results_observer
+                        if strategy.pack_name == "findings"
+                        else None
+                    ),
+                    findings_retrieval_targets=(
+                        findings_retrieval_targets
+                        if strategy.pack_name == "findings"
+                        else None
                     ),
                 )
                 futures[future] = step_name
@@ -568,12 +1098,22 @@ def generate_evidence_packs(
                     if strategy.pack_name == "findings"
                     else {}
                 ),
+                source_spans=(
+                    validated_source_spans if strategy.pack_name == "findings" else None
+                ),
+                findings_retrieval_results_observer=(
+                    findings_retrieval_results_observer
+                    if strategy.pack_name == "findings"
+                    else None
+                ),
+                findings_retrieval_targets=(
+                    findings_retrieval_targets
+                    if strategy.pack_name == "findings"
+                    else None
+                ),
             )
     for strategy in parallel_strategies:
         results[strategy.pack_name] = parallel_results[strategy.pack_name]
-    validated_source_spans = source_spans or (
-        [{"id": "source:document", "text": source_text}] if source_text.strip() else []
-    )
     if validated_source_spans:
         initial_fidelity = validate_evidence_fidelity(
             results, source_spans=validated_source_spans
@@ -689,6 +1229,9 @@ def _generate_pack(
     deferred_materializations,
     strategy: EvidencePackStrategy,
     prompt_user_variables: Optional[Dict[str, str]] = None,
+    source_spans: Optional[list[dict[str, object]]] = None,
+    findings_retrieval_results_observer=None,
+    findings_retrieval_targets: Optional[list[dict[str, object]]] = None,
     shared_retrieval_context_json: str = "",
     retrieval_results_observer=None,
     require_retrieval_results: bool = False,
@@ -711,8 +1254,15 @@ def _generate_pack(
         )
     )
 
-    def prepare_pack_prompt(retrieval_context_json: str):
-        user_variables = dict(prompt_user_variables or {})
+    def prepare_pack_prompt(
+        retrieval_context_json: str,
+        user_variables_override: Optional[Dict[str, str]] = None,
+    ):
+        user_variables = dict(
+            user_variables_override
+            if user_variables_override is not None
+            else prompt_user_variables or {}
+        )
         if pack_name in {"scope", "methods", "limitations"}:
             user_variables["shared_retrieval_context_json"] = retrieval_context_json
         return prepare_prompt_bundle(
@@ -902,8 +1452,17 @@ def _generate_pack(
     recovery_attempted = False
     doc_map_retrieval_results: list[OpenAIFileSearchResult] = []
 
-    def call_model(mode: str, original_response: str, schema_errors: str):
+    def call_model(
+        mode: str,
+        original_response: str,
+        schema_errors: str,
+        *,
+        bundle_override=None,
+        context_override: Optional[RunContext] = None,
+        stage_override: Optional[str] = None,
+    ):
         nonlocal recovery_attempted, doc_map_retrieval_results
+        call_ctx = context_override or ctx
         if mode != "primary":
             recovery_attempted = True
         doc_map_context_json = (
@@ -915,13 +1474,15 @@ def _generate_pack(
             shared_retrieval_context_json or doc_map_context_json
         )
         request_vector_store_id: str | None = vector_store_id
+        if pack_name == "findings" and mode == "targeted_fallback_source_pages":
+            request_vector_store_id = None
         if effective_retrieval_context and (
             pack_name in {"scope", "methods", "limitations"}
             or (pack_name == "doc_map" and mode != "primary")
         ):
             request_vector_store_id = None
-        bundle = prompt_bundle
-        if mode != "primary":
+        bundle = bundle_override or prompt_bundle
+        if mode != "primary" and bundle_override is None:
             bundle = recovery_prompt_bundle(
                 mode=mode,
                 artifact_family=pack_name,
@@ -940,7 +1501,7 @@ def _generate_pack(
                     ),
                 },
                 settings=settings,
-                ctx=ctx,
+                ctx=call_ctx,
                 prompt_client=prompt_client,
                 vector_store_id=request_vector_store_id,
             )
@@ -948,18 +1509,26 @@ def _generate_pack(
             openai_client=openai_client,
             prompt_bundle=bundle,
             settings=settings,
-            ctx=ctx,
+            ctx=call_ctx,
             vector_store_id=request_vector_store_id,
             report_id=report_id,
             artifact_family=pack_name,
-            stage=f"evidence_pack_{mode}",
+            stage=stage_override or f"evidence_pack_{mode}",
             publisher_name=publisher_name,
             report_name=report_name,
             source_url=source_url,
             output_schema=output_schema,
             output_schema_identity=f"{pack_name}_v1",
-            repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}[mode],
-            include_file_search_results=(pack_name == "doc_map" and mode == "primary"),
+            repair_attempt={"primary": 0, "model_repair": 1, "regeneration": 2}.get(
+                mode, 0
+            ),
+            include_file_search_results=(
+                (pack_name == "doc_map" and mode == "primary")
+                or (
+                    pack_name == "findings"
+                    and findings_retrieval_results_observer is not None
+                )
+            ),
             vector_store_content_hash=(vector_store_content_hash or ""),
             cache_file_search_results=(pack_name == "doc_map" and mode == "primary"),
         )
@@ -969,9 +1538,33 @@ def _generate_pack(
             )
             if retrieval_results_observer is not None:
                 retrieval_results_observer(doc_map_retrieval_results)
+        if pack_name == "findings" and findings_retrieval_results_observer is not None:
+            found_results = list(getattr(resp, "file_search_results", None) or [])
+            findings_retrieval_results_observer(found_results, mode)
+            logger.info(
+                log_event(
+                    call_ctx,
+                    role="generator",
+                    event="findings_retrieval_results_observed",
+                    module=logger.name,
+                    fields={
+                        "report_id": report_id,
+                        "retrieval_stage": mode,
+                        "query_count": len(
+                            {
+                                query
+                                for result in found_results
+                                for query in result.queries
+                                if str(query).strip()
+                            }
+                        ),
+                        "result_count": len(found_results),
+                    },
+                )
+            )
         logger.info(
             log_event(
-                ctx,
+                call_ctx,
                 role="generator",
                 event="evidence_pack_response_received",
                 module=logger.name,
@@ -1015,22 +1608,24 @@ def _generate_pack(
             normalized["not_found_reason"] = "limitations_not_found"
         return normalized
 
-    recovery = execute_structured_output(
-        StructuredOutputExecutionRequest(
-            schema_version="1.0",
-            report_id=report_id,
-            artifact_family=pack_name,
-            schema_name=schema_name,
-            model=prompt_bundle.resolved_model,
-            workflow="report_analysis",
-            prompt_family=prompt_bundle.routing_decision.namespace,
-            allow_abstention=pack_name in _OPTIONAL_EVIDENCE_PACKS,
-            terminal_failure_code=(
-                "doc_map_invalid_json"
-                if pack_name == "doc_map"
-                else "evidence_pack_invalid_json"
-            ),
+    execution_request = StructuredOutputExecutionRequest(
+        schema_version="1.0",
+        report_id=report_id,
+        artifact_family=pack_name,
+        schema_name=schema_name,
+        model=prompt_bundle.resolved_model,
+        workflow="report_analysis",
+        prompt_family=prompt_bundle.routing_decision.namespace,
+        allow_abstention=pack_name in _OPTIONAL_EVIDENCE_PACKS,
+        terminal_failure_code=(
+            "doc_map_invalid_json"
+            if pack_name == "doc_map"
+            else "evidence_pack_invalid_json"
         ),
+    )
+
+    recovery = execute_structured_output(
+        execution_request,
         ctx,
         call_model=call_model,
         normalize_payload=normalize_payload,
@@ -1048,9 +1643,268 @@ def _generate_pack(
         ),
     )
     result_payload = recovery.payload
+    fallback_attempts = 0
+    if pack_name == "findings" and source_spans:
+        findings = [
+            item
+            for item in result_payload.get("findings", [])
+            if isinstance(item, dict)
+        ]
+        targets = findings_retrieval_targets or []
+        if targets:
+            initial_fidelity = validate_evidence_fidelity(
+                {"findings": {"findings": findings}}, source_spans=source_spans
+            )
+            grounded_finding_ids = _attach_verified_finding_pages(
+                findings, initial_fidelity
+            )
+            result_payload["findings"] = findings
+            missing_targets = _missing_findings_retrieval_targets(
+                targets, findings, grounded_finding_ids
+            )
+            if missing_targets:
+                logger.info(
+                    log_event(
+                        ctx,
+                        role="generator",
+                        event="findings_targeted_fallback_started",
+                        module=logger.name,
+                        fields={
+                            "report_id": report_id,
+                            "missing_section_ids": [
+                                str(target.get("id") or "")
+                                for target in missing_targets
+                            ],
+                            "target_count": len(missing_targets),
+                            "initial_finding_count": len(findings),
+                            "grounded_finding_count": len(grounded_finding_ids),
+                            "initial_validation_statuses": {
+                                status: sum(
+                                    result.status == status
+                                    for result in initial_fidelity.results
+                                )
+                                for status in sorted(
+                                    {
+                                        result.status
+                                        for result in initial_fidelity.results
+                                    }
+                                )
+                            },
+                            "source_reference_count": sum(
+                                len(result.candidate.evidence_references)
+                                for result in initial_fidelity.results
+                            ),
+                        },
+                    )
+                )
+                fallback_ctx = child_context(
+                    ctx, task_id=f"{ctx.task_id}:targeted_fallback"
+                )
+                fallback_variables = dict(prompt_user_variables or {})
+                fallback_target_ids = {
+                    str(target.get("id") or "") for target in missing_targets
+                }
+                fallback_variables["doc_map_sections_json"] = json.dumps(
+                    [
+                        {
+                            "id": str(target.get("id") or ""),
+                            "title": str(target.get("title") or ""),
+                            "summary": "",
+                            "key_points": _findings_target_key_points(target),
+                            "pages": list(target.get("pages") or []),
+                        }
+                        for target in missing_targets
+                        if str(target.get("id") or "") in fallback_target_ids
+                    ],
+                    ensure_ascii=False,
+                )
+                fallback_variables["source_temporal_relationships_json"] = "[]"
+                fallback_variables["findings_targeted_fallback_instruction"] = (
+                    "Bounded recovery: the DocMap sections below guide retrieval "
+                    "but are not evidence. Use only the independently extracted "
+                    "source-page excerpts below as evidence, and cite their physical "
+                    "page numbers. Return only findings needed to complete the listed "
+                    "target key points. Preserve each subject, period, denominator, "
+                    "and numeric relationship; omit unsupported parts. Keep paired "
+                    "measures for one subject or cohort in the same finding. For a "
+                    "two-year YoY range, write 'year over year between [start year] "
+                    "and [end year]' instead of copying the dash. For a numeric M&A "
+                    "deal count, phrase the count before the acronym, such as "
+                    "'5.2 deals in M&A'. Do not expand into unrelated findings."
+                )
+                fallback_source_pages = _findings_target_source_pages(
+                    missing_targets, source_spans
+                )
+                fallback_variables["findings_target_source_pages_json"] = json.dumps(
+                    fallback_source_pages, ensure_ascii=False
+                )
+                fallback_bundle = prepare_pack_prompt("", fallback_variables)
+
+                def call_targeted_fallback(
+                    _mode: str, _original_response: str, _schema_errors: str
+                ):
+                    return call_model(
+                        (
+                            "targeted_fallback_source_pages"
+                            if fallback_source_pages
+                            else "targeted_fallback"
+                        ),
+                        "",
+                        "",
+                        bundle_override=fallback_bundle,
+                        context_override=fallback_ctx,
+                        stage_override="evidence_pack_targeted_fallback",
+                    )
+
+                fallback_attempts = 1
+                try:
+                    fallback = execute_structured_output(
+                        replace(execution_request, allow_model_recovery=False),
+                        fallback_ctx,
+                        call_model=call_targeted_fallback,
+                        normalize_payload=normalize_payload,
+                        validate_payload=lambda payload: validate_schema(
+                            SchemaValidateRequest(
+                                schema_version="1.0",
+                                payload=payload,
+                                schema_name=schema_name,
+                            ),
+                            fallback_ctx,
+                        ),
+                        is_substantive=lambda payload: (
+                            _pack_confidence_score(pack_name, payload) > 0.0
+                        ),
+                        model_pricing=settings.model_pricing,
+                        is_formal_abstention=lambda payload: bool(
+                            isinstance(payload, dict)
+                            and str(payload.get("not_found_reason") or "").strip()
+                        ),
+                    )
+                except StructuredOutputFailure as exc:
+                    logger.warning(
+                        log_event(
+                            fallback_ctx,
+                            role="generator",
+                            event="findings_targeted_fallback_rejected",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "error_code": exc.code,
+                                "error_class": exc.context.get("error_class", ""),
+                                "target_count": len(missing_targets),
+                            },
+                        )
+                    )
+                else:
+                    fallback_attempts = fallback.attempts
+                    target_ids = {
+                        str(target.get("id") or ""): target
+                        for target in missing_targets
+                    }
+                    fallback_findings: list[dict[str, object]] = []
+                    for raw_item in fallback.payload.get("findings", []):
+                        if not isinstance(raw_item, dict):
+                            continue
+                        matched_target = next(
+                            (
+                                target
+                                for target in missing_targets
+                                if _findings_section_matches_target(
+                                    raw_item, target, missing_targets
+                                )
+                            ),
+                            None,
+                        )
+                        if matched_target is None:
+                            continue
+                        item = dict(raw_item)
+                        if not str(item.get("section_id") or "").strip():
+                            item["section_id"] = matched_target["id"]
+                        if not str(item.get("section_title") or "").strip():
+                            item["section_title"] = matched_target["title"]
+                        if str(item.get("section_id") or "").strip() not in target_ids:
+                            continue
+                        item["text"] = _normalize_targeted_finding_text(
+                            str(item.get("text") or "")
+                        )
+                        fallback_findings.append(item)
+                    if fallback_findings:
+                        merged = dict(result_payload)
+                        fallback_fidelity = validate_evidence_fidelity(
+                            {"findings": {"findings": fallback_findings}},
+                            source_spans=source_spans,
+                        )
+                        directly_supported_fallback_ids = (
+                            _attach_verified_finding_pages(
+                                fallback_findings, fallback_fidelity
+                            )
+                        )
+                        merged_findings = [
+                            item
+                            for item in findings
+                            if not any(
+                                str(fallback_item.get("id") or "").strip()
+                                in directly_supported_fallback_ids
+                                and _findings_is_subset_of_fallback(item, fallback_item)
+                                for fallback_item in fallback_findings
+                            )
+                        ]
+                        existing_ids = {
+                            str(item.get("id") or "").strip()
+                            for item in merged_findings
+                        }
+                        signatures = {
+                            (
+                                str(item.get("section_id") or "").casefold(),
+                                str(item.get("text") or "").casefold(),
+                                str(item.get("evidence") or "").casefold(),
+                                tuple(item.get("pages") or []),
+                            )
+                            for item in merged_findings
+                        }
+                        for index, item in enumerate(fallback_findings, start=1):
+                            signature = (
+                                str(item.get("section_id") or "").casefold(),
+                                str(item.get("text") or "").casefold(),
+                                str(item.get("evidence") or "").casefold(),
+                                tuple(item.get("pages") or []),
+                            )
+                            if signature in signatures:
+                                continue
+                            item = dict(item)
+                            item_id = str(item.get("id") or "").strip()
+                            if item_id in existing_ids:
+                                item_id = f"{item_id}-targeted-{index}"
+                                item["id"] = item_id
+                            existing_ids.add(item_id)
+                            signatures.add(signature)
+                            merged_findings.append(item)
+                        if merged_findings != findings:
+                            merged["findings"] = merged_findings
+                            merged["not_found_reason"] = ""
+                            result_payload = merged
+                    logger.info(
+                        log_event(
+                            fallback_ctx,
+                            role="generator",
+                            event="findings_targeted_fallback_complete",
+                            module=logger.name,
+                            fields={
+                                "report_id": report_id,
+                                "attempts": fallback.attempts,
+                                "target_count": len(missing_targets),
+                                "returned_findings": len(fallback_findings),
+                                "merged_findings": max(
+                                    0,
+                                    len(result_payload.get("findings", []))
+                                    - len(findings),
+                                ),
+                            },
+                        )
+                    )
     not_found_reason = str(result_payload.get("not_found_reason") or "")
-    attempts_used = recovery.attempts
-    max_attempts = 3
+    attempts_used = recovery.attempts + fallback_attempts
+    max_attempts = 3 + (1 if fallback_attempts else 0)
     result_payload = _attach_pack_family_status(pack_name, result_payload)
     if cache_meta and isinstance(result_payload, dict):
         result_payload = dict(result_payload)

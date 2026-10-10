@@ -6,7 +6,11 @@ text: |
   printed page labels guide retrieval but are not PDF offsets. Copy a verbatim
   body excerpt into evidence and use its physical PDF page index in pages.
 
+  {{ findings_targeted_fallback_instruction }}
+
   {{ doc_map_sections_json }}
+
+  {{ findings_target_source_pages_json }}
 
   For listed periods, deterministic retained-source label/value pairs bind
   findings. They override ambiguous file_search chart rendering; preserve
