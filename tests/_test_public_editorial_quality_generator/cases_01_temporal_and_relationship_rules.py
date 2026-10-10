@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v9"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v10"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -757,6 +757,29 @@ def test_metric_category_relationship_uses_canonical_quantity_matching(
     explanation = _metric_label_relationship_explanation(claim, evidence)
 
     assert bool(explanation) is expected_relationship_failure
+
+
+def test_inline_heading_footnote_is_not_treated_as_category_value() -> None:
+    evidence = (
+        "We forecast that over the next four years, global Internet and media "
+        "revenues will grow by approximately $300 billion, continuing to outpace "
+        "GDP growth\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, "
+        "2017E-2021E, USD\nACTIVATE\nFORECAST\n$302B\nGROWTH\nDOLLARS\n"
+        "CAGR 4.1%\nGlobal GDP CAGR: ~3%\n$1.7T\n$2.0T\n2017E\n2021E"
+    )
+    claim = (
+        "Global consumer Internet and media revenues are forecast to add $302B "
+        "at a 4.1% CAGR during 2017E\u20132021E."
+    )
+
+    explanation = _metric_label_relationship_explanation(claim, evidence)
+    report = evaluate_public_editorial_quality(
+        report_id="activate-footnote-heading",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
+    assert explanation == ""
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
 def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown() -> (
