@@ -293,8 +293,7 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     ]
 
     assert (
-        "State that a dataset represents or comes from a specific population only when "
-        "retained evidence explicitly identifies that population"
+        "State dataset population or methodology only when linked evidence says so"
         in summary_prompt.user.text
     )
     assert "use the most specific supplied evidence ID that states that detail" in (

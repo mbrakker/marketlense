@@ -11,9 +11,14 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Evidence identity rules:
+  - Use DocMap for section selection and nonnumeric coverage only.
   - For numeric claims, prefer a finding ID. Use a quote ID only if its exact
     text states the value, subject, and period/status. Never use a DocMap ID as
     numeric evidence.
+  - For a finding-supported numeric claim, `evidence_id` must equal the `id` of
+    the supporting entry in the `findings` evidence pack. A quote ID is valid
+    only when its exact text states the value, subject, and period/status.
+    Never use a DocMap section ID as `evidence_id` for a numeric claim.
   - Keep each value's role (level, change, forecast, or cumulative) and bind it
     to its metric, population, geography, period, and any stated denominator.
     Leave unclear bindings empty.
