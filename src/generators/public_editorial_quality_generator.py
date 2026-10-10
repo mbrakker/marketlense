@@ -175,7 +175,7 @@ _VALUE_PERIOD_PAIR = re.compile(
 )
 _CAPITALIZED_CATEGORY_VALUE_PAIR = re.compile(
     rf"\b(?P<label>[A-Z][A-Za-z0-9&/-]*(?:\s+(?:[A-Z][A-Za-z0-9&/-]*|and|&)){{0,4}})"
-    rf"(?:\s*(?::|is|has|accounts\s+for|at|reaches)\s*|\s+)"
+    rf"(?:[ \t]*(?::|is|has|accounts\s+for|at|reaches)[ \t]*|[ \t]+)"
     rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
 _DELIMITED_CATEGORY_VALUE_PAIR = re.compile(

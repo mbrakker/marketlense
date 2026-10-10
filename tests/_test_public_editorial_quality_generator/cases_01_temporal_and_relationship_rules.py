@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v10"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v11"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -779,6 +779,27 @@ def test_inline_heading_footnote_is_not_treated_as_category_value() -> None:
     )
 
     assert explanation == ""
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
+
+
+def test_chart_line_break_does_not_bind_growth_heading_to_adjacent_value() -> None:
+    evidence = (
+        "We forecast that over the next four years, global Internet and media "
+        "revenues will grow by approximately $300 billion, continuing to outpace "
+        "GDP growth\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, "
+        "2017E-2021E, USD\nACTIVATE\nFORECAST\n$302B\n$2.0T\nGROWTH\n"
+        "$1.7T\nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\n2017E\n2021E"
+    )
+    claim = (
+        "Activate forecasts $302B in global consumer Internet and media revenue "
+        "growth at 4.1% CAGR for 2017E\u20132021E."
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="activate-chart-line-break",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
