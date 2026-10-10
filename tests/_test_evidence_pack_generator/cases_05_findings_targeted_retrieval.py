@@ -367,6 +367,29 @@ def test_findings_target_source_pages_select_complete_numeric_relationship_page(
     ]
 
 
+def test_findings_target_source_pages_retrieves_word_only_target():
+    from src.generators.evidence_pack_generator import _findings_target_source_pages
+
+    target = {
+        "id": "global-business",
+        "title": "Global business",
+        "key_point": "Global business results improved across channels.",
+        "pages": [1],
+    }
+    source_spans = [
+        {
+            "id": "pdf:p1",
+            "page": 1,
+            "text": "Global business results improved across channels.",
+        }
+    ]
+
+    excerpts = _findings_target_source_pages([target], source_spans)
+
+    assert [item["page"] for item in excerpts] == [1]
+    assert "Global business results" in excerpts[0]["text"]
+
+
 def test_findings_target_source_pages_resolve_printed_label_to_physical_pdf_page():
     from src.generators.evidence_pack_generator import _findings_target_source_pages
 

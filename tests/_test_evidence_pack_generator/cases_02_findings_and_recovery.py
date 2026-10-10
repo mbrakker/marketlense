@@ -673,6 +673,30 @@ def test_same_section_title_does_not_match_a_different_docmap_section_id():
     ) == [target]
 
 
+def test_different_section_title_does_not_cover_target_without_section_id():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    target = {
+        "id": "paid-media-results",
+        "title": "Paid media results",
+        "key_point": "Paid media revenue grew 12% in 2025.",
+        "pages": [5],
+    }
+    unrelated_finding = {
+        "id": "unrelated-finding",
+        "section_title": "Consumer behavior",
+        "text": "Paid media revenue grew 12% in 2025.",
+        "evidence": "Paid media revenue grew 12% in 2025.",
+        "pages": [5],
+    }
+
+    assert _missing_findings_retrieval_targets(
+        [target], [unrelated_finding], {"unrelated-finding"}
+    ) == [target]
+
+
 def test_generate_evidence_packs_handles_missing_json(tmp_path):
     fake_openai = FakeOpenAIClient(parsed=None)
     analysis_store = FakeAnalysisStore()
