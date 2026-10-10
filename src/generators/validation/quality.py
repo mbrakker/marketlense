@@ -55,14 +55,17 @@ _QUANTITATIVE_METRIC_CONTEXT = re.compile(
 _QUALITATIVE_ACTOR = re.compile(
     r"\b(?:advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
     r"corporates?|creators?|developers?|households?|investors?|marketers?|"
-    r"merchants?|operators?|publishers?|retailers?|users?)\b",
+    r"merchants?|operators?|publishers?|retailers?|users?|apps?|games?|gaming|"
+    r"casino|slots?|installs?|sessions?|referrals?|traffic|pipelines?|"
+    r"carve[- ]?outs?)\b",
     re.IGNORECASE,
 )
 _QUALITATIVE_RELATION = re.compile(
     r"\b(?:account for|adopt|choose|constrain|decline|depend|divert|drive|"
-    r"exceed|fall|generate|grow|increase|lead to|lose|outpace|prefer|push|"
-    r"reduce|redirect|reshape|shift|substitute|switch|trade off|value|weigh|"
-    r"while|whereas|rather than|instead of|more likely|less likely)\b",
+    r"disrupt|erode|exceed|fall|fell|gain|generate|grow|grew|increase|lead to|"
+    r"lose|outpace|prefer|push|reduce|redirect|reshape|rise|rose|shift|"
+    r"substitute|switch|trade off|value|weigh|while|whereas|rather than|"
+    r"instead of|more likely|less likely)\b",
     re.IGNORECASE,
 )
 
@@ -122,6 +125,33 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
                 )
             )
             continue
+        if path == "insights_final[0].text":
+            if _has_concrete_signal(first_sentence):
+                continue
+            stronger_evidence_id = _stronger_retained_insight_evidence_id(
+                artifacts, start_index=1
+            )
+            if not stronger_evidence_id:
+                continue
+            insights = artifacts.get("insights_final")
+            lead = insights[0] if isinstance(insights, list) and insights else {}
+            lead_id = _s(lead.get("id")).strip() if isinstance(lead, dict) else ""
+            issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message=(
+                        "Core signal is broader than another retained "
+                        "source-supported insight."
+                    ),
+                    severity="warning",
+                    affected_section=path,
+                    rule_id=RULE_ID,
+                    repair_target="artifact_copy",
+                    entity_id=f"insight:{lead_id}:text" if lead_id else path,
+                    evidence_ids=[stronger_evidence_id],
+                )
+            )
+            continue
         if not _has_generic_copy_signal(first_sentence):
             issues.append(
                 ValidationIssue(
@@ -140,13 +170,15 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
     return issues
 
 
-def _stronger_retained_insight_evidence_id(artifacts: dict) -> str:
+def _stronger_retained_insight_evidence_id(
+    artifacts: dict, *, start_index: int = 0
+) -> str:
     """Return the first specific, evidence-linked selected insight, if any."""
 
     insights = artifacts.get("insights_final")
     if not isinstance(insights, list):
         return ""
-    for insight in insights:
+    for insight in insights[start_index:]:
         if not isinstance(insight, dict):
             continue
         evidence_id = _s(insight.get("evidence_id")).strip()
@@ -273,8 +305,7 @@ def _has_concrete_signal(sentence: str) -> bool:
     ):
         return True
     return bool(
-        _QUALITATIVE_ACTOR.search(sentence)
-        and _QUALITATIVE_RELATION.search(sentence)
+        _QUALITATIVE_ACTOR.search(sentence) and _QUALITATIVE_RELATION.search(sentence)
     )
 
 

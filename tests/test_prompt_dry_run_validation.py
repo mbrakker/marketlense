@@ -203,19 +203,17 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
+    assert "both tldrs lead with the strongest supported body outcome" in prompt_text
     assert (
-        "both tldrs must share the report's most material supported finding"
+        "if findings lack it, state the docmap relationship without numbers"
         in prompt_text
     )
-    assert "prefer decision-useful body outcomes over broad context" in prompt_text
-    assert "directly supported docmap point" in prompt_text
     assert "plan guides selection, not evidence" in prompt_text
-    assert "abstain if unsupported" in prompt_text
+    assert "abstain only when no clear outcome exists" in prompt_text
     assert "strongest decision-useful supported finding" in prompt_text
     assert "even outside the priority-one theme" in prompt_text
     assert "priority order cannot exclude stronger evidence" in prompt_text
     assert "preserve exact comparisons" in prompt_text
-    assert "findings omit a stronger body result" in prompt_text
 
 
 def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
@@ -230,8 +228,11 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "plan guides selection, not evidence" in prompt_text
-    assert "directly supported docmap point" in prompt_text
-    assert "abstain if unsupported" in prompt_text
+    assert (
+        "if findings lack it, state the docmap relationship without numbers"
+        in prompt_text
+    )
+    assert "abstain only when no clear outcome exists" in prompt_text
 
 
 @pytest.mark.parametrize(
@@ -303,9 +304,10 @@ def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "use the plan for coherence" in prompt_text
-    assert "rank specific, decision-useful commercial results" in prompt_text
-    assert "above sample details or section descriptions" in prompt_text
-    assert "preserve exact values and comparisons" in prompt_text
+    assert "prefer specific commercial outcomes and directional changes" in prompt_text
+    assert "including qualitative relationships" in prompt_text
+    assert "over section descriptions" in prompt_text
+    assert "preserve exact values/comparisons" in prompt_text
 
 
 def test_editorial_prompts_preserve_specific_measured_findings() -> None:
@@ -336,20 +338,25 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         in doc_map_text
     )
     assert (
-        "search file_search by section/title/page and exact key-point metric"
+        "search file_search by section/title/page and each key-point metric"
         in findings_text
     )
+    assert "search for directional body outcomes" in findings_text
     assert "exhaust body searches before summary-only findings" in findings_text
-    assert "docmap/temporal pairs are clues, not evidence" in findings_text
+    assert "docmap is a clue, not evidence" in findings_text
     assert "keep chart values exact" in findings_text
     assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
-    assert (
-        "from key points and comparisons, including nonnumeric relationships"
-        in candidates_text
-    )
+    assert "use the plan for coherence, not ranking" in candidates_text
+    assert "outcomes and directional changes from source sections" in candidates_text
+    assert "including qualitative relationships" in candidates_text
     assert "keep its wording and date range exact" in summary_text
-    assert "preserve exact values and comparisons" in candidates_text
+    assert "preserve exact values/comparisons" in candidates_text
+    assert (
+        "if findings lack it, state the docmap relationship without numbers"
+        in summary_text
+    )
+    assert "abstain only when no clear outcome exists" in summary_text
     assert "preserve candidates' exact values, comparisons" in final_text
     assert "rank by candidate score and decision relevance first" in final_text
     assert "use plan priority for coherence or ties" in final_text
