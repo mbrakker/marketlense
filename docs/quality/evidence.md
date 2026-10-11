@@ -32,27 +32,37 @@ This deterministic queue evidence confirms queue semantics at the exact tested r
 The existing CI job summary is rendered by
 `scripts/quality/release_evidence_job_summary.py`. It compares the release
 review and queue evidence with the workflow's exact SHA and build identity,
-shows the canonical review disposition and unwaived issue count, and links to
-the Actions run page where `release-evidence-bundle` is listed. The artifact
-has 14-day retention. Since the existing summary step runs before upload, it
-labels archive availability `unverified`; it never claims the bundle already
-exists. Full issue details remain in the bundled review JSON/Markdown; the job
-summary emits no issue reasons or diagnostic text. The summary step still runs
-when an input file is absent and labels missing, malformed, stale, incompatible,
-or mismatched evidence non-green. This is a review surface only; the existing
-release approval gates are unchanged.
+shows the canonical release-review/queue validation result and unwaived issue
+count, and links directly to the uploaded `release-evidence-bundle` when the
+Actions upload step supplies a validated artifact URL. The summary runs after
+upload. It reports the upload action outcome separately from bundle
+completeness: `complete` requires a successful upload, a direct artifact URL,
+and every configured required bundle path to exist; absent paths produce
+`partial`, and unproven upload/link conditions remain `unverified` or
+`unavailable`. The optional WordPress staging artifact is excluded from this
+required-path check. A successful validation is only an exact-SHA release
+review plus deterministic queue validation; it does not prove representative
+runtime processing or a complete uploaded bundle. The artifact has 14-day
+retention. Full issue details remain in the canonical bundled review
+JSON/Markdown; the job summary emits no issue reasons or diagnostic text. The
+summary step still runs when an input file is absent and labels missing,
+malformed, stale, incompatible, mismatched, or contradictory review evidence
+non-green. This is a review surface only; the existing release approval gates
+are unchanged.
 
-The summary reads only the allow-listed status, SHA, freshness, and
+The summary reads only allow-listed provenance, status, SHA, freshness, and
 `log_corpus.operator_declared_scope` fields from the retained CTO
 `log_content_leakage.json`. Scope is shown as `representative`, `smoke-only`,
-or `unavailable`. A smoke-only corpus is explicitly insufficient for
-representative processing. The collector describes this scope as
-operator-declared and does not verify that the declared workflow ran, so a
-representative declaration is labeled unverified and does not turn the
-combined reviewer disposition green by itself. Missing or mismatched CTO
-metadata is shown as unavailable. After the configured retention period, the
-Actions run page remains a reference but its artifact may have expired; this
-summary does not make an external API call to inspect later expiry.
+or `unavailable`. Evidence whose repository SHA differs from the tested SHA is
+shown as `historical_unmatched` with its recorded scope and is explicitly
+excluded from current-run validation. A smoke-only corpus is insufficient for
+representative processing. The collector describes scope as operator-declared
+and does not verify that the declared workflow ran, so representative scope is
+shown as `declared_unverified`; it does not change the canonical validation
+result. Missing or malformed CTO metadata is shown as unavailable or
+incompatible. After the configured retention period, an Actions artifact may
+expire; the summary does not make an external API call to inspect later
+availability.
 
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 

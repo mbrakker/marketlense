@@ -36,6 +36,25 @@ _ARTIFACT_STATES = _UNTRUSTED_ARTIFACT_STATES | {
     "passed",
     "warned",
 }
+CANONICAL_BUNDLE_REQUIRED_PATHS = (
+    "out/release_evidence_manifest_ci.json",
+    "out/release_evidence_review_ci.json",
+    "out/release_evidence_review_ci.md",
+    "out/release_evidence_executive_summary_ci.json",
+    "out/workflow_queue_evidence_ci.json",
+    "docs/quality/release_evidence_waivers.yaml",
+    "coverage.xml",
+    "mutation_results.json",
+    "out/pdf_candidate_benchmark_ci.json",
+    "out/pdf_crop_refine_benchmark_ci.json",
+    "out/pdf_benchmark_trends_ci.json",
+    "out/public_report_quality_ci.json",
+    "out/run_health_scorecard_ci.json",
+    "out/llm_accounting_reconciliation_ci.json",
+    "out/test_telemetry_ci.json",
+    "out/quality_command_telemetry_ci.json",
+    "out/ci_performance_benchmark.json",
+)
 
 
 def render_release_evidence_job_summary(
@@ -46,6 +65,9 @@ def render_release_evidence_job_summary(
     expected_run_id: str | None = None,
     runtime_evidence: dict[str, Any] | None = None,
     artifact_url: str | None = None,
+    bundle_upload_outcome: str | None = None,
+    bundle_artifact_url: str | None = None,
+    bundle_files_complete: bool | None = None,
 ) -> str:
     """Render fixed scalar fields; evidence payload text is never interpolated."""
     normalized_sha = tested_sha.strip().lower()
@@ -61,68 +83,95 @@ def render_release_evidence_job_summary(
     runtime_state, corpus_scope = _runtime_state(
         runtime_evidence, expected_sha=normalized_sha
     )
-    safe_artifact_url = _safe_actions_run_url(artifact_url)
-    artifact_availability = "unverified" if safe_artifact_url else "unavailable"
-
-    # This step precedes upload, and the collector records a declared scope
-    # rather than verifying representative workflow execution.
-    all_evidence_passed = (
-        review_state == "passed"
-        and queue_state == "passed"
-        and runtime_state == "passed"
-        and corpus_scope == "representative"
-        and artifact_availability == "available"
+    safe_run_url = _safe_actions_run_url(artifact_url)
+    safe_bundle_url = _safe_actions_artifact_url(
+        bundle_artifact_url,
+        expected_run_id=expected_run_id,
+        expected_run_url=safe_run_url,
     )
-    final_disposition = "passed" if all_evidence_passed else "non-green"
-    artifact_reference = (
-        f"[release-evidence-bundle lookup in this workflow run]({safe_artifact_url})"
-        if safe_artifact_url
-        else "`release-evidence-bundle` (workflow run link unavailable)"
+    upload_state = _bundle_upload_state(bundle_upload_outcome)
+    bundle_state = _bundle_completeness_state(
+        bundle_upload_outcome=bundle_upload_outcome,
+        bundle_files_complete=bundle_files_complete,
+        bundle_url_available=safe_bundle_url is not None,
     )
+    canonical_validation = (
+        "passed"
+        if review_state == "passed" and queue_state == "passed"
+        else "non-green"
+    )
+    if safe_bundle_url:
+        artifact_reference = f"[release-evidence-bundle]({safe_bundle_url})"
+    elif safe_run_url:
+        artifact_reference = (
+            f"[release-evidence-bundle listing in this workflow run]({safe_run_url})"
+        )
+    else:
+        artifact_reference = "`release-evidence-bundle` reference unavailable"
     issue_count_text = str(issue_count) if issue_count is not None else "unavailable"
+    waived_issue_count = _safe_count_field(review, "waived_issue_count")
+    waived_issue_count_text = (
+        str(waived_issue_count) if waived_issue_count is not None else "unavailable"
+    )
     lines = [
         "## Release evidence review",
         "",
-        f"- Final reviewer disposition: `{final_disposition}`",
+        f"- Canonical release-evidence validation: `{canonical_validation}`",
+        (
+            "- Validation scope: exact-SHA release review and deterministic "
+            "workflow-queue evidence only."
+        ),
+        "- Validation does not attest to runtime representativeness or bundle "
+        "completeness.",
         f"- Tested SHA: `{normalized_sha or 'unavailable'}`",
         f"- Evidence build: `{build_id or 'unavailable'}`",
         f"- Evidence generated at: `{reviewed_at or 'unavailable'}`",
         f"- Release-review disposition: `{review_state}`",
         f"- Queue-evidence disposition: `{queue_state}`",
         f"- Unwaived issue count: `{issue_count_text}`",
+        f"- Waived issue count: `{waived_issue_count_text}`",
         f"- Runtime-corpus evidence: `{runtime_state}`",
         f"- Runtime-corpus scope: `{corpus_scope}`",
-        (
-            f"- Artifact availability: `{artifact_availability}` "
-            "(upload follows this summary; retention is 14 days)"
-        ),
+        f"- Artifact upload step: `{upload_state}` (14-day retention)",
+        f"- Canonical bundle completeness: `{bundle_state}`",
         f"- Canonical artifact reference: {artifact_reference}",
-        (
-            "- Queue scope: deterministic temporary-SQLite; "
-            "not live production throughput proof."
-        ),
-        (
-            "- Full canonical issues are not copied here; the bundled review "
-            "JSON/Markdown contains them when upload succeeds."
-        ),
-        "",
     ]
+    if runtime_state == "historical_unmatched":
+        lines.append(
+            "- Historical runtime evidence is not used for current-run validation."
+        )
     if corpus_scope == "smoke-only":
-        lines.insert(
-            -3,
+        lines.append(
             (
                 "- Runtime-corpus limitation: smoke-only evidence does not "
                 "establish representative report-processing coverage."
             ),
         )
     elif corpus_scope == "representative":
-        lines.insert(
-            -3,
+        lines.append(
             (
                 "- Runtime-corpus limitation: the scope declaration does not "
                 "verify that representative processing ran."
             ),
         )
+    if bundle_state == "partial":
+        lines.append(
+            "- Required bundle files are missing; upload-step success alone is "
+            "insufficient."
+        )
+    elif bundle_state == "unverified":
+        lines.append(
+            "- Upload succeeded, but a complete bundle reference was not verified."
+        )
+    lines.extend(
+        (
+            "- Queue scope: deterministic temporary-SQLite; not live production "
+            "throughput proof.",
+            "- Full canonical issues are not copied here; consult the linked "
+            "review JSON/Markdown when included.",
+            "",
+        )
+    )
     summary = "\n".join(lines)
     if len(summary.encode("utf-8")) > MAX_SUMMARY_BYTES:
         return (
@@ -130,13 +179,47 @@ def render_release_evidence_job_summary(
                 (
                     "## Release evidence review",
                     "",
-                    "- Final reviewer disposition: `non-green`",
+                    "- Canonical release-evidence validation: `non-green`",
                     "- Summary output exceeded its fixed bound.",
                 )
             )
             + "\n"
         )
     return summary
+
+
+def _safe_count_field(payload: dict[str, Any] | None, field: str) -> int | None:
+    if payload is None:
+        return None
+    value = payload.get(field)
+    return value if _is_count(value) else None
+
+
+def _bundle_upload_state(outcome: str | None) -> str:
+    if outcome == "success":
+        return "succeeded"
+    if outcome == "failure":
+        return "failed"
+    if outcome == "skipped":
+        return "skipped"
+    return "unavailable"
+
+
+def _bundle_completeness_state(
+    *,
+    bundle_upload_outcome: str | None,
+    bundle_files_complete: bool | None,
+    bundle_url_available: bool,
+) -> str:
+    if bundle_upload_outcome == "failure":
+        return "incomplete"
+    if bundle_upload_outcome != "success":
+        return "unavailable"
+    if bundle_files_complete is False:
+        return "partial"
+    if bundle_files_complete is not True or not bundle_url_available:
+        return "unverified"
+    return "complete"
 
 
 def _review_state(
@@ -222,7 +305,7 @@ def _review_state(
             return "incompatible", None, build_id, None
         if not artifact["required"]:
             continue
-        if status in _UNTRUSTED_ARTIFACT_STATES:
+        if status != "passed":
             required_artifact_failed = True
 
     if not isinstance(review.get("generated_at"), str):
@@ -231,6 +314,14 @@ def _review_state(
     if not generated_at:
         return "incompatible", None, build_id, None
 
+    if required_artifact_failed and review["passed"]:
+        return "incompatible", unwaived_issue_count, build_id, generated_at
+    if review["passed"] is True and (
+        review["manifest_passed"] is not True
+        or unwaived_issue_count != 0
+        or waiver_error_count != 0
+    ):
+        return "incompatible", unwaived_issue_count, build_id, generated_at
     if required_artifact_failed:
         return "failed", unwaived_issue_count, build_id, generated_at
     if (
@@ -294,8 +385,6 @@ def _runtime_state(
     runtime_sha = runtime_evidence.get("repository_commit_sha")
     if not isinstance(runtime_sha, str) or not _SHA_RE.fullmatch(runtime_sha.lower()):
         return "incompatible", "unavailable"
-    if runtime_sha.lower() != expected_sha:
-        return "mismatched", "unavailable"
 
     log_corpus = runtime_evidence.get("log_corpus")
     if not isinstance(log_corpus, dict):
@@ -312,8 +401,6 @@ def _runtime_state(
     corpus_scope = _CORPUS_SCOPES.get(raw_scope) if isinstance(raw_scope, str) else None
     if corpus_scope is None:
         return "incompatible", "unavailable"
-    if corpus_scope == "unavailable":
-        return "unavailable", corpus_scope
 
     evidence_status = runtime_evidence.get("status")
     passed = runtime_evidence.get("passed")
@@ -329,6 +416,10 @@ def _runtime_state(
     ):
         return "incompatible", "unavailable"
 
+    if runtime_sha.lower() != expected_sha:
+        return "historical_unmatched", corpus_scope
+    if corpus_scope == "unavailable":
+        return "unavailable", corpus_scope
     if corpus_scope == "representative":
         if evidence_status == "unavailable":
             return "unavailable", corpus_scope
@@ -361,6 +452,56 @@ def _safe_actions_run_url(value: str | None) -> str | None:
         )
         or ".." in parsed.path.split("/")
     ):
+        return None
+    return value
+
+
+def _safe_actions_artifact_url(
+    value: str | None,
+    *,
+    expected_run_id: str | None,
+    expected_run_url: str | None,
+) -> str | None:
+    if not isinstance(value, str) or len(value) > 500:
+        return None
+    parsed = urlparse(value)
+    matched_path = re.fullmatch(
+        r"/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/actions/runs/([0-9]+)/artifacts/([0-9]+)",
+        parsed.path,
+    )
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.netloc != parsed.hostname
+        or parsed.query
+        or parsed.fragment
+        or not re.fullmatch(r"[A-Za-z0-9.-]+", parsed.hostname)
+        or matched_path is None
+        or ".." in parsed.path.split("/")
+    ):
+        return None
+    if expected_run_id and (
+        not _BUILD_ID_RE.fullmatch(expected_run_id)
+        or matched_path.group(1) != expected_run_id.split("-", maxsplit=1)[0]
+    ):
+        return None
+    if expected_run_url:
+        run = urlparse(expected_run_url)
+        run_path = re.fullmatch(
+            r"/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/actions/runs/([0-9]+)",
+            run.path,
+        )
+        artifact_repository = "/".join(parsed.path.split("/")[1:3])
+        if (
+            run.hostname != parsed.hostname
+            or run_path is None
+            or artifact_repository != run_path.group(1)
+            or matched_path.group(1) != run_path.group(2)
+        ):
+            return None
+    elif parsed.hostname != "github.com":
         return None
     return value
 
@@ -432,6 +573,13 @@ def _actions_context() -> tuple[str | None, str | None]:
     return run_key, _safe_actions_run_url(url)
 
 
+def _canonical_bundle_files_complete() -> bool:
+    return all(
+        (ROOT / relative_path).is_file()
+        for relative_path in CANONICAL_BUNDLE_REQUIRED_PATHS
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Append bounded release-evidence status to the GitHub job summary."
@@ -439,6 +587,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--review-json", required=True)
     parser.add_argument("--queue-evidence-json", required=True)
     parser.add_argument("--runtime-evidence-json")
+    parser.add_argument("--bundle-upload-outcome", default="")
+    parser.add_argument("--bundle-artifact-url", default="")
     parser.add_argument("--output-path", required=True)
     args = parser.parse_args(argv)
 
@@ -456,6 +606,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_run_id=expected_run_id,
         runtime_evidence=_read_object(runtime_path) if runtime_path else None,
         artifact_url=artifact_url,
+        bundle_upload_outcome=args.bundle_upload_outcome or None,
+        bundle_artifact_url=args.bundle_artifact_url or None,
+        bundle_files_complete=_canonical_bundle_files_complete(),
     )
     with Path(args.output_path).open("a", encoding="utf-8") as handle:
         handle.write(summary)

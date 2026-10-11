@@ -116,12 +116,12 @@ Original proposal disposition labels describe historic reconciliation evidence, 
 | [ARCH-H](A-autonomy.md#arch-h-consolidate-only-proven-redundant-validation-work-and-short-circuit-unjudgeable-inputs) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Investigation; promote only on evidence |
 | [ARCH-I](A-autonomy.md#arch-i-test-whether-verified-selection-can-replace-a-redundant-insight-generation-step) | [A8](A-autonomy.md#a8-compare-retained-model-call-replay-bundles) | Investigation; promote only on evidence |
 
-| [PATH-01](R-engineering.md#path-01) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
-| [PATH-02](R-engineering.md#path-02) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
-| [PATH-03](R-engineering.md#path-03) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
-| [PATH-04](R-engineering.md#path-04) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
-| [PATH-05](R-engineering.md#path-05) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
-| [PATH-06](R-engineering.md#path-06) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New P2 residual audit; verify at implementation HEAD |
+| [PATH-01](R-engineering.md#path-01-bound-mailbox-pdf-and-zip-attachment-destinations-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-02](R-engineering.md#path-02-bound-browser-download-copied-artifact-capture-and-profile-paths-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-03](R-engineering.md#path-03-bound-candidate-pdf-caches-and-ocr-chunk-names-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-04](R-engineering.md#path-04-bound-crop-refinement-images-and-fingerprint-paths-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-05](R-engineering.md#path-05-resolve-compacted-analysis-artifacts-and-bound-cover-assets-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-06](R-engineering.md#path-06-recheck-compact-fallbacks-and-residual-nested-paths-p2) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New P2 residual audit; verify at implementation HEAD |
 
 ## Reconciliation policy
 

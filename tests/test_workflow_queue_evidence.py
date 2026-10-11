@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts.quality.generate_workflow_queue_evidence import (
     MAX_EVIDENCE_BYTES,
     finalize_exact_head,
@@ -246,7 +248,7 @@ def test_job_summary_reports_exact_release_and_runtime_evidence_without_details(
     )
 
     assert f"Tested SHA: `{_SHA}`" in summary
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `passed`" in summary
     assert "Release-review disposition: `passed`" in summary
     assert "Queue-evidence disposition: `passed`" in summary
     assert "Runtime-corpus evidence: `declared_unverified`" in summary
@@ -255,12 +257,212 @@ def test_job_summary_reports_exact_release_and_runtime_evidence_without_details(
         "scope declaration does not verify that representative processing ran"
         in summary
     )
-    assert "Artifact availability: `unverified`" in summary
+    assert "Artifact upload step: `unavailable`" in summary
+    assert "Canonical bundle completeness: `unavailable`" in summary
     assert "Unwaived issue count: `0`" in summary
     assert "release-evidence-bundle" in summary
     assert "https://github.com/acme/marketlense/actions/runs/12345" in summary
     assert "not live production throughput proof" in summary
     assert "PRIVATE_RUNTIME_DIAGNOSTIC_MUST_NOT_RENDER" not in summary
+
+
+def test_canonical_validation_can_pass_with_historical_runtime_and_partial_bundle() -> (
+    None
+):
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+        runtime_evidence=_runtime_fixture(
+            "representative_report_processing", tested_sha="b" * 40
+        ),
+        bundle_upload_outcome="success",
+        bundle_artifact_url=(
+            "https://github.com/acme/marketlense/actions/runs/12345/artifacts/67890"
+        ),
+        bundle_files_complete=False,
+    )
+
+    assert "Canonical release-evidence validation: `passed`" in summary
+    assert "Runtime-corpus evidence: `historical_unmatched`" in summary
+    assert "Runtime-corpus scope: `representative`" in summary
+    assert (
+        "Historical runtime evidence is not used for current-run validation" in summary
+    )
+    assert "does not verify that representative processing ran" in summary
+    assert "Artifact upload step: `succeeded`" in summary
+    assert "Canonical bundle completeness: `partial`" in summary
+    assert (
+        "https://github.com/acme/marketlense/actions/runs/12345/artifacts/67890"
+        in summary
+    )
+
+
+@pytest.mark.parametrize(
+    "bundle_url",
+    [
+        "https://attacker.example/acme/marketlense/actions/runs/12345/artifacts/67890",
+        "https://github.com/other/repo/actions/runs/12345/artifacts/67890",
+    ],
+)
+def test_bundle_reference_must_match_the_current_github_run(bundle_url: str) -> None:
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+        artifact_url="https://github.com/acme/marketlense/actions/runs/12345",
+        bundle_upload_outcome="success",
+        bundle_artifact_url=bundle_url,
+        bundle_files_complete=True,
+    )
+
+    assert "Canonical bundle completeness: `unverified`" in summary
+    assert "https://github.com/acme/marketlense/actions/runs/12345)" in summary
+    assert bundle_url not in summary
+
+
+def test_complete_bundle_requires_successful_upload_all_required_files_and_link() -> (
+    None
+):
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+        bundle_upload_outcome="success",
+        bundle_artifact_url=(
+            "https://github.com/acme/marketlense/actions/runs/12345/artifacts/67890"
+        ),
+        bundle_files_complete=True,
+    )
+
+    assert "Canonical release-evidence validation: `passed`" in summary
+    assert "Artifact upload step: `succeeded`" in summary
+    assert "Canonical bundle completeness: `complete`" in summary
+
+
+def test_successful_upload_without_bundle_reference_is_not_complete() -> None:
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+        bundle_upload_outcome="success",
+        bundle_artifact_url=None,
+        bundle_files_complete=True,
+    )
+
+    assert "Artifact upload step: `succeeded`" in summary
+    assert "Canonical bundle completeness: `unverified`" in summary
+
+
+def test_failed_bundle_upload_is_incomplete_even_when_files_exist() -> None:
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+        bundle_upload_outcome="failure",
+        bundle_artifact_url=None,
+        bundle_files_complete=True,
+    )
+
+    assert "Artifact upload step: `failed`" in summary
+    assert "Canonical bundle completeness: `incomplete`" in summary
+
+
+@pytest.mark.parametrize(
+    "artifact_status",
+    ["failed", "missing", "stale", "expired", "incomplete", "warned", "invalid"],
+)
+def test_success_claim_with_nonpassing_required_artifact_is_rejected(
+    artifact_status: str,
+) -> None:
+    review = _review_fixture(
+        artifacts=[
+            {
+                "name": "test_telemetry",
+                "required": True,
+                "status": artifact_status,
+                "passed": False,
+                "unwaived_issue_count": 0,
+            }
+        ]
+    )
+    summary = render_release_evidence_job_summary(
+        review=review,
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+    )
+
+    assert "Release-review disposition: `incompatible`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
+
+
+def test_required_artifact_status_and_pass_flag_must_agree() -> None:
+    review = _review_fixture(
+        artifacts=[
+            {
+                "name": "test_telemetry",
+                "required": True,
+                "status": "passed",
+                "passed": False,
+                "unwaived_issue_count": 0,
+            }
+        ]
+    )
+    summary = render_release_evidence_job_summary(
+        review=review,
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+    )
+
+    assert "Release-review disposition: `incompatible`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
+
+
+def test_waived_issue_count_preserves_canonical_waiver_semantics() -> None:
+    summary = render_release_evidence_job_summary(
+        review=_review_fixture(issues=[{"waived": True, "reason": "approved"}]),
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+    )
+
+    assert "Canonical release-evidence validation: `passed`" in summary
+    assert "Unwaived issue count: `0`" in summary
+    assert "Waived issue count: `1`" in summary
+
+
+def test_waiver_does_not_hide_a_required_artifact_failure() -> None:
+    issue = {"waived": True, "artifact_name": "test_telemetry"}
+    review = _review_fixture(
+        passed=False,
+        issues=[issue],
+        artifacts=[
+            {
+                "name": "test_telemetry",
+                "required": True,
+                "status": "failed",
+                "passed": False,
+                "unwaived_issue_count": 0,
+            }
+        ],
+    )
+    summary = render_release_evidence_job_summary(
+        review=review,
+        queue_evidence=_queue_fixture(),
+        tested_sha=_SHA,
+        expected_run_id=_RUN_ID,
+    )
+
+    assert "Release-review disposition: `failed`" in summary
+    assert "Unwaived issue count: `0`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
 
 
 def test_job_summary_marks_sha_and_run_mismatches_non_green() -> None:
@@ -276,9 +478,10 @@ def test_job_summary_marks_sha_and_run_mismatches_non_green() -> None:
     )
 
     assert f"Tested SHA: `{_SHA}`" in summary
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
     assert "Release-review disposition: `mismatched`" in summary
-    assert "Runtime-corpus scope: `unavailable`" in summary
+    assert "Runtime-corpus evidence: `historical_unmatched`" in summary
+    assert "Runtime-corpus scope: `representative`" in summary
 
 
 def test_job_summary_rejects_same_sha_evidence_from_a_different_build() -> None:
@@ -291,7 +494,7 @@ def test_job_summary_rejects_same_sha_evidence_from_a_different_build() -> None:
         artifact_url="https://github.com/acme/marketlense/actions/runs/98765",
     )
 
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
     assert "Release-review disposition: `mismatched`" in summary
     assert "Unwaived issue count: `unavailable`" in summary
 
@@ -332,10 +535,10 @@ def test_job_summary_marks_missing_and_stale_evidence_non_green() -> None:
         runtime_evidence=_runtime_fixture("representative_report_processing"),
     )
 
-    assert "Final reviewer disposition: `non-green`" in summary_missing
+    assert "Canonical release-evidence validation: `non-green`" in summary_missing
     assert "Release-review disposition: `unavailable`" in summary_missing
     assert "Runtime-corpus scope: `unavailable`" in summary_missing
-    assert "Final reviewer disposition: `non-green`" in summary_stale
+    assert "Canonical release-evidence validation: `non-green`" in summary_stale
     assert "Release-review disposition: `failed`" in summary_stale
     assert "PRIVATE_EXPIRED_ARTIFACT_DIAGNOSTIC" not in summary_stale
     assert "artifact_stale" not in summary_stale
@@ -359,9 +562,9 @@ def test_job_summary_labels_smoke_and_undeclared_corpus_as_non_representative() 
 
     assert "Runtime-corpus scope: `smoke-only`" in smoke
     assert "representative" in smoke.lower()
-    assert "Final reviewer disposition: `non-green`" in smoke
+    assert "Canonical release-evidence validation: `passed`" in smoke
     assert "Runtime-corpus scope: `unavailable`" in undeclared
-    assert "Final reviewer disposition: `non-green`" in undeclared
+    assert "Canonical release-evidence validation: `passed`" in undeclared
 
 
 def test_job_summary_is_bounded_and_omits_private_issue_fields() -> None:
@@ -403,7 +606,7 @@ def test_job_summary_rejects_incompatible_runtime_metadata_and_bad_queue_sha() -
         runtime_evidence=incompatible_runtime,
     )
 
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
     assert "Queue-evidence disposition: `mismatched`" in summary
     assert "Runtime-corpus scope: `unavailable`" in summary
     assert "PRIVATE_RUNTIME_DIAGNOSTIC_MUST_NOT_RENDER" not in summary
@@ -413,6 +616,7 @@ def test_job_summary_keeps_expired_required_artifacts_non_green_even_if_waived()
     None
 ):
     review = _review_fixture(
+        passed=False,
         issues=[{"waived": True, "artifact_name": "test_telemetry"}],
         artifacts=[
             {
@@ -433,7 +637,7 @@ def test_job_summary_keeps_expired_required_artifacts_non_green_even_if_waived()
         artifact_url="https://github.com/acme/marketlense/actions/runs/12345",
     )
 
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
     assert "Release-review disposition: `failed`" in summary
     assert "Unwaived issue count: `0`" in summary
 
@@ -480,7 +684,7 @@ def test_job_summary_cli_emits_unavailable_states_when_artifact_files_are_absent
 
     summary = summary_path.read_text(encoding="utf-8")
     assert result == 0
-    assert "Final reviewer disposition: `non-green`" in summary
+    assert "Canonical release-evidence validation: `non-green`" in summary
     assert "Release-review disposition: `unavailable`" in summary
     assert "Queue-evidence disposition: `unavailable`" in summary
     assert "Runtime-corpus scope: `unavailable`" in summary

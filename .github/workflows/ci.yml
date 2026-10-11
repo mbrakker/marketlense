@@ -195,10 +195,8 @@ jobs:
             --waivers-yaml docs/quality/release_evidence_waivers.yaml \
             --output-json out/release_evidence_review_ci.json \
             --output-md out/release_evidence_review_ci.md
-      - name: Write release evidence job summary
-        if: ${{ always() }}
-        run: python scripts/quality/release_evidence_job_summary.py --review-json out/release_evidence_review_ci.json --queue-evidence-json out/workflow_queue_evidence_ci.json --runtime-evidence-json docs/CTO_evidence/log_content_leakage.json --output-path "$GITHUB_STEP_SUMMARY"
       - name: Upload release evidence bundle
+        id: release_evidence_bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -224,3 +222,9 @@ jobs:
             out/test_telemetry_ci.json
             out/quality_command_telemetry_ci.json
             out/ci_performance_benchmark.json
+      - name: Write release evidence job summary
+        if: ${{ always() }}
+        env:
+          RELEASE_EVIDENCE_UPLOAD_OUTCOME: ${{ steps.release_evidence_bundle.outcome }}
+          RELEASE_EVIDENCE_ARTIFACT_URL: ${{ steps.release_evidence_bundle.outputs.artifact-url }}
+        run: python scripts/quality/release_evidence_job_summary.py --review-json out/release_evidence_review_ci.json --queue-evidence-json out/workflow_queue_evidence_ci.json --runtime-evidence-json docs/CTO_evidence/log_content_leakage.json --bundle-upload-outcome "$RELEASE_EVIDENCE_UPLOAD_OUTCOME" --bundle-artifact-url "$RELEASE_EVIDENCE_ARTIFACT_URL" --output-path "$GITHUB_STEP_SUMMARY"

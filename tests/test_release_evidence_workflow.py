@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from scripts.quality.release_evidence_job_summary import (
+    CANONICAL_BUNDLE_REQUIRED_PATHS,
+)
+
 
 def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -31,8 +35,8 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         < manifest_index
         < executive_summary_index
         < review_index
-        < summary_index
         < upload_index
+        < summary_index
     )
     assert "--fresh-after" in workflow
     assert "--require-head-commit" in workflow
@@ -64,9 +68,23 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         in workflow
     )
     assert "release_evidence_job_summary.py" in workflow
-    summary_step = workflow[summary_index:upload_index]
+    upload_step_start = workflow.index("- name: Upload release evidence bundle")
+    upload_step = workflow[upload_step_start:summary_index]
+    summary_step = workflow[summary_index:]
+    assert "id: release_evidence_bundle" in upload_step
+    for required_path in CANONICAL_BUNDLE_REQUIRED_PATHS:
+        assert required_path in upload_step
+    assert "out/wordpress_entity_rest_verification_staging.json" in upload_step
+    assert (
+        "out/wordpress_entity_rest_verification_staging.json"
+        not in CANONICAL_BUNDLE_REQUIRED_PATHS
+    )
     assert "if: ${{ always() }}" in summary_step
     assert "hashFiles(" not in summary_step
+    assert "RELEASE_EVIDENCE_UPLOAD_OUTCOME" in summary_step
+    assert "steps.release_evidence_bundle.outcome" in summary_step
+    assert "RELEASE_EVIDENCE_ARTIFACT_URL" in summary_step
+    assert "steps.release_evidence_bundle.outputs.artifact-url" in summary_step
     assert (
         "--runtime-evidence-json docs/CTO_evidence/log_content_leakage.json"
         in summary_step
