@@ -1,6 +1,6 @@
 # Consolidated TODO — canonical MarketLense backlog
 
-**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register; D13 was added as a deferred P2 follow-up on 2026-10-11 (neither date implies a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`. **E17 scope added:** 2026-10-11 based on code inspection and the retained 2026-10-06 provider profile; no new report execution is implied.
+**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register; D13 was added as a deferred P2 follow-up on 2026-10-11 (neither date implies a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`. **E17 scope added:** 2026-10-11 based on code inspection and the retained 2026-10-06 provider profile; no new report execution is implied. **E18 scope added:** 2026-10-11 as an unverified four-stage stability proposal; no new model run or quality result is implied.
 
 This is the **single authoritative status and outcome register**. The five [workstream specifications](docs/backlog/) contain full implementation and Luna guidance, and the [technical proposal index](docs/backlog/proposal-index.md) maps all proposals to one existing owner. Full unchanged backups: [original backlog](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [original 100-improvement catalogue](docs/backlog/archive/10improvements-20261011-preconsolidation.md). The root [10improvements.md](10improvements.md) is now a compatibility pointer, not a competing backlog.
 
@@ -14,7 +14,7 @@ This is the **single authoritative status and outcome register**. The five [work
 
 ## Execution focus
 
-The register's five workstreams remain the prioritisation lanes, **not** a newly audited ranking. Initial decisions should be evidence-driven: A21 first-attempt reliability, A18/A19 discovery and verified acquisition, E15 semantic crop acceptance, P6 human editorial acceptance, E16 methodology/applicability, and P16/P17 decision-grade composition. Confirm the actual blocker and applicable prerequisites on current HEAD before selecting a slice. No technical proposal is automatically authorised or considered incomplete merely by appearing in the index. E17 is a separately prioritised P1 token/cache-economics outcome: implement its measurement slice first, while preserving the higher-priority correctness and autonomous-MVP gates.
+The register's five workstreams remain the prioritisation lanes, **not** a newly audited ranking. Initial decisions should be evidence-driven: A21 first-attempt reliability, A18/A19 discovery and verified acquisition, E15 semantic crop acceptance, P6 human editorial acceptance, E16 methodology/applicability, and P16/P17 decision-grade composition. Confirm the actual blocker and applicable prerequisites on current HEAD before selecting a slice. No technical proposal is automatically authorised or considered incomplete merely by appearing in the index. E17 is a separately prioritised P1 token/cache-economics outcome: implement its measurement slice first, while preserving the higher-priority correctness and autonomous-MVP gates. E18 is a P1 first-pass analytical-stability outcome: diagnose repeated-run and fixed-input validator variation before authorising its subsequent behavioral stages; reuse A21/E13/E16/P17 evidence and owners.
 
 | Workstream | Owning specification |
 | --- | --- |
@@ -84,6 +84,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Active | E15 | [Make publication crops visually complete and repairable](docs/backlog/E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Affine coordinate and invalid-bbox guards have scoped fixes; semantic completeness, directional repair, publication-DPI consistency and human-labelled production acceptance remain unproved. |
 | Active | E16 | [Make methodology, applicability, and uncertainty decision-grade](docs/backlog/E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Convert loose methods/limitations text into source-linked evidence-strength facts that constrain claims and support executive interpretation. |
 | Active | E17 | [Reduce LLM input, output, and cache cost without quality regression](docs/backlog/E-evidence.md#e17-reduce-llm-input-output-and-cache-cost-without-quality-regression) | Stage measurement, grounding response efficiency, source-preserving prompt projections, provider-cache policy and evidence-gated consolidation; prove lower total cost without quality/reliability regression on frozen five reports. |
+| Active | E18 | [Stabilize LLM report analysis and first-pass validation](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation) | Four sequential stages: pin repeated-generation and fixed-input validator baseline; address proven factual drift; stabilize insight selection; fix proven semantic-verdict/repair instability and verify frozen-five quality, first-pass readiness, speed and cost. |
 | Active | R1 | [Publish release-evidence reviews where reviewers work](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Link exact-tested-HEAD evidence/approval to the PR/release surface and declare runtime-corpus representativeness. |
 | Active | R2 | [Enforce role boundaries, direct-I/O discipline, and controlled module growth](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
 | Active | R3 | [Restore service quality coverage above the retained baseline](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline) | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
@@ -222,6 +223,10 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 #### E17. Reduce LLM input, output, and cache cost without quality regression
 
 [Full E17 specification](docs/backlog/E-evidence.md#e17-reduce-llm-input-output-and-cache-cost-without-quality-regression).
+
+#### E18. Stabilize LLM report analysis and first-pass validation
+
+[Full E18 specification](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation).
 
 #### R1. Publish release-evidence reviews where reviewers work
 
