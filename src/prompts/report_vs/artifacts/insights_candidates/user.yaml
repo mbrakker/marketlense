@@ -49,9 +49,9 @@ text: |
   materially different outcomes for distinct named groups or subgroups. Do not
   omit distinct groups solely because they share a theme; use one clear
   comparison or distinct candidates when each is material.
-  Make both fields audience-specific, non-generic, and non-contradictory; add
-  no factual premise. Use numbers only when linked finding evidence or the
-  exact quote states value, subject, and period/status. A paraphrased finding
-  alone is not numeric evidence; otherwise omit the number.
+  Keep source-derived text and advice within the selected evidence ID; do not
+  infer subjects or qualifiers from DocMap or titles. Use numbers only when its
+  excerpt states the full value-subject-period relationship. Keep both fields
+  audience-specific, non-generic, and non-contradictory.
   For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. When `metric.value` is present, `metric.label` is required: make it a concise human-readable description of that exact source-backed metric (for example, `Digital video revenue growth`, `Monthly U.S. adult generative AI users`, or `Global eCommerce sales`), never a general insight or search statement. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.
   When the retained evidence supplies them, preserve the exact numeric binding in `metric.subject`, `metric.cohort`, `metric.denominator`, and `metric.observation_status` (`observed`, `forecast`, or `estimate`). Leave a field empty rather than inferring it.

@@ -181,7 +181,10 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     summary_text = " ".join(summary.user.text.split())
     findings_text = " ".join(findings.system.text.split())
 
-    assert "A paraphrased finding alone is not numeric evidence" in candidates_text
+    assert (
+        "use numbers only when its excerpt states the full value-subject-period relationship"
+        in candidates_text.lower()
+    )
     assert "A quote ID is allowed only when its text states the exact value" in (
         candidates_text
     )
@@ -189,8 +192,11 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     assert "finding/quote ID and page" in final_text
     assert "do not expand scope" in final_text
     assert "both sides of each comparison" in final_text
-    assert "direct quote candidate" in summary_text
-    assert "Paraphrased finding text alone is insufficient" in summary_text
+    assert (
+        "`evidence_id` must support every value, subject, direction, and period"
+        in summary_text
+    )
+    assert "split claims supported by separate ids" in summary_text.lower()
     assert "Each number in `text` must appear" in findings_text
     assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
 
@@ -213,17 +219,13 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "do not substitute an introductory statistic or recommendation" in (
         prompt_text
     )
-    assert "preserve exact values, subjects, and periods from direct evidence" in (
-        prompt_text
+    assert "preserve exact values and periods from direct evidence" in prompt_text
+    assert (
+        "docmap and the plan guide context and coherence, not evidence" in prompt_text
     )
-    assert "otherwise use docmap only for nonnumeric context" in prompt_text
-    assert "plan guides coherence, not evidence" in prompt_text
     assert "abstain when none is supportable" in prompt_text
     assert "if absent, use the strongest direct finding" in prompt_text
     assert "priority order or section summaries do not prove cross-section links" in (
-        prompt_text
-    )
-    assert "preserve exact values, subjects, and periods from direct evidence" in (
         prompt_text
     )
 
@@ -239,8 +241,9 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "plan guides coherence, not evidence" in prompt_text
-    assert "otherwise use docmap only for nonnumeric context" in prompt_text
+    assert (
+        "docmap and the plan guide context and coherence, not evidence" in prompt_text
+    )
     assert "abstain when none is supportable" in prompt_text
 
 
@@ -265,7 +268,10 @@ def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
     ).lower()
 
     if namespace == "report_vs/artifacts/summary":
-        assert "plan guides coherence, not evidence" in prompt_text
+        assert (
+            "docmap and the plan guide context and coherence, not evidence"
+            in prompt_text
+        )
     elif namespace == "report_vs/artifacts/regenerate/summary":
         assert "selection guidance, not evidence" in prompt_text
         assert "section-scoped" in prompt_text
@@ -380,7 +386,9 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "retain introductory metrics when they materially frame the report" in (
         candidates_text
     )
-    assert "otherwise use docmap only for nonnumeric context" in summary_text
+    assert (
+        "docmap and the plan guide context and coherence, not evidence" in summary_text
+    )
     assert "if absent, use the strongest direct finding or abstain" in summary_text
     assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text

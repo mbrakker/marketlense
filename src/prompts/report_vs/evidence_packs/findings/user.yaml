@@ -5,6 +5,10 @@ text: |
   DocMap is a clue,
   not evidence; printed page labels guide retrieval but are not PDF offsets.
   Quote verbatim body evidence; cite the physical PDF page index in pages.
+  For every finding, its evidence excerpt must independently contain every
+  number and the exact subject, cohort, and period stated in the finding text.
+  Section titles and DocMap summaries cannot supply missing links. Use a longer
+  verbatim span when needed, or omit the claim.
 
   {{ doc_map_sections_json }}
 

@@ -26,9 +26,9 @@ text: |
   - No emojis, no hashtags
 
   Content constraints (strict):
-  - Facts must be supported. Interpretation may explain why a linked finding
-    matters even when the source does not; advice may be conditional
-    MarketLense guidance tied to that finding.
+  - Support facts with selected source spans; plan themes and DocMap are
+    context, not evidence. Tie interpretation and conditional advice to linked
+    findings.
   - The plan selects an angle; it cannot prove cross-section links or report-wide centrality. Omit unsupported synthesis.
   - Keep facts descriptive when evidence is descriptive. Make interpretation
     non-contradictory; make advice conditional and MarketLense-authored. Add no

@@ -1178,11 +1178,10 @@ def build_expert_synthesis_context(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Build the bounded, evidence-first input for Expert View synthesis."""
+    """Build bounded direct-source input for Expert View synthesis."""
     plan = normalize_artifact_editorial_plan(editorial_plan)
-    span_index = _build_evidence_span_index(
-        doc_map=doc_map, evidence_packs=evidence_packs
-    )
+    # DocMap selects retrieval targets; it cannot substantiate factual claims.
+    span_index = _build_evidence_span_index(doc_map={}, evidence_packs=evidence_packs)
     themes: List[Dict[str, Any]] = []
     for theme in plan["themes"]:
         evidence = []

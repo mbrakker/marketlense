@@ -567,7 +567,7 @@ def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_pa
         evidence["evidence_id"]
         for theme in synthesis_context["themes"]
         for evidence in theme["evidence"]
-    } == {"f1", "f2", "f3", "s1"}
+    } == {"f1", "f2", "f3"}
     assert synthesis_context["insight_implications"] == [
         {
             "evidence_id": "f3",
@@ -608,6 +608,57 @@ def test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack():
             "text": "Sample sizes vary across the report's analyses.",
         }
     ]
+
+
+def test_expert_synthesis_context_does_not_use_docmap_sections_as_evidence():
+    context = artifact_normalization.build_expert_synthesis_context(
+        editorial_plan={
+            "report_thesis": "Finance acquisition and engagement diverged.",
+            "themes": [
+                {
+                    "theme": "Finance outcomes",
+                    "priority": 1,
+                    "evidence_ids": ["docmap-only", "direct-finding"],
+                },
+                {
+                    "theme": "Finance adoption",
+                    "priority": 2,
+                    "evidence_ids": ["docmap-only"],
+                },
+            ],
+        },
+        insights_final=[],
+        doc_map={
+            "sections": [
+                {
+                    "id": "docmap-only",
+                    "title": "Finance outcomes",
+                    "summary": "Global installs fell 4% while sessions rose 21%.",
+                    "key_points": [
+                        "Global finance-app installs fell 4% while sessions rose 21%."
+                    ],
+                    "pages": [34],
+                }
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "direct-finding",
+                        "text": "Global finance-app installs fell 4% while sessions rose 21%.",
+                        "evidence": "Global finance-app installs fell 4% while sessions rose 21%.",
+                        "pages": [34],
+                    }
+                ]
+            }
+        },
+    )
+
+    evidence_ids = {
+        item["evidence_id"] for theme in context["themes"] for item in theme["evidence"]
+    }
+    assert evidence_ids == {"direct-finding"}
 
 
 def test_expert_comment_can_abstain_when_no_distinct_synthesis_is_returned(tmp_path):

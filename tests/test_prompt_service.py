@@ -199,7 +199,7 @@ def test_insight_candidate_prompt_prioritizes_distinctive_findings() -> None:
     assert "Keep each group's paired metrics and direction together" in prompt_text
     assert "evidence_id" in prompt_text
     assert (
-        "Use numbers only when linked finding evidence or the exact quote states"
+        "Use numbers only when its excerpt states the full value-subject-period relationship"
         in prompt_text
     )
     system_text = " ".join(prompt_set.system.text.split())
@@ -284,6 +284,13 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
     assert "publisher forecast" in prompt_text
     assert "promotional" in prompt_text
     assert "current-state" in prompt_text
+    assert (
+        "its evidence excerpt must independently contain every number and the "
+        "exact subject, cohort, and period stated in the finding text"
+    ) in prompt_text
+    assert "section titles and docmap summaries cannot supply missing links" in (
+        prompt_text
+    )
 
 
 def test_findings_prompt_matches_evidence_source_to_retrieval_mode() -> None:
@@ -331,6 +338,17 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
         _ctx(),
     )
 
+    summary_text = " ".join(summary_prompt.user.text.casefold().split())
+    expert_text = " ".join(expert_prompt.user.text.casefold().split())
+    assert (
+        "`evidence_id` must support every value, subject, direction, and period"
+        in summary_text
+    )
+    assert (
+        "support facts with selected source spans; plan themes and docmap are "
+        "context, not evidence"
+    ) in expert_text
+
     assert (
         'do not emit labels such as "Answer:" or "Implication:"'
         in summary_prompt.user.text
@@ -353,18 +371,15 @@ def test_doc_map_prompt_carries_chart_periods_and_printed_page_coverage() -> Non
 
     assert (
         "For ordered series and multi-measure charts/tables, bind every value to"
-        " its displayed period, category/row, and measure/column"
-        in normalized_prompt
+        " its displayed period, category/row, and measure/column" in normalized_prompt
     )
     assert (
         "the full inclusive page span through continuation pages, and all explicit"
-        " printed-page references"
-        in normalized_prompt
+        " printed-page references" in normalized_prompt
     )
     assert (
         "all supporting printed pages for numeric key points; use printed, not PDF,"
-        " page numbers"
-        in normalized_prompt
+        " page numbers" in normalized_prompt
     )
 
 
