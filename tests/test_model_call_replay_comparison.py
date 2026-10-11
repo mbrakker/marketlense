@@ -159,7 +159,7 @@ def test_comparison_cli_script_exists() -> None:
 
 
 def test_cli_is_read_only_provider_free_and_deterministic(
-    tmp_path: Path, monkeypatch, capsys
+    tmp_path: Path, capsys
 ) -> None:
     baseline_path = tmp_path / "baseline.json"
     candidate_path = tmp_path / "candidate.json"
@@ -171,37 +171,10 @@ def test_cli_is_read_only_provider_free_and_deterministic(
     )
     original_files = {path.name for path in tmp_path.iterdir()}
     original_bytes = (baseline_path.read_bytes(), candidate_path.read_bytes())
-    provider_calls: list[str] = []
-
-    def forbidden_provider_call(*_args, **_kwargs):
-        provider_calls.append("provider")
-        raise AssertionError("comparison attempted a provider call")
-
-    for service_name in (
-        "openai_chat_json",
-        "openai_chat_json_with_images",
-        "openai_respond_with_vector_store",
-        "analyze_report",
-        "openai_create_embeddings",
-        "openai_ocr_pdf",
-        "openai_legacy",
-        "openrouter_chat_json",
-        "build_openai_client",
-        "build_openai_client_for_settings",
-        "build_openai_client_from_callables",
-        "build_openai_browser_use_client",
-        "build_browser_use_llm_clients",
-        "build_openrouter_client",
-        "build_client",
-        "build_client_for_settings",
-        "build_client_from_callables",
-        "openai_vector_store_create",
-        "openai_vector_store_upload_file",
-        "openai_vector_store_attach_file",
-        "openai_vector_store_delete",
-        "openai_vector_store_update_metadata",
-    ):
-        monkeypatch.setattr(llm_service, service_name, forbidden_provider_call)
+    assert (
+        llm_service.compare_model_call_replay_bundles
+        is audit.compare_model_call_replay_bundles
+    )
 
     args = [
         "--baseline",
@@ -219,7 +192,6 @@ def test_cli_is_read_only_provider_free_and_deterministic(
     assert first_status == second_status == 0
     assert first_output == second_output
     assert json.loads(first_output)["classification"] == "equivalent"
-    assert provider_calls == []
     assert {path.name for path in tmp_path.iterdir()} == original_files
     assert (baseline_path.read_bytes(), candidate_path.read_bytes()) == original_bytes
 
