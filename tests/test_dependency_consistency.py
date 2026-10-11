@@ -116,3 +116,13 @@ def test_ci_installs_the_lock_with_hash_verification() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     assert "python -m pip install --require-hashes -r requirements.lock" in workflow
+
+
+def test_ci_caches_pip_against_the_hash_locked_dependency_manifest() -> None:
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+    setup_python_step = workflow.split(
+        "      - uses: actions/setup-python@v5", maxsplit=1
+    )[1].split("      - name:", maxsplit=1)[0]
+
+    assert "cache: pip" in setup_python_step
+    assert "cache-dependency-path: requirements.lock" in setup_python_step
