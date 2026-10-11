@@ -24,6 +24,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
+    SOFT_COPY_SENTENCE_GRID_VERSION,
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
     soft_copy_claim_provenance_from_payload,
@@ -2857,6 +2858,7 @@ def _artifact_cache_meta(
         "topic_brief_mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
         "toc_structure_version": TOC_STRUCTURE_VERSION,
         "editorial_plan_transform_version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+        "soft_copy_sentence_grid_version": SOFT_COPY_SENTENCE_GRID_VERSION,
         "md5": md5,
         "inputs_sha256": inputs_hash,
         "prompts": prompt_meta,

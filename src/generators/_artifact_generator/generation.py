@@ -18,6 +18,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     SoftCopyPromptFamilyMaterialization,
+    soft_copy_claim_bindings_match_public_text_grid,
     soft_copy_prompt_family_materialization_from_payload,
 )
 from src.generators._artifact_generator.family_policy import (
@@ -708,6 +709,23 @@ def generate_artifacts(
                 soft_copy_reuse_rejected=True,
                 soft_copy_reuse_rejection_reason="soft_copy_provenance_missing",
             )
+        elif (
+            reuse is not None
+            and reuse.reusable
+            and soft_copy_family
+            and retained_soft_copy is not None
+            and not soft_copy_claim_bindings_match_public_text_grid(
+                artifact_family=soft_copy_family,
+                public_output=retained_soft_copy.public_output,
+                claim_bindings=retained_soft_copy.claim_provenance,
+            )
+        ):
+            reuse = None
+            update_family_reuse(
+                namespace,
+                soft_copy_reuse_rejected=True,
+                soft_copy_reuse_rejection_reason="soft_copy_provenance_incompatible",
+            )
         if reuse is not None and reuse.reusable:
             with family_state_lock:
                 reused = family_reuse_telemetry["reused_families"]
@@ -750,7 +768,10 @@ def generate_artifacts(
             return {root_key: public_output}
         reason = (
             (
-                "soft_copy_provenance_missing"
+                str(
+                    family_reuse[namespace].get("soft_copy_reuse_rejection_reason")
+                    or "soft_copy_provenance_missing"
+                )
                 if family_reuse[namespace].get("soft_copy_reuse_rejected")
                 else reuse.reason
             )

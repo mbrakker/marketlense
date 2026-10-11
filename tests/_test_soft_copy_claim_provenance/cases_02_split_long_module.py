@@ -88,6 +88,35 @@ def test_byte_identical_expert_and_linkedin_text_share_sentence_hashes() -> None
     ]
 
 
+def test_sentence_splitter_keeps_initialism_before_year_in_same_claim() -> None:
+    from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+
+    text = (
+        "The U.S. 2017 video measure showed 61% of time and 34% of spend. "
+        "The U.S. 2017 audio measure showed 64% of time and 47% of spend. "
+        "A separate conclusion followed."
+    )
+
+    assert soft_copy_material_sentences(text) == [
+        "The U.S. 2017 video measure showed 61% of time and 34% of spend.",
+        "The U.S. 2017 audio measure showed 64% of time and 47% of spend.",
+        "A separate conclusion followed.",
+    ]
+
+
+def test_sentence_splitter_keeps_capitalized_sentence_after_terminal_initialism() -> (
+    None
+):
+    from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
+
+    assert soft_copy_material_sentences(
+        "The survey covered the U.S. Results varied."
+    ) == [
+        "The survey covered the U.S.",
+        "Results varied.",
+    ]
+
+
 def test_fragment_binding_rebuilds_only_a_canonical_material_sentence() -> None:
     from src.contracts.soft_copy_claim_provenance import soft_copy_material_sentences
     from src.generators.soft_copy_claim_provenance import (

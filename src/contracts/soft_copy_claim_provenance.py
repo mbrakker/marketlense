@@ -12,6 +12,7 @@ from src.utils.errors import AppError
 
 SOFT_COPY_CLAIM_PROVENANCE_SCHEMA_VERSION = "1.0"
 SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION = "1.0"
+SOFT_COPY_SENTENCE_GRID_VERSION = "2"
 SoftCopyClaimClassification = Literal["factual", "interpretive", "recommendation"]
 _CLASSIFICATIONS = frozenset({"factual", "interpretive", "recommendation"})
 _PROMPT_FAMILY_TO_ARTIFACT_FAMILY = {
@@ -130,6 +131,56 @@ def soft_copy_claim_bindings_cover_public_text(
         public_output=public_output,
         claim_bindings=claim_bindings,
     )
+
+
+def soft_copy_claim_bindings_match_public_text_grid(
+    *, artifact_family: str, public_output: object, claim_bindings: object
+) -> bool:
+    """Check retained bindings map one-to-one onto the current sentence grid."""
+
+    text = soft_copy_public_text(artifact_family, public_output)
+    sentences = soft_copy_material_sentences(text)
+    if not sentences:
+        return not claim_bindings
+    if not isinstance(claim_bindings, list) or not claim_bindings:
+        return False
+
+    sentence_owners: dict[str, int] = {}
+    seen_bindings: set[tuple[str, str, tuple[str, ...]]] = set()
+    for index, binding in enumerate(claim_bindings):
+        if not isinstance(binding, dict):
+            return False
+        binding_key = (
+            " ".join(str(binding.get("claim") or "").split()),
+            str(binding.get("classification") or ""),
+            tuple(
+                str(evidence_id).strip()
+                for evidence_id in binding.get("evidence_ids", [])
+                if str(evidence_id).strip()
+            )
+            if isinstance(binding.get("evidence_ids"), list)
+            else (),
+        )
+        if binding_key in seen_bindings:
+            continue
+        seen_bindings.add(binding_key)
+        aligned = align_soft_copy_claim_bindings_to_text(
+            artifact_family=artifact_family,
+            text=text,
+            claim_bindings=[binding],
+        )
+        mapped = {
+            " ".join(str(item.get("claim") or "").split())
+            for item in aligned
+            if isinstance(item, dict)
+        }
+        if not mapped:
+            return False
+        for sentence in mapped:
+            owner = sentence_owners.setdefault(sentence, index)
+            if owner != index:
+                return False
+    return set(sentence_owners) == set(sentences)
 
 
 def soft_copy_uncovered_sentences(
@@ -358,8 +409,9 @@ def soft_copy_material_sentences(text: object) -> list[str]:
 
     Provenance declares complete public sentences.  ``U.K. digital media`` is
     one such sentence, not the two fragments produced by a punctuation-only
-    splitter.  The lowercase continuation condition keeps a genuine terminal
-    initialism followed by a new capitalized sentence fail-closed.  Fragments
+    splitter.  Lowercase and numeric continuations keep initialisms before
+    words or years in the same sentence; a capitalized continuation remains a
+    separate sentence.  Fragments
     that carry no prose (for example a closing line of only ``#tag``
     hashtags, which LinkedIn formatting treats as metadata rather than a
     claim) are not material sentences and therefore require no provenance.
@@ -375,7 +427,7 @@ def soft_copy_material_sentences(text: object) -> list[str]:
         if (
             sentences
             and re.search(r"(?:\b[A-Za-z]\.){2,}$", sentences[-1])
-            and fragment[:1].islower()
+            and (fragment[:1].islower() or fragment[:1].isdigit())
         ):
             sentences[-1] = f"{sentences[-1]} {fragment}"
         elif _is_prose_fragment(fragment):
