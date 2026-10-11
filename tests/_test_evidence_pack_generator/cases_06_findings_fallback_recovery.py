@@ -476,8 +476,8 @@ def test_targeted_fallback_drops_exact_duplicate_but_keeps_missing_finding(
         "findings": [
             {
                 "id": "impulse-targeted-copy",
-                    "text": "Consumers reported fewer impulse purchases, 54% versus "
-                    "71% last year.",
+                "text": "Consumers reported fewer impulse purchases, 54% versus "
+                "71% last year.",
                 "evidence": impulse_evidence,
                 "pages": [21],
                 "section_id": target_id,
