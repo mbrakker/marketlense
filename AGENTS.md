@@ -95,6 +95,9 @@ Canonical documentation MUST be updated when a change would otherwise leave arch
 
 ## 11. Completion
 
+For backlog work, use `CONSOLIDATED_TODO.md` as the only status authority and consult the linked `docs/backlog/` owning outcome and technical slice before changing code. Each task provides a copy/paste Luna prompt, but its historical diagnosis and acceptance targets require verification on current HEAD. Implement one coherent slice, update its owning outcome with evidence, and do not close a parent on partial implementation. Archived original backlogs are backup research, not execution authorities.
+
+
 Completion claims MUST be evidence-based. Before reporting completion, inspect the final diff for scope and secret exposure, run proportionate relevant validators and checks, and report exact commands/results, skipped or unavailable checks, newly introduced versus pre-existing failures, and residual uncertainty. Claim enforcement, test success, or verified behavior only with direct evidence.
 
 ## 12. Canonical references
@@ -105,4 +108,6 @@ Completion claims MUST be evidence-based. Before reporting completion, inspect t
 - Logging and evidence: docs/quality/evidence.md
 - Configuration and credentials: docs/ops/configuration.md; docs/ops/credentials.md
 - Documentation map: docs/README.md
-- Canonical backlog: CONSOLIDATED_TODO.md
+- Canonical backlog/status authority: CONSOLIDATED_TODO.md
+- Backlog execution specifications: docs/backlog/A-autonomy.md, P-publication.md, E-evidence.md, R-engineering.md, S-simplification.md
+- Historical technical proposal mappings: docs/backlog/proposal-index.md (not a second status ledger)
