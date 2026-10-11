@@ -572,12 +572,18 @@ def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_pa
         {
             "evidence_id": "f3",
             "so_what": "Retention changes the growth tradeoff.",
+            "source_finding": "Retention stabilizing",
+            "source_excerpt": "Retention improved",
+            "source_page": 4,
         },
         {
             "evidence_id": "f2",
             "so_what": "Margin pressure limits expansion options.",
+            "source_finding": "Margin pressure in EU",
+            "source_excerpt": "Margin declined",
+            "source_page": 3,
         },
-    ]
+    ], synthesis_context["insight_implications"]
     assert synthesis_context["limitations"] == [
         {
             "evidence_id": "f3",

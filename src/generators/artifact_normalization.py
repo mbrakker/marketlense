@@ -1182,6 +1182,17 @@ def build_expert_synthesis_context(
     plan = normalize_artifact_editorial_plan(editorial_plan)
     # DocMap selects retrieval targets; it cannot substantiate factual claims.
     span_index = _build_evidence_span_index(doc_map={}, evidence_packs=evidence_packs)
+    source_findings = _expert_source_findings(evidence_packs)
+    implications = _expert_insight_implications(
+        insights_final,
+        evidence_span_index=span_index,
+        source_findings=source_findings,
+    )
+    implication_source_ids = {
+        _s(item.get("evidence_id")).casefold()
+        for item in implications
+        if item.get("source_finding")
+    }
     themes: List[Dict[str, Any]] = []
     for theme in plan["themes"]:
         evidence = []
@@ -1190,13 +1201,19 @@ def build_expert_synthesis_context(
             if not spans:
                 continue
             span = spans[0]
-            evidence.append(
-                {
-                    "evidence_id": _s(span.get("evidence_id")),
-                    "source_pack": _s(span.get("source_pack")),
-                    "text": _s(span.get("text")),
-                }
-            )
+            item: Dict[str, Any] = {
+                "evidence_id": _s(span.get("evidence_id")),
+                "source_pack": _s(span.get("source_pack")),
+                "text": _s(span.get("text")),
+            }
+            source_page = span.get("page")
+            if isinstance(source_page, int) and source_page > 0:
+                item["page"] = source_page
+            evidence_id = _s(span.get("evidence_id")).casefold()
+            source_finding = source_findings.get(evidence_id, "")
+            if source_finding and evidence_id not in implication_source_ids:
+                item["source_finding"] = source_finding
+            evidence.append(item)
         themes.append(
             {
                 "theme": theme["theme"],
@@ -1207,7 +1224,7 @@ def build_expert_synthesis_context(
     return {
         "schema_version": "1.0",
         "themes": themes,
-        "insight_implications": _expert_insight_implications(insights_final),
+        "insight_implications": implications,
         "limitations": _expert_context_items(
             evidence_packs.get("limitations"),
             item_key="limitations",
@@ -1219,9 +1236,36 @@ def build_expert_synthesis_context(
 
 def _expert_insight_implications(
     insights_final: List[Dict[str, Any]],
-) -> List[Dict[str, str]]:
-    implications: List[Dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
+    *,
+    evidence_span_index: Dict[str, List[Dict[str, Any]]],
+    source_findings: Dict[str, str],
+) -> List[Dict[str, Any]]:
+    """Keep insight claims adjacent to their independently retained source span."""
+
+    metric_context_fields = (
+        "label",
+        "value",
+        "unit",
+        "subject",
+        "cohort",
+        "denominator",
+        "timeframe",
+        "geography",
+        "segment",
+        "sample_size",
+        "observation_status",
+    )
+    required_metric_fields = (
+        "label",
+        "value",
+        "unit",
+        "subject",
+        "cohort",
+        "denominator",
+        "timeframe",
+    )
+    implications: List[Dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
     for insight in insights_final:
         if not isinstance(insight, dict):
             continue
@@ -1229,14 +1273,76 @@ def _expert_insight_implications(
         if not implication:
             continue
         evidence_id = _s(insight.get("evidence_id")).strip()
-        key = (evidence_id.casefold(), normalize_text(implication))
+        source_finding = source_findings.get(evidence_id.casefold(), "")
+        spans = evidence_span_index.get(evidence_id.casefold(), [])
+        source_span = next(
+            (
+                span
+                for span in spans
+                if _s(span.get("text")).strip()
+                and _s(span.get("evidence_id")).casefold() == evidence_id.casefold()
+            ),
+            None,
+        )
+        key = (
+            evidence_id.casefold(),
+            normalize_text(implication),
+            normalize_text(source_finding),
+        )
         if key in seen:
             continue
         seen.add(key)
-        implications.append({"evidence_id": evidence_id, "so_what": implication})
+        item: Dict[str, Any] = {"evidence_id": evidence_id}
+        if implication:
+            item["so_what"] = implication
+        if source_finding and source_span is not None:
+            item.update(
+                {
+                    "source_finding": source_finding,
+                    "source_excerpt": _s(source_span.get("text")),
+                }
+            )
+            source_page = source_span.get("page")
+            if isinstance(source_page, int) and source_page > 0:
+                item["source_page"] = source_page
+            metric = insight.get("metric")
+            if isinstance(metric, dict):
+                structured_metric = {
+                    field_name: _s(metric.get(field_name)).strip()
+                    for field_name in metric_context_fields
+                    if _s(metric.get(field_name)).strip()
+                }
+                if all(
+                    field_name in structured_metric
+                    for field_name in required_metric_fields
+                ):
+                    item["metric"] = structured_metric
+        implications.append(item)
         if len(implications) == 7:
             break
     return implications
+
+
+def _expert_source_findings(evidence_packs: Dict[str, Any]) -> Dict[str, str]:
+    """Index only unique findings-pack statements by their retained evidence ID."""
+
+    findings_pack = evidence_packs.get("findings")
+    findings = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
+    if not isinstance(findings, list):
+        return {}
+    by_id: Dict[str, set[str]] = {}
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        evidence_id = _s(finding.get("id")).strip().casefold()
+        text = _s(finding.get("text")).strip()
+        if evidence_id and text:
+            by_id.setdefault(evidence_id, set()).add(text)
+    return {
+        evidence_id: next(iter(texts))
+        for evidence_id, texts in by_id.items()
+        if len(texts) == 1
+    }
 
 
 def _expert_counter_signals(
