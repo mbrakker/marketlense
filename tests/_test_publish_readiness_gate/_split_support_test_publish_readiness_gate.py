@@ -252,13 +252,15 @@ def _readiness_with_package(
     *,
     configuration_hash: str = "config-current",
     policy_hash: str = "policy-current",
+    validation_report: ValidationReport | None = None,
 ) -> object:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     return _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
-        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        validation_report=validation_report
+        or ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path="",
         category_ids=["markets"],

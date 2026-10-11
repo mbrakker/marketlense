@@ -19,6 +19,7 @@ def _check(
     outcome: str,
     protected_facts: dict,
     proposition_status: str = "compatible",
+    text: str = "In creative prose, respondents may adopt X in 2026.",
 ) -> dict:
     complete_protected_facts = {
         dimension: {
@@ -31,7 +32,7 @@ def _check(
     complete_protected_facts.update(protected_facts)
     return {
         "section": "expert_comment",
-        "text": "In creative prose, respondents may adopt X in 2026.",
+        "text": text,
         "classification": "factual_claim",
         "entailment_outcome": outcome,
         "proposition_status": proposition_status,
@@ -40,7 +41,12 @@ def _check(
     }
 
 
-def _issues(tmp_path, check: dict):
+def _issues(
+    tmp_path,
+    check: dict,
+    *,
+    evidence_text: str = "52% of respondents expect X in 2026.",
+):
     return run_grounding_check(
         request=ValidationRequest(
             schema_version="1.0",
@@ -52,7 +58,7 @@ def _issues(tmp_path, check: dict):
         ),
         settings=_settings(tmp_path),
         grounding_use_vector_store=False,
-        evidence_texts=["52% of respondents expect X in 2026."],
+        evidence_texts=[evidence_text],
         evidence_windows=[],
         prompt_client=FakePromptClient(),
         openai_client=FakeOpenAI(
@@ -88,6 +94,112 @@ def test_grounding_accepts_compatible_creative_paraphrase(tmp_path) -> None:
     )
 
     assert issues == []
+
+
+def test_grounding_accepts_an_explicitly_supported_budget_reason(tmp_path) -> None:
+    claim = (
+        "A similar proportion (48%) are embracing cheaper alternatives, "
+        "such as canned fruit instead of fresh, to manage budgets."
+    )
+    evidence = (
+        "A similar proportion (48%) are embracing cheaper alternatives, such as "
+        "canned fruit instead of fresh, highlighting a willingness to compromise "
+        "on experience to manage budgets."
+    )
+    issues = _issues(
+        tmp_path,
+        _check(
+            outcome="entailed",
+            text=claim,
+            protected_facts={
+                "value": {
+                    "claim_value": "48%",
+                    "evidence_value": "48%",
+                    "status": "compatible",
+                },
+                "causality": {
+                    "claim_value": "cheaper alternatives used to manage budgets",
+                    "evidence_value": "cheaper alternatives to manage budgets",
+                    "status": "compatible",
+                },
+            },
+        ),
+        evidence_text=evidence,
+    )
+
+    assert issues == []
+
+
+def test_grounding_accepts_the_supported_quantity_observation_without_a_reason(
+    tmp_path,
+) -> None:
+    claim = (
+        "Around half (49%) are buying smaller quantities, suggesting a shift "
+        "toward consumption control rather than complete avoidance."
+    )
+    evidence = (
+        "For instance, around half (49%) are buying smaller quantities, "
+        "suggesting a shift toward consumption control, rather than complete avoidance."
+    )
+    issues = _issues(
+        tmp_path,
+        _check(
+            outcome="entailed",
+            text=claim,
+            protected_facts={
+                "value": {
+                    "claim_value": "49%",
+                    "evidence_value": "49%",
+                    "status": "compatible",
+                },
+                "causality": {
+                    "claim_value": "smaller quantities suggest consumption control",
+                    "evidence_value": "smaller quantities suggest consumption control",
+                    "status": "compatible",
+                },
+            },
+        ),
+        evidence_text=evidence,
+    )
+
+    assert issues == []
+
+
+def test_grounding_flags_the_unsupported_reason_on_the_49_percent_finding(
+    tmp_path,
+) -> None:
+    claim = (
+        "Around half of consumers (49%) said they were buying smaller quantities "
+        "to manage budgets."
+    )
+    evidence = (
+        "For instance, around half (49%) are buying smaller quantities, suggesting "
+        "a shift toward consumption control, rather than complete avoidance."
+    )
+    issues = _issues(
+        tmp_path,
+        _check(
+            outcome="not_established",
+            text=claim,
+            protected_facts={
+                "value": {
+                    "claim_value": "49%",
+                    "evidence_value": "49%",
+                    "status": "compatible",
+                },
+                "causality": {
+                    "claim_value": "buying smaller quantities to manage budgets",
+                    "evidence_value": None,
+                    "status": "unknown",
+                },
+            },
+        ),
+        evidence_text=evidence,
+    )
+
+    assert len(issues) == 1
+    assert issues[0].severity == "warning"
+    assert "[factual_claim|not_established]" in issues[0].message
 
 
 @pytest.mark.parametrize(

@@ -647,6 +647,20 @@ def _validation_result(
         for issue in validation_report.issues
         if str(issue.severity).casefold() == "error"
         or str(issue.rule_id).casefold() == "deferred_grounding_required"
+        # Public factual checks can fall outside the narrower retained-claim
+        # identity batch. Their explicit not-established verdict still blocks
+        # publication even when validation records it as a warning.
+        or (
+            str(issue.rule_id).casefold() == "grounding"
+            and str(issue.violation_type).casefold() == "not_established"
+            and re.match(
+                r"^\s*(?:\[grounding\]\s*)?"
+                r"\[factual_claim\|not_established\]",
+                str(issue.message),
+                re.IGNORECASE,
+            )
+            is not None
+        )
     ]
     if validation_report.status != "pass" or failed:
         return _fail(
