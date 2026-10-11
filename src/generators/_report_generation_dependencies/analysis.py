@@ -10,6 +10,7 @@ from src.contracts.context_category_fit import (
     ReportContextBuildRequest,
 )
 from src.contracts.files import ReadJsonRequest
+from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse
 from src.contracts.regeneration import (
     ArtifactRegenerationRequest,
     ArtifactRegenerationResponse,
@@ -45,6 +46,7 @@ from src.generators.taxonomy_generator import extract_taxonomy
 from src.generators.validation_generator import validate_report as run_validation
 from src.services import (
     file_service,
+    pdf_service,
     report_analysis_store_service,
     state_service,
     vector_store_service,
@@ -82,6 +84,9 @@ class ReportAnalysisDependencies:
     analysis_pack_path: Callable[[AnalysisPackPathRequest, RunContext], Any]
     read_json: Callable[[ReadJsonRequest, RunContext], Any]
     analysis_store_pack: Callable[[AnalysisStorePackRequest, RunContext], Any]
+    extract_pdf_text: Callable[
+        [PdfTextExtractRequest, RunContext], PdfTextExtractResponse
+    ]
     figure_caption: FigureCaptionDependencies
 
     @classmethod
@@ -106,5 +111,6 @@ class ReportAnalysisDependencies:
             analysis_pack_path=report_analysis_store_service.pack_path,
             read_json=file_service.read_json,
             analysis_store_pack=report_analysis_store_service.store_pack,
+            extract_pdf_text=pdf_service.extract_pdf_text,
             figure_caption=FigureCaptionDependencies.default(),
         )

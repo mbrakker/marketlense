@@ -198,7 +198,9 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
 
 def test_findings_fallback_uses_file_search_when_source_page_excerpts_are_missing(
     tmp_path,
+    caplog,
 ):
+    caplog.set_level("INFO", logger="market_lense.evidence_pack_generator")
     from dataclasses import replace
 
     from src.contracts.openai import OpenAIResponseResult
@@ -310,9 +312,34 @@ def test_findings_fallback_uses_file_search_when_source_page_excerpts_are_missin
     assert "search file_search" in fallback_instruction
     assert "independently retrieved source evidence" in fallback_instruction
     assert not any(
-        finding["id"] == "casino-and-slots"
-        for finding in packs["findings"]["findings"]
+        finding["id"] == "casino-and-slots" for finding in packs["findings"]["findings"]
     )
+    events = [
+        json.loads(record.message)
+        for record in caplog.records
+        if record.message.lstrip().startswith("{")
+    ]
+    assert not any(
+        event.get("event") == "findings_targeted_fallback_rejected" for event in events
+    )
+    completed = next(
+        event
+        for event in events
+        if event.get("event") == "findings_targeted_fallback_complete"
+    )
+    assert completed["fields"]["formal_abstention"] is True
+    assert completed["fields"]["not_found_reason"] == "findings_not_found"
+
+
+def test_empty_findings_envelope_preserves_formal_abstention_reason():
+    from src.generators.evidence_packs.findings_strategy import FINDINGS_STRATEGY
+
+    normalized = FINDINGS_STRATEGY.normalize_payload(
+        {"findings": [], "not_found_reason": "findings_not_found"}, "r1", "report"
+    ).payload
+
+    assert normalized["findings"] == []
+    assert normalized["not_found_reason"] == "findings_not_found"
 
 
 def test_findings_targeted_fallback_keeps_ma_means_as_deal_counts(tmp_path):

@@ -77,6 +77,9 @@ from src.orchestrators._report_analysis_orchestrator.regeneration_plan import (
     _target_steps,
 )
 from src.orchestrators._report_analysis_orchestrator.shared import logger
+from src.orchestrators._report_analysis_orchestrator.source_evidence import (
+    build_findings_source_spans,
+)
 from src.orchestrators._report_analysis_orchestrator.validation import (
     _evaluate_and_store_public_editorial_quality,
     _merge_public_editorial_quality,
@@ -488,15 +491,11 @@ def run_report_analysis(
         else None
     )
     evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
-    source_spans = [
-        {
-            "id": f"source:page:{page.page_number}",
-            "page": page.page_number,
-            "text": page.text,
-        }
-        for page in source.text_response.pages
-        if page.page_number > 0 and page.text.strip()
-    ]
+    source_spans = build_findings_source_spans(
+        source,
+        extract_pdf_text=dependencies.extract_pdf_text,
+        ctx=mode_ctx,
+    )
     if artifact_openai_client is not None:
         artifact_kwargs["openai_client"] = artifact_openai_client
 

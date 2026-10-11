@@ -61,11 +61,12 @@ def _extract_wrapped_pack_payload(
             payload.get("_cache") if isinstance(payload.get("_cache"), dict) else None
         )
         wrapped = payload.get(root_key)
+        root_list_is_envelope = isinstance(wrapped, list)
         if wrapped is None:
             wrapped = payload.get("evidence_pack")
         if wrapped is None:
             wrapped = payload.get("evidencePack")
-        if wrapped is not None:
+        if wrapped is not None and not root_list_is_envelope:
             source = wrapped
     return source, cache_meta
 

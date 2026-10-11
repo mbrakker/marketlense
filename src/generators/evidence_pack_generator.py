@@ -1253,6 +1253,11 @@ def generate_evidence_packs(
             if initial_fidelity.unresolved_factual_count
             else initial_fidelity
         )
+        findings_validation_results = [
+            result
+            for result in fidelity.results
+            if result.candidate.source_family == "findings"
+        ]
         findings_pack = results.get("findings")
         if isinstance(findings_pack, dict) and isinstance(
             findings_pack.get("findings"), list
@@ -1270,6 +1275,41 @@ def generate_evidence_packs(
                 results[pack_name] = _attach_pack_family_status(
                     pack_name, results[pack_name]
                 )
+        findings_payload = results.get("findings")
+        if isinstance(findings_payload, dict):
+            grounding_status_counts = {
+                status: sum(
+                    result.status == status for result in findings_validation_results
+                )
+                for status in sorted(
+                    {result.status for result in findings_validation_results}
+                )
+            }
+            final_findings = findings_payload.get("findings")
+            retained_count = (
+                sum(isinstance(item, dict) for item in final_findings)
+                if isinstance(final_findings, list)
+                else 0
+            )
+            family_status = findings_payload.get("family_status")
+            logger.info(
+                log_event(
+                    pack_contexts.get("findings", ctx),
+                    role="generator",
+                    event="findings_evidence_validation_complete",
+                    module=logger.name,
+                    fields={
+                        "candidate_count": len(findings_validation_results),
+                        "grounding_status_counts": grounding_status_counts,
+                        "retained_count": retained_count,
+                        "abstention_reason": (
+                            str(family_status.get("reason") or "")
+                            if isinstance(family_status, dict)
+                            else str(findings_payload.get("not_found_reason") or "")
+                        ),
+                    },
+                )
+            )
         results["evidence_fidelity"] = asdict(fidelity)
 
     # Store and materialize only the authoritative post-fidelity outputs. These
@@ -2056,6 +2096,14 @@ def _generate_pack(
                                 "target_count": len(missing_targets),
                                 "returned_findings": len(fallback_findings),
                                 "supported_findings": len(supported_fallback_findings),
+                                "formal_abstention": bool(
+                                    str(
+                                        fallback.payload.get("not_found_reason") or ""
+                                    ).strip()
+                                ),
+                                "not_found_reason": str(
+                                    fallback.payload.get("not_found_reason") or ""
+                                ).strip(),
                                 "merged_findings": max(
                                     0,
                                     len(result_payload.get("findings", []))
@@ -2088,6 +2136,18 @@ def _generate_pack(
                 "not_found_reason": not_found_reason,
                 "attempts": attempts_used,
                 "max_attempts": max_attempts,
+                **(
+                    {
+                        "structured_output_status": "accepted",
+                        "candidate_count": sum(
+                            isinstance(item, dict)
+                            for item in result_payload.get("findings", [])
+                        ),
+                        "formal_abstention": bool(not_found_reason.strip()),
+                    }
+                    if pack_name == "findings"
+                    else {}
+                ),
             },
         )
     )
