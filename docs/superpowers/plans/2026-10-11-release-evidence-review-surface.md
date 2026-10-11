@@ -42,7 +42,7 @@
 
 - [x] Change only the existing summary step condition so it emits an explicit unavailable result when canonical summary inputs are missing; do not add or reorder processing, upload, provider, or gate steps.
 - [x] Document the safe summary fields, canonical artifact reference, runtime-corpus labels, and unavailable behavior without duplicating detailed issues.
-- [ ] Record verified R1 implementation scope, focused test results, live-presentation availability, and remaining gaps in the sole status authority; retain Active if upload/expiry or live rendering cannot be verified.
+- [x] Record verified R1 implementation scope, focused test results, live-presentation availability, and remaining gaps in the sole status authority; retain Active because the rendered text and representative execution provenance could not be verified.
 
 ### Task 3: Verify the scoped result and publish the requested commit
 
@@ -50,5 +50,5 @@
 - Inspect the complete final diff and changed-file list.
 
 - [x] Run focused tests and applicable documentation/workflow checks; inspect actual fixture-generated summary output and scan it for sensitive fixture markers. Focused tests, Ruff, type check, and repository hygiene pass; documentation and backlog source checks report unrelated pre-existing D13/D14/PATH anchors and closed R6 detailed-ID issues.
-- [ ] Inspect the final diff for unrelated changes or sensitive data; report whether live GitHub presentation and artifact-expiry state were observable.
+- [x] Inspect the final diff for unrelated changes or sensitive data; report that the live Actions summary step succeeded and the artifact listing/expiry were observable, while the rendered summary body was not exposed by the API and the browser required sign-in.
 - [ ] Commit the verified scope, push the current branch, and record the resulting SHA.
