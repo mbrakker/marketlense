@@ -287,13 +287,15 @@ def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "key points should prioritize distinctive body outcomes and contrasts" in (
-        prompt_text
+    assert "key points prioritize distinctive, exact body outcomes" in prompt_text
+    assert (
+        "retain the strongest labeled subgroup comparison or counter-direction"
+        in prompt_text
     )
-    assert "preserve exact metrics, causes, mechanisms, and periods" in prompt_text
-    assert "final body page before the next heading" in prompt_text
-    assert "full page span, not only the opener" in prompt_text
-    assert "all explicit printed pages" in prompt_text
+    assert "even alongside aggregates" in prompt_text
+    assert "preserve paired measures, causes, mechanisms, and periods" in prompt_text
+    assert "full inclusive page span through continuation pages" in prompt_text
+    assert "all explicit printed-page references" in prompt_text
 
 
 def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
@@ -345,11 +347,9 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         load("report_vs/artifacts/summary").user.text.split()
     ).lower()
 
-    assert (
-        "key points should prioritize distinctive body outcomes and contrasts"
-        in doc_map_text
-    )
-    assert "preserve exact metrics, causes, mechanisms, and periods" in doc_map_text
+    assert "key points prioritize distinctive, exact body outcomes" in doc_map_text
+    assert "even alongside aggregates" in doc_map_text
+    assert "preserve paired measures, causes, mechanisms, and periods" in doc_map_text
     assert (
         "primary pass: search file_search by section/title/page and each key-point metric"
         in findings_text
