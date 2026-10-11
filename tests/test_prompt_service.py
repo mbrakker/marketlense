@@ -169,10 +169,12 @@ def test_doc_map_prompt_prioritizes_distinctive_body_results_and_contrasts() -> 
     )
     prompt_text = " ".join(prompt_set.user.text.split())
 
-    assert "prioritize distinctive body outcomes" in prompt_text
-    assert "contrasts; preserve exact metrics, causes, mechanisms, and periods" in (
-        prompt_text
+    assert "Key points prioritize distinctive, exact body outcomes" in prompt_text
+    assert (
+        "Where a section shows materially different groups, retain the strongest"
+        in prompt_text
     )
+    assert "preserve paired measures, causes, mechanisms, and periods" in prompt_text
     assert "Use only the provided report content." in prompt_text
 
 
@@ -191,6 +193,10 @@ def test_insight_candidate_prompt_prioritizes_distinctive_findings() -> None:
         prompt_text
     )
     assert "comparisons, counter-signals, and qualitative conclusions" in prompt_text
+    assert "Do not omit distinct groups solely because they share a theme" in (
+        prompt_text
+    )
+    assert "Keep each group's paired metrics and direction together" in prompt_text
     assert "evidence_id" in prompt_text
     assert (
         "Use numbers only when linked finding evidence or the exact quote states"
@@ -333,7 +339,7 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
     assert "explicitly named publisher or organization" in doc_map_prompt.user.text
 
 
-def test_doc_map_prompt_carries_chart_periods_and_one_based_page_coverage() -> None:
+def test_doc_map_prompt_carries_chart_periods_and_printed_page_coverage() -> None:
     doc_map_prompt = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -346,14 +352,20 @@ def test_doc_map_prompt_carries_chart_periods_and_one_based_page_coverage() -> N
     normalized_prompt = " ".join(doc_map_prompt.user.text.split())
 
     assert (
-        "each numeric chart/table key point, include its displayed title/axis period"
+        "For ordered series and multi-measure charts/tables, bind every value to"
+        " its displayed period, category/row, and measure/column"
         in normalized_prompt
     )
     assert (
-        "list every supporting one-based printed page in the section's pages"
+        "the full inclusive page span through continuation pages, and all explicit"
+        " printed-page references"
         in normalized_prompt
     )
-    assert "Do not infer periods or use PDF page indices" in normalized_prompt
+    assert (
+        "all supporting printed pages for numeric key points; use printed, not PDF,"
+        " page numbers"
+        in normalized_prompt
+    )
 
 
 def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> None:

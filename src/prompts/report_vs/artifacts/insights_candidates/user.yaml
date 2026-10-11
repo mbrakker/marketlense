@@ -45,6 +45,10 @@ text: |
   repeated context; retain introductory metrics when they materially frame the
   report. Avoid several candidates from one theme when stronger distinct themes
   remain. Preserve exact values, subjects, and periods.
+  Keep each group's paired metrics and direction together when evidence shows
+  materially different outcomes for distinct named groups or subgroups. Do not
+  omit distinct groups solely because they share a theme; use one clear
+  comparison or distinct candidates when each is material.
   Make both fields audience-specific, non-generic, and non-contradictory; add
   no factual premise. Use numbers only when linked finding evidence or the
   exact quote states value, subject, and period/status. A paraphrased finding
