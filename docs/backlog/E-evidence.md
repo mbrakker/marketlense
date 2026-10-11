@@ -1,6 +1,6 @@
 # Evidence, grounding, analytics, and validation
 
-Canonical owner IDs: E6, E10, E12, E13, E14, E15, E16, E17. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
+Canonical owner IDs: E6, E10, E12, E13, E14, E15, E16, E17, E18. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
 
 Before implementing a slice, verify its historic diagnosis at current HEAD; use its **Luna implementation prompt** together with the full evidence and criteria immediately above it. Proposed thresholds are acceptance targets, not current results. Closed parent milestones are not reopened by a proposal's historical wording.
 
@@ -1006,3 +1006,85 @@ Update the canonical backlog evidence accurately; close E17 only when all criter
 Commit and push the smallest verified slice.
 ```
 
+
+
+---
+
+## E18. Stabilize LLM report analysis and first-pass validation
+
+**Canonical status:** Active; proposed 2026-10-11 from repository inspection and historical retained cohorts, **not** a verified current-HEAD stability regression or implementation. **Priority:** P1 (factual quality / autonomous first-pass reliability). **Mapped technical slices:** E18.1–E18.4 below, four sequentially verified stages under this single canonical owner; no new historical proposal-index IDs.
+
+- **Observed baseline, not causation:** The existing insights-candidate prompt asks for 6–8 items while editorial plans allow 2–7 themes; candidates include LLM-authored relevance/novelty/metric scores, and final-insight and downstream prose stages still perform semantic editorial work. The current `effective_sampling_controls()` suppresses temperature/seed for configured GPT-6 reasoning calls; changing global temperature alone cannot stabilize those calls. Retained E11 three-report evidence establishes structured-output first-pass success only, not semantic/editorial repeatability. The historical October 2–3 A21 frozen 20-report run reached 16/20 readiness, with 8/20 bounded repairs; the later four-report rerun used a different producer SHA. Neither result proves that LLM output variability caused a failure, nor does it establish current-HEAD repeatability.
+- **Target behaviour:** Identical approved report evidence produces materially consistent factual claims, protected metric/source bindings, selected themes and valid citations across independent model runs. Human-quality editorial wording and defensible analyst interpretation may vary; unsupported facts and bad source scope may not. First-pass validation and publish readiness improve without suppressing genuine violations, excessive model calls, lost report coverage or editorial flattening.
+- **Ownership / no duplication:** A21 owns end-to-end first-attempt SLO and broad live cohort/readback; E18 owns **diagnosing and reducing within-report LLM analytical variability**. E16/GRD-07 owns any new atomic source-observation or methodology contract; E18 consumes existing source-bound evidence rather than rebuilding it. P17/ARCH-B owns a shared cross-surface evidence slate; E18 stabilizes use of the **current** editorial plan and insight-selection path, not a second ranking system. E13 owns candidate-repair promotion effectiveness; E18 changes only demonstrated unstable generation/validation behavior through existing scoped repairs. E17 owns token/cache economics; P6 owns independent human editorial acceptance; E11's closed structured-output milestone stays closed.
+
+### Four stages — run in order, verify and commit separately
+
+1. **E18.1 — Diagnose and pin a repeatability baseline (P1; prerequisite).** Inspect current prompts, evidence/doc-map retrieval, candidate generation, editorial-plan selection, model policies, validation, caches and repair telemetry. Reuse existing frozen-five source cohort and accepted artifacts. Start with provider-free comparison of retained outputs/audit metadata. Where insufficient, run a *budgeted* repeated experiment: at least three independent generation runs per report from identical frozen source/evidence inputs, with generated-analysis reuse disabled or isolated so a cache hit cannot masquerade as model stability; record a separate retrieval-stage experiment only if needed to explain different evidence sets. Independently run semantic validation at least three times on exactly the same pinned claim/evidence pairs. Compare hashes and substantive claim/selection identities, not prose byte equality. Attribute observed failures by stage, validator rule, evidence identity, real versus false-positive support failure, provider/model/policy/attempt, first-pass versus repaired success, wall time, tokens and cost. Use existing A21/E13/E9 and quality profiling infrastructure; no redundant telemetry service or production behavior changes. **Gate:** reproducible, source/commit-bound baseline with a ranked, evidence-backed failure/variability Pareto; if the source of instability is not established, abstain from code changes.
+2. **E18.2 — Prevent factual drift at generation (P1; only if E18.1 identifies it).** Reuse canonical findings, evidence IDs, source spans, number/label/category/denominator/period/status relationships, source-display normalization and protected-field checks. Fix the earliest proven data-binding or prompt/normalization defect; keep canonical source truth authoritative and do not introduce a parallel facts store. Remove *forced* 6–8 candidate padding on sparse reports only if it demonstrably creates weak/duplicate/unsupported items, adapting the smallest necessary producer/consumer constraints while retaining broad-report coverage and accepted schemas. Prefer semantic reasoning where rule-based extraction or scoring would be disproportionately complex. **Gate:** focused numeric/table/forecast/scope adversarial tests and previously failing real-report fixtures show fewer genuine grounding failures without dropping important evidence, weakening controls, or increasing duplicate insights.
+3. **E18.3 — Stabilize analytical selection (P1; only if E18.1 identifies it).** Reuse the existing editorial plan, stable evidence IDs, insight candidate pool and already-implemented theme-coverage/deduplication logic; resolve inconsistent downstream selection or rewording at its existing boundary. Avoid repeatedly choosing a different theme set or changing protected facts; apply deterministic eligibility/tie-breaking *only* for objectively equivalent candidates, leaving commercial relevance, synthesis and nuance to the LLM. Coordinate any shared cross-surface slate changes under P17/ARCH-B, not as an E18 duplicate. **Gate:** compared with E18.1, materially more stable supported selected findings and important theme/counter-signal coverage, with no loss in diversity, analyst significance, P6-quality criteria or first-pass factual fidelity.
+4. **E18.4 — Stabilize semantic verdicts, scoped repair, and integrated regression (P1).** On frozen identical claim/evidence pairs, isolate genuinely inconsistent semantic judgments from legitimate unsupported-claim failures. Fix confirmed prompt/context/completeness/validator interpretation defects in the existing service; use deterministic checks for exact IDs/values and simple proven relationships, LLM for entailment. Never majority-vote away a genuine factual blocker, auto-approve uncertain claims, add a new validation framework, or relax the readiness gate. Reuse E13's bounded claim-scoped repair/promotion instead of regenerating whole families unnecessarily. Benchmark after changes against the pinned frozen-five repeated baseline (including at least three independent analysis runs per report when live evaluation is justified); inspect the actual final editorial outputs. **Gate:** documented decrease in genuine first-pass failures and/or false-positive repairs, no new false accepts, unchanged source/provenance/publication safeguards, and no unjustified total time/cost regression.
+
+### Outcome-level acceptance
+
+- Every implemented modification maps to a **measured** root cause and passes its own stage gate. If a suspected mechanism is already correct or tests show no benefit, record `no change needed` rather than adding code.
+- For comparable frozen-five runs, retain per-report and aggregate first-pass validation/readiness, issue fingerprints, evidence/metric identity stability, theme coverage, repair frequency and promotions, human-reviewed substantive editorial quality, provider calls/tokens/cost and wall-clock latency. Same inputs/model/policies/producer SHA and explicit cache/replay semantics are mandatory for within-version variability measurements; version changes are labelled, not conflated with stochastic variation.
+- Unsupported claims still fail closed; all pre-existing correctly publishable reports remain publishable. No regressions in numerical fidelity, attribution, methodological scope/forecast qualifiers, materially important findings, original-source support, P6 editorial standards, A21 reliability or approval/readback invariants. Publication is **disabled** during stability benchmarking.
+- Reuse existing schema, retrieval, prompt, normalization, validator, regeneraton, audit and benchmark infrastructure; no new services, default model change, global reasoning/sampling switch, or token optimisation without measured justification. Respect explicit provider budgets and existing protected caching/checkpoint identities.
+- Close E18 only on exact-commit retained evidence from real reports proving improved stability/first-pass outcomes without quality regression. A21, E13, E16, E17, P6 and P17 statuses remain independently governed.
+
+### Luna implementation prompts — E18 (one stage per Codex invocation)
+
+**E18.1 — Diagnose and baseline**
+
+```text
+At current MarketLense HEAD, execute E18.1 only (docs/backlog/E-evidence.md).
+Read AGENTS.md and inspect existing prompts, model policies, evidence/analysis/validation
+code, retained five-report corpus and E9/E13/A21 telemetry. Pin a comparable,
+budgeted multi-run generation and fixed-input semantic-validation baseline;
+distinguish retrieval variation, generation variation, validator variation and
+true unsupported claims. Do not mistake cache reuse for stability; do not change
+production behavior. Retain root-cause evidence, hashes, costs and Pareto.
+Use existing benchmark infrastructure; report limitations and next justified slice.
+Verify, commit and push the measurement-only change.
+```
+
+**E18.2 — Factual stability**
+
+```text
+Implement E18.2 only if E18.1 proves relevant factual-generation instability.
+Read AGENTS.md and the full E18 specification. Fix root causes at the earliest
+existing evidence/normalization/prompt boundary; preserve exact numeric/source
+tuples. Remove forced sparse-report candidate padding only if justified, with
+downstream contract and broad-report coverage tests. Reuse E16's fact contracts
+and all grounding/readiness safeguards. Inspect affected real-report output
+and baseline deltas. If unproven, make no production change.
+Record verification and commit/push the smallest proven change.
+```
+
+**E18.3 — Analytical selection**
+
+```text
+Implement E18.3 only if repeatability evidence supports a selection defect.
+Read AGENTS.md and E18. Reuse the existing editorial plan, candidate set,
+source identities and selectors; fix only observed drift or inconsistent
+downstream re-selection. Avoid duplicate P17/ARCH-B selection architecture and
+complex deterministic rankings where semantic judgment is better.
+Compare same-evidence repeated runs for stability, coverage, factual fidelity,
+editorial depth, cost and latency; inspect final prose. Revert ineffective fixes.
+Commit and push the verified change and its retained evidence.
+```
+
+**E18.4 — Validation and full verification**
+
+```text
+Implement E18.4 after the preceding stage gates. Read AGENTS.md and E18.
+Recheck fixed claim/evidence pairs for validator inconsistency; fix only proven
+false-positive root causes using existing deterministic checks and semantic
+validators. Keep fail-closed true factual violations, E13 scoped promotion and
+all readiness safeguards. Run the frozen-five independent before/after evaluation
+with existing tools, inspect outputs and record first-pass/repair/readiness,
+quality, cost, speed, source identities and exact commits. No WordPress writes.
+Do not claim stable or improved quality without comparative evidence.
+Commit and push the verified changes; update E18 status only if all gates pass.
+```
