@@ -58,3 +58,15 @@ def test_preconsolidation_references_retained() -> None:
     assert len(re.findall(r"^### (?:ING|DISC|ACQ|SYS|CODE|CROP|ART|ANA|GRD|VER)-\d{2} —", catalogue, re.M)) == 100
     assert len(re.findall(r"^### Architecture follow-up [A-I] —", catalogue, re.M)) == 9
     assert "archived original" in (ROOT / "10improvements.md").read_text(encoding="utf-8").lower()
+
+
+def test_proposal_links_are_local_and_have_explicit_targets() -> None:
+    index = INDEX.read_text(encoding="utf-8")
+    for technical_id, relative_name in re.findall(
+        r"^\| \[([A-Z][A-Z0-9-]+)\]\(([^#)]+)#[^)]+\) \|", index, re.M
+    ):
+        assert "/" not in relative_name, "proposal links must be relative to docs/backlog"
+        destination = INDEX.parent / relative_name
+        assert destination in WORKSTREAMS
+        text = destination.read_text(encoding="utf-8")
+        assert f'<a id="{technical_id.lower()}"></a>' in text

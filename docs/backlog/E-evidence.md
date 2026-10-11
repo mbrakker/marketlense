@@ -43,6 +43,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ana-04"></a>
 #### ANA-04 — Retrieve evidence for the request, not the average retained claim
 
 **Primary canonical owner:** [E6](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -73,6 +74,7 @@ Update E6 and proposal disposition only with verifiable SHA/cohort/test evidence
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-05"></a>
 #### ANA-05 — Reject incompatible or numerically invalid retrieval vectors
 
 **Primary canonical owner:** [E6](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -103,6 +105,7 @@ Update E6 and proposal disposition only with verifiable SHA/cohort/test evidence
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-06"></a>
 #### ANA-06 — Close E6 with task-relevant offline semantic evaluation
 
 **Primary canonical owner:** [E6](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -207,6 +210,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ing-08"></a>
 #### ING-08 — Resume category fitting from a validated pre-category checkpoint
 
 **Primary canonical owner:** [E12](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -284,6 +288,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ver-08"></a>
 #### VER-08 — Retain rejected repair memory and remaining budgets across restart
 
 **Primary canonical owner:** [E13](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -310,6 +315,7 @@ Update E13 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-d"></a>
 #### ARCH-D — Refresh all materially dependent editorial families after atomic repairs
 
 **Primary canonical owner:** [E13](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -420,6 +426,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="crop-01"></a>
 #### CROP-01 — Add human semantic labels to the executable crop benchmark
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -447,6 +454,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-02"></a>
 #### CROP-02 — Preserve small but valuable visuals through shortlist filtering
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -474,6 +482,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-03"></a>
 #### CROP-03 — Rank visuals by incremental evidence value and remove redundant selections
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -501,6 +510,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-04"></a>
 #### CROP-04 — Localize selected visuals using an annotated overview and readable local context
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -528,6 +538,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-05"></a>
 #### CROP-05 — Reject invalid model geometry and normalize all page-coordinate transforms
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -555,6 +566,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-06"></a>
 #### CROP-06 — Protect the complete semantic bbox through one final geometry pass
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -582,6 +594,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-07"></a>
 #### CROP-07 — Repair clipped content by expanding and rerendering the source bbox
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -609,6 +622,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-08"></a>
 #### CROP-08 — Make chart/table completeness a rejecting semantic gate
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -636,6 +650,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-09"></a>
 #### CROP-09 — Apply one final-publication profile to every reuse and fallback path
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -663,6 +678,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="crop-10"></a>
 #### CROP-10 — Treat continued tables and shared-panel visuals as explicit semantic units
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -692,6 +708,7 @@ Update E15 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-g"></a>
 #### ARCH-G — Generate and fact-check figure captions from canonical approved context
 
 **Primary canonical owner:** [E15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -761,6 +778,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ana-01"></a>
 #### ANA-01 — Preserve supported metric context through projection and readback
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -791,6 +809,7 @@ Update E16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-10"></a>
 #### ANA-10 — Separate publication date, observation period and projection timestamp
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -821,6 +840,7 @@ Update E16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-05"></a>
 #### GRD-05 — Preserve support grade and distinguish source extracts from model rationale
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -851,6 +871,7 @@ Update E16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-06"></a>
 #### GRD-06 — Retain all evidence fragments instead of discarding everything after the first
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -881,6 +902,7 @@ Update E16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-07"></a>
 #### GRD-07 — Bind numeric values to atomic source observations, not an unordered number bag
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -911,6 +933,7 @@ Update E16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-10"></a>
 #### GRD-10 — Carry approved source-root lineage through cross-report evidence joins
 
 **Primary canonical owner:** [E16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.

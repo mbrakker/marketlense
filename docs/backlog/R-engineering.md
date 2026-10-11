@@ -44,6 +44,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ver-10"></a>
 #### VER-10 — Gate verifier behavior changes with output replay, not prompt-size estimates alone
 
 **Primary canonical owner:** [R1](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -110,6 +111,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="code-04"></a>
 #### CODE-04 — Distinguish corrupt lock files from active lock owners and repair safe orphan cases
 
 **Primary canonical owner:** [R2](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -137,6 +139,7 @@ Update R2 and proposal disposition only with verifiable SHA/cohort/test evidence
 Commit and push the smallest proven change.
 ```
  
+<a id="code-05"></a>
 #### CODE-05 — Fence filesystem lock eviction and release against replacement owners
 
 **Primary canonical owner:** [R2](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -276,6 +279,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="code-10"></a>
 #### CODE-10 — Fail closed with typed errors on corrupt persisted idempotency outcomes
 
 **Primary canonical owner:** [R7](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.

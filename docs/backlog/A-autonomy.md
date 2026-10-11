@@ -43,6 +43,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="arch-i"></a>
 #### ARCH-I — Test whether verified selection can replace a redundant insight-generation step
 
 **Primary canonical owner:** [A8](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Investigation; promote only on evidence.
@@ -110,6 +111,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ing-09"></a>
 #### ING-09 — Make a configured global model cap apply across transport operations
 
 **Primary canonical owner:** [A15](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -179,6 +181,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ing-03"></a>
 #### ING-03 — Admit structurally valid image-only reports to a bounded OCR route
 
 **Primary canonical owner:** [A17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -209,6 +212,7 @@ Update A17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-10"></a>
 #### ING-10 — Forecast complete review-ready work and show forecast error
 
 **Primary canonical owner:** [A17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -285,6 +289,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="disc-01"></a>
 #### DISC-01 — Build an independent, stage-attributed discovery recall benchmark
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -311,6 +316,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-02"></a>
 #### DISC-02 — Replace irreversible heuristic rejection with bounded triage of plausible report candidates
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -337,6 +343,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-03"></a>
 #### DISC-03 — Correct host identity so unrelated domains cannot be treated as publisher siblings or social sites
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -363,6 +370,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-04"></a>
 #### DISC-04 — Separate seen URLs from qualified decisions and enable safe re-screening
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -389,6 +397,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-05"></a>
 #### DISC-05 — Require first-run completeness evidence and protect against partial-refresh replacement
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -415,6 +424,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-06"></a>
 #### DISC-06 — Turn deferred recovery records into executable, idempotent recovery work
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -441,6 +451,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-07"></a>
 #### DISC-07 — Scope landing-page evidence to the report instead of shared navigation/footer content
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -467,6 +478,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-08"></a>
 #### DISC-08 — Deduplicate by report identity after qualification, preserving alternative routes
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -493,6 +505,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-09"></a>
 #### DISC-09 — Union ordinary anchors with embedded report cards and improve card-associated titles
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -519,6 +532,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="disc-10"></a>
 #### DISC-10 — Treat missing semantic decisions as incomplete work, with orchestrator-owned bounded recovery
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -547,6 +561,7 @@ Update A18 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-07"></a>
 #### SYS-07 — Carry authoritative discovery qualification into acquisition
 
 **Primary canonical owner:** [A18](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -631,6 +646,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="acq-01"></a>
 #### ACQ-01 — Preserve one verified submission identity across acquisition and mailbox queues
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -657,6 +673,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-02"></a>
 #### ACQ-02 — Make IMAP reads non-mutating and message identities genuinely stable
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -683,6 +700,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-03"></a>
 #### ACQ-03 — Retrieve report mail without top-ten starvation or coarse-window false matches
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -709,6 +727,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-04"></a>
 #### ACQ-04 — Rank message and attachment metadata before downloading or writing bytes
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -735,6 +754,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-05"></a>
 #### ACQ-05 — Preserve signed URLs and capture actual HTML link context
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -761,6 +781,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-06"></a>
 #### ACQ-06 — Verify and rank attachment PDFs before declaring acquisition success
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -787,6 +808,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-07"></a>
 #### ACQ-07 — Enforce finite ZIP and attachment resource limits before decompression
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -813,6 +835,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-08"></a>
 #### ACQ-08 — Continue past candidate failures and suppress only the exact failed asset
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -839,6 +862,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-09"></a>
 #### ACQ-09 — Replace worker-blocking delivery waits with durable, bounded poll scheduling
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -865,6 +889,7 @@ Update A19 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="acq-10"></a>
 #### ACQ-10 — Account for actual mailbox work and measure the verified delivery funnel
 
 **Primary canonical owner:** [A19](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -976,6 +1001,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ing-01"></a>
 #### ING-01 — Refill ready queue work while long analysis jobs are running
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1006,6 +1032,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-02"></a>
 #### ING-02 — Bind extracted OCR text to the derived OCR artifact identity
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1036,6 +1063,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-04"></a>
 #### ING-04 — Recover weak pages without OCRing every healthy page
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1066,6 +1094,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-05"></a>
 #### ING-05 — Persist validated OCR chunks before later chunks can fail
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1096,6 +1125,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-06"></a>
 #### ING-06 — Reject inconsistent cached PDF-text provenance instead of silently dropping pages
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1126,6 +1156,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ing-07"></a>
 #### ING-07 — Stop launching artifact work once a required artifact has failed
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1156,6 +1187,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-01"></a>
 #### SYS-01 — Preserve effective configuration across the entire acquisition-to-publication graph
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1186,6 +1218,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-02"></a>
 #### SYS-02 — Maintain real lease ownership throughout long-running workflows
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1216,6 +1249,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-03"></a>
 #### SYS-03 — Give maintenance queues explicit capability semantics before enabling them
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1246,6 +1280,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-04"></a>
 #### SYS-04 — Hash and identify each stage's actual output, rather than reuse the source PDF hash
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1276,6 +1311,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-05"></a>
 #### SYS-05 — Prove crash convergence between domain persistence and queue completion
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1306,6 +1342,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-06"></a>
 #### SYS-06 — Add cooperative stop checks for already-running expensive work
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1336,6 +1373,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-08"></a>
 #### SYS-08 — Reconcile retained artifact integrity as well as queue row existence
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1366,6 +1404,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-09"></a>
 #### SYS-09 — Make reliability exports tell the same truth as authoritative terminal results
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1396,6 +1435,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="sys-10"></a>
 #### SYS-10 — Treat downstream capacity as durable backpressure, not spent execution attempts
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1426,6 +1466,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-01"></a>
 #### CODE-01 — Make explicit requeue grant a real, bounded recovery attempt
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1453,6 +1494,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-02"></a>
 #### CODE-02 — Terminalize exhausted crashed jobs instead of creating unclaimable pending work
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1480,6 +1522,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-03"></a>
 #### CODE-03 — Reclaim expired outbox leases so committed downstream work survives a crash
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1507,6 +1550,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-06"></a>
 #### CODE-06 — Reject foreign-identity and unsupported-schema checksum sidecars
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1534,6 +1578,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-07"></a>
 #### CODE-07 — Stop losing subsecond freshness in the checksum cache
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1561,6 +1606,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-08"></a>
 #### CODE-08 — Make idempotency checksum validation atomic with the upsert
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1588,6 +1634,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="code-09"></a>
 #### CODE-09 — Reject queue deduplication keys reused for incompatible jobs
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1615,6 +1662,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-01"></a>
 #### ART-01 — Retain completed artifact families before a later family fails
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1645,6 +1693,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-02"></a>
 #### ART-02 — Make editorial-plan reuse real, with complete family registration
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -1675,6 +1724,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-03"></a>
 #### ART-03 — Send each artifact family only its required evidence context
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1705,6 +1755,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-04"></a>
 #### ART-04 — Apply upstream family policy before producing dependent public copy
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1735,6 +1786,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-05"></a>
 #### ART-05 — Use a deterministic quotation fast path where semantic selection is unnecessary
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1765,6 +1817,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-02"></a>
 #### ANA-02 — Separate successful persistence from usable analytical coverage
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1795,6 +1848,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-07"></a>
 #### ANA-07 — Require item-level support before counting a Signal's evidence
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1825,6 +1879,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-01"></a>
 #### GRD-01 — Make the report evidence registry collision-safe
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1855,6 +1910,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-02"></a>
 #### GRD-02 — Separate authoritative source support from generated navigation context
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1885,6 +1941,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-03"></a>
 #### GRD-03 — Preserve complete page sets and explicit page-number semantics
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1915,6 +1972,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-04"></a>
 #### GRD-04 — Treat ambiguous page recovery as ambiguity, not a tie-breaking opportunity
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1945,6 +2003,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-08"></a>
 #### GRD-08 — Bind quote wording and speaker attribution separately to exact source spans
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -1975,6 +2034,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-01"></a>
 #### VER-01 — Require one semantic verdict for every requested item
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -2001,6 +2061,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-02"></a>
 #### VER-02 — Make malformed or unavailable semantic judgments explicit, not ordinary warnings
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2027,6 +2088,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-03"></a>
 #### VER-03 — Persist proof of required rule execution, not only a list of issues
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2053,6 +2115,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-04"></a>
 #### VER-04 — Preserve retryable validation failures through the orchestration boundary
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -2079,6 +2142,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-05"></a>
 #### VER-05 — Add a deterministic adversarial corpus for the complete acceptance path
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2105,6 +2169,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-07"></a>
 #### VER-07 — Reject internally inconsistent persisted readiness decisions
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2131,6 +2196,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-09"></a>
 #### VER-09 — Run cheap mandatory prerequisites before launching expensive verification
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2157,6 +2223,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-a"></a>
 #### ARCH-A — Reuse an item-level verified evidence pool rather than re-verifying source facts per artifact
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2183,6 +2250,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-c"></a>
 #### ARCH-C — Validate generated insight candidates before dependent prose and substitute approved reserves
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -2209,6 +2277,7 @@ Update A21 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-h"></a>
 #### ARCH-H — Consolidate only proven redundant validation work and short-circuit unjudgeable inputs
 
 **Primary canonical owner:** [A21](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Investigation; promote only on evidence.

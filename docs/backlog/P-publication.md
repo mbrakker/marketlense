@@ -153,6 +153,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="art-10"></a>
 #### ART-10 — Test generated-artifact delivery by content role, not only leak counts
 
 **Primary canonical owner:** [P6](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -185,6 +186,7 @@ Update P6 and proposal disposition only with verifiable SHA/cohort/test evidence
 Commit and push the smallest proven change.
 ```
  
+<a id="ver-06"></a>
 #### VER-06 — Calibrate verifier false accepts and false rejects against blinded human evidence
 
 **Primary canonical owner:** [P6](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -362,6 +364,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="ana-03"></a>
 #### ANA-03 — Calculate publisher-diversity bonuses once per selection round
 
 **Primary canonical owner:** [P16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -392,6 +395,7 @@ Update P16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-08"></a>
 #### ANA-08 — Classify agreement only among comparable, independent propositions
 
 **Primary canonical owner:** [P16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -422,6 +426,7 @@ Update P16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="ana-09"></a>
 #### ANA-09 — Bound prompt size without starving later sources or counter-evidence
 
 **Primary canonical owner:** [P16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -452,6 +457,7 @@ Update P16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="grd-09"></a>
 #### GRD-09 — Ground factual premises inside recommendation and interpretation sentences
 
 **Primary canonical owner:** [P16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -482,6 +488,7 @@ Update P16 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-e"></a>
 #### ARCH-E — Project the same selected evidence into summary, decision advice and Expert View
 
 **Primary canonical owner:** [P16](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -551,6 +558,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
 
 Technical IDs below are **subtasks or investigations**, not additional canonical Active outcomes. Status notes are historical catalogue/reconciliation claims and require current-HEAD verification.
  
+<a id="art-06"></a>
 #### ART-06 — Match insight requirements to independently supported source breadth
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -581,6 +589,7 @@ Update P17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-07"></a>
 #### ART-07 — Preserve multilingual topic meaning and section identity
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -611,6 +620,7 @@ Update P17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-08"></a>
 #### ART-08 — Bind cover variation to semantic content, not execution telemetry
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Scoped implementation reported; verify current HEAD.
@@ -641,6 +651,7 @@ Update P17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="art-09"></a>
 #### ART-09 — Generate a finite report composition plan instead of one fixed story
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -671,6 +682,7 @@ Update P17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-b"></a>
 #### ARCH-B — Rank and select a diverse evidence slate once in the editorial plan
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
@@ -697,6 +709,7 @@ Update P17 and proposal disposition only with verifiable SHA/cohort/test evidenc
 Commit and push the smallest proven change.
 ```
  
+<a id="arch-f"></a>
 #### ARCH-F — Reuse priorities for metrics, quotes, visuals and distribution hooks
 
 **Primary canonical owner:** [P17](../../CONSOLIDATED_TODO.md). **Proposal disposition:** Proposal; revalidate at current HEAD.
