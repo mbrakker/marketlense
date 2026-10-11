@@ -912,6 +912,19 @@ def _resolve_unit_family(
     }:
         return "time", unit_norm, magnitude_norm
 
+    # A metric may place descriptive cohort words between a number and its
+    # explicit duration unit (for example, "4.5 daily video-attention hours").
+    # Bind only a short alphabetic descriptor run; do not borrow a unit across
+    # another clause, conjunction, or numeric value.
+    duration_suffix = re.match(
+        r"\s+(?:(?!(?:and|or|but)\b)[a-z]+(?:-[a-z]+)*\s+){1,3}"
+        r"(?P<unit>minutes?|hours?|days?|weeks?|months?|years?)\b",
+        sentence[span[1] : min(len(sentence), span[1] + 48)],
+    )
+    if duration_suffix:
+        duration_unit = duration_suffix.group("unit")
+        return "time", duration_unit, magnitude_norm
+
     if unit_norm in {"point", "points"}:
         return "points", "points", magnitude_norm
     if unit_norm in {"index", "rank"}:

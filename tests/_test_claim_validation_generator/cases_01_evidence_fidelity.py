@@ -19,6 +19,101 @@ def test_retained_claim_validation_indexes_legacy_finding_excerpt() -> None:
     assert package.results[0].status == "supported"
 
 
+def test_actual_activate_video_insight_matches_validated_finding_relationship() -> None:
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend; "
+        "all other users account for 39% of time spent and 66% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "66%\n39%\n34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention) All Other Users"
+    )
+    insight = {
+        "id": "video-attention-and-spend-cohorts",
+        "text": (
+            "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+            "61% time/34% consumer spend; others, 39% time/66% spend."
+        ),
+        "evidence_id": "video_super_users_time_spend",
+        "evidence_spans": [
+            {
+                "evidence_id": "video_super_users_time_spend",
+                "source_pack": "findings",
+                "page": 15,
+            }
+        ],
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "video_super_users_time_spend",
+                    "text": statement,
+                    "evidence": excerpt,
+                    "page": 15,
+                }
+            ]
+        }
+    }
+
+    package = validate_retained_claims({"insights_final": [insight]}, evidence)
+
+    result = package.results[0]
+    assert result.status == "supported"
+    assert result.deterministic_status == "supported"
+    assert {reference.page for reference in result.candidate.evidence_references} == {
+        15
+    }
+    assert all(
+        reference.source_pack == "findings"
+        for reference in result.candidate.evidence_references
+    )
+
+
+def test_activate_video_insight_rejects_numeric_values_absent_from_finding() -> None:
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention)"
+    )
+    package = validate_retained_claims(
+        {
+            "insights_final": [
+                {
+                    "id": "video-insight",
+                    "text": "Top 25% video users accounted for 62% of time spent.",
+                    "evidence_id": "video-finding",
+                }
+            ]
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "video-finding",
+                        "text": statement,
+                        "evidence": excerpt,
+                    }
+                ]
+            }
+        },
+    )
+
+    result = package.results[0]
+    assert result.status == "unsupported"
+    assert any(
+        check.name == "number_value_unit_match"
+        and check.reason == "quantity_not_entailed"
+        for check in result.checks
+    )
+
+
 def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
     claim = "Adjust data covers the top 5,000 apps."
     package = validate_retained_claims(

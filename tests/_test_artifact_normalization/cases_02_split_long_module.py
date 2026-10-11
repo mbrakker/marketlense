@@ -1,5 +1,268 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
+
+from .cases_01_split_long_module import *  # noqa: F401,F403
+
+
+def _supported_findings_fidelity(evidence_id: str, statement: str, page: int) -> dict:
+    return {
+        "results": [
+            {
+                "candidate": {
+                    "claim_id": f"evidence:findings:{evidence_id}",
+                    "text": statement,
+                    "evidence_references": [
+                        {"source_pack": "source_pdf", "page": page}
+                    ],
+                },
+                "status": "supported",
+            }
+        ]
+    }
+
+
+def test_insight_binding_carries_validated_finding_with_page_excerpt() -> None:
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend; "
+        "all other users account for 39% of time spent and 66% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "66%\n39%\n34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention) All Other Users"
+    )
+    insights = [
+        {
+            "id": "video-attention-and-spend-cohorts",
+            "text": (
+                "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+                "61% time/34% consumer spend; others, 39% time/66% spend."
+            ),
+            "evidence_id": "video_super_users_time_spend",
+            "evidence": excerpt,
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "evidence_fidelity": _supported_findings_fidelity(
+                "video_super_users_time_spend", statement, 15
+            ),
+            "findings": {
+                "family_status": {"status": "generated", "policy_action": "keep"},
+                "findings": [
+                    {
+                        "id": "video_super_users_time_spend",
+                        "text": statement,
+                        "evidence": excerpt,
+                        "pages": [15],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert statement in insights[0]["evidence"]
+    assert excerpt in insights[0]["evidence"]
+    assert {
+        (span["evidence_id"], span["source_pack"], span["page"], span["text"])
+        for span in insights[0]["evidence_spans"]
+    } == {
+        ("video_super_users_time_spend", "findings_statement", 15, statement),
+        ("video_super_users_time_spend", "findings", 15, excerpt),
+    }
+
+    quality = evaluate_public_editorial_quality(
+        report_id="activate-video-cohort", artifacts={"insights_final": insights}
+    )
+    assert "public_editorial_quality.unsupported_numeric_claim" not in {
+        issue.rule_id for issue in quality.issues
+    }
+
+
+def test_insight_binding_does_not_promote_abstained_or_doc_map_findings() -> None:
+    unsupported_statement = "Top 25% of users account for 66% of time spent."
+    excerpt = "66% 39% 34% 61% Share of Time Spent Share of Consumer Spend"
+    insights = [
+        {
+            "id": "insight-1",
+            "text": "Top 25% of users account for 66% of time spent.",
+            "evidence_id": "video_super_users_time_spend",
+            "evidence": "Model supplied text.",
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={
+            "sections": [
+                {
+                    "id": "video_super_users_time_spend",
+                    "summary": unsupported_statement,
+                    "key_points": [unsupported_statement],
+                    "pages": [15],
+                }
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "family_status": {"status": "abstained", "policy_action": "abstain"},
+                "findings": [
+                    {
+                        "id": "video_super_users_time_spend",
+                        "text": unsupported_statement,
+                        "evidence": excerpt,
+                        "pages": [15],
+                    }
+                ],
+            }
+        },
+    )
+
+    assert excerpt in insights[0]["evidence"]
+    assert unsupported_statement not in insights[0]["evidence"]
+    assert all(
+        span["source_pack"] != "findings_statement"
+        for span in insights[0]["evidence_spans"]
+    )
+
+
+def test_binding_requires_source_excerpt_before_finding_statement() -> None:
+    statement = "Top 25% of users accounted for 61% of time spent."
+    insights = [
+        {
+            "id": "insight-1",
+            "text": statement,
+            "evidence_id": "finding-1",
+            "evidence": "Model supplied text.",
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "family_status": {"status": "generated", "policy_action": "keep"},
+                "findings": [
+                    {
+                        "id": "finding-1",
+                        "text": statement,
+                        "evidence": "",
+                        "pages": [15],
+                    }
+                ],
+            }
+        },
+    )
+
+    assert insights[0]["evidence"] == "Model supplied text."
+    assert insights[0]["evidence_spans"] == []
+
+
+def test_finding_statement_is_not_promoted_without_matching_fidelity_record() -> None:
+    statement = "The top 25% of users accounted for 61% of video time."
+    excerpt = "Top 25% of Users 61% Share of Time Spent"
+    insights = [
+        {
+            "id": "insight-1",
+            "text": statement,
+            "evidence_id": "video-finding",
+            "evidence": "Model supplied text.",
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "findings": {
+                "family_status": {"status": "generated", "policy_action": "keep"},
+                "findings": [
+                    {
+                        "id": "video-finding",
+                        "text": statement,
+                        "evidence": excerpt,
+                        "pages": [15],
+                    }
+                ],
+            }
+        },
+    )
+
+    assert excerpt in insights[0]["evidence"]
+    assert statement not in insights[0]["evidence"]
+    assert all(
+        span["source_pack"] != "findings_statement"
+        for span in insights[0]["evidence_spans"]
+    )
+
+
+def test_finding_statement_requires_exact_fidelity_text_and_source_page() -> None:
+    statement = "The top 25% of users accounted for 61% of video time."
+    excerpt = "Top 25% of Users 61% Share of Time Spent"
+    for fidelity_statement, fidelity_page in (
+        (f"{statement} Additional unsupported detail.", 15),
+        (statement, 14),
+    ):
+        insights = [
+            {
+                "id": "insight-1",
+                "text": statement,
+                "evidence_id": "video-finding",
+                "evidence": excerpt,
+            }
+        ]
+        bind_artifact_evidence_spans(
+            summary={},
+            insights_candidates=[],
+            insights_final=insights,
+            quotes_final=[],
+            doc_map={},
+            evidence_packs={
+                "evidence_fidelity": _supported_findings_fidelity(
+                    "video-finding", fidelity_statement, fidelity_page
+                ),
+                "findings": {
+                    "family_status": {
+                        "status": "generated",
+                        "policy_action": "keep",
+                    },
+                    "findings": [
+                        {
+                            "id": "video-finding",
+                            "text": statement,
+                            "evidence": excerpt,
+                            "pages": [15],
+                        }
+                    ],
+                },
+            },
+        )
+
+        assert excerpt in insights[0]["evidence"]
+        assert statement not in insights[0]["evidence"]
+        assert all(
+            span["source_pack"] != "findings_statement"
+            for span in insights[0]["evidence_spans"]
+        )
+
+
 from pathlib import Path as _SplitPath
 
 __file__ = str(

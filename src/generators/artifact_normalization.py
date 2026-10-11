@@ -2038,10 +2038,17 @@ def bind_artifact_evidence_spans(
             elif "page" in page_keys and pages:
                 item["page"] = pages[0]
             if bind_canonical_evidence:
+                source_bound = [
+                    span
+                    for span in derived
+                    if span.get("source_pack")
+                    in {"findings", "findings_statement", "quote_candidates"}
+                ]
+                canonical_spans = source_bound or derived
                 canonical_evidence = " ".join(
                     dict.fromkeys(
                         _s(span.get("text")).strip()
-                        for span in derived
+                        for span in canonical_spans
                         if _s(span.get("text")).strip()
                     )
                 )
@@ -2711,17 +2718,92 @@ def _build_evidence_span_index(
     if isinstance(evidence_packs, dict):
         findings_pack = evidence_packs.get("findings")
         if isinstance(findings_pack, dict):
+            fidelity = evidence_packs.get("evidence_fidelity")
+            supported_findings: dict[str, tuple[str, set[int]]] = {}
+            ambiguous_findings: set[str] = set()
+            fidelity_results = (
+                fidelity.get("results") if isinstance(fidelity, dict) else None
+            )
+            for result in (
+                fidelity_results if isinstance(fidelity_results, list) else []
+            ):
+                if not isinstance(result, dict) or result.get("status") != "supported":
+                    continue
+                candidate = result.get("candidate")
+                if not isinstance(candidate, dict):
+                    continue
+                claim_id = _s(candidate.get("claim_id"))
+                prefix = "evidence:findings:"
+                if not claim_id.startswith(prefix):
+                    continue
+                validated_finding_id = claim_id.removeprefix(prefix)
+                statement = _s(candidate.get("text")).strip()
+                references = candidate.get("evidence_references")
+                source_pages: set[int] = set()
+                if isinstance(references, list):
+                    for reference in references:
+                        if (
+                            not isinstance(reference, dict)
+                            or reference.get("source_pack") != "source_pdf"
+                        ):
+                            continue
+                        page = reference.get("page")
+                        if isinstance(page, int) and page > 0:
+                            source_pages.add(page)
+                if not validated_finding_id or not statement or not source_pages:
+                    continue
+                binding = (statement, source_pages)
+                if (
+                    validated_finding_id in supported_findings
+                    and supported_findings[validated_finding_id] != binding
+                ):
+                    supported_findings.pop(validated_finding_id, None)
+                    ambiguous_findings.add(validated_finding_id)
+                elif validated_finding_id not in ambiguous_findings:
+                    supported_findings[validated_finding_id] = binding
+            family_status = findings_pack.get("family_status")
+            findings_validated = (
+                isinstance(family_status, dict)
+                and family_status.get("status") == "generated"
+                and family_status.get("policy_action") == "keep"
+            )
             for item in findings_pack.get("findings") or []:
                 if not isinstance(item, dict):
                     continue
-                _register(
-                    evidence_id=item.get("id"),
-                    source_pack="findings",
-                    pages=_coerce_span_pages(item),
-                    text=_pick_first_non_empty_text(
-                        item.get("evidence"), item.get("text"), item.get("statement")
-                    ),
+                finding_id = _s(item.get("id") or item.get("evidence_id")).strip()
+                pages = _coerce_span_pages(item)
+                excerpt = _pick_first_non_empty_text(
+                    item.get("evidence"), item.get("excerpt")
                 )
+                if not finding_id or not excerpt:
+                    # A generated finding sentence without its retained source
+                    # excerpt is not evidence for a downstream artifact.
+                    continue
+                _register(
+                    evidence_id=finding_id,
+                    source_pack="findings",
+                    pages=pages,
+                    text=excerpt,
+                )
+                statement = _pick_first_non_empty_text(
+                    item.get("text"), item.get("statement")
+                )
+                validated_statement, validated_pages = supported_findings.get(
+                    _s(finding_id), ("", set())
+                )
+                if (
+                    findings_validated
+                    and statement
+                    and statement == validated_statement
+                    and pages
+                    and set(pages).issubset(validated_pages)
+                ):
+                    _register(
+                        evidence_id=finding_id,
+                        source_pack="findings_statement",
+                        pages=pages,
+                        text=statement,
+                    )
         quotes_pack = evidence_packs.get("quote_candidates")
         if isinstance(quotes_pack, dict):
             for item in quotes_pack.get("quote_candidates") or []:

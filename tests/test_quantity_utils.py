@@ -418,3 +418,35 @@ def test_signed_and_spaced_negative_quantities_stay_negative() -> None:
 def test_designation_compound_extracts_positive_year_number() -> None:
     parsed = extract_quantities("COVID-19-era spending changed.")
     assert 19.0 in [quantity.value for quantity in parsed]
+
+
+def test_extracts_time_unit_after_descriptive_cohort_words() -> None:
+    parsed = extract_quantities(
+        "Top 25% users (4.5+ daily video-attention hours) account for "
+        "61% of time spent and 34% of consumer spend."
+    )
+
+    assert any(
+        quantity.value == 4.5
+        and quantity.unit_family == "time"
+        and quantity.unit == "hours"
+        for quantity in parsed
+    )
+    assert sum(quantity.unit_family == "percent" for quantity in parsed) == 3
+
+
+def test_extract_quantities_does_not_borrow_a_distant_time_unit() -> None:
+    parsed = extract_quantities(
+        "A 4.5% share was reported for daily video attention; the chart spans 2 hours."
+    )
+
+    assert any(
+        quantity.value == 4.5 and quantity.unit_family == "percent"
+        for quantity in parsed
+    )
+    assert any(
+        quantity.value == 2 and quantity.unit_family == "time" for quantity in parsed
+    )
+    assert not any(
+        quantity.value == 4.5 and quantity.unit_family == "time" for quantity in parsed
+    )

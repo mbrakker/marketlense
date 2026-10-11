@@ -8,6 +8,7 @@ from src.contracts.claim_validation import (
 from src.contracts.pdf_text import PdfTextPage
 from src.contracts.protected_facts import PROTECTED_FACT_DIMENSIONS
 from src.contracts.validation import ValidationRequest
+from src.generators.artifact_normalization import bind_artifact_evidence_spans
 from src.generators.claim_validation_generator import (
     _has_printed_page_label,
     apply_retained_claim_semantic_results,
@@ -328,6 +329,175 @@ def test_grounding_rule_can_validate_claim_against_its_cited_source_page(tmp_pat
     assert result.semantic_outcome == "entailed"
     assert result.semantic_identity is not None
     assert result.semantic_identity.evidence_hash == semantic_inputs[0].evidence_hash
+
+
+def test_activate_numeric_insight_grounding_uses_validated_finding_relationship(
+    tmp_path,
+):
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend; "
+        "all other users account for 39% of time spent and 66% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "66%\n39%\n34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention) All Other Users"
+    )
+    correct = (
+        "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+        "61% time/34% consumer spend; others, 39% time/66% spend."
+    )
+    wrong_cohorts = (
+        "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+        "39% time/66% consumer spend; others, 61% time/34% spend."
+    )
+    wrong_metrics = (
+        "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+        "34% time/61% consumer spend; others, 66% time/39% spend."
+    )
+    wrong_denominator = (
+        "Among all U.S. consumers in 2017, the top 25% of video users account for "
+        "61% of time spent and 34% of consumer spend."
+    )
+    evidence_id = "video_super_users_time_spend"
+    insights = [
+        {
+            "id": f"video-claim-{index}",
+            "text": text,
+            "evidence_id": evidence_id,
+            "evidence": excerpt,
+        }
+        for index, text in enumerate(
+            (correct, wrong_cohorts, wrong_metrics, wrong_denominator), start=1
+        )
+    ]
+    artifacts = {"insights_final": insights}
+    evidence_packs = {
+        "findings": {
+            "family_status": {"status": "generated", "policy_action": "keep"},
+            "findings": [
+                {
+                    "id": evidence_id,
+                    "text": statement,
+                    "evidence": excerpt,
+                    "pages": [15],
+                }
+            ],
+        },
+        "evidence_fidelity": {
+            "results": [
+                {
+                    "candidate": {
+                        "claim_id": f"evidence:findings:{evidence_id}",
+                        "text": statement,
+                        "evidence_references": [
+                            {"source_pack": "source_pdf", "page": 15}
+                        ],
+                    },
+                    "status": "supported",
+                }
+            ]
+        },
+    }
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs=evidence_packs,
+    )
+    assert statement in insights[0]["evidence"]
+    assert excerpt in insights[0]["evidence"]
+    assert {
+        (span["source_pack"], span["page"]) for span in insights[0]["evidence_spans"]
+    } == {("findings", 15), ("findings_statement", 15)}
+
+    request = ValidationRequest(
+        schema_version="1.0",
+        report_id="activate-video-cohort",
+        report=_report(),
+        artifacts=artifacts,
+        evidence_packs=evidence_packs,
+        source_id="source:activate-video-cohort",
+        source_pages=[PdfTextPage(page_number=15, text=excerpt)],
+    )
+    package = validate_retained_claims(artifacts, evidence_packs)
+    semantic_inputs = retained_claim_semantic_inputs(
+        package,
+        evidence_packs,
+        source_identity=request.source_id,
+        source_pages=request.source_pages,
+    )
+    payload = grounding_payload(
+        request, artifacts, retained_claim_inputs=semantic_inputs
+    )
+    correct_item = next(
+        item for item in payload["public_factual_items"] if item["text"] == correct
+    )
+    assert statement in correct_item["retained_evidence"]
+    assert excerpt in correct_item["retained_evidence"]
+
+    outcomes = {
+        correct: "entailed",
+        wrong_cohorts: "contradicted",
+        wrong_metrics: "contradicted",
+        wrong_denominator: "not_established",
+    }
+    checks = [
+        {
+            "item_id": item["item_id"],
+            "section": item["section"],
+            "text": item["text"],
+            "classification": "factual_claim",
+            "entailment_outcome": outcomes.get(item["text"], "entailed"),
+            "proposition_status": (
+                "incompatible"
+                if outcomes.get(item["text"]) == "contradicted"
+                else "compatible"
+            ),
+            "protected_facts": {
+                dimension: {
+                    "claim_value": None,
+                    "evidence_value": None,
+                    "status": "unknown",
+                }
+                for dimension in PROTECTED_FACT_DIMENSIONS
+            },
+            "reason": "grounding_result",
+        }
+        for item in payload["public_factual_items"]
+    ]
+    model_client = FakeOpenAI(grounding_payload={"unsupported": [], "checks": checks})
+    runtime = SimpleNamespace(
+        request=request,
+        settings=_settings(tmp_path),
+        ctx=_ctx(),
+        prepared=SimpleNamespace(
+            grounding_use_vector_store=False,
+            evidence_texts=[],
+            evidence_windows=[],
+        ),
+        prompt_client=FakePromptClient(),
+        openai_client=model_client,
+        source_id=request.source_id,
+        vector_store_content_hash="",
+        retained_claim_validation=package,
+    )
+
+    issues = run_grounding_rule(runtime)
+
+    blocking_text = "\n".join(
+        issue.message for issue in issues if issue.severity == "error"
+    )
+    assert "39% time/66% consumer spend" in blocking_text
+    assert "34% time/61% consumer spend" in blocking_text
+    denominator_issues = [
+        issue for issue in issues if "Among all U.S. consumers" in issue.message
+    ]
+    assert denominator_issues
+    assert all(issue.severity == "warning" for issue in denominator_issues)
 
 
 def test_final_materialization_reuses_matching_page_bound_semantic_result():
