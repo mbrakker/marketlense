@@ -1,11 +1,50 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from hashlib import sha256
+
+import pytest
 
 from src.generators.soft_copy_claim_provenance import (
     assert_retained_soft_copy_claims_match_public_copy,
 )
+from src.utils.errors import AppError
 from tests.test_soft_copy_claim_provenance import _assemble_soft_copy
+
+
+def test_persisted_summary_can_pass_while_unbound_regeneration_candidate_fails() -> (
+    None
+):
+    retained_sentence = "The report describes a distinct market shift."
+    summary = {
+        "tldr": retained_sentence,
+        "card_tldr_compact": retained_sentence,
+        "executive_summary": retained_sentence,
+        "claim_evidence_map": [],
+    }
+    persisted = _assemble_soft_copy(
+        summary=summary,
+        soft_copy_claim_bindings={
+            "summary": [
+                {
+                    "claim": retained_sentence,
+                    "classification": "interpretive",
+                    "evidence_ids": [],
+                }
+            ]
+        },
+    )
+    assert_retained_soft_copy_claims_match_public_copy(persisted)
+
+    candidate = deepcopy(persisted)
+    candidate["summary"]["tldr"] = "Mobile sessions rose during 2025."
+
+    with pytest.raises(AppError) as captured:
+        assert_retained_soft_copy_claims_match_public_copy(candidate)
+
+    assert captured.value.code == "soft_copy_claim_provenance_coverage_invalid"
+    assert captured.value.context["artifact_family"] == "summary"
+    assert_retained_soft_copy_claims_match_public_copy(persisted)
 
 
 def test_targeted_summary_removal_preserves_unrelated_claim_text() -> None:
