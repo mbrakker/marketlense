@@ -1,6 +1,6 @@
 # Consolidated TODO — canonical MarketLense backlog
 
-**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register; D13 was added as a deferred P2 follow-up on 2026-10-11 (neither date implies a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`. **E17 scope added:** 2026-10-11 based on code inspection and the retained 2026-10-06 provider profile; no new report execution is implied. **E18 scope added:** 2026-10-11 as an unverified four-stage stability proposal; no new model run or quality result is implied.
+**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register; D13 was added as a deferred P2 follow-up on 2026-10-11 (neither date implies a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`. **E17 scope added:** 2026-10-11 based on code inspection and the retained 2026-10-06 provider profile; no new report execution is implied. **E18 scope added:** 2026-10-11 as an unverified four-stage stability proposal; no new model run or quality result is implied. **R8 scope added:** 2026-10-11 from a targeted static Windows path audit, without native reproduction or new pipeline verification.
 
 This is the **single authoritative status and outcome register**. The five [workstream specifications](docs/backlog/) contain full implementation and Luna guidance, and the [technical proposal index](docs/backlog/proposal-index.md) maps all proposals to one existing owner. Full unchanged backups: [original backlog](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [original 100-improvement catalogue](docs/backlog/archive/10improvements-20261011-preconsolidation.md). The root [10improvements.md](10improvements.md) is now a compatibility pointer, not a competing backlog.
 
@@ -14,7 +14,7 @@ This is the **single authoritative status and outcome register**. The five [work
 
 ## Execution focus
 
-The register's five workstreams remain the prioritisation lanes, **not** a newly audited ranking. Initial decisions should be evidence-driven: A21 first-attempt reliability, A18/A19 discovery and verified acquisition, E15 semantic crop acceptance, P6 human editorial acceptance, E16 methodology/applicability, and P16/P17 decision-grade composition. Confirm the actual blocker and applicable prerequisites on current HEAD before selecting a slice. No technical proposal is automatically authorised or considered incomplete merely by appearing in the index. E17 is a separately prioritised P1 token/cache-economics outcome: implement its measurement slice first, while preserving the higher-priority correctness and autonomous-MVP gates. E18 is a P1 first-pass analytical-stability outcome: diagnose repeated-run and fixed-input validator variation before authorising its subsequent behavioral stages; reuse A21/E13/E16/P17 evidence and owners.
+The register's five workstreams remain the prioritisation lanes, **not** a newly audited ranking. Initial decisions should be evidence-driven: A21 first-attempt reliability, A18/A19 discovery and verified acquisition, E15 semantic crop acceptance, P6 human editorial acceptance, E16 methodology/applicability, and P16/P17 decision-grade composition. Confirm the actual blocker and applicable prerequisites on current HEAD before selecting a slice. No technical proposal is automatically authorised or considered incomplete merely by appearing in the index. E17 is a separately prioritised P1 token/cache-economics outcome: implement its measurement slice first, while preserving the higher-priority correctness and autonomous-MVP gates. E18 is a P1 first-pass analytical-stability outcome: diagnose repeated-run and fixed-input validator variation before authorising its subsequent behavioral stages; reuse A21/E13/E16/P17 evidence and owners. R8 is a P1 Windows-path reliability outcome with five P1 producer/consumer slices followed by one P2 residual audit; do not rewrite already-protected paths.
 
 | Workstream | Owning specification |
 | --- | --- |
@@ -92,6 +92,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Closed | R5 | Hash-verified dependency lock artifacts | Native Ubuntu CPython 3.12 wheelhouse and offline hash-locked install are verified. |
 | Active | R6 | [Review bounded-log reduction telemetry and remediate recurring callers](docs/backlog/R-engineering.md#r6-review-bounded-log-reduction-telemetry-and-remediate-recurring-callers) | Aggregate reduction attempts and convert recurring oversized callers into bounded remediation. |
 | Active | R7 | [Prove recoverable backups and full-state disaster restoration](docs/backlog/R-engineering.md#r7-prove-recoverable-backups-and-full-state-disaster-restoration) | Back up the mutually dependent stores/artifacts consistently and prove isolated restoration, integrity, lineage, and safe resume against explicit recovery objectives. |
+| Active | R8 | [Harden Windows artifact path construction and reuse](docs/backlog/R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | P1 Windows path-length risk: PATH-01..05 mailbox, browser, candidate cache/OCR, crop and cover path fixes, plus P2 residual PATH-06; protect canonical stored references and prove Windows/readback. Static audit only, not a reproduced failure. |
 | Closed | S1 | Canonical service-boundary audit | CI-enforced service-boundary audit preserves approved external-effect ownership. |
 | Closed | S2 | Publish/ingest facade audit | CI-enforced facade/decomposition coverage preserves routing, retries, state, and external-effect contracts. |
 | Active | S3 | [Simplify the PDF visual-heuristics boundary](docs/backlog/S-simplification.md#s3-simplify-the-pdf-visual-heuristics-boundary) | Only address measured remaining coupling behind the canonical PDF boundary. |
@@ -121,7 +122,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Excluded | X2 | Automatic lower private-API promotion thresholds | Conservative thresholds remain mandatory. |
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Map only verified identity facts; diagnostics remain operator-only. |
 
-**Register counts:** 31 Active, 44 Closed, 13 Deferred, 3 Excluded (91 total). The 2026-10-08 baseline contained 89 items; D13 (Deferred) and E17 (Active) were added on 2026-10-11. E17 is an optimisation plan grounded in inspected code and historical provider profiles, **not** a completed implementation, new cohort audit, or verified savings.
+**Register counts:** 32 Active, 44 Closed, 13 Deferred, 3 Excluded (92 total). The 2026-10-08 baseline contained 89 items; D13 (Deferred) and E17 (Active) were added on 2026-10-11. E17 is an optimisation plan grounded in inspected code and historical provider profiles, **not** a completed implementation, new cohort audit, or verified savings. R8 was added from a targeted 2026-10-11 static Windows-path audit without native Windows testing or measured incidents.
 
 
 ## Active Backlog
@@ -247,6 +248,10 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 #### R7. Prove recoverable backups and full-state disaster restoration
 
 [Full R7 specification](docs/backlog/R-engineering.md#r7-prove-recoverable-backups-and-full-state-disaster-restoration).
+
+#### R8. Harden Windows artifact path construction and reuse
+
+[Full R8 specification](docs/backlog/R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse).
 
 #### S3. Simplify the PDF visual-heuristics boundary
 
