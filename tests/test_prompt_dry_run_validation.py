@@ -327,9 +327,15 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
 
     assert "in `key_points`, preserve each section's strongest source result" in doc_map_text
     assert "strategic contrasts (including structural versus reactive)" in doc_map_text
-    assert "search file_search by section/title/page and each key-point metric" in findings_text
-    assert "search for directional body outcomes" in findings_text
-    assert "exhaust body searches before summary-only findings" in findings_text
+    assert (
+        "primary pass: search file_search by section/title/page and each key-point metric"
+        in findings_text
+    )
+    assert "seek directional body outcomes" in findings_text
+    assert (
+        "primary pass: exhaust mapped body searches before summary-only findings"
+        in findings_text
+    )
     assert "docmap is a clue, not evidence" in findings_text
     assert "keep chart values exact" in findings_text
     assert "return empty only if body searches find no direct support" in findings_text

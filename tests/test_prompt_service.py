@@ -186,7 +186,7 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
     assert "counterbalancing" in findings_prompt.user.text
     findings_text = " ".join(findings_prompt.user.text.split()).casefold()
     assert (
-        "if body evidence supports a material key point, include it as a finding"
+        "if retrieved body evidence supports a material key point, include it as a finding"
         in findings_text
     )
 
@@ -253,6 +253,7 @@ def test_findings_prompt_matches_evidence_source_to_retrieval_mode() -> None:
     assert "targeted fallback: page excerpts only" in system_text
     assert "docmap guides, not evidence" in system_text
     assert "docmap is a clue, not evidence" in user_text
+    assert "primary pass: search file_search" in user_text
 
 
 def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
