@@ -1256,7 +1256,7 @@ def generate_evidence_packs(
         findings_validation_results = [
             result
             for result in fidelity.results
-            if result.candidate.source_family == "findings"
+            if result.candidate.claim_id.startswith("evidence:findings:")
         ]
         findings_pack = results.get("findings")
         if isinstance(findings_pack, dict) and isinstance(

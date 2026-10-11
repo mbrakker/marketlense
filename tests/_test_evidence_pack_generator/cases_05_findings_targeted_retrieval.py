@@ -329,6 +329,14 @@ def test_findings_fallback_uses_file_search_when_source_page_excerpts_are_missin
     )
     assert completed["fields"]["formal_abstention"] is True
     assert completed["fields"]["not_found_reason"] == "findings_not_found"
+    validation = next(
+        event
+        for event in events
+        if event.get("event") == "findings_evidence_validation_complete"
+    )
+    assert validation["fields"]["candidate_count"] == 1
+    assert validation["fields"]["grounding_status_counts"] == {"unsupported": 1}
+    assert validation["fields"]["retained_count"] == 0
 
 
 def test_empty_findings_envelope_preserves_formal_abstention_reason():
