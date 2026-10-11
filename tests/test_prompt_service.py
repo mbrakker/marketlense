@@ -237,7 +237,7 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
     assert "current-state" in prompt_text
 
 
-def test_findings_prompt_allows_supplied_source_excerpts_in_targeted_fallback() -> None:
+def test_findings_prompt_matches_evidence_source_to_retrieval_mode() -> None:
     findings_prompt = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -249,8 +249,9 @@ def test_findings_prompt_allows_supplied_source_excerpts_in_targeted_fallback() 
 
     system_text = " ".join(findings_prompt.system.text.casefold().split())
     user_text = " ".join(findings_prompt.user.text.casefold().split())
-    assert "use source evidence only" in system_text
-    assert "use only evidence retrieved from file_search" not in system_text
+    assert "primary: file_search only" in system_text
+    assert "targeted fallback: page excerpts only" in system_text
+    assert "docmap guides, not evidence" in system_text
     assert "docmap is a clue, not evidence" in user_text
 
 

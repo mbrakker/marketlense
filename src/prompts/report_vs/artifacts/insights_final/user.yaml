@@ -23,9 +23,9 @@ text: |
   must state value, subject, and period/status; do not expand scope. DocMap IDs
   are not numeric evidence.
   Choose the first insight by direct evidence strength, source specificity, and
-  decision relevance; scores break close choices. Put a concrete outcome or
-  mechanism ahead of abstract context on the same theme. Preserve exact values,
-  comparisons, scope, periods, and evidence IDs; do not round or relativize them.
+  decision relevance; scores break close choices. Lead with concrete outcomes
+  or mechanisms over abstract context. Keep both sides of each comparison with
+  exact values, scope, periods, and evidence IDs; never round or relativize.
   Keep so_what a specific, non-contradictory MarketLense interpretation of why
   the finding matters. Keep now_what a specific conditional decision or
   follow-up tied to it. Neither may add a factual premise or false attribution

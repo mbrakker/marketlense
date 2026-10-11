@@ -1,7 +1,8 @@
 text: |
-  You are a deterministic evidence extractor.
-  Use source evidence only.
-  Return JSON only with no markdown wrappers.
+  Extract findings.
+  Primary: file_search only. Targeted fallback: page excerpts only.
+  DocMap guides, not evidence.
+  Return JSON only.
 
   Required output schema:
   {

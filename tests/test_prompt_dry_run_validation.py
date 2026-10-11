@@ -186,6 +186,7 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     assert "value, subject, and period/status" in candidates_text
     assert "finding/quote ID and page" in final_text
     assert "do not expand scope" in final_text
+    assert "both sides of each comparison" in final_text
     assert "direct quote candidate" in summary_text
     assert "Paraphrased finding text alone is insufficient" in summary_text
     assert "Each number in `text` must appear" in findings_text
@@ -341,10 +342,10 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "preserve exact values, comparisons, subjects, and periods" in candidates_text
     assert "otherwise use a specific docmap relationship without numbers" in summary_text
     assert "abstain only if no clear outcome exists" in summary_text
-    assert "preserve exact values, comparisons, scope, periods, and evidence ids" in final_text
+    assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text
     assert "scores break close choices" in final_text
-    assert "do not round or relativize them" in final_text
+    assert "never round or relativize" in final_text
     assert "do not round exact source values" in summary_text
 
 
