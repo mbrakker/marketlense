@@ -206,7 +206,7 @@ Commit and push the scoped change, including the necessary backlog evidence upda
  
 ## R6. Review bounded-log reduction telemetry and remediate recurring callers
 
-**Canonical status:** Active as of the archived 2026-10-08 reconciliation. **Mapped technical slices:** none; outcome specification stands alone.
+**Canonical status:** Closed in [the unified register](../../CONSOLIDATED_TODO.md). This specification and its implementation evidence are retained for historical reference. **Mapped technical slices:** none; outcome specification stands alone.
 
 - **Baseline:** Python logging bounds payloads and retains reduction metadata under `fields.log_payload_reduced` in the original reduced event (`src/utils/logging.py`), not a separate event. Recurring-caller percentile/grouping/remediation aggregation remains absent. Use metadata-only evidence without reconstructing discarded values; P2 owns PHP emission safety.
 - **Target behaviour:** Release/operator evidence shows where bounded-log reduction is occurring, how large attempted events are, and which modules/events repeatedly trigger reduction, without retaining/reconstructing discarded content. Recurring callers become explicit remediation work.
