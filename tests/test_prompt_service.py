@@ -237,6 +237,23 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
     assert "current-state" in prompt_text
 
 
+def test_findings_prompt_allows_supplied_source_excerpts_in_targeted_fallback() -> None:
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    system_text = " ".join(findings_prompt.system.text.casefold().split())
+    user_text = " ".join(findings_prompt.user.text.casefold().split())
+    assert "use source evidence only" in system_text
+    assert "use only evidence retrieved from file_search" not in system_text
+    assert "docmap is a clue, not evidence" in user_text
+
+
 def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
     doc_map_prompt = load_prompt_set(
         PromptLoadRequest(
