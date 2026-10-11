@@ -206,22 +206,20 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "both tldrs lead with the strongest specific body finding or comparison" in (
+    assert "selected lead insight json" in prompt_text
+    assert "lead both tldrs and the opening executive_summary sentence with it" in (
         prompt_text
     )
-    assert "do not substitute a broad report recommendation or theme" in prompt_text
+    assert "do not substitute an introductory statistic or recommendation" in (
+        prompt_text
+    )
     assert "preserve exact values, subjects, and periods from direct evidence" in (
         prompt_text
     )
     assert "otherwise use docmap only for nonnumeric context" in prompt_text
     assert "plan guides coherence, not evidence" in prompt_text
-    assert "abstain only if no clear source outcome exists" in prompt_text
-    assert "strongest decision-useful direct finding" in prompt_text
-    assert (
-        "open executive_summary with the strongest decision-useful direct finding"
-        in (prompt_text)
-    )
-    assert "even outside the priority-one theme" in prompt_text
+    assert "abstain when none is supportable" in prompt_text
+    assert "if absent, use the strongest direct finding" in prompt_text
     assert "priority order or section summaries do not prove cross-section links" in (
         prompt_text
     )
@@ -243,7 +241,7 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
 
     assert "plan guides coherence, not evidence" in prompt_text
     assert "otherwise use docmap only for nonnumeric context" in prompt_text
-    assert "abstain only if no clear source outcome exists" in prompt_text
+    assert "abstain when none is supportable" in prompt_text
 
 
 @pytest.mark.parametrize(
@@ -383,7 +381,7 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
         candidates_text
     )
     assert "otherwise use docmap only for nonnumeric context" in summary_text
-    assert "abstain only if no clear source outcome exists" in summary_text
+    assert "if absent, use the strongest direct finding or abstain" in summary_text
     assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text
     assert "scores break close choices" in final_text

@@ -10,14 +10,6 @@ def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
     client = FakeOpenAI(
         [
             {
-                "summary": {
-                    "tldr": "Grounded TLDR.",
-                    "card_tldr_compact": "Grounded TLDR.",
-                    "executive_summary": "Executive summary.",
-                    "claim_evidence_map": [],
-                }
-            },
-            {
                 "insights_candidates": [
                     {
                         "id": "candidate-1",
@@ -120,6 +112,14 @@ def test_generate_artifacts_does_not_fabricate_insights_after_unknown_evidence(
                         "pages": [2],
                     },
                 ]
+            },
+            {
+                "summary": {
+                    "tldr": "Grounded TLDR.",
+                    "card_tldr_compact": "Grounded TLDR.",
+                    "executive_summary": "Executive summary.",
+                    "claim_evidence_map": [],
+                }
             },
             _cover_semantics_response(),
             {"expert_comment": "Grounded comment."},

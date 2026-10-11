@@ -150,6 +150,8 @@ class _ControlledArtifactClient:
         family = ctx.task_id.rsplit(":", 1)[-1]
         if family == "insights_final":
             assert self.completed["insights_candidates"].is_set()
+        if family == "summary":
+            assert self.completed["insights_final"].is_set()
         if family == "cover_semantics":
             assert self.completed["summary"].is_set()
             assert self.completed["insights_final"].is_set()
@@ -228,21 +230,19 @@ def test_artifact_families_follow_dependencies_without_stage_barriers(tmp_path):
         try:
             assert all(
                 client.started[name].wait(timeout=3)
-                for name in (
-                    "summary",
-                    "insights_candidates",
-                    "quotes",
-                )
+                for name in ("insights_candidates", "quotes")
             )
             assert client.completed["editorial_plan"].is_set()
             assert not client.started["insights_final"].is_set()
+            assert not client.started["summary"].is_set()
 
             client.release["insights_candidates"].set()
             assert client.started["insights_final"].wait(timeout=3)
-            assert not client.completed["summary"].is_set()
+            assert not client.started["summary"].is_set()
             assert not client.completed["quotes"].is_set()
 
             client.release["insights_final"].set()
+            assert client.started["summary"].wait(timeout=3)
             assert client.started["expert_comment"].wait(timeout=3)
             assert client.started["linkedin_post"].wait(timeout=3)
             assert not client.started["cover_semantics"].is_set()
@@ -291,18 +291,16 @@ def test_two_worker_dag_prioritizes_candidate_critical_path_over_quotes(tmp_path
     with ThreadPoolExecutor(max_workers=1) as coordinator:
         future = coordinator.submit(_run_artifacts, tmp_path, client, executor)
         try:
-            assert client.started["summary"].wait(timeout=3)
             assert client.started["insights_candidates"].wait(timeout=3)
             assert not client.started["quotes"].is_set()
-
-            client.release["summary"].set()
-            assert client.completed["summary"].wait(timeout=3)
-            assert not client.started["quotes"].is_set()
+            assert not client.started["summary"].is_set()
 
             client.release["insights_candidates"].set()
             assert client.started["insights_final"].wait(timeout=3)
             assert client.started["quotes"].wait(timeout=3)
             client.release["insights_final"].set()
+            assert client.started["summary"].wait(timeout=3)
+            client.release["summary"].set()
             client.release["quotes"].set()
             payload = future.result(timeout=5)
         finally:
@@ -317,7 +315,7 @@ def test_two_worker_dag_prioritizes_candidate_critical_path_over_quotes(tmp_path
 def test_artifact_family_failure_stops_dependents_and_keeps_running_work_safe(
     tmp_path,
 ):
-    blocked = {"summary", "insights_candidates", "quotes"}
+    blocked = {"insights_candidates", "quotes"}
     failure = AppError(
         code="artifact_test_failure",
         message="candidate failed",
@@ -335,6 +333,7 @@ def test_artifact_family_failure_stops_dependents_and_keeps_running_work_safe(
         )
         try:
             assert all(client.started[name].wait(timeout=3) for name in blocked)
+            assert not client.started["summary"].is_set()
             client.release["insights_candidates"].set()
             with pytest.raises(AppError) as raised:
                 future.result(timeout=3)
@@ -347,7 +346,7 @@ def test_artifact_family_failure_stops_dependents_and_keeps_running_work_safe(
             for event in client.release.values():
                 event.set()
             executor.shutdown()
-    assert client.completed["summary"].is_set()
+    assert not client.started["summary"].is_set()
     assert client.completed["quotes"].is_set()
     assert analysis_store.stored == []
 
@@ -358,16 +357,16 @@ def _run_gated_dag(tmp_path, initial_order, terminal_order):
     with ThreadPoolExecutor(max_workers=1) as coordinator:
         future = coordinator.submit(_run_artifacts, tmp_path, client, executor)
         try:
-            assert all(
-                client.started[name].wait(timeout=3)
-                for name in ("summary", "insights_candidates", "quotes")
-            )
+            assert all(client.started[name].wait(timeout=3) for name in initial_order)
             for family in initial_order:
                 client.release[family].set()
                 assert client.completed[family].wait(timeout=3)
             assert client.started["insights_final"].wait(timeout=3)
             client.release["insights_final"].set()
             assert client.completed["insights_final"].wait(timeout=3)
+            assert client.started["summary"].wait(timeout=3)
+            client.release["summary"].set()
+            assert client.completed["summary"].wait(timeout=3)
             for family in ("cover_semantics", "expert_comment", "linkedin_post"):
                 assert client.started[family].wait(timeout=3)
             for family in terminal_order:
@@ -402,12 +401,12 @@ def test_artifact_output_is_order_independent_and_matches_sequential_generation(
     sequential = _run_artifacts(tmp_path / "sequential", _ControlledArtifactClient())
     first_dag = _run_gated_dag(
         tmp_path / "first-dag",
-        initial_order=("summary", "quotes", "insights_candidates"),
+        initial_order=("quotes", "insights_candidates"),
         terminal_order=("cover_semantics", "expert_comment", "linkedin_post"),
     )
     second_dag = _run_gated_dag(
         tmp_path / "second-dag",
-        initial_order=("quotes", "insights_candidates", "summary"),
+        initial_order=("insights_candidates", "quotes"),
         terminal_order=("linkedin_post", "expert_comment", "cover_semantics"),
     )
 

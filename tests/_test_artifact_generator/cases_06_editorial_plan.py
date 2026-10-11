@@ -221,6 +221,13 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
             "evidence_json"
         ]
     )["findings"]["findings"]
+    summary_lead = json.loads(
+        prompt_client.variables_for_namespace("report_vs/artifacts/summary")[
+            "selected_lead_insight_json"
+        ]
+    )
+    assert summary_lead["evidence_id"] == payload["insights_final"][0]["evidence_id"]
+    assert summary_lead["text"] == payload["insights_final"][0]["text"]
     assert [item["id"] for item in summary_findings] == [
         "f3",
         "f1",

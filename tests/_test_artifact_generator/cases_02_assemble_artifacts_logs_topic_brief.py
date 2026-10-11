@@ -624,10 +624,10 @@ def test_generate_artifacts_runs_llm_steps_serially_without_executor(
     assert fake_openai.max_in_flight == 1
     assert [req[2] for req in fake_openai.requests if req[0] == "vector"] == [
         "editorial_plan",
-        "summary",
         "insights_candidates",
         "quotes",
         "insights_final",
+        "summary",
         "cover_semantics",
         "expert_comment",
         "linkedin_post",
