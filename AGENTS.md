@@ -111,4 +111,5 @@ Completion claims MUST be evidence-based. Before reporting completion, inspect t
 - Canonical backlog/status authority: CONSOLIDATED_TODO.md
 - Backlog execution specifications: docs/backlog/A-autonomy.md, P-publication.md, E-evidence.md, R-engineering.md, S-simplification.md
 - Backlog execution guide: docs/backlog/README.md
+- Execution sequencing / intelligence-first priorities: docs/backlog/implementation-roadmap.md (not a status register)
 - Historical technical proposal mappings: docs/backlog/proposal-index.md (not a second status ledger)

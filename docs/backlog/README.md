@@ -1,8 +1,8 @@
 # Backlog — execution guide
 
-[Canonical backlog](../../CONSOLIDATED_TODO.md) · [Technical proposal index](proposal-index.md) · [Original backups](archive/)
+[Canonical backlog](../../CONSOLIDATED_TODO.md) · [Intelligence-first implementation roadmap](implementation-roadmap.md) · [Technical proposal index](proposal-index.md) · [Original backups](archive/)
 
-The five workstream specifications own detailed implementation and Luna prompts. `CONSOLIDATED_TODO.md` alone owns task status. One technical proposal must map to one primary canonical owner; do not create parallel Active tasks.
+The [implementation roadmap](implementation-roadmap.md) owns dependency-aware execution sequence and gives intelligence production priority over discovery/acquisition expansion; its easy-fix lane is spare-capacity work. It is not a second status register. The five workstream specifications own detailed implementation and Luna prompts. `CONSOLIDATED_TODO.md` alone owns task status. One technical proposal must map to one primary canonical owner; do not create parallel Active tasks.
 
 ## Shared GPT6 Luna rules retained from original catalogue
 
