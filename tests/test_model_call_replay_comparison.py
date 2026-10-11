@@ -109,6 +109,8 @@ def _bundle(
 def _compare(
     baseline: ModelCallReplayBundle,
     candidate: ModelCallReplayBundle,
+    *,
+    expectations: dict[str, str] | None = None,
 ):
     return audit.compare_model_call_replay_bundles(
         ModelCallReplayBundleComparisonRequest(
@@ -118,6 +120,7 @@ def _compare(
             candidate_bundle=candidate,
             baseline_bundle_sha256="5" * 64,
             candidate_bundle_sha256="6" * 64,
+            compatibility_expectations=expectations or {},
         )
     )
 
@@ -250,6 +253,42 @@ def test_cli_never_echoes_retained_private_content(tmp_path: Path, capsys) -> No
     assert "PRIVATE_PROMPT_MARKER" not in output
     assert "PRIVATE_RESPONSE_MARKER" not in output
     assert "PRIVATE_CREDENTIAL_MARKER" not in output
+
+
+def test_cli_candidate_expectation_mismatch_reports_field_without_value(
+    tmp_path: Path, capsys
+) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(
+        json.dumps(asdict(_bundle()), sort_keys=True), encoding="utf-8"
+    )
+    candidate_path.write_text(
+        json.dumps(asdict(_bundle(model="gpt-6-astra")), sort_keys=True),
+        encoding="utf-8",
+    )
+
+    exit_code = comparison_cli.main(
+        [
+            "--baseline",
+            str(baseline_path),
+            "--candidate",
+            str(candidate_path),
+            "--artifact-family",
+            ARTIFACT_FAMILY,
+            "--expect",
+            "model=gpt-6-luna",
+        ]
+    )
+    output = capsys.readouterr().out
+    result = json.loads(output)
+
+    assert exit_code == 0
+    assert result["classification"] == "incompatible"
+    assert result["expectation_mismatch_fields"] == ["model"]
+    assert result["expectations_met"] is False
+    assert "gpt-6-luna" not in output
+    assert "gpt-6-astra" not in output
 
 
 def test_identical_bundles_are_equivalent_and_repeatable() -> None:
@@ -394,3 +433,18 @@ def test_changed_fields_follow_fixed_order() -> None:
         "output_sha256",
         "artifact_sha256",
     )
+
+
+def test_candidate_compatibility_expectation_mismatch_is_reported_without_value() -> (
+    None
+):
+    result = _compare(
+        _bundle(),
+        _bundle(),
+        expectations={"model": "gpt-6-astra"},
+    )
+
+    assert result.classification == "incompatible"
+    assert result.expectations_met is False
+    assert result.expectation_mismatch_fields == ("model",)
+    assert "gpt-6-astra" not in repr(result)

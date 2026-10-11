@@ -27024,6 +27024,12 @@
         "candidate_bundle_sha256": {
           "type": "string"
         },
+        "compatibility_expectations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "input_diagnostic_codes": {
           "items": {
             "type": "string"
@@ -27090,6 +27096,15 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "expectation_mismatch_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expectations_met": {
+          "type": "boolean"
         },
         "missing_fields": {
           "items": {

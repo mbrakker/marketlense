@@ -134,9 +134,12 @@ provider client or writing an output artifact:
 python scripts/quality/compare_model_call_replay_bundles.py `
   --baseline <baseline-replay-bundle.json> `
   --candidate <candidate-replay-bundle.json> `
-  --artifact-family report_vs/doc_map
+  --artifact-family report_vs/doc_map `
+  --expect model=<expected-model>
 ```
 
+`--expect` is optional and repeatable. It accepts allowlisted candidate
+identity fields; expectation values are compared but never included in output.
 The command prints one stable JSON response to stdout. It reports only artifact
 family, bundle-byte hashes, safe field names, classification, and bounded
 diagnostic codes. Exit code `2` means a malformed or unreadable input; other

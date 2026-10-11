@@ -46,6 +46,7 @@ _FORBIDDEN_CONTENT_KEYS = frozenset(
     }
 )
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_EXPECTATION_NAME_RE = re.compile(r"^[a-z_]+$")
 
 
 class _DuplicateJsonKey(ValueError):
@@ -233,6 +234,25 @@ def _valid_audit_values(payload: dict[str, Any]) -> bool:
     return True
 
 
+def _parse_expectations(values: list[str]) -> dict[str, str]:
+    if len(values) > 16:
+        raise ValueError
+    expectations: dict[str, str] = {}
+    for value in values:
+        name, separator, expected = value.partition("=")
+        if (
+            not separator
+            or not _EXPECTATION_NAME_RE.fullmatch(name)
+            or len(name) > 64
+            or not expected
+            or len(expected) > 128
+            or name in expectations
+        ):
+            raise ValueError
+        expectations[name] = expected
+    return expectations
+
+
 def _render_response(response: ModelCallReplayBundleComparisonResponse) -> str:
     return json.dumps(
         asdict(response),
@@ -247,12 +267,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--baseline", required=True, type=Path)
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--artifact-family", required=True)
+    parser.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        metavar="FIELD=VALUE",
+        help="Optional candidate identity expectation; values are omitted from output.",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    try:
+        expectations = _parse_expectations(args.expect)
+    except ValueError:
+        parser.error("Invalid compatibility expectation.")
     baseline, baseline_ref, baseline_error = _load_bundle(args.baseline, "BASELINE")
     candidate, candidate_ref, candidate_error = _load_bundle(
         args.candidate, "CANDIDATE"
@@ -268,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
             candidate_bundle=candidate,
             baseline_bundle_sha256=baseline_ref,
             candidate_bundle_sha256=candidate_ref,
+            compatibility_expectations=expectations,
             input_diagnostic_codes=diagnostics,
         )
     )

@@ -35,6 +35,15 @@ class ModelCallReplayBundleComparisonRequest:
     candidate_bundle_sha256: str = field(
         metadata={"doc": "SHA-256 of the exact retained candidate bundle bytes."}
     )
+    compatibility_expectations: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "doc": (
+                "Optional allowlisted candidate identities used as comparison "
+                "expectations; values are never included in the response."
+            )
+        },
+    )
     input_diagnostic_codes: tuple[str, ...] = field(
         default=(),
         metadata={"doc": "Bounded parse diagnostics from the read-only file adapter."},
@@ -76,4 +85,12 @@ class ModelCallReplayBundleComparisonResponse:
     regression_evidence: tuple[str, ...] = field(
         default=(),
         metadata={"doc": "Comparable evidence codes supporting a regression."},
+    )
+    expectation_mismatch_fields: tuple[str, ...] = field(
+        default=(),
+        metadata={"doc": "Safe candidate identity fields that missed expectations."},
+    )
+    expectations_met: bool = field(
+        default=True,
+        metadata={"doc": "Whether optional candidate identity expectations matched."},
     )

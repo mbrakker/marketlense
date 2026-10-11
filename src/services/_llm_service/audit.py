@@ -126,6 +126,9 @@ def compare_model_call_replay_bundles(
             candidate_missing.add(optional_field)
     missing_fields = _ordered_fields(baseline_missing | candidate_missing)
     changed_fields = _ordered_difference(baseline_identity, candidate_identity)
+    expectation_mismatches = _expectation_mismatches(
+        request.compatibility_expectations, candidate_identity
+    )
 
     family_mismatch = (
         "artifact_family" in baseline_identity
@@ -135,7 +138,9 @@ def compare_model_call_replay_bundles(
         and candidate_identity["artifact_family"] != safe_family
     )
     cohort_changed = any(field_name in _COHORT_FIELDS for field_name in changed_fields)
-    cohort_incompatible = cohort_changed or family_mismatch
+    cohort_incompatible = (
+        cohort_changed or family_mismatch or bool(expectation_mismatches)
+    )
     regression_evidence: tuple[str, ...] = ()
     diagnostics: tuple[str, ...] = ()
 
@@ -147,12 +152,16 @@ def compare_model_call_replay_bundles(
             diagnostics = (*diagnostics, "COHORT_INCOMPATIBLE")
         if family_mismatch:
             diagnostics = (*diagnostics, "ARTIFACT_FAMILY_MISMATCH")
+        if expectation_mismatches:
+            diagnostics = (*diagnostics, "EXPECTATION_MISMATCH")
     elif cohort_incompatible:
         classification = "incompatible"
         cohort_compatibility = "incompatible"
         diagnostics = ("COHORT_INCOMPATIBLE",)
         if family_mismatch:
             diagnostics = (*diagnostics, "ARTIFACT_FAMILY_MISMATCH")
+        if expectation_mismatches:
+            diagnostics = (*diagnostics, "EXPECTATION_MISMATCH")
     else:
         cohort_compatibility = "compatible"
         baseline_validation = _validation_state(baseline.audit_record.validation_result)
@@ -189,6 +198,8 @@ def compare_model_call_replay_bundles(
             missing_fields=missing_fields,
             diagnostic_codes=diagnostics,
             regression_evidence=regression_evidence,
+            expectation_mismatch_fields=expectation_mismatches,
+            expectations_met=not expectation_mismatches,
         )
 
     return _comparison_response(
@@ -203,6 +214,8 @@ def compare_model_call_replay_bundles(
         changed_fields=changed_fields,
         missing_fields=missing_fields,
         diagnostic_codes=diagnostics,
+        expectation_mismatch_fields=expectation_mismatches,
+        expectations_met=not expectation_mismatches,
     )
 
 
@@ -218,6 +231,16 @@ def _validate_comparison_request(
         errors.append("BASELINE_REFERENCE_INVALID")
     if _safe_sha256(request.candidate_bundle_sha256) is None:
         errors.append("CANDIDATE_REFERENCE_INVALID")
+    if not isinstance(request.compatibility_expectations, dict):
+        errors.append("EXPECTATION_INVALID")
+        return tuple(dict.fromkeys(errors))[:12]
+    if len(request.compatibility_expectations) > 16:
+        errors.append("EXPECTATION_LIMIT_EXCEEDED")
+        return tuple(dict.fromkeys(errors))[:12]
+    for name, expected_value in request.compatibility_expectations.items():
+        if name not in _FIELD_ORDER or _safe_text(expected_value) is None:
+            errors.append("EXPECTATION_INVALID")
+            break
     if _validated_input_diagnostics(request.input_diagnostic_codes) is None:
         errors.append("INPUT_DIAGNOSTIC_INVALID")
     return tuple(dict.fromkeys(errors))[:12]
@@ -451,6 +474,46 @@ def _ordered_difference(
     return _ordered_fields(changed)
 
 
+def _expectation_mismatches(
+    expectations: dict[str, str], candidate_identity: dict[str, object]
+) -> tuple[str, ...]:
+    return _ordered_fields(
+        {
+            field_name
+            for field_name, expected in expectations.items()
+            if candidate_identity.get(field_name)
+            != _expected_value(field_name, expected)
+        }
+    )
+
+
+def _expected_value(field_name: str, value: str) -> object:
+    if field_name in {
+        "prompt_hash",
+        "rendered_prompt_redaction_hash",
+        "schema_sha256",
+        "policy_sha256",
+        "evidence_sha256",
+        "output_sha256",
+        "artifact_sha256",
+    }:
+        return value.casefold() if _safe_sha256(value) is not None else value
+    if field_name == "temperature":
+        try:
+            parsed = float(value)
+        except ValueError:
+            return value
+        return parsed if math.isfinite(parsed) else value
+    if field_name in {"seed", "seed_supported"}:
+        if field_name == "seed_supported" and value.casefold() in {"true", "false"}:
+            return value.casefold() == "true"
+        try:
+            return int(value)
+        except ValueError:
+            return value
+    return value
+
+
 def _ordered_fields(field_names: set[str]) -> tuple[str, ...]:
     return tuple(name for name in _FIELD_ORDER if name in field_names)
 
@@ -499,6 +562,8 @@ def _comparison_response(
     missing_fields: tuple[str, ...] = (),
     diagnostic_codes: tuple[str, ...] = (),
     regression_evidence: tuple[str, ...] = (),
+    expectation_mismatch_fields: tuple[str, ...] = (),
+    expectations_met: bool = True,
 ) -> ModelCallReplayBundleComparisonResponse:
     return ModelCallReplayBundleComparisonResponse(
         schema_version=_COMPARISON_SCHEMA_VERSION,
@@ -512,6 +577,8 @@ def _comparison_response(
         missing_fields=missing_fields[: len(_FIELD_ORDER)],
         diagnostic_codes=tuple(dict.fromkeys(diagnostic_codes))[:12],
         regression_evidence=regression_evidence[:4],
+        expectation_mismatch_fields=expectation_mismatch_fields[:16],
+        expectations_met=expectations_met,
     )
 
 
