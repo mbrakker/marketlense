@@ -173,6 +173,8 @@ This lane is upstream of *fresh autonomous report intake* but not a prerequisite
 
 ## Phase 7 — Improve cost, parallelism and simplify only after intelligence-quality proof
 
+- **R9:** Independently optimize CI with comparable green-run baselines, safe dependency caching, isolated parallel mutation/independent quality gates, measured pytest tuning or sharding, and complete exact-SHA release-evidence aggregation. Prove the full-CI wall-clock gain and runner-minute cost without missing tests, mutation targets or quality gates; schedule this engineering work alongside, not ahead of, intelligence-critical fixes.
+
 - **E12** add pre-category checkpoint recovery only if compatible identity and retained category-only replay show worthwhile reliability/cost impact; avoid unnecessary checkpoint infrastructure. This is independent of the source-fidelity and insight-quality milestones.
 - **E17:** begin measured work at E17.1 in Phase 0; promote subsequent slices in source-protecting order: **E17.2** output/semantic-verdict efficiency (after verified correctness) → **E17.3** task-specific input evidence projections (after stable provenance and editorial usage) → **E17.4** provider-cache economics with real supported controls → **E17.5** eliminate only proven redundant semantic calls. Compare *quality, first-pass reliability, total calls/tokens/cache economics, wall-clock time and total cost* on the unchanged frozen five.
 - **A15 / ING-09 → A21 / ING-01:** verify global model concurrency and queue lease safety **before** increasing workers. Tune throughput only with representative wall-clock and quality measurements. `ING-07` fail-fast scheduling and `ART-01/03` reuse/projections may be independent focused optimizations after correctness gates, not excuses for a new DAG framework.
@@ -217,12 +219,12 @@ Each canonical ID appears in **one primary roadmap home** below. Dependencies ma
 | **Phase 2 — factual, methodological, LLM and verification stability** | **`E16`, `E18`** | **Fix output-causing upstream defects before downstream text patches** |
 | **Phase 3 — decision synthesis and analytical relevance** | **`P16`, `E14`** | **Second substantive quality milestone; category calibration is independent** |
 | **Phase 4 — complete visuals and narrative composition** | **`E15`** | **E15 gate before selected visual publication; P17 implementation continues from Phase 1** |
-| Phase 5 — faithful public projection and operation | `P2`, `P4`, `P5`, `P7`, `P8`, `P10`, `R6` | Downstream UX/operability after intelligence content is strong |
+| Phase 5 — faithful public projection and operation | `P2`, `P4`, `P5`, `P7`, `P8`, `P10` | Downstream UX/operability after intelligence content is strong |
 | **Parallel intake (secondary unless hard blocker)** | `A15`, `A17`, `A18`, `A19`, `R8` | New-report acquisition, source readiness and pathway safety; not on the frozen-five intelligence path |
 | Phase 6 — human acceptance and end-to-end safety | `A20`, `P6`, `R1`, `R3`, `R7` | Independent quality acceptance first; operational MVP proof separately |
-| Phase 7 — measured efficiency/simplification | `E17`, `E12`, `S3`, `S4` | Never sacrifice semantic quality for token, time or architecture reductions |
+| Phase 7 — measured efficiency/simplification | `E17`, `E12`, `R9`, `S3`, `S4` | Never sacrifice semantic quality for token, time or architecture reductions |
 
-**Coverage:** 33 unique Active outcomes represented exactly once, as at the cited 11 October 2026 snapshot; phase-level priorities do not rewrite their canonical status or imply a current-HEAD implementation verification.
+**Coverage:** 33 unique Active outcomes represented exactly once after adding R9 on 11 October 2026 and excluding closed R6; phase-level priorities do not rewrite their canonical status or imply a current-HEAD implementation verification.
 
 ## How to choose the next actual Luna task
 

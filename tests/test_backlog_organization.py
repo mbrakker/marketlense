@@ -169,8 +169,8 @@ def test_master_remains_compatible_with_existing_backlog_validator() -> None:
 
     summary, violations = validate_canonical_backlog(MASTER.read_text(encoding="utf-8"))
     assert not violations, violations
-    assert summary.active_register_items == 32
-    assert summary.detailed_active_sections == 32
+    assert summary.active_register_items == 33
+    assert summary.detailed_active_sections == 33
 
 
 def test_migrated_quality_links_are_relative_to_workstream() -> None:

@@ -1,6 +1,6 @@
 # Architecture, engineering, release, and disaster recovery
 
-Canonical owner IDs: R1, R2, R3, R6, R7, R8. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
+Canonical owner IDs: R1, R2, R3, R6, R7, R8, R9. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
 
 Before implementing a slice, verify its historic diagnosis at current HEAD; use its **Luna implementation prompt** together with the full evidence and criteria immediately above it. Proposed thresholds are acceptance targets, not current results. Closed parent milestones are not reopened by a proposal's historical wording.
 
@@ -441,6 +441,43 @@ Update R8/proposal disposition with evidence; do not close the parent early. Com
 - **Implementation:** Measure final path, component, temp and sidecar lengths; fix only actual remaining high-likelihood gaps, and surface genuinely impossible roots as typed actionable diagnostics.
 - **Acceptance:** Checkpoint/cache replay and isolated work roots survive realistic Windows depth; impossible roots fail predictably; final report identifies areas inspected and untested native Windows behavior.
 - **Codex guidance:** Inventory only credible remaining paths after PATH-01..05, avoid building broad new infrastructure, verify focused cases and commit/push.
+
+
+<a id="r9-accelerate-ci-validation-fivefold-without-weakening-release-gates"></a>
+## R9. Accelerate CI validation fivefold without weakening release gates
+
+**Canonical status:** Active. **Priority:** P1 engineering efficiency; independent of intelligence-output critical-path priorities. **Added:** 2026-10-11. **Mapped technical slices:** none. R9.1–R9.4 below are phases of one new outcome, not additional legacy proposal IDs. No implementation or fivefold speedup is claimed.
+
+- **Observed baseline:** Current `.github/workflows/ci.yml` runs Python/PHP setup, static and policy checks, eight-worker pytest/coverage, mutation, PDF/prompt/public-report quality and release-evidence assembly sequentially in one Ubuntu job. Successful [main CI run 38174895618](https://github.com/mbrakker/marketlense/actions/runs/38174895618) at SHA `7b56f0e8403008a7dfb64de511ab39bf8b430715` ran approximately **15m48s** end-to-end; step logs show mutation ~7m39s, pytest/coverage ~4m21s and installation ~2m22s. Earlier successful [branch run 38160369352](https://github.com/mbrakker/marketlense/actions/runs/38160369352) ran ~21 minutes (mutation ~10m24s, pytest ~5m54s, installation ~2m41s). These are two non-equivalent single runs, **not** a statistically comparable baseline. `scripts/ci/run_mutation_gate.py` executes target/mutant pytest subprocesses serially; there are 17 configured targets and up to 71 mutants. `requirements.lock` includes torch, triton and NVIDIA/CUDA packages; their necessity in CI is unverified. `scripts/ci/check_risk_policy.py` classifies change risk, but current workflow does not selectively apply it to heavy gates. `scripts/quality/build_ci_performance_benchmark.py` sums task durations; this is not true elapsed wall-clock after parallelism.
+- **Desired outcome:** At least **5× shorter median elapsed full-CI time** than a comparable, pinned green-run baseline, plus prompt reliable PR failure feedback, without reducing required gate scope, editorial/grounding safeguards, test coverage, mutation assurance or release-evidence completeness. A historical ~15m48s run would imply ~3m10s, but the definitive numeric target must use the measured comparable baseline; this is a **stretch goal**, not a forecast.
+
+**Implementation stages (one verified stage per implementation slice):**
+
+1. **R9.1 — Baseline and setup:** Record at least three comparable successful full workflows before changing topology: source SHA, runner/runtime, trigger, elapsed/step timing, eligible pytest node IDs, coverage, mutation target scores, artifact completeness, and total billed runner-minutes. Profile cold/warm installation; enable safe dependency caching keyed by `requirements.lock`. Investigate the heavy torch/CUDA dependency graph before attempting removal; keep the verified locked environment. Avoid redundant superseded-work execution only where the applicable required event and SHA release gates remain satisfied.
+2. **R9.2 — Parallelize mutation and independent gates:** Move independent validation into parallel GitHub Actions jobs with explicit dependencies. Partition the existing 17 mutation targets into isolated runners (benchmark roughly four balanced partitions); never edit the same source tree concurrently across mutants. Keep mutant selection and minimum scores unchanged. Merge every target's results into the existing compatible `mutation_results.json`; absent/duplicate/failed partitions must fail the overall gate. Preserve the existing quality non-regression comparison.
+3. **R9.3 — Profile and optimize pytest:** Use retained per-test telemetry to locate expensive modules, fixture setup and scheduling imbalance. Benchmark xdist worker/scheduling alternatives against `-n 8 --dist=worksteal`; shard pytest (initially ~3–4 balanced, disjoint shards) **only if** measured benefits justify complexity. Assert exact eligible node-ID union without omissions/duplicates, consistent outcomes and merged global/module coverage and per-test timing. Preserve all coverage thresholds; optimize expensive fixtures without weakening test isolation.
+4. **R9.4 — Reassemble release evidence and measure actual speed:** Use established GitHub artifact and `needs` dependency mechanisms for exact-SHA stage outputs and final checks. Preserve release manifest, summary, review, upload/completeness checks, freshness/start-time semantics, coverage, mutation, PDF, prompt, public-report quality and conditional WordPress staging checks. A missing, failed, stale or mixed-commit input must never produce an approved release bundle. Update CI performance telemetry to report actual elapsed wall-clock/critical path rather than summing parallel stages. Risk-classified PR feedback can be fast, but only a genuinely complete required-gate run is full-release green.
+
+- **Acceptance / verification:**
+  - Compare at least **three comparable successful runs per version**, recording median full-workflow wall-clock, fastest PR failure feedback, individual stage timing, GitHub billed runner-minutes, and flake/failure rates; report achieved speedup and gap to ≥5× without cherry-picking.
+  - Full-suite pytest collected/executed node IDs have no omissions/duplicates; results and aggregate coverage meet all existing gates. Mutation reports contain **all configured targets exactly once**, original selection/max-mutant and per-target/global minimum score requirements, and identical pass/fail/non-regression semantics.
+  - Injected test failures, mutation failures, missing/duplicate target results, missing release artifacts and wrong-SHA/stale evidence all fail closed, including multi-job or partial-completion paths.
+  - Exact-commit release manifest/review, upload bundle and summary remain complete and trustworthy; static, WordPress, public-report and LLM/prompt/PDF quality protections do not silently disappear from full release validation.
+  - Use existing CI tooling, telemetry, contracts and tests; do not build a generic scheduler, an elaborate change-based test-selection framework, new infrastructure or speculative optimizations solely to chase fivefold speed.
+
+### Luna implementation prompt — R9
+
+~~~text
+Work on the next unverified R9 CI acceleration stage at current HEAD.
+Start with .github/workflows/ci.yml, scripts/ci/run_mutation_gate.py, existing
+pytest/quality telemetry, release-evidence builders/contracts and recent green run logs.
+Implement one measured, coherent improvement using existing mechanisms. Preserve every
+applicable test, mutant, threshold, coverage/quality gate and exact-SHA release artifact.
+Prove correct aggregation and fail-closed behavior across parallel jobs. Compare
+comparable green workflows for elapsed wall-clock and billed runner-minutes; distinguish
+measured gains from the 5x stretch goal. Update the R9 canonical status/evidence only
+when verified. Run focused checks, record gaps, then commit and push the scoped change.
+~~~
 
 ---
 
