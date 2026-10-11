@@ -8,6 +8,7 @@ from src.contracts.report_generation import ReportSourceState
 from src.contracts.run_context import RunContext
 from src.utils.errors import AppError
 from src.utils.logging import child_context, log_event
+from src.utils.pdf_text_layout import detached_percent_label_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,13 @@ def build_findings_source_spans(
         for page in source.text_response.pages
         if page.page_number > 0
     }
-    if any(
+    missing_pages = any(
         page_number not in pages_by_number for page_number in range(1, page_count + 1)
-    ):
+    )
+    has_detached_chart_rows = any(
+        detached_percent_label_tokens(text) for text in pages_by_number.values()
+    )
+    if missing_pages or has_detached_chart_rows:
         runtime = source.runtime
         path = source.analysis_pdf_path or runtime.local_pdf_path
         settings = runtime.settings

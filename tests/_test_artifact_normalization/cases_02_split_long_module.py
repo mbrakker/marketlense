@@ -86,6 +86,71 @@ def test_insight_binding_carries_validated_finding_with_page_excerpt() -> None:
     }
 
 
+def test_reuters_insight_binding_carries_exact_findings_statement_and_page() -> None:
+    statement = (
+        "For possible licensing deals with AI companies around news content IP, "
+        "respondents expected 49% minor contribution and 20% significant source "
+        "of income in three years (Base = 272)."
+    )
+    excerpt = (
+        "Half (49%) are expecting a minor contribution.\n"
+        "Q8. Possible licensing deals with AI companies around news content IP; "
+        "in three years. Base = 272.\n"
+        "Main source of income 0%\n"
+        "Significant source of income 20%\n"
+        "Minor source of income 49%\n"
+        "We won't be getting any income 20%\n"
+        "Don't know 11%"
+    )
+    insights = [
+        {
+            "id": "ai-platform-licensing-income-expectations",
+            "text": statement,
+            "evidence_id": "section-2-ai-platform-revenue",
+            "evidence": excerpt,
+        }
+    ]
+
+    bind_artifact_evidence_spans(
+        summary={},
+        insights_candidates=[],
+        insights_final=insights,
+        quotes_final=[],
+        doc_map={},
+        evidence_packs={
+            "evidence_fidelity": _supported_findings_fidelity(
+                "section-2-ai-platform-revenue", statement, 15
+            ),
+            "findings": {
+                "family_status": {"status": "generated", "policy_action": "keep"},
+                "findings": [
+                    {
+                        "id": "section-2-ai-platform-revenue",
+                        "text": statement,
+                        "evidence": excerpt,
+                        "pages": [15],
+                    }
+                ],
+            },
+        },
+    )
+
+    assert statement in insights[0]["evidence"]
+    assert excerpt in insights[0]["evidence"]
+    assert {
+        (span["evidence_id"], span["source_pack"], span["page"], span["text"])
+        for span in insights[0]["evidence_spans"]
+    } == {
+        (
+            "section-2-ai-platform-revenue",
+            "findings_statement",
+            15,
+            statement,
+        ),
+        ("section-2-ai-platform-revenue", "findings", 15, excerpt),
+    }
+
+
 def test_insight_binding_does_not_promote_abstained_or_doc_map_findings() -> None:
     unsupported_statement = "Top 25% of users account for 66% of time spent."
     excerpt = "66% 39% 34% 61% Share of Time Spent Share of Consumer Spend"
