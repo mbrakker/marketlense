@@ -51,4 +51,4 @@
 
 - [x] Run focused tests and applicable documentation/workflow checks; inspect actual fixture-generated summary output and scan it for sensitive fixture markers. Focused tests, Ruff, type check, and repository hygiene pass; documentation and backlog source checks report unrelated pre-existing D13/D14/PATH anchors and closed R6 detailed-ID issues.
 - [x] Inspect the final diff for unrelated changes or sensitive data; report that the live Actions summary step succeeded and the artifact listing/expiry were observable, while the rendered summary body was not exposed by the API and the browser required sign-in.
-- [ ] Commit the verified scope, push the current branch, and record the resulting SHA.
+- [x] Commit the verified implementation (`6c254e05213216c686bc5522f720e96c4da54d53`) and R1 status evidence (`b2ed7678`); both commits were pushed to `main`. The final repository SHA is reported after this plan closeout.
