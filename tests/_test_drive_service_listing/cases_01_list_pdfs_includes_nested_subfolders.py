@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+import json
+
 from ._shared import *  # noqa: F401,F403
 
 
@@ -351,6 +353,7 @@ def test_preflight_drive_write_access_refreshes_expired_oauth_token(
     token_path = tmp_path / "token.json"
     token_path.write_text("{}", encoding="utf-8")
     credentials = _FakeAuthorizedUserCredentials(valid=False, expired=True)
+    credentials.granted_scopes = ["https://www.googleapis.com/auth/drive"]
 
     external_boundary_mocks_only.setattr(
         drive_service.AuthorizedUserCredentials,
@@ -415,7 +418,10 @@ def test_preflight_drive_write_access_rejects_insufficient_oauth_scope(
     external_boundary_mocks_only, tmp_path, assert_app_error
 ):
     token_path = tmp_path / "token.json"
-    token_path.write_text("{}", encoding="utf-8")
+    token_path.write_text(
+        '{"granted_scopes":["https://www.googleapis.com/auth/drive.metadata.readonly"]}',
+        encoding="utf-8",
+    )
     credentials = _FakeAuthorizedUserCredentials(
         scopes=["https://www.googleapis.com/auth/drive.metadata.readonly"]
     )
@@ -622,7 +628,19 @@ def test_list_pdfs_uses_oauth_user_credentials(external_boundary_mocks_only, tmp
     assert [f.file_id for f in files] == ["root-pdf"]
 
 
-def test_authorize_oauth_user_writes_token(external_boundary_mocks_only, tmp_path):
+@pytest.mark.parametrize(
+    ("granted_scopes", "expected_scopes"),
+    [
+        (
+            ["https://www.googleapis.com/auth/drive"],
+            ["https://www.googleapis.com/auth/drive"],
+        ),
+        (None, []),
+    ],
+)
+def test_authorize_oauth_user_reports_only_provider_granted_scopes(
+    external_boundary_mocks_only, tmp_path, granted_scopes, expected_scopes
+):
     client_secret_path = tmp_path / "client.json"
     token_output_path = tmp_path / "token.json"
     client_secret_path.write_text("{}", encoding="utf-8")
@@ -634,7 +652,10 @@ def test_authorize_oauth_user_writes_token(external_boundary_mocks_only, tmp_pat
                 def run_local_server(self, port, open_browser):
                     assert port == 0
                     assert open_browser is True
-                    return _FakeAuthorizedUserCredentials()
+                    credentials = _FakeAuthorizedUserCredentials()
+                    if granted_scopes is not None:
+                        credentials.granted_scopes = granted_scopes
+                    return credentials
 
             return _Runner()
 
@@ -652,6 +673,9 @@ def test_authorize_oauth_user_writes_token(external_boundary_mocks_only, tmp_pat
     assert token_output_path.exists()
     assert response.token_output_path == str(token_output_path)
     assert response.refresh_token_present is True
+    assert response.scopes == expected_scopes
+    token_payload = json.loads(token_output_path.read_text(encoding="utf-8"))
+    assert token_payload.get("granted_scopes", []) == expected_scopes
 
 
 def test_list_pdfs_wraps_missing_service_account_path_as_typed_error(
@@ -807,7 +831,7 @@ __all__ = [
     "test_preflight_drive_write_access_rejects_failed_write_probe",
     "test_preflight_drive_write_access_tolerates_probe_cleanup_failure",
     "test_list_pdfs_uses_oauth_user_credentials",
-    "test_authorize_oauth_user_writes_token",
+    "test_authorize_oauth_user_reports_only_provider_granted_scopes",
     "test_list_pdfs_wraps_missing_service_account_path_as_typed_error",
     "test_download_pdf_to_path_removes_partial_file_on_failure",
     "test_list_pdfs_streams_pages_incrementally",

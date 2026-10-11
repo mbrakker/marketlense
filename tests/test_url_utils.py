@@ -25,6 +25,20 @@ def test_normalize_url_preserves_functional_query_parameters() -> None:
     )
 
 
+def test_normalize_url_preserves_signed_path_and_query_bytes() -> None:
+    url = (
+        "HTTPS://EXAMPLE.COM:443/Reports/Annual/"
+        "?token=a%2fb+Case&token=second%2Bvalue&X-Amz-Signature=AbC%2f+Z"
+    )
+
+    assert normalize_url(url) == (
+        "https://example.com/Reports/Annual/"
+        "?token=a%2fb+Case&token=second%2Bvalue&X-Amz-Signature=AbC%2f+Z"
+    )
+    azure_sas_url = "https://example.com/Reports/Annual?sv=2026-10-01&sig=a%2Fb+Case&utm_source=mail"
+    assert normalize_url(azure_sas_url) == azure_sas_url
+
+
 def test_host_matches_domain_requires_exact_host_or_subdomain() -> None:
     assert host_matches_domain("https://salesforce.com/app", "salesforce.com")
     assert host_matches_domain("https://foo.salesforce.com/app", "salesforce.com")

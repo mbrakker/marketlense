@@ -9,6 +9,8 @@ from src.contracts.publish import PublishSettings
 from src.contracts.run_context import RunContext
 from src.contracts.wordpress import (
     WordPressAuthSettings,
+    WordPressPostTypePreflightRequirement,
+    WordPressPublishCapabilityRequirements,
     WordPressPublishTargetPreflightRequest,
     WordPressPublishTargetPreflightResponse,
 )
@@ -114,6 +116,63 @@ def preflight_publish_target(
     )
 
 
+def preflight_publish_capability(
+    settings: PublishSettings,
+    ctx: RunContext,
+    requirements: WordPressPublishCapabilityRequirements | None = None,
+) -> WordPressPublishTargetPreflightResponse:
+    """Verify the authenticated read and publication capability without writes."""
+    wp = settings.wp
+    auth_header = build_auth_header(
+        username=wp.username,
+        app_password=wp.app_password,
+        bearer_token=wp.bearer_token,
+    )
+    if requirements is None:
+        required_capabilities = ["create_posts"]
+        if str(wp.post_status or "").strip().lower() == "publish":
+            required_capabilities.append("publish_posts")
+        requirements = WordPressPublishCapabilityRequirements(
+            schema_version="1.0",
+            post_types=(wp.post_type,),
+            post_type_capabilities=tuple(required_capabilities),
+        )
+    post_types = tuple(dict.fromkeys(requirements.post_types))
+    if not requirements.post_types and not requirements.rest_routes:
+        post_types = (wp.post_type,)
+    primary_post_type = post_types[0] if post_types else ""
+    additional_post_types = tuple(
+        WordPressPostTypePreflightRequirement(
+            post_type=post_type,
+            required_meta_keys=_required_publish_meta_keys(post_type),
+        )
+        for post_type in post_types[1:]
+    )
+    return _preflight_publish_target_request(
+        WordPressPublishTargetPreflightRequest(
+            schema_version="1.0",
+            base_url=wp.site_url,
+            auth_header=auth_header,
+            post_type=primary_post_type,
+            ssl_verify=wp.ssl_verify,
+            ca_bundle_path=wp.ca_bundle_path,
+            required_meta_keys=(
+                _required_publish_meta_keys(primary_post_type)
+                if primary_post_type
+                else ()
+            ),
+            verify_authentication=True,
+            required_capabilities=requirements.post_type_capabilities,
+            additional_post_types=additional_post_types,
+            required_user_capabilities=requirements.user_capabilities,
+            required_rest_routes=requirements.rest_routes,
+            required_rest_methods=requirements.rest_methods,
+            timeout_seconds=5.0,
+        ),
+        ctx,
+    )
+
+
 __all__ = [
     "_WordPressRequestResult",
     "_SessionPool",
@@ -137,6 +196,7 @@ __all__ = [
     "_raise_wordpress_installation_redirect",
     "_safe_json",
     "preflight_publish_target",
+    "preflight_publish_capability",
     "upload_media",
     "prepare_media_upload",
     "create_post",

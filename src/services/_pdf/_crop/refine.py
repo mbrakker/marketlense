@@ -12,6 +12,7 @@ import pymupdf as fitz
 from PIL import Image
 
 from src.contracts.report_assets import (
+    CROP_REFINE_COORDINATE_TRANSFORM_VERSION,
     CropRefineBBoxApplyRequest,
     CropRefineBBoxApplyResponse,
     CropRefinePageRenderRequest,
@@ -32,6 +33,68 @@ from src.services._pdf.shared import crop_logger
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.path_utils import safe_path_segment
+
+
+def _matrix_coefficients(
+    matrix: fitz.Matrix,
+) -> tuple[float, float, float, float, float, float]:
+    return tuple(float(value) for value in matrix)  # type: ignore[return-value]
+
+
+def _page_render_response(
+    *,
+    page: fitz.Page,
+    image_path: str,
+    page_number: int,
+    image_width: int,
+    image_height: int,
+) -> CropRefinePageRenderResponse:
+    page_width = float(page.rect.width)
+    page_height = float(page.rect.height)
+    scale_x = (float(image_width) / page_width) if page_width > 0 else 0.0
+    scale_y = (float(image_height) / page_height) if page_height > 0 else 0.0
+    display_to_pdf = _matrix_coefficients(page.derotation_matrix)
+    pdf_to_display = _matrix_coefficients(page.rotation_matrix)
+    image_to_pdf = (
+        display_to_pdf[0] / scale_x,
+        display_to_pdf[1] / scale_x,
+        display_to_pdf[2] / scale_y,
+        display_to_pdf[3] / scale_y,
+        display_to_pdf[4],
+        display_to_pdf[5],
+    )
+    crop_box = page.cropbox
+    media_box = page.mediabox
+    return CropRefinePageRenderResponse(
+        schema_version="1.1",
+        image_path=image_path,
+        page=page_number,
+        image_width=image_width,
+        image_height=image_height,
+        page_width=page_width,
+        page_height=page_height,
+        scale_x=scale_x,
+        scale_y=scale_y,
+        coordinate_transform_version=CROP_REFINE_COORDINATE_TRANSFORM_VERSION,
+        display_to_pdf_transform=display_to_pdf,
+        pdf_to_display_transform=pdf_to_display,
+        image_to_pdf_transform=image_to_pdf,
+        rotation=int(page.rotation),
+        crop_box=(
+            float(crop_box.x0),
+            float(crop_box.y0),
+            float(crop_box.x1),
+            float(crop_box.y1),
+        ),
+        media_box=(
+            float(media_box.x0),
+            float(media_box.y0),
+            float(media_box.x1),
+            float(media_box.y1),
+        ),
+        pdf_page_width=float(crop_box.width),
+        pdf_page_height=float(crop_box.height),
+    )
 
 
 def render_page_for_crop_refine(
@@ -91,10 +154,6 @@ def render_page_for_crop_refine(
             with Image.open(abs_path) as cached_img:
                 image_width = int(cached_img.width)
                 image_height = int(cached_img.height)
-            page_width = float(page.rect.width)
-            page_height = float(page.rect.height)
-            scale_x = (float(image_width) / page_width) if page_width > 0 else 0.0
-            scale_y = (float(image_height) / page_height) if page_height > 0 else 0.0
             crop_logger.info(
                 log_event(
                     ctx,
@@ -109,16 +168,12 @@ def render_page_for_crop_refine(
                     },
                 )
             )
-            response = CropRefinePageRenderResponse(
-                schema_version="1.0",
+            response = _page_render_response(
+                page=page,
                 image_path=rel,
-                page=request.page,
+                page_number=request.page,
                 image_width=image_width,
                 image_height=image_height,
-                page_width=page_width,
-                page_height=page_height,
-                scale_x=scale_x,
-                scale_y=scale_y,
             )
         else:
             zoom = max(float(request.dpi), 72.0) / 72.0
@@ -141,20 +196,12 @@ def render_page_for_crop_refine(
                     },
                 )
             )
-            page_width = float(page.rect.width)
-            page_height = float(page.rect.height)
-            scale_x = (float(pix.width) / page_width) if page_width > 0 else 0.0
-            scale_y = (float(pix.height) / page_height) if page_height > 0 else 0.0
-            response = CropRefinePageRenderResponse(
-                schema_version="1.0",
+            response = _page_render_response(
+                page=page,
                 image_path=rel,
-                page=request.page,
+                page_number=request.page,
                 image_width=int(pix.width),
                 image_height=int(pix.height),
-                page_width=page_width,
-                page_height=page_height,
-                scale_x=scale_x,
-                scale_y=scale_y,
             )
     finally:
         if owns_doc and local_doc is not None:
@@ -212,24 +259,49 @@ def apply_crop_refine_bbox(
                 context={"page_count": local_doc.page_count},
             )
         page = local_doc[request.page]
-        x0, y0, x1, y1 = request.bbox
-        input_rect = fitz.Rect(float(x0), float(y0), float(x1), float(y1))
-        rect = input_rect & page.rect
-        if rect.is_empty:
-            rect = page.rect
+        page_bounds = fitz.Rect(0, 0, page.cropbox.width, page.cropbox.height)
+        input_rect = fitz.Rect(*(float(value) for value in request.bbox))
+        original_rect = fitz.Rect(*(float(value) for value in request.original_bbox))
+        degradation_reason = ""
+        rect = input_rect & page_bounds
+        outside_page = rect.is_empty or tuple(rect) != tuple(input_rect)
+        original_clipped = original_rect & page_bounds
+        if original_clipped.is_empty or tuple(original_clipped) != tuple(original_rect):
+            raise AppError(
+                code="crop_refine_original_bbox_invalid",
+                message="Crop refine source candidate geometry is outside the page",
+                retryable=False,
+                context={"page": request.page},
+            )
+        if outside_page:
+            rect = fitz.Rect(original_clipped)
+            degradation_reason = "proposal_outside_page_fallback"
+        page_area = max(page_bounds.get_area(), 1.0)
+        if (
+            not request.full_page_target
+            and rect.get_area() / page_area >= 0.9
+            and original_clipped.get_area() / page_area < 0.85
+        ):
+            rect = fitz.Rect(original_clipped)
+            degradation_reason = "near_page_expansion_fallback"
         rect = _crop_refine_edge_guard_rect(
             page,
             rect,
             artifact_cache=artifact_cache,
         )
         if rect.width < 1:
-            rect = fitz.Rect(rect.x0, rect.y0, min(page.rect.x1, rect.x0 + 1), rect.y1)
+            rect = fitz.Rect(
+                rect.x0, rect.y0, min(page_bounds.x1, rect.x0 + 1), rect.y1
+            )
         if rect.height < 1:
-            rect = fitz.Rect(rect.x0, rect.y0, rect.x1, min(page.rect.y1, rect.y0 + 1))
+            rect = fitz.Rect(
+                rect.x0, rect.y0, rect.x1, min(page_bounds.y1, rect.y0 + 1)
+            )
         response = CropRefineBBoxApplyResponse(
-            schema_version="1.0",
+            schema_version="1.1",
             page=request.page,
             bbox=(float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1)),
+            degradation_reason=degradation_reason,
         )
     finally:
         if owns_doc and local_doc is not None:

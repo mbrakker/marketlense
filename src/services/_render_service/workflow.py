@@ -79,7 +79,7 @@ def render_report(request: RenderRequest, ctx: RunContext) -> RenderResponse:
             },
         )
     )
-    view = _build_render_view(request, tag_acronym_map)
+    view = _build_render_view(request, tag_acronym_map, ctx)
     view["seo"]["title"] = _build_seo_title(
         view["report_title"],
         view["focus_year"],

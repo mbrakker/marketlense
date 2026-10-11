@@ -12,12 +12,31 @@ import pytest
 
 from src.contracts.lock import LockAcquireRequest, LockGetRequest
 from src.contracts.run_context import RunContext
-from src.services.lock_service import acquire_lock, get_lock
+from src.services.lock_service import (
+    _write_lock_atomically,
+    acquire_lock,
+    get_lock,
+)
 from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def test_lock_publication_does_not_replace_a_legacy_lock(tmp_path: Path) -> None:
+    lock_path = tmp_path / "legacy.lock"
+    legacy_record = b'{"owner_id":"legacy-worker","pid":123,"created_at":1}'
+    lock_path.write_bytes(legacy_record)
+
+    published = _write_lock_atomically(
+        lock_path,
+        {"owner_id": "new-worker", "pid": 456, "created_at": 2},
+        _ctx(),
+    )
+
+    assert lock_path.read_bytes() == legacy_record
+    assert published is False
 
 
 def _acquire_after_barrier(lock_path, owner_id, barrier, results, release_winner):

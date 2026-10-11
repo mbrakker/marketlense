@@ -25,6 +25,9 @@ from src.services._config_service.common import (
     _to_int,
     logger,
 )
+from src.services._config_service.workflow_queue import (
+    default_workflow_queue_policies,
+)
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.model_resolver import registered_report_generation_namespaces
@@ -44,7 +47,7 @@ def load_workflow_control_settings(
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     raw_control = data.get("workflow_control", {}) or {}
     if not isinstance(raw_control, dict):
         raise AppError(
@@ -183,13 +186,17 @@ _RUN_PROFILE_ALLOWED_KEYS = {
 
 
 def _available_budget_profile_refs(raw_queues: object) -> list[str]:
-    return sorted(
-        {
-            str(_mapping(raw_queue).get("budget_profile") or "").strip()
-            for raw_queue in _mapping(raw_queues).values()
-            if str(_mapping(raw_queue).get("budget_profile") or "").strip()
-        }
+    profiles = {
+        policy.budget_profile
+        for policy in default_workflow_queue_policies().values()
+        if policy.budget_profile
+    }
+    profiles.update(
+        str(_mapping(raw_queue).get("budget_profile") or "").strip()
+        for raw_queue in _mapping(raw_queues).values()
+        if str(_mapping(raw_queue).get("budget_profile") or "").strip()
     )
+    return sorted(profiles)
 
 
 def _parse_run_profiles(

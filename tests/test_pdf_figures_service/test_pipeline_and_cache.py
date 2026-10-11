@@ -466,7 +466,8 @@ def test_extract_best_figure_bounds_asset_path_in_deep_isolated_output(
     tmp_path,
 ) -> None:
     pdf_path = tmp_path / "deep-path-figure.pdf"
-    out_dir = tmp_path / ("isolated-report-run-" * 5)
+    # Leave room for xdist's worker-specific temp segment on Windows.
+    out_dir = tmp_path / ("isolated-report-run-" * 3)
     _build_candidates_pdf(pdf_path)
 
     response = extract_best_figure(

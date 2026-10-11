@@ -216,6 +216,7 @@ def generate_signal_post_projection(
         candidate_read_request = SignalCandidateReadRequest(
             schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
             db_path=request.signal_store_db or request.db_path,
+            manifest_sha256=generation.candidate_manifest_sha256,
             extraction_request_id=generation.extraction_request_id,
             candidate_ids=list(generation.candidate_ids),
             group_ids=[generation.candidate_group_id],

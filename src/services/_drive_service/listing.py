@@ -6,6 +6,7 @@ from src.services import drive_service as boundary
 
 from .shared import *  # noqa: F401,F403
 from .client_cache import _get_drive_client
+from .auth import _build_drive_client
 from src.contracts.run_budget import (
     BudgetDecision,
     BudgetRequest,
@@ -827,6 +828,139 @@ def list_files_in_folder(
         ctx=ctx,
         outcome="completed",
         actual_reads=1,
+    )
+    return response
+
+
+def preflight_drive_folder_access(
+    request: DriveFolderCapabilityPreflightRequest, ctx: RunContext
+) -> DriveFolderCapabilityPreflightResponse:
+    """Check one Drive folder with a bounded metadata-only read.
+
+    OAuth tokens are never refreshed or rewritten by this diagnostic operation.
+    """
+    folder_id = str(request.folder_id or "").strip()
+    if not folder_id:
+        raise AppError(
+            code="drive_folder_id_missing",
+            message="Drive folder ID is required for capability preflight",
+            retryable=False,
+        )
+    if request.auth_mode not in {"service_account", "oauth_user"}:
+        raise AppError(
+            code="drive_auth_mode_invalid",
+            message="Drive authentication mode is unsupported",
+            retryable=False,
+        )
+    credential_path = (
+        request.service_account_path
+        if request.auth_mode == "service_account"
+        else str(request.oauth_token_path or "")
+    )
+    if not credential_path or not Path(credential_path).expanduser().is_file():
+        raise AppError(
+            code=(
+                "drive_service_account_missing"
+                if request.auth_mode == "service_account"
+                else "drive_oauth_token_missing"
+            ),
+            message="Configured Drive credential file is unavailable",
+            retryable=False,
+        )
+
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_capability_preflight_start",
+            module=logger.name,
+            fields={"auth_mode": request.auth_mode, "provider_call_limit": 1},
+        )
+    )
+    try:
+        try:
+            drive = _build_drive_client(
+                auth_mode=request.auth_mode,
+                service_account_path=request.service_account_path,
+                oauth_token_path=request.oauth_token_path,
+                ctx=ctx,
+                allow_token_refresh=False,
+                allow_401_refresh=False,
+                require_write_scope=request.require_write_scope,
+                timeout_seconds=request.timeout_seconds,
+            )
+        except AppError as exc:
+            if "provider_calls" in exc.context:
+                raise
+            raise AppError(
+                code=exc.code,
+                message=exc.message,
+                cause=exc,
+                retryable=exc.retryable,
+                severity=exc.severity,
+                context={**exc.context, "provider_calls": 0},
+            ) from exc
+        metadata = (
+            drive.files()
+            .get(
+                fileId=folder_id,
+                fields="id,mimeType,capabilities(canAddChildren)",
+                supportsAllDrives=bool(request.supports_all_drives),
+            )
+            .execute(num_retries=0)
+        )
+    except AppError:
+        raise
+    except DRIVE_BOUNDARY_EXCEPTIONS as exc:
+        status_code = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
+        authentication_error = status_code in {401, 403}
+        retryable = (
+            status_code == 0 or status_code in {408, 425, 429} or status_code >= 500
+        )
+        raise AppError(
+            code=(
+                "drive_credentials_invalid"
+                if authentication_error
+                else "drive_folder_unavailable"
+            ),
+            message="Drive folder capability preflight failed",
+            cause=exc,
+            retryable=retryable,
+            context={"status_code": status_code, "provider_calls": 1},
+        ) from exc
+    if not isinstance(metadata, dict):
+        raise AppError(
+            code="drive_folder_metadata_invalid",
+            message="Drive folder capability metadata response was invalid",
+            retryable=True,
+            context={"provider_calls": 1},
+        )
+    capabilities = metadata.get("capabilities")
+    can_add_children_value = (
+        capabilities.get("canAddChildren") if isinstance(capabilities, dict) else None
+    )
+    response = DriveFolderCapabilityPreflightResponse(
+        schema_version="1.0",
+        accessible=True,
+        is_folder=metadata.get("mimeType") == "application/vnd.google-apps.folder",
+        can_add_children=(
+            can_add_children_value if isinstance(can_add_children_value, bool) else None
+        ),
+        provider_calls=1,
+    )
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="drive_folder_capability_preflight_complete",
+            module=logger.name,
+            fields={
+                "accessible": response.accessible,
+                "is_folder": response.is_folder,
+                "can_add_children": response.can_add_children,
+                "provider_calls": 1,
+            },
+        )
     )
     return response
 

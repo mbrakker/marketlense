@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from src.contracts.browser_download import (
@@ -19,6 +20,7 @@ from src.services._browser_report_download.models import (
     BrowserUseAgentResult,
 )
 from src.utils.errors import AppError
+from src.utils.clock import utc_now_seconds_z
 
 from .classification import (
     _agent_result_indicates_report_not_found,
@@ -379,6 +381,11 @@ def _build_salvaged_email_result(
     network_resource_urls: list[str],
     network_events: list[BrowserDownloadNetworkEvent],
 ) -> BrowserReportDownloadResult:
+    if outcome == "email_requested":
+        confirmation_evidence = replace(
+            confirmation_evidence,
+            submission_confirmed_at_utc=utc_now_seconds_z(),
+        )
     route_steps = [
         BrowserDownloadRouteStep(
             schema_version="1.0",

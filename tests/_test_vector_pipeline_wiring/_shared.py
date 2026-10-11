@@ -456,6 +456,11 @@ def _base_vector_report_dependencies(
         del ctx
         report = req.reports[0]
         asset_dir = Path(req.output_dir) / report.report_slug / "assets"
+        asset_dir.mkdir(parents=True, exist_ok=True)
+        for size in ("small", "medium", "large"):
+            (asset_dir / f"report-card-{size}.png").write_bytes(
+                f"cover-{size}".encode("ascii")
+            )
         return [
             SimpleNamespace(
                 schema_version="2.0",

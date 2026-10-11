@@ -5,11 +5,23 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from src.contracts.browser_download import BrowserRuntimeAvailabilityResponse
 from src.services._browser_report_download._browser_runtime.runtime import (
     browser_runtime_identity,
     load_browser_session_class,
     load_browser_use_runtime,
 )
+
+
+def test_browser_runtime_availability_contract_rejects_inconsistent_state() -> None:
+    with pytest.raises(ValueError, match="reason code is inconsistent"):
+        BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=True,
+            reason_code="browser_runtime_dependency_missing",
+        )
 
 
 def test_browser_worker_uses_the_same_supported_runtime_as_the_parent() -> None:

@@ -416,6 +416,37 @@ def _reports_db_030_add_signal_publication_manifest(
         )
 
 
+def _reports_db_031_create_immutable_signal_candidate_manifests(
+    conn: sqlite3.Connection,
+) -> None:
+    """Retain append-only checksummed approved Signal candidate snapshots."""
+    from .schema import _SIGNAL_CANDIDATE_MANIFESTS_TABLE_SQL
+
+    conn.execute(_SIGNAL_CANDIDATE_MANIFESTS_TABLE_SQL)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_signal_candidate_manifests_group "
+        "ON signal_candidate_manifests(group_id, extraction_request_id)"
+    )
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_signal_candidate_manifest_update
+        BEFORE UPDATE ON signal_candidate_manifests
+        BEGIN
+          SELECT RAISE(ABORT, 'signal candidate manifests are immutable');
+        END
+        """
+    )
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_signal_candidate_manifest_delete
+        BEFORE DELETE ON signal_candidate_manifests
+        BEGIN
+          SELECT RAISE(ABORT, 'signal candidate manifests are immutable');
+        END
+        """
+    )
+
+
 def _reports_db_023_create_corpus_rehabilitation_campaigns(
     conn: sqlite3.Connection,
 ) -> None:

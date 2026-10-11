@@ -147,6 +147,57 @@
       ],
       "type": "object"
     },
+    "src.contracts._browser_download.dev_diagnostics.BrowserExecutableAvailabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.dev_diagnostics.BrowserExecutableAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "available"
+      ],
+      "type": "object"
+    },
+    "src.contracts._browser_download.dev_diagnostics.BrowserRuntimeAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "enum": [
+            "browser_runtime_available",
+            "browser_runtime_dependency_missing"
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "available",
+        "reason_code"
+      ],
+      "type": "object"
+    },
     "src.contracts._browser_download.forensics.FailedAcquisitionForensicsArtifact": {
       "additionalProperties": false,
       "properties": {
@@ -1366,6 +1417,9 @@
             }
           ]
         },
+        "mail_delivery_generation_id": {
+          "type": "string"
+        },
         "mailbox_settings": {
           "anyOf": [
             {},
@@ -1434,6 +1488,9 @@
         },
         "settings": {
           "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+        },
+        "source_identity_id": {
+          "type": "string"
         },
         "state_db": {
           "type": "string"
@@ -1540,6 +1597,26 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "mail_delivery_request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mail_delivery_requested_after_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "normalized_url": {
           "type": "string"
@@ -2855,6 +2932,9 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "submission_confirmed_at_utc": {
+          "type": "string"
         },
         "submit_button_state": {
           "type": "string"
@@ -15953,6 +16033,16 @@
         "path": {
           "type": "string"
         },
+        "profile_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "schema_version": {
           "type": "string"
         }
@@ -20528,6 +20618,101 @@
       ],
       "type": "object"
     },
+    "src.contracts.drive.DriveFolderCapabilityPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "auth_mode": {
+          "type": "string"
+        },
+        "drive_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "folder_id": {
+          "type": "string"
+        },
+        "include_items_from_all_drives": {
+          "type": "boolean"
+        },
+        "oauth_token_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "require_write_scope": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "service_account_path": {
+          "type": "string"
+        },
+        "supports_all_drives": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "folder_id",
+        "service_account_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.drive.DriveFolderCapabilityPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "can_add_children": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_folder": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
     "src.contracts.drive.DriveFolderEnsureRequest": {
       "additionalProperties": false,
       "properties": {
@@ -21735,6 +21920,42 @@
       ],
       "type": "object"
     },
+    "src.contracts.files.ExecutableAvailabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "executable_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "executable_name"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.ExecutableAvailabilityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "executable_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "executable_name",
+        "available"
+      ],
+      "type": "object"
+    },
     "src.contracts.files.FileBundleHashRequest": {
       "additionalProperties": false,
       "properties": {
@@ -22455,6 +22676,37 @@
         "schema_version",
         "path",
         "content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.RepositoryRevisionReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "working_directory": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "src.contracts.files.RepositoryRevisionReadResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "commit_sha": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "commit_sha"
       ],
       "type": "object"
     },
@@ -24178,6 +24430,100 @@
       ],
       "type": "object"
     },
+    "src.contracts.llm.OpenAIModelPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "model"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenAIModelPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "model",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenRouterModelPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_key": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "schema_version",
+        "api_key",
+        "model"
+      ],
+      "type": "object"
+    },
+    "src.contracts.llm.OpenRouterModelPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "model",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
     "src.contracts.llm_usage.LLMPolicyEffectivenessRequest": {
       "additionalProperties": false,
       "properties": {
@@ -25305,6 +25651,16 @@
         "created_at": {
           "type": "number"
         },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -25333,6 +25689,16 @@
     "src.contracts.lock.LockReleaseRequest": {
       "additionalProperties": false,
       "properties": {
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lock_path": {
           "type": "string"
         },
@@ -25614,6 +25980,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.mailbox_acquisition.MailboxAccessPreflightResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accessible": {
+          "type": "boolean"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "provider",
+        "accessible",
+        "provider_calls"
+      ],
+      "type": "object"
+    },
     "src.contracts.mailbox_acquisition.MailboxAcquisitionSettings": {
       "additionalProperties": false,
       "properties": {
@@ -25811,6 +26201,30 @@
       ],
       "type": "object"
     },
+    "src.contracts.mailbox_acquisition.MailboxLinkReference": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_text": {
+          "type": "string"
+        },
+        "nearby_text": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "url",
+        "anchor_text",
+        "nearby_text"
+      ],
+      "type": "object"
+    },
     "src.contracts.mailbox_acquisition.MailboxMessage": {
       "additionalProperties": false,
       "properties": {
@@ -25828,6 +26242,12 @@
         },
         "html_body": {
           "type": "string"
+        },
+        "link_references": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxLinkReference"
+          },
+          "type": "array"
         },
         "links": {
           "items": {
@@ -29364,6 +29784,70 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_utils.CropPublicationProofRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "expected_image_sha256": {
+          "type": "string"
+        },
+        "image_path": {
+          "type": "string"
+        },
+        "item_type": {
+          "type": "string"
+        },
+        "output_dir": {
+          "type": "string"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "qa_sidecar_path": {
+          "type": "string"
+        },
+        "render_dpi": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "output_dir",
+        "image_path",
+        "qa_sidecar_path",
+        "candidate_id",
+        "page",
+        "item_type",
+        "render_dpi",
+        "expected_image_sha256"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pdf_utils.CropPublicationProofResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "accepted",
+        "reason"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_utils.PdfEofCheckRequest": {
       "additionalProperties": false,
       "properties": {
@@ -29823,6 +30307,244 @@
         "sample_count",
         "p50_wall_time_ms",
         "p95_wall_time_ms"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "degraded",
+            "blocked",
+            "not_required",
+            "not_checked"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "capability",
+        "affected_workflows",
+        "status",
+        "reason_code",
+        "retryable",
+        "remediation",
+        "required"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightReport": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_count": {
+          "type": "integer"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pipeline_preflight.CapabilityPreflightCheck"
+          },
+          "type": "array"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "external_writes": {
+          "type": "integer"
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "provider_calls": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "degraded",
+            "blocked",
+            "not_required",
+            "not_checked"
+          ]
+        },
+        "workflow_names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workflow_statuses": {
+          "additionalProperties": {
+            "enum": [
+              "ready",
+              "degraded",
+              "blocked",
+              "not_required",
+              "not_checked"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "status",
+        "workflow_names",
+        "workflow_statuses",
+        "checks",
+        "elapsed_ms",
+        "provider_calls",
+        "external_writes",
+        "blocking_count"
+      ],
+      "type": "object"
+    },
+    "src.contracts.pipeline_preflight.CapabilityPreflightRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "browser_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._browser_download.identity.BrowserDownloadSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "browser_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "live_checks": {
+          "type": "boolean"
+        },
+        "mailbox_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.mailbox_acquisition.MailboxAcquisitionSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mailbox_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_name": {
+          "enum": [
+            "manual",
+            "autonomous_mvp"
+          ]
+        },
+        "publish_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.publish.PublishSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publish_settings_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_inventory_config_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publisher_inventory_settings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts._publisher_inventory.settings.PublisherInventorySettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queue_policies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/src.contracts.workflow_queue.WorkflowQueuePolicy"
+          },
+          "type": "object"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/src.contracts.config.AppSettings"
+        },
+        "workflow_control": {
+          "$ref": "#/$defs/src.contracts.workflow_control.WorkflowControlSettings"
+        }
+      },
+      "required": [
+        "schema_version",
+        "profile_name",
+        "settings",
+        "workflow_control",
+        "queue_policies"
       ],
       "type": "object"
     },
@@ -34166,6 +34888,12 @@
           },
           "type": "object"
         },
+        "dpi": {
+          "type": "integer"
+        },
+        "image_sha256": {
+          "type": "string"
+        },
         "path": {
           "type": "string"
         },
@@ -34213,6 +34941,28 @@
           ],
           "type": "array"
         },
+        "full_page_target": {
+          "type": "boolean"
+        },
+        "original_bbox": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "page": {
           "type": "integer"
         },
@@ -34237,7 +34987,8 @@
         "schema_version",
         "pdf_path",
         "page",
-        "bbox"
+        "bbox",
+        "original_bbox"
       ],
       "type": "object"
     },
@@ -34262,6 +35013,9 @@
             }
           ],
           "type": "array"
+        },
+        "degradation_reason": {
+          "type": "string"
         },
         "page": {
           "type": "integer"
@@ -34385,14 +35139,105 @@
     "src.contracts.report_assets.CropRefinePageRenderResponse": {
       "additionalProperties": false,
       "properties": {
+        "coordinate_transform_version": {
+          "type": "string"
+        },
+        "crop_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_height": {
           "type": "integer"
         },
         "image_path": {
           "type": "string"
         },
+        "image_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
         "image_width": {
           "type": "integer"
+        },
+        "media_box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "page": {
           "type": "integer"
@@ -34402,6 +35247,40 @@
         },
         "page_width": {
           "type": "number"
+        },
+        "pdf_page_height": {
+          "type": "number"
+        },
+        "pdf_page_width": {
+          "type": "number"
+        },
+        "pdf_to_display_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "rotation": {
+          "type": "integer"
         },
         "scale_x": {
           "type": "number"
@@ -34422,7 +35301,16 @@
         "page_width",
         "page_height",
         "scale_x",
-        "scale_y"
+        "scale_y",
+        "coordinate_transform_version",
+        "display_to_pdf_transform",
+        "pdf_to_display_transform",
+        "image_to_pdf_transform",
+        "rotation",
+        "crop_box",
+        "media_box",
+        "pdf_page_width",
+        "pdf_page_height"
       ],
       "type": "object"
     },
@@ -34438,11 +35326,39 @@
           },
           "type": "array"
         },
+        "coordinate_transform_version": {
+          "type": "string"
+        },
         "cost_daily_path": {
           "type": "string"
         },
         "cost_ledger_path": {
           "type": "string"
+        },
+        "display_to_pdf_transform": {
+          "maxItems": 6,
+          "minItems": 6,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
         },
         "execution_identity": {
           "type": "string"
@@ -35342,6 +36258,9 @@
         "file_id": {
           "type": "string"
         },
+        "final_crop_dpi": {
+          "type": "integer"
+        },
         "out_dir": {
           "type": "string"
         },
@@ -35550,6 +36469,9 @@
     "src.contracts.report_cards.CardCoverAsset": {
       "additionalProperties": false,
       "properties": {
+        "content_sha256": {
+          "type": "string"
+        },
         "height": {
           "type": "integer"
         },
@@ -35675,6 +36597,9 @@
     "src.contracts.report_cards.ReportCardManifest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },
@@ -35763,6 +36688,9 @@
     "src.contracts.report_cards.ReportCardManifestRequest": {
       "additionalProperties": false,
       "properties": {
+        "cover_style_hash": {
+          "type": "string"
+        },
         "covered_period": {
           "type": "string"
         },
@@ -36484,6 +37412,12 @@
           "type": "string"
         },
         "caption_source": {
+          "type": "string"
+        },
+        "crop_dpi": {
+          "type": "integer"
+        },
+        "crop_image_sha256": {
           "type": "string"
         },
         "crop_qa_accepted": {
@@ -38297,6 +39231,37 @@
       ],
       "type": "object"
     },
+    "src.contracts.signal_candidates.SignalCandidateManifestSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidate"
+          },
+          "type": "array"
+        },
+        "extraction_request_id": {
+          "type": "string"
+        },
+        "group": {
+          "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
+        },
+        "manifest_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "manifest_sha256",
+        "extraction_request_id",
+        "group",
+        "candidates"
+      ],
+      "type": "object"
+    },
     "src.contracts.signal_candidates.SignalCandidateReadRequest": {
       "additionalProperties": false,
       "properties": {
@@ -38326,6 +39291,9 @@
         },
         "limit": {
           "type": "integer"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -38375,6 +39343,9 @@
             "$ref": "#/$defs/src.contracts.signal_candidates.SignalCandidateGroup"
           },
           "type": "array"
+        },
+        "manifest_sha256": {
+          "type": "string"
         },
         "schema_version": {
           "type": "string"
@@ -38480,6 +39451,12 @@
         },
         "group_count": {
           "type": "integer"
+        },
+        "manifest_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "schema_version": {
           "type": "string"
@@ -38632,6 +39609,77 @@
       ],
       "type": "object"
     },
+    "src.contracts.sqlite_migration.SqliteCapabilityInspectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "database_key": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "lock_timeout_seconds": {
+          "type": "number"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "db_path"
+      ],
+      "type": "object"
+    },
+    "src.contracts.sqlite_migration.SqliteCapabilityInspectionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "current_version": {
+          "type": "integer"
+        },
+        "database_key": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "integer"
+        },
+        "foreign_keys_ok": {
+          "type": "boolean"
+        },
+        "integrity_ok": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "write_lock_available": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "database_key",
+        "status",
+        "reason_code",
+        "retryable",
+        "current_version",
+        "expected_version",
+        "integrity_ok",
+        "foreign_keys_ok",
+        "write_lock_available"
+      ],
+      "type": "object"
+    },
     "src.contracts.sqlite_migration.SqliteMigrationAppliedStep": {
       "additionalProperties": false,
       "properties": {
@@ -38741,6 +39789,9 @@
         "provider_cursor": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -38771,10 +39822,16 @@
         "selected_message_id": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
         "status": {
+          "type": "string"
+        },
+        "submission_confirmed_at_utc": {
           "type": "string"
         },
         "updated_at_utc": {
@@ -38803,6 +39860,85 @@
         "error_code",
         "created_at_utc",
         "updated_at_utc"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestByKeyGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "idempotency_key": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "idempotency_key"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestByKeyGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestGetRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "type": "integer"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "state_db": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "state_db",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "src.contracts.state.MailDeliveryRequestGetResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/src.contracts.state.MailDeliveryRequest"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "request"
       ],
       "type": "object"
     },
@@ -38928,6 +40064,9 @@
         "idempotency_key": {
           "type": "string"
         },
+        "publisher_id": {
+          "type": "string"
+        },
         "publisher_name": {
           "type": "string"
         },
@@ -38946,10 +40085,19 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
         "state_db": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "submission_confirmed_at_utc": {
           "type": "string"
         }
       },
@@ -47838,6 +48986,27 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressPostTypePreflightRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "post_type": {
+          "type": "string"
+        },
+        "required_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "post_type"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressPostUpdateRequest": {
       "additionalProperties": false,
       "properties": {
@@ -47937,9 +49106,57 @@
       ],
       "type": "object"
     },
+    "src.contracts.wordpress.WordPressPublishCapabilityRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "post_type_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "post_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rest_methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "user_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version"
+      ],
+      "type": "object"
+    },
     "src.contracts.wordpress.WordPressPublishTargetPreflightRequest": {
       "additionalProperties": false,
       "properties": {
+        "additional_post_types": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress.WordPressPostTypePreflightRequirement"
+          },
+          "type": "array"
+        },
         "auth_header": {
           "type": "string"
         },
@@ -47959,7 +49176,31 @@
         "post_type": {
           "type": "string"
         },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "required_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_rest_methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_user_capabilities": {
           "items": {
             "type": "string"
           },
@@ -47969,6 +49210,12 @@
           "type": "string"
         },
         "ssl_verify": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "number"
+        },
+        "verify_authentication": {
           "type": "boolean"
         }
       },
@@ -47983,6 +49230,9 @@
     "src.contracts.wordpress.WordPressPublishTargetPreflightResponse": {
       "additionalProperties": false,
       "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
         "base_url": {
           "type": "string"
         },
@@ -47991,6 +49241,9 @@
         },
         "post_type": {
           "type": "string"
+        },
+        "provider_calls": {
+          "type": "integer"
         },
         "reachable": {
           "type": "boolean"
@@ -48001,7 +49254,31 @@
         "status_code": {
           "type": "integer"
         },
+        "verified_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "verified_meta_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_post_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_rest_routes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "verified_user_capabilities": {
           "items": {
             "type": "string"
           },
@@ -48289,6 +49566,9 @@
           },
           "type": "array"
         },
+        "candidate_manifest_sha256": {
+          "type": "string"
+        },
         "category_filters": {
           "items": {
             "type": "string"
@@ -48493,6 +49773,9 @@
         "body_html": {
           "type": "string"
         },
+        "candidate_group_id": {
+          "type": "string"
+        },
         "card_content": {
           "$ref": "#/$defs/src.contracts.signal_cards.SignalCardContent"
         },
@@ -48522,6 +49805,12 @@
         },
         "slug": {
           "type": "string"
+        },
+        "source_attributions": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.wordpress_entities.SignalSourceAttribution"
+          },
+          "type": "array"
         },
         "source_report_ids": {
           "items": {
@@ -48576,6 +49865,24 @@
         "uncertainty",
         "validation_status",
         "card_content"
+      ],
+      "type": "object"
+    },
+    "src.contracts.wordpress_entities.SignalSourceAttribution": {
+      "additionalProperties": false,
+      "properties": {
+        "publisher": {
+          "type": "string"
+        },
+        "report_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id"
       ],
       "type": "object"
     },
@@ -51928,6 +53235,9 @@
         "schema_version": {
           "type": "string"
         },
+        "source_identity_id": {
+          "type": "string"
+        },
         "source_url": {
           "type": "string"
         },
@@ -52990,6 +54300,9 @@
           "type": "string"
         },
         "frozen_evidence_manifest": {
+          "type": "string"
+        },
+        "frozen_manifest_sha256": {
           "type": "string"
         },
         "input_content_hash": {

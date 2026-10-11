@@ -9,6 +9,10 @@ from src.contracts.state import (
     MailboxCandidateRejectionListResponse,
     MailboxCandidateRejectionRecordRequest,
     MailDeliveryRequest,
+    MailDeliveryRequestByKeyGetRequest,
+    MailDeliveryRequestByKeyGetResponse,
+    MailDeliveryRequestGetRequest,
+    MailDeliveryRequestGetResponse,
     MailDeliveryRequestListDueRequest,
     MailDeliveryRequestListDueResponse,
     MailDeliveryRequestMarkAttemptRequest,
@@ -17,7 +21,7 @@ from src.contracts.state import (
     MailDeliveryRequestUpsertResponse,
 )
 from src.services._state_service.common import _state_conn, logger
-from src.utils.clock import utc_now_seconds_z
+from src.utils.clock import is_utc_timestamp_z, utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -44,25 +48,15 @@ def upsert_mail_delivery_request(
         )
     )
     with _state_conn(request.state_db, ctx) as conn:
-        before = conn.execute(
-            "SELECT id FROM mail_delivery_requests WHERE idempotency_key=?",
-            (request.idempotency_key,),
-        ).fetchone()
-        conn.execute(
+        insert = conn.execute(
             """
             INSERT INTO mail_delivery_requests(
               idempotency_key, source_url, report_title, publisher_name,
               delivery_email, requested_after_utc, route_family, route_history_id,
-              status, next_attempt_after_utc, created_at_utc, updated_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
-            ON CONFLICT(idempotency_key) DO UPDATE SET
-              source_url=excluded.source_url,
-              report_title=excluded.report_title,
-              publisher_name=excluded.publisher_name,
-              delivery_email=excluded.delivery_email,
-              route_family=excluded.route_family,
-              route_history_id=excluded.route_history_id,
-              updated_at_utc=excluded.updated_at_utc
+              status, next_attempt_after_utc, created_at_utc, updated_at_utc,
+              publisher_id, source_identity_id, submission_confirmed_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(idempotency_key) DO NOTHING
             """,
             (
                 request.idempotency_key,
@@ -73,19 +67,69 @@ def upsert_mail_delivery_request(
                 request.requested_after_utc,
                 request.route_family,
                 request.route_history_id,
-                request.requested_after_utc,
+                request.status,
+                request.requested_after_utc or now,
                 now,
                 now,
+                request.publisher_id,
+                request.source_identity_id,
+                request.submission_confirmed_at_utc,
             ),
         )
         row = conn.execute(
             "SELECT * FROM mail_delivery_requests WHERE idempotency_key=?",
             (request.idempotency_key,),
         ).fetchone()
+        if (
+            request.status == "pending"
+            and request.submission_confirmed_at_utc
+            and str(row[9] or "") == "submission_started"
+        ):
+            if not _same_submission_identity(row, request):
+                raise AppError(
+                    code="mail_delivery_submission_identity_mismatch",
+                    message="Confirmed mail submission does not match its durable intent",
+                    retryable=False,
+                )
+            conn.execute(
+                """
+                UPDATE mail_delivery_requests
+                SET report_title=?, publisher_name=?, requested_after_utc=?,
+                    route_family=?, route_history_id=?, status='pending',
+                    next_attempt_after_utc=?, submission_confirmed_at_utc=?,
+                    updated_at_utc=?
+                WHERE id=? AND status='submission_started'
+                """,
+                (
+                    request.report_title,
+                    request.publisher_name,
+                    request.requested_after_utc,
+                    request.route_family,
+                    request.route_history_id,
+                    request.requested_after_utc,
+                    request.submission_confirmed_at_utc,
+                    now,
+                    int(row[0]),
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM mail_delivery_requests WHERE idempotency_key=?",
+                (request.idempotency_key,),
+            ).fetchone()
+        elif request.status == "pending" and request.submission_confirmed_at_utc:
+            if (
+                str(row[9] or "") == "pending"
+                and str(row[6] or "") != request.submission_confirmed_at_utc
+            ):
+                raise AppError(
+                    code="mail_delivery_submission_watermark_mismatch",
+                    message="Confirmed mail submission conflicts with its persisted watermark",
+                    retryable=False,
+                )
     response = MailDeliveryRequestUpsertResponse(
         schema_version="1.0",
         request=_row_to_mail_delivery_request(row),
-        created=before is None,
+        created=insert.rowcount == 1,
     )
     logger.info(
         log_event(
@@ -102,6 +146,56 @@ def upsert_mail_delivery_request(
         )
     )
     return response
+
+
+def get_mail_delivery_request(
+    request: MailDeliveryRequestGetRequest,
+    ctx: RunContext,
+) -> MailDeliveryRequestGetResponse:
+    if request.request_id <= 0:
+        raise AppError(
+            code="mail_delivery_request_id_invalid",
+            message="Mail delivery request ID must be a positive integer",
+            retryable=False,
+        )
+    with _state_conn(request.state_db, ctx) as conn:
+        row = conn.execute(
+            "SELECT * FROM mail_delivery_requests WHERE id=?",
+            (request.request_id,),
+        ).fetchone()
+    if row is None:
+        raise AppError(
+            code="mail_delivery_request_not_found",
+            message="Mail delivery request does not exist",
+            retryable=False,
+            context={"request_id": request.request_id},
+        )
+    return MailDeliveryRequestGetResponse(
+        schema_version="1.0",
+        request=_row_to_mail_delivery_request(row),
+    )
+
+
+def get_mail_delivery_request_by_key(
+    request: MailDeliveryRequestByKeyGetRequest,
+    ctx: RunContext,
+) -> MailDeliveryRequestByKeyGetResponse:
+    key = str(request.idempotency_key or "").strip()
+    if not key:
+        raise AppError(
+            code="mail_delivery_idempotency_key_missing",
+            message="Mail delivery request idempotency key is required",
+            retryable=False,
+        )
+    with _state_conn(request.state_db, ctx) as conn:
+        row = conn.execute(
+            "SELECT * FROM mail_delivery_requests WHERE idempotency_key=?",
+            (key,),
+        ).fetchone()
+    return MailDeliveryRequestByKeyGetResponse(
+        schema_version="1.0",
+        request=_row_to_mail_delivery_request(row) if row is not None else None,
+    )
 
 
 def list_due_mail_delivery_requests(
@@ -130,11 +224,30 @@ def list_due_mail_delivery_requests(
             """
             SELECT * FROM mail_delivery_requests
             WHERE status='pending' AND next_attempt_after_utc <= ?
+              AND trim(publisher_id) <> ''
+              AND trim(source_identity_id) <> ''
+              AND trim(submission_confirmed_at_utc) <> ''
+              AND requested_after_utc = submission_confirmed_at_utc
             ORDER BY next_attempt_after_utc ASC, id ASC
             LIMIT ?
             """,
             (now, limit),
         ).fetchall()
+        held_unverified_count = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) FROM mail_delivery_requests
+                WHERE status='pending' AND next_attempt_after_utc <= ?
+                  AND (
+                    trim(publisher_id) = ''
+                    OR trim(source_identity_id) = ''
+                    OR trim(submission_confirmed_at_utc) = ''
+                    OR requested_after_utc <> submission_confirmed_at_utc
+                  )
+                """,
+                (now,),
+            ).fetchone()[0]
+        )
     response = MailDeliveryRequestListDueResponse(
         schema_version="1.0",
         requests=[_row_to_mail_delivery_request(row) for row in rows],
@@ -145,7 +258,11 @@ def list_due_mail_delivery_requests(
             role="service",
             event="mail_delivery_request_list_due_complete",
             module=logger.name,
-            fields={"state_db": request.state_db, "count": len(response.requests)},
+            fields={
+                "state_db": request.state_db,
+                "count": len(response.requests),
+                "held_unverified_count": held_unverified_count,
+            },
         )
     )
     return response
@@ -345,8 +462,37 @@ def _validate_upsert_request(request: MailDeliveryRequestUpsertRequest) -> None:
         missing.append("idempotency_key")
     if not str(request.source_url or "").strip():
         missing.append("source_url")
-    if not str(request.requested_after_utc or "").strip():
+    if not str(request.publisher_id or "").strip():
+        missing.append("publisher_id")
+    if not str(request.source_identity_id or "").strip():
+        missing.append("source_identity_id")
+    if request.status not in {"submission_started", "pending"}:
+        missing.append("status")
+    if (
+        request.status != "submission_started"
+        and not str(request.requested_after_utc or "").strip()
+    ):
         missing.append("requested_after_utc")
+    if request.status == "submission_started" and (
+        request.requested_after_utc or request.submission_confirmed_at_utc
+    ):
+        missing.append("unconfirmed_submission_watermark")
+    if (
+        request.status == "pending"
+        and not str(request.submission_confirmed_at_utc or "").strip()
+    ):
+        missing.append("submission_confirmed_at_utc")
+    if (
+        request.status == "pending"
+        and request.submission_confirmed_at_utc
+        and (not is_utc_timestamp_z(request.submission_confirmed_at_utc))
+    ):
+        missing.append("submission_confirmed_at_utc_invalid")
+    if (
+        request.submission_confirmed_at_utc
+        and request.requested_after_utc != request.submission_confirmed_at_utc
+    ):
+        missing.append("submission_watermark_mismatch")
     if missing:
         raise AppError(
             code="mail_delivery_request_invalid",
@@ -354,6 +500,20 @@ def _validate_upsert_request(request: MailDeliveryRequestUpsertRequest) -> None:
             retryable=False,
             context={"missing": missing},
         )
+
+
+def _same_submission_identity(row, request: MailDeliveryRequestUpsertRequest) -> bool:
+    return (
+        str(row[1] or "") == request.idempotency_key
+        and str(row[2] or "") == request.source_url
+        and str(row[3] or "") == request.report_title
+        and str(row[4] or "") == request.publisher_name
+        and str(row[5] or "") == request.delivery_email
+        and str(row[7] or "") == request.route_family
+        and str(row[8] or "") == request.route_history_id
+        and str(row[20] or "") == request.publisher_id
+        and str(row[21] or "") == request.source_identity_id
+    )
 
 
 def _row_to_mail_delivery_request(row) -> MailDeliveryRequest:
@@ -391,6 +551,9 @@ def _row_to_mail_delivery_request(row) -> MailDeliveryRequest:
         error_code=str(row[17] or ""),
         created_at_utc=str(row[18] or ""),
         updated_at_utc=str(row[19] or ""),
+        publisher_id=str(row[20] or ""),
+        source_identity_id=str(row[21] or ""),
+        submission_confirmed_at_utc=str(row[22] or ""),
     )
 
 

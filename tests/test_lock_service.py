@@ -327,10 +327,10 @@ def test_failed_initial_lock_write_removes_only_the_created_file(
     unrelated_file = tmp_path / ".ingest.lock.unrelated.tmp"
     unrelated_file.write_text("preserve", encoding="utf-8")
 
-    def fail_replace(source, destination):
-        raise OSError("simulated atomic lock write failure")
+    def fail_link(source, destination):
+        raise OSError("simulated atomic lock publication failure")
 
-    external_boundary_mocks_only.setattr(lock_service.os, "replace", fail_replace)
+    external_boundary_mocks_only.setattr(lock_service.os, "link", fail_link)
 
     with pytest.raises(AppError) as exc_info:
         acquire_lock(

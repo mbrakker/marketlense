@@ -260,7 +260,7 @@ def _write_lock_atomically(
     lock_path: Path,
     payload: dict[str, object],
     ctx: RunContext,
-) -> None:
+) -> bool:
     fd: int | None = None
     temp_path: Path | None = None
     temp_identity: tuple[int, int] | None = None
@@ -278,13 +278,15 @@ def _write_lock_atomically(
             json.dump(payload, handle, ensure_ascii=True)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temp_path, lock_path)
+        try:
+            # The sidecar guard serializes current workers. A hard link also
+            # keeps publication exclusive against older workers that only use
+            # O_EXCL on the lock path and do not know about that guard.
+            os.link(temp_path, lock_path)
+        except FileExistsError:
+            return False
+        return True
     except (OSError, ValueError, TypeError) as exc:
-        if fd is not None:
-            with suppress(OSError):
-                os.close(fd)
-        if temp_path is not None:
-            _remove_created_lock_file(temp_path, temp_identity, ctx)
         raise AppError(
             code="lock_acquire_failed",
             message=f"Failed to acquire lock at {lock_path}",
@@ -292,6 +294,12 @@ def _write_lock_atomically(
             retryable=False,
             context={"lock_path": str(lock_path)},
         ) from exc
+    finally:
+        if fd is not None:
+            with suppress(OSError):
+                os.close(fd)
+        if temp_path is not None:
+            _remove_created_lock_file(temp_path, temp_identity, ctx)
 
 
 def get_lock(request: LockGetRequest, ctx: RunContext) -> LockGetResponse:
@@ -422,7 +430,35 @@ def acquire_lock(request: LockAcquireRequest, ctx: RunContext) -> LockAcquireRes
         }
         if requested_ttl is not None:
             payload["ttl_seconds"] = requested_ttl
-        _write_lock_atomically(lock_path, payload, ctx)
+        if not _write_lock_atomically(lock_path, payload, ctx):
+            conflict = _read_lock(request.lock_path)
+            if conflict is None:
+                raise AppError(
+                    code="lock_acquire_raced",
+                    message="A competing worker released the lock during acquisition",
+                    retryable=True,
+                    context={"lock_path": request.lock_path},
+                )
+            logger.info(
+                log_event(
+                    ctx,
+                    role="service",
+                    event="lock_conflict",
+                    module=logger.name,
+                    fields={
+                        "lock_path": request.lock_path,
+                        "existing_owner": conflict.owner_id,
+                        "existing_pid": conflict.pid,
+                        "created_at": conflict.created_at,
+                    },
+                )
+            )
+            return LockAcquireResponse(
+                schema_version="1.0",
+                acquired=False,
+                lock=None,
+                conflict=conflict,
+            )
 
         info = LockInfo(
             schema_version="1.0",

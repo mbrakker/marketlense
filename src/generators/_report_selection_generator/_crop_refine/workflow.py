@@ -9,6 +9,7 @@ from src.contracts.candidates import Candidate
 from src.contracts.ingest import IngestSettings
 from src.contracts.prompts import PromptLoadRequest, PromptRenderRequest
 from src.contracts.report_assets import (
+    CROP_REFINE_COORDINATE_TRANSFORM_VERSION,
     CropRefineBBoxApplyRequest,
     CropRefineCandidate,
     CropRefinePageRenderRequest,
@@ -18,6 +19,7 @@ from src.contracts.report_assets import (
 from src.generators.report_generation_dependencies import ReportSelectionDependencies
 from src.generators.report_generation_shared import logger
 from src.utils.candidate_features import candidate_features, candidate_features_payload
+from src.utils.affine import transform_bbox
 from src.utils.logging import log_event
 from src.utils.model_resolver import (
     effective_sampling_controls,
@@ -304,18 +306,19 @@ def select_refined_candidate_items(
             bbox: tuple[float, float, float, float],
             include_proposed_bbox: bool,
         ) -> dict[str, Any]:
+            display_bbox = transform_bbox(bbox, page_render.pdf_to_display_transform)
             payload_item = {
                 "id": candidate.id,
                 "type": candidate.kind,
                 "page": candidate.page,
-                "bbox": [float(value) for value in bbox],
+                "bbox": [float(value) for value in display_bbox],
                 "caption": (candidate.caption or "")[:400],
                 "preview_text": (candidate.preview_text or "")[:600],
                 "features": candidate_features_payload(candidate),
                 "quality_signals": _candidate_quality_signals(candidate),
             }
             if include_proposed_bbox:
-                payload_item["proposed_bbox"] = [float(value) for value in bbox]
+                payload_item["proposed_bbox"] = [float(value) for value in display_bbox]
             return payload_item
 
         def _invoke_phase(
@@ -354,7 +357,7 @@ def select_refined_candidate_items(
             )
             crop_refine_resp = dependencies.refine_candidate_crops(
                 CropRefineRequest(
-                    schema_version="1.0",
+                    schema_version="1.1",
                     system_prompt=crop_refine_system_render.text,
                     user_prompt=crop_refine_user_render.text,
                     prompt_system_sha256=crop_refine_prompt_set.system.sha256,
@@ -384,6 +387,10 @@ def select_refined_candidate_items(
                     response_cache_enabled=True,
                     response_cache_dir=settings.cache_dir,
                     run_budget=_ranking_run_budget(settings, ctx),
+                    coordinate_transform_version=(
+                        CROP_REFINE_COORDINATE_TRANSFORM_VERSION
+                    ),
+                    display_to_pdf_transform=(page_render.display_to_pdf_transform),
                 ),
                 ctx,
             )
@@ -391,7 +398,7 @@ def select_refined_candidate_items(
                 log_event(
                     ctx,
                     role="generator",
-                    event="crop_refine_llm_response_raw",
+                    event="crop_refine_llm_response_complete",
                     module=logger.name,
                     fields={
                         "page": page_number,
@@ -400,7 +407,7 @@ def select_refined_candidate_items(
                             candidate.id for candidate in phase_candidates
                         ],
                         "candidate_count": len(phase_candidates),
-                        "content": crop_refine_resp.raw_content,
+                        "result_count": len(crop_refine_resp.results),
                     },
                 )
             )
@@ -769,11 +776,16 @@ def select_refined_candidate_items(
                 continue
         bbox_resp = dependencies.apply_crop_refine_bbox(
             CropRefineBBoxApplyRequest(
-                schema_version="1.0",
+                schema_version="1.1",
                 pdf_path=local_pdf_path,
                 page=candidate.page,
                 bbox=refined_bbox,
                 pdf_context=pdf_context,
+                original_bbox=_bbox_tuple(candidate.bbox),
+                full_page_target=bool(
+                    isinstance(candidate.meta, dict)
+                    and candidate.meta.get("full_page_target") is True
+                ),
             ),
             ctx,
         )
@@ -784,7 +796,11 @@ def select_refined_candidate_items(
                 role="generator",
                 event="crop_refine_bbox_applied",
                 module=logger.name,
-                fields={"candidate_id": candidate.id, "bbox": list(refined_bbox)},
+                fields={
+                    "candidate_id": candidate.id,
+                    "bbox": list(refined_bbox),
+                    "degradation_reason": bbox_resp.degradation_reason,
+                },
             )
         )
         width = max(0.0, refined_bbox[2] - refined_bbox[0])

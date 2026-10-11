@@ -22,6 +22,12 @@ python -m src.cli drive-oauth-login --client-json .\google_oauth_client.json --t
 
 The Drive service refreshes a valid authorized-user token for configured calls. If a credential becomes invalid, replace or re-authorize the local secret material and rerun a bounded plan or workflow; do not edit provider tokens into YAML. See [troubleshooting](troubleshooting.md) for failure routing.
 
+The token file records `granted_scopes` only when Google returns the actual OAuth
+grant. Live write-capability preflight uses this metadata rather than the
+requested scopes passed to the credential loader. Older token files without
+that grant record remain usable for normal calls, but write-scope preflight
+reports the scope as unverified until the user completes Drive OAuth again.
+
 ## Browser form identity
 
 Browser form values are sensitive identity data, including business email,

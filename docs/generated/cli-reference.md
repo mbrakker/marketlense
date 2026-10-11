@@ -9,6 +9,7 @@ For command options and help text, run `python -m src.cli <command> --help`.
 | `audit-acquisition-paths` | [`src/_cli/publisher.py`](../../src/_cli/publisher.py) | Public |
 | `backfill-artifact-lineage` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `browser-doctor` | [`src/_cli/browser.py`](../../src/_cli/browser.py) | Public |
+| `capability-preflight` | [`src/_cli/pipeline.py`](../../src/_cli/pipeline.py) | Public |
 | `corpus-rehabilitation-approve` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `corpus-rehabilitation-create` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |
 | `corpus-rehabilitation-plan` | [`src/_cli/admin.py`](../../src/_cli/admin.py) | Public |

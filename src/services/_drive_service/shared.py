@@ -37,6 +37,8 @@ from src.contracts.drive import (
     DriveFileMetadataResponse,
     DriveFolderEnsureRequest,
     DriveFolderEnsureResponse,
+    DriveFolderCapabilityPreflightRequest,
+    DriveFolderCapabilityPreflightResponse,
     DriveFolderFileListRequest,
     DriveFolderFileListResponse,
     DriveListRequest,
@@ -81,6 +83,7 @@ class _DriveCredentialResolution:
     credentials: object
     refreshed: bool
     credential_path: str
+    granted_scopes: tuple[str, ...] | None = None
 
 
 _DRIVE_CLIENTS: dict[tuple[str, str, int], _DriveClientCacheEntry] = {}
@@ -219,6 +222,8 @@ __all__ = [
     "DriveFileMetadataResponse",
     "DriveFolderEnsureRequest",
     "DriveFolderEnsureResponse",
+    "DriveFolderCapabilityPreflightRequest",
+    "DriveFolderCapabilityPreflightResponse",
     "DriveFolderFileListRequest",
     "DriveFolderFileListResponse",
     "DriveListRequest",

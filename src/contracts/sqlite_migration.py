@@ -60,3 +60,52 @@ class SqliteMigrationApplyResponse:
     applied_steps: tuple[SqliteMigrationAppliedStep, ...] = field(
         metadata={"doc": "Ordered migration steps applied during this execution."}
     )
+
+
+@dataclass(frozen=True)
+class SqliteCapabilityInspectionRequest:
+    schema_version: str = field(
+        metadata={"doc": "SQLite capability inspection request version."}
+    )
+    database_key: str = field(
+        metadata={"doc": "Canonical migration registry key for this database."}
+    )
+    db_path: str = field(metadata={"doc": "Existing SQLite database path to inspect."})
+    lock_timeout_seconds: float = field(
+        default=0.1,
+        metadata={"doc": "Maximum wait for a reversible writer-lock probe."},
+    )
+
+
+@dataclass(frozen=True)
+class SqliteCapabilityInspectionResponse:
+    schema_version: str = field(
+        metadata={"doc": "SQLite capability inspection response version."}
+    )
+    database_key: str = field(
+        metadata={"doc": "Canonical migration registry key inspected."}
+    )
+    status: str = field(
+        metadata={"doc": "Inspection outcome: ready, degraded, or blocked."}
+    )
+    reason_code: str = field(
+        metadata={"doc": "Stable machine-readable inspection reason."}
+    )
+    retryable: bool = field(
+        metadata={"doc": "Whether an operator may safely retry this inspection."}
+    )
+    current_version: int = field(
+        metadata={"doc": "Recorded migration version, or zero when unavailable."}
+    )
+    expected_version: int = field(
+        metadata={"doc": "Latest version in the canonical migration registry."}
+    )
+    integrity_ok: bool = field(
+        metadata={"doc": "Whether SQLite quick_check reported an intact database."}
+    )
+    foreign_keys_ok: bool = field(
+        metadata={"doc": "Whether PRAGMA foreign_key_check found no violations."}
+    )
+    write_lock_available: bool = field(
+        metadata={"doc": "Whether a bounded BEGIN IMMEDIATE/ROLLBACK succeeded."}
+    )

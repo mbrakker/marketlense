@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from dataclasses import asdict
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict, replace
 
 import pytest
 
@@ -158,7 +159,6 @@ def test_signal_candidate_store_persists_lineage_and_idempotent_readback(
     assert json.loads(stored[1])["raw_metric_policy"] == (
         "raw_metrics_preserved_without_normalization"
     )
-
     events = [
         json.loads(record.message)
         for record in caplog.records
@@ -171,6 +171,132 @@ def test_signal_candidate_store_persists_lineage_and_idempotent_readback(
         "signal_candidate_store_read_start",
         "signal_candidate_store_read_complete",
     }
+
+
+@pytest.mark.integration
+def test_signal_candidate_snapshots_preserve_same_id_reextractions(
+    tmp_path,
+    run_context,
+) -> None:
+    db_path = str(tmp_path / "signal-snapshots.sqlite")
+    candidate = _candidate(
+        "signal-candidate:theme-ai:signal-ai",
+        group_id="signal-group:theme-ai:signal-ai",
+    )
+    group = _group("signal-group:theme-ai:signal-ai", candidate.candidate_id)
+    first = upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id="extract-ai",
+            candidates=[candidate],
+            groups=[group],
+        ),
+        run_context,
+    )
+    changed_candidate = replace(
+        candidate,
+        summary="AI commerce adoption is accelerating across new evidence.",
+        raw_source_context={
+            **candidate.raw_source_context,
+            "evidence": [{"report_id": "report-a", "text": "Changed source text"}],
+        },
+    )
+    changed_group = replace(
+        group, summary="AI commerce adoption is accelerating across new evidence."
+    )
+    second = upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id="extract-ai",
+            candidates=[changed_candidate],
+            groups=[changed_group],
+        ),
+        run_context,
+    )
+
+    first_hash = first.manifest_hashes[group.group_id]
+    second_hash = second.manifest_hashes[group.group_id]
+    assert first_hash != second_hash
+    first_snapshot = read_signal_candidates(
+        SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            manifest_sha256=first_hash,
+        ),
+        run_context,
+    )
+    latest = read_signal_candidates(
+        SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id="extract-ai",
+            candidate_ids=[candidate.candidate_id],
+            group_ids=[group.group_id],
+        ),
+        run_context,
+    )
+
+    assert first_snapshot.manifest_sha256 == first_hash
+    assert first_snapshot.candidates == [candidate]
+    assert first_snapshot.groups == [group]
+    assert latest.candidates == [changed_candidate]
+    assert latest.groups == [changed_group]
+
+
+@pytest.mark.integration
+def test_concurrent_signal_candidate_snapshots_never_mix_group_versions(
+    tmp_path,
+    run_context,
+) -> None:
+    db_path = str(tmp_path / "concurrent-signal-snapshots.sqlite")
+    candidate = _candidate(
+        "signal-candidate:theme-ai:concurrent",
+        group_id="signal-group:theme-ai:concurrent",
+    )
+    group = _group("signal-group:theme-ai:concurrent", candidate.candidate_id)
+    upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=db_path,
+            extraction_request_id="extract-concurrent",
+            candidates=[candidate],
+            groups=[group],
+        ),
+        run_context,
+    )
+
+    def persist(version: str) -> tuple[str, str]:
+        version_candidate = replace(candidate, summary=f"Summary {version}")
+        version_group = replace(group, summary=f"Summary {version}")
+        response = upsert_signal_candidates(
+            SignalCandidateStoreRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=db_path,
+                extraction_request_id="extract-concurrent",
+                candidates=[version_candidate],
+                groups=[version_group],
+            ),
+            run_context,
+        )
+        return version, response.manifest_hashes[group.group_id]
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        snapshots = list(pool.map(persist, ("one", "two")))
+
+    assert len({manifest_sha256 for _, manifest_sha256 in snapshots}) == 2
+    for version, manifest_sha256 in snapshots:
+        readback = read_signal_candidates(
+            SignalCandidateReadRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=db_path,
+                manifest_sha256=manifest_sha256,
+            ),
+            run_context,
+        )
+        assert readback.candidates[0].summary == f"Summary {version}"
+        assert readback.groups[0].summary == f"Summary {version}"
 
 
 @pytest.mark.integration

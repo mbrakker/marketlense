@@ -467,6 +467,52 @@ class FileStatResponse:
 
 
 @dataclass(frozen=True)
+class ExecutableAvailabilityRequest:
+    schema_version: str = field(
+        metadata={"doc": "Executable-availability request schema version."}
+    )
+    executable_name: str = field(
+        metadata={"doc": "Executable name to resolve using the process search path."}
+    )
+
+
+@dataclass(frozen=True)
+class ExecutableAvailabilityResponse:
+    schema_version: str = field(
+        metadata={"doc": "Executable-availability response schema version."}
+    )
+    executable_name: str = field(metadata={"doc": "Executable name inspected."})
+    available: bool = field(
+        metadata={
+            "doc": "True when the executable is resolvable on the process search path."
+        }
+    )
+
+
+@dataclass(frozen=True)
+class RepositoryRevisionReadRequest:
+    schema_version: str = field(
+        metadata={"doc": "Repository-revision request schema version."}
+    )
+    working_directory: str = field(
+        default="",
+        metadata={
+            "doc": "Repository working directory, empty for the process directory."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class RepositoryRevisionReadResponse:
+    schema_version: str = field(
+        metadata={"doc": "Repository-revision response schema version."}
+    )
+    commit_sha: str = field(
+        metadata={"doc": "Full repository commit SHA, or empty when unavailable."}
+    )
+
+
+@dataclass(frozen=True)
 class DeleteFileRequest:
     schema_version: str = field(metadata={"doc": "Delete file request schema version."})
     path: str = field(metadata={"doc": "Filesystem path to delete."})

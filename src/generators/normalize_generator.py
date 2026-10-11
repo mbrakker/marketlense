@@ -7,7 +7,7 @@ from src.contracts.report_models import Figure, Quote, ReportFigureAsset, Report
 from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.utils.logging import log_event
-from src.utils.coercion import coerce_int, string_value as _s
+from src.utils.coercion import coerce_float, coerce_int, string_value as _s
 from src.services.schema_validator_service import validate_schema
 
 logger = logging.getLogger("market_lense.normalize_generator")
@@ -205,6 +205,24 @@ def _normalize_report_payload(data: ReportPayload) -> ReportPayload:
                     generated_caption=_s(asset.get("generated_caption")).strip(),
                     display_caption=_s(asset.get("display_caption")).strip(),
                     caption_source=_s(asset.get("caption_source")).strip(),
+                    crop_qa_score=coerce_float(asset.get("crop_qa_score"), 0.0),
+                    crop_qa_defects=[
+                        _s(item) for item in asset.get("crop_qa_defects", [])
+                    ],
+                    crop_qa_detector_summary={
+                        _s(key): coerce_float(value, 0.0)
+                        for key, value in dict(
+                            asset.get("crop_qa_detector_summary") or {}
+                        ).items()
+                    },
+                    crop_qa_accepted=asset.get("crop_qa_accepted") is True,
+                    crop_qa_sidecar_path=_s(asset.get("crop_qa_sidecar_path")).strip(),
+                    crop_quality_profile=_s(asset.get("crop_quality_profile")).strip(),
+                    crop_rejection_reason=_s(
+                        asset.get("crop_rejection_reason")
+                    ).strip(),
+                    crop_dpi=coerce_int(asset.get("crop_dpi"), 0),
+                    crop_image_sha256=_s(asset.get("crop_image_sha256")).strip(),
                     schema_version=_s(asset.get("schema_version")).strip() or "1.0",
                 )
             )

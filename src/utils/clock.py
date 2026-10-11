@@ -17,3 +17,14 @@ def utc_now_seconds_iso(value: datetime | None = None) -> str:
 
 def utc_now_seconds_z(value: datetime | None = None) -> str:
     return utc_now_seconds_iso(value).replace("+00:00", "Z")
+
+
+def is_utc_timestamp_z(value: str) -> bool:
+    token = str(value or "").strip()
+    if not token.endswith("Z"):
+        return False
+    try:
+        datetime.fromisoformat(token[:-1] + "+00:00")
+    except ValueError:
+        return False
+    return True

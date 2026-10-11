@@ -33,6 +33,8 @@ from src.services._llm_service.openai_shared import (
     _strip_json_fence,
     openai_legacy,
 )
+from src.services._llm_service.openrouter_preflight import preflight_openrouter_model
+from src.services._llm_service.preflight import preflight_openai_model
 from src.services._llm_service.openrouter import (
     build_openrouter_client,
     openrouter_chat_json,
@@ -74,10 +76,12 @@ __all__ = [
     "openai_ocr_pdf",
     "openai_respond_with_vector_store",
     "openrouter_chat_json",
+    "preflight_openrouter_model",
     "openai_vector_store_attach_file",
     "openai_vector_store_create",
     "openai_vector_store_delete",
     "openai_vector_store_status",
     "openai_vector_store_update_metadata",
     "openai_vector_store_upload_file",
+    "preflight_openai_model",
 ]

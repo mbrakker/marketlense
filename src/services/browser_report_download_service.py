@@ -9,6 +9,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from src.contracts.browser_download import (
+    BrowserExecutableAvailabilityRequest,
+    BrowserExecutableAvailabilityResponse,
+    BrowserRuntimeAvailabilityResponse,
     BrowserDeveloperDiagnosticsRequest,
     BrowserDeveloperDiagnosticsResult,
     BrowserDownloadConfirmationEvidence,
@@ -30,6 +33,10 @@ from src.contracts.state import (
     StateArtifactAcquisitionCacheRecordRequest,
 )
 from src.services._browser_report_download import http as http_runtime
+from src.services._browser_report_download._browser_runtime.runtime import (
+    load_browser_session_class,
+    load_browser_use_runtime,
+)
 from src.services._browser_report_download._artifact.pdf import _build_pdf_result
 from src.services._browser_report_download.artifact import (
     finalize_browser_report_download_result,
@@ -46,6 +53,9 @@ from src.services._browser_report_download.dev_diagnostics import (
 )
 from src.services._browser_report_download.dev_diagnostics import (
     run_browser_developer_diagnostics as _run_browser_developer_diagnostics,
+)
+from src.services._browser_report_download.dev_diagnostics import (
+    inspect_browser_executable as _inspect_browser_executable,
 )
 from src.services._browser_report_download.http import (
     try_direct_onsite_capture,
@@ -165,7 +175,11 @@ def _preflight_terminal_static_archive_result(
         if is_access_forbidden
         else "preflight_terminal_not_found"
     )
-    target_text = "terminal HTTP 403 Forbidden page" if is_access_forbidden else "terminal not-found page"
+    target_text = (
+        "terminal HTTP 403 Forbidden page"
+        if is_access_forbidden
+        else "terminal not-found page"
+    )
     return BrowserReportDownloadResult(
         schema_version="1.0",
         source_url=request.url,
@@ -865,6 +879,35 @@ def default_browser_doctor_verification_url() -> str:
     return _default_browser_doctor_verification_url()
 
 
+def preflight_browser_executable(
+    request: BrowserExecutableAvailabilityRequest, ctx: RunContext
+) -> BrowserExecutableAvailabilityResponse:
+    """Inspect installed browser assets without launching a browser."""
+
+    return _inspect_browser_executable(request, ctx)
+
+
+def preflight_browser_runtime(_ctx: RunContext) -> BrowserRuntimeAvailabilityResponse:
+    """Check the canonical installed-or-vendored browser runtime without launching it."""
+
+    try:
+        load_browser_use_runtime()
+        load_browser_session_class()
+    except AppError as exc:
+        if exc.code != "browser_use_unavailable":
+            raise
+        return BrowserRuntimeAvailabilityResponse(
+            schema_version="1.0",
+            available=False,
+            reason_code="browser_runtime_dependency_missing",
+        )
+    return BrowserRuntimeAvailabilityResponse(
+        schema_version="1.0",
+        available=True,
+        reason_code="browser_runtime_available",
+    )
+
+
 def run_browser_developer_diagnostics(
     request: BrowserDeveloperDiagnosticsRequest,
     ctx: RunContext,
@@ -1018,10 +1061,11 @@ def _try_deterministic_browser_route_playbooks(
                 )
             )
             continue
-        if (
-            result.outcome in {"downloaded", "email_requested", "captured"}
-            and result.route_status in {"verified", "recovered"}
-        ):
+        if result.outcome in {
+            "downloaded",
+            "email_requested",
+            "captured",
+        } and result.route_status in {"verified", "recovered"}:
             logger.info(
                 log_event(
                     ctx,
@@ -1234,9 +1278,7 @@ def _preflight_diagnostics(probe: Any) -> dict[str, Any]:
     return {
         "status": str(getattr(probe, "status", "") or ""),
         "phase": phase,
-        "duration_seconds": float(
-            getattr(probe, "duration_seconds", 0.0) or 0.0
-        ),
+        "duration_seconds": float(getattr(probe, "duration_seconds", 0.0) or 0.0),
         "final_url": str(getattr(probe, "final_url", "") or ""),
         "html_size": int(getattr(probe, "html_size", 0) or 0),
         "evidence_labels": evidence_labels,
@@ -1732,9 +1774,7 @@ def download_report_with_browser_use(
                 execution_url=normalized_execution_url,
                 download_dir=download_dir,
                 browser=(
-                    preflight_session.browser
-                    if preflight_session is not None
-                    else None
+                    preflight_session.browser if preflight_session is not None else None
                 ),
                 playbooks=deterministic_playbooks,
             )

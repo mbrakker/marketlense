@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from dataclasses import replace
@@ -30,6 +31,7 @@ from src.contracts.run_budget import (
 )
 from src.contracts.run_context import RunContext
 from src.contracts.state import (
+    MailDeliveryRequest,
     MailDeliveryRequestUpsertRequest,
     WorkflowControlObservationWriteRequest,
 )
@@ -82,8 +84,9 @@ from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     finalize_budget_side_effect,
 )
-from src.utils.clock import utc_now_seconds_z
+from src.utils.clock import is_utc_timestamp_z, utc_now_seconds_z
 from src.utils.errors import AppError
+from src.utils.idempotency import mail_delivery_request_idempotency_key
 from src.utils.logging import log_event
 from src.utils.url_utils import normalize_url
 
@@ -259,7 +262,7 @@ def run_report_download(
         ReportDownloadRoutePlanRequest(
             schema_version="1.0",
             normalized_url=normalized_url,
-            delivery_email=_resolve_deferred_delivery_email(request),
+            delivery_email=resolve_deferred_delivery_email(request),
             remembered_route=route_memory,
             candidate_trace=request.candidate_trace,
             publisher_discovery_route_kind=request.publisher_discovery_route_kind,
@@ -386,6 +389,13 @@ def run_report_download(
                     route_families=[planned_step.route_family],
                 )
         try:
+            _prepare_mail_delivery_submission_intent(
+                request=request,
+                normalized_url=normalized_url,
+                planned_step=planned_step,
+                ctx=ctx,
+                dependencies=deps,
+            )
             result = _run_download_attempt(
                 request=request,
                 ctx=ctx,
@@ -601,12 +611,11 @@ def run_report_download(
         ctx=ctx,
         dependencies=deps,
     )
-    record_deferred_mail_delivery_request(
+    mail_delivery_request = record_deferred_mail_delivery_request(
         request=request,
         result=result,
         ctx=ctx,
         dependencies=deps,
-        run_started_at_utc=run_started_at_utc,
     )
     drive_uploads = archive_successful_report_artifacts(
         request=request,
@@ -670,6 +679,12 @@ def run_report_download(
         onsite_page_count=result.onsite_page_count,
         onsite_completeness_status=result.onsite_completeness_status,
         drive_uploads=drive_uploads,
+        mail_delivery_request_id=(
+            str(mail_delivery_request.request_id) if mail_delivery_request else None
+        ),
+        mail_delivery_requested_after_utc=(
+            mail_delivery_request.requested_after_utc if mail_delivery_request else None
+        ),
     )
     logger.info(
         log_event(
@@ -703,7 +718,7 @@ def _run_download_attempt(
         schema_version="1.0",
         url=request.url,
         settings=request.settings,
-        delivery_email=_resolve_deferred_delivery_email(request),
+        delivery_email=resolve_deferred_delivery_email(request),
         route_hint=planned_step.route_hint,
         route_step_hints=list(planned_step.route_step_hints),
         route_kind_hint=planned_step.route_kind_hint,
@@ -1063,49 +1078,42 @@ def record_deferred_mail_delivery_request(
     result: BrowserReportDownloadResult,
     ctx: RunContext,
     dependencies: ReportDownloadDependencies,
-    run_started_at_utc: str,
-) -> None:
+) -> MailDeliveryRequest | None:
     if result.outcome != "email_requested":
-        return
-    if request.mailbox_settings is None:
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="report_download_mail_delivery_request_skipped",
-                module=logger.name,
-                fields={
-                    "normalized_url": result.normalized_url,
-                    "reason": "mailbox_settings_missing",
-                    "outcome": result.outcome,
-                },
-            )
-        )
-        return
-    delivery_email = _resolve_deferred_delivery_email(request)
+        return None
+    delivery_email = resolve_deferred_delivery_email(request)
     if not delivery_email:
-        logger.info(
-            log_event(
-                ctx,
-                role="orchestrator",
-                event="report_download_mail_delivery_request_skipped",
-                module=logger.name,
-                fields={
-                    "normalized_url": result.normalized_url,
-                    "reason": "delivery_email_missing",
-                    "outcome": result.outcome,
-                },
-            )
+        raise AppError(
+            code="mail_delivery_recipient_missing",
+            message="Verified email submission has no durable recipient identity",
+            retryable=False,
         )
-        return
     publisher_name = _mail_delivery_publisher_name(request)
     report_title = _mail_delivery_report_title(request, result)
-    idempotency_key = "|".join(
-        [
-            "mail_delivery",
-            normalize_url(result.normalized_url or request.url),
-            delivery_email.casefold(),
-        ]
+    submission_confirmed_at_utc = str(
+        result.confirmation_evidence.submission_confirmed_at_utc or ""
+    ).strip()
+    if not is_utc_timestamp_z(submission_confirmed_at_utc):
+        raise AppError(
+            code="mail_delivery_submission_timestamp_missing",
+            message="Verified email submission has no valid confirmation timestamp",
+            retryable=False,
+        )
+    publisher_id, source_identity_id = _mail_delivery_identity_values(
+        request, result.normalized_url or request.url
+    )
+    if not source_identity_id or not publisher_id:
+        raise AppError(
+            code="mail_delivery_source_identity_missing",
+            message="Verified email submission has no durable source and publisher identity",
+            retryable=False,
+        )
+    generation_id = request.mail_delivery_generation_id.strip()
+    idempotency_key = mail_delivery_request_idempotency_key(
+        generation_id=generation_id,
+        source_url=result.normalized_url or request.url,
+        delivery_email=delivery_email,
+        source_identity_id=source_identity_id,
     )
     upsert_response = dependencies.upsert_mail_delivery_request(
         MailDeliveryRequestUpsertRequest(
@@ -1116,12 +1124,26 @@ def record_deferred_mail_delivery_request(
             report_title=report_title,
             publisher_name=publisher_name,
             delivery_email=delivery_email,
-            requested_after_utc=run_started_at_utc,
+            requested_after_utc=submission_confirmed_at_utc,
             route_family=result.route_family,
             route_history_id="",
+            publisher_id=publisher_id,
+            source_identity_id=source_identity_id,
+            submission_confirmed_at_utc=submission_confirmed_at_utc,
+            status="pending",
         ),
         ctx,
     )
+    if (
+        upsert_response.request.requested_after_utc != submission_confirmed_at_utc
+        or upsert_response.request.submission_confirmed_at_utc
+        != submission_confirmed_at_utc
+    ):
+        raise AppError(
+            code="mail_delivery_submission_watermark_mismatch",
+            message="Confirmed mail submission does not match its durable watermark",
+            retryable=False,
+        )
     dependencies.write_workflow_control_observation(
         WorkflowControlObservationWriteRequest(
             schema_version="1.0",
@@ -1165,6 +1187,7 @@ def record_deferred_mail_delivery_request(
             },
         )
     )
+    return upsert_response.request
 
 
 def _mail_delivery_report_title(
@@ -1175,7 +1198,100 @@ def _mail_delivery_report_title(
         return request.report_title.strip()
     if request.candidate_trace is not None and request.candidate_trace.title.strip():
         return request.candidate_trace.title.strip()
-    return result.route_summary.strip() or result.normalized_url or request.url
+    return result.normalized_url or request.url
+
+
+def _mail_delivery_identity_values(
+    request: ReportDownloadOrchestratorRequest, source_url: str
+) -> tuple[str, str]:
+    publisher_id = str(request.publisher_id or "").strip()
+    source_identity_id = str(request.source_identity_id or "").strip()
+    if not source_identity_id:
+        source_identity_id = hashlib.sha256(
+            normalize_url(source_url).encode()
+        ).hexdigest()
+    if not publisher_id:
+        host = (
+            str(
+                urlsplit(
+                    _publisher_scope_url_for_request(request) or source_url
+                ).hostname
+                or ""
+            )
+            .strip()
+            .casefold()
+        )
+        if host:
+            publisher_id = f"host:{host}"
+    return publisher_id, source_identity_id
+
+
+def _prepare_mail_delivery_submission_intent(
+    *,
+    request: ReportDownloadOrchestratorRequest,
+    normalized_url: str,
+    planned_step: ReportDownloadRoutePlanStep,
+    ctx: RunContext,
+    dependencies: ReportDownloadDependencies,
+) -> None:
+    if planned_step.route_family != "browser_email_form":
+        return
+    delivery_email = resolve_deferred_delivery_email(request)
+    if not delivery_email:
+        raise AppError(
+            code="mail_delivery_recipient_missing",
+            message="Email submission requires a durable recipient identity",
+            retryable=False,
+        )
+    publisher_id, source_identity_id = _mail_delivery_identity_values(
+        request, normalized_url
+    )
+    if not publisher_id or not source_identity_id:
+        raise AppError(
+            code="mail_delivery_source_identity_missing",
+            message="Email submission requires durable publisher and source identities",
+            retryable=False,
+        )
+    report_title = request.report_title.strip()
+    if not report_title and request.candidate_trace is not None:
+        report_title = request.candidate_trace.title.strip()
+    report_title = report_title or normalized_url
+    response = dependencies.upsert_mail_delivery_request(
+        MailDeliveryRequestUpsertRequest(
+            schema_version="1.0",
+            state_db=request.state_db,
+            idempotency_key=mail_delivery_request_idempotency_key(
+                generation_id=request.mail_delivery_generation_id,
+                source_url=normalized_url,
+                delivery_email=delivery_email,
+                source_identity_id=source_identity_id,
+            ),
+            source_url=request.url,
+            report_title=report_title,
+            publisher_name=_mail_delivery_publisher_name(request),
+            delivery_email=delivery_email,
+            requested_after_utc="",
+            route_family=planned_step.route_family,
+            route_history_id="",
+            publisher_id=publisher_id,
+            source_identity_id=source_identity_id,
+            submission_confirmed_at_utc="",
+            status="submission_started",
+        ),
+        ctx,
+    )
+    if not response.created:
+        code = (
+            "mail_delivery_submission_in_progress"
+            if response.request.status == "submission_started"
+            else "mail_delivery_submission_already_recorded"
+        )
+        raise AppError(
+            code=code,
+            message="A durable mail submission already exists for this generation",
+            retryable=False,
+            context={"request_id": response.request.request_id},
+        )
 
 
 def _mail_delivery_publisher_name(request: ReportDownloadOrchestratorRequest) -> str:
@@ -1186,7 +1302,7 @@ def _mail_delivery_publisher_name(request: ReportDownloadOrchestratorRequest) ->
     return host or "unknown_publisher"
 
 
-def _resolve_deferred_delivery_email(
+def resolve_deferred_delivery_email(
     request: ReportDownloadOrchestratorRequest,
 ) -> str:
     explicit = str(request.delivery_email or "").strip()
@@ -1248,7 +1364,7 @@ def preflight_mailbox_before_email_form(
     normalized_families = {str(family or "").strip() for family in route_families}
     if normalized_families and normalized_families <= {"direct_pdf_probe"}:
         return
-    delivery_email = _resolve_deferred_delivery_email(request)
+    delivery_email = resolve_deferred_delivery_email(request)
     if not delivery_email:
         return
     dependencies.preflight_mailbox_search(

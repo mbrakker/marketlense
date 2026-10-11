@@ -21,6 +21,35 @@ def _string_list(payload: Mapping[str, object], key: str) -> List[str]:
 
 
 @dataclass(frozen=True)
+class SignalSourceAttribution:
+    report_id: str = field(metadata={"doc": "Source report identifier."})
+    publisher: str = field(
+        default="",
+        metadata={"doc": "Publisher for this exact report, empty when unavailable."},
+    )
+    schema_version: str = field(
+        default=WORDPRESS_ENTITY_SCHEMA_VERSION,
+        metadata={"doc": "Enclosing Signal projection schema version."},
+    )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> "SignalSourceAttribution":
+        report_id = str(payload.get("report_id") or "").strip()
+        if not report_id:
+            raise ValueError("Signal source attribution requires report_id")
+        schema_version = str(
+            payload.get("schema_version") or WORDPRESS_ENTITY_SCHEMA_VERSION
+        )
+        if schema_version != WORDPRESS_ENTITY_SCHEMA_VERSION:
+            raise ValueError("Unsupported Signal source attribution schema version")
+        return cls(
+            report_id=report_id,
+            publisher=str(payload.get("publisher") or "").strip(),
+            schema_version=schema_version,
+        )
+
+
+@dataclass(frozen=True)
 class SignalPublishProjection:
     schema_version: str = field(
         metadata={"doc": "Signal publish projection schema version."}
@@ -54,9 +83,26 @@ class SignalPublishProjection:
     card_content: SignalCardContent = field(
         metadata={"doc": "Validated signal-card content before cover rendering."}
     )
+    source_attributions: List[SignalSourceAttribution] = field(
+        default_factory=list,
+        metadata={
+            "doc": (
+                "Exact report-to-publisher relationships; missing publishers "
+                "stay empty."
+            ),
+            "required": False,
+        },
+    )
     file_id: str = field(
         default="",
         metadata={"doc": "Stable pseudo file ID used for WordPress idempotency."},
+    )
+    candidate_group_id: str = field(
+        default="",
+        metadata={
+            "doc": "Immutable approved candidate-group identity for queued Signals.",
+            "required": False,
+        },
     )
     html_text: str = field(
         default="",
@@ -81,11 +127,28 @@ class SignalPublishProjection:
         metadata={"doc": "Canonical WordPress route for durable Signal posts."},
     )
 
+    def __post_init__(self) -> None:
+        report_ids = [item.report_id for item in self.source_attributions]
+        if len(report_ids) != len(set(report_ids)):
+            raise ValueError("Signal source attributions must be unique by report_id")
+        if any(report_id not in self.source_report_ids for report_id in report_ids):
+            raise ValueError("Signal source attribution must reference a source report")
+
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> "SignalPublishProjection":
         card_payload = payload.get("card_content")
         if not isinstance(card_payload, Mapping):
             raise ValueError("Signal publish projections require card_content")
+        raw_attributions = payload.get("source_attributions", [])
+        if not isinstance(raw_attributions, list) or any(
+            not isinstance(item, Mapping) for item in raw_attributions
+        ):
+            raise ValueError("Signal source_attributions must be a list of objects")
+        source_attributions = [
+            SignalSourceAttribution.from_dict(item)
+            for item in raw_attributions
+            if isinstance(item, Mapping)
+        ]
         return cls(
             schema_version=str(payload["schema_version"]),
             title=str(payload["title"]),
@@ -99,7 +162,9 @@ class SignalPublishProjection:
             uncertainty=str(payload["uncertainty"]),
             validation_status=str(payload["validation_status"]),
             card_content=SignalCardContent.from_dict(card_payload),
+            source_attributions=source_attributions,
             file_id=str(payload.get("file_id") or ""),
+            candidate_group_id=str(payload.get("candidate_group_id") or ""),
             html_text=str(payload.get("html_text") or ""),
             topic_labels=_string_list(payload, "topic_labels")
             if "topic_labels" in payload
@@ -169,6 +234,15 @@ class SignalPostGenerationRequest:
             "doc": (
                 "Exact approved candidate group when generation consumes a frozen "
                 "queue manifest."
+            ),
+            "required": False,
+        },
+    )
+    candidate_manifest_sha256: str = field(
+        default="",
+        metadata={
+            "doc": (
+                "Immutable approved candidate manifest checksum for queued generation."
             ),
             "required": False,
         },

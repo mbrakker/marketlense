@@ -95,6 +95,12 @@ class ReportFigureAsset:
         default="",
         metadata={"doc": "Rejection reason if the crop was not accepted."},
     )
+    crop_dpi: int = field(
+        default=0, metadata={"doc": "Render DPI of the published crop image."}
+    )
+    crop_image_sha256: str = field(
+        default="", metadata={"doc": "SHA-256 of the published crop image."}
+    )
     schema_version: str = field(
         default="1.0", metadata={"doc": "Figure asset schema version."}
     )

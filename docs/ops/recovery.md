@@ -53,16 +53,26 @@ semantic/grounding bypass, retry changes, or automatic routing changes.
 The [top failure runbooks](top_failure_runbooks.md) contain typed failure-specific checks and bounded remediation commands. `docs/ops/failure_remediation.yaml` is the machine-validated runbook registry.
 
 Local workflow locks are reclaimed when their owner PID is no longer alive;
-permission-denied inspection remains conservative and falls back to the
-configured TTL. This prevents a terminated local ingest process from blocking
-a safe retry for the full lock window without stealing a lock held by a running
-process.
+permission-denied inspection remains conservative and the configured TTL
+continues to apply. Reads, acquisitions, stale eviction, recovery, and release
+are serialized through a persistent sibling `.coord` file using the platform's
+blocking OS file lock. Do not delete or replace this coordination file: callers
+could then lock different inodes and both proceed.
 
-If an existing lock file is malformed or has invalid owner fields, ingest
-returns `lock_file_corrupt` and leaves the file in place for diagnosis. Verify
-that no live owner holds the lock before removing it manually. A failed new
-lock write cleans up its partial file only while the acquiring process still
-owns that exact file.
+New lock records are written to a unique temporary file and atomically moved
+into place only when complete. Each carries an acquisition generation. Current
+release callers must provide the exact owner, PID, and generation; a legacy
+tokenless release can remove only a legacy record with an exact owner/PID match.
+Valid legacy records remain readable. `get_lock` reports malformed records as
+`lock_file_corrupt`; the next acquisition may recover one only after obtaining
+the exclusive coordination lock. Failed writes remove only their own temporary
+file.
+
+Drain workers running an older application version before deploying this
+change. Older lock writers do not honor the coordination sidecar and therefore
+cannot participate in the new cross-process guarantee. The coordination
+mechanism is for processes sharing a local filesystem; network filesystem lock
+semantics are not asserted.
 
 ## Frozen-cohort configuration provenance recovery
 

@@ -7,6 +7,36 @@ from src.contracts.pdf_context import PdfContext
 
 
 @dataclass(frozen=True)
+class CropPublicationProofRequest:
+    schema_version: str = field(metadata={"doc": "Crop proof request schema version."})
+    output_dir: str = field(
+        metadata={"doc": "Root directory containing crop artifacts."}
+    )
+    image_path: str = field(
+        metadata={"doc": "Relative path to the publication crop image."}
+    )
+    qa_sidecar_path: str = field(metadata={"doc": "Relative path to its QA sidecar."})
+    candidate_id: str = field(metadata={"doc": "Expected source candidate identifier."})
+    page: int = field(metadata={"doc": "Expected zero-based source page."})
+    item_type: str = field(metadata={"doc": "Expected crop candidate type."})
+    render_dpi: int = field(metadata={"doc": "Expected strict crop render DPI."})
+    expected_image_sha256: str = field(
+        metadata={"doc": "Expected SHA-256 digest recorded by figure selection."}
+    )
+
+
+@dataclass(frozen=True)
+class CropPublicationProofResponse:
+    schema_version: str = field(metadata={"doc": "Crop proof response schema version."})
+    accepted: bool = field(
+        metadata={"doc": "Whether all crop integrity proofs matched."}
+    )
+    reason: str = field(
+        metadata={"doc": "Stable proof acceptance or rejection reason."}
+    )
+
+
+@dataclass(frozen=True)
 class PdfEofCheckRequest:
     schema_version: str = field(
         metadata={"doc": "PDF EOF check request schema version."}

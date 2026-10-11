@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import html
 import logging
 from dataclasses import asdict
@@ -22,6 +23,7 @@ from src.contracts.wordpress_entities import (
     WORDPRESS_ENTITY_SCHEMA_VERSION,
     SignalPostGenerationRequest,
     SignalPublishProjection,
+    SignalSourceAttribution,
 )
 from src.generators.signal_card_projection import build_signal_card_content
 from src.utils.coercion import ordered_unique_strings as _unique_ordered
@@ -273,6 +275,14 @@ def _body_html_from_candidates(
         f"<p>{html.escape(uncertainty)}</p>"
         "</article>"
     )
+
+
+def _publication_slug(title_topic: str, candidate_group_id: str) -> str:
+    slug = f"{slugify(title_topic)}-signal"
+    if not candidate_group_id:
+        return slug
+    suffix = hashlib.sha256(candidate_group_id.encode("utf-8")).hexdigest()[:16]
+    return f"{slug}-{suffix}"
 
 
 def _stored_source_ref_citation(
@@ -595,6 +605,30 @@ def _frozen_manifest_inputs(
             context={"candidate_group_id": request.candidate_group_id},
         )
 
+    frozen_source_hashes = group.raw_group_context.get("source_content_hashes")
+    if request.candidate_manifest_sha256 and not isinstance(frozen_source_hashes, dict):
+        raise AppError(
+            code="signal_frozen_manifest_invalid",
+            message="Frozen Signal manifest lacks projected source content hashes",
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
+    if isinstance(frozen_source_hashes, dict):
+        for source in selected_sources:
+            frozen_hash = str(frozen_source_hashes.get(source.report_id) or "")
+            if not frozen_hash or frozen_hash != source.content_hash:
+                raise AppError(
+                    code="signal_frozen_manifest_source_changed",
+                    message=(
+                        "Projected Signal source content changed after candidate "
+                        "approval"
+                    ),
+                    retryable=False,
+                    severity="error",
+                    context={"candidate_group_id": request.candidate_group_id},
+                )
+
     normalized_topic = " ".join(request.topic.split()).casefold()
     for source in selected_sources:
         report_date = str(source.report_date or "")
@@ -790,7 +824,7 @@ def _projection_from_candidates(
         " ".join(str(request.topic or "").strip().split()) or candidates[0].title
     )
     title = f"{title_topic} signal"
-    slug = f"{slugify(title_topic)}-signal"
+    slug = _publication_slug(title_topic, request.candidate_group_id)
     tag_labels = _unique_ordered(
         [tag for source in selected_sources for tag in source.tags]
     )
@@ -822,6 +856,13 @@ def _projection_from_candidates(
         body_html=body_html,
         evidence_ids=evidence_ids,
         source_report_ids=source_report_ids,
+        source_attributions=[
+            SignalSourceAttribution(
+                report_id=source.report_id,
+                publisher=str(source.publisher or "").strip(),
+            )
+            for source in selected_sources
+        ],
         topic_ids=topic_ids,
         confidence=max(candidate.confidence for candidate in candidates),
         uncertainty=uncertainty,
@@ -835,6 +876,7 @@ def _projection_from_candidates(
             uncertainty=uncertainty,
         ),
         file_id=f"signal:{slug}",
+        candidate_group_id=request.candidate_group_id,
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,
         tag_labels=tag_labels,
@@ -866,6 +908,19 @@ def build_signal_publish_projection(
         )
     )
     stored_candidates = _approved_candidates(candidate_data)
+    if request.candidate_manifest_sha256 and (
+        candidate_data is None
+        or candidate_data.manifest_sha256 != request.candidate_manifest_sha256
+    ):
+        raise AppError(
+            code="signal_candidate_manifest_changed",
+            message=(
+                "Signal generation did not read the queued immutable candidate manifest"
+            ),
+            retryable=False,
+            severity="error",
+            context={"candidate_group_id": request.candidate_group_id},
+        )
     if request.candidate_group_id and not stored_candidates:
         raise AppError(
             code="signal_frozen_manifest_candidate_missing",
@@ -937,7 +992,7 @@ def build_signal_publish_projection(
     )
     title_topic = " ".join(str(request.topic or "").strip().split()) or topic_labels[0]
     title = f"{title_topic} signal"
-    slug = f"{slugify(title_topic)}-signal"
+    slug = _publication_slug(title_topic, request.candidate_group_id)
     publisher_count = len({publisher.casefold() for publisher in publisher_labels})
     confidence = min(
         0.95, round(0.55 + (len(evidence_ids) * 0.05) + (publisher_count * 0.08), 2)
@@ -961,6 +1016,13 @@ def build_signal_publish_projection(
         body_html=body_html,
         evidence_ids=evidence_ids,
         source_report_ids=source_report_ids,
+        source_attributions=[
+            SignalSourceAttribution(
+                report_id=source.report_id,
+                publisher=str(source.publisher or "").strip(),
+            )
+            for source in selected_sources
+        ],
         topic_ids=topic_ids,
         confidence=confidence,
         uncertainty=uncertainty,
@@ -974,6 +1036,7 @@ def build_signal_publish_projection(
             uncertainty=uncertainty,
         ),
         file_id=f"signal:{slug}",
+        candidate_group_id=request.candidate_group_id,
         html_text=f"<html><body>{body_html}</body></html>",
         topic_labels=topic_labels,
         tag_labels=tag_labels,

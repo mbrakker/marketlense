@@ -74,6 +74,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `audit-acquisition-paths`
 - `backfill-artifact-lineage`
 - `browser-doctor`
+- `capability-preflight`
 - `corpus-rehabilitation-approve`
 - `corpus-rehabilitation-create`
 - `corpus-rehabilitation-plan`

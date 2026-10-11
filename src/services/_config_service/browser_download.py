@@ -49,7 +49,7 @@ def load_browser_download_settings(
             fields={"path": str(config_path)},
         )
     )
-    data = _load_config(str(config_path))
+    data = _load_config(str(config_path), profile_name=request.profile_name)
     runtime_base_path = _resolve_runtime_base_path(config_path)
     cost_cfg = _resolve_cost_config(
         data,

@@ -68,6 +68,9 @@ def run_autonomous_happy_path_smoke(work_dir: Path) -> dict[str, Any]:
             requested_after_utc="2026-07-04T11:08:00Z",
             route_family="browser_email_form",
             route_history_id="smoke-route-history",
+            publisher_id="smoke-publisher",
+            source_identity_id="smoke-source-identity",
+            submission_confirmed_at_utc="2026-07-04T11:08:00Z",
         ),
         ctx,
     )

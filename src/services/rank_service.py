@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Any
 
 from src.contracts.llm import LLMClientPolicy
@@ -17,6 +18,7 @@ from src.contracts.report_assets import (
 from src.contracts.report_models import RankedCandidate
 from src.contracts.run_context import RunContext
 from src.services import llm_service
+from src.utils.affine import transform_bbox
 from src.utils.coercion import coerce_bool, coerce_int
 from src.utils.errors import AppError
 from src.utils.logging import log_event
@@ -30,15 +32,19 @@ def _rank_llm_policy(scope: str) -> LLMClientPolicy:
     return llm_service.default_client_policy(scope=scope)
 
 
-def _to_bbox(
-    value: Any, fallback: tuple[float, float, float, float]
-) -> tuple[float, float, float, float]:
+def _to_bbox(value: Any) -> tuple[float, float, float, float] | None:
     if isinstance(value, (list, tuple)) and len(value) == 4:
         try:
-            return (float(value[0]), float(value[1]), float(value[2]), float(value[3]))
+            bbox = tuple(float(value[index]) for index in range(4))
         except (TypeError, ValueError):
-            return fallback
-    return fallback
+            return None
+        if (
+            all(math.isfinite(coordinate) for coordinate in bbox)
+            and bbox[0] < bbox[2]
+            and bbox[1] < bbox[3]
+        ):
+            return bbox  # type: ignore[return-value]
+    return None
 
 
 def _parse_rank_items(
@@ -318,6 +324,17 @@ def refine_candidate_crops(
         raw_items_value if isinstance(raw_items_value, list) else []
     )
     by_id = {candidate.id: candidate for candidate in request.candidates}
+    for source_candidate in request.candidates:
+        if _to_bbox(source_candidate.bbox) is None:
+            raise AppError(
+                code="crop_refine_candidate_geometry_invalid",
+                message="Crop refine source candidate geometry is invalid",
+                retryable=False,
+                context={
+                    "candidate_id": source_candidate.id,
+                    "page": source_candidate.page,
+                },
+            )
     results: list[CropRefineResult] = []
     for item in raw_items:
         if not isinstance(item, dict):
@@ -326,18 +343,51 @@ def refine_candidate_crops(
         candidate = by_id.get(cid)
         if not candidate:
             continue
-        refined_bbox = _to_bbox(item.get("refined_bbox"), candidate.bbox)
-        try:
+        display_bbox = _to_bbox(item.get("refined_bbox"))
+        if display_bbox is None:
             results.append(
                 CropRefineResult(
                     schema_version="1.0",
                     id=cid,
-                    is_valid_candidate=coerce_bool(
-                        item.get("is_valid_candidate"),
-                        False,
-                        true_tokens={"1", "true", "yes", "y", "on"},
-                        false_tokens={"0", "false", "no", "n", "off"},
-                    ),
+                    is_valid_candidate=False,
+                    refined_bbox=candidate.bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.0,
+                    reason="invalid_geometry",
+                )
+            )
+            continue
+        try:
+            refined_bbox = transform_bbox(
+                display_bbox, request.display_to_pdf_transform
+            )
+        except ValueError:
+            results.append(
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=cid,
+                    is_valid_candidate=False,
+                    refined_bbox=candidate.bbox,
+                    include_title=True,
+                    include_note_if_present=True,
+                    confidence=0.0,
+                    reason="invalid_geometry",
+                )
+            )
+            continue
+        try:
+            is_valid = coerce_bool(
+                item.get("is_valid_candidate"),
+                False,
+                true_tokens={"1", "true", "yes", "y", "on"},
+                false_tokens={"0", "false", "no", "n", "off"},
+            )
+            results.append(
+                CropRefineResult(
+                    schema_version="1.0",
+                    id=cid,
+                    is_valid_candidate=is_valid,
                     refined_bbox=refined_bbox,
                     include_title=coerce_bool(
                         item.get("include_title"),
@@ -352,7 +402,7 @@ def refine_candidate_crops(
                         false_tokens={"0", "false", "no", "n", "off"},
                     ),
                     confidence=float(item.get("confidence", 0.0) or 0.0),
-                    reason=str(item.get("reason") or ""),
+                    reason="model_accepted" if is_valid else "model_rejected",
                 )
             )
         except (TypeError, ValueError):

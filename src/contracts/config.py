@@ -10,6 +10,15 @@ class ConfigLoadRequest:
     path: str = field(
         metadata={"doc": "Absolute or workspace-relative path to the YAML config file."}
     )
+    profile_name: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": (
+                "Explicit app profile overlay; empty selects base/local configuration "
+                "without inheriting the process profile."
+            )
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -552,9 +561,7 @@ class AppSettings:
     validation_grounding_global_min_interval_ms: int = field(
         default=250,
         metadata={
-            "doc": (
-                "Minimum milliseconds between validation grounding call starts."
-            )
+            "doc": ("Minimum milliseconds between validation grounding call starts.")
         },
     )
     strict_schema_validation: bool = field(

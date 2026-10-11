@@ -188,21 +188,33 @@ def _crop_outcomes_by_candidate_id(crop_response: object) -> dict[str, object]:
 def _accepted_crop_path_by_id(
     *,
     crop_response: object,
-    items: list[CropItem],
+    expected_dpi: int,
 ) -> dict[str, str]:
     outcomes = _crop_outcomes_by_candidate_id(crop_response)
-    if outcomes:
-        return {
-            candidate_id: str(_outcome_value(outcome, "path", "") or "").strip()
-            for candidate_id, outcome in outcomes.items()
-            if bool(_outcome_value(outcome, "accepted", False))
-            and str(_outcome_value(outcome, "path", "") or "").strip()
-        }
+    if not outcomes:
+        return {}
     return {
-        item.id: str(path or "").strip()
-        for item, path in zip(items, getattr(crop_response, "paths", []), strict=False)
-        if str(path or "").strip()
+        candidate_id: str(_outcome_value(outcome, "path", "") or "").strip()
+        for candidate_id, outcome in outcomes.items()
+        if bool(_outcome_value(outcome, "accepted", False))
+        and str(_outcome_value(outcome, "quality_profile", "") or "")
+        == "publication_strict"
+        and int(_outcome_value(outcome, "dpi", 0) or 0) == int(expected_dpi)
+        and str(_outcome_value(outcome, "qa_sidecar_path", "") or "").strip()
+        and _is_sha256(_outcome_value(outcome, "image_sha256", ""))
+        and str(_outcome_value(outcome, "path", "") or "").strip()
     }
+
+
+def _is_sha256(value: object) -> bool:
+    token = str(value or "").strip()
+    return len(token) == 64 and all(
+        character in "0123456789abcdefABCDEF" for character in token
+    )
+
+
+def _final_crop_dpi(settings: IngestSettings) -> int:
+    return max(72, int(getattr(settings, "final_crop_dpi", 144) or 144))
 
 
 def _crop_metadata_by_id(crop_response: object) -> dict[str, dict[str, Any]]:
@@ -227,6 +239,8 @@ def _crop_metadata_by_id(crop_response: object) -> dict[str, dict[str, Any]]:
             "crop_rejection_reason": str(
                 _outcome_value(outcome, "rejection_reason", "") or ""
             ),
+            "crop_dpi": int(_outcome_value(outcome, "dpi", 0) or 0),
+            "crop_image_sha256": str(_outcome_value(outcome, "image_sha256", "") or ""),
         }
     return metadata
 
@@ -589,6 +603,8 @@ def _asset_from_candidate(
         crop_rejection_reason=str(
             (crop_metadata or {}).get("crop_rejection_reason") or ""
         ),
+        crop_dpi=int((crop_metadata or {}).get("crop_dpi") or 0),
+        crop_image_sha256=str((crop_metadata or {}).get("crop_image_sha256") or ""),
     )
 
 
@@ -600,6 +616,7 @@ def _build_figure_assets(
     primary_caption: str,
     fig_resp: Any,
     crop_metadata_by_id: Optional[dict[str, dict[str, Any]]] = None,
+    expected_crop_dpi: int = 0,
 ) -> list[ReportFigureAsset]:
     assets: list[ReportFigureAsset] = []
     for index, image_path in enumerate(gallery_paths, start=1):
@@ -609,6 +626,17 @@ def _build_figure_assets(
         normalized_path = str(image_path or "").strip()
         if not normalized_path:
             continue
+        candidate_id = str(getattr(candidate, "id", "") or "").strip()
+        crop_metadata = (crop_metadata_by_id or {}).get(candidate_id, {})
+        if (
+            candidate is None
+            or not bool(crop_metadata.get("crop_qa_accepted"))
+            or crop_metadata.get("crop_quality_profile") != "publication_strict"
+            or int(crop_metadata.get("crop_dpi") or 0) != int(expected_crop_dpi)
+            or not str(crop_metadata.get("crop_qa_sidecar_path") or "").strip()
+            or not _is_sha256(crop_metadata.get("crop_image_sha256"))
+        ):
+            continue
         assets.append(
             _asset_from_candidate(
                 image_path=normalized_path,
@@ -616,33 +644,10 @@ def _build_figure_assets(
                 is_primary=index == 1,
                 index=index,
                 primary_display_caption=primary_caption,
-                crop_metadata=(crop_metadata_by_id or {}).get(
-                    str(getattr(candidate, "id", "") or "").strip()
-                )
-                if candidate is not None
-                else None,
+                crop_metadata=crop_metadata,
             )
         )
-    if assets:
-        return assets
-    normalized_primary = str(primary_figure_path or "").strip()
-    if not normalized_primary:
-        return []
-    fallback_caption = str(getattr(fig_resp, "caption", "") or "").strip()
-    return [
-        ReportFigureAsset(
-            image_path=normalized_primary,
-            page=int(getattr(fig_resp, "page", -1) or -1),
-            candidate_id="",
-            kind="image",
-            is_primary=True,
-            detected_caption=fallback_caption,
-            preview_text="",
-            generated_caption="",
-            display_caption=primary_caption,
-            caption_source="legacy",
-        )
-    ]
+    return assets
 
 
 def select_report_figures(
@@ -674,10 +679,12 @@ def select_report_figures(
             return fig_resp
         fig_resp = _extract_figure_task()
         figure_extracted = True
-        if fig_resp.image_path:
-            data._figure_image = fig_resp.image_path
-            if fig_resp.caption and not (data.figure.evidence or "").strip():
-                data.figure.evidence = fig_resp.caption
+        if (
+            fig_resp.image_path
+            and fig_resp.caption
+            and not (data.figure.evidence or "").strip()
+        ):
+            data.figure.evidence = fig_resp.caption
         return fig_resp
 
     def _extract_candidates_task():
@@ -847,14 +854,14 @@ def select_report_figures(
                     report_name=runtime.report_name,
                     items=selected_items,
                     mode="publication_strict",
-                    dpi=int(runtime.settings.final_crop_dpi),
+                    dpi=_final_crop_dpi(runtime.settings),
                     pdf_context=source.pdf_context,
                 ),
                 runtime.ctx,
             )
             selected_path_by_id = _accepted_crop_path_by_id(
                 crop_response=crop_response,
-                items=selected_items,
+                expected_dpi=_final_crop_dpi(runtime.settings),
             )
             figure_crop_metadata_by_id.update(_crop_metadata_by_id(crop_response))
             sliced_paths = [
@@ -882,42 +889,7 @@ def select_report_figures(
                 settings=runtime.settings,
             )
             if fallback_candidates:
-                candidate_path_by_id = _load_candidate_crop_path_map(
-                    settings=runtime.settings,
-                    report_name=runtime.report_name,
-                    ctx=runtime.ctx,
-                    dependencies=dependencies,
-                )
                 fallback_path_by_id: dict[str, str] = {}
-                reuse_stats: dict[str, Any] = {}
-                if candidate_path_by_id:
-                    reused_paths, reused_candidates, reuse_stats = (
-                        _select_fallback_candidate_crop_paths(
-                            ranked_rows=ranked,
-                            prefiltered_candidates=prefiltered_candidates,
-                            candidate_path_by_id=candidate_path_by_id,
-                            selected_kind_max=max(
-                                1, int(runtime.settings.rank_selected_max)
-                            ),
-                            settings=runtime.settings,
-                        )
-                    )
-                    fallback_path_by_id.update(
-                        _candidate_crop_path_map(reused_candidates, reused_paths)
-                    )
-                    if fallback_path_by_id:
-                        logger.info(
-                            log_event(
-                                runtime.ctx,
-                                role="generator",
-                                event="candidate_crops_reused",
-                                module=logger.name,
-                                fields={
-                                    "file_id": runtime.file.file_id,
-                                    **reuse_stats,
-                                },
-                            )
-                        )
                 missing_fallback_candidates = [
                     candidate
                     for candidate in fallback_candidates
@@ -958,6 +930,7 @@ def select_report_figures(
                                 subdir="candidates",
                                 items=fallback_items,
                                 mode="publication_strict",
+                                dpi=_final_crop_dpi(runtime.settings),
                                 pdf_context=source.pdf_context,
                             ),
                             runtime.ctx,
@@ -965,7 +938,7 @@ def select_report_figures(
                         fallback_path_by_id.update(
                             _accepted_crop_path_by_id(
                                 crop_response=fallback_crop_resp,
-                                items=fallback_items,
+                                expected_dpi=_final_crop_dpi(runtime.settings),
                             )
                         )
                         figure_crop_metadata_by_id.update(
@@ -1024,7 +997,7 @@ def select_report_figures(
                                 "file_id": runtime.file.file_id,
                                 "ranked_count": len(ranked),
                                 "prefiltered_count": len(prefiltered_candidates),
-                                "candidate_crop_count": len(candidate_path_by_id),
+                                "candidate_crop_count": 0,
                                 "selected_count": len(fallback_paths),
                                 "reused_crop_count": len(fallback_path_by_id)
                                 - newly_cropped_count,
@@ -1066,11 +1039,12 @@ def select_report_figures(
     else:
         _ensure_figure_extracted()
 
-    primary_figure_path = str(data._figure_top or data._figure_image or "").strip()
+    primary_figure_path = str(sliced_paths[0] if sliced_paths else "").strip()
     figure_gallery, figure_top, figure_section_enabled = _resolve_figure_section_assets(
         sliced_paths,
         primary_figure_path,
     )
+    data._figure_image = ""
     data._figure_gallery = figure_gallery
     data._figure_top = figure_top
     data._figure_assets = _build_figure_assets(
@@ -1083,6 +1057,7 @@ def select_report_figures(
         ),
         fig_resp=fig_resp,
         crop_metadata_by_id=figure_crop_metadata_by_id,
+        expected_crop_dpi=_final_crop_dpi(runtime.settings),
     )
     data._figure_section_enabled = figure_section_enabled
     if data._figure_section_enabled and not figure_gallery and figure_top:
@@ -1102,7 +1077,10 @@ def select_report_figures(
                 role="generator",
                 event="figure_section_disabled_zero_candidates",
                 module=logger.name,
-                fields={"file_id": runtime.file.file_id},
+                fields={
+                    "file_id": runtime.file.file_id,
+                    "reason_code": "no_usable_publication_strict_crop",
+                },
             )
         )
 

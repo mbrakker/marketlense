@@ -52,6 +52,7 @@ from src.generators.analysis_store_adapter import (
     store_pack as store_analysis_pack,
 )
 from src.generators.artifact_normalization import (
+    EDITORIAL_PLAN_TRANSFORM_VERSION,
     artifact_evidence_span_index,
     bind_artifact_evidence_spans,
     carry_soft_copy_binding_semantics_to_final_sentences,
@@ -2784,6 +2785,7 @@ def _artifact_cache_meta(
         "schema_version": "2.0",
         "topic_brief_mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
         "toc_structure_version": TOC_STRUCTURE_VERSION,
+        "editorial_plan_transform_version": EDITORIAL_PLAN_TRANSFORM_VERSION,
         "md5": md5,
         "inputs_sha256": inputs_hash,
         "prompts": prompt_meta,

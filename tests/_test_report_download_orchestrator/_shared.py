@@ -48,6 +48,11 @@ from src.contracts.mailbox_acquisition import (
     MailboxAcquisitionSettings,
     MailboxSearchResult,
 )
+from src.contracts.workflow_queue import (
+    MailboxDeliveryPayload,
+    ReportAcquisitionPayload,
+    WorkflowJobSubmission,
+)
 from src.contracts.publisher_inventory import PublisherInventoryCandidateTrace
 from src.contracts.report_store import (
     PublisherDownloadRouteResponse,
@@ -70,6 +75,12 @@ from src.orchestrators.report_download_orchestrator import (
     ReportDownloadDependencies,
     run_report_download,
 )
+from src.orchestrators._workflow_queue_handlers.acquisition import (
+    build_mailbox_delivery_submission,
+)
+from src.orchestrators.workflow_queue_orchestrator import (
+    execute_workflow_queue_handler,
+)
 from src.services._browser_report_download import request as request_runtime
 from src.services.config_service import upsert_browser_download_identity_fields
 from src.services.report_store_service import (
@@ -80,6 +91,8 @@ from src.services.state_service import (
     list_due_mail_delivery_requests,
     list_workflow_control_observations,
 )
+from src.services.workflow_queue_service import enqueue_workflow_job, get_workflow_job
+from tests._workflow_queue_registry_support import _workflow_job
 from src.utils.errors import AppError
 
 

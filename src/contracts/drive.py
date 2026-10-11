@@ -282,6 +282,75 @@ class DriveFolderFileListResponse:
 
 
 @dataclass(frozen=True)
+class DriveFolderCapabilityPreflightRequest:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder capability-preflight request version."}
+    )
+    folder_id: str = field(metadata={"doc": "Configured Drive folder identity."})
+    service_account_path: str = field(
+        metadata={"doc": "Service-account credential path for service-account auth."}
+    )
+    auth_mode: str = field(
+        default="service_account",
+        metadata={"doc": "Drive auth mode: service_account or oauth_user."},
+    )
+    oauth_token_path: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Existing OAuth token path; preflight never refreshes or writes it."
+        },
+    )
+    supports_all_drives: bool = field(default=True)
+    include_items_from_all_drives: bool = field(
+        default=True,
+        metadata={
+            "doc": "Legacy list-query option retained for schema 1.0 callers; the metadata-only preflight does not list items."
+        },
+    )
+    drive_id: Optional[str] = field(
+        default=None,
+        metadata={
+            "doc": "Legacy list-query option retained for schema 1.0 callers; the metadata-only preflight does not select a Drive corpus."
+        },
+    )
+    timeout_seconds: float = field(
+        default=5.0,
+        metadata={"doc": "Bounded timeout for one metadata-only Drive request."},
+    )
+    require_write_scope: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether the existing credentials must include the Drive write scope; this check never refreshes or rewrites credentials."
+        },
+    )
+
+
+@dataclass(frozen=True)
+class DriveFolderCapabilityPreflightResponse:
+    schema_version: str = field(
+        metadata={"doc": "Drive folder capability-preflight response version."}
+    )
+    accessible: bool = field(
+        metadata={"doc": "Whether the configured folder is readable."}
+    )
+    provider_calls: int = field(
+        metadata={"doc": "Bounded Drive API requests performed by the check."}
+    )
+    is_folder: Optional[bool] = field(
+        default=None,
+        metadata={
+            "doc": "Whether the configured Drive item is a folder; None means a legacy producer did not report its type."
+        },
+    )
+    can_add_children: Optional[bool] = field(
+        default=None,
+        metadata={
+            "doc": "Whether the authenticated Drive user can add children to the folder; None means the provider did not expose this capability."
+        },
+    )
+
+
+@dataclass(frozen=True)
 class DriveWritePreflightRequest:
     schema_version: str = field(
         metadata={"doc": "Drive write-preflight request schema version."}
@@ -590,7 +659,12 @@ class DriveOAuthAuthorizeResponse:
         }
     )
     scopes: list[str] = field(
-        metadata={"doc": "Authorized OAuth scopes persisted in the token JSON."}
+        metadata={
+            "doc": (
+                "OAuth scopes Google explicitly reported as granted and persisted in the token JSON; "
+                "empty when the provider did not expose grant metadata."
+            )
+        }
     )
     refresh_token_present: bool = field(
         metadata={

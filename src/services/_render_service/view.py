@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,10 @@ from urllib.parse import urlsplit
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from src.contracts.report_assets import RenderRequest
+from src.contracts.pdf_utils import CropPublicationProofRequest
+from src.contracts.run_context import RunContext
+from src.services.pdf_service import verify_crop_publication_proof
+from src.utils.logging import log_event
 from src.utils.time_period import normalize_time_period
 
 from .normalization import (
@@ -103,16 +108,23 @@ def _suppress_repeated_insight_advisory_items(
             decision[advisory_field] = [
                 item
                 for item in items
-                if re.sub(r"\s+", " ", _s(item)).strip().casefold()
-                not in insight_copy
+                if re.sub(r"\s+", " ", _s(item)).strip().casefold() not in insight_copy
             ]
 
 
+logger = logging.getLogger("market_lense.render_service")
+
+
 def _build_figure_slides(
-    data: dict[str, Any], out_dir: Path, report_title: str
+    data: dict[str, Any],
+    out_dir: Path,
+    report_title: str,
+    ctx: RunContext | None = None,
+    expected_final_dpi: int = 0,
 ) -> list[dict[str, Any]]:
     figure_assets = _coerce_list(data.get("_figure_assets"))
     slides: list[dict[str, Any]] = []
+    rejection_reasons: Counter[str] = Counter()
     cards_by_candidate = {
         _s(candidate_card.get("candidate_id")): candidate_card
         for raw_card in _coerce_list(
@@ -144,14 +156,57 @@ def _build_figure_slides(
         card = cards_by_candidate.get(candidate_id)
         image_path = _s(asset.get("image_path"))
         page = asset.get("page")
-        if (
-            asset.get("crop_qa_accepted") is not True
-            or not image_path
-            or card is None
-            or page is None
-            or str(page) != str(card.get("source_page"))
-        ):
+        sidecar_path = _s(asset.get("crop_qa_sidecar_path")).strip()
+        raw_dpi = asset.get("crop_dpi")
+        parsed_dpi = _exact_integer(raw_dpi)
+        parsed_source_page = _exact_integer(page)
+        dpi = parsed_dpi if parsed_dpi is not None else 0
+        source_page = parsed_source_page if parsed_source_page is not None else -1
+        rejection_reason = ""
+        if not candidate_id:
+            rejection_reason = "candidate_id_missing"
+        elif asset.get("crop_qa_accepted") is not True:
+            rejection_reason = "selection_qa_rejected"
+        elif asset.get("crop_quality_profile") != "publication_strict":
+            rejection_reason = "crop_profile_not_strict"
+        elif not sidecar_path:
+            rejection_reason = "qa_sidecar_path_missing"
+        elif raw_dpi not in (None, "") and parsed_dpi is None:
+            rejection_reason = "crop_dpi_invalid"
+        elif dpi <= 0:
+            rejection_reason = "crop_dpi_missing"
+        elif page is not None and parsed_source_page is None:
+            rejection_reason = "source_page_invalid"
+        elif expected_final_dpi <= 0:
+            rejection_reason = "configured_crop_dpi_missing"
+        elif dpi != expected_final_dpi:
+            rejection_reason = "configured_crop_dpi_mismatch"
+        elif not image_path:
+            rejection_reason = "crop_image_path_missing"
+        elif card is None:
+            rejection_reason = "insight_card_unavailable"
+        elif source_page < 0 or str(source_page) != str(card.get("source_page")):
+            rejection_reason = "source_page_mismatch"
+        else:
+            proof = verify_crop_publication_proof(
+                CropPublicationProofRequest(
+                    schema_version="1.0",
+                    output_dir=str(out_dir),
+                    image_path=image_path,
+                    qa_sidecar_path=sidecar_path,
+                    candidate_id=candidate_id,
+                    page=source_page,
+                    item_type=_s(asset.get("kind")),
+                    render_dpi=dpi,
+                    expected_image_sha256=_s(asset.get("crop_image_sha256")),
+                )
+            )
+            if not proof.accepted:
+                rejection_reason = proof.reason
+        if rejection_reason:
+            rejection_reasons[rejection_reason] += 1
             continue
+        assert card is not None
         index = len(slides) + 1
         is_primary = not slides
         caption = _s(card.get("caption"))
@@ -171,7 +226,7 @@ def _build_figure_slides(
                     caption=caption,
                 ),
                 "caption": caption,
-                "page": int(page),
+                "page": source_page,
                 "kind": _s(asset.get("kind")),
                 "candidate_id": candidate_id,
                 "is_primary": is_primary,
@@ -185,11 +240,45 @@ def _build_figure_slides(
                 ),
             }
         )
+    if figure_assets and rejection_reasons and ctx is not None:
+        logger.info(
+            log_event(
+                ctx,
+                role="service",
+                event="render_publication_crops_filtered",
+                module=logger.name,
+                fields={
+                    "candidate_count": len(figure_assets),
+                    "accepted_count": len(slides),
+                    "rejection_reasons": dict(rejection_reasons),
+                },
+            )
+        )
     return slides
 
 
+def _exact_integer(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    if isinstance(value, str):
+        token = value.strip()
+        if not token:
+            return None
+        try:
+            return int(token)
+        except ValueError:
+            return None
+    return None
+
+
 def _build_render_view(
-    request: RenderRequest, tag_acronym_map: dict[str, str]
+    request: RenderRequest,
+    tag_acronym_map: dict[str, str],
+    ctx: RunContext | None = None,
 ) -> dict[str, Any]:
     data = request.data
     out_dir = Path(request.out_dir)
@@ -217,15 +306,9 @@ def _build_render_view(
     source_attribution_parts = [
         f"Publication: {publisher}" if publisher else "",
         f"Byline: {report_author}" if report_author else "",
-        (
-            f"Underlying data: {', '.join(provider_names)}"
-            if provider_names
-            else ""
-        ),
+        (f"Underlying data: {', '.join(provider_names)}" if provider_names else ""),
     ]
-    source_attribution = " · ".join(
-        part for part in source_attribution_parts if part
-    )
+    source_attribution = " · ".join(part for part in source_attribution_parts if part)
     region = _s(data.get("region"))
     time_period = _s(data.get("time_period"))
     focus_year = _extract_focus_year(
@@ -292,7 +375,7 @@ def _build_render_view(
     snapshot_tags = _coerce_list(data.get("taxonomy"))
     figure_section_enabled = bool(data.get("_figure_section_enabled", True))
     figure_slides = (
-        _build_figure_slides(data, out_dir, report_title)
+        _build_figure_slides(data, out_dir, report_title, ctx, request.final_crop_dpi)
         if figure_section_enabled
         else []
     )

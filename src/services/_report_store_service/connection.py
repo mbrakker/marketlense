@@ -49,7 +49,7 @@ def _metadata_conn(path: str, ctx: RunContext):
                     schema_version="1.0",
                     database_key="reports_db",
                     db_path=path,
-                    target_version=30,
+                    target_version=31,
                     ctx=ctx,
                 ),
                 conn,

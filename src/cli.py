@@ -38,6 +38,7 @@ from src._cli.cross_report import (
 )
 from src._cli.pipeline import (
     _resolve_cli_workflow_control,
+    capability_preflight,
     cost_report,
     extract_candidates,
     generate_covers,

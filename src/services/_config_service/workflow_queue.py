@@ -58,7 +58,10 @@ def load_workflow_queue_policies(
 ) -> dict[str, WorkflowQueuePolicy]:
     """Load and validate defaults; durable controls remain operator-owned."""
     del ctx  # Config parsing is deterministic and has no queue side effect.
-    data = _load_config(str(_resolve_bootstrap_config_path(request.path)))
+    data = _load_config(
+        str(_resolve_bootstrap_config_path(request.path)),
+        profile_name=request.profile_name,
+    )
     raw = data.get("workflow_queues", {}) or {}
     if not isinstance(raw, dict):
         raise AppError(

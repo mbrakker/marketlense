@@ -11,6 +11,8 @@ import asyncio
 import inspect
 import json
 import logging
+import os
+import shutil
 import subprocess
 import sys
 from contextlib import suppress
@@ -19,6 +21,8 @@ from threading import Thread
 from typing import Any
 
 from src.contracts.browser_download import (
+    BrowserExecutableAvailabilityRequest,
+    BrowserExecutableAvailabilityResponse,
     BrowserDeveloperDiagnosticCheck,
     BrowserDeveloperDiagnosticsRequest,
     BrowserDeveloperDiagnosticsResult,
@@ -58,6 +62,75 @@ _DEFAULT_VERIFICATION_URL = (
 
 def default_browser_doctor_verification_url() -> str:
     return _DEFAULT_VERIFICATION_URL
+
+
+def inspect_browser_executable(
+    request: BrowserExecutableAvailabilityRequest, ctx: RunContext
+) -> BrowserExecutableAvailabilityResponse:
+    del request
+    executable_names = (
+        "chrome",
+        "chrome.exe",
+        "chromium",
+        "chromium.exe",
+        "google-chrome",
+    )
+    available = any(shutil.which(name) for name in executable_names)
+    if not available:
+        roots = [
+            os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ""),
+            str(Path.home() / ".cache" / "ms-playwright"),
+            str(Path(os.environ.get("LOCALAPPDATA", "")) / "ms-playwright")
+            if os.environ.get("LOCALAPPDATA")
+            else "",
+        ]
+        for program_root in (
+            os.environ.get("PROGRAMFILES"),
+            os.environ.get("PROGRAMFILES(X86)"),
+        ):
+            if program_root:
+                roots.append(
+                    str(Path(program_root) / "Google" / "Chrome" / "Application")
+                )
+        candidate_names = (
+            "chrome",
+            "chrome.exe",
+            "chromium",
+            "chrome-linux/chrome",
+            "chrome-linux64/chrome",
+        )
+        browser_patterns = (
+            "chromium-*/chrome-linux/chrome",
+            "chromium-*/chrome-linux64/chrome",
+            "chromium-*/chrome-win/chrome.exe",
+            "chromium-*/chrome-win64/chrome.exe",
+        )
+        for root_value in roots:
+            if not root_value:
+                continue
+            root = Path(root_value).expanduser()
+            if any((root / candidate).is_file() for candidate in candidate_names):
+                available = True
+                break
+            if root.is_dir() and any(
+                path.is_file()
+                for pattern in browser_patterns
+                for path in root.glob(pattern)
+            ):
+                available = True
+                break
+    logger.info(
+        log_event(
+            ctx,
+            role="service",
+            event="browser_executable_preflight_complete",
+            module=logger.name,
+            fields={"available": available, "browser_launched": False},
+        )
+    )
+    return BrowserExecutableAvailabilityResponse(
+        schema_version="1.0", available=available
+    )
 
 
 def run_browser_developer_diagnostics(

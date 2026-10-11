@@ -21,6 +21,8 @@ from src.utils.public_metric_display import normalize_public_metric_display
 from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup, normalize_text
 
+EDITORIAL_PLAN_TRANSFORM_VERSION = "normalize_and_stabilize_editorial_plan:1.0"
+
 METRIC_FIELDS = (
     "label",
     "value",

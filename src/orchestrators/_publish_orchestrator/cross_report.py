@@ -296,6 +296,10 @@ def _signal_projection_package(
         projection.html_text or f"<html><body>{projection.body_html}</body></html>",
         publish_entity_metadata,
     )
+    publisher_by_report_id = {
+        attribution.report_id: attribution.publisher
+        for attribution in projection.source_attributions
+    }
     return CrossReportPublishPackage(
         schema_version=CROSS_REPORT_ANALYSIS_SCHEMA_VERSION,
         package_id=stable_file_id,
@@ -310,10 +314,14 @@ def _signal_projection_package(
         canonical_artifact_path=f"signal_posts/{projection.slug}.json",
         artifact_sha256=content_hash,
         validation_sha256=content_hash,
-        selected_theme_id=projection.slug,
+        selected_theme_id=projection.candidate_group_id or projection.slug,
         selected_report_ids=list(projection.source_report_ids),
         source_metadata=[
-            {"publisher": publisher} for publisher in projection.publisher_labels
+            {
+                "report_id": report_id,
+                "publisher": publisher_by_report_id.get(report_id, ""),
+            }
+            for report_id in projection.source_report_ids
         ],
         category_labels=list(projection.topic_labels or projection.topic_ids),
         tag_labels=list(projection.tag_labels),

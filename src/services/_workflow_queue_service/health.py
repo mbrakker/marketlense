@@ -56,6 +56,7 @@ from src.utils.clock import utc_now_seconds_iso
 from src.utils.errors import AppError
 
 from .leasing import release_expired_workflow_leases
+from .outbox import reconcile_expired_workflow_outbox_leases
 from .schema import _ensure_control, _now, _parse_time
 
 
@@ -277,6 +278,9 @@ def reconcile_workflow_queue(
     now = _now(now_utc)
     released = release_expired_workflow_leases(state_db, ctx, now_utc=now)
     repaired_outbox: list[str] = []
+    reclaimed_outbox = reconcile_expired_workflow_outbox_leases(
+        state_db, ctx, now_utc=now
+    )
     anomalies: list[str] = []
     with _state_conn(state_db, ctx) as conn:
         conn.execute("BEGIN IMMEDIATE")
@@ -300,6 +304,7 @@ def reconcile_workflow_queue(
         conn.commit()
     return {
         "released_leases": released,
+        "reclaimed_outbox_leases": reclaimed_outbox,
         "repaired_outbox_events": repaired_outbox,
         "anomalies": anomalies,
     }

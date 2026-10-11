@@ -83,7 +83,7 @@ def _deps(**overrides) -> ReportSelectionDependencies:
         ),
         render_prompt=lambda req, ctx: SimpleNamespace(text="prompt"),
         render_page_for_crop_refine=lambda req, ctx: SimpleNamespace(
-            schema_version="1.0",
+            schema_version="1.1",
             image_path="page.png",
             page=req.page,
             image_width=600,
@@ -92,6 +92,15 @@ def _deps(**overrides) -> ReportSelectionDependencies:
             page_height=800.0,
             scale_x=1.0,
             scale_y=1.0,
+            coordinate_transform_version="pdf-page-affine-v1",
+            display_to_pdf_transform=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            pdf_to_display_transform=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            image_to_pdf_transform=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            rotation=0,
+            crop_box=(0.0, 0.0, 600.0, 800.0),
+            media_box=(0.0, 0.0, 600.0, 800.0),
+            pdf_page_width=600.0,
+            pdf_page_height=800.0,
         ),
         apply_crop_refine_bbox=lambda req, ctx: SimpleNamespace(
             schema_version="1.0",
@@ -102,6 +111,7 @@ def _deps(**overrides) -> ReportSelectionDependencies:
                 float(req.bbox[2]) + 8.0,
                 float(req.bbox[3]) + 8.0,
             ),
+            degradation_reason="",
         ),
     )
     return replace(seeded, **overrides)

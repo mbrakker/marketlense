@@ -33,6 +33,15 @@ have a category relationship for every source. Those minimums cannot be lower
 than two source reports and two evidence items. A held group carries a typed
 reason and is not queued.
 
+The complete semantic candidate and group snapshot, including projected source
+content hashes and evidence/category relationships, is retained immutably in
+the reports database and addressed by its SHA-256 manifest identity. Later
+extraction can update the current candidate view without rebinding a queued
+generation job. Identical topics in different groups retain distinct slugs,
+file IDs, package paths, covers, and idempotency identities while keeping the
+human-readable title. Published source metadata resolves each publisher by its
+exact report ID; missing attribution remains blank.
+
 The generation worker reads only the frozen candidate, source, and evidence
 IDs from that manifest. It does not select a replacement set under separate
 limits. If a frozen source, evidence row, category relationship, or compatible

@@ -7,6 +7,7 @@ from src.services import drive_service as boundary
 from .shared import *  # noqa: F401,F403
 from .auth import (
     _build_authorized_drive_http,
+    _credentials_include_required_drive_scopes,
     _resolve_authorized_user_credentials,
     _resolve_drive_credentials,
 )
@@ -61,10 +62,24 @@ def preflight_drive_write_access(
             oauth_token_path=request.oauth_token_path,
             ctx=ctx,
         )
-        if not _credentials_include_required_drive_scopes(resolution.credentials):
+        scope_check = _credentials_include_required_drive_scopes(
+            resolution.credentials,
+            auth_mode=auth_mode,
+            granted_scopes=resolution.granted_scopes,
+        )
+        if scope_check is not True:
+            is_unverified = scope_check is None
             raise AppError(
-                code="drive_preflight_scope_insufficient",
-                message="Drive credentials do not include the required write scope",
+                code=(
+                    "drive_preflight_scope_unverified"
+                    if is_unverified
+                    else "drive_preflight_scope_insufficient"
+                ),
+                message=(
+                    "Drive credential grant scopes are unavailable for verification"
+                    if is_unverified
+                    else "Drive credentials do not include the required write scope"
+                ),
                 retryable=False,
                 severity="error",
                 context={
@@ -154,21 +169,6 @@ def preflight_drive_write_access(
             )
         )
         raise
-
-
-def _credentials_include_required_drive_scopes(credentials) -> bool:
-    has_scopes = getattr(credentials, "has_scopes", None)
-    if callable(has_scopes):
-        try:
-            return bool(has_scopes(DRIVE_SCOPES))
-        except (TypeError, ValueError):
-            return False
-    scopes = getattr(credentials, "scopes", None)
-    if scopes is None:
-        scopes = getattr(credentials, "granted_scopes", None)
-    if scopes is None:
-        return True
-    return set(DRIVE_SCOPES).issubset({str(scope) for scope in scopes})
 
 
 def _load_drive_folder_write_metadata(

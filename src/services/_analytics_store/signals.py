@@ -7,11 +7,14 @@ import logging
 import sqlite3
 from dataclasses import asdict
 from typing import Any, cast
+
 from src.contracts.run_context import RunContext
 from src.contracts.signal_candidates import (
     SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION,
     SignalCandidate,
     SignalCandidateGroup,
+    SignalCandidateManifestSnapshot,
     SignalCandidateReadRequest,
     SignalCandidateReadResponse,
     SignalCandidateSourceRef,
@@ -19,6 +22,7 @@ from src.contracts.signal_candidates import (
     SignalCandidateStoreResponse,
     validate_signal_candidate_contract,
 )
+from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
@@ -108,6 +112,200 @@ def _group_from_row(row: sqlite3.Row) -> SignalCandidateGroup:
     )
     validate_signal_candidate_contract(group)
     return group
+
+
+def _candidate_from_manifest_payload(payload: dict[str, Any]) -> SignalCandidate:
+    candidate = SignalCandidate(
+        schema_version=str(payload["schema_version"]),
+        candidate_id=str(payload["candidate_id"]),
+        candidate_type=cast(Any, payload["candidate_type"]),
+        title=str(payload["title"]),
+        summary=str(payload["summary"]),
+        confidence=float(payload["confidence"]),
+        strength=float(payload["strength"]),
+        support_level=cast(Any, payload["support_level"]),
+        caveats=[str(value) for value in payload["caveats"]],
+        source_report_ids=[str(value) for value in payload["source_report_ids"]],
+        evidence_ids=[str(value) for value in payload["evidence_ids"]],
+        source_refs=[
+            _candidate_source_ref_from_dict(item) for item in payload["source_refs"]
+        ],
+        raw_source_context=dict(payload["raw_source_context"]),
+        validation_status=cast(Any, payload["validation_status"]),
+        validation_notes=[str(value) for value in payload["validation_notes"]],
+        group_id=str(payload["group_id"]),
+        extraction_request_id=str(payload["extraction_request_id"]),
+        generated_at_utc=str(payload["generated_at_utc"]),
+    )
+    validate_signal_candidate_contract(candidate)
+    return candidate
+
+
+def _group_from_manifest_payload(payload: dict[str, Any]) -> SignalCandidateGroup:
+    group = SignalCandidateGroup(
+        schema_version=str(payload["schema_version"]),
+        group_id=str(payload["group_id"]),
+        stable_key=str(payload["stable_key"]),
+        title=str(payload["title"]),
+        summary=str(payload["summary"]),
+        support_level=cast(Any, payload["support_level"]),
+        candidate_ids=[str(value) for value in payload["candidate_ids"]],
+        source_report_ids=[str(value) for value in payload["source_report_ids"]],
+        evidence_ids=[str(value) for value in payload["evidence_ids"]],
+        caveats=[str(value) for value in payload["caveats"]],
+        raw_group_context=dict(payload["raw_group_context"]),
+        validation_status=cast(Any, payload["validation_status"]),
+        extraction_request_id=str(payload["extraction_request_id"]),
+        generated_at_utc=str(payload["generated_at_utc"]),
+        topic=str(payload.get("topic") or ""),
+        topic_ids=[str(value) for value in payload.get("topic_ids", [])],
+        source_category_ids={
+            str(report_id): [str(value) for value in category_ids]
+            for report_id, category_ids in payload.get(
+                "source_category_ids", {}
+            ).items()
+        },
+        publication_status=cast(Any, payload["publication_status"]),
+        publication_hold_reason=cast(Any, payload["publication_hold_reason"]),
+    )
+    validate_signal_candidate_contract(group)
+    return group
+
+
+def _manifest_semantic_content(
+    *,
+    extraction_request_id: str,
+    group: SignalCandidateGroup,
+    candidates: list[SignalCandidate],
+) -> dict[str, Any]:
+    group_payload = asdict(group)
+    group_payload.pop("generated_at_utc", None)
+    candidate_payloads = []
+    for candidate in candidates:
+        candidate_payload = asdict(candidate)
+        candidate_payload.pop("generated_at_utc", None)
+        candidate_payloads.append(candidate_payload)
+    return {
+        "schema_version": SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION,
+        "extraction_request_id": extraction_request_id,
+        "group": group_payload,
+        "candidates": candidate_payloads,
+    }
+
+
+def _signal_candidate_manifest_sha256(
+    snapshot: SignalCandidateManifestSnapshot,
+) -> str:
+    return sha256_json(
+        _manifest_semantic_content(
+            extraction_request_id=snapshot.extraction_request_id,
+            group=snapshot.group,
+            candidates=snapshot.candidates,
+        )
+    )
+
+
+def _signal_candidate_manifest_snapshot(
+    group: SignalCandidateGroup,
+    candidates: list[SignalCandidate],
+) -> SignalCandidateManifestSnapshot:
+    snapshot_material = _manifest_semantic_content(
+        extraction_request_id=group.extraction_request_id,
+        group=group,
+        candidates=candidates,
+    )
+    snapshot = SignalCandidateManifestSnapshot(
+        schema_version=SIGNAL_CANDIDATE_MANIFEST_SCHEMA_VERSION,
+        manifest_sha256=sha256_json(snapshot_material),
+        extraction_request_id=group.extraction_request_id,
+        group=group,
+        candidates=candidates,
+    )
+    validate_signal_candidate_contract(snapshot)
+    return snapshot
+
+
+def _read_signal_candidate_manifest(
+    conn: sqlite3.Connection,
+    request: SignalCandidateReadRequest,
+) -> SignalCandidateManifestSnapshot:
+    row = conn.execute(
+        """
+        SELECT manifest_json
+        FROM signal_candidate_manifests
+        WHERE manifest_sha256=?
+        """,
+        (request.manifest_sha256,),
+    ).fetchone()
+    if row is None:
+        raise AppError(
+            code="signal_candidate_manifest_missing",
+            message="The immutable Signal candidate manifest is unavailable",
+            retryable=False,
+            severity="error",
+            context={"manifest_sha256": request.manifest_sha256},
+        )
+    try:
+        payload = json.loads(str(row["manifest_json"]))
+        if not isinstance(payload, dict):
+            raise ValueError("snapshot must be a JSON object")
+        group_payload = payload.get("group")
+        candidate_payloads = payload.get("candidates")
+        if not isinstance(group_payload, dict) or not isinstance(
+            candidate_payloads, list
+        ):
+            raise ValueError("snapshot group or candidates are missing")
+        snapshot = SignalCandidateManifestSnapshot(
+            schema_version=str(payload["schema_version"]),
+            manifest_sha256=str(payload["manifest_sha256"]),
+            extraction_request_id=str(payload["extraction_request_id"]),
+            group=_group_from_manifest_payload(group_payload),
+            candidates=[
+                _candidate_from_manifest_payload(item)
+                for item in candidate_payloads
+                if isinstance(item, dict)
+            ],
+        )
+        validate_signal_candidate_contract(snapshot)
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise AppError(
+            code="signal_candidate_manifest_corrupt",
+            message="The immutable Signal candidate manifest is invalid",
+            cause=exc,
+            retryable=False,
+            severity="error",
+            context={"manifest_sha256": request.manifest_sha256},
+        ) from exc
+    if (
+        snapshot.manifest_sha256 != request.manifest_sha256
+        or _signal_candidate_manifest_sha256(snapshot) != request.manifest_sha256
+        or (
+            request.extraction_request_id
+            and snapshot.extraction_request_id != request.extraction_request_id
+        )
+        or (request.group_ids and request.group_ids != [snapshot.group.group_id])
+        or (
+            request.candidate_ids
+            and request.candidate_ids != snapshot.group.candidate_ids
+        )
+        or (
+            request.source_report_ids
+            and request.source_report_ids != snapshot.group.source_report_ids
+        )
+        or (
+            request.evidence_ids and request.evidence_ids != snapshot.group.evidence_ids
+        )
+    ):
+        raise AppError(
+            code="signal_candidate_manifest_changed",
+            message=(
+                "The immutable Signal candidate manifest checksum or identity changed"
+            ),
+            retryable=False,
+            severity="error",
+            context={"manifest_sha256": request.manifest_sha256},
+        )
+    return snapshot
 
 
 def _delete_stale_signal_rows(
@@ -285,6 +483,44 @@ def upsert_signal_candidates(
                 _upsert_signal_group(conn, group)
             for candidate in request.candidates:
                 _upsert_signal_candidate(conn, candidate)
+            candidates_by_id = {
+                candidate.candidate_id: candidate for candidate in request.candidates
+            }
+            manifest_hashes: dict[str, str] = {}
+            for group in request.groups:
+                if len(set(group.candidate_ids)) != len(group.candidate_ids) or any(
+                    candidate_id not in candidates_by_id
+                    for candidate_id in group.candidate_ids
+                ):
+                    raise AppError(
+                        code="signal_candidate_manifest_invalid",
+                        message=(
+                            "Signal candidate snapshot must contain every exact "
+                            "group member"
+                        ),
+                        retryable=False,
+                        severity="error",
+                        context={"group_id": group.group_id},
+                    )
+                group_candidates = [
+                    candidates_by_id[candidate_id]
+                    for candidate_id in group.candidate_ids
+                ]
+                snapshot = _signal_candidate_manifest_snapshot(group, group_candidates)
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO signal_candidate_manifests(
+                        manifest_sha256, extraction_request_id, group_id, manifest_json
+                    ) VALUES(?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot.manifest_sha256,
+                        snapshot.extraction_request_id,
+                        snapshot.group.group_id,
+                        _json(asdict(snapshot)),
+                    ),
+                )
+                manifest_hashes[group.group_id] = snapshot.manifest_sha256
             stale_candidate_count = _delete_stale_signal_rows(
                 conn,
                 table="signal_candidates",
@@ -322,6 +558,7 @@ def upsert_signal_candidates(
         group_count=len(request.groups),
         stale_candidate_count=stale_candidate_count,
         stale_group_count=stale_group_count,
+        manifest_hashes=manifest_hashes,
     )
     validate_signal_candidate_contract(response)
     logger.info(
@@ -404,38 +641,48 @@ def read_signal_candidates(
                 "evidence_ids": request.evidence_ids,
                 "topic_filters": request.topic_filters,
                 "limit": request.limit,
+                "manifest_sha256": request.manifest_sha256,
             },
         )
     )
     try:
         with _analytics_conn(request.db_path, ctx) as conn:
             conn.row_factory = sqlite3.Row
-            candidate_rows = conn.execute(
-                """
-                SELECT *
-                FROM signal_candidates
-                ORDER BY strength DESC, candidate_id ASC
-                """
-            ).fetchall()
-            candidates = [
-                candidate
-                for candidate in (_candidate_from_row(row) for row in candidate_rows)
-                if _candidate_matches_read_request(candidate, request)
-            ][: request.limit]
-            group_ids = sorted({candidate.group_id for candidate in candidates})
-            groups: list[SignalCandidateGroup] = []
-            if group_ids:
-                placeholders = ",".join("?" for _ in group_ids)
-                group_rows = conn.execute(
-                    f"""
+            groups: list[SignalCandidateGroup]
+            if request.manifest_sha256:
+                snapshot = _read_signal_candidate_manifest(conn, request)
+                candidates = list(snapshot.candidates)
+                groups = [snapshot.group]
+            else:
+                snapshot = None
+                candidate_rows = conn.execute(
+                    """
                     SELECT *
-                    FROM signal_candidate_groups
-                    WHERE group_id IN ({placeholders})
-                    ORDER BY group_id ASC
-                    """,
-                    tuple(group_ids),
+                    FROM signal_candidates
+                    ORDER BY strength DESC, candidate_id ASC
+                    """
                 ).fetchall()
-                groups = [_group_from_row(row) for row in group_rows]
+                candidates = [
+                    candidate
+                    for candidate in (
+                        _candidate_from_row(row) for row in candidate_rows
+                    )
+                    if _candidate_matches_read_request(candidate, request)
+                ][: request.limit]
+                group_ids = sorted({candidate.group_id for candidate in candidates})
+                groups = []
+                if group_ids:
+                    placeholders = ",".join("?" for _ in group_ids)
+                    group_rows = conn.execute(
+                        f"""
+                        SELECT *
+                        FROM signal_candidate_groups
+                        WHERE group_id IN ({placeholders})
+                        ORDER BY group_id ASC
+                        """,
+                        tuple(group_ids),
+                    ).fetchall()
+                    groups = [_group_from_row(row) for row in group_rows]
     except AppError:
         raise
     except sqlite3.Error as exc:
@@ -453,6 +700,7 @@ def read_signal_candidates(
         db_path=request.db_path,
         candidates=candidates,
         groups=groups,
+        manifest_sha256=(snapshot.manifest_sha256 if snapshot is not None else ""),
     )
     validate_signal_candidate_contract(response)
     logger.info(
