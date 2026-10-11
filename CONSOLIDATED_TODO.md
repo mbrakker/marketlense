@@ -1,6 +1,6 @@
 # Consolidated TODO — canonical MarketLense backlog
 
-**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register (not a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`.
+**Last structural consolidation:** 2026-10-11. **Status baseline:** 2026-10-08, as recorded in the archived register; D13 was added as a deferred P2 follow-up on 2026-10-11 (neither date implies a new source, deployment, test, or cohort audit). **Consolidation source HEAD:** `b0f1249f014c270dfd85fa6d7fad9cf71035cb90`.
 
 This is the **single authoritative status and outcome register**. The five [workstream specifications](docs/backlog/) contain full implementation and Luna guidance, and the [technical proposal index](docs/backlog/proposal-index.md) maps all proposals to one existing owner. Full unchanged backups: [original backlog](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [original 100-improvement catalogue](docs/backlog/archive/10improvements-20261011-preconsolidation.md). The root [10improvements.md](10improvements.md) is now a compatibility pointer, not a competing backlog.
 
@@ -106,6 +106,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Deferred | D10 | Browser executor/static-DOM/prompt-payload/route-playbook tuning | Revisit only from a measured acquisition gap; A18/A19 own current correctness work. |
 | Deferred | D11 | Root pre-commit, declarative quality-gate manifest, stricter mypy/Ruff, and hygiene scorecards | Revisit when current CI evidence proves a specific enforcement gap. |
 | Deferred | D12 | Governed staging WordPress publish/projection canary | Revisit when a non-public staging site and named human approver are available. |
+| Deferred | D13 | [Evaluate direct OpenAI Responses migration](docs/backlog/R-engineering.md#d13-openai-responses-migration) | P2: selectively A/B direct OpenAI text/JSON generation against current Chat Completions on the frozen five-report cohort; migrate only with non-regressing quality/reliability and demonstrated overall benefit. Keep OpenRouter; test reasoning-context reuse separately. |
 | Closed | C1 | Cached-provider accounting reconciliation corpus | Real provider-hit and tamper-rejection fixtures are in the CI accounting path. |
 | Closed | C2 | Bounded multimodal crop-QA escalation | Typed escalation generator and deterministic no-model default are implemented/tested. |
 | Closed | C3 | Lazy model construction, ranking/crop shortcuts, prefetch, and route prompt improvements | Landed behind existing boundaries with retained regression evidence. |
@@ -118,7 +119,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Excluded | X2 | Automatic lower private-API promotion thresholds | Conservative thresholds remain mandatory. |
 | Excluded | X3 | Invented acquisition-form identity facts or public pipeline diagnostics | Map only verified identity facts; diagnostics remain operator-only. |
 
-**Register counts (retained from the 2026-10-08 status baseline):** 30 Active, 44 Closed, 12 Deferred, 3 Excluded (89 total). This consolidation does **not** certify technical closure on 2026-10-11.
+**Register counts:** 30 Active, 44 Closed, 13 Deferred, 3 Excluded (90 total). The 2026-10-08 baseline contained 89 items; D13 is one newly tracked deferred follow-up, not evidence of technical closure or a new cohort audit.
 
 
 ## Active Backlog
@@ -247,7 +248,7 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 
 ## Deferred and excluded work
 
-The authoritative statuses and short reasons remain above; the [original register](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) preserves the full historical context. Do not activate intentionally deferred DAG scheduling, temporary-sandbox HTTPS migration, speculative provider failover or generic infrastructure work without a measured MVP need. Exclusions remain prohibited behavior, not queued tasks.
+The authoritative statuses and short reasons remain above; the [original register](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) preserves the full historical context. Do not activate intentionally deferred DAG scheduling, temporary-sandbox HTTPS migration, speculative provider failover or generic infrastructure work without a measured MVP need. [D13](docs/backlog/R-engineering.md#d13-openai-responses-migration) is a P2 evidence-gated endpoint comparison, not authorization to change the production default or to build stateful reasoning chains. Exclusions remain prohibited behavior, not queued tasks.
 
 ## Autonomous-MVP completion and publication safeguards
 
