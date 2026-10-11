@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
+from scripts.quality._cto_review_evidence.log_reduction_scorecard import (
+    LogReductionAccumulator,
+)
 from src.utils.gui_utils import (
     extract_log_date_from_filename,
     parse_structured_log_line,
@@ -279,6 +282,7 @@ def scan_logs(
     *,
     fresh_after: object | None,
     parse_timestamp: Callable[[str], object | None],
+    reduction_accumulator: LogReductionAccumulator | None = None,
 ) -> tuple[list[dict[str, object]], dict[str, object], bool]:
     """Scan snapshotted logs line-by-line; return redacted matches and coverage."""
     matches: list[dict[str, object]] = []
@@ -303,6 +307,8 @@ def scan_logs(
         coverage["log_files_scanned"] += 1
         coverage["log_bytes_scanned"] += int(entry.get("snapshot_file_size") or 0)
         log_date = extract_log_date_from_filename(str(entry.get("source_path") or ""))
+        if reduction_accumulator is not None:
+            reduction_accumulator.observe_file_date(log_date)
         first: str | None = None
         last: str | None = None
         line_count = 0
@@ -318,6 +324,12 @@ def scan_logs(
                     if parse_all_structured_events or matched
                     else None
                 )
+                if parse_all_structured_events and reduction_accumulator is not None:
+                    reduction_accumulator.observe_event(
+                        parsed,
+                        raw_line=raw_line,
+                        log_date=log_date,
+                    )
                 if parse_all_structured_events and parsed is None:
                     unparsed_count += 1
                     coverage["unparsed_lines"] = (

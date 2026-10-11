@@ -222,6 +222,56 @@ Commit and push the scoped change, including the necessary backlog evidence upda
   - Recurring callers above threshold are linked to an owner/remediation item and remain reviewable; no automatic weakening of event bounds occurs.
   - Aggregation is deterministic for the same retained log set and tests prove redaction preservation.
 
+**Implementation and verification (2026-10-11):** The CTO evidence collector
+emits the versioned `log_reduction_scorecard.json` artifact and bounded totals
+in its executive summary. It reuses the full structured-event parser pass when
+`--fresh-after` is supplied and reports `unavailable` when that pass is not
+available. The scorecard uses nearest-rank size percentiles, compares retained
+serialized JSON message bytes with the recorded maximum, flags three or more
+reductions for a validated module/event pair, and routes review to the module
+owner and this R6 item. Its persisted remediation reference uses the canonical
+R6 heading anchor. It lists at most 100 caller groups and reports an explicit
+partial state and overflow reference when more groups exist. It does not alter
+runtime logging or release approval checks.
+
+The exact-HEAD fixture produced an available scorecard and executive summary
+for three reductions, one recurring `src.services.example/bounded_event`
+group, and p50/p90/p95/p99/max attempted sizes of 24,000/40,000/40,000/40,000/
+40,000 bytes. The actual read-only scan of
+`logs/market_lense_2026-10-08.log` found zero reductions in 20,444 structured
+events; all 20,444 module/event identities fit the safe grammar (75 distinct
+module names), timestamps were available, and producer build identity was
+unavailable. This was one retained log file, not a full retained-corpus audit.
+The fixture output was inspected for metadata-only content, and separate
+sensitive-content fixtures verify that unsafe identities and payload text do
+not enter the scorecard.
+
+Focused verification:
+
+```text
+python -m pytest -q --cov=src.contracts.log_reduction --cov-report=term-missing tests/test_log_reduction_scorecard.py tests/test_log_reduction_contract.py tests/test_collect_cto_review_evidence.py tests/test_logging_schema.py tests/test_gui_utils.py tests/test_release_evidence_summary.py tests/test_release_evidence_review.py
+162 passed; new scorecard contract coverage 100% (9 ResourceWarnings from SQLite-backed evidence fixtures)
+python -m ruff check src/contracts/log_reduction.py scripts/quality/_cto_review_evidence/log_reduction_scorecard.py scripts/quality/_cto_review_evidence/log_content_leakage.py scripts/quality/collect_cto_review_evidence.py tests/test_log_reduction_scorecard.py tests/test_log_reduction_contract.py tests/_test_collect_cto_review_evidence/cases_02_strict_collection_and_leakage.py
+All checks passed
+python -m ruff format --check src/contracts/log_reduction.py scripts/quality/_cto_review_evidence/log_reduction_scorecard.py scripts/quality/_cto_review_evidence/log_content_leakage.py scripts/quality/collect_cto_review_evidence.py tests/test_log_reduction_scorecard.py tests/test_log_reduction_contract.py tests/_test_collect_cto_review_evidence/cases_02_strict_collection_and_leakage.py
+All seven files already formatted
+python scripts/ci/check_contract_schemas.py
+Contract schema snapshot gate passed
+python scripts/ci/check_architecture_imports.py
+Architecture import gate passed
+python scripts/ci/check_bounded_logging.py
+Bounded logging gate passed
+$env:TYPECHECK_CHANGED_ONLY='true'; python scripts/ci/run_type_check.py
+Changed contract type check passed; tracked repository baseline matched
+```
+
+`python scripts/ci/check_documentation.py --check-generated` still reports ten
+pre-existing missing heading anchors in the R-engineering backlog links. The
+scorecard and its local fixture collector made no external provider calls or
+writes; evidence artifacts were written only to temporary test output. R6
+implementation acceptance is complete; caller remediation remains a
+review-driven action when a scanned corpus flags an actual recurring caller.
+
 ### Luna implementation prompt — R6
 
 ```text

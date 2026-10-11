@@ -1,6 +1,7 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path as _SplitPath
 
 __file__ = str(
@@ -21,6 +22,12 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
     manifest = json.loads((paths.output_dir / "evidence_run_manifest.json").read_text())
     snapshots = json.loads((paths.output_dir / "snapshot_manifest.json").read_text())
     leakage = json.loads((paths.output_dir / "log_content_leakage.json").read_text())
+    reduction_scorecard = json.loads(
+        (paths.output_dir / "log_reduction_scorecard.json").read_text()
+    )
+    executive_summary = json.loads(
+        (paths.output_dir / "executive_summary.json").read_text()
+    )
     validation = json.loads(
         (paths.output_dir / "consistency_validation.json").read_text()
     )
@@ -43,6 +50,9 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
     assert leakage["status"] == "passed"
     assert leakage["coverage"]["source_canary_count"] == 5
     assert leakage["coverage"]["editorial_canary_count"] == 5
+    assert reduction_scorecard["status"] == "unavailable"
+    assert reduction_scorecard["reduction_count"] is None
+    assert executive_summary["totals"]["log_reductions"]["status"] == "unavailable"
     assert validation["passed"] is True
     assert validation["repository_commit_sha"] == sha
     rendered = "\n".join(
@@ -52,10 +62,72 @@ def test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle(
     )
     assert source not in rendered
     assert editorial not in rendered
+    assert "log_reduction_scorecard.json" in executive_summary["artifacts"]
     assert all(
         "sha256" in item and "byte_count" in item
         for item in manifest["artifact_inventory"]
     )
+
+
+def test_fresh_cto_scan_reports_recurring_log_reductions_in_summary(
+    tmp_path: Path,
+) -> None:
+    paths, sha, _, _ = _strict_paths(tmp_path)
+    fresh_after = datetime.now(UTC) - timedelta(minutes=1)
+    paths = EvidencePaths(
+        **{
+            **paths.__dict__,
+            "fresh_after": fresh_after.isoformat(),
+            "log_corpus_scope": "post_remediation_smoke_only",
+        }
+    )
+    log_path = next(paths.log_dir.glob("market_lense_*.log"))
+    lines = []
+    for attempted_size in (20_000, 24_000, 40_000):
+        payload = {
+            "timestamp_utc": datetime.now(UTC).isoformat(),
+            "run_id": "r6-test-run",
+            "module": "src.services.example",
+            "event": "bounded_event",
+            "producer_commit_sha": sha,
+            "fields": {
+                "log_payload_reduced": {
+                    "attempted_size_bytes": attempted_size,
+                    "maximum_size_bytes": 16_384,
+                    "original_field_count": 1,
+                }
+            },
+        }
+        lines.append(f"12:00:00 | INFO | market_lense.test | {json.dumps(payload)}\n")
+    log_path.write_text("".join(lines), encoding="utf-8")
+
+    collect(paths)
+
+    scorecard = json.loads(
+        (paths.output_dir / "log_reduction_scorecard.json").read_text()
+    )
+    summary = json.loads((paths.output_dir / "executive_summary.json").read_text())
+    assert scorecard["status"] == "available"
+    assert scorecard["reduction_count"] == 3
+    assert scorecard["groups"][0]["recurring"] is True
+    assert summary["totals"]["log_reductions"] == {
+        "status": "available",
+        "reduction_count": 3,
+        "module_event_group_count": 1,
+        "recurring_group_count": 1,
+        "included_group_count": 1,
+        "omitted_group_count": 0,
+        "attempted_size_bytes": {
+            "status": "available",
+            "sample_count": 3,
+            "p50": 24_000,
+            "p90": 40_000,
+            "p95": 40_000,
+            "p99": 40_000,
+            "max": 40_000,
+        },
+    }
+    assert scorecard["build_identity"]["collector_commit_sha"] == sha
 
 
 def test_declared_smoke_log_scope_is_explicit_in_public_evidence(
@@ -260,7 +332,10 @@ def test_json_escaped_and_windowed_retained_content_fail_leakage_assessment(
     paths, _, source, _ = _strict_paths(tmp_path)
     normalized = " ".join(source.casefold().split())
     middle = (len(normalized) - 80) // 2
-    partial = f"{normalized[:80]} unrelated operational marker {normalized[middle : middle + 80]}"
+    partial = (
+        f"{normalized[:80]} unrelated operational marker "
+        f"{normalized[middle : middle + 80]}"
+    )
     _seed_standard_log(tmp_path, json.dumps({"nested": partial}, ensure_ascii=True))
 
     with pytest.raises(LogContentLeakageError):
@@ -343,6 +418,7 @@ def test_freshness_requires_a_fresh_standard_log(tmp_path: Path) -> None:
 
 __all__ = [
     "test_strict_clean_exact_head_snapshots_logs_and_publishes_redacted_bundle",
+    "test_fresh_cto_scan_reports_recurring_log_reductions_in_summary",
     "test_declared_smoke_log_scope_is_explicit_in_public_evidence",
     "test_strict_isolated_bundle_marks_absent_run_logs_unavailable",
     "test_unknown_log_corpus_scope_fails_before_snapshot_work",

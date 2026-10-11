@@ -212,11 +212,45 @@ Raw snapshotted log lines are compared deterministically, including unstructured
 The existing CSV filenames remain stable. The collector additionally writes:
 
 - `detailed_metrics.json`: finalized structured input for summary derivation;
-- `executive_summary.json`: totals derived only from that finalized detail;
+- `executive_summary.json`: totals derived from finalized detail plus the bounded log-reduction scorecard;
 - `snapshot_manifest.json`: database, retained-artifact, and standard-log snapshot provenance;
 - `log_content_leakage.json`: versioned canary coverage and redacted matching result (`passed`, `failed`, or `incomplete`);
+- `log_reduction_scorecard.json`: versioned read-only reduction counts, module/event groups, size summaries, time/build identity, and recurring-caller review locators;
 - `evidence_run_manifest.json`: exact repository provenance, configuration, snapshot-manifest hash, and canonical file inventory with byte counts and SHA-256 values;
 - `consistency_validation.json`: compact checks, exact-head outcome, repository SHA, and finalized run-manifest hash.
+
+The scorecard reuses the structured-log parser pass already performed for a
+fresh CTO scan. `--fresh-after` enables that full metadata pass; without it,
+the scorecard reports `unavailable` rather than treating unparsed records as
+zero reductions. No readable log files also reports `unavailable`. A complete
+scan with no reductions reports `zero`; malformed structured lines, invalid
+reduction metadata, or unreadable files report `partial` with explicit counts.
+The existing content-leakage result and release approval checks are unchanged.
+
+Only validated module and event identifiers and numeric reduction metadata
+enter the scorecard. Module identities accept the current `src.*` namespace
+and retained `market_lense.*` namespace; other module/event identities are
+represented by a generic unavailable identity. Attempted-size percentiles use
+nearest-rank p50, p90, p95, p99, and maximum values. Retained event size is the
+UTF-8 byte length of the serialized JSON message in the snapshotted log; the
+discarded values are never reconstructed. The scorecard compares that size
+with each event's retained `maximum_size_bytes` and reports the budget result.
+It reports both validated
+offset-aware `timestamp_utc` bounds and dates from canonical log filenames,
+plus the collector SHA and up to 25 sorted producer SHAs retained by events.
+Missing build or time identity is explicit.
+
+A caller is recurring after at least three reductions for the same validated
+module/event pair across the scanned corpus. Such a group points reviewers to
+the owning module and
+`CONSOLIDATED_TODO.md#r6-review-bounded-log-reduction-telemetry-and-remediate-recurring-callers`.
+This creates review work only;
+it never changes logging code or event bounds. The scorecard includes at most
+100 caller groups, ordered by reduction count and then identifier. If more
+groups exist, it reports omitted and omitted-recurring counts, routes the
+overflow to module owners through R6, and sets its state to `partial`.
+`log_reduction_scorecard.json` is included in the executive-summary artifact
+list and the CTO inventory.
 
 The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. It records the collector Python/OS separately from bounded producer-commit observations in historical structured logs; historical producer runtime version is explicitly `not_retained` when absent. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
 
