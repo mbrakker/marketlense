@@ -134,7 +134,7 @@ following map links every documentation set and explains what belongs there.
 | Test-fixture guides | Retained benchmark and crop-quality corpora, their integrity rules, and the baselines that consume them | [candidate fixtures](tests/fixtures/candidate_extraction/golden/crop_quality_v1/README.md), [PDF benchmark fixtures](tests/fixtures/pdf_benchmark/golden/README.md), and [crop-refinement fixtures](tests/fixtures/pdf_crop_refine/golden/README.md) |
 | Vendored Browser Use reference | The preserved upstream tool documentation; it is not MarketLense’s canonical workflow documentation | [tools/browser-use README](tools/browser-use/README.md) |
 | WordPress front end | The public rendering contract, shortcodes, card variants, and verification procedure for the WordPress subproject | [README_WORDPRESS.md](README_WORDPRESS.md) |
-| Active backlog | The sole current prioritised work list; historical plans are not a backlog | [CONSOLIDATED_TODO.md](CONSOLIDATED_TODO.md) |
+| Active backlog and task specifications | Canonical task status and priorities, execution guidance, mapped technical proposals, and task-specific Luna prompts | [Canonical backlog](CONSOLIDATED_TODO.md), [execution guide](docs/backlog/README.md), and [technical proposal index](docs/backlog/proposal-index.md) |
 
 Use the complete [documentation index](docs/README.md) to locate an individual
 file within these sets. Keep this README as stable orientation and keep
@@ -152,5 +152,7 @@ Historical implementation detail belongs in Git history or
 ## Contributing
 
 Read [AGENTS.md](AGENTS.md) before making changes. Preserve role boundaries, update the canonical documentation for changed behavior, regenerate references when CLI/configuration sources change, and run the focused quality checks for the affected area.
+
+For backlog implementation, start with the [execution guide](docs/backlog/README.md), then use the [proposal index](docs/backlog/proposal-index.md) and its owning workstream specification for task-specific Luna prompts. Only [CONSOLIDATED_TODO.md](CONSOLIDATED_TODO.md) determines task status.
 
 The root README is an entry point: keep it to stable orientation, essential setup, primary commands, and links to canonical documentation.
