@@ -11,7 +11,6 @@ from src.services.lock_service import acquire_lock, release_lock
 from src.utils.errors import AppError
 from src.utils.logging import log_event
 
-
 logger = logging.getLogger("market_lense.ingest_orchestrator")
 
 
@@ -82,6 +81,7 @@ def finalize_ingest_run(
                 lock_path=lock_info.lock_path,
                 owner_id=lock_info.owner_id,
                 pid=lock_info.pid,
+                generation=lock_info.generation,
             ),
             lock_ctx,
         )
