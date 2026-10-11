@@ -1954,6 +1954,24 @@ def _source_index(
     return indexed
 
 
+def _source_pages_support_numeric_claim(
+    raw: dict,
+    pages: Sequence[int],
+    source_evidence: dict[str, tuple[str, str, int | None]],
+) -> bool:
+    claim_quantities = extract_quantities(_item_claim_text(raw))
+    if not claim_quantities:
+        return False
+    page_quantities = [
+        quantity
+        for _pack, text, page in source_evidence.values()
+        if page in pages
+        for quantity in extract_quantities(text)
+    ]
+    status, _reason = _numeric_evidence_status(claim_quantities, page_quantities)
+    return status == "passed"
+
+
 def _source_references(
     raw: dict,
     source_evidence: dict[str, tuple[str, str, int | None]],
@@ -1972,6 +1990,27 @@ def _source_references(
         page_values = [page for page in page_values if page in exact_evidence_pages]
         if not page_values:
             page_values = exact_evidence_pages[:1]
+    elif len(page_values) == 1:
+        source_text = _item_source_text(raw)
+        matched_pages = _matched_source_pages(source_text, source_evidence)
+        if (
+            len(matched_pages) == 1
+            and matched_pages[0] != page_values[0]
+            and not _source_pages_support_numeric_claim(
+                raw, page_values, source_evidence
+            )
+            and _source_pages_support_numeric_claim(raw, matched_pages, source_evidence)
+        ):
+            matched_page_text = "\n".join(
+                text
+                for _pack, text, page in source_evidence.values()
+                if page == matched_pages[0]
+            )
+            shared_tokens = _recovery_tokens(source_text) & _recovery_tokens(
+                matched_page_text
+            )
+            if len(shared_tokens) >= 5:
+                page_values = matched_pages
     has_page_provenance = any(
         source_page is not None
         for _source_id, (_pack, _text, source_page) in source_evidence.items()

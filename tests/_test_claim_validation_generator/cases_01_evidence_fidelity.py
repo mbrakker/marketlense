@@ -371,6 +371,82 @@ def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page
     assert package.results[0].status == "supported"
 
 
+def _activate_revenue_fidelity_case(alternate_page_text: str):
+    claim = (
+        "Global consumer Internet and media revenue is forecast to rise from "
+        "$1.7 trillion in 2017E to $2.0 trillion in 2021E, adding $302 billion "
+        "at 4.1% CAGR versus approximately 3% global GDP CAGR."
+    )
+    evidence = (
+        "Global consumer Internet and media revenue outlook, a four-year "
+        "forecast: $1.7 trillion to $2.0 trillion; $302 billion in growth; "
+        "4.1% CAGR versus global GDP around 3%."
+    )
+    return validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "revenue-growth",
+                        "text": claim,
+                        "evidence": evidence,
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "www.activate.com\n3\nContents\n"
+                    "$300 Billion in Tech and Media Growth Dollars"
+                ),
+            },
+            {
+                "id": "source:page:5",
+                "page": 5,
+                "text": alternate_page_text,
+            },
+        ],
+    )
+
+
+def test_evidence_fidelity_recovers_unique_numeric_source_page_from_excerpt() -> None:
+    package = _activate_revenue_fidelity_case(
+        "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
+        "2017E\n2021E\n$1.7T\n$2.0T\n$302B\nCAGR 4.1%\n"
+        "Global GDP CAGR: ~3%\nFORECAST"
+    )
+
+    result = package.results[0]
+    assert result.status == "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [5]
+
+
+def test_evidence_fidelity_does_not_rebind_to_same_values_for_another_subject() -> None:
+    package = _activate_revenue_fidelity_case(
+        "GLOBAL SPORTS REVENUE OUTLOOK, 2017E-2021E, USD\n"
+        "$1.7T\n$2.0T\n$302B\nCAGR 4.1%\nGlobal GDP CAGR: ~3%"
+    )
+
+    result = package.results[0]
+    assert result.status != "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [4]
+
+
+def test_evidence_fidelity_does_not_rebind_when_alternate_page_is_incomplete() -> None:
+    package = _activate_revenue_fidelity_case(
+        "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
+        "2017E\n2021E\n$1.7T\n$2.0T\n$302B"
+    )
+
+    result = package.results[0]
+    assert result.status != "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [4]
+
+
 def test_evidence_fidelity_does_not_treat_explanatory_evidence_as_the_claim() -> None:
     package = validate_evidence_fidelity(
         {
