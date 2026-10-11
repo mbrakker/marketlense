@@ -1,6 +1,6 @@
 # Architecture, engineering, release, and disaster recovery
 
-Canonical owner IDs: R1, R2, R3, R6, R7. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
+Canonical owner IDs: R1, R2, R3, R6, R7, R8. This document contains **Active outcome specifications and their retained technical proposal slices**. Status belongs to [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md), not to individual proposal sections. The complete source texts are preserved unchanged in the [historical backlog](archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) and [historical proposal catalogue](archive/10improvements-20261011-preconsolidation.md).
 
 Before implementing a slice, verify its historic diagnosis at current HEAD; use its **Luna implementation prompt** together with the full evidence and criteria immediately above it. Proposed thresholds are acceptance targets, not current results. Closed parent milestones are not reopened by a proposal's historical wording.
 
@@ -307,6 +307,91 @@ Update R7 and proposal disposition only with verifiable SHA/cohort/test evidence
 Commit and push the smallest proven change.
 ```
  
+---
+
+
+<a id="r8-harden-windows-artifact-path-construction-and-reuse"></a>
+## R8. Harden Windows artifact path construction and reuse
+
+**Canonical status:** Active. **Priority:** P1, with residual inventory PATH-06 at P2. **Added:** 2026-10-11. **Evidence:** targeted static inspection at observed main HEAD e389f3c3796d4cfc59fdd273a26684812790b82c; not a native Windows reproduction, production incident count, or exhaustive repository-wide audit. PATH-01..PATH-06 are R8 implementation slices, not new canonical outcomes.
+
+- **Baseline:** Mailbox attachment and ZIP paths use sanitized but unbounded message IDs and filenames; browser artifact copies retain source filenames, append unbounded collision counters, and nest under host/hash download roots; candidate extraction caches use long Drive titles; OCR chunk filenames append page ranges to the full PDF stem; crop-refinement outputs use unbounded report-name directories and generate fingerprint sidecars; cover fingerprint lookup reconstructs slug-based analysis paths and can miss compacted analysis-store paths. Browser profile/capture paths, cover image temporary writes, cache/checkpoint compaction fallbacks and isolated canary roots merit scoped follow-up. These are code-observed vulnerabilities, not verified failures.
+- **Existing protection to reuse:** src/utils/path_utils.py provides bounded filenames; src/services/file_service.py bounds atomic temp names; src/services/report_analysis_store_service.py compacts persisted report packs; PDF crop-region and preview outputs compact paths. Preserve these where already sufficient; avoid duplicate systems or universal path rewriting.
+- **Target outcome:** Valid reports can acquire, persist, split for OCR, crop, resume, render and generate covers on reasonably deep standard Windows roots, without depending on opt-in long-path support. File paths and their temporary/sidecar variants stay within supported full-path and component budgets; compact naming remains deterministic and collision-resistant, while original filenames, identities, hashes, lineage, cache and persisted references remain correct. For impossible operator-supplied roots, fail with typed actionable non-retryable errors before expensive side effects where practical; never silently skip or accept missing artifacts.
+- **Execution order:** Reinspect current HEAD; implement PATH-01 mailbox, PATH-02 browser, PATH-03 candidate cache/OCR, PATH-04 crop refinement, PATH-05 cover paths, then PATH-06 residual checks. Implement and verify one meaningful slice per commit; no new service/framework, blanket retry, generic filesystem abstraction, unnecessary renaming, or extra model calls.
+- **Outcome acceptance:** Focused Windows/portable tests prove long-root, Unicode, long-name, collision and impossible-root cases, including direct and ZIP PDFs, browser downloads, OCR chunk re-open, crop/fingerprint and cover readback, deterministic replay and safe failure. Verify that compacted names are consumed via canonical persisted references, historical paths still read, and checkpoints/cache identities are not broken. Run a native Windows test for high-risk paths when available; state explicitly if unavailable. Record exact SHA, checks/results, scope, residual gaps and rollback. Close R8 only after a scoped scan of remaining routine path producers and end-to-end affected artifact readback, not on documentation alone.
+
+### Luna implementation prompt — R8
+
+~~~text
+Implement the next unverified R8 / PATH-NN Windows-path reliability slice at current MarketLense HEAD.
+Inspect AGENTS.md, the owning R8/PATH specification, actual producer/consumer code, tests and path contracts.
+Fix the earliest verified path-production or reference mismatch using existing utilities/services.
+Preserve identities, original names in metadata, source hashes, cache/checkpoint compatibility,
+atomic writes, path traversal/ZIP safeguards, validation and publication gates.
+Test long/deep and normal paths, deterministic collision behavior, impossible roots, and downstream readback.
+Report exact test results, native Windows coverage or its absence, remaining gaps and producer SHA.
+Update R8/proposal disposition with evidence; do not close the parent early. Commit and push.
+~~~
+
+### Linked technical implementation slices — Windows path-length review
+
+**Technical status:** Proposed from 2026-10-11 source inspection. Recheck source at implementation HEAD; if already protected, verify and reconcile rather than modify.
+
+<a id="path-01"></a>
+#### PATH-01 — Bound mailbox PDF and ZIP attachment destinations (P1)
+
+- **Modules:** src/services/mailbox_acquisition_service.py — _safe_file_name, _artifact_path, _materialize_attachment and ZIP staging.
+- **Problem:** Unbounded provider-message directory and direct/ZIP PDF basename can exceed full-path or component limits; sanitization alone is insufficient.
+- **Implementation:** Bound full destination and staging paths; preserve original names/provider IDs/archive provenance separately; use stable, collision-resistant derived names and keep ZIP safety limits.
+- **Acceptance:** Long IDs, long filenames, ZIP members with nearly identical names, repeated writes and nested usable roots persist distinct readable PDFs; impossible roots yield typed errors, never overwrite or silently lose a candidate.
+- **Codex guidance:** Fix the producer using existing path helpers; test direct and ZIP readback plus collisions and error handling, then commit/push.
+
+<a id="path-02"></a>
+#### PATH-02 — Bound browser download, copied artifact, capture and profile paths (P1)
+
+- **Modules:** src/services/_browser_report_download/request.py; _browser_runtime/_terminal_assets/artifacts.py and capture.py; _browser_runtime/_session_lifecycle/cleanup.py.
+- **Problem:** Host/hash download subdirectories, original filenames/collision suffixes, URL-derived rendered PDFs and managed profile names are not validated against one complete budget.
+- **Implementation:** Bound destination names at their owning producer; retain canonical URL/cache identity, session cleanup and verified PDF semantics. Do not treat a failed materialization as successful acquisition or trigger extra browser/model work.
+- **Acceptance:** Long host, downloaded name, repeated collisions and deep roots are handled deterministically; captured PDFs and profiles create and clean up or fail explicitly, with correct stored artifact paths.
+- **Codex guidance:** Trace actual browser file creation/readback and cleanup; fix verified gaps with small changes, run focused paths and commit/push.
+
+<a id="path-03"></a>
+#### PATH-03 — Bound candidate PDF caches and OCR chunk names (P1)
+
+- **Modules:** src/orchestrators/candidate_extraction_orchestrator.py; src/services/_pdf/text.py.
+- **Problem:** Candidate cache derives its name from an unbounded Drive filename; OCR chunk suffixes extend the entire source PDF stem.
+- **Implementation:** Use stable identity/content-aware compact filenames within the resolved cache/chunk root. Preserve Drive file identity, MD5, OCR source/chunk lineage, chunk order and cache/resume behavior; do not unnecessarily rework the main file-ID cache.
+- **Acceptance:** Long source names yield correct, reopenable OCR chunks and distinct cache entries; replay hits the intended source; unfit roots fail explicitly without repeated work.
+- **Codex guidance:** Verify cache/OCR contracts and downstream consumers, implement a focused naming fix and test roundtrip/reuse before commit/push.
+
+<a id="path-04"></a>
+#### PATH-04 — Bound crop-refinement images and fingerprint paths (P1)
+
+- **Modules:** src/services/_pdf/_crop/refine.py and its sidecar writer; compare already protected _crop/regions.py and _crop/preview.py.
+- **Problem:** The report-derived crop_refine_pages directory and longer image fingerprint/QA sidecars can breach Windows budgets.
+- **Implementation:** Reuse existing report-name/path compaction, budget all output/sidecar/temp variants, preserve relative references, page identity and crop QA.
+- **Acceptance:** Long report names render and reopen page images with verified fingerprint sidecars, while ordinary paths, crop semantics and source provenance remain unchanged. Unfit roots fail explicitly.
+- **Codex guidance:** Reuse existing crop naming patterns, verify downstream sidecar proof, then commit/push.
+
+<a id="path-05"></a>
+#### PATH-05 — Resolve compacted analysis artifacts and bound cover assets (P1)
+
+- **Modules:** src/orchestrators/cover_image_orchestrator.py; src/utils/cover_path_utils.py; src/services/cover_image_service.py; canonical src/services/report_analysis_store_service.py.
+- **Problem:** Reconstructed report_analysis/artifacts.json may not match stored compacted slug/pack paths; cover asset paths are only component-bounded; cover temporary filename appends .tmp.
+- **Implementation:** Reuse actual persisted/authoritative analysis artifact path, not a manually reconstructed slug; bound full cover/card and temporary paths while retaining existing references, cover style identity and idempotent reuse.
+- **Acceptance:** Long titles that compact both analysis slug and pack remain cover-generatable/replayable with correct fingerprint; existing legacy paths still read; near-limit .tmp outputs succeed or fail typed.
+- **Codex guidance:** Trace report-analysis write -> saved reference -> cover read -> cover output; fix producer and consumer at the correct boundaries, test readback/reuse, commit/push.
+
+<a id="path-06"></a>
+#### PATH-06 — Recheck compact fallbacks and residual nested paths (P2)
+
+- **Modules:** src/services/file_service.py checkpoint fallback; src/generators/report_generation_shared.py cache fallback; scripts/quality/ias_live_canary_runner.py nested roots; other credible path producers discovered by focused inventory.
+- **Problem:** Some compact fallbacks return paths without checking the final compact candidate; nested canary/test roots can exhaust the remaining path budget.
+- **Implementation:** Measure final path, component, temp and sidecar lengths; fix only actual remaining high-likelihood gaps, and surface genuinely impossible roots as typed actionable diagnostics.
+- **Acceptance:** Checkpoint/cache replay and isolated work roots survive realistic Windows depth; impossible roots fail predictably; final report identifies areas inspected and untested native Windows behavior.
+- **Codex guidance:** Inventory only credible remaining paths after PATH-01..05, avoid building broad new infrastructure, verify focused cases and commit/push.
+
 ---
 
 <a id="d13-openai-responses-migration"></a>
