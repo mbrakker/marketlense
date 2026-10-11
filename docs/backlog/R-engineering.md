@@ -435,3 +435,48 @@ verified status and evidence; commit and push only the scoped changes.
 ```
 
 ---
+
+
+<a id="d14-subscription-debug-inference-adapter"></a>
+## Deferred initiative D14 — Evaluate ChatGPT-plan debugging inference adapter
+
+**Canonical status:** Deferred; P2, debugging-only; not an autonomous-MVP blocker. **Added:** 2026-10-11. **Status authority:** [D14 in the unified register](../../CONSOLIDATED_TODO.md). Separate from D13's evaluation of API-billed Chat Completions versus Responses. This is a proposal, not an implemented capability or evidence of savings.
+
+- **Inspected baseline:** `src/services/_llm_service/client.py` defines shared provider operations; `openai_chat.py` sends ordinary JSON through Chat Completions and image+JSON through Responses; `openai_responses.py` owns OCR and hosted file search; embeddings and vector-store management have separate OpenAI API operations. `openai_shared.py` semantic-cache identity has no billing/backend discriminator. Reverify behavior at implementation HEAD.
+- **Eligibility restriction:** Official [Sign in with ChatGPT plan usage](https://developers.openai.com/siwc/token-sharing-open-source) currently covers eligible open-source and locally hosted clients. Paid or remotely hosted deployment requires separate approval. Model, reasoning controls, regional/account permissions and quotas must be confirmed with the selected account, not inferred from MarketLense's API configuration. Preview [Responses limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) require `store=false` and `stream=true`, exclude `temperature`, `max_output_tokens`, hosted `file_search`, Files uploads and several other tools; embeddings and vector-store lifecycle remain API-only.
+- **Objective:** Add, only if feasible, an explicitly opted-in **local debugging** inference backend using official subscription-authorized Responses. Convert supported calls and normalize results at the *existing* LLM service boundary, without rewriting generators, creating a generic HTTP proxy, touching production defaults, or falsely claiming full API compatibility. Never use unofficial ChatGPT endpoints or scrape client credentials.
+
+**Implementation slices (one deferred initiative; not separate active outcomes):**
+
+1. **D14.1 — Feasibility gate.** Verify current official policy, open-source/local eligibility, PKCE OAuth consent/scopes, model catalogue and exact debugging requirements. Probe one permitted text/strict-JSON call on a selected account with bounded usage and inspect stream events. If unauthorized, or acceptable same-model/same-effort support is absent, report the limitation and stop; an explicitly different debug model must be labelled non-parity.
+2. **D14.2 — Shared transport selector.** Default to the unchanged API; add opt-in `chatgpt_plan_debug` at `LLMServiceClient`/provider-operations boundary. Translate supported Chat Completions text/JSON requests to Responses and preserve current typed `OpenAIResponseResult`, model policy, schema validation, errors, service timing, orchestrator-owned retries and audit. Only extend to images/PDF inference after explicit capability verification. Do not monkeypatch the SDK, fork the pipeline or silently implement D13's API endpoint migration.
+3. **D14.3 — OAuth and streaming compatibility.** Use official local OAuth with state, PKCE, nonce/ID-token/scope checks, stable issued client/host identifiers, secure local credential storage, serialized refresh and revocation handling. Map accepted instructions/input and JSON schema; set `store=false`/`stream=true`; treat only `response.completed` as success. Normalize text/parsed JSON, model, token usage, request ID and typed failure. Reject refusal, incomplete/interrupted/error streams and unsupported parameters without manufacturing output or token totals.
+4. **D14.4 — Explicit hybrid and spend policy.** Hosted file search/grounding, vector-store operations, uploads and embeddings must **fail before provider I/O** unless the operator separately permits API-billed unsupported operations. Do not automatically fall back after subscription quota/eligibility errors or substitute models without consent. Separate semantic/replay caches by backend and actual model/config; distinguish real API spend, subscription usage and unknown costs in audit/budget reporting (unknown is not zero). Preserve existing API budget guardrails, evidence provenance and publication-disabled debug scope.
+5. **D14.5 — Verification and decision.** Unit/contract tests with recorded responses cover request adaptation, strict/loose JSON, incomplete/refused streams, auth expiry/denial, unsupported operations, budget/fallback policy, cache isolation, failures and metadata. Run an explicitly opted-in bounded local live smoke, then a previously frozen difficult report; expand to the frozen five-report cohort only if useful and compatible. Inspect actual artifacts, schema/grounding and editorial quality, number of eligible versus API-billed calls, total spend and wall clock. Document exact SHA, limitations, rollback and a go/no-go decision. Retain API-only routing if benefit is insufficient.
+
+**Acceptance criteria:**
+
+- Default/production API, OpenRouter, hosted file-search provenance, embeddings/vector stores, validation, queue retry ownership and publication behavior are unchanged.
+- One explicit switch controls supported debug inference. The existing downstream contracts receive accurately normalized, schema-valid responses with truthful model, usage and backend metadata.
+- Unsupported operation, unavailable same-model access, denied/expired consent, quota error, or incomplete stream fails explicitly; no secret leakage or surprise paid API call.
+- Backend-isolated caches and accounting, bounded local opt-in verification and a documented quality/cost comparison substantiate any claimed debugging savings. No automatic promotion to production.
+
+### Luna implementation prompt — D14
+
+```text
+Evaluate deferred D14 at current MarketLense HEAD: optional local ChatGPT-plan debug inference.
+Read canonical backlog and R-engineering D14; verify current official OpenAI eligibility,
+OAuth/model catalogue and request constraints before implementing more than a bounded
+local proof of concept. If feasible, route supported inference behind one opt-in debug
+switch at the existing LLM service boundary. Keep API production/default, preserve typed
+responses, schemas, evidence, auditing, retry/budget ownership and downstream behavior.
+Use official PKCE/OAuth and streaming Responses only; normalize completed results.
+For hosted file_search, embeddings, Files and vector-store work, require separate explicit
+permission for billed API use or fail before calling. No silent model/fallback substitution,
+cross-backend cache reuse, invented token totals, unofficial endpoints or publication.
+Verify recorded boundary tests, opt-in local live smoke, then representative frozen report
+output and eligible-call/API-spend comparison; state exact checks, gaps and go/no-go.
+Update canonical status only with verified evidence; commit and push scoped changes.
+```
+
+---
