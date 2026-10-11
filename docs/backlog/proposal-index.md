@@ -1,8 +1,8 @@
 # Technical proposal ownership index
 
-**Source:** [archived original improvement catalogue](archive/10improvements-20261011-preconsolidation.md). **Status authority:** [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md). This index has **100 numbered technical recommendations plus nine architecture follow-ups**. They are mapped implementation slices, **not 109 new Active outcomes**.
+**Source:** [archived original improvement catalogue](archive/10improvements-20261011-preconsolidation.md). **Status authority:** [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md). This index retains **100 original numbered recommendations and nine architecture follow-ups**, plus **six new PATH-01..06 Windows path-risk slices** added 2026-10-11. They are implementation subtasks, not extra Active outcomes.
 
-Disposition labels describe the **historic proposal/reconciliation evidence only**, not a current-HEAD code audit. Every proposal remains technically preserved in full, with a copy/paste Luna prompt, under exactly one existing Active canonical owner. Related outcomes mentioned within a proposal are dependencies or consumers, not second task owners.
+Original proposal disposition labels describe historic reconciliation evidence, not a current-HEAD audit. PATH-01..06 derive from a targeted 2026-10-11 static inspection, not verified native Windows failures. Every proposal has one primary canonical owner, and the new PATH slices have Luna execution guidance under R8. Related outcomes are dependencies/consumers, not parallel owners.
 
 | Technical ID | Canonical owner / full specification | Proposal disposition |
 | --- | --- | --- |
@@ -115,6 +115,13 @@ Disposition labels describe the **historic proposal/reconciliation evidence only
 | [ARCH-G](E-evidence.md#arch-g-generate-and-fact-check-figure-captions-from-canonical-approved-context) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
 | [ARCH-H](A-autonomy.md#arch-h-consolidate-only-proven-redundant-validation-work-and-short-circuit-unjudgeable-inputs) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Investigation; promote only on evidence |
 | [ARCH-I](A-autonomy.md#arch-i-test-whether-verified-selection-can-replace-a-redundant-insight-generation-step) | [A8](A-autonomy.md#a8-compare-retained-model-call-replay-bundles) | Investigation; promote only on evidence |
+
+| [PATH-01](R-engineering.md#path-01) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-02](R-engineering.md#path-02) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-03](R-engineering.md#path-03) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-04](R-engineering.md#path-04) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-05](R-engineering.md#path-05) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-06](R-engineering.md#path-06) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New P2 residual audit; verify at implementation HEAD |
 
 ## Reconciliation policy
 
