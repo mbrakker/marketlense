@@ -308,3 +308,45 @@ Commit and push the smallest proven change.
 ```
  
 ---
+
+<a id="d13-openai-responses-migration"></a>
+## Deferred initiative D13 — Evaluate direct OpenAI Responses migration
+
+**Canonical status:** Deferred; P2, not an autonomous-MVP blocker. **Added:** 2026-10-11. **Status authority:** [D13 in the unified register](../../CONSOLIDATED_TODO.md). This is a new scoped initiative, **not** one of the 109 historical catalogue proposals, and does not alter A15's existing model-policy completion criteria.
+
+- **Observed implementation baseline (not measured performance):** `src/services/_llm_service/openai_chat.py` sends `openai_chat_json` and `analyze_report` through `chat.completions.create`, with an older compatibility fallback. The image+JSON method in that file and `openai_ocr_pdf` / `openai_respond_with_vector_store` in `openai_responses.py` already use `responses.create`. `src/services/_llm_service/openrouter.py` uses a Chat Completions-compatible OpenRouter route. Shared policy, adapters, caching and usage accounting already exist. There is **no retained MarketLense A/B evidence** in this task establishing a quality, latency or cost improvement from changing the endpoint.
+- **Objective:** Determine whether using Responses for **direct OpenAI text/JSON generation** improves editorial quality, reasoning reliability, latency or total cost enough to justify replacing its Chat Completions path. Retain the present route if the benefits are not demonstrated. Do not change file search, OCR, image routes or OpenRouter merely for endpoint uniformity.
+- **Execution order / tasks:**
+  1. **Compatibility inventory:** Reinspect all direct OpenAI text/JSON call sites, policy resolution and legacy `TypeError` fallback at current HEAD; verify current official API/SDK/model support. Map Chat/Responses request and response fields (system instructions, messages, strict JSON schema versus JSON-object mode, reasoning effort, supported sampling settings, max-token limits, completion status and refusals).
+  2. **Small reversible A/B switch:** Route `openai_chat_json` and `analyze_report` through a selectable Responses transport at the existing LLM service boundary, defaulting to the current Chat Completions behavior during the experiment. Reuse canonical model policy, contracts, error classification, bounded orchestrator retries, audit and usage accounting; do not create a parallel LLM service or an automatic per-call retry across endpoints.
+  3. **Parity and isolation:** Verify schema parsing/validation, provenance/evidence, cache-key separation and legitimate cache reuse, prompt hashes, reasoning/output token reporting, cached-token and any cache-write cost attribution, request IDs, redacted audit fields, provider timing, rate limits/budgets, timeout and failure handling. Preserve OpenRouter's Chat Completions-compatible fallback; keep existing Responses-based vector search/OCR/images unchanged.
+  4. **Frozen comparison:** Run both transports on the **same previously frozen five-report cohort**, including its known difficult/failed cases and unchanged source-file identities. Keep models, reasoning efforts, prompts, schemas, tool use, validation policy and publish-disabled environment equivalent. Use enough repeat runs to distinguish endpoint effects from LLM variance. Inspect real generated artifacts, not only JSON/schema success, and compare factual fidelity, grounding, analytical depth, report specificity, first-pass validation, retry/regeneration and quarantine rates, total report wall-clock time/critical path, calls, input/output/reasoning/cached tokens, cache hits/writes, tool charges and total cost. Report incompatible/unknown measurements explicitly.
+  5. **Decision and rollout:** Produce an exact-SHA, cohort-linked baseline/candidate evidence summary with qualitative editorial review. Promote Responses only if factual/editorial quality and operational reliability are non-regressing, and wall-clock/cost outcomes provide a defensible overall benefit (or a clearly justified quality benefit at acceptable cost). Otherwise record **no change**. Roll out behind the existing policy/configuration boundary, with rollback, only after the decision.
+  6. **Conditional cleanup:** Only after proven promotion and verification of live callers, remove obsolete Chat Completions-specific compatibility code that has become unreachable. Do not remove the OpenRouter-compatible transport or introduce speculative abstractions.
+  7. **Separate optional optimization:** If retained call traces show substantial repeated context/reasoning across related steps, *independently* benchmark Responses reasoning-state reuse or improved prompt-cache reuse. Prove source/report isolation, cache identity, grounding, failure recovery, quality, time and full cost before adopting. Do not chain independent report tasks, add hidden state or force stateful reasoning merely because Responses supports it.
+- **Acceptance criteria / verification:**
+  - Transport selection changes only the intended direct OpenAI text/JSON calls; default route and unrelated OpenRouter, file-search, OCR, image and embedding behavior remain unchanged.
+  - Representative faked boundary tests cover both endpoint payloads, strict/loose JSON, valid/invalid responses, unsupported parameters, refusal/incomplete output, accounting, cache isolation, retry/error ownership and explicit rollback.
+  - Five-report paired results include actual reviewed output and full-cost/speed/validation accounting, with prior failures and stochastic variance documented; no publication writes.
+  - The decision is evidence-based: no automatic promotion, no invented percentage improvement, no lower factual/grounding or editorial standard to achieve savings. Negative results explicitly close the investigation with no migration.
+  - Optional reasoning-context reuse has a **separate** quality/cost/latency decision; it is not required for the endpoint parity experiment.
+
+### Luna implementation prompt — D13
+
+```text
+Investigate D13 — Evaluate direct OpenAI Responses migration at current MarketLense HEAD.
+Source: CONSOLIDATED_TODO.md and docs/backlog/R-engineering.md (deferred D13).
+First verify current actual code/API support; do not assume switching endpoints improves results.
+Implement only the smallest reversible OpenAI text/JSON transport A/B seam, preserving
+existing public contracts, policies, OpenRouter fallback, schemas, caching and accounting.
+Benchmark the same frozen five-report cohort (including prior failure cases) on both
+transports with equivalent inputs/configuration and publication disabled. Review actual
+artifacts, factual fidelity, editorial quality, full latency/cost/cache and failure rates.
+Keep Chat Completions unless the evidence supports migration; treat context/reasoning reuse
+as a separate optional experiment, not part of initial parity.
+Run relevant boundary/frozen-cohort checks, document exact commands, SHA, outputs,
+uncertainties, acceptance decision and rollback. Update the canonical backlog with
+verified status and evidence; commit and push only the scoped changes.
+```
+
+---
