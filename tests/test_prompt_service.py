@@ -158,6 +158,44 @@ def test_insight_candidate_repair_prompt_uses_explicit_evidence_whitelist() -> N
     assert "Cite only supporting IDs from" in prompt_set.user.text
 
 
+def test_doc_map_prompt_prioritizes_distinctive_body_results_and_contrasts() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split())
+
+    assert "prioritize distinctive body outcomes" in prompt_text
+    assert "contrasts; preserve exact metrics, causes, mechanisms, and periods" in (
+        prompt_text
+    )
+    assert "Use only the provided report content." in prompt_text
+
+
+def test_insight_candidate_prompt_prioritizes_distinctive_findings() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split())
+
+    assert "Prioritize distinctive, decision-relevant body findings" in prompt_text
+    assert "comparisons, counter-signals, and qualitative outcomes" in prompt_text
+    assert "evidence_id" in prompt_text
+    assert (
+        "Use numbers only when linked finding evidence or the exact quote states"
+        in prompt_text
+    )
+
+
 def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
     None
 ):
