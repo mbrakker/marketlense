@@ -187,13 +187,18 @@ def test_insight_candidate_prompt_prioritizes_distinctive_findings() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split())
 
-    assert "Prioritize distinctive, decision-relevant body findings" in prompt_text
-    assert "comparisons, counter-signals, and qualitative outcomes" in prompt_text
+    assert "Prioritize distinctive, decision-relevant report-body outcomes" in (
+        prompt_text
+    )
+    assert "comparisons, counter-signals, and qualitative conclusions" in prompt_text
     assert "evidence_id" in prompt_text
     assert (
         "Use numbers only when linked finding evidence or the exact quote states"
         in prompt_text
     )
+    system_text = " ".join(prompt_set.system.text.split())
+    assert "Prefer distinctive, decision-relevant findings" in system_text
+    assert "complete numeric relationships and qualitative conclusions" in system_text
 
 
 def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (

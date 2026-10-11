@@ -182,7 +182,9 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     findings_text = " ".join(findings.system.text.split())
 
     assert "A paraphrased finding alone is not numeric evidence" in candidates_text
-    assert "Use a quote ID only if its exact text states" in candidates_text
+    assert "A quote ID is allowed only when its text states the exact value" in (
+        candidates_text
+    )
     assert "value, subject, and period/status" in candidates_text
     assert "finding/quote ID and page" in final_text
     assert "do not expand scope" in final_text
@@ -204,14 +206,28 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "both tldrs lead with the strongest supported body outcome" in prompt_text
-    assert "otherwise use a specific docmap relationship without numbers" in prompt_text
-    assert "plan guides selection, not evidence" in prompt_text
-    assert "abstain only if no clear outcome exists" in prompt_text
-    assert "strongest decision-useful supported finding" in prompt_text
+    assert "both tldrs lead with the strongest specific body finding or comparison" in (
+        prompt_text
+    )
+    assert "do not substitute a broad report recommendation or theme" in prompt_text
+    assert "preserve exact values, subjects, and periods from direct evidence" in (
+        prompt_text
+    )
+    assert "otherwise use docmap only for nonnumeric context" in prompt_text
+    assert "plan guides coherence, not evidence" in prompt_text
+    assert "abstain only if no clear source outcome exists" in prompt_text
+    assert "strongest decision-useful direct finding" in prompt_text
+    assert (
+        "open executive_summary with the strongest decision-useful direct finding"
+        in (prompt_text)
+    )
     assert "even outside the priority-one theme" in prompt_text
-    assert "priority order cannot exclude stronger evidence" in prompt_text
-    assert "preserve exact values and periods" in prompt_text
+    assert "priority order or section summaries do not prove cross-section links" in (
+        prompt_text
+    )
+    assert "preserve exact values, subjects, and periods from direct evidence" in (
+        prompt_text
+    )
 
 
 def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
@@ -225,9 +241,9 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert "plan guides selection, not evidence" in prompt_text
-    assert "otherwise use a specific docmap relationship without numbers" in prompt_text
-    assert "abstain only if no clear outcome exists" in prompt_text
+    assert "plan guides coherence, not evidence" in prompt_text
+    assert "otherwise use docmap only for nonnumeric context" in prompt_text
+    assert "abstain only if no clear source outcome exists" in prompt_text
 
 
 @pytest.mark.parametrize(
@@ -251,7 +267,7 @@ def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
     ).lower()
 
     if namespace == "report_vs/artifacts/summary":
-        assert "plan guides selection, not evidence" in prompt_text
+        assert "plan guides coherence, not evidence" in prompt_text
     elif namespace == "report_vs/artifacts/regenerate/summary":
         assert "selection guidance, not evidence" in prompt_text
         assert "section-scoped" in prompt_text
@@ -294,8 +310,18 @@ def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
     assert "use the plan only for coherence" in prompt_text
-    assert "prioritize distinctive, decision-relevant body findings" in prompt_text
-    assert "comparisons, counter-signals, and qualitative outcomes" in prompt_text
+    assert "prioritize distinctive, decision-relevant report-body outcomes" in (
+        prompt_text
+    )
+    assert "comparisons, counter-signals, and qualitative conclusions" in prompt_text
+    assert (
+        "prefer stronger body findings over general introductory or repeated context"
+        in (prompt_text)
+    )
+    assert (
+        "avoid several candidates from one theme when stronger distinct themes remain"
+        in (prompt_text)
+    )
 
 
 def test_editorial_prompts_preserve_specific_measured_findings() -> None:
@@ -341,16 +367,23 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "state a share only when the source names its base" in findings_text
     assert "keep each value's role" in candidates_text
     assert "use the plan only for coherence" in candidates_text
-    assert "prioritize distinctive, decision-relevant body findings" in candidates_text
-    assert "comparisons, counter-signals, and qualitative outcomes" in candidates_text
-    assert "keep its wording and date range exact" in summary_text
-    assert "preserve important context and exact values, subjects, and periods" in (
-        candidates_text
+    assert (
+        "prioritize distinctive, decision-relevant report-body outcomes"
+        in candidates_text
     )
     assert (
-        "otherwise use a specific docmap relationship without numbers" in summary_text
+        "comparisons, counter-signals, and qualitative conclusions" in candidates_text
     )
-    assert "abstain only if no clear outcome exists" in summary_text
+    assert (
+        "avoid several candidates from one theme when stronger distinct themes remain"
+        in (candidates_text)
+    )
+    assert "keep its wording and date range exact" in summary_text
+    assert "retain introductory metrics when they materially frame the report" in (
+        candidates_text
+    )
+    assert "otherwise use docmap only for nonnumeric context" in summary_text
+    assert "abstain only if no clear source outcome exists" in summary_text
     assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text
     assert "scores break close choices" in final_text

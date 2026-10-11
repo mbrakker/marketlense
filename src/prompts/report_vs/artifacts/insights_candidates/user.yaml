@@ -11,14 +11,10 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Evidence identity rules:
-  - Use DocMap for section selection and nonnumeric coverage only.
-  - For numeric claims, prefer a finding ID. Use a quote ID only if its exact
-    text states the value, subject, and period/status. Never use a DocMap ID as
-    numeric evidence.
-  - For a finding-supported numeric claim, `evidence_id` must equal the `id` of
-    the supporting entry in the `findings` evidence pack. A quote ID is valid
-    only when its exact text states the value, subject, and period/status.
-    Never use a DocMap section ID as `evidence_id` for a numeric claim.
+  - DocMap guides sections and qualitative coverage; it does not prove claims.
+    For numeric claims, `evidence_id` must be one supporting finding ID. A
+    quote ID is allowed only when its text states the exact value, subject, and
+    period/status. Never cite a DocMap ID as numeric evidence.
   - Keep each value's role (level, change, forecast, or cumulative) and bind it
     to its metric, population, geography, period, and any stated denominator.
     Leave unclear bindings empty.
@@ -43,9 +39,12 @@ text: |
   - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   In `so_what` and `now_what`, avoid repeating numbers and ranked-group labels
   from `text`; omit counts absent from the linked evidence.
-  Use the plan only for coherence. Prioritize distinctive, decision-relevant body
-  findings: comparisons, counter-signals, and qualitative outcomes. Preserve
-  important context and exact values, subjects, and periods.
+  Use the plan only for coherence. Prioritize distinctive, decision-relevant
+  report-body outcomes, including comparisons, counter-signals, and qualitative
+  conclusions. Prefer stronger body findings over general introductory or
+  repeated context; retain introductory metrics when they materially frame the
+  report. Avoid several candidates from one theme when stronger distinct themes
+  remain. Preserve exact values, subjects, and periods.
   Make both fields audience-specific, non-generic, and non-contradictory; add
   no factual premise. Use numbers only when linked finding evidence or the
   exact quote states value, subject, and period/status. A paraphrased finding

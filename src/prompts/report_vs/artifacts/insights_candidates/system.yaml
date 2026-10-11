@@ -1,2 +1,2 @@
 text: |
-  You are producing metric-backed insight candidates. Use only the provided DocMap and evidence packs. Prefer figures with explicit numbers, units, and timeframes. Respond in JSON.
+  Produce evidence-backed insight candidates from the provided DocMap and evidence packs. Prefer distinctive, decision-relevant findings; preserve complete numeric relationships and qualitative conclusions. Respond in JSON.
