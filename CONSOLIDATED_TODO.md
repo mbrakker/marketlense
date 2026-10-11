@@ -85,7 +85,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Active | E16 | [Make methodology, applicability, and uncertainty decision-grade](docs/backlog/E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Convert loose methods/limitations text into source-linked evidence-strength facts that constrain claims and support executive interpretation. |
 | Active | E17 | [Reduce LLM input, output, and cache cost without quality regression](docs/backlog/E-evidence.md#e17-reduce-llm-input-output-and-cache-cost-without-quality-regression) | Stage measurement, grounding response efficiency, source-preserving prompt projections, provider-cache policy and evidence-gated consolidation; prove lower total cost without quality/reliability regression on frozen five reports. |
 | Active | E18 | [Stabilize LLM report analysis and first-pass validation](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation) | Four sequential stages: pin repeated-generation and fixed-input validator baseline; address proven factual drift; stabilize insight selection; fix proven semantic-verdict/repair instability and verify frozen-five quality, first-pass readiness, speed and cost. |
-| Active | R1 | [Publish release-evidence reviews where reviewers work](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Renderer/workflow implementation is at `974ee328505af12bda78222e0c85326cada5957d`. Live run `38173660507` passed backlog/documentation and all fast gates; full pytest had five stale backlog-organization assertions (7,200 passed), now corrected locally. Its upload and summary steps succeeded, but the archive contained only 4/17 required paths. Keep Active pending a green follow-up run, complete-bundle verification, and live rendered-summary inspection. |
+| Active | R1 | [Publish release-evidence reviews where reviewers work](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Renderer/workflow commit `974ee328505af12bda78222e0c85326cada5957d`; backlog/status follow-up `7b56f0e8403008a7dfb64de511ab39bf8b430715`. Full run `38174895618` passed at the latter SHA (7,205 pytest cases; fast, coverage, mutation and quality/evidence gates passed; optional WordPress staging gate skipped). Bundle artifact `11715692798` contains all 17 required paths. Keep Active because the private GitHub page required sign-in, so rendered-summary presentation was not directly inspected. |
 | Active | R2 | [Enforce role boundaries, direct-I/O discipline, and controlled module growth](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
 | Active | R3 | [Restore service quality coverage above the retained baseline](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline) | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
 | Closed | R4 | Publication usage/projection reconciliation guard | Missing/invalid/materially lagged usage/projection evidence stops public writes without rebuilding. |
@@ -234,30 +234,36 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 
 [Full R1 specification](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work).
 
-**Follow-up implementation verification — 2026-10-11:** The renderer and
-existing Actions job summary now validate exact-SHA release-review/queue
-evidence separately from runtime and upload state. Local focused validation
-passed: 50 pytest cases across backlog organization, workflow-queue,
-release-evidence workflow, and release-review suites; formatting, Ruff, the
-repository mypy baseline, repository hygiene, backlog-source, documentation,
-and risk-policy gates. Generated Markdown was inspected for valid review/queue
-evidence with a partial bundle and historical runtime SHA, a contradictory
-successful review with a failed required artifact, and missing review/queue
-inputs. The first live push run
-[`38173660507`](https://github.com/mbrakker/marketlense/actions/runs/38173660507)
-used renderer commit `974ee328505af12bda78222e0c85326cada5957d`. Backlog-source,
-documentation, formatting, Ruff, type, hygiene, and other fast gates passed;
-the full suite reported 7,200 passed and five failures in stale
-`test_backlog_organization.py` expectations for the R6 closure, current D13
-anchor, PATH proposal mappings, and active count. Those assertions and the
-R6 specification status are now corrected and the focused backlog suite passes
-7/7 locally. The run's upload and summary steps both succeeded, but the
-downloaded archive contained only four of 17 configured required paths
-(`coverage.xml`, the waiver file, CI performance benchmark, and test
-telemetry), so it was partial. The private GitHub run page redirected the
-browser to sign-in; rendered summary text could not be inspected. A follow-up
-push run is required to verify the corrected full suite and complete bundle.
-R1 remains Active.
+**Follow-up implementation verification — 2026-10-11:** Renderer/workflow
+commit `974ee328505af12bda78222e0c85326cada5957d` separates canonical
+exact-SHA review/queue validation from runtime and upload status. Backlog and
+evidence-documentation follow-up commit `7b56f0e8403008a7dfb64de511ab39bf8b430715`
+aligns tests and retained R6 status. Focused validation passed: 50 pytest
+cases across backlog organization, workflow-queue, release-evidence workflow,
+and release-review suites; formatting, Ruff, repository mypy baseline,
+repository hygiene, backlog-source, documentation, and risk-policy gates.
+Generated Markdown was inspected for valid review/queue evidence with a
+partial bundle and historical runtime SHA, a contradictory successful review
+with a failed required artifact, and missing review/queue inputs.
+
+The push run
+[`38174895618`](https://github.com/mbrakker/marketlense/actions/runs/38174895618)
+tested exact SHA `7b56f0e8403008a7dfb64de511ab39bf8b430715` and completed
+successfully in 15m45s: all repository, backlog/documentation, 7,205 pytest,
+coverage, mutation, quality, queue, release-review, upload, and summary steps
+passed. Optional WordPress staging REST verification was skipped by
+configuration. Uploaded artifact
+[`release-evidence-bundle`](https://github.com/mbrakker/marketlense/actions/runs/38174895618/artifacts/11715692798)
+was 389,685 bytes, expires `2026-10-25T21:20:58Z`, and its downloaded file
+inventory contains all 17 configured required paths. The uploaded canonical
+review and queue JSON were passed back through the renderer: it reported
+canonical validation `passed`, exact tested SHA/build, zero unwaived issues,
+runtime `historical_unmatched`/`representative` with the declaration caveat,
+and bundle `complete`. This is a local re-render of live artifact JSON, not a
+readback of GitHub's rendered job-summary body. The Playwright run page
+redirected to sign-in for this private repository, so direct live presentation
+inspection remains unavailable; R1 remains Active until that reviewer-surface
+acceptance is demonstrated.
 
 #### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
 
