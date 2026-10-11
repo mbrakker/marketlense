@@ -1879,26 +1879,34 @@ def _generate_pack(
                     ],
                     ensure_ascii=False,
                 )
-                fallback_variables["findings_targeted_fallback_instruction"] = (
-                    "Bounded recovery: DocMap sections guide retrieval but are not "
-                    "evidence. Use only the independently extracted source-page "
-                    "excerpts below, citing physical page numbers. Return only "
-                    "findings: at most one concise finding per listed key point, with "
-                    "no more than three per target. Address only those listed key "
-                    "points and no unrelated sections. Keep "
-                    "each claim to one concise sentence and evidence to the shortest "
-                    "verbatim excerpt that supports every included detail. Preserve "
-                    "subjects, periods, denominators, and numeric relationships; omit "
-                    "any target whose full relationship is not supported. Keep paired "
-                    "measures together. For two-year YoY ranges, write 'year over "
-                    "year between [start year] and [end year]'. For numeric M&A deal "
-                    "counts, "
-                    "write '5.2 deals in M&A'. Follow this output limit over the "
-                    "report-wide coverage instructions above; return no unrelated "
-                    "findings and only the requested JSON object."
-                )
                 fallback_source_pages = _findings_target_source_pages(
                     missing_targets, source_spans
+                )
+                source_instruction = (
+                    "Use only the independently extracted source-page excerpts below, "
+                    "citing physical page numbers. "
+                    if fallback_source_pages
+                    else "No source-page excerpt is available. Search file_search for "
+                    "the listed section titles, page labels, and key-point metrics; "
+                    "use only independently retrieved source evidence and cite "
+                    "physical page numbers. "
+                )
+                fallback_variables["findings_targeted_fallback_instruction"] = (
+                    "Bounded recovery: DocMap sections guide retrieval but are not "
+                    "evidence. "
+                    + source_instruction
+                    + "Return only findings: at most one concise finding per listed "
+                    "key point, with no more than three per target. Address only "
+                    "those listed key points and no unrelated sections. Keep each "
+                    "claim to one concise sentence and evidence to the shortest "
+                    "verbatim excerpt that supports every included detail. Preserve "
+                    "subjects, periods, denominators, and numeric relationships; "
+                    "omit any target whose full relationship is not supported. Keep "
+                    "paired measures together. For two-year YoY ranges, write 'year "
+                    "over year between [start year] and [end year]'. For numeric "
+                    "M&A deal counts, write '5.2 deals in M&A'. Follow this output "
+                    "limit over the report-wide coverage instructions above; return "
+                    "no unrelated findings and only the requested JSON object."
                 )
                 fallback_variables["findings_target_source_pages_json"] = json.dumps(
                     fallback_source_pages, ensure_ascii=False

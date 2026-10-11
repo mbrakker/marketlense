@@ -249,8 +249,8 @@ def test_findings_prompt_matches_evidence_source_to_retrieval_mode() -> None:
 
     system_text = " ".join(findings_prompt.system.text.casefold().split())
     user_text = " ".join(findings_prompt.user.text.casefold().split())
-    assert "primary: file_search only" in system_text
-    assert "targeted fallback: page excerpts only" in system_text
+    assert "primary: file_search" in system_text
+    assert "fallback: supplied page excerpts; otherwise file_search" in system_text
     assert "docmap guides, not evidence" in system_text
     assert "docmap is a clue, not evidence" in user_text
     assert "primary pass: search file_search" in user_text

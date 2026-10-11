@@ -196,6 +196,125 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
 
 
+def test_findings_fallback_uses_file_search_when_source_page_excerpts_are_missing(
+    tmp_path,
+):
+    from dataclasses import replace
+
+    from src.contracts.openai import OpenAIResponseResult
+
+    target_id = "gaming-finding-keeping-users"
+    doc_map = {
+        **substantive_doc_map(),
+        "sections": [
+            {
+                "id": target_id,
+                "title": "Finding and keeping users",
+                "summary": "Gaming installs and sessions differ by subvertical.",
+                "key_points": [
+                    "Casino installs +22% and sessions -5%; slots installs +46% "
+                    "and sessions -5%."
+                ],
+                "pages": [19],
+            }
+        ],
+    }
+    primary = {
+        "findings": [
+            {
+                "id": "intro-finding",
+                "text": "The report describes a global mobile trend.",
+                "evidence": "The report describes a global mobile trend.",
+                "pages": [3],
+                "section_id": "introduction",
+                "section_title": "Introduction",
+            }
+        ]
+    }
+    fallback = {"findings": [], "not_found_reason": "findings_not_found"}
+
+    class MissingPageExcerptClient:
+        def __init__(self):
+            self.fallback_requests = []
+
+        def openai_respond_with_vector_store(self, request, ctx):
+            if str(ctx.task_id).endswith(":doc_map"):
+                payload = doc_map
+            elif str(ctx.task_id).endswith(":targeted_fallback"):
+                self.fallback_requests.append(request)
+                payload = fallback
+            else:
+                payload = primary
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=11,
+                output_tokens=7,
+                model=request.model,
+            )
+
+        def openai_chat_json(self, request, ctx):
+            import re
+
+            payload = {
+                "metrics": [
+                    {
+                        "id": item_id,
+                        "supported": False,
+                        "confidence": 0.1,
+                        "reason": "The source page excerpt is unavailable.",
+                    }
+                    for item_id in dict.fromkeys(
+                        re.findall(r'"id"\s*:\s*"([^"]+)"', request.user_prompt)
+                    )
+                ],
+                "quotes": [],
+            }
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=11,
+                output_tokens=7,
+                model=request.model,
+            )
+
+    client = MissingPageExcerptClient()
+    prompt_client = RecordingPromptClient()
+    packs = generate_evidence_packs(
+        report_id="gaming-report",
+        report_name="gaming-report.pdf",
+        vector_store_id="vs_gaming",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=replace(_ctx(), task_id="test:gaming-report-no-page-excerpt"),
+        source_spans=[
+            {
+                "id": "source:page:3",
+                "page": 3,
+                "text": "The report describes a global mobile trend.",
+            }
+        ],
+        openai_client=client,
+        prompt_client=prompt_client,
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert len(client.fallback_requests) == 1
+    assert client.fallback_requests[0].vector_store_id == "vs_gaming"
+    assert prompt_client.findings_variables is not None
+    assert prompt_client.findings_variables["findings_target_source_pages_json"] == "[]"
+    fallback_instruction = prompt_client.findings_variables[
+        "findings_targeted_fallback_instruction"
+    ].casefold()
+    assert "search file_search" in fallback_instruction
+    assert "independently retrieved source evidence" in fallback_instruction
+    assert not any(
+        finding["id"] == "casino-and-slots"
+        for finding in packs["findings"]["findings"]
+    )
+
+
 def test_findings_targeted_fallback_keeps_ma_means_as_deal_counts(tmp_path):
     from dataclasses import replace
 
