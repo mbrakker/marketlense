@@ -608,7 +608,7 @@ def test_incomplete_numeric_lead_does_not_expand_to_secondary_numeric_target():
     assert _missing_findings_retrieval_targets(targets, [], set()) == targets
 
 
-def test_complete_buyer_comparison_still_retrieves_missing_strategic_portfolio_target():
+def test_exact_buyer_comparison_leaves_missing_portfolio_target_for_fallback():
     from src.generators.evidence_pack_generator import (
         _missing_findings_retrieval_targets,
     )
@@ -631,9 +631,7 @@ def test_complete_buyer_comparison_still_retrieves_missing_strategic_portfolio_t
         {
             "id": "buyer-deal-comparison",
             "section_id": "diverging-risk-appetites-between-buyers",
-            "text": (
-                "For 2026, corporate buyers averaged 5.2 M&A deals versus 7.3 for PE."
-            ),
+            "text": "Planned 2026 M&A deals: corporate mean 5.2; PE mean 7.3.",
             "evidence": "2026 M&A deals: corporate mean 5.2; private equity mean 7.3.",
             "pages": [15],
         }

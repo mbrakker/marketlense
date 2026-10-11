@@ -57,9 +57,6 @@ from src.generators.evidence_packs.registry import (
     PACK_STRATEGIES,
 )
 from src.generators.prompt_preparation import prepare_prompt_bundle
-from src.generators.public_editorial_quality_generator import (
-    _metric_label_relationship_explanation,
-)
 from src.generators.structured_output_execution import (
     invoke_structured_output_model,
     recovery_prompt_bundle,
@@ -86,7 +83,6 @@ from src.utils.errors import AppError
 from src.utils.json_recovery import parse_json_from_text, strip_json_fence
 from src.utils.logging import child_context, log_event, new_run_context
 from src.utils.model_client_contract import require_injected_model_client
-from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.structured_output import StructuredOutputFailure
 
 logger = logging.getLogger("market_lense.evidence_pack_generator")
@@ -131,11 +127,6 @@ _FINDINGS_TARGET_RESULT = re.compile(
     r"reaches|forecast|project(?:s|ed|ion))\b",
     re.IGNORECASE,
 )
-_FINDINGS_TARGET_NEGATIVE_DIRECTION = re.compile(
-    r"\b(?:declin(?:e|es|ed|ing)|decreas(?:e|s|ed|ing)|fell|falling|"
-    r"drop(?:s|ped|ping)?|down|lost|loss)\b",
-    re.IGNORECASE,
-)
 _FINDINGS_TARGET_STOP_WORDS = frozenset(
     {
         "a",
@@ -167,45 +158,12 @@ _FINDINGS_TARGET_STOP_WORDS = frozenset(
         "with",
     }
 )
-_FINDINGS_DUPLICATE_BOILERPLATE_WORDS = frozenset(
-    {"making", "report", "reports", "says", "states", "stated"}
-)
-_FINDINGS_DUPLICATE_EQUIVALENT_WORDS = frozenset(
-    {
-        "categories",
-        "category",
-        "each",
-        "figure",
-        "followed",
-        "most",
-        "rated",
-        "reported",
-        "reporting",
-        "respectively",
-    }
-)
-_FINDINGS_DUPLICATE_WORD_ALIASES = {
-    "offer": "promotion",
-    "offers": "promotion",
-    "promotions": "promotion",
-    "globally": "global",
-    "fell": "decrease",
-    "decreased": "decrease",
-    "declined": "decrease",
-    "days": "day",
-    "represented": "accounted",
-}
 _FINDINGS_TARGET_NUMBER = re.compile(
     r"(?<![\w\d])[+\-−]?\s*"
     r"(?P<number>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
     r"\s*(?P<unit>%|percent(?:age points?)?|pp|[kmbtn]|"
     r"thousand|million|billion|trillion|[eE])?(?![\w&])",
     re.IGNORECASE,
-)
-_FINDINGS_TARGET_QUALIFIERS = (
-    ("approximate", ("approximately", "approx.", "around", "about", "roughly", "~")),
-    ("at_least", ("at least", "more than", "over")),
-    ("at_most", ("at most", "less than", "under")),
 )
 _FINDINGS_TARGET_YEAR_RANGE = re.compile(
     r"\b(?P<start>(?:19|20)\d{2})\s*[-–—−\uFFFD]\s*"
@@ -239,46 +197,17 @@ def _findings_target_number_markers(value: str) -> set[str]:
     return markers
 
 
-def _findings_target_number_occurrences(
-    value: str, *, include_years: bool = False
-) -> list[str]:
-    without_chart_identifiers = re.sub(
-        r"\b(?:fig(?:ure)?|chart|table)\s*[A-Z]?\s*\d+\b",
-        " ",
-        value,
-        flags=re.IGNORECASE,
-    )
-    normalized = _FINDINGS_TARGET_YEAR_RANGE.sub(
-        r"\g<start> to \g<end>", without_chart_identifiers.replace("−", "-")
-    )
-    occurrences: list[str] = []
-    for match in _FINDINGS_TARGET_NUMBER.finditer(normalized):
-        number = match.group("number").replace(",", "")
-        unit = str(match.group("unit") or "").strip().casefold()
-        unit = {
-            "percent": "%",
-            "percentage point": "pp",
-            "percentage points": "pp",
-            "thousand": "k",
-            "million": "m",
-            "billion": "b",
-            "trillion": "t",
-        }.get(unit, unit)
-        is_year = unit in {"", "e"} and number.isdigit() and 1900 <= int(number) <= 2100
-        if is_year and not include_years:
-            continue
-        preceding_text = normalized[max(0, match.start() - 100) : match.start()]
-        preceding_text = re.split(r"[;.!?\n]", preceding_text)[-1]
-        is_negative = match.group(0).strip().startswith("-") or (
-            not match.group(0).strip().startswith("+")
-            and bool(_FINDINGS_TARGET_NEGATIVE_DIRECTION.search(preceding_text))
-        )
-        occurrences.append(f"{'-' if is_negative else ''}{number}{unit}")
-    return occurrences
-
-
 def _findings_target_score(value: str, title: str = "") -> float:
-    number_count = len(set(_findings_target_number_occurrences(value)))
+    number_count = len(
+        {
+            marker
+            for marker in _findings_target_number_markers(value)
+            if not (
+                marker.removesuffix("e").isdigit()
+                and 1900 <= int(marker.removesuffix("e")) <= 2100
+            )
+        }
+    )
     comparison_score = min(len(_FINDINGS_TARGET_COMPARISON.findall(value)), 2) * 1.5
     result_score = min(len(_FINDINGS_TARGET_RESULT.findall(value)), 2) * 0.5
     content_words = {
@@ -324,10 +253,6 @@ def _findings_target_pages(target: dict[str, object]) -> list[int]:
     ]
 
 
-def _findings_target_key_point_score(value: str, title: str = "") -> float:
-    return _findings_target_score(value, title)
-
-
 def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
     """Select bounded substantive sections as retrieval targets, never evidence."""
 
@@ -364,7 +289,7 @@ def _findings_retrieval_targets(doc_map: dict) -> list[dict[str, object]]:
         priority_key_points = sorted(
             enumerate(target_key_points),
             key=lambda item: (
-                -_findings_target_key_point_score(item[1], title),
+                -_findings_target_score(item[1], title),
                 item[0],
             ),
         )
@@ -630,248 +555,40 @@ def _findings_section_matches_target(
     return bool(finding_pages.intersection(target_pages))
 
 
-def _findings_is_subset_of_fallback(
-    finding: dict[str, object], fallback_finding: dict[str, object]
-) -> bool:
-    """Drop a primary item only when a supported fallback preserves its facts."""
-
-    finding_section_id = str(finding.get("section_id") or "").strip()
-    fallback_section_id = str(fallback_finding.get("section_id") or "").strip()
-    if finding_section_id and fallback_section_id:
-        same_section = finding_section_id == fallback_section_id
-    else:
-        same_section = bool(
-            str(finding.get("section_title") or "").strip().casefold()
-            == str(fallback_finding.get("section_title") or "").strip().casefold()
-            and set(_findings_target_pages(finding))
-            & set(_findings_target_pages(fallback_finding))
-        )
-    if not same_section:
-        return False
-
-    for key in ("text", "evidence"):
-        primary_text = str(finding.get(key) or "")
-        fallback_text = str(fallback_finding.get(key) or "")
-        primary_words = set(
-            re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", primary_text.casefold())
-        )
-        fallback_words = set(
-            re.findall(r"[a-z0-9]+(?:\.[a-z0-9]+)?", fallback_text.casefold())
-        )
-        if not primary_words or not primary_words.issubset(fallback_words):
-            return False
-        if Counter(_findings_target_number_occurrences(primary_text)) - Counter(
-            _findings_target_number_occurrences(fallback_text)
-        ):
-            return False
-        if Counter(
-            _findings_target_number_occurrences(primary_text, include_years=True)
-        ) - Counter(
-            _findings_target_number_occurrences(fallback_text, include_years=True)
-        ):
-            return False
-        if _metric_label_relationship_explanation(primary_text, fallback_text):
-            return False
-    return set(_findings_target_pages(finding)).issubset(
-        set(_findings_target_pages(fallback_finding))
-    )
+def _normalize_findings_text(value: str) -> str:
+    return " ".join(value.casefold().split())
 
 
-def _findings_grounded_claim_signature(
-    finding: dict[str, object],
-) -> Optional[tuple[str, tuple[int, ...], tuple[str, ...], tuple[str, ...]]]:
-    """Return a conservative claim signature for same-page duplicate removal."""
-
+def _findings_duplicate_key(finding: dict[str, object]) -> tuple[str, str] | None:
     section_id = str(finding.get("section_id") or "").strip().casefold()
-    pages = tuple(sorted(_findings_target_pages(finding)))
-    text = str(finding.get("text") or "").casefold()
-    words = tuple(
-        sorted(
-            {
-                word
-                for word in re.findall(r"[a-z]{3,}", text)
-                if word
-                not in _FINDINGS_TARGET_STOP_WORDS
-                | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
-            }
-        )
-    )
-    numbers = tuple(_findings_target_number_occurrences(text, include_years=True))
-    if not section_id or not pages or not words or not numbers:
+    text = _normalize_findings_text(str(finding.get("text") or ""))
+    if not section_id or not text:
         return None
-    return section_id, pages, words, numbers
+    return section_id, text
 
 
-def _findings_claim_covered_by_grounded_findings(
-    finding: dict[str, object], grounded_findings: list[dict[str, object]]
-) -> bool:
-    """Return whether grounded same-section findings already cover this claim."""
-
-    section_id = str(finding.get("section_id") or "").strip().casefold()
-    text = str(finding.get("text") or "").casefold()
-    if not section_id:
-        return False
-    claim_words = {
-        word
-        for word in re.findall(r"[a-z]{3,}", text)
-        if word
-        not in _FINDINGS_TARGET_STOP_WORDS
-        | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
-        | _FINDINGS_DUPLICATE_EQUIVALENT_WORDS
-    }
-    claim_words = {
-        _FINDINGS_DUPLICATE_WORD_ALIASES.get(word, word) for word in claim_words
-    }
-    claim_numbers = Counter(
-        _findings_target_number_occurrences(text, include_years=True)
-    )
-    matching_findings = [
-        item
-        for item in grounded_findings
-        if str(item.get("section_id") or "").strip().casefold() == section_id
-    ]
-    if not claim_words or not claim_numbers or not matching_findings:
-        return False
-
-    grounded_text = " ".join(str(item.get("text") or "") for item in matching_findings)
-    grounded_words = {
-        word
-        for word in re.findall(r"[a-z]{3,}", grounded_text.casefold())
-        if word
-        not in _FINDINGS_TARGET_STOP_WORDS
-        | _FINDINGS_DUPLICATE_BOILERPLATE_WORDS
-        | _FINDINGS_DUPLICATE_EQUIVALENT_WORDS
-    }
-    grounded_words = {
-        _FINDINGS_DUPLICATE_WORD_ALIASES.get(word, word) for word in grounded_words
-    }
-    grounded_numbers: Counter[str] = Counter()
-    for item in matching_findings:
-        grounded_numbers.update(
-            _findings_target_number_occurrences(
-                str(item.get("text") or ""), include_years=True
-            )
-        )
-    if claim_words - grounded_words or claim_numbers - grounded_numbers:
-        return False
-    return not _metric_label_relationship_explanation(text, grounded_text)
-
-
-def _findings_target_point_covered(
-    key_point: str, findings: list[dict[str, object]]
-) -> bool:
-    clauses = [clause.strip() for clause in re.split(r";", key_point) if clause.strip()]
-    expected_years = {
-        marker
-        for marker in _findings_target_number_occurrences(key_point, include_years=True)
-        if marker.rstrip("e").isdigit() and 1900 <= int(marker.rstrip("e")) <= 2100
-    }
-    return bool(clauses) and all(
-        _findings_target_clause_covered(clause, findings, expected_years)
-        for clause in clauses
-    )
-
-
-def _findings_target_numeric_occurrences(
-    value: str,
-) -> list[tuple[str, Quantity]]:
-    markers = _findings_target_number_occurrences(value)
-    quantities = [
-        quantity
-        for quantity in extract_quantities(value)
-        if not (
-            quantity.value.is_integer()
-            and 1900 <= int(quantity.value) <= 2100
-            and quantity.unit_family == "unknown"
-        )
-    ]
-    if len(markers) != len(quantities):
-        return []
-    return [
-        (
-            marker,
-            replace(
-                quantity,
-                value=abs(quantity.value) * (-1 if marker.startswith("-") else 1),
-            ),
-        )
-        for marker, quantity in zip(markers, quantities, strict=True)
-    ]
-
-
-def _findings_target_numeric_values_covered(target_text: str, actual_text: str) -> bool:
-    expected_markers = _findings_target_number_occurrences(target_text)
-    if not expected_markers:
-        return True
-    actual_markers = _findings_target_number_occurrences(actual_text)
-    if not (Counter(expected_markers) - Counter(actual_markers)):
-        return True
-
-    expected = _findings_target_numeric_occurrences(target_text)
-    actual = _findings_target_numeric_occurrences(actual_text)
-    if len(expected) != len(expected_markers) or len(actual) != len(actual_markers):
-        return False
-    remaining = list(actual)
-    for expected_marker, expected_quantity in expected:
-        match_index = next(
-            (
-                index
-                for index, (actual_marker, actual_quantity) in enumerate(remaining)
-                if expected_marker.startswith("-") == actual_marker.startswith("-")
-                and quantities_match(expected_quantity, actual_quantity)
-            ),
-            None,
-        )
-        if match_index is None:
-            return False
-        remaining.pop(match_index)
-    return True
-
-
-def _findings_target_clause_covered(
-    key_point: str,
+def _merge_supported_fallback_findings(
     findings: list[dict[str, object]],
-    required_years: set[str],
-) -> bool:
-    expected_numbers = Counter(_findings_target_number_occurrences(key_point))
-    key_point_words = {
-        word
-        for word in re.findall(r"[a-z]{3,}", key_point.casefold())
-        if word not in _FINDINGS_TARGET_STOP_WORDS
+    grounded_finding_ids: set[str],
+    supported_fallback_findings: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Keep primary findings and append only nonduplicate supported fallback claims."""
+
+    seen_keys = {
+        key
+        for finding in findings
+        if str(finding.get("id") or "").strip() in grounded_finding_ids
+        if (key := _findings_duplicate_key(finding)) is not None
     }
-    for finding in findings:
-        claim = str(finding.get("text") or "")
-        evidence = str(finding.get("evidence") or "")
-        if not _findings_target_numeric_values_covered(key_point, claim):
+    merged = list(findings)
+    for finding in supported_fallback_findings:
+        key = _findings_duplicate_key(finding)
+        if key is not None and key in seen_keys:
             continue
-        if not _findings_target_numeric_values_covered(key_point, evidence):
-            continue
-        claim_markers = set(
-            _findings_target_number_occurrences(claim, include_years=True)
-        )
-        evidence_markers = set(
-            _findings_target_number_occurrences(evidence, include_years=True)
-        )
-        if required_years - claim_markers or required_years - evidence_markers:
-            continue
-        if key_point_words and len(expected_numbers) == 0:
-            finding_words = set(
-                re.findall(r"[a-z]{3,}", f"{claim} {evidence}".casefold())
-            )
-            if len(key_point_words & finding_words) < min(2, len(key_point_words)):
-                continue
-        if any(
-            any(variant in key_point.casefold() for variant in variants)
-            and not any(variant in claim.casefold() for variant in variants)
-            for _name, variants in _FINDINGS_TARGET_QUALIFIERS
-        ):
-            continue
-        if _metric_label_relationship_explanation(key_point, claim):
-            continue
-        if _metric_label_relationship_explanation(claim, evidence):
-            continue
-        return True
-    return False
+        merged.append(finding)
+        if key is not None:
+            seen_keys.add(key)
+    return merged
 
 
 def _findings_target_is_covered(
@@ -886,14 +603,17 @@ def _findings_target_is_covered(
         if _findings_section_matches_target(finding, target, targets)
         and str(finding.get("id") or "").strip() in grounded_finding_ids
     ]
-    if not matched:
+    if not matched or not any(_findings_target_pages(finding) for finding in matched):
         return False
-    if not any(_findings_target_pages(finding) for finding in matched):
-        return False
-    return all(
-        _findings_target_point_covered(key_point, matched)
-        for key_point in _findings_target_key_points(target)
-    )
+
+    for key_point in _findings_target_key_points(target):
+        expected = _normalize_findings_text(key_point)
+        if not expected or not any(
+            expected in _normalize_findings_text(str(finding.get("text") or ""))
+            for finding in matched
+        ):
+            return False
+    return True
 
 
 def _attach_verified_finding_pages(
@@ -2252,14 +1972,6 @@ def _generate_pack(
                         for item in findings
                         if str(item.get("id") or "").strip()
                     }
-                    seen_signatures = {
-                        (
-                            str(item.get("section_id") or "").casefold(),
-                            str(item.get("text") or "").casefold(),
-                            str(item.get("evidence") or "").casefold(),
-                        )
-                        for item in findings
-                    }
                     for raw_item in fallback.payload.get("findings", []):
                         if not isinstance(raw_item, dict):
                             continue
@@ -2285,13 +1997,6 @@ def _generate_pack(
                         item["text"] = _normalize_targeted_finding_text(
                             str(item.get("text") or "")
                         )
-                        signature = (
-                            str(item.get("section_id") or "").casefold(),
-                            str(item.get("text") or "").casefold(),
-                            str(item.get("evidence") or "").casefold(),
-                        )
-                        if signature in seen_signatures:
-                            continue
                         item_id = str(item.get("id") or "").strip()
                         if not item_id or item_id in existing_ids:
                             base_id = item_id or str(
@@ -2304,7 +2009,6 @@ def _generate_pack(
                                 item_id = f"{base_id}-targeted-{suffix}"
                             item["id"] = item_id
                         existing_ids.add(item_id)
-                        seen_signatures.add(signature)
                         fallback_findings.append(item)
                     supported_fallback_findings: list[dict[str, object]] = []
                     if fallback_findings:
@@ -2324,149 +2028,9 @@ def _generate_pack(
                             in directly_supported_fallback_ids
                         ]
 
-                        def repeats_grounded_target_points(
-                            fallback_item: dict[str, object],
-                        ) -> bool:
-                            matched_target = next(
-                                (
-                                    target
-                                    for target in missing_targets
-                                    if _findings_section_matches_target(
-                                        fallback_item, target, missing_targets
-                                    )
-                                ),
-                                None,
-                            )
-                            if matched_target is None:
-                                return False
-                            fallback_pages = set(_findings_target_pages(fallback_item))
-                            covered_points = [
-                                key_point
-                                for key_point in _findings_target_key_points(
-                                    matched_target
-                                )
-                                if _findings_target_point_covered(
-                                    key_point, [fallback_item]
-                                )
-                            ]
-                            return bool(covered_points) and all(
-                                any(
-                                    str(existing.get("id") or "").strip()
-                                    in grounded_finding_ids
-                                    and _findings_section_matches_target(
-                                        existing, matched_target, missing_targets
-                                    )
-                                    and bool(
-                                        fallback_pages
-                                        & set(_findings_target_pages(existing))
-                                    )
-                                    and _findings_target_point_covered(
-                                        key_point, [existing]
-                                    )
-                                    for existing in findings
-                                )
-                                for key_point in covered_points
-                            )
-
-                        grounded_claim_signatures = set()
-                        grounded_primary_findings = []
-                        for finding in findings:
-                            if (
-                                str(finding.get("id") or "").strip()
-                                not in grounded_finding_ids
-                            ):
-                                continue
-                            grounded_primary_findings.append(finding)
-                            claim_signature = _findings_grounded_claim_signature(
-                                finding
-                            )
-                            if claim_signature is not None:
-                                grounded_claim_signatures.add(claim_signature)
-                        deduplicated_fallback_findings: list[dict[str, object]] = []
-                        for index, item in enumerate(supported_fallback_findings):
-                            if repeats_grounded_target_points(item):
-                                continue
-                            if _findings_claim_covered_by_grounded_findings(
-                                item, grounded_primary_findings
-                            ):
-                                continue
-                            covered_by_another_fallback = any(
-                                other_index != index
-                                and _findings_claim_covered_by_grounded_findings(
-                                    item, [other]
-                                )
-                                and (
-                                    not _findings_claim_covered_by_grounded_findings(
-                                        other, [item]
-                                    )
-                                    or other_index < index
-                                )
-                                for other_index, other in enumerate(
-                                    supported_fallback_findings
-                                )
-                            )
-                            if covered_by_another_fallback:
-                                continue
-                            claim_signature = _findings_grounded_claim_signature(item)
-                            if (
-                                claim_signature is not None
-                                and claim_signature in grounded_claim_signatures
-                            ):
-                                continue
-                            if claim_signature is not None:
-                                grounded_claim_signatures.add(claim_signature)
-                            deduplicated_fallback_findings.append(item)
-                        supported_fallback_findings = deduplicated_fallback_findings
-                        merged_findings = [
-                            item
-                            for item in findings
-                            if not any(
-                                str(fallback_item.get("id") or "").strip()
-                                in directly_supported_fallback_ids
-                                and (
-                                    _findings_is_subset_of_fallback(item, fallback_item)
-                                    or _findings_claim_covered_by_grounded_findings(
-                                        item, [fallback_item]
-                                    )
-                                )
-                                for fallback_item in supported_fallback_findings
-                            )
-                        ]
-                        merged_ids = {
-                            str(item.get("id") or "").strip()
-                            for item in merged_findings
-                            if str(item.get("id") or "").strip()
-                        }
-                        merged_signatures = {
-                            (
-                                str(item.get("section_id") or "").casefold(),
-                                str(item.get("text") or "").casefold(),
-                                str(item.get("evidence") or "").casefold(),
-                            )
-                            for item in merged_findings
-                        }
-                        for item in supported_fallback_findings:
-                            signature = (
-                                str(item.get("section_id") or "").casefold(),
-                                str(item.get("text") or "").casefold(),
-                                str(item.get("evidence") or "").casefold(),
-                            )
-                            if signature in merged_signatures:
-                                continue
-                            item = dict(item)
-                            item_id = str(item.get("id") or "").strip()
-                            if item_id in merged_ids:
-                                suffix = 1
-                                base_id = item_id
-                                item_id = f"{base_id}-targeted-{suffix}"
-                                while item_id in existing_ids or item_id in merged_ids:
-                                    suffix += 1
-                                    item_id = f"{base_id}-targeted-{suffix}"
-                                item["id"] = item_id
-                            existing_ids.add(item_id)
-                            merged_ids.add(item_id)
-                            merged_signatures.add(signature)
-                            merged_findings.append(item)
+                        merged_findings = _merge_supported_fallback_findings(
+                            findings, grounded_finding_ids, supported_fallback_findings
+                        )
                         if merged_findings != findings:
                             merged = dict(result_payload)
                             merged["findings"] = merged_findings

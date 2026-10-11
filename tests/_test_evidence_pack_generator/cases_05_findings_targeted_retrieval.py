@@ -189,7 +189,7 @@ def test_findings_targeted_fallback_recovers_incomplete_numeric_body_relationshi
         and "sessions decreased 5%" in finding["text"]
         for finding in packs["findings"]["findings"]
     ), packs
-    assert not any(
+    assert any(
         finding["id"] == "casino-only" for finding in packs["findings"]["findings"]
     )
     assert packs["evidence_fidelity"]["deterministic_pass_count"] >= 1
@@ -521,7 +521,7 @@ def test_findings_retrieval_target_keeps_multiple_high_value_key_points():
 
 
 def test_findings_target_significance_does_not_boost_report_topics():
-    from src.generators.evidence_pack_generator import _findings_target_key_point_score
+    from src.generators.evidence_pack_generator import _findings_target_score
 
     app_metrics = (
         "Casino installs +22% and sessions -5%; slots installs +46% and sessions -5%."
@@ -530,9 +530,7 @@ def test_findings_target_significance_does_not_boost_report_topics():
         "Online orders +22% and visits -5%; stores orders +46% and visits -5%."
     )
 
-    assert _findings_target_key_point_score(
-        app_metrics
-    ) == _findings_target_key_point_score(retail_metrics)
+    assert _findings_target_score(app_metrics) == _findings_target_score(retail_metrics)
 
 
 def test_findings_targets_skip_reader_metadata_but_keep_substantive_summaries():
@@ -573,216 +571,6 @@ def test_findings_targets_skip_reader_metadata_but_keep_substantive_summaries():
         "market-outlook",
         "executive-summary",
     }
-
-
-def test_findings_target_coverage_requires_each_numeric_relationship():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "gaming",
-        "title": "Finding and keeping users",
-        "pages": [19],
-        "key_points": [
-            "Casino installs +22% and sessions -5%; slots installs +46% "
-            "and sessions -5%."
-        ],
-    }
-    findings = [
-        {
-            "id": "only-casino-pair",
-            "section_id": "gaming",
-            "text": "Casino installs grew 22%; slots installs grew 46%.",
-            "evidence": (
-                "Casino installs +22%, sessions -5%; slots installs +46%, sessions -5%."
-            ),
-            "pages": [19],
-        }
-    ]
-
-    assert not _findings_target_is_covered(
-        target, findings, {"only-casino-pair"}, [target]
-    )
-
-
-def test_findings_target_numbers_ignore_chart_identifiers():
-    from src.generators.evidence_pack_generator import (
-        _findings_target_number_occurrences,
-    )
-
-    assert _findings_target_number_occurrences(
-        "Figure 9, October 2025: money-off promotions 75%, percentage-off 74%, "
-        "and buy-one-get-one-free 73%.",
-        include_years=True,
-    ) == ["2025", "75%", "74%", "73%"]
-
-
-def test_findings_target_coverage_allows_complete_relationships_across_findings():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "gaming",
-        "title": "Finding and keeping users",
-        "pages": [18],
-        "key_points": [
-            "Casino installs +22% and sessions -5%; slots installs +46% "
-            "and sessions -5%."
-        ],
-    }
-    findings = [
-        {
-            "id": "casino-pair",
-            "section_id": "gaming",
-            "text": "Casino installs grew 22% and sessions fell 5% in 2025.",
-            "evidence": "Casino installs +22%; sessions -5% in 2025.",
-            "pages": [19],
-        },
-        {
-            "id": "slots-pair",
-            "section_id": "gaming",
-            "text": "Slots installs grew 46% and sessions fell 5% in 2025.",
-            "evidence": "Slots installs +46%; sessions -5% in 2025.",
-            "pages": [19],
-        },
-    ]
-
-    assert _findings_target_is_covered(
-        target, findings, {"casino-pair", "slots-pair"}, [target]
-    )
-
-
-def test_findings_target_coverage_accepts_equivalent_numeric_formatting():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "market-growth",
-        "title": "Market growth",
-        "pages": [4],
-        "key_point": "Global revenue increased to $0.3T in 2025.",
-    }
-    findings = [
-        {
-            "id": "market-growth-2025",
-            "section_id": "market-growth",
-            "text": "Global revenue rose to $300 billion in 2025.",
-            "evidence": "Global revenue reached $300 billion in 2025.",
-            "pages": [5],
-        }
-    ]
-
-    assert _findings_target_is_covered(
-        target, findings, {"market-growth-2025"}, [target]
-    )
-
-
-def test_findings_target_coverage_accepts_supported_qualitative_paraphrase():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "portfolio-simplification",
-        "title": "Portfolio simplification as a value creation strategy",
-        "pages": [18],
-        "key_point": (
-            "Portfolio simplification can unlock value for buyers and sellers."
-        ),
-    }
-    findings = [
-        {
-            "id": "carve-out-value",
-            "section_id": "portfolio-simplification",
-            "text": (
-                "Carve-outs can simplify portfolios and unlock value for buyers "
-                "and sellers."
-            ),
-            "evidence": (
-                "Carve-outs can simplify portfolios and unlock value for buyers "
-                "and sellers."
-            ),
-            "pages": [19],
-        }
-    ]
-
-    assert _findings_target_is_covered(target, findings, {"carve-out-value"}, [target])
-
-
-def test_findings_target_coverage_does_not_compare_printed_and_physical_page_numbers():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "revenue-growth",
-        "title": "Revenue growth",
-        "pages": [4],  # DocMap printed label; source page is physical PDF page 5.
-        "key_point": "Revenue increased 12% in 2025.",
-    }
-    findings = [
-        {
-            "id": "revenue-growth-2025",
-            "section_id": "revenue-growth",
-            "text": "Revenue increased 12% in 2025.",
-            "evidence": "Revenue increased 12% in 2025.",
-            "pages": [5],
-        }
-    ]
-
-    assert _findings_target_is_covered(
-        target, findings, {"revenue-growth-2025"}, [target]
-    )
-
-
-def test_findings_target_coverage_rejects_values_swapped_between_subjects():
-    from src.generators.evidence_pack_generator import _findings_target_is_covered
-
-    target = {
-        "id": "benchmarks",
-        "title": "Growth by category",
-        "pages": [19],
-        "key_points": ["Casino 22%; Slots 46%."],
-    }
-    findings = [
-        {
-            "id": "swapped-categories",
-            "section_id": "benchmarks",
-            "text": "Casino 46%; Slots 22%.",
-            "evidence": "Casino 22%; Slots 46%.",
-            "pages": [19],
-        }
-    ]
-
-    assert not _findings_target_is_covered(
-        target, findings, {"swapped-categories"}, [target]
-    )
-
-
-def test_missing_findings_targets_checks_all_bounded_targets_and_returns_two():
-    from src.generators.evidence_pack_generator import (
-        _missing_findings_retrieval_targets,
-    )
-
-    targets = [
-        {
-            "id": f"section-{index}",
-            "title": f"Section {index}",
-            "key_point": f"Section {index} has a source-backed result.",
-            "pages": [index],
-        }
-        for index in range(1, 5)
-    ]
-    findings = [
-        {
-            "id": f"finding-{index}",
-            "section_id": f"section-{index}",
-            "text": f"Section {index} has a source-backed result.",
-            "evidence": f"Section {index} has a source-backed result.",
-            "pages": [index],
-        }
-        for index in (1, 2)
-    ]
-
-    assert (
-        _missing_findings_retrieval_targets(
-            targets, findings, {"finding-1", "finding-2"}
-        )
-        == targets[2:4]
-    )
 
 
 def test_bounded_recovery_prioritizes_specific_strategy_over_broad_focus():

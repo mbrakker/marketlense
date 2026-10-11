@@ -1,5 +1,51 @@
 # Frozen Five-Report Autonomous MVP Comparison — 2026-10-09 baseline and 2026-10-10 follow-ups
 
+## 2026-10-11 findings-retrieval simplification
+
+This bounded retrieval refactor removes overlapping deterministic semantic-coverage and fallback-deduplication checks. Completeness now requires a grounded finding in the mapped section and the full normalized DocMap key point in the claim; uncertain paraphrases remain eligible for the existing one-call fallback. Deduplication now removes only same-section claims whose normalized full text matches, and only after the primary claim is grounded. Primary findings are never removed by fallback merging. Source page resolution, excerpt aggregation, evidence-fidelity validation, fallback bounds and failure handling are unchanged. No retrieval or validation stage was added.
+
+The production generator diff removes 485 lines and adds 49 (net −436). The frozen PDFs and DocMaps were unchanged (the five source MD5s are listed in “Cohort identity and retained evidence”). The comparison used the existing `gpt-6-luna` settings, production `generate_evidence_packs` entry point, and isolated per-report output/cache roots. The pre-change provider responses were captured and replayed through both implementations. Activate, KPMG, Capgemini and Reuters produced the same final finding lists under replay; Adjust's captured semantic-validation response described a different candidate set, so its full final-pack replay could not be completed. The live post-change run completed all five reports with existing validation.
+
+### Paired findings review
+
+Every finding retained in the post-change packs below has `supported` status and a physical source-page reference in the evidence-fidelity ledger. The overall ledger still reports rejected candidates for Activate, Adjust and Reuters, so this retrieval comparison does not change publication readiness or claim that every generated candidate is supported.
+
+| Report | Captured baseline → post-change top substantive evidence | Assessment and limitations |
+| --- | --- | --- |
+| Activate | Baseline retained the $302B, 2017E–2021E, 4.1% versus approximately 3% GDP forecast (p. 5) and segment CAGRs (p. 6), alongside three creator-view findings. The new pack retains both forecasts and adds the U.S. video super-user relationship (top 25%, 4.5+ hours daily, 61% of video time and 34% of spend; p. 15), sports revenue/right forecasts (p. 86), and the $15B+ sports-betting opportunity (p. 88). | **Better coverage.** The highest-value exact forecast remains. The new live pack also contains duplicate phrasings of the forecast and the 2016 creator-concentration finding; conservative text-only deduplication does not merge paraphrases. |
+| KPMG | Baseline retained the structural-forces overview (p. 9) and 2026 mean planned deals of 5.2 corporate versus 7.3 private equity (p. 15). The new pack retains the comparison and adds a buyer-pipeline outlook (p. 15), strategic direction over opportunistic expansion (p. 12), and the carve-out/spin-off/divestiture pipeline from portfolio simplification (p. 13). | **Better.** The new qualitative findings are more specific to strategic choices and portfolio actions. The deal comparison appears twice under different IDs and slightly different wording; this remains a known duplicate. |
+| Adjust | Baseline retained the combined 2025 gaming results: casino installs +22% / sessions −5%, and slots installs +46% / sessions −5% (p. 19), plus broad AI-adoption claims. The new pack retains that complete directional relationship in its combined gaming subvertical finding (p. 19), with additional separate category metrics and body results for finance, ecommerce, retention and CPI (pp. 17–38). | **Better body coverage.** Subjects, directions, periods and values for casino and slots are preserved. Four introductory/AI findings still appear first, but the pack contains a broad set of distinct body results rather than being dominated by introduction evidence. Some combined and component claims overlap. |
+| Capgemini | Baseline and new packs both retain the 74% lower-price switching signal and 71% undisclosed pack-size/quality signal (p. 11), and the 75% / 74% / 73% promotion results (p. 24). The new pack also contains the 54% versus 71% impulse-purchase change (p. 21), weekly assistant use and willingness-to-pay evidence (pp. 33–34), and human-support loyalty changes (p. 45). | **Equivalent to better.** The commercial switching and promotion evidence remains intact, with useful commerce and AI additions. The three promotion values appear both individually and in one aggregate finding. |
+| Reuters Institute | Baseline retained the forecast of a greater-than-40% search-traffic decline over three years (p. 12) and referral data (p. 13). The new pack retains referral tables and adds the 43% Facebook / 46% X referral declines (p. 20), publisher revenue expectations (p. 38), innovation barriers (p. 40), AI-video scale (p. 29), and the assistance freeze affecting independent outlets (p. 38). | **Equivalent overall, with an omission.** New body evidence is broader and more operationally specific, but the three-year search-traffic forecast is absent from the new pack. The Facebook/X summary overlaps values in the longer-range referral table. |
+
+The captured-response replay helps separate deterministic changes from provider variation: the four matching replay outputs show no finding-selection change for those response sets. The live calls are independent model runs and returned different candidate lists, particularly for Activate and Adjust; those additions cannot be attributed solely to the deterministic refactor. For Adjust, the live pack independently passed factual validation for the retained casino/slots relationship.
+
+### Retrieval cost and latency
+
+The before/after runs used separate cache and output roots. Provider token and cost figures are from the recorded response usage; wall time is the sum of the five sequential isolated report runs. Total model-request count includes the existing semantic-fidelity calls, which can vary with the returned candidate set.
+
+| Measure | Captured baseline | Simplified live run | Change |
+| --- | ---: | ---: | ---: |
+| Report model requests | 20 | 24 | +20%; all four additional requests were existing semantic validation calls |
+| Primary / targeted-fallback / repair requests | 11 | 11 | No change |
+| File Search tool calls | 21 | 13 | −38.1% |
+| Input / output tokens | 241,288 / 50,113 | 173,540 / 46,725 | −28.1% / −6.8% |
+| Estimated report cost | $0.101687 | $0.073216 | −28.0% |
+| Sum of sequential report wall times | 521.309s | 548.345s | +5.2% |
+
+The observed request count increased by four; all four were calls through the existing semantic-validation stage, which rose from 9 to 13. No new LLM stage or retrieval request was introduced. The run used fewer File Search calls, fewer tokens and lower estimated cost, while cumulative wall time rose 27.036 seconds. These are measured independent runs, not a causal or repeatability guarantee. The extra semantic calls and the remaining paraphrase/aggregate overlaps are limitations to monitor.
+
+The refactor is limited to findings retrieval/completeness/deduplication and these regression tests. It does not change editorial selection, summaries, rendered output, or publication gates. The earlier NO-GO publication recommendation remains in force pending the separately bounded editorial-survival verification.
+
+### Refactor verification
+
+- `python -m ruff check` on the changed generator, aggregator and test modules passed.
+- `python -m pytest -q tests/test_evidence_pack_generator.py tests/test_long_test_file_ownership.py` passed: 80 tests.
+- `python scripts/ci/run_type_check.py` passed across 773 source files; the full-repository mypy baseline remained at zero tracked errors.
+- Final `python -m pytest -q` passed: 7,214 passed, 1 skipped, 31 deselected, 22 warnings and 24 subtests in 781.60s.
+
+The first full run exposed the changed targeted-retrieval test module at 1,052 lines. Its completeness/dedup cases were moved to a dedicated sibling module; the 1,000-line gate was not changed, and both the focused gate and final full suite pass. An intermediate full run also hit `test_source_ingest_backlog_progresses_before_deeper_report_stages`; the isolated rerun passed (1 test), and the final full run passed. GitHub Actions result is recorded after the branch push below.
+
 **Recommendation: NO-GO for autonomous publication and merge.** The latest exact-five generation run on `cf4bba4785aa9c3e018441436c364a5e09f9286a` passed validation and publication readiness 5/5 with zero unsupported or unresolved claims. Capgemini and Reuters have specific leads, but Activate loses the baseline’s exact period/CAGR comparison, KPMG remains theme-led, and Adjust leads with broad AI-adoption data instead of its distinctive gaming results. Report cost is 54.9% above baseline and 82.1% above the canary. Reliability remains sound; editorial acceptance and cost do not.
 
 The run used the unchanged manifest SHA-256 `744de32ef0d200ced0904b4f44868084b29e4d923f75e78ca106c3c3549d22a7`; the environment-loaded preflight admitted 5/5 members after source-checksum verification. Shared batching and cross-report analysis used fresh isolated state. The raw result is in ignored `tmp/p5fix23-full-exact-five/frozen-reliability-0voy3fz4/cohort_result.json`, SHA-256 `106d0c087edb23ce6c83fddf8e2dd401cfb8a48663c7bfe9b1750940fd2d9f4f`. No staging, publication, or WordPress writes occurred; the cross-report briefing completed and all 40 Signal manifests remained held for insufficient grounding.

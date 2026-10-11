@@ -146,7 +146,7 @@ def test_truncated_targeted_fallback_keeps_primary_findings_and_stays_bounded(
     )
 
 
-def test_targeted_fallback_drops_same_page_duplicate_of_grounded_key_point(
+def test_targeted_fallback_keeps_validated_alternate_qualification(
     tmp_path,
 ):
     target_id = "commercial-results"
@@ -266,13 +266,14 @@ def test_targeted_fallback_drops_same_page_duplicate_of_grounded_key_point(
     assert client.fallback_calls == 1
     assert [finding["id"] for finding in findings] == [
         "revenue-growth-primary",
+        "revenue-growth-targeted-copy",
         "market-share-targeted",
     ]
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
 
 
 @pytest.mark.parametrize("include_bogof", [True, False])
-def test_targeted_fallback_drops_comparison_already_grounded_across_findings(
+def test_targeted_fallback_retains_comparison_without_suppressing_primary_findings(
     tmp_path, include_bogof
 ):
     target_id = "careful-spending"
@@ -416,16 +417,21 @@ def test_targeted_fallback_drops_comparison_already_grounded_across_findings(
     findings = packs["findings"]["findings"]
     assert client.fallback_calls == 1
     if include_bogof:
-        expected = ["promotion-1", "promotion-2", "promotion-3"]
+        expected = [
+            "promotion-1",
+            "promotion-2",
+            "promotion-3",
+            "promotion-summary-targeted",
+        ]
     else:
-        expected = ["promotion-summary-targeted"]
+        expected = ["promotion-1", "promotion-2", "promotion-summary-targeted"]
     expected.append("impulse-targeted")
     actual = [finding["id"] for finding in findings]
     assert actual == expected, actual
     assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
 
 
-def test_targeted_fallback_drops_boilerplate_duplicate_but_keeps_missing_finding(
+def test_targeted_fallback_drops_exact_duplicate_but_keeps_missing_finding(
     tmp_path,
 ):
     target_id = "careful-spending"
@@ -470,8 +476,8 @@ def test_targeted_fallback_drops_boilerplate_duplicate_but_keeps_missing_finding
         "findings": [
             {
                 "id": "impulse-targeted-copy",
-                "text": "54% of consumers reported making fewer impulse purchases "
-                "versus 71% last year.",
+                    "text": "Consumers reported fewer impulse purchases, 54% versus "
+                    "71% last year.",
                 "evidence": impulse_evidence,
                 "pages": [21],
                 "section_id": target_id,

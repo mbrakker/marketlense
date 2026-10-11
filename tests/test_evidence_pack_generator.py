@@ -8,3 +8,4 @@ from ._test_evidence_pack_generator.cases_03_docmap_normalization import *  # no
 from ._test_evidence_pack_generator.cases_04_retained_safety_and_quotes import *  # noqa: F401,F403
 from ._test_evidence_pack_generator.cases_05_findings_targeted_retrieval import *  # noqa: F401,F403
 from ._test_evidence_pack_generator.cases_06_findings_fallback_recovery import *  # noqa: F401,F403
+from ._test_evidence_pack_generator.cases_07_findings_completeness_and_dedup import *  # noqa: F401,F403
