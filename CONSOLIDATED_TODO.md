@@ -120,6 +120,131 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 
 **Register counts (retained from the 2026-10-08 status baseline):** 30 Active, 44 Closed, 12 Deferred, 3 Excluded (89 total). This consolidation does **not** certify technical closure on 2026-10-11.
 
+
+## Active Backlog
+
+Navigation-only sections for compatibility with existing backlog-source checks. Full implementation and acceptance criteria live in linked workstream specifications. Status authority remains the Unified Work Register.
+
+#### A8. Compare retained model-call replay bundles
+
+[Full A8 specification](docs/backlog/A-autonomy.md#a8-compare-retained-model-call-replay-bundles).
+
+#### A15. Complete explicit model-policy coverage and policy-effectiveness evidence
+
+[Full A15 specification](docs/backlog/A-autonomy.md#a15-complete-explicit-model-policy-coverage-and-policy-effectiveness-evidence).
+
+#### A17. Calibrate deterministic admission thresholds from retained preflight funnels
+
+[Full A17 specification](docs/backlog/A-autonomy.md#a17-calibrate-deterministic-admission-thresholds-from-retained-preflight-funnels).
+
+#### A18. Harden discovery recall and authoritative acquisition handoff
+
+[Full A18 specification](docs/backlog/A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff).
+
+#### A19. Harden acquisition routes, terminal semantics, and artifact verification
+
+[Full A19 specification](docs/backlog/A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification).
+
+#### A20. Prove clean-room capability readiness before first external work
+
+[Full A20 specification](docs/backlog/A-autonomy.md#a20-prove-clean-room-capability-readiness-before-first-external-work).
+
+#### A21. Establish a representative first-attempt end-to-end reliability SLO
+
+[Full A21 specification](docs/backlog/A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo).
+
+#### P2. Harden bounded WordPress public-observability events
+
+[Full P2 specification](docs/backlog/P-publication.md#p2-harden-bounded-wordpress-public-observability-events).
+
+#### P4. Close public briefing, correction, and submission intake
+
+[Full P4 specification](docs/backlog/P-publication.md#p4-close-public-briefing-correction-and-submission-intake).
+
+#### P5. Validate and close responsive search and navigation
+
+[Full P5 specification](docs/backlog/P-publication.md#p5-validate-and-close-responsive-search-and-navigation).
+
+#### P6. Complete blind human editorial acceptance
+
+[Full P6 specification](docs/backlog/P-publication.md#p6-complete-blind-human-editorial-acceptance).
+
+#### P7. Fix public performance measurement and reach hosted targets
+
+[Full P7 specification](docs/backlog/P-publication.md#p7-fix-public-performance-measurement-and-reach-hosted-targets).
+
+#### P8. Complete concise public evidence, methodology, and related-content surfaces
+
+[Full P8 specification](docs/backlog/P-publication.md#p8-complete-concise-public-evidence-methodology-and-related-content-surfaces).
+
+#### P10. Operate correlated public-render failure telemetry
+
+[Full P10 specification](docs/backlog/P-publication.md#p10-operate-correlated-public-render-failure-telemetry).
+
+#### P16. Build a decision-grade consulting synthesis artifact
+
+[Full P16 specification](docs/backlog/P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact).
+
+#### P17. Compose adaptive, non-repetitive visual report stories
+
+[Full P17 specification](docs/backlog/P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories).
+
+#### E6. Retain a hash-pinned claim-embedding benchmark export
+
+[Full E6 specification](docs/backlog/E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export).
+
+#### E10. Attest active model-pricing rates before they become stale
+
+[Full E10 specification](docs/backlog/E-evidence.md#e10-attest-active-model-pricing-rates-before-they-become-stale).
+
+#### E12. Persist pre-category editorial context checkpoints
+
+[Full E12 specification](docs/backlog/E-evidence.md#e12-persist-pre-category-editorial-context-checkpoints).
+
+#### E13. Measure candidate-regeneration promotion effectiveness
+
+[Full E13 specification](docs/backlog/E-evidence.md#e13-measure-candidate-regeneration-promotion-effectiveness).
+
+#### E14. Calibrate category-fit coverage from retained outcomes
+
+[Full E14 specification](docs/backlog/E-evidence.md#e14-calibrate-category-fit-coverage-from-retained-outcomes).
+
+#### E15. Make publication crops visually complete and repairable
+
+[Full E15 specification](docs/backlog/E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable).
+
+#### E16. Make methodology, applicability, and uncertainty decision-grade
+
+[Full E16 specification](docs/backlog/E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade).
+
+#### R1. Publish release-evidence reviews where reviewers work
+
+[Full R1 specification](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work).
+
+#### R2. Enforce role boundaries, direct-I/O discipline, and controlled module growth
+
+[Full R2 specification](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth).
+
+#### R3. Restore service quality coverage above the retained baseline
+
+[Full R3 specification](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline).
+
+#### R6. Review bounded-log reduction telemetry and remediate recurring callers
+
+[Full R6 specification](docs/backlog/R-engineering.md#r6-review-bounded-log-reduction-telemetry-and-remediate-recurring-callers).
+
+#### R7. Prove recoverable backups and full-state disaster restoration
+
+[Full R7 specification](docs/backlog/R-engineering.md#r7-prove-recoverable-backups-and-full-state-disaster-restoration).
+
+#### S3. Simplify the PDF visual-heuristics boundary
+
+[Full S3 specification](docs/backlog/S-simplification.md#s3-simplify-the-pdf-visual-heuristics-boundary).
+
+#### S4. Give WordPress shortcodes semantic ownership
+
+[Full S4 specification](docs/backlog/S-simplification.md#s4-give-wordpress-shortcodes-semantic-ownership).
+
 ## Deferred and excluded work
 
 The authoritative statuses and short reasons remain above; the [original register](docs/backlog/archive/CONSOLIDATED_TODO-20261011-preconsolidation.md) preserves the full historical context. Do not activate intentionally deferred DAG scheduling, temporary-sandbox HTTPS migration, speculative provider failover or generic infrastructure work without a measured MVP need. Exclusions remain prohibited behavior, not queued tasks.

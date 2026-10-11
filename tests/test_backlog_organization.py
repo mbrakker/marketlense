@@ -60,13 +60,42 @@ def test_preconsolidation_references_retained() -> None:
     assert "archived original" in (ROOT / "10improvements.md").read_text(encoding="utf-8").lower()
 
 
-def test_proposal_links_are_local_and_have_explicit_targets() -> None:
+def test_proposal_links_resolve_to_real_section_headings() -> None:
     index = INDEX.read_text(encoding="utf-8")
-    for technical_id, relative_name in re.findall(
-        r"^\| \[([A-Z][A-Z0-9-]+)\]\(([^#)]+)#[^)]+\) \|", index, re.M
-    ):
-        assert "/" not in relative_name, "proposal links must be relative to docs/backlog"
+    mappings = re.findall(
+        r"^\| \[([A-Z][A-Z0-9-]+)\]\(([^#)]+)#([a-z0-9-]+)\) \|",
+        index,
+        re.M,
+    )
+    assert len(mappings) == 109
+    for technical_id, relative_name, anchor in mappings:
+        assert "/" not in relative_name
         destination = INDEX.parent / relative_name
         assert destination in WORKSTREAMS
-        text = destination.read_text(encoding="utf-8")
-        assert f'<a id="{technical_id.lower()}"></a>' in text
+        sections = re.findall(
+            r"^#### ([A-Z][A-Z0-9-]+) — ([^\n]+)$",
+            destination.read_text(encoding="utf-8"),
+            re.M,
+        )
+        headings = {item_id: title for item_id, title in sections}
+        assert technical_id in headings
+        display_title = technical_id + " — " + headings[technical_id]
+        expected = re.sub(
+            r"[\s-]+", "-",
+            re.sub(r"[^\w\s-]", "", display_title.lower()),
+        ).strip("-")
+        assert anchor == expected
+
+
+def test_master_remains_compatible_with_existing_backlog_validator() -> None:
+    from scripts.ci.check_backlog_source import validate_canonical_backlog
+
+    summary, violations = validate_canonical_backlog(MASTER.read_text(encoding="utf-8"))
+    assert not violations, violations
+    assert summary.active_register_items == 30
+    assert summary.detailed_active_sections == 30
+
+
+def test_migrated_quality_links_are_relative_to_workstream() -> None:
+    for path in WORKSTREAMS:
+        assert "](docs/quality/" not in path.read_text(encoding="utf-8"), path

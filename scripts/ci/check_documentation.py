@@ -161,6 +161,9 @@ def validate_markdown_links(root: Path) -> tuple[DocumentationViolation, ...]:
     violations: list[DocumentationViolation] = []
     anchor_cache: dict[Path, set[str]] = {}
     for relative_path in _first_party_markdown(root):
+        # Immutable preconsolidation backups retain original root-relative links.
+        if relative_path.parts[:3] == ("docs", "backlog", "archive"):
+            continue
         source = root / relative_path
         for raw_target in MARKDOWN_LINK.findall(source.read_text(encoding="utf-8")):
             target, anchor = _link_target(raw_target)

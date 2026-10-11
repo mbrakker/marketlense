@@ -6,115 +6,115 @@ Disposition labels describe the **historic proposal/reconciliation evidence only
 
 | Technical ID | Canonical owner / full specification | Proposal disposition |
 | --- | --- | --- |
-| [ING-01](A-autonomy.md#ing-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ING-02](A-autonomy.md#ing-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [ING-03](A-autonomy.md#ing-03) | [A17](A-autonomy.md#a17-calibrate-deterministic-admission-thresholds-from-retained-preflight-funnels) | Proposal; revalidate at current HEAD |
-| [ING-04](A-autonomy.md#ing-04) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ING-05](A-autonomy.md#ing-05) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ING-06](A-autonomy.md#ing-06) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [ING-07](A-autonomy.md#ing-07) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ING-08](E-evidence.md#ing-08) | [E12](E-evidence.md#e12-persist-pre-category-editorial-context-checkpoints) | Proposal; revalidate at current HEAD |
-| [ING-09](A-autonomy.md#ing-09) | [A15](A-autonomy.md#a15-complete-explicit-model-policy-coverage-and-policy-effectiveness-evidence) | Proposal; revalidate at current HEAD |
-| [ING-10](A-autonomy.md#ing-10) | [A17](A-autonomy.md#a17-calibrate-deterministic-admission-thresholds-from-retained-preflight-funnels) | Proposal; revalidate at current HEAD |
-| [DISC-01](A-autonomy.md#disc-01) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-02](A-autonomy.md#disc-02) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-03](A-autonomy.md#disc-03) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-04](A-autonomy.md#disc-04) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-05](A-autonomy.md#disc-05) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-06](A-autonomy.md#disc-06) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-07](A-autonomy.md#disc-07) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-08](A-autonomy.md#disc-08) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-09](A-autonomy.md#disc-09) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [DISC-10](A-autonomy.md#disc-10) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [ACQ-01](A-autonomy.md#acq-01) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-02](A-autonomy.md#acq-02) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Scoped implementation reported; verify current HEAD |
-| [ACQ-03](A-autonomy.md#acq-03) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-04](A-autonomy.md#acq-04) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-05](A-autonomy.md#acq-05) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-06](A-autonomy.md#acq-06) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-07](A-autonomy.md#acq-07) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Scoped implementation reported; verify current HEAD |
-| [ACQ-08](A-autonomy.md#acq-08) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-09](A-autonomy.md#acq-09) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [ACQ-10](A-autonomy.md#acq-10) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
-| [SYS-01](A-autonomy.md#sys-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-02](A-autonomy.md#sys-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-03](A-autonomy.md#sys-03) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-04](A-autonomy.md#sys-04) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-05](A-autonomy.md#sys-05) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-06](A-autonomy.md#sys-06) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-07](A-autonomy.md#sys-07) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
-| [SYS-08](A-autonomy.md#sys-08) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-09](A-autonomy.md#sys-09) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [SYS-10](A-autonomy.md#sys-10) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [CODE-01](A-autonomy.md#code-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [CODE-02](A-autonomy.md#code-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [CODE-03](A-autonomy.md#code-03) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [CODE-04](R-engineering.md#code-04) | [R2](R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Scoped implementation reported; verify current HEAD |
-| [CODE-05](R-engineering.md#code-05) | [R2](R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Scoped implementation reported; verify current HEAD |
-| [CODE-06](A-autonomy.md#code-06) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [CODE-07](A-autonomy.md#code-07) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [CODE-08](A-autonomy.md#code-08) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [CODE-09](A-autonomy.md#code-09) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [CODE-10](R-engineering.md#code-10) | [R7](R-engineering.md#r7-prove-recoverable-backups-and-full-state-disaster-restoration) | Scoped implementation reported; verify current HEAD |
-| [CROP-01](E-evidence.md#crop-01) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-02](E-evidence.md#crop-02) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-03](E-evidence.md#crop-03) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-04](E-evidence.md#crop-04) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-05](E-evidence.md#crop-05) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Scoped implementation reported; verify current HEAD |
-| [CROP-06](E-evidence.md#crop-06) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-07](E-evidence.md#crop-07) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-08](E-evidence.md#crop-08) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-09](E-evidence.md#crop-09) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [CROP-10](E-evidence.md#crop-10) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [ART-01](A-autonomy.md#art-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ART-02](A-autonomy.md#art-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [ART-03](A-autonomy.md#art-03) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ART-04](A-autonomy.md#art-04) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ART-05](A-autonomy.md#art-05) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ART-06](P-publication.md#art-06) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
-| [ART-07](P-publication.md#art-07) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
-| [ART-08](P-publication.md#art-08) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Scoped implementation reported; verify current HEAD |
-| [ART-09](P-publication.md#art-09) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
-| [ART-10](P-publication.md#art-10) | [P6](P-publication.md#p6-complete-blind-human-editorial-acceptance) | Proposal; revalidate at current HEAD |
-| [ANA-01](E-evidence.md#ana-01) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [ANA-02](A-autonomy.md#ana-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ANA-03](P-publication.md#ana-03) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
-| [ANA-04](E-evidence.md#ana-04) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
-| [ANA-05](E-evidence.md#ana-05) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
-| [ANA-06](E-evidence.md#ana-06) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
-| [ANA-07](A-autonomy.md#ana-07) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ANA-08](P-publication.md#ana-08) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
-| [ANA-09](P-publication.md#ana-09) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
-| [ANA-10](E-evidence.md#ana-10) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [GRD-01](A-autonomy.md#grd-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [GRD-02](A-autonomy.md#grd-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [GRD-03](A-autonomy.md#grd-03) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [GRD-04](A-autonomy.md#grd-04) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [GRD-05](E-evidence.md#grd-05) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [GRD-06](E-evidence.md#grd-06) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [GRD-07](E-evidence.md#grd-07) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [GRD-08](A-autonomy.md#grd-08) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [GRD-09](P-publication.md#grd-09) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
-| [GRD-10](E-evidence.md#grd-10) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
-| [VER-01](A-autonomy.md#ver-01) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [VER-02](A-autonomy.md#ver-02) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [VER-03](A-autonomy.md#ver-03) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [VER-04](A-autonomy.md#ver-04) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
-| [VER-05](A-autonomy.md#ver-05) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [VER-06](P-publication.md#ver-06) | [P6](P-publication.md#p6-complete-blind-human-editorial-acceptance) | Proposal; revalidate at current HEAD |
-| [VER-07](A-autonomy.md#ver-07) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [VER-08](E-evidence.md#ver-08) | [E13](E-evidence.md#e13-measure-candidate-regeneration-promotion-effectiveness) | Proposal; revalidate at current HEAD |
-| [VER-09](A-autonomy.md#ver-09) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [VER-10](R-engineering.md#ver-10) | [R1](R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Proposal; revalidate at current HEAD |
-| [ARCH-A](A-autonomy.md#arch-a) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ARCH-B](P-publication.md#arch-b) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
-| [ARCH-C](A-autonomy.md#arch-c) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ARCH-D](E-evidence.md#arch-d) | [E13](E-evidence.md#e13-measure-candidate-regeneration-promotion-effectiveness) | Proposal; revalidate at current HEAD |
-| [ARCH-E](P-publication.md#arch-e) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
-| [ARCH-F](P-publication.md#arch-f) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
-| [ARCH-G](E-evidence.md#arch-g) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
-| [ARCH-H](A-autonomy.md#arch-h) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Investigation; promote only on evidence |
-| [ARCH-I](A-autonomy.md#arch-i) | [A8](A-autonomy.md#a8-compare-retained-model-call-replay-bundles) | Investigation; promote only on evidence |
+| [ING-01](A-autonomy.md#ing-01-refill-ready-queue-work-while-long-analysis-jobs-are-running) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ING-02](A-autonomy.md#ing-02-bind-extracted-ocr-text-to-the-derived-ocr-artifact-identity) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [ING-03](A-autonomy.md#ing-03-admit-structurally-valid-image-only-reports-to-a-bounded-ocr-route) | [A17](A-autonomy.md#a17-calibrate-deterministic-admission-thresholds-from-retained-preflight-funnels) | Proposal; revalidate at current HEAD |
+| [ING-04](A-autonomy.md#ing-04-recover-weak-pages-without-ocring-every-healthy-page) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ING-05](A-autonomy.md#ing-05-persist-validated-ocr-chunks-before-later-chunks-can-fail) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ING-06](A-autonomy.md#ing-06-reject-inconsistent-cached-pdf-text-provenance-instead-of-silently-dropping-pages) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [ING-07](A-autonomy.md#ing-07-stop-launching-artifact-work-once-a-required-artifact-has-failed) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ING-08](E-evidence.md#ing-08-resume-category-fitting-from-a-validated-pre-category-checkpoint) | [E12](E-evidence.md#e12-persist-pre-category-editorial-context-checkpoints) | Proposal; revalidate at current HEAD |
+| [ING-09](A-autonomy.md#ing-09-make-a-configured-global-model-cap-apply-across-transport-operations) | [A15](A-autonomy.md#a15-complete-explicit-model-policy-coverage-and-policy-effectiveness-evidence) | Proposal; revalidate at current HEAD |
+| [ING-10](A-autonomy.md#ing-10-forecast-complete-review-ready-work-and-show-forecast-error) | [A17](A-autonomy.md#a17-calibrate-deterministic-admission-thresholds-from-retained-preflight-funnels) | Proposal; revalidate at current HEAD |
+| [DISC-01](A-autonomy.md#disc-01-build-an-independent-stage-attributed-discovery-recall-benchmark) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-02](A-autonomy.md#disc-02-replace-irreversible-heuristic-rejection-with-bounded-triage-of-plausible-report-candidates) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-03](A-autonomy.md#disc-03-correct-host-identity-so-unrelated-domains-cannot-be-treated-as-publisher-siblings-or-social-sites) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-04](A-autonomy.md#disc-04-separate-seen-urls-from-qualified-decisions-and-enable-safe-re-screening) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-05](A-autonomy.md#disc-05-require-first-run-completeness-evidence-and-protect-against-partial-refresh-replacement) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-06](A-autonomy.md#disc-06-turn-deferred-recovery-records-into-executable-idempotent-recovery-work) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-07](A-autonomy.md#disc-07-scope-landing-page-evidence-to-the-report-instead-of-shared-navigationfooter-content) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-08](A-autonomy.md#disc-08-deduplicate-by-report-identity-after-qualification-preserving-alternative-routes) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-09](A-autonomy.md#disc-09-union-ordinary-anchors-with-embedded-report-cards-and-improve-card-associated-titles) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [DISC-10](A-autonomy.md#disc-10-treat-missing-semantic-decisions-as-incomplete-work-with-orchestrator-owned-bounded-recovery) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [ACQ-01](A-autonomy.md#acq-01-preserve-one-verified-submission-identity-across-acquisition-and-mailbox-queues) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-02](A-autonomy.md#acq-02-make-imap-reads-non-mutating-and-message-identities-genuinely-stable) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Scoped implementation reported; verify current HEAD |
+| [ACQ-03](A-autonomy.md#acq-03-retrieve-report-mail-without-top-ten-starvation-or-coarse-window-false-matches) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-04](A-autonomy.md#acq-04-rank-message-and-attachment-metadata-before-downloading-or-writing-bytes) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-05](A-autonomy.md#acq-05-preserve-signed-urls-and-capture-actual-html-link-context) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-06](A-autonomy.md#acq-06-verify-and-rank-attachment-pdfs-before-declaring-acquisition-success) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-07](A-autonomy.md#acq-07-enforce-finite-zip-and-attachment-resource-limits-before-decompression) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Scoped implementation reported; verify current HEAD |
+| [ACQ-08](A-autonomy.md#acq-08-continue-past-candidate-failures-and-suppress-only-the-exact-failed-asset) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-09](A-autonomy.md#acq-09-replace-worker-blocking-delivery-waits-with-durable-bounded-poll-scheduling) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [ACQ-10](A-autonomy.md#acq-10-account-for-actual-mailbox-work-and-measure-the-verified-delivery-funnel) | [A19](A-autonomy.md#a19-harden-acquisition-routes-terminal-semantics-and-artifact-verification) | Proposal; revalidate at current HEAD |
+| [SYS-01](A-autonomy.md#sys-01-preserve-effective-configuration-across-the-entire-acquisition-to-publication-graph) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-02](A-autonomy.md#sys-02-maintain-real-lease-ownership-throughout-long-running-workflows) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-03](A-autonomy.md#sys-03-give-maintenance-queues-explicit-capability-semantics-before-enabling-them) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-04](A-autonomy.md#sys-04-hash-and-identify-each-stages-actual-output-rather-than-reuse-the-source-pdf-hash) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-05](A-autonomy.md#sys-05-prove-crash-convergence-between-domain-persistence-and-queue-completion) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-06](A-autonomy.md#sys-06-add-cooperative-stop-checks-for-already-running-expensive-work) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-07](A-autonomy.md#sys-07-carry-authoritative-discovery-qualification-into-acquisition) | [A18](A-autonomy.md#a18-harden-discovery-recall-and-authoritative-acquisition-handoff) | Proposal; revalidate at current HEAD |
+| [SYS-08](A-autonomy.md#sys-08-reconcile-retained-artifact-integrity-as-well-as-queue-row-existence) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-09](A-autonomy.md#sys-09-make-reliability-exports-tell-the-same-truth-as-authoritative-terminal-results) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [SYS-10](A-autonomy.md#sys-10-treat-downstream-capacity-as-durable-backpressure-not-spent-execution-attempts) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [CODE-01](A-autonomy.md#code-01-make-explicit-requeue-grant-a-real-bounded-recovery-attempt) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [CODE-02](A-autonomy.md#code-02-terminalize-exhausted-crashed-jobs-instead-of-creating-unclaimable-pending-work) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [CODE-03](A-autonomy.md#code-03-reclaim-expired-outbox-leases-so-committed-downstream-work-survives-a-crash) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [CODE-04](R-engineering.md#code-04-distinguish-corrupt-lock-files-from-active-lock-owners-and-repair-safe-orphan-cases) | [R2](R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Scoped implementation reported; verify current HEAD |
+| [CODE-05](R-engineering.md#code-05-fence-filesystem-lock-eviction-and-release-against-replacement-owners) | [R2](R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Scoped implementation reported; verify current HEAD |
+| [CODE-06](A-autonomy.md#code-06-reject-foreign-identity-and-unsupported-schema-checksum-sidecars) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [CODE-07](A-autonomy.md#code-07-stop-losing-subsecond-freshness-in-the-checksum-cache) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [CODE-08](A-autonomy.md#code-08-make-idempotency-checksum-validation-atomic-with-the-upsert) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [CODE-09](A-autonomy.md#code-09-reject-queue-deduplication-keys-reused-for-incompatible-jobs) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [CODE-10](R-engineering.md#code-10-fail-closed-with-typed-errors-on-corrupt-persisted-idempotency-outcomes) | [R7](R-engineering.md#r7-prove-recoverable-backups-and-full-state-disaster-restoration) | Scoped implementation reported; verify current HEAD |
+| [CROP-01](E-evidence.md#crop-01-add-human-semantic-labels-to-the-executable-crop-benchmark) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-02](E-evidence.md#crop-02-preserve-small-but-valuable-visuals-through-shortlist-filtering) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-03](E-evidence.md#crop-03-rank-visuals-by-incremental-evidence-value-and-remove-redundant-selections) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-04](E-evidence.md#crop-04-localize-selected-visuals-using-an-annotated-overview-and-readable-local-context) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-05](E-evidence.md#crop-05-reject-invalid-model-geometry-and-normalize-all-page-coordinate-transforms) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Scoped implementation reported; verify current HEAD |
+| [CROP-06](E-evidence.md#crop-06-protect-the-complete-semantic-bbox-through-one-final-geometry-pass) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-07](E-evidence.md#crop-07-repair-clipped-content-by-expanding-and-rerendering-the-source-bbox) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-08](E-evidence.md#crop-08-make-charttable-completeness-a-rejecting-semantic-gate) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-09](E-evidence.md#crop-09-apply-one-final-publication-profile-to-every-reuse-and-fallback-path) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [CROP-10](E-evidence.md#crop-10-treat-continued-tables-and-shared-panel-visuals-as-explicit-semantic-units) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [ART-01](A-autonomy.md#art-01-retain-completed-artifact-families-before-a-later-family-fails) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ART-02](A-autonomy.md#art-02-make-editorial-plan-reuse-real-with-complete-family-registration) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [ART-03](A-autonomy.md#art-03-send-each-artifact-family-only-its-required-evidence-context) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ART-04](A-autonomy.md#art-04-apply-upstream-family-policy-before-producing-dependent-public-copy) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ART-05](A-autonomy.md#art-05-use-a-deterministic-quotation-fast-path-where-semantic-selection-is-unnecessary) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ART-06](P-publication.md#art-06-match-insight-requirements-to-independently-supported-source-breadth) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
+| [ART-07](P-publication.md#art-07-preserve-multilingual-topic-meaning-and-section-identity) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
+| [ART-08](P-publication.md#art-08-bind-cover-variation-to-semantic-content-not-execution-telemetry) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Scoped implementation reported; verify current HEAD |
+| [ART-09](P-publication.md#art-09-generate-a-finite-report-composition-plan-instead-of-one-fixed-story) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
+| [ART-10](P-publication.md#art-10-test-generated-artifact-delivery-by-content-role-not-only-leak-counts) | [P6](P-publication.md#p6-complete-blind-human-editorial-acceptance) | Proposal; revalidate at current HEAD |
+| [ANA-01](E-evidence.md#ana-01-preserve-supported-metric-context-through-projection-and-readback) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [ANA-02](A-autonomy.md#ana-02-separate-successful-persistence-from-usable-analytical-coverage) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ANA-03](P-publication.md#ana-03-calculate-publisher-diversity-bonuses-once-per-selection-round) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [ANA-04](E-evidence.md#ana-04-retrieve-evidence-for-the-request-not-the-average-retained-claim) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
+| [ANA-05](E-evidence.md#ana-05-reject-incompatible-or-numerically-invalid-retrieval-vectors) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
+| [ANA-06](E-evidence.md#ana-06-close-e6-with-task-relevant-offline-semantic-evaluation) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
+| [ANA-07](A-autonomy.md#ana-07-require-item-level-support-before-counting-a-signals-evidence) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ANA-08](P-publication.md#ana-08-classify-agreement-only-among-comparable-independent-propositions) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [ANA-09](P-publication.md#ana-09-bound-prompt-size-without-starving-later-sources-or-counter-evidence) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [ANA-10](E-evidence.md#ana-10-separate-publication-date-observation-period-and-projection-timestamp) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [GRD-01](A-autonomy.md#grd-01-make-the-report-evidence-registry-collision-safe) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [GRD-02](A-autonomy.md#grd-02-separate-authoritative-source-support-from-generated-navigation-context) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [GRD-03](A-autonomy.md#grd-03-preserve-complete-page-sets-and-explicit-page-number-semantics) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [GRD-04](A-autonomy.md#grd-04-treat-ambiguous-page-recovery-as-ambiguity-not-a-tie-breaking-opportunity) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [GRD-05](E-evidence.md#grd-05-preserve-support-grade-and-distinguish-source-extracts-from-model-rationale) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [GRD-06](E-evidence.md#grd-06-retain-all-evidence-fragments-instead-of-discarding-everything-after-the-first) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [GRD-07](E-evidence.md#grd-07-bind-numeric-values-to-atomic-source-observations-not-an-unordered-number-bag) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [GRD-08](A-autonomy.md#grd-08-bind-quote-wording-and-speaker-attribution-separately-to-exact-source-spans) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [GRD-09](P-publication.md#grd-09-ground-factual-premises-inside-recommendation-and-interpretation-sentences) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [GRD-10](E-evidence.md#grd-10-carry-approved-source-root-lineage-through-cross-report-evidence-joins) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
+| [VER-01](A-autonomy.md#ver-01-require-one-semantic-verdict-for-every-requested-item) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [VER-02](A-autonomy.md#ver-02-make-malformed-or-unavailable-semantic-judgments-explicit-not-ordinary-warnings) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [VER-03](A-autonomy.md#ver-03-persist-proof-of-required-rule-execution-not-only-a-list-of-issues) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [VER-04](A-autonomy.md#ver-04-preserve-retryable-validation-failures-through-the-orchestration-boundary) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Scoped implementation reported; verify current HEAD |
+| [VER-05](A-autonomy.md#ver-05-add-a-deterministic-adversarial-corpus-for-the-complete-acceptance-path) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [VER-06](P-publication.md#ver-06-calibrate-verifier-false-accepts-and-false-rejects-against-blinded-human-evidence) | [P6](P-publication.md#p6-complete-blind-human-editorial-acceptance) | Proposal; revalidate at current HEAD |
+| [VER-07](A-autonomy.md#ver-07-reject-internally-inconsistent-persisted-readiness-decisions) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [VER-08](E-evidence.md#ver-08-retain-rejected-repair-memory-and-remaining-budgets-across-restart) | [E13](E-evidence.md#e13-measure-candidate-regeneration-promotion-effectiveness) | Proposal; revalidate at current HEAD |
+| [VER-09](A-autonomy.md#ver-09-run-cheap-mandatory-prerequisites-before-launching-expensive-verification) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [VER-10](R-engineering.md#ver-10-gate-verifier-behavior-changes-with-output-replay-not-prompt-size-estimates-alone) | [R1](R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Proposal; revalidate at current HEAD |
+| [ARCH-A](A-autonomy.md#arch-a-reuse-an-item-level-verified-evidence-pool-rather-than-re-verifying-source-facts-per-artifact) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ARCH-B](P-publication.md#arch-b-rank-and-select-a-diverse-evidence-slate-once-in-the-editorial-plan) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
+| [ARCH-C](A-autonomy.md#arch-c-validate-generated-insight-candidates-before-dependent-prose-and-substitute-approved-reserves) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
+| [ARCH-D](E-evidence.md#arch-d-refresh-all-materially-dependent-editorial-families-after-atomic-repairs) | [E13](E-evidence.md#e13-measure-candidate-regeneration-promotion-effectiveness) | Proposal; revalidate at current HEAD |
+| [ARCH-E](P-publication.md#arch-e-project-the-same-selected-evidence-into-summary-decision-advice-and-expert-view) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [ARCH-F](P-publication.md#arch-f-reuse-priorities-for-metrics-quotes-visuals-and-distribution-hooks) | [P17](P-publication.md#p17-compose-adaptive-non-repetitive-visual-report-stories) | Proposal; revalidate at current HEAD |
+| [ARCH-G](E-evidence.md#arch-g-generate-and-fact-check-figure-captions-from-canonical-approved-context) | [E15](E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Proposal; revalidate at current HEAD |
+| [ARCH-H](A-autonomy.md#arch-h-consolidate-only-proven-redundant-validation-work-and-short-circuit-unjudgeable-inputs) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Investigation; promote only on evidence |
+| [ARCH-I](A-autonomy.md#arch-i-test-whether-verified-selection-can-replace-a-redundant-insight-generation-step) | [A8](A-autonomy.md#a8-compare-retained-model-call-replay-bundles) | Investigation; promote only on evidence |
 
 ## Reconciliation policy
 
