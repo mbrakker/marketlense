@@ -193,10 +193,12 @@ def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> N
     assert "do not expand scope" in final_text
     assert "both sides of each comparison" in final_text
     assert (
-        "`evidence_id` must support every value, subject, direction, and period"
-        in summary_text
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
+        in summary_text.lower()
     )
-    assert "split claims supported by separate ids" in summary_text.lower()
+    assert "split claims from separate ids" in summary_text.lower()
+    assert "docmap cannot fill gaps" in summary_text.lower()
     assert "Each number in `text` must appear" in findings_text
     assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
 
@@ -219,10 +221,12 @@ def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> No
     assert "do not substitute an introductory statistic or recommendation" in (
         prompt_text
     )
-    assert "preserve exact values and periods from direct evidence" in prompt_text
-    assert (
-        "docmap and the plan guide context and coherence, not evidence" in prompt_text
+    assert "preserve its subject, relationship, values, period, and evidence id" in (
+        prompt_text
     )
+    assert "treat every numeric source fact as a bound relationship" in prompt_text
+    assert "use the plan only for coherence" in prompt_text
+    assert "docmap summary supports its section only" in prompt_text
     assert "abstain when none is supportable" in prompt_text
     assert "if absent, use the strongest direct finding" in prompt_text
     assert "priority order or section summaries do not prove cross-section links" in (
@@ -241,9 +245,9 @@ def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
     )
     prompt_text = " ".join(prompt_set.user.text.split()).lower()
 
-    assert (
-        "docmap and the plan guide context and coherence, not evidence" in prompt_text
-    )
+    assert "use the plan only for coherence" in prompt_text
+    assert "docmap summary supports its section only" in prompt_text
+    assert "docmap cannot fill gaps" in prompt_text
     assert "abstain when none is supportable" in prompt_text
 
 
@@ -268,10 +272,8 @@ def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
     ).lower()
 
     if namespace == "report_vs/artifacts/summary":
-        assert (
-            "docmap and the plan guide context and coherence, not evidence"
-            in prompt_text
-        )
+        assert "use the plan only for coherence" in prompt_text
+        assert "docmap summary supports its section only" in prompt_text
     elif namespace == "report_vs/artifacts/regenerate/summary":
         assert "selection guidance, not evidence" in prompt_text
         assert "section-scoped" in prompt_text
@@ -386,15 +388,17 @@ def test_editorial_prompts_preserve_specific_measured_findings() -> None:
     assert "retain introductory metrics when they materially frame the report" in (
         candidates_text
     )
-    assert (
-        "docmap and the plan guide context and coherence, not evidence" in summary_text
-    )
+    assert "use the plan only for coherence" in summary_text
+    assert "docmap summary supports its section only" in summary_text
     assert "if absent, use the strongest direct finding or abstain" in summary_text
     assert "both sides of each comparison" in final_text
     assert "direct evidence strength, source specificity" in final_text
     assert "scores break close choices" in final_text
     assert "never round or relativize" in final_text
-    assert "do not round exact source values" in summary_text
+    assert (
+        "never round exact source values or replace explicit periods with relative "
+        "timeframes" in summary_text
+    )
 
 
 @pytest.mark.parametrize(
