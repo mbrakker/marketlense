@@ -1678,7 +1678,7 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
     ):
         for match in pattern.finditer(text):
             value = _normalized_relationship_value(match.group("value"))
-            label = _normalized_relationship_label(match.group("label"))
+            label = _normalized_category_value_label(match.group("label"))
             if value and label and not _is_year_value(value):
                 pairs.add((label, value))
     return pairs
@@ -1746,9 +1746,7 @@ def _values_near_label(
         for related_label in other_labels
     ]
     permitted_neighbors = {
-        value.strip().casefold()
-        for value in permitted_neighbor_labels
-        if value.strip()
+        value.strip().casefold() for value in permitted_neighbor_labels if value.strip()
     }
     shared_value_prefix = re.compile(
         rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+",
@@ -1769,9 +1767,7 @@ def _values_near_label(
                 re.IGNORECASE,
             )
             if preceding_value:
-                value = _normalized_relationship_value(
-                    preceding_value.group("value")
-                )
+                value = _normalized_relationship_value(preceding_value.group("value"))
                 if value and not _is_year_value(value):
                     values.add(value)
                 continue
@@ -1786,9 +1782,8 @@ def _values_near_label(
                     if pattern.search(intervening_text):
                         matched_related_label = True
                         intervening_text = pattern.sub(" ", intervening_text)
-                if (
-                    matched_related_label
-                    and category_list_separators.fullmatch(intervening_text)
+                if matched_related_label and category_list_separators.fullmatch(
+                    intervening_text
                 ):
                     value = _normalized_relationship_value(prefix.group("value"))
                     if value and not _is_year_value(value):
@@ -1835,6 +1830,12 @@ def _is_compound_category_header(text: str, label_start: int) -> bool:
         return False
     header = text[header_start : label_start + header_end_match.start()]
     return bool(re.search(r"\b(?:and|&)\b|&", header))
+
+
+def _normalized_category_value_label(value: str) -> str:
+    """Use the nearest blank-line-delimited row label, not its table heading."""
+    nearest_label = re.split(r"\r?\n[ \t]*\r?\n", value)[-1]
+    return _normalized_relationship_label(nearest_label)
 
 
 def _normalized_relationship_label(value: str) -> str:

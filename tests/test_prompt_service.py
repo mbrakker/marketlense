@@ -341,7 +341,8 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
     summary_text = " ".join(summary_prompt.user.text.casefold().split())
     expert_text = " ".join(expert_prompt.user.text.casefold().split())
     assert (
-        "`evidence_id` must support every value, subject, direction, and period"
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
         in summary_text
     )
     assert (

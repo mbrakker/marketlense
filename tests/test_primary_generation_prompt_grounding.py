@@ -235,10 +235,39 @@ def test_summary_numeric_claims_need_one_complete_direct_evidence_binding() -> N
     normalised = _normalise_whitespace(rendered)
 
     assert (
-        "`evidence_id` must support every value, subject, direction, and period "
-        "in a numeric sentence"
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
     ) in normalised
-    assert ("split claims supported by separate ids") in normalised
+    assert ("split claims from separate ids") in normalised
+
+
+def test_findings_and_insights_preserve_source_qualification_and_value_tuples() -> None:
+    insights_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    insight_policy = _normalise_whitespace(insights_prompt.system.text)
+    findings_policy = _normalise_whitespace(findings_prompt.system.text)
+    assert (
+        "remain bound to its exact source metric/category, subject, cohort, "
+        "denominator, and period"
+    ) in insight_policy
+    assert (
+        "do not turn an inferred motive into a respondent-stated reason"
+    ) in findings_policy
 
 
 def test_expert_comment_cannot_use_docmap_context_as_factual_evidence() -> None:

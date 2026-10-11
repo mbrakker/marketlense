@@ -60,6 +60,38 @@ def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
+def test_same_categories_across_distinct_evidence_cohorts_keep_their_bindings() -> None:
+    evidence = (
+        "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\n\n"
+        "Social Media 40%\n\nDirect Visits 38%\n\n"
+        "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, "
+        "% ACTIVE NEWS READERS\n\n"
+        "Direct Visits 49%\n\nSocial Media 33%"
+    )
+    valid_text = (
+        "Among U.S. adults in 2017, reported news-discovery sources were social "
+        "media at 40% and direct visits at 38%; among U.S. active news readers "
+        "searching for news that year, direct visits were 49% and social media "
+        "33%."
+    )
+    swapped_text = valid_text.replace(
+        "social media at 40% and direct visits at 38%",
+        "social media at 38% and direct visits at 40%",
+    )
+
+    valid = evaluate_public_editorial_quality(
+        report_id="reuters-distinct-news-reader-cohorts",
+        artifacts=_temporal_artifacts(text=valid_text, evidence=evidence),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="reuters-distinct-news-reader-cohorts",
+        artifacts=_temporal_artifacts(text=swapped_text, evidence=evidence),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+
+
 def test_ordered_category_value_series_rejects_swapped_values_and_categories() -> None:
     evidence = "Platform preference: Alpha 43%; Beta 41%; Gamma 43%."
 

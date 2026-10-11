@@ -21,7 +21,9 @@ text: |
   }
 
   Rules:
-  - Every finding must be decision-relevant and evidence-grounded.
+  - Every finding must be decision-relevant and evidence-grounded. Do not
+    turn an inferred motive into a respondent-stated reason; preserve source
+    attribution and qualifying language.
   - One finding states one independently verifiable proposition; split
     distinct measures, populations, and actions even when co-located.
   - Its `evidence` must be a verbatim source-body excerpt that directly
