@@ -28,7 +28,12 @@ def test_canonical_register_preserved_and_active_ownership_unique() -> None:
     original_rows = REGISTER.findall(original)
     assert rows, "missing canonical work register"
     assert len({task_id for _, task_id in rows}) == len(rows), "duplicate canonical IDs"
-    assert rows == original_rows, "documentation migration changed an existing task's status/ID"
+    remaining = iter(rows)
+    for historic_row in original_rows:
+        assert any(row == historic_row for row in remaining), (
+            "historic canonical task statuses/IDs or ordering changed"
+        )
+    assert rows.count(("Deferred", "D13")) == 1
     active_ids = {task_id for status, task_id in rows if status == "Active"}
     owners = [item for path in WORKSTREAMS for item in OWNER.findall(path.read_text(encoding="utf-8"))]
     assert len(owners) == len(set(owners)), "same outcome defined in multiple workstreams"
@@ -52,6 +57,19 @@ def test_every_proposal_has_one_mapping_and_one_full_specification() -> None:
         text = path.read_text(encoding="utf-8")
         assert text.count("Luna implementation prompt") >= len(OWNER.findall(text)), path
 
+
+
+def test_deferred_responses_migration_has_one_canonical_owner_spec() -> None:
+    master = MASTER.read_text(encoding="utf-8")
+    engineering = (ROOT / "docs/backlog/R-engineering.md").read_text(encoding="utf-8")
+    assert (
+        "[Evaluate direct OpenAI Responses migration]"
+        "(docs/backlog/R-engineering.md#d13-openai-responses-migration)"
+        in master
+    )
+    assert engineering.count('<a id="d13-openai-responses-migration"></a>') == 1
+    assert "### Luna implementation prompt — D13" in engineering
+    assert "## D13." not in engineering  # remains deferred; not an active owner
 
 def test_preconsolidation_references_retained() -> None:
     catalogue = (ARCHIVE / "10improvements-20261011-preconsolidation.md").read_text(encoding="utf-8")
