@@ -125,6 +125,65 @@ checks, typed outcomes, and aggregate calls, tokens, cost, and duration; full
 workflow state and model payloads remain in ignored run storage. These
 comparisons are stochastic observations, not controlled causal estimates.
 
+## Model-call replay bundle comparison
+
+Compare two retained `ModelCallReplayBundle` JSON files without constructing a
+provider client or writing an output artifact:
+
+```powershell
+python scripts/quality/compare_model_call_replay_bundles.py `
+  --baseline <baseline-replay-bundle.json> `
+  --candidate <candidate-replay-bundle.json> `
+  --artifact-family report_vs/doc_map
+```
+
+The command prints one stable JSON response to stdout. It reports only artifact
+family, bundle-byte hashes, safe field names, classification, and bounded
+diagnostic codes. Exit code `2` means a malformed or unreadable input; other
+classifications exit successfully so callers can inspect the result.
+
+`equivalent` requires the same prompt, model execution, policy, schema,
+selected-evidence, output, and artifact identities. Changes to the prompt,
+model, policy, schema, evidence, operation, provider decision, or artifact
+family classify as `incompatible`; they cannot support a regression claim.
+Changed output or artifact identities within a complete compatible cohort are
+`compatible_but_changed`. `materially_regressed` is reserved for a changed
+output identity where the baseline validation passed and candidate validation
+failed in that same cohort. Missing required identity is `incomplete`, and
+invalid structure or identity hashes are `malformed`.
+
+Bundle schema `1.1` can carry a typed `comparison_evidence` block with explicit
+artifact-family, policy, evidence, output, artifact, and optional schema
+SHA-256 identities. The replay builder accepts that block only from a caller
+that already has those retained identities. Schema `1.0` bundles and `1.1`
+bundles without those identities remain incomplete; prompt/model equality does
+not fill gaps. The command validates hash shape but does not independently
+authenticate how a producer derived an identity or prove that two output hashes
+represent equivalent content.
+
+The block uses these fields; hashes must come from retained artifacts or
+provenance records, never from guessed values:
+
+```json
+{
+  "schema_version": "1.0",
+  "artifact_family": "report_vs/doc_map",
+  "policy_sha256": "<retained-sha256>",
+  "evidence_sha256": "<retained-sha256>",
+  "output_sha256": "<retained-sha256>",
+  "artifact_sha256": "<retained-sha256>",
+  "schema_sha256": "<optional-retained-sha256>"
+}
+```
+
+No serialized model-call replay bundles are retained in the current checked-in
+evidence corpus. Existing audit log rows lack policy, selected-evidence,
+output, and artifact identities, while report-level lineage has no stable
+per-call link; neither is joined speculatively. Complete comparison tests use
+synthetic bundles and prove the comparator behavior, not provenance from a
+real retained call. Re-run the command on retained bundles when an eligible
+pair exists, and keep incomplete legacy outcomes explicit.
+
 ## Repair-effectiveness evidence
 
 The validation reliability artifact retains a cohort-compatible, content-free
