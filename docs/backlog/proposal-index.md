@@ -2,7 +2,7 @@
 
 **Source:** [archived original improvement catalogue](archive/10improvements-20261011-preconsolidation.md). **Status authority:** [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md). This index retains **100 original numbered recommendations and nine architecture follow-ups**, plus **six new PATH-01..06 Windows path-risk slices** added 2026-10-11. They are implementation subtasks, not extra Active outcomes.
 
-Original proposal disposition labels describe historic reconciliation evidence unless a row records a verified implementation SHA. PATH-01..06 derive from a targeted 2026-10-11 static inspection, not verified native Windows failures. Every proposal has one primary canonical owner, and the new PATH slices have Luna execution guidance under R8. Related outcomes are dependencies/consumers, not parallel owners.
+Original proposal disposition labels describe historic reconciliation evidence unless a row records a verified implementation SHA. PATH-01..06 were identified by targeted static inspection on 2026-10-11 rather than reproduced incidents; PATH-01 has since been implemented and verified on native Windows. Every proposal has one primary canonical owner, and the new PATH slices have Luna execution guidance under R8. Related outcomes are dependencies/consumers, not parallel owners.
 
 | Technical ID | Canonical owner / full specification | Proposal disposition |
 | --- | --- | --- |
@@ -116,7 +116,7 @@ Original proposal disposition labels describe historic reconciliation evidence u
 | [ARCH-H](A-autonomy.md#arch-h-consolidate-only-proven-redundant-validation-work-and-short-circuit-unjudgeable-inputs) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Investigation; promote only on evidence |
 | [ARCH-I](A-autonomy.md#arch-i-test-whether-verified-selection-can-replace-a-redundant-insight-generation-step) | [A8](A-autonomy.md#a8-compare-retained-model-call-replay-bundles) | Investigation; promote only on evidence |
 
-| [PATH-01](R-engineering.md#path-01-bound-mailbox-pdf-and-zip-attachment-destinations-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
+| [PATH-01](R-engineering.md#path-01-bound-mailbox-pdf-and-zip-attachment-destinations-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | Implemented and verified on native Windows 2026-10-12; producer commit `ac04546fa4a7dd8329dfa89771001e996c266b43`; R8 remains Active |
 | [PATH-02](R-engineering.md#path-02-bound-browser-download-copied-artifact-capture-and-profile-paths-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
 | [PATH-03](R-engineering.md#path-03-bound-candidate-pdf-caches-and-ocr-chunk-names-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
 | [PATH-04](R-engineering.md#path-04-bound-crop-refinement-images-and-fingerprint-paths-p1) | [R8](R-engineering.md#r8-harden-windows-artifact-path-construction-and-reuse) | New 2026-10-11 static risk; not reproduced |
