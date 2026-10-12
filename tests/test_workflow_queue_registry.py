@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -324,7 +325,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     fake_openai.add("vector_stores.files.create", {"id": "file_queue_test"})
     config_path = _isolated_app_config(tmp_path)
     source_path = Path(
-        "tests/fixtures/pdf_benchmark/golden/IAS - Industry_Pulse_Report_2026_ACIG.pdf"
+        "tests/fixtures/pdf_benchmark/golden/CAPGEMINI - 2026-Retail-Trends_ACIG.pdf"
     ).resolve()
     source_hash = hashlib.md5(source_path.read_bytes()).hexdigest()
     record_report_source(
@@ -332,11 +333,11 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
             schema_version="1.0",
             db_path=str(tmp_path / "reports.sqlite"),
             source_domain="publisher.example",
-            report_name="Industry Pulse Report 2026",
-            landing_page_url="https://publisher.example/reports/industry-pulse-2026",
+            report_name="2026 Retail Trends",
+            landing_page_url="https://publisher.example/reports/retail-trends-2026",
             downloaded_at_utc="2026-08-10T12:00:00Z",
             md5=source_hash,
-            publisher_name="Industry Analytics Summit",
+            publisher_name="Capgemini",
         ),
         _ctx(),
     )
@@ -349,10 +350,10 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     )(
         job,
         SourceIngestPayload(
-            source_identity_id="ias-industry-pulse",
+            source_identity_id="capgemini-retail-trends",
             source_artifact_reference=str(source_path),
             source_content_hash=source_hash,
-            report_id="ias-industry-pulse-2026",
+            report_id="capgemini-retail-trends-2026",
             parser_ocr_compatibility_version="parser.v1",
             input_reference=str(source_path),
             input_content_hash=source_hash,
@@ -370,7 +371,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     assert child.parent_job_id == job.job_id
     assert child.payload.attributes["admission_decision_hash"]
     assert child.idempotency_key == (
-        f"ias-industry-pulse-2026:report_selection:{source_hash}:parser.v1"
+        f"capgemini-retail-trends-2026:report_selection:{source_hash}:parser.v1"
     )
 
     selection_result = queue_orchestrator._report_stage_handler(
@@ -384,7 +385,7 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
             job_type="report_selection.v1",
         ),
         ReportSelectionPayload(
-            report_id="ias-industry-pulse-2026",
+            report_id="capgemini-retail-trends-2026",
             source_prepared_checkpoint="source_prepared",
             input_reference=str(source_path),
             input_content_hash=source_hash,
@@ -396,6 +397,37 @@ def test_source_ingest_checkpoint_hands_off_to_report_selection(
     assert selection_result.result.output_verified is True
     assert selection_result.result.summary["checkpoint"] == "selection_complete"
     assert selection_result.downstream[0].queue_name == "report_analysis"
+    selection_checkpoint = json.loads(
+        (
+            tmp_path
+            / "out"
+            / ".checkpoints"
+            / "report_generation"
+            / "capgemini-retail-trends-2026"
+            / "selection_complete.json"
+        ).read_text(encoding="utf-8")
+    )
+    selection = selection_checkpoint["payload"]["selection"]
+    assert selection["candidate_count"] > 0
+    selection_payload = selection["payload"]
+    assert selection_payload["_figure_gallery"]
+    accepted_crops = [
+        asset
+        for asset in selection_payload["_figure_assets"]
+        if asset["crop_qa_accepted"]
+        and asset["crop_quality_profile"] == "publication_strict"
+        and len(asset["crop_image_sha256"]) == 64
+    ]
+    assert accepted_crops
+    for asset in accepted_crops:
+        image_path = tmp_path / "out" / asset["image_path"]
+        qa_sidecar_path = tmp_path / "out" / asset["crop_qa_sidecar_path"]
+        assert image_path.is_file()
+        assert qa_sidecar_path.is_file()
+        assert (
+            hashlib.sha256(image_path.read_bytes()).hexdigest()
+            == asset["crop_image_sha256"]
+        )
     assert len(fake_openai.calls["vector_stores.create"]) == 1
     assert len(fake_openai.calls["files.create"]) == 1
     assert len(fake_openai.calls["vector_stores.files.create"]) == 1
