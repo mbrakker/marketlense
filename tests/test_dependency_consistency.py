@@ -4,7 +4,32 @@ from pathlib import Path
 
 from scripts.ci.check_dependency_consistency import (
     check_consistency,
+    declared_exact_pins,
     hash_lock_diagnostics,
+    locked_pins,
+)
+
+UNUSED_GPU_STACK_PACKAGES = frozenset(
+    {
+        "cuda-bindings",
+        "cuda-pathfinder",
+        "nvidia-cublas-cu12",
+        "nvidia-cuda-cupti-cu12",
+        "nvidia-cuda-nvrtc-cu12",
+        "nvidia-cuda-runtime-cu12",
+        "nvidia-cudnn-cu12",
+        "nvidia-cufile-cu12",
+        "nvidia-cufft-cu12",
+        "nvidia-curand-cu12",
+        "nvidia-cusolver-cu12",
+        "nvidia-cusparse-cu12",
+        "nvidia-cusparselt-cu12",
+        "nvidia-nccl-cu12",
+        "nvidia-nvjitlink-cu12",
+        "nvidia-nvshmem-cu12",
+        "nvidia-nvtx-cu12",
+        "triton",
+    }
 )
 
 
@@ -54,6 +79,18 @@ def test_matching_exact_pins_pass(tmp_path: Path) -> None:
     _write_repository(tmp_path)
 
     assert check_consistency(tmp_path) == ()
+
+
+def test_unused_gpu_stack_is_not_in_the_canonical_lock() -> None:
+    root = Path(__file__).resolve().parents[1]
+    locked, diagnostics = locked_pins(root)
+    declared = {package for package, _version, _source in declared_exact_pins(root)}
+    unused_gpu_packages = UNUSED_GPU_STACK_PACKAGES | (
+        {"torch"} if "torch" not in declared else set()
+    )
+
+    assert diagnostics == ()
+    assert not (unused_gpu_packages & locked.keys())
 
 
 def test_declared_pin_missing_from_lock_identifies_manifest_and_package(

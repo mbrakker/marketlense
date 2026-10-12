@@ -13,16 +13,13 @@
 ## Setup
 
 Codex Cloud uses the repository bootstrap and its hash-locked dependencies; see
-[Codex Cloud environment](codex-cloud-environment.md). The local Windows setup is:
-
-From the repository root:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --require-hashes -r requirements.lock
-.\.venv\Scripts\python.exe -m pip install --no-deps -e .\tools\browser-use
-Copy-Item src\config\app.example.yaml src\config\app.local.yaml
-```
+[Codex Cloud environment](codex-cloud-environment.md). The canonical lock is
+hash-verified for the CPython 3.12 Linux environment used by CI. Its
+platform-specific hashes do not currently cover Windows wheels: a clean
+CPython 3.12 Windows install with `--require-hashes` fails at the Windows
+`aiohttp==3.14.3` wheel. Do not disable hash checking to work around this. A
+reproducible Windows bootstrap is unavailable until the lock carries verified
+Windows artifact hashes.
 
 Keep machine-specific values in `src/config/app.local.yaml` and secrets in `.env` or the process environment. Do not commit either secret material or generated runtime output.
 
