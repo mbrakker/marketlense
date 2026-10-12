@@ -277,8 +277,7 @@ def _select_diverse_sources(
 
     while remaining and len(selected) < max_source_reports:
         rescored = [
-            rescore_candidate(candidate, selected_publishers)
-            for candidate in remaining
+            rescore_candidate(candidate, selected_publishers) for candidate in remaining
         ]
         winner = min(rescored, key=sort_key)
         selected_publishers.add(winner.publisher.strip().casefold())

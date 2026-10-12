@@ -147,6 +147,21 @@ def test_select_artifact_insights_fills_report_slots_after_theme_coverage():
     assert [item["evidence_id"] for item in selected] == ["f1", "f2", "f3", "f1"]
 
 
+def test_select_artifact_insights_leads_with_top_score_and_preserves_theme_coverage():
+    candidates = [
+        _insight("f1", score=0.6, text="The planned first theme remains relevant."),
+        _insight("f2", score=0.95, text="The stronger commercial finding leads."),
+    ]
+
+    selected = select_artifact_insights(
+        final_insights=candidates,
+        candidate_insights=candidates,
+        editorial_plan=_editorial_plan("f1", "f2"),
+    )
+
+    assert [item["evidence_id"] for item in selected[:2]] == ["f2", "f1"]
+
+
 def test_select_artifact_insights_maps_pages_within_doc_map_section_ranges():
     doc_map = _doc_map(3)
     for section, page in zip(doc_map["sections"], (1, 10, 20), strict=True):
@@ -437,6 +452,7 @@ __all__ = [
     "test_select_artifact_insights_keeps_representative_sections_for_broad_doc_map",
     "test_select_artifact_insights_keeps_distinct_grounded_slots_for_narrow_doc_map",
     "test_select_artifact_insights_fills_report_slots_after_theme_coverage",
+    "test_select_artifact_insights_leads_with_top_score_and_preserves_theme_coverage",
     "test_select_artifact_insights_maps_pages_within_doc_map_section_ranges",
     "test_generate_artifacts_repairs_a_clustered_broad_plan_with_early_middle_and_late_themes",
     "test_generate_artifacts_does_not_expand_a_narrow_editorial_plan",

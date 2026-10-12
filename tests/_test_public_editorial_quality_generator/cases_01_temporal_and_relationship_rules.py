@@ -5,7 +5,7 @@ from ._shared import *  # noqa: F401,F403
 
 
 def test_public_editorial_validator_version_invalidates_retained_v1_results() -> None:
-    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v9"
+    assert PUBLIC_EDITORIAL_VALIDATOR_VERSION == "public-editorial-quality:v14"
 
 
 def test_social_video_fixture_preserves_forecast_period_value_pairs() -> None:
@@ -60,6 +60,38 @@ def test_period_relationship_check_allows_an_implicit_shared_comparison_endpoint
     assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
 
 
+def test_same_categories_across_distinct_evidence_cohorts_keep_their_bindings() -> None:
+    evidence = (
+        "SOURCES OF NEWS DISCOVERY, U.S., 2017, % ADULTS\n\n"
+        "Social Media 40%\n\nDirect Visits 38%\n\n"
+        "NEWS CONSUMERS ACTIVELY SEARCHING FOR NEWS, U.S., 2017, "
+        "% ACTIVE NEWS READERS\n\n"
+        "Direct Visits 49%\n\nSocial Media 33%"
+    )
+    valid_text = (
+        "Among U.S. adults in 2017, reported news-discovery sources were social "
+        "media at 40% and direct visits at 38%; among U.S. active news readers "
+        "searching for news that year, direct visits were 49% and social media "
+        "33%."
+    )
+    swapped_text = valid_text.replace(
+        "social media at 40% and direct visits at 38%",
+        "social media at 38% and direct visits at 40%",
+    )
+
+    valid = evaluate_public_editorial_quality(
+        report_id="reuters-distinct-news-reader-cohorts",
+        artifacts=_temporal_artifacts(text=valid_text, evidence=evidence),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="reuters-distinct-news-reader-cohorts",
+        artifacts=_temporal_artifacts(text=swapped_text, evidence=evidence),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
+
+
 def test_ordered_category_value_series_rejects_swapped_values_and_categories() -> None:
     evidence = "Platform preference: Alpha 43%; Beta 41%; Gamma 43%."
 
@@ -92,7 +124,9 @@ def test_ordered_category_value_series_rejects_swapped_values_and_categories() -
     )
 
 
-def test_region_metric_values_allow_value_before_region_without_losing_binding() -> None:
+def test_region_metric_values_allow_value_before_region_without_losing_binding() -> (
+    None
+):
     evidence = (
         "The Global Quality Benchmarks table lists Q1 2026 Brand Suitability "
         "Violation Rates of APAC 8.0%, EMEA 6.3%, LATAM 6.0%, and North America 3.7%."
@@ -122,6 +156,25 @@ def test_region_metric_values_allow_value_before_region_without_losing_binding()
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
+def test_value_before_predicate_category_preserves_relationship_and_rejects_swap() -> (
+    None
+):
+    evidence = (
+        "Transformational 13%. Promising 44%. Limited 42%. "
+        "Q11 asked for the best adjective describing current AI initiative impact."
+    )
+    valid_text = (
+        "44% called the impact promising, 42% limited, and 13% transformational."
+    )
+    swapped_text = valid_text.replace(
+        "42% limited, and 13% transformational",
+        "13% limited, and 42% transformational",
+    )
+
+    assert _metric_label_relationship_explanation(valid_text, evidence) == ""
+    assert _metric_label_relationship_explanation(swapped_text, evidence)
+
+
 def test_grouped_regions_keep_the_preceding_value_binding() -> None:
     evidence = (
         "The Q1 2026 Global Quality Benchmarks table lists Video Viewable Rate "
@@ -148,12 +201,8 @@ def test_grouped_regions_keep_the_preceding_value_binding() -> None:
         ),
     )
 
-    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(
-        valid
-    )
-    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(
-        swapped
-    )
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
 def test_doubleverify_emea_engagement_retained_relationship_and_mismatches() -> None:
@@ -757,6 +806,81 @@ def test_metric_category_relationship_uses_canonical_quantity_matching(
     explanation = _metric_label_relationship_explanation(claim, evidence)
 
     assert bool(explanation) is expected_relationship_failure
+
+
+def test_inline_heading_footnote_is_not_treated_as_category_value() -> None:
+    evidence = (
+        "We forecast that over the next four years, global Internet and media "
+        "revenues will grow by approximately $300 billion, continuing to outpace "
+        "GDP growth\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, "
+        "2017E-2021E, USD\nACTIVATE\nFORECAST\n$302B\nGROWTH\nDOLLARS\n"
+        "CAGR 4.1%\nGlobal GDP CAGR: ~3%\n$1.7T\n$2.0T\n2017E\n2021E"
+    )
+    claim = (
+        "Global consumer Internet and media revenues are forecast to add $302B "
+        "at a 4.1% CAGR during 2017E\u20132021E."
+    )
+
+    explanation = _metric_label_relationship_explanation(claim, evidence)
+    report = evaluate_public_editorial_quality(
+        report_id="activate-footnote-heading",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
+    assert explanation == ""
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
+
+
+def test_chart_line_break_does_not_bind_growth_heading_to_adjacent_value() -> None:
+    evidence = (
+        "We forecast that over the next four years, global Internet and media "
+        "revenues will grow by approximately $300 billion, continuing to outpace "
+        "GDP growth\nCONSUMER INTERNET AND MEDIA REVENUES1, GLOBAL, "
+        "2017E-2021E, USD\nACTIVATE\nFORECAST\n$302B\n$2.0T\nGROWTH\n"
+        "$1.7T\nDOLLARS\nCAGR 4.1%\nGlobal GDP CAGR: ~3%\n2017E\n2021E"
+    )
+    claim = (
+        "Activate forecasts $302B in global consumer Internet and media revenue "
+        "growth at 4.1% CAGR for 2017E\u20132021E."
+    )
+
+    report = evaluate_public_editorial_quality(
+        report_id="activate-chart-line-break",
+        artifacts=_temporal_artifacts(text=claim, evidence=evidence),
+    )
+
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(report)
+
+
+def test_metric_labels_bind_values_before_for_in_mixed_case_categories() -> None:
+    evidence = (
+        "Where publishers plan to put more and less effort in 2026 "
+        "(net difference): YouTube +74; AI platforms +61; TikTok +56."
+    )
+    valid = evaluate_public_editorial_quality(
+        report_id="reuters-mixed-case-category-values",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Publishers' 2026 effort plans have net differences of +74 for "
+                "YouTube, +61 for AI platforms, and +56 for TikTok."
+            ),
+            evidence=evidence,
+        ),
+    )
+    swapped = evaluate_public_editorial_quality(
+        report_id="reuters-swapped-category-values",
+        artifacts=_temporal_artifacts(
+            text=(
+                "Publishers' 2026 effort plans have net differences of +61 for "
+                "YouTube, +74 for AI platforms, and +56 for TikTok."
+            ),
+            evidence=evidence,
+        ),
+    )
+
+    assert ("ai platforms", "+61") in _structured_category_value_pairs(evidence)
+    assert "public_editorial_quality.metric_label_relationship" not in _rule_ids(valid)
+    assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
 def test_compound_size_and_spend_header_keeps_ambiguous_category_binding_unknown() -> (

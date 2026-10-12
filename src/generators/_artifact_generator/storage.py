@@ -24,6 +24,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.schema_validation import SchemaValidateRequest
 from src.contracts.semantic_ids import ReportId
 from src.contracts.soft_copy_claim_provenance import (
+    SOFT_COPY_SENTENCE_GRID_VERSION,
     SoftCopyClaimProvenance,
     align_soft_copy_claim_bindings_to_text,
     soft_copy_claim_provenance_from_payload,
@@ -340,11 +341,27 @@ def assemble_artifacts_payload(
             or summary_current_text_has_exact_retained_lineage
         )
     )
+    repaired_compact_tldr_invalid = False
+    if summary_repair_in_progress:
+        try:
+            _validate_complete_tldr(
+                summary.get("card_tldr_compact"),
+                limit=18,
+                code="card_tldr_compact_invalid",
+                field_name="summary.card_tldr_compact",
+            )
+        except AppError as exc:
+            if exc.code != "card_tldr_compact_invalid":
+                raise
+            repaired_compact_tldr_invalid = True
     try:
         summary_fallback_applied = (
-            False
-            if summary_repair_in_progress
-            else constrain_summary_to_source_backed_claims(summary)
+            constrain_summary_to_source_backed_claims(
+                summary,
+                require_direct_fallback=repaired_compact_tldr_invalid,
+            )
+            if not summary_repair_in_progress or repaired_compact_tldr_invalid
+            else False
         )
     except AppError as exc:
         if exc.code != "card_tldr_compact_invalid":
@@ -355,12 +372,24 @@ def assemble_artifacts_payload(
         )
         soft_copy_claim_bindings["summary"] = []
         summary_fallback_applied = False
-    pre_correction_soft_copy = {
+    if repaired_compact_tldr_invalid and not summary_fallback_applied:
+        _abstain_summary_without_short_direct_claim(
+            summary=summary,
+            family_status=family_status,
+        )
+        soft_copy_claim_bindings["summary"] = []
+    pre_correction_soft_copy: Dict[str, Any] = {
         "summary": deepcopy(summary),
         "expert_comment": expert_comment,
         "linkedin_post": linkedin_post,
     }
     pre_correction_bindings = deepcopy(soft_copy_claim_bindings)
+    if (soft_copy_repair_texts or {}).get("summary") and retained_summary_claims:
+        pre_correction_bindings["summary"] = _summary_bindings_with_retained_claims(
+            summary=pre_correction_soft_copy["summary"],
+            bindings=pre_correction_bindings.get("summary", []),
+            retained_claims=retained_summary_after_replacements,
+        )
     if (
         evidence_span_stats.get("bound_count", 0) > 0
         or evidence_span_stats.get("unbound_count", 0) > 0
@@ -790,6 +819,49 @@ def _soft_copy_claim_provenance_payload(
                 context={"artifact_family": family},
             )
     return soft_copy_claim_provenance_to_payload(claims)
+
+
+def _summary_bindings_with_retained_claims(
+    *,
+    summary: Dict[str, Any],
+    bindings: List[Dict[str, Any]],
+    retained_claims: List[SoftCopyClaimProvenance],
+) -> List[Dict[str, Any]]:
+    """Carry retained summary semantics across later deterministic corrections."""
+
+    public_text = soft_copy_public_text("summary", summary)
+    aligned = align_soft_copy_claim_bindings_to_text(
+        artifact_family="summary",
+        text=public_text,
+        claim_bindings=bindings,
+    )
+    covered_sentences = {
+        " ".join(str(binding.get("claim") or "").split())
+        for binding in aligned
+        if isinstance(binding, dict)
+    }
+    claims_by_hash: Dict[str, List[SoftCopyClaimProvenance]] = {}
+    for claim in retained_claims:
+        claims_by_hash.setdefault(claim.text_hash, []).append(claim)
+    result = [dict(binding) for binding in bindings if isinstance(binding, dict)]
+    for sentence in soft_copy_material_sentences(public_text):
+        normalized = " ".join(sentence.split())
+        if normalized in covered_sentences:
+            continue
+        sentence_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        matches = claims_by_hash.get(sentence_hash, [])
+        if len(matches) != 1:
+            continue
+        claim = matches[0]
+        result.append(
+            {
+                "claim": normalized,
+                "classification": claim.classification,
+                "evidence_ids": list(claim.evidence_ids),
+            }
+        )
+        covered_sentences.add(normalized)
+    return result
 
 
 def _complete_summary_bindings_from_exact_direct_claims(
@@ -2786,6 +2858,7 @@ def _artifact_cache_meta(
         "topic_brief_mapping_version": TOPIC_BRIEF_MAPPING_VERSION,
         "toc_structure_version": TOC_STRUCTURE_VERSION,
         "editorial_plan_transform_version": EDITORIAL_PLAN_TRANSFORM_VERSION,
+        "soft_copy_sentence_grid_version": SOFT_COPY_SENTENCE_GRID_VERSION,
         "md5": md5,
         "inputs_sha256": inputs_hash,
         "prompts": prompt_meta,

@@ -24,7 +24,9 @@ Each pack prompt must explicitly define:
 - The findings prompt receives `doc_map_sections_json` only after a usable
   DocMap is generated. Use it to seek supported findings across major sections,
   copy only its exact section IDs/titles, and keep file-search evidence as the
-  sole grounding source. Do not require one finding per section or trigger
+  sole grounding source. DocMap pages are printed labels; findings and quote
+  page fields use physical PDF page indexes. Findings evidence must be a
+  verbatim body excerpt. Do not require one finding per section or trigger
   additional calls for sparse reports.
 - Each finding is one independently verifiable proposition. Split separate
   measures, populations, and actions into separate findings even when they

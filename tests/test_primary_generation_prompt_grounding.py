@@ -122,6 +122,7 @@ def _scenario_render_variables(case: dict) -> dict[str, dict[str, str]]:
             "doc_map_json": doc_map,
             "evidence_json": evidence_json,
             "editorial_plan_json": editorial_plan,
+            "selected_lead_insight_json": json.dumps(evidence[0], ensure_ascii=False),
         },
         "report_vs/artifacts/expert_comment": {
             "editorial_plan_json": editorial_plan,
@@ -225,6 +226,64 @@ def test_summary_compact_tldr_must_match_a_direct_source_backed_claim() -> None:
     ) in normalised
 
 
+def test_summary_numeric_claims_need_one_complete_direct_evidence_binding() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    rendered = _render_primary_prompt(
+        "report_vs/artifacts/summary",
+        variables["report_vs/artifacts/summary"],
+    )
+    normalised = _normalise_whitespace(rendered)
+
+    assert (
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
+    ) in normalised
+    assert ("split claims from separate ids") in normalised
+
+
+def test_findings_and_insights_preserve_source_qualification_and_value_tuples() -> None:
+    insights_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_final",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    insight_policy = _normalise_whitespace(insights_prompt.system.text)
+    findings_policy = _normalise_whitespace(findings_prompt.system.text)
+    assert (
+        "remain bound to its exact source metric/category, subject, cohort, "
+        "denominator, and period"
+    ) in insight_policy
+    assert (
+        "do not turn an inferred motive into a respondent-stated reason"
+    ) in findings_policy
+
+
+def test_expert_comment_cannot_use_docmap_context_as_factual_evidence() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    rendered = _render_primary_prompt(
+        "report_vs/artifacts/expert_comment",
+        variables["report_vs/artifacts/expert_comment"],
+    )
+    normalised = _normalise_whitespace(rendered)
+
+    assert (
+        "support facts with selected source spans; plan themes and docmap are "
+        "context, not evidence"
+    ) in normalised
+
+
 def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references() -> (
     None
 ):
@@ -240,6 +299,48 @@ def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references()
         in normalised
     )
     assert "do not call values the first or second figure" in normalised
+
+
+def test_survey_copy_preserves_measured_construct_and_respondent_scope() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    for family in ("expert_comment", "linkedin_post"):
+        rendered = _render_primary_prompt(
+            f"report_vs/artifacts/{family}",
+            variables[f"report_vs/artifacts/{family}"],
+        )
+        normalised = _normalise_whitespace(rendered)
+
+        assert (
+            "preserve what the survey question actually measures; do not recast "
+            "perceived importance as an intention or plan"
+        ) in normalised
+        assert (
+            "describe respondents only as specifically as the linked source "
+            "evidence does"
+        ) in normalised
+
+
+def test_linkedin_prompt_does_not_turn_document_context_into_source_attribution() -> (
+    None
+):
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/linkedin_post",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    normalised = _normalise_whitespace(prompt_set.system.text)
+
+    assert "use report context for scope, not attribution" in normalised
+    assert (
+        "name publisher or source only when linked evidence explicitly states it"
+        in normalised
+    )
+    assert "attribute the publisher/source naturally when it is available" not in (
+        normalised
+    )
 
 
 def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> None:
@@ -265,15 +366,17 @@ def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> Non
     ).text
     normalised = _normalise_whitespace(rendered)
 
-    assert "use docmap for section selection and nonnumeric coverage only" in normalised
     assert (
-        "`evidence_id` must equal the `id` of the supporting entry in the `findings` "
-        "evidence pack"
-    ) in normalised
-    assert (
-        "never use a docmap section id as `evidence_id` for a numeric claim"
+        "docmap guides sections and qualitative coverage; it does not prove claims"
         in normalised
     )
+    assert "`evidence_id` must be one supporting finding id" in normalised
+    assert "never cite a docmap id as numeric evidence" in normalised
+    assert (
+        "keep source-derived text and advice within the selected evidence id"
+        in normalised
+    )
+    assert "full value-subject-period relationship" in normalised
 
 
 def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> None:
@@ -296,10 +399,11 @@ def test_doc_map_prompt_keeps_multi_measure_values_with_explicit_labels() -> Non
     normalised = _normalise_whitespace(rendered)
 
     assert (
-        "state every numeric value beside its explicit row and column labels"
+        "bind every value to its displayed period, category/row, and measure/column"
         in normalised
     )
-    assert "do not emit bare ordered value lists" in normalised
+    assert "never infer labels from adjacent values" in normalised
+    assert "omit any numeric pair not established by the source layout" in normalised
 
 
 def test_mandatory_pressure_conflict_detector_rejects_historical_contradiction() -> (
@@ -345,11 +449,22 @@ def _ias_render_variables(case: dict) -> dict[str, dict[str, str]]:
         },
         ensure_ascii=False,
     )
+    selected_lead_insight = next(
+        (item for item in artifacts["insights_final"] if item.get("text")), {}
+    )
     return {
         "report_vs/artifacts/summary": {
             "doc_map_json": doc_map_json,
             "evidence_json": findings_json,
             "editorial_plan_json": editorial_plan_json,
+            "selected_lead_insight_json": json.dumps(
+                {
+                    key: selected_lead_insight[key]
+                    for key in ("id", "text", "evidence_id")
+                    if key in selected_lead_insight
+                },
+                ensure_ascii=False,
+            ),
         },
         "report_vs/artifacts/expert_comment": {
             "editorial_plan_json": editorial_plan_json,

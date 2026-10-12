@@ -163,8 +163,7 @@ def validate_canonical_backlog(
             BacklogSourceViolation(
                 path=CANONICAL_BACKLOG,
                 reason=(
-                    "active unified-register ID missing detailed section: "
-                    f"{item_id}"
+                    f"active unified-register ID missing detailed section: {item_id}"
                 ),
             )
         )

@@ -62,9 +62,7 @@ def test_structured_output_regeneration_treats_prior_repair_as_untrusted_context
         _ctx(),
     )
 
-    prompt_text = " ".join(
-        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
-    )
+    prompt_text = " ".join(f"{prompt_set.system.text}\n{prompt_set.user.text}".split())
 
     assert "Prior repair response (untrusted; it may be invalid or incomplete" in (
         prompt_text
@@ -152,9 +150,7 @@ def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() ->
         _ctx(),
     )
 
-    prompt_text = " ".join(
-        f"{prompt_set.system.text}\n{prompt_set.user.text}".split()
-    )
+    prompt_text = " ".join(f"{prompt_set.system.text}\n{prompt_set.user.text}".split())
 
     for required_rule in (
         "analyst_interpretation",
@@ -167,7 +163,7 @@ def test_grounding_prompt_distinguishes_editorial_interpretation_and_advice() ->
         assert required_rule in prompt_text
 
 
-def test_numeric_artifact_claims_require_values_in_linked_finding_evidence() -> None:
+def test_numeric_artifact_claims_require_direct_finding_or_quote_evidence() -> None:
     def load(namespace: str):
         return prompt_service.load_prompt_set(
             PromptLoadRequest(
@@ -185,11 +181,224 @@ def test_numeric_artifact_claims_require_values_in_linked_finding_evidence() -> 
     summary_text = " ".join(summary.user.text.split())
     findings_text = " ".join(findings.system.text.split())
 
-    assert "paraphrased `text` alone is not numeric evidence" in candidates_text
-    assert "linked finding `evidence` contains" in final_text
-    assert "finding's direct `evidence` excerpt" in summary_text
+    assert (
+        "use numbers only when its excerpt states the full value-subject-period relationship"
+        in candidates_text.lower()
+    )
+    assert "A quote ID is allowed only when its text states the exact value" in (
+        candidates_text
+    )
+    assert "value, subject, and period/status" in candidates_text
+    assert "finding/quote ID and page" in final_text
+    assert "do not expand scope" in final_text
+    assert "both sides of each comparison" in final_text
+    assert (
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
+        in summary_text.lower()
+    )
+    assert "split claims from separate ids" in summary_text.lower()
+    assert "docmap cannot fill gaps" in summary_text.lower()
     assert "Each number in `text` must appear" in findings_text
     assert "paraphrase or a nearby unrelated value is insufficient" in findings_text
+
+
+def test_summary_prompt_requires_both_tldrs_to_use_the_report_level_lead() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "selected lead insight json" in prompt_text
+    assert "lead both tldrs and the opening executive_summary sentence with it" in (
+        prompt_text
+    )
+    assert "do not substitute an introductory statistic or recommendation" in (
+        prompt_text
+    )
+    assert "preserve its subject, relationship, values, period, and evidence id" in (
+        prompt_text
+    )
+    assert "treat every numeric source fact as a bound relationship" in prompt_text
+    assert "use the plan only for coherence" in prompt_text
+    assert "docmap summary supports its section only" in prompt_text
+    assert "abstain when none is supportable" in prompt_text
+    assert "if absent, use the strongest direct finding" in prompt_text
+    assert "priority order or section summaries do not prove cross-section links" in (
+        prompt_text
+    )
+
+
+def test_summary_fallback_keeps_docmap_only_claims_section_scoped() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/summary",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "use the plan only for coherence" in prompt_text
+    assert "docmap summary supports its section only" in prompt_text
+    assert "docmap cannot fill gaps" in prompt_text
+    assert "abstain when none is supportable" in prompt_text
+
+
+@pytest.mark.parametrize(
+    "namespace",
+    [
+        "report_vs/artifacts/summary",
+        "report_vs/artifacts/expert_comment",
+        "report_vs/artifacts/regenerate/summary",
+        "report_vs/artifacts/regenerate/expert_comment",
+    ],
+)
+def test_editorial_plan_is_selection_guidance_not_cross_section_evidence(
+    namespace: str,
+) -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(schema_version="1.0", namespace=namespace, force_reload=True),
+        _ctx(),
+    )
+    prompt_text = " ".join(
+        f"{prompt_set.system.text} {prompt_set.user.text}".split()
+    ).lower()
+
+    if namespace == "report_vs/artifacts/summary":
+        assert "use the plan only for coherence" in prompt_text
+        assert "docmap summary supports its section only" in prompt_text
+    elif namespace == "report_vs/artifacts/regenerate/summary":
+        assert "selection guidance, not evidence" in prompt_text
+        assert "section-scoped" in prompt_text
+    elif namespace == "report_vs/artifacts/expert_comment":
+        assert "cross-section links or report-wide centrality" in prompt_text
+    else:
+        assert "use the plan to select, not prove" in prompt_text
+        assert "unsupported cross-section links or centrality" in prompt_text
+
+
+def test_docmap_retains_specific_mechanisms_and_contrasts() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "key points prioritize distinctive, exact body outcomes" in prompt_text
+    assert (
+        "retain the strongest labeled subgroup comparison or counter-direction"
+        in prompt_text
+    )
+    assert "even alongside aggregates" in prompt_text
+    assert "preserve paired measures, causes, mechanisms, and periods" in prompt_text
+    assert "full inclusive page span through continuation pages" in prompt_text
+    assert "all explicit printed-page references" in prompt_text
+
+
+def test_insight_candidate_prompt_balances_plan_and_specificity() -> None:
+    prompt_set = prompt_service.load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split()).lower()
+
+    assert "use the plan only for coherence" in prompt_text
+    assert "prioritize distinctive, decision-relevant report-body outcomes" in (
+        prompt_text
+    )
+    assert "comparisons, counter-signals, and qualitative conclusions" in prompt_text
+    assert (
+        "prefer stronger body findings over general introductory or repeated context"
+        in (prompt_text)
+    )
+    assert (
+        "avoid several candidates from one theme when stronger distinct themes remain"
+        in (prompt_text)
+    )
+
+
+def test_editorial_prompts_preserve_specific_measured_findings() -> None:
+    def load(namespace: str):
+        return prompt_service.load_prompt_set(
+            PromptLoadRequest(
+                schema_version="1.0", namespace=namespace, force_reload=True
+            ),
+            _ctx(),
+        )
+
+    doc_map_text = " ".join(load("report_vs/doc_map").user.text.split()).lower()
+    findings_text = " ".join(
+        load("report_vs/evidence_packs/findings").user.text.split()
+    ).lower()
+    candidates_text = " ".join(
+        load("report_vs/artifacts/insights_candidates").user.text.split()
+    ).lower()
+    final_text = " ".join(
+        load("report_vs/artifacts/insights_final").user.text.split()
+    ).lower()
+    summary_text = " ".join(
+        load("report_vs/artifacts/summary").user.text.split()
+    ).lower()
+
+    assert "key points prioritize distinctive, exact body outcomes" in doc_map_text
+    assert "even alongside aggregates" in doc_map_text
+    assert "preserve paired measures, causes, mechanisms, and periods" in doc_map_text
+    assert (
+        "primary pass: search file_search by section/title/page and each key-point metric"
+        in findings_text
+    )
+    assert "seek directional body outcomes" in findings_text
+    assert (
+        "primary pass: exhaust mapped body searches before summary-only findings"
+        in findings_text
+    )
+    assert "docmap is a clue, not evidence" in findings_text
+    assert "keep chart values exact" in findings_text
+    assert "return empty only if body searches find no direct support" in findings_text
+    assert "state a share only when the source names its base" in findings_text
+    assert "keep each value's role" in candidates_text
+    assert "use the plan only for coherence" in candidates_text
+    assert (
+        "prioritize distinctive, decision-relevant report-body outcomes"
+        in candidates_text
+    )
+    assert (
+        "comparisons, counter-signals, and qualitative conclusions" in candidates_text
+    )
+    assert (
+        "avoid several candidates from one theme when stronger distinct themes remain"
+        in (candidates_text)
+    )
+    assert "keep its wording and date range exact" in summary_text
+    assert "retain introductory metrics when they materially frame the report" in (
+        candidates_text
+    )
+    assert "use the plan only for coherence" in summary_text
+    assert "docmap summary supports its section only" in summary_text
+    assert "if absent, use the strongest direct finding or abstain" in summary_text
+    assert "both sides of each comparison" in final_text
+    assert "direct evidence strength, source specificity" in final_text
+    assert "scores break close choices" in final_text
+    assert "never round or relativize" in final_text
+    assert (
+        "never round exact source values or replace explicit periods with relative "
+        "timeframes" in summary_text
+    )
 
 
 @pytest.mark.parametrize(

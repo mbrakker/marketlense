@@ -6,23 +6,25 @@ import copy
 import hashlib
 import json
 import logging
+import math
 import sqlite3
 import subprocess
 import tempfile
 import time
+from contextlib import closing
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from statistics import median
 from types import TracebackType
 from typing import Any
+from urllib.parse import SplitResult, urlsplit
 
 import yaml
 
 from src.contracts.config import ConfigLoadRequest, IngestSettingsBuildRequest
 from src.contracts.drive import DriveFile
 from src.contracts.logging import REQUIRED_LOG_EVENT_FIELDS
-from src.contracts.llm_usage import LLMUsageRunSummaryRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.report_store import (
     ReportSourceRecordRequest,
@@ -30,12 +32,17 @@ from src.contracts.report_store import (
     SourceIdentityObservationRecordRequest,
 )
 from src.contracts.semantic_ids import ReportId
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidateReadRequest,
+    SignalCandidateStoreRequest,
+)
 from src.contracts.validation_run_manifest import (
     PreselectedFrozenValidationCohortSubmissionRequest,
     PreselectedFrozenValidationSource,
 )
 from src.contracts.workflow_control import SupervisorRunRequest
-from src.contracts.workflow_queue import WorkflowQueueControl
+from src.contracts.workflow_queue import WorkflowJobSubmission, WorkflowQueueControl
 from src.orchestrators.admission_preflight_orchestrator import (
     AdmissionPreflightRequest,
     admission_configuration_hash,
@@ -48,14 +55,19 @@ from src.orchestrators.ingest_orchestrator import (
 )
 from src.orchestrators.pipeline_preflight_orchestrator import preflight_report_pipeline
 from src.orchestrators.workflow_supervisor_orchestrator import run_supervisor_once
+from src.services._config_service.yaml_mapping import deep_merge_mappings
+from src.services.analytics_store_service import (
+    read_signal_candidates,
+    upsert_signal_candidates,
+)
 from src.services.config_service import (
     build_ingest_settings,
+    load_publish_settings,
     load_settings,
     load_workflow_control_settings,
     load_workflow_queue_policies,
     new_runtime_context,
 )
-from src.services.llm_usage_ledger_service import read_usage_run_summary
 from src.services.report_analysis_store_service import (
     pack_path as resolve_report_analysis_pack_path,
 )
@@ -63,8 +75,12 @@ from src.services.report_store_service import (
     record_report_source,
     record_source_identity_observation,
 )
+from src.services.wordpress_service import preflight_publish_capability
 from src.services.workflow_queue_service import (
+    enqueue_workflow_job,
+    get_workflow_job,
     get_workflow_queue_control,
+    load_workflow_job_payload,
     seed_workflow_queue_controls,
     set_workflow_queue_control,
 )
@@ -224,7 +240,7 @@ def _validation_reuse_telemetry_summary(
                 continue
             if isinstance(event, dict):
                 events.append(event)
-    totals = {name: 0 for name in _VALIDATION_REUSE_COUNTER_FIELDS}
+    totals = dict.fromkeys(_VALIDATION_REUSE_COUNTER_FIELDS, 0)
     fallback_totals: dict[str, int] = {}
     for event in events:
         fields = event.get("fields")
@@ -274,10 +290,39 @@ _FROZEN_REPORT_QUEUE_STAGES = (
     "report_render",
     "publication_readiness",
 )
+_CROSS_REPORT_QUEUE_NAMES = (
+    "analytics_projection",
+    "signal_candidate",
+    "signal_generation",
+    "briefing_opportunity",
+    "briefing_generation",
+)
+_CROSS_REPORT_DESCENDANT_QUEUE_NAMES = (
+    *_CROSS_REPORT_QUEUE_NAMES,
+    "cover_generation",
+    "publication_readiness",
+    "wordpress_publish",
+    "wordpress_projection",
+)
+_CROSS_REPORT_TERMINAL_STATUSES = {"succeeded", "blocked", "dead_letter", "cancelled"}
+_CONFIRMED_WORDPRESS_STAGING_HOST = "marketlense.medianewsonline.com"
 
 
-def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
+def prepare_isolated_canary_run(
+    *,
+    runs_root: Path,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
+    enable_cross_report_analysis: bool = False,
+) -> IsolatedCanaryRun:
     """Create a unique run root and config whose mutable paths stay within it."""
+
+    _validate_staging_mode(
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
+    )
 
     root_parent = runs_root.resolve()
     root_parent.mkdir(parents=True, exist_ok=True)
@@ -314,7 +359,13 @@ def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
         root / "state" / "projection_cost_daily.json",
         root / "state" / "projection_cost_ledger.jsonl",
     )
-    config = _isolated_config(root=root, paths=paths, cost_paths=cost_paths)
+    config = _isolated_config(
+        root=root,
+        paths=paths,
+        cost_paths=cost_paths,
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        enable_cross_report_analysis=enable_cross_report_analysis,
+    )
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return IsolatedCanaryRun(
@@ -325,14 +376,27 @@ def prepare_isolated_canary_run(*, runs_root: Path) -> IsolatedCanaryRun:
 
 
 def _isolated_config(
-    *, root: Path, paths: dict[str, Path], cost_paths: dict[str, Path]
+    *,
+    root: Path,
+    paths: dict[str, Path],
+    cost_paths: dict[str, Path],
+    publish_to_wordpress_staging: bool = False,
+    enable_cross_report_analysis: bool = False,
 ) -> dict[str, Any]:
     base_config_path = (
         Path(__file__).resolve().parents[2] / "src" / "config" / "app.yaml"
     )
-    config = copy.deepcopy(yaml.safe_load(base_config_path.read_text(encoding="utf-8")))
+    config = yaml.safe_load(base_config_path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
         raise RuntimeError("Base application configuration must be a mapping")
+    if publish_to_wordpress_staging:
+        profile_path = base_config_path.with_name("app.autonomous_mvp.yaml")
+        profile = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
+        if not isinstance(profile, dict):
+            raise RuntimeError("Autonomous MVP configuration must be a mapping")
+        config = deep_merge_mappings(config, profile)
+    else:
+        config = copy.deepcopy(config)
     config["paths"] = {
         **dict(config.get("paths") or {}),
         **{name: str(path) for name, path in paths.items()},
@@ -377,14 +441,165 @@ def _isolated_config(
         "enabled": True,
         "worker_batches_enabled": True,
     }
+    if publish_to_wordpress_staging:
+        workflow_control["autonomous_publication_policy"] = {
+            **dict(workflow_control.get("autonomous_publication_policy") or {}),
+            "enabled": True,
+        }
     config["workflow_control"] = workflow_control
     workflow_queues = dict(config.get("workflow_queues") or {})
     workflow_queues["wordpress_publish"] = {
         **dict(workflow_queues.get("wordpress_publish") or {}),
-        "enabled": False,
+        "enabled": publish_to_wordpress_staging,
     }
+    if publish_to_wordpress_staging:
+        for queue_name in (
+            "publisher_discovery",
+            "report_acquisition",
+            "mailbox_delivery",
+        ):
+            workflow_queues[queue_name] = {
+                **dict(workflow_queues.get(queue_name) or {}),
+                "enabled": False,
+            }
     config["workflow_queues"] = workflow_queues
+    publish = dict(config.get("publish") or {})
+    wp = dict(publish.get("wp") or {})
+    if publish_to_wordpress_staging:
+        wp["post_status"] = "draft"
+    publish["wp"] = wp
+    config["publish"] = publish
+    cross_report = dict(config.get("cross_report_analysis") or {})
+    cross_report["enabled"] = enable_cross_report_analysis
+    config["cross_report_analysis"] = cross_report
     return config
+
+
+def _validate_staging_mode(
+    *,
+    publish_to_wordpress_staging: bool,
+    staging_hostname: str,
+    allow_insecure_staging_http: bool = False,
+) -> None:
+    normalized_host = str(staging_hostname or "").strip().lower().rstrip(".")
+    if publish_to_wordpress_staging:
+        if normalized_host != _CONFIRMED_WORDPRESS_STAGING_HOST:
+            raise ValueError(
+                "WordPress publication requires the confirmed WordPress staging host"
+            )
+    elif normalized_host:
+        raise ValueError(
+            "A staging hostname is only accepted when staging publication is enabled"
+        )
+    if allow_insecure_staging_http and not publish_to_wordpress_staging:
+        raise ValueError(
+            "HTTP staging opt-in requires WordPress staging publication to be enabled"
+        )
+
+
+def _validate_wordpress_staging_origin(
+    site_url: str,
+    *,
+    staging_hostname: str,
+    allow_insecure_http: bool,
+) -> SplitResult:
+    """Validate a credentialed WordPress target against the pinned staging origin."""
+
+    expected_host = str(staging_hostname or "").strip().lower().rstrip(".")
+    if expected_host != _CONFIRMED_WORDPRESS_STAGING_HOST:
+        raise ValueError("WordPress target is not the confirmed staging host")
+    raw_site_url = str(site_url or "").strip()
+    try:
+        site = urlsplit(raw_site_url)
+        scheme = site.scheme.lower()
+        hostname = (site.hostname or "").lower().rstrip(".")
+        port = site.port
+    except ValueError as exc:
+        raise ValueError("WordPress staging URL is invalid") from exc
+    if (
+        scheme not in {"http", "https"}
+        or hostname != expected_host
+        or site.username is not None
+        or site.password is not None
+        or "?" in raw_site_url
+        or "#" in raw_site_url
+    ):
+        raise ValueError("WordPress target is not the confirmed staging origin")
+    expected_port = 80 if scheme == "http" else 443
+    if port not in {None, expected_port}:
+        raise ValueError("WordPress staging URL uses an unapproved port")
+    if scheme == "http" and not allow_insecure_http:
+        raise ValueError("HTTP WordPress staging requires explicit opt-in")
+    return site
+
+
+def _wordpress_publication_evidence(
+    *,
+    publication_outcome: dict[str, Any] | None,
+    workflow_status: str,
+    workflow_attempt_count: int,
+    wordpress_post_id: int | None,
+    expected_file_id: str,
+    expected_post_type: str,
+) -> dict[str, bool]:
+    """Count only a first-attempt create with durable authenticated-readback proof."""
+
+    outcome = publication_outcome or {}
+    expectation = outcome.get("readback_expectation")
+    expectation = expectation if isinstance(expectation, dict) else {}
+    required_readback_checks = {
+        "post_id",
+        "report_file_identity",
+        "canonical_url",
+        "post_type",
+        "status",
+        "content_checksum",
+        "source_attribution",
+        "metadata",
+        "taxonomy_assignments",
+        "media_associations",
+    }
+    readback_checks = outcome.get("readback_checks")
+    verified_readback_checks: set[str] = set()
+    readback_checks_well_formed = isinstance(readback_checks, list)
+    seen_readback_checks: set[str] = set()
+    if isinstance(readback_checks, list):
+        for check in readback_checks:
+            if not isinstance(check, dict):
+                readback_checks_well_formed = False
+                continue
+            name = str(check.get("name") or "").strip()
+            status = str(check.get("status") or "").strip()
+            if not name or name in seen_readback_checks:
+                readback_checks_well_formed = False
+            seen_readback_checks.add(name)
+            if status == "verified":
+                verified_readback_checks.add(name)
+    actual_write_count = outcome.get("actual_write_count")
+    created = (
+        wordpress_post_id is not None
+        and workflow_status == "succeeded"
+        and workflow_attempt_count == 1
+        and outcome.get("status") == "published"
+        and outcome.get("publication_outcome") == "post_created"
+        and isinstance(actual_write_count, int)
+        and not isinstance(actual_write_count, bool)
+        and actual_write_count == 1
+        and outcome.get("file_id") == expected_file_id
+        and outcome.get("post_id") == wordpress_post_id
+        and expectation.get("file_id") == expected_file_id
+        and expectation.get("post_type") == expected_post_type
+    )
+    readback = (
+        created
+        and readback_checks_well_formed
+        and outcome.get("authenticated_readback_verified") is True
+        and required_readback_checks.issubset(verified_readback_checks)
+    )
+    return {
+        "wordpress_created_this_run": created,
+        "wordpress_authenticated_readback": readback,
+    }
 
 
 def ensure_isolated_publication_queue_disabled(
@@ -822,13 +1037,32 @@ def run_frozen_cohort_once(
     runs_root: Path,
     sources: list[dict[str, Any]],
     max_duration_seconds: int = 7_200,
+    publish_to_wordpress_staging: bool = False,
+    staging_hostname: str = "",
+    allow_insecure_staging_http: bool = False,
+    enable_cross_report_analysis: bool = False,
 ) -> dict[str, Any]:
     """Submit one immutable retained cohort through the production queue once."""
 
+    _validate_staging_mode(
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
+    )
+    if publish_to_wordpress_staging and not enable_cross_report_analysis:
+        raise ValueError(
+            "Staging publication requires cross-report handoff verification"
+        )
     git_sha = _require_clean_git_sha()
     run_started_at_utc = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
     started_at = time.monotonic()
-    run = prepare_isolated_canary_run(runs_root=runs_root)
+    run = prepare_isolated_canary_run(
+        runs_root=runs_root,
+        publish_to_wordpress_staging=publish_to_wordpress_staging,
+        staging_hostname=staging_hostname,
+        allow_insecure_staging_http=allow_insecure_staging_http,
+        enable_cross_report_analysis=enable_cross_report_analysis,
+    )
     reuse_events_path = run.root / "validation_claim_reuse_decisions.jsonl"
     reuse_event_handler: _ValidationReuseDecisionHandler | None = None
     results = [_empty_result(run, started_at) for _ in sources]
@@ -836,12 +1070,13 @@ def run_frozen_cohort_once(
         "cost_usd": None,
         "duration_seconds": None,
         "bounded_automatic_repair": None,
-        "duration_measurement": (
-            "time.monotonic from runner entry to all reports terminal"
-        ),
+        "wordpress_staging_preflight": None,
+        "wordpress_replay": None,
+        "duration_measurement": "runner entry to all five report workflows terminal",
     }
     terminal_observed_at_utc = ""
     terminal_observed_monotonic: float | None = None
+    report_terminal_observed_monotonic: float | None = None
     for result in results:
         result["git_sha"] = git_sha
     prepared_sources: list[PreselectedFrozenValidationSource] = []
@@ -857,13 +1092,66 @@ def run_frozen_cohort_once(
             ),
             ctx,
         )
+        if publish_to_wordpress_staging:
+            publish_settings = load_publish_settings(
+                ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+                ctx,
+            )
+            try:
+                site = _validate_wordpress_staging_origin(
+                    publish_settings.wp.site_url,
+                    staging_hostname=staging_hostname,
+                    allow_insecure_http=allow_insecure_staging_http,
+                )
+            except ValueError as exc:
+                raise AppError(
+                    code="wordpress_staging_host_mismatch",
+                    message=(
+                        "Resolved WordPress target is not the confirmed staging host"
+                    ),
+                    retryable=False,
+                ) from exc
+            if publish_settings.wp.post_status.strip().lower() != "draft":
+                raise AppError(
+                    code="wordpress_staging_status_unsafe",
+                    message="The isolated WordPress canary must create drafts",
+                    retryable=False,
+                )
+            preflight = preflight_publish_capability(publish_settings, ctx)
+            if (
+                not preflight.reachable
+                or not preflight.authenticated
+                or "create_posts" not in preflight.verified_capabilities
+                or publish_settings.wp.post_type not in preflight.verified_post_types
+            ):
+                raise AppError(
+                    code="wordpress_staging_capability_unavailable",
+                    message=(
+                        "WordPress staging did not confirm draft publication capability"
+                    ),
+                    retryable=True,
+                )
+            cohort_metrics["wordpress_staging_preflight"] = {
+                "hostname": site.hostname,
+                "scheme": site.scheme.lower(),
+                "insecure_http_opt_in": allow_insecure_staging_http,
+                "post_type": publish_settings.wp.post_type,
+                "post_status": publish_settings.wp.post_status,
+                "authenticated": preflight.authenticated,
+                "reachable": preflight.reachable,
+                "verified_capabilities": list(preflight.verified_capabilities),
+                "provider_calls": preflight.provider_calls,
+            }
         _assert_empty_stores(run=run, settings=settings)
         seeded_controls = _seed_isolated_workflow_queue_controls(
             state_db=settings.state_db,
             config_path=run.config_path,
             ctx=ctx,
         )
-        ensure_isolated_publication_queue_disabled(state_db=settings.state_db, ctx=ctx)
+        if not publish_to_wordpress_staging:
+            ensure_isolated_publication_queue_disabled(
+                state_db=settings.state_db, ctx=ctx
+            )
         for result, source in zip(results, sources, strict=True):
             source_path = Path(str(source["resolved_source_path"]))
             if not source_path.is_file():
@@ -928,7 +1216,7 @@ def run_frozen_cohort_once(
             for result in results:
                 result["workflow_root_id"] = root_workflow_id
             with _ValidationReuseEventCapture(reuse_events_path) as reuse_event_handler:
-                _drain_report_paths(
+                drain_timing = _drain_report_paths(
                     state_db=settings.state_db,
                     usage_db_path=settings.usage_db_path,
                     config_path=run.config_path,
@@ -936,7 +1224,11 @@ def run_frozen_cohort_once(
                     root_workflow_id=root_workflow_id,
                     ctx=ctx,
                     max_duration_seconds=max_duration_seconds,
+                    drain_cross_report_handoffs=enable_cross_report_analysis,
                 )
+            report_terminal_observed_monotonic = drain_timing[
+                "core_reports_terminal_monotonic"
+            ]
             terminal_observed_monotonic = time.monotonic()
             terminal_observed_at_utc = datetime.now(timezone.utc).isoformat(
                 timespec="milliseconds"
@@ -960,7 +1252,19 @@ def run_frozen_cohort_once(
                         "max_total_jobs": supervisor_capacity.max_total_jobs,
                     },
                     "runner_started_at_utc": run_started_at_utc,
-                    "all_reports_terminal_observed_at_utc": terminal_observed_at_utc,
+                    "all_reports_terminal_observed_at_utc": drain_timing[
+                        "core_reports_terminal_at_utc"
+                    ],
+                    "all_handoffs_terminal_observed_at_utc": terminal_observed_at_utc,
+                    "core_reports_terminal_wall_seconds": drain_timing[
+                        "core_reports_terminal_wall_seconds"
+                    ],
+                    "cross_report_handoff_drain_wall_seconds": drain_timing[
+                        "cross_report_handoff_drain_wall_seconds"
+                    ],
+                    "cross_report_handoffs_terminal": drain_timing[
+                        "cross_report_handoffs_terminal"
+                    ],
                     "runner_to_terminal_wall_seconds": round(
                         terminal_observed_monotonic - started_at, 3
                     ),
@@ -993,13 +1297,79 @@ def run_frozen_cohort_once(
                         ctx=ctx,
                     )
                 )
+            if publish_to_wordpress_staging:
+                cohort_metrics["wordpress_replay"] = _replay_completed_wordpress_jobs(
+                    state_db=settings.state_db,
+                    root_workflow_id=root_workflow_id,
+                    report_ids=tuple(str(result["report_id"]) for result in results),
+                    ctx=ctx,
+                )
+            cross_report_provider_usage = {
+                "provider_calls": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "estimated_cost_usd": 0.0,
+            }
+            if enable_cross_report_analysis:
+                cross_report_evidence = _collect_cross_report_handoff_evidence(
+                    state_db=settings.state_db,
+                    signal_store_db=settings.signal_store_db,
+                    usage_db_path=settings.usage_db_path,
+                    root_workflow_id=root_workflow_id,
+                    ctx=ctx,
+                )
+                cohort_metrics["cross_report_handoffs"] = cross_report_evidence
+                cross_report_provider_usage = dict(
+                    cross_report_evidence["provider_usage"]
+                )
+            report_provider_calls = _sum_member_metric(results, "model_provider_calls")
+            report_input_tokens = _sum_member_metric(results, "input_tokens")
+            report_output_tokens = _sum_member_metric(results, "output_tokens")
+            report_cost = _sum_member_metric(results, "cost")
+            report_tool_calls = _sum_member_metric(results, "file_search_calls")
+            cross_calls = int(cross_report_provider_usage.get("provider_calls", 0))
+            cross_cost = cross_report_provider_usage.get("estimated_cost_usd")
+            combined_cost = (
+                round(
+                    float(report_cost) + (float(cross_cost) if cross_calls else 0.0),
+                    6,
+                )
+                if report_cost is not None
+                and (
+                    cross_calls == 0
+                    or (
+                        cross_report_provider_usage.get("cost_available")
+                        and cross_cost is not None
+                    )
+                )
+                else None
+            )
+
             cohort_metrics.update(
                 {
-                    "model_provider_calls": results[0]["model_provider_calls"],
-                    "input_tokens": results[0]["input_tokens"],
-                    "output_tokens": results[0]["output_tokens"],
-                    "cost_usd": results[0]["cost"],
-                    "file_search_calls": results[0]["file_search_calls"],
+                    "model_provider_calls": report_provider_calls,
+                    "input_tokens": report_input_tokens,
+                    "output_tokens": report_output_tokens,
+                    "cost_usd": report_cost,
+                    "file_search_calls": report_tool_calls,
+                    "combined_run_provider_calls": (
+                        report_provider_calls + cross_calls
+                        if report_provider_calls is not None
+                        else None
+                    ),
+                    "combined_run_input_tokens": (
+                        report_input_tokens
+                        + int(cross_report_provider_usage.get("input_tokens", 0))
+                        if report_input_tokens is not None
+                        else None
+                    ),
+                    "combined_run_output_tokens": (
+                        report_output_tokens
+                        + int(cross_report_provider_usage.get("output_tokens", 0))
+                        if report_output_tokens is not None
+                        else None
+                    ),
+                    "combined_run_cost_usd": combined_cost,
                     "bounded_automatic_repair": any(
                         bool(result["bounded_automatic_repair"]) for result in results
                     ),
@@ -1034,29 +1404,28 @@ def run_frozen_cohort_once(
                 )
             )
         cohort_metrics["duration_seconds"] = (
-            round(terminal_observed_monotonic - started_at, 3)
+            round(
+                (report_terminal_observed_monotonic or terminal_observed_monotonic)
+                - started_at,
+                3,
+            )
             if terminal_observed_monotonic is not None
             else _finish_frozen_cohort_results(
                 results, started_at, retain_member_duration=False
             )
         )
+        cohort_metrics["end_to_end_duration_seconds"] = (
+            round(terminal_observed_monotonic - started_at, 3)
+            if terminal_observed_monotonic is not None
+            else cohort_metrics["duration_seconds"]
+        )
         for result in results:
-            # Usage and repair records are scoped to the one batch root workflow.
-            # They cannot be attributed to an individual member without retained
-            # report-specific telemetry, so never duplicate them into members.
-            result.update(
-                {
-                    "bounded_automatic_repair": None,
-                    "operator_intervention": None,
-                    "model_provider_calls": None,
-                    "file_search_calls": None,
-                    "input_tokens": None,
-                    "output_tokens": None,
-                    "cost": None,
-                    "total_duration_seconds": None,
-                    "metric_attribution": "unavailable",
-                }
-            )
+            if result.get("core_processing_duration_seconds") is not None:
+                result["total_duration_seconds"] = result[
+                    "core_processing_duration_seconds"
+                ]
+            else:
+                result["total_duration_seconds"] = None
         _write_result(run.root / "cohort_members.json", {"reports": results})
     return {
         "git_sha": git_sha,
@@ -1366,13 +1735,17 @@ def _drain_report_paths(
     root_workflow_id: str,
     ctx,
     max_duration_seconds: int,
-) -> None:
-    """Drive the canonical supervisor until every submitted report is terminal."""
+    drain_cross_report_handoffs: bool = False,
+) -> dict[str, Any]:
+    """Drain the report cohort and, when enabled, its isolated handoff queues."""
 
     control = load_workflow_control_settings(
         ConfigLoadRequest(schema_version="1.0", path=str(config_path)), ctx
     )
     deadline = time.monotonic() + max(1, max_duration_seconds)
+    started_at = time.monotonic()
+    reports_terminal_at: float | None = None
+    reports_terminal_at_utc = ""
     worker_id = f"ias-live-canary:{root_workflow_id}"
     while time.monotonic() < deadline:
         supervisor = run_supervisor_once(
@@ -1394,10 +1767,705 @@ def _drain_report_paths(
             )
             for report_id in report_ids
         }
-        if all(state in {"awaiting_review", "failed"} for state in states.values()):
-            return
+        reports_terminal = all(
+            state in {"awaiting_review", "published", "failed"}
+            for state in states.values()
+        )
+        now = time.monotonic()
+        if reports_terminal and reports_terminal_at is None:
+            reports_terminal_at = now
+            reports_terminal_at_utc = datetime.now(timezone.utc).isoformat(
+                timespec="milliseconds"
+            )
+        handoffs_terminal = (
+            _cross_report_handoffs_terminal(
+                state_db=state_db, root_workflow_id=root_workflow_id
+            )
+            if drain_cross_report_handoffs and reports_terminal
+            else not drain_cross_report_handoffs
+        )
+        if reports_terminal and handoffs_terminal:
+            return {
+                "core_reports_terminal_wall_seconds": round(
+                    (reports_terminal_at or now) - started_at, 3
+                ),
+                "core_reports_terminal_monotonic": reports_terminal_at,
+                "core_reports_terminal_at_utc": reports_terminal_at_utc,
+                "cross_report_handoff_drain_wall_seconds": (
+                    round(max(0.0, now - reports_terminal_at), 3)
+                    if drain_cross_report_handoffs and reports_terminal_at is not None
+                    else 0.0
+                ),
+                "cross_report_handoffs_terminal": handoffs_terminal,
+            }
         if supervisor.completed_job_count == 0:
             time.sleep(1)
+    return {
+        "core_reports_terminal_wall_seconds": (
+            round(reports_terminal_at - started_at, 3)
+            if reports_terminal_at is not None
+            else None
+        ),
+        "core_reports_terminal_monotonic": reports_terminal_at,
+        "core_reports_terminal_at_utc": reports_terminal_at_utc,
+        "cross_report_handoff_drain_wall_seconds": (
+            round(max(0.0, time.monotonic() - reports_terminal_at), 3)
+            if drain_cross_report_handoffs and reports_terminal_at is not None
+            else 0.0
+        ),
+        "cross_report_handoffs_terminal": (
+            _cross_report_handoffs_terminal(
+                state_db=state_db, root_workflow_id=root_workflow_id
+            )
+            if drain_cross_report_handoffs
+            else True
+        ),
+    }
+
+
+def _cross_report_handoffs_terminal(*, state_db: str, root_workflow_id: str) -> bool:
+    """Require cohort handoff jobs and outbox rows to reach durable terminal state."""
+
+    handoff_marks = ",".join("?" for _ in _CROSS_REPORT_QUEUE_NAMES)
+    descendant_marks = ",".join("?" for _ in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            f"""
+            SELECT status FROM workflow_jobs
+            WHERE root_workflow_id=? AND (
+              queue_name IN ({handoff_marks})
+              OR (queue_name IN ({descendant_marks})
+                  AND (entity_type IN ('briefing','signal')
+                       OR queue_name='wordpress_projection'))
+            )
+            """,
+            (
+                root_workflow_id,
+                *_CROSS_REPORT_QUEUE_NAMES,
+                *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES,
+            ),
+        ).fetchall()
+        outbox_rows = conn.execute(
+            f"""
+            SELECT status FROM workflow_outbox
+            WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+            """,
+            (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+        ).fetchall()
+    return all(
+        str(row[0]) in _CROSS_REPORT_TERMINAL_STATUSES for row in job_rows
+    ) and all(str(row[0]) in {"materialised", "dead_letter"} for row in outbox_rows)
+
+
+def _collect_cross_report_handoff_evidence(
+    *,
+    state_db: str,
+    signal_store_db: str,
+    usage_db_path: str,
+    root_workflow_id: str,
+    ctx,
+) -> dict[str, Any]:
+    """Retain bounded queue, Briefing, Signal-manifest, and usage evidence."""
+
+    handoff_marks = ",".join("?" for _ in _CROSS_REPORT_QUEUE_NAMES)
+    descendant_marks = ",".join("?" for _ in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            f"""
+            SELECT job_id,queue_name,status,entity_type,attempt_count,
+                   output_reference,output_content_hash,started_at_utc,
+                   completed_at_utc,error_code
+            FROM workflow_jobs
+            WHERE root_workflow_id=? AND (
+              queue_name IN ({handoff_marks})
+              OR (queue_name IN ({descendant_marks})
+                  AND (entity_type IN ('briefing','signal')
+                       OR queue_name='wordpress_projection'))
+            )
+            ORDER BY queue_name,job_id
+            """,
+            (
+                root_workflow_id,
+                *_CROSS_REPORT_QUEUE_NAMES,
+                *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES,
+            ),
+        ).fetchall()
+        outbox_nonterminal_count = int(
+            conn.execute(
+                f"""
+                SELECT COUNT(*) FROM workflow_outbox
+                WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+                  AND status NOT IN ('materialised','dead_letter')
+                """,
+                (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+            ).fetchone()[0]
+        )
+        outbox_dead_letter_count = int(
+            conn.execute(
+                f"""
+                SELECT COUNT(*) FROM workflow_outbox
+                WHERE root_workflow_id=? AND queue_name IN ({descendant_marks})
+                  AND status='dead_letter'
+                """,
+                (root_workflow_id, *_CROSS_REPORT_DESCENDANT_QUEUE_NAMES),
+            ).fetchone()[0]
+        )
+        opportunity_rows = conn.execute(
+            """SELECT generation_job_id,source_hashes_json,publisher_ids_json
+            FROM workflow_briefing_opportunities
+            WHERE generation_job_id<>''"""
+        ).fetchall()
+    job_status_counts: dict[str, dict[str, int]] = {}
+    job_ids: list[str] = []
+    for row in job_rows:
+        job_id, queue_name, status = str(row[0]), str(row[1]), str(row[2])
+        job_ids.append(job_id)
+        status_counts = job_status_counts.setdefault(queue_name, {})
+        status_counts[status] = status_counts.get(status, 0) + 1
+    queue_terminal = _cross_report_handoffs_terminal(
+        state_db=state_db, root_workflow_id=root_workflow_id
+    )
+    terminal_failure_count = sum(
+        1 for row in job_rows if str(row[2]) in {"blocked", "dead_letter", "cancelled"}
+    )
+    terminal_failure_count += outbox_dead_letter_count
+    signal_or_briefing_publication_rows = [
+        row
+        for row in job_rows
+        if str(row[1]) == "wordpress_publish" and str(row[3]) in {"signal", "briefing"}
+    ]
+    signal_or_briefing_publication_status_counts: dict[str, int] = {}
+    for row in signal_or_briefing_publication_rows:
+        status = str(row[2])
+        signal_or_briefing_publication_status_counts[status] = (
+            signal_or_briefing_publication_status_counts.get(status, 0) + 1
+        )
+    expected_publication_policy_hold_count = sum(
+        1
+        for row in signal_or_briefing_publication_rows
+        if str(row[2]) == "blocked"
+        and str(row[9]) == "cross_report_publish_live_disabled"
+    )
+    unclassified_terminal_failure_count = (
+        terminal_failure_count - expected_publication_policy_hold_count
+    )
+
+    opportunities_by_job = {
+        str(job_id): (
+            _json_string_set(source_hashes_json),
+            _json_string_set(publisher_ids_json),
+        )
+        for job_id, source_hashes_json, publisher_ids_json in opportunity_rows
+    }
+    briefing_generation_rows = [
+        row for row in job_rows if str(row[1]) == "briefing_generation"
+    ]
+    briefing_generation_job_ids = {
+        str(row[0])
+        for row in briefing_generation_rows
+        if str(row[2]) == "succeeded" and str(row[5]) and str(row[6])
+    }
+    briefing_wall_time_ms_by_job: dict[str, list[int]] = {}
+    if briefing_generation_job_ids:
+        with sqlite3.connect(state_db) as conn:
+            telemetry_tables = {
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
+                    "('performance_telemetry_spans', "
+                    "'performance_telemetry_measurements')"
+                )
+            }
+            if len(telemetry_tables) == 2:
+                telemetry_rows = conn.execute(
+                    """SELECT s.attributes_json,m.status,m.integer_value
+                    FROM performance_telemetry_spans AS s
+                    JOIN performance_telemetry_measurements AS m
+                      ON m.span_id=s.span_id
+                    WHERE s.stage='briefing_generation' AND m.metric='wall_time_ms'"""
+                ).fetchall()
+            else:
+                telemetry_rows = []
+        for attributes_json, metric_status, wall_time_ms in telemetry_rows:
+            if metric_status != "observed" or wall_time_ms is None:
+                continue
+            try:
+                attributes = json.loads(str(attributes_json or "{}"))
+                job_id = str(attributes.get("job_id") or "")
+                measured_ms = int(wall_time_ms)
+            except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+            if job_id in briefing_generation_job_ids and measured_ms >= 0:
+                briefing_wall_time_ms_by_job.setdefault(job_id, []).append(measured_ms)
+    briefing_valid_multireport_count = 0
+    briefing_valid_multireport_job_ids: list[str] = []
+    briefing_valid_multireport_execution_seconds: list[float] = []
+    briefing_duration_complete = True
+    for row in briefing_generation_rows:
+        job_id = str(row[0])
+        if str(row[2]) != "succeeded" or not str(row[5]) or not str(row[6]):
+            continue
+        source_hashes, publishers = opportunities_by_job.get(job_id, (set(), set()))
+        if len(source_hashes) >= 2 and len(publishers) >= 2:
+            briefing_valid_multireport_count += 1
+            briefing_valid_multireport_job_ids.append(job_id)
+            measured_ms = briefing_wall_time_ms_by_job.get(job_id, [])
+            elapsed_seconds = (
+                round(sum(measured_ms) / 1000, 3)
+                if measured_ms
+                else _workflow_job_elapsed_seconds(row[7], row[8])
+            )
+            if elapsed_seconds == 0:
+                elapsed_seconds = None
+            if elapsed_seconds is None:
+                briefing_duration_complete = False
+            else:
+                briefing_valid_multireport_execution_seconds.append(elapsed_seconds)
+
+    signal_manifest_hashes: list[str] = []
+    signal_manifest_readback_count = 0
+    signal_manifest_replay_count = 0
+    signal_manifest_mutation_preserved = False
+    signal_manifest_mutation_probe_count = 0
+    signal_manifest_mutation_verified_count = 0
+    single_source_group_count = 0
+    single_source_hold_count = 0
+    single_source_unsafe_count = 0
+    signal_multireport_group_count = 0
+    signal_hold_reason_counts: dict[str, int] = {}
+    signal_path = Path(signal_store_db)
+    if signal_path.is_file():
+        with sqlite3.connect(signal_path) as conn:
+            table_exists = conn.execute(
+                """SELECT 1 FROM sqlite_master
+                WHERE type='table' AND name='signal_candidate_manifests'"""
+            ).fetchone()
+            manifest_rows = (
+                conn.execute(
+                    """SELECT manifest_sha256,extraction_request_id,group_id
+                    FROM signal_candidate_manifests ORDER BY manifest_sha256"""
+                ).fetchall()
+                if table_exists
+                else []
+            )
+        for manifest_hash, extraction_request_id, group_id in manifest_rows:
+            manifest_hash = str(manifest_hash)
+            signal_manifest_hashes.append(manifest_hash)
+            request = SignalCandidateReadRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=signal_store_db,
+                manifest_sha256=manifest_hash,
+                extraction_request_id=str(extraction_request_id),
+                group_ids=[str(group_id)],
+            )
+            snapshot = read_signal_candidates(request, ctx)
+            replayed_snapshot = read_signal_candidates(request, ctx)
+            if (
+                snapshot.manifest_sha256 != manifest_hash
+                or len(snapshot.groups) != 1
+                or snapshot.candidates != replayed_snapshot.candidates
+                or snapshot.groups != replayed_snapshot.groups
+                or replayed_snapshot.manifest_sha256 != manifest_hash
+            ):
+                continue
+            signal_manifest_readback_count += 1
+            signal_manifest_replay_count += 1
+            group = snapshot.groups[0]
+            source_count = len(set(group.source_report_ids))
+            if source_count == 1:
+                single_source_group_count += 1
+                if (
+                    group.publication_status == "held"
+                    and group.publication_hold_reason == "signal_grounding_insufficient"
+                ):
+                    single_source_hold_count += 1
+                    signal_hold_reason_counts["signal_grounding_insufficient"] = (
+                        signal_hold_reason_counts.get(
+                            "signal_grounding_insufficient", 0
+                        )
+                        + 1
+                    )
+                else:
+                    single_source_unsafe_count += 1
+            elif source_count >= 2:
+                signal_multireport_group_count += 1
+        signal_manifest_mutation_probe_count = len(manifest_rows)
+        for manifest_hash, extraction_request_id, group_id in manifest_rows:
+            signal_manifest_mutation_verified_count += int(
+                _verify_signal_manifest_immutable(
+                    signal_store_db=signal_store_db,
+                    manifest_hash=str(manifest_hash),
+                    extraction_request_id=str(extraction_request_id),
+                    group_id=str(group_id),
+                    ctx=ctx,
+                )
+            )
+        signal_manifest_mutation_preserved = bool(manifest_rows) and (
+            signal_manifest_mutation_verified_count
+            == signal_manifest_mutation_probe_count
+        )
+
+    cross_job_ids = [
+        str(row[0])
+        for row in job_rows
+        if str(row[1]) in _CROSS_REPORT_QUEUE_NAMES
+        or (
+            str(row[1]) in _CROSS_REPORT_DESCENDANT_QUEUE_NAMES
+            and (
+                str(row[3]) in {"briefing", "signal"}
+                or str(row[1]) == "wordpress_projection"
+            )
+        )
+    ]
+    usage = _read_workflow_job_usage(usage_db_path, cross_job_ids)
+    briefing_usage = _read_workflow_job_usage(
+        usage_db_path, briefing_valid_multireport_job_ids
+    )
+    briefing_execution_seconds = (
+        round(sum(briefing_valid_multireport_execution_seconds), 3)
+        if briefing_duration_complete
+        and briefing_valid_multireport_count > 0
+        and len(briefing_valid_multireport_execution_seconds)
+        == briefing_valid_multireport_count
+        else None
+    )
+    briefing_generation_success_count = sum(
+        1 for row in briefing_generation_rows if str(row[2]) == "succeeded"
+    )
+    return {
+        "enabled": True,
+        "queue_terminal": queue_terminal,
+        "queue_terminal_failure_count": terminal_failure_count,
+        "queue_expected_policy_hold_count": expected_publication_policy_hold_count,
+        "queue_unclassified_terminal_failure_count": (
+            unclassified_terminal_failure_count
+        ),
+        "queue_nonterminal_outbox_count": outbox_nonterminal_count,
+        "queue_dead_letter_outbox_count": outbox_dead_letter_count,
+        "job_status_counts": job_status_counts,
+        "briefing_generation_success_count": briefing_generation_success_count,
+        "briefing_validated_multireport_count": briefing_valid_multireport_count,
+        "briefing_validated_multireport_execution_seconds": (
+            briefing_execution_seconds
+        ),
+        "briefing_validated_multireport_provider_usage": briefing_usage,
+        "signal_manifest_count": len(signal_manifest_hashes),
+        "signal_manifest_hashes": signal_manifest_hashes,
+        "signal_manifest_readback_verified_count": signal_manifest_readback_count,
+        "signal_manifest_replay_verified_count": signal_manifest_replay_count,
+        "signal_manifest_mutation_probe_count": signal_manifest_mutation_probe_count,
+        "signal_manifest_mutation_verified_count": (
+            signal_manifest_mutation_verified_count
+        ),
+        "signal_manifest_mutation_probe_scope": "every_manifest",
+        "signal_manifest_mutation_preserved": signal_manifest_mutation_preserved,
+        "signal_single_source_group_count": single_source_group_count,
+        "signal_single_source_insufficient_grounding_hold_count": (
+            single_source_hold_count
+        ),
+        "signal_single_source_unsafe_group_count": single_source_unsafe_count,
+        "signal_multireport_group_count": signal_multireport_group_count,
+        "signal_hold_reason_counts": signal_hold_reason_counts,
+        "signal_or_briefing_publication_job_count": len(
+            signal_or_briefing_publication_rows
+        ),
+        "signal_or_briefing_publication_status_counts": (
+            signal_or_briefing_publication_status_counts
+        ),
+        "signal_or_briefing_publication_policy_hold_count": (
+            expected_publication_policy_hold_count
+        ),
+        "signal_or_briefing_publication_unexpected_job_count": (
+            len(signal_or_briefing_publication_rows)
+            - expected_publication_policy_hold_count
+        ),
+        "provider_usage": usage,
+    }
+
+
+def _json_string_set(raw: object) -> set[str]:
+    try:
+        values = json.loads(str(raw or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return set()
+    if not isinstance(values, list):
+        return set()
+    return {str(value).strip() for value in values if str(value).strip()}
+
+
+def _workflow_job_elapsed_seconds(
+    started_at: object, completed_at: object
+) -> float | None:
+    if not str(started_at or "").strip() or not str(completed_at or "").strip():
+        return None
+    try:
+        started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+        completed = datetime.fromisoformat(str(completed_at).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    if completed.tzinfo is None:
+        completed = completed.replace(tzinfo=timezone.utc)
+    elapsed = (completed - started).total_seconds()
+    return round(elapsed, 3) if elapsed >= 0 else None
+
+
+def _read_workflow_job_usage(usage_db_path: str, job_ids: list[str]) -> dict[str, Any]:
+    if not job_ids or not Path(usage_db_path).is_file():
+        return {
+            "provider_calls": 0,
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "tool_calls": 0,
+            "estimated_cost_usd": None,
+            "pricing_status_counts": {},
+            "unpriced_provider_call_count": 0,
+            "cost_available": False,
+        }
+    marks = ",".join("?" for _ in job_ids)
+    task_ids = tuple(f"workflow_job:{job_id}" for job_id in job_ids)
+    with sqlite3.connect(usage_db_path) as conn:
+        columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(llm_usage_events)")
+        }
+        row = conn.execute(
+            f"""SELECT COUNT(*),COALESCE(SUM(input_tokens),0),
+                       COALESCE(SUM(cached_input_tokens),0),
+                       COALESCE(SUM(output_tokens),0),COALESCE(SUM(tool_calls),0),
+                       COALESCE(SUM(estimated_cost_usd),0.0)
+                FROM llm_usage_events WHERE task_id IN ({marks})""",
+            task_ids,
+        ).fetchone()
+        pricing_status_counts: dict[str, int] = {}
+        if "pricing_status" in columns:
+            pricing_rows = conn.execute(
+                f"""SELECT pricing_status, COUNT(*)
+                    FROM llm_usage_events WHERE task_id IN ({marks})
+                    GROUP BY pricing_status""",
+                task_ids,
+            ).fetchall()
+            pricing_status_counts = {
+                str(status or "unknown").strip().lower(): int(count)
+                for status, count in pricing_rows
+            }
+        elif int(row[0]):
+            pricing_status_counts = {"unknown": int(row[0])}
+    priced_statuses = {"matched", "alias_matched"}
+    unpriced_provider_calls = sum(
+        count
+        for status, count in pricing_status_counts.items()
+        if status not in priced_statuses
+    )
+    cost_available = int(row[0]) > 0 and unpriced_provider_calls == 0
+    return {
+        "provider_calls": int(row[0]),
+        "input_tokens": int(row[1]),
+        "cached_input_tokens": int(row[2]),
+        "output_tokens": int(row[3]),
+        "tool_calls": int(row[4]),
+        "estimated_cost_usd": round(float(row[5]), 6) if cost_available else None,
+        "pricing_status_counts": pricing_status_counts,
+        "unpriced_provider_call_count": unpriced_provider_calls,
+        "cost_available": cost_available,
+    }
+
+
+def _read_report_usage_summary(
+    *, usage_db_path: str, run_id: str, report_id: str
+) -> dict[str, Any] | None:
+    """Read provider totals attributed to one report in the isolated run."""
+
+    path = Path(usage_db_path)
+    if not path.is_file() or not run_id.strip() or not report_id.strip():
+        return None
+    try:
+        with closing(sqlite3.connect(path)) as conn:
+            columns = {
+                str(row[1])
+                for row in conn.execute("PRAGMA table_info(llm_usage_events)")
+            }
+            required = {
+                "run_id",
+                "report_id",
+                "input_tokens",
+                "cached_input_tokens",
+                "output_tokens",
+                "tool_calls",
+                "estimated_cost_usd",
+            }
+            if not required.issubset(columns):
+                return None
+            row = conn.execute(
+                """SELECT COUNT(*),COALESCE(SUM(input_tokens),0),
+                          COALESCE(SUM(cached_input_tokens),0),
+                          COALESCE(SUM(output_tokens),0),
+                          COALESCE(SUM(tool_calls),0),
+                          COALESCE(SUM(estimated_cost_usd),0.0)
+                   FROM llm_usage_events WHERE run_id=? AND report_id=?""",
+                (run_id, report_id),
+            ).fetchone()
+            pricing_status_counts: dict[str, int] = {}
+            if "pricing_status" in columns:
+                pricing_rows = conn.execute(
+                    """SELECT pricing_status,COUNT(*) FROM llm_usage_events
+                       WHERE run_id=? AND report_id=? GROUP BY pricing_status""",
+                    (run_id, report_id),
+                ).fetchall()
+                pricing_status_counts = {
+                    str(status or "unknown").strip().lower(): int(count)
+                    for status, count in pricing_rows
+                }
+            elif int(row[0]):
+                pricing_status_counts = {"unknown": int(row[0])}
+    except sqlite3.Error:
+        return None
+    priced_statuses = {"matched", "alias_matched"}
+    unpriced_provider_calls = sum(
+        count
+        for status, count in pricing_status_counts.items()
+        if status not in priced_statuses
+    )
+    cost_available = int(row[0]) > 0 and unpriced_provider_calls == 0
+    return {
+        "provider_calls": int(row[0]),
+        "input_tokens": int(row[1]),
+        "cached_input_tokens": int(row[2]),
+        "output_tokens": int(row[3]),
+        "tool_calls": int(row[4]),
+        "estimated_cost_usd": round(float(row[5]), 6) if cost_available else None,
+        "pricing_status_counts": pricing_status_counts,
+        "unpriced_provider_call_count": unpriced_provider_calls,
+        "cost_available": cost_available,
+    }
+
+
+def _read_report_core_duration(
+    *, state_db: str, report_id: str, root_workflow_id: str
+) -> dict[str, Any]:
+    """Measure source-ingest start through this report's final core stage."""
+
+    unavailable = {
+        "core_processing_duration_seconds": None,
+        "core_processing_duration_scope": "unavailable",
+    }
+    path = Path(state_db)
+    if not path.is_file() or not report_id.strip() or not root_workflow_id.strip():
+        return unavailable
+    marks = ",".join("?" for _ in _FROZEN_REPORT_QUEUE_STAGES)
+    try:
+        with closing(sqlite3.connect(path)) as conn:
+            rows = conn.execute(
+                """SELECT queue_name,status,started_at_utc,completed_at_utc
+                   FROM workflow_jobs WHERE root_workflow_id=? AND report_id=?
+                     AND queue_name IN ("""
+                + marks
+                + ")",
+                (root_workflow_id, report_id, *_FROZEN_REPORT_QUEUE_STAGES),
+            ).fetchall()
+    except sqlite3.Error:
+        return unavailable
+    ingest_starts = [
+        parsed
+        for queue, _, started, _ in rows
+        if str(queue) == "source_ingest"
+        and (parsed := _parse_telemetry_time(str(started or ""))) is not None
+    ]
+    completions = [
+        (str(queue), str(status), parsed)
+        for queue, status, _, completed in rows
+        if (parsed := _parse_telemetry_time(str(completed or ""))) is not None
+    ]
+    if not ingest_starts or not completions:
+        return unavailable
+    started_at = min(ingest_starts)
+    finished_at = max(item[2] for item in completions)
+    elapsed = (finished_at - started_at).total_seconds()
+    if elapsed < 0:
+        return unavailable
+    is_complete = any(
+        queue == "publication_readiness" and status == "succeeded"
+        for queue, status, _ in completions
+    )
+    return {
+        "core_processing_duration_seconds": round(elapsed, 3),
+        "core_processing_duration_scope": "complete" if is_complete else "partial",
+    }
+
+
+def _sum_member_metric(results: list[dict[str, Any]], field: str) -> int | float | None:
+    values = [result.get(field) for result in results]
+    if not values or any(
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(float(value))
+        for value in values
+    ):
+        return None
+    total = sum(values)
+    return (
+        round(float(total), 6)
+        if any(isinstance(value, float) for value in values)
+        else int(total)
+    )
+
+
+def _verify_signal_manifest_immutable(
+    *,
+    signal_store_db: str,
+    manifest_hash: str,
+    extraction_request_id: str,
+    group_id: str,
+    ctx,
+) -> bool:
+    """Prove a changed current view cannot alter an existing frozen manifest."""
+
+    source_path = Path(signal_store_db)
+    with tempfile.TemporaryDirectory(
+        prefix="signal-manifest-mutation-", dir=source_path.parent
+    ) as temp_root:
+        isolated_db = str(Path(temp_root) / "signals.sqlite")
+        with (
+            closing(sqlite3.connect(source_path)) as source_conn,
+            closing(sqlite3.connect(isolated_db)) as copy_conn,
+        ):
+            source_conn.backup(copy_conn)
+        request = SignalCandidateReadRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=isolated_db,
+            manifest_sha256=manifest_hash,
+            extraction_request_id=extraction_request_id,
+            group_ids=[group_id],
+        )
+        original = read_signal_candidates(request, ctx)
+        if len(original.groups) != 1 or not original.candidates:
+            return False
+        changed_summary = "Mutation probe for isolated frozen-manifest verification."
+        changed_candidates = [
+            replace(candidate, summary=changed_summary)
+            for candidate in original.candidates
+        ]
+        changed_groups = [
+            replace(group, summary=changed_summary) for group in original.groups
+        ]
+        changed = upsert_signal_candidates(
+            SignalCandidateStoreRequest(
+                schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+                db_path=isolated_db,
+                extraction_request_id=extraction_request_id,
+                candidates=changed_candidates,
+                groups=changed_groups,
+            ),
+            ctx,
+        )
+        replayed = read_signal_candidates(request, ctx)
+        return bool(
+            changed.manifest_hashes.get(group_id) != manifest_hash
+            and replayed.manifest_sha256 == manifest_hash
+            and replayed.candidates == original.candidates
+            and replayed.groups == original.groups
+        )
 
 
 def _queue_terminal_state(
@@ -1416,9 +2484,26 @@ def _queue_terminal_state(
             """,
             (report_id, root_workflow_id),
         ).fetchone()
-        if readiness and str(readiness[0]) == "awaiting_review":
-            return "awaiting_review"
         if readiness:
+            readiness_status = str(readiness[0])
+            if readiness_status == "awaiting_review":
+                return "awaiting_review"
+            if readiness_status == "approved":
+                published = conn.execute(
+                    "SELECT 1 FROM published WHERE file_id=? LIMIT 1",
+                    (report_id,),
+                ).fetchone()
+                if published:
+                    return "published"
+                failed_publish = conn.execute(
+                    """SELECT 1 FROM workflow_jobs
+                    WHERE report_id=? AND root_workflow_id=?
+                      AND queue_name='wordpress_publish'
+                      AND status IN ('dead_letter','blocked','cancelled')
+                    LIMIT 1""",
+                    (report_id, root_workflow_id),
+                ).fetchone()
+                return "failed" if failed_publish else "publishing"
             return "failed"
         failure = conn.execute(
             """
@@ -1465,11 +2550,11 @@ def _read_result(
                 """
                 SELECT 1 FROM workflow_job_transitions AS transition
                 JOIN workflow_jobs AS job ON job.job_id=transition.job_id
-                WHERE job.root_workflow_id=?
+                WHERE job.root_workflow_id=? AND job.report_id=?
                   AND transition.reason IN ('operator_requeue','queue-requeue')
                 LIMIT 1
                 """,
-                (root_workflow_id,),
+                (root_workflow_id, report_id),
             ).fetchone()
         )
         workflow_retry_count = int(
@@ -1491,6 +2576,51 @@ def _read_result(
             """,
             (report_id, root_workflow_id),
         ).fetchone()
+        published_post = conn.execute(
+            "SELECT wp_post_id,post_type FROM published WHERE file_id=? LIMIT 1",
+            (report_id,),
+        ).fetchone()
+        idempotency_table_exists = conn.execute(
+            """SELECT 1 FROM sqlite_master
+            WHERE type='table' AND name='orchestrator_idempotency'"""
+        ).fetchone()
+        publication_outcome_row = (
+            conn.execute(
+                """
+                SELECT outcome_json FROM orchestrator_idempotency
+                WHERE scope='publish_orchestrator.publish_html'
+                  AND idempotency_key=?
+                """,
+                (f"{str(published_post[1]) if published_post else ''}:{report_id}",),
+            ).fetchone()
+            if idempotency_table_exists
+            else None
+        )
+        publication_job_rows = conn.execute(
+            """
+            SELECT job.status,COUNT(attempt.attempt_id)
+            FROM workflow_jobs AS job
+            LEFT JOIN workflow_job_attempts AS attempt ON attempt.job_id=job.job_id
+            WHERE job.queue_name='wordpress_publish'
+              AND job.report_id=? AND job.root_workflow_id=?
+            GROUP BY job.job_id
+            """,
+            (report_id, root_workflow_id),
+        ).fetchall()
+    publication_outcome: dict[str, Any] | None = None
+    if publication_outcome_row is not None:
+        try:
+            decoded_outcome = json.loads(publication_outcome_row[0])
+            if isinstance(decoded_outcome, dict):
+                publication_outcome = decoded_outcome
+        except (TypeError, json.JSONDecodeError):
+            publication_outcome = None
+    publication_workflow_status = (
+        str(publication_job_rows[0][0]) if len(publication_job_rows) == 1 else ""
+    )
+    publication_workflow_attempt_count = (
+        int(publication_job_rows[0][1]) if len(publication_job_rows) == 1 else 0
+    )
     with sqlite3.connect(settings.reports_db) as conn:
         attempts = int(
             conn.execute(
@@ -1533,16 +2663,16 @@ def _read_result(
                 ).fetchone()[0]
             )
     readiness_payload = _read_readiness_payload(readiness_job)
-    usage = read_usage_run_summary(
-        LLMUsageRunSummaryRequest(
-            schema_version="1.0",
-            db_path=settings.usage_db_path,
-            run_id=root_workflow_id,
-        ),
-        ctx,
+    usage = _read_report_usage_summary(
+        usage_db_path=settings.usage_db_path,
+        run_id=root_workflow_id,
+        report_id=report_id,
     )
-    file_search_calls = _read_usage_tool_call_count(
-        usage_db_path=settings.usage_db_path, run_id=root_workflow_id
+    usage_metrics = usage or {}
+    core_duration = _read_report_core_duration(
+        state_db=settings.state_db,
+        report_id=report_id,
+        root_workflow_id=root_workflow_id,
     )
     validation_pass = report_validation_passed(
         Path(settings.output_dir), source_path, report_id=report_id, ctx=ctx
@@ -1555,7 +2685,7 @@ def _read_result(
     )
     terminal_failure = ""
     final_state = status
-    if status != "awaiting_review":
+    if status not in {"awaiting_review", "published"}:
         # A bounded supervisor drain cannot leave a submitted member in a
         # non-terminal result. Preserve an observed queue failure when present;
         # otherwise make the elapsed bound explicit and typed.
@@ -1574,10 +2704,22 @@ def _read_result(
         else {}
     )
     report_output_dir = Path(settings.output_dir) / slugify(source_path.name)
+    publication_evidence = _wordpress_publication_evidence(
+        publication_outcome=publication_outcome,
+        workflow_status=publication_workflow_status,
+        workflow_attempt_count=publication_workflow_attempt_count,
+        wordpress_post_id=int(published_post[0]) if published_post else None,
+        expected_file_id=report_id,
+        expected_post_type=str(published_post[1]) if published_post else "",
+    )
     return {
         "workflow_attempt_count": attempts,
         "final_state": final_state,
         "awaiting_review": final_state == "awaiting_review",
+        "published": final_state == "published",
+        "wordpress_post_id": int(published_post[0]) if published_post else None,
+        "wordpress_post_type": str(published_post[1]) if published_post else "",
+        **publication_evidence,
         "bounded_automatic_repair": (
             automatic_repair_count > 0
             or workflow_retry_count > 0
@@ -1598,14 +2740,130 @@ def _read_result(
         "unresolved_retained_factual_claims": (
             retained_claim_counts[1] if retained_claim_counts is not None else None
         ),
-        "model_provider_calls": usage.call_count,
-        "file_search_calls": file_search_calls,
-        "input_tokens": usage.input_tokens,
-        "output_tokens": usage.output_tokens,
-        "cost": usage.estimated_cost_usd,
+        "model_provider_calls": usage_metrics.get("provider_calls"),
+        "file_search_calls": usage_metrics.get("tool_calls"),
+        "input_tokens": usage_metrics.get("input_tokens"),
+        "output_tokens": usage_metrics.get("output_tokens"),
+        "cost": usage_metrics.get("estimated_cost_usd"),
+        "cost_attribution_available": bool(usage_metrics.get("cost_available", False)),
+        "metric_attribution": (
+            "canonical_run_and_report_id" if usage is not None else "unavailable"
+        ),
+        **core_duration,
         "terminal_failure_code": terminal_failure,
         **({"failure_diagnostic": failure_diagnostic} if failure_diagnostic else {}),
     }
+
+
+def _replay_completed_wordpress_jobs(
+    *, state_db: str, root_workflow_id: str, report_ids: tuple[str, ...], ctx
+) -> dict[str, Any]:
+    """Repeat completed durable submissions and prove they cause no new write."""
+
+    if not report_ids:
+        return {"status": "not_run", "reason": "no_report_ids"}
+    marks = ",".join("?" for _ in report_ids)
+    with sqlite3.connect(state_db) as conn:
+        job_rows = conn.execute(
+            """SELECT job_id,status,attempt_count FROM workflow_jobs
+            WHERE queue_name='wordpress_publish' AND root_workflow_id=?
+              AND report_id IN ("""
+            + marks
+            + ") ORDER BY job_id",
+            (root_workflow_id, *report_ids),
+        ).fetchall()
+    completed = [row for row in job_rows if str(row[1]) == "succeeded"]
+    before_publications = _published_snapshot(state_db, report_ids)
+    replayed_job_ids: list[str] = []
+    same_job_count = 0
+    created_job_count = 0
+    for job_id, _, _ in completed:
+        job = get_workflow_job(state_db, str(job_id), ctx)
+        if job is None or job.status != "succeeded":
+            continue
+        duplicate, created = enqueue_workflow_job(
+            state_db,
+            WorkflowJobSubmission(
+                schema_version=job.schema_version,
+                queue_name=job.queue_name,
+                job_type=job.job_type,
+                payload=load_workflow_job_payload(job),
+                idempotency_key=job.idempotency_key,
+                deduplication_scope=job.deduplication_scope,
+                workflow_version=job.workflow_version,
+                root_workflow_id=job.root_workflow_id,
+                parent_job_id=job.parent_job_id,
+                trigger_event_id=job.trigger_event_id,
+                correlation_id=job.correlation_id,
+                entity_type=job.entity_type,
+                entity_id=job.entity_id,
+                publisher_id=job.publisher_id,
+                source_identity_id=job.source_identity_id,
+                report_id=job.report_id,
+                priority=job.priority,
+                max_attempts=job.max_attempts,
+                budget_profile=job.budget_profile,
+                execution_plan_hash=job.execution_plan_hash,
+            ),
+            ctx,
+        )
+        created_job_count += int(created)
+        if duplicate.job_id == job.job_id:
+            same_job_count += 1
+            replayed_job_ids.append(job.job_id)
+    after_publications = _published_snapshot(state_db, report_ids)
+    with sqlite3.connect(state_db) as conn:
+        after_attempts = conn.execute(
+            """SELECT job_id,status,attempt_count FROM workflow_jobs
+            WHERE queue_name='wordpress_publish' AND root_workflow_id=?
+              AND report_id IN ("""
+            + marks
+            + ") ORDER BY job_id",
+            (root_workflow_id, *report_ids),
+        ).fetchall()
+    attempt_counts_unchanged = [
+        (str(row[0]), str(row[1]), int(row[2])) for row in job_rows
+    ] == [(str(row[0]), str(row[1]), int(row[2])) for row in after_attempts]
+    publication_rows_unchanged = before_publications == after_publications
+    status = (
+        "verified"
+        if completed
+        and len(completed) == len(before_publications)
+        and len(replayed_job_ids) == len(completed)
+        and created_job_count == 0
+        and attempt_counts_unchanged
+        and publication_rows_unchanged
+        else "not_run"
+        if not completed
+        else "failed"
+    )
+    return {
+        "status": status,
+        "completed_publication_jobs": len(completed),
+        "first_attempt_publication_jobs": sum(int(row[2]) == 1 for row in completed),
+        "duplicate_submissions": len(replayed_job_ids),
+        "same_job_ids": same_job_count == len(completed),
+        "created_duplicate_jobs": created_job_count,
+        "attempt_counts_unchanged": attempt_counts_unchanged,
+        "published_rows_unchanged": publication_rows_unchanged,
+        "wordpress_post_ids": [row[1] for row in before_publications],
+        "additional_wordpress_writes": (0 if status == "verified" else None),
+    }
+
+
+def _published_snapshot(
+    state_db: str, report_ids: tuple[str, ...]
+) -> list[tuple[str, int, str]]:
+    if not report_ids:
+        return []
+    marks = ",".join("?" for _ in report_ids)
+    with sqlite3.connect(state_db) as conn:
+        rows = conn.execute(
+            f"SELECT file_id,wp_post_id,post_type FROM published "
+            f"WHERE file_id IN ({marks}) ORDER BY file_id",
+            report_ids,
+        ).fetchall()
+    return [(str(row[0]), int(row[1]), str(row[2])) for row in rows]
 
 
 def _read_failure_diagnostic(
@@ -1927,21 +3185,6 @@ def _read_retained_claim_counts(
     )
 
 
-def _read_usage_tool_call_count(*, usage_db_path: str, run_id: str) -> int:
-    """Read existing provider tool calls from the canonical LLM usage ledger."""
-
-    if not Path(usage_db_path).is_file():
-        return 0
-    with sqlite3.connect(usage_db_path) as conn:
-        return int(
-            conn.execute(
-                "SELECT COALESCE(SUM(tool_calls),0) "
-                "FROM llm_usage_events WHERE run_id=?",
-                (run_id,),
-            ).fetchone()[0]
-        )
-
-
 def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
     del started_at
     return {
@@ -1955,6 +3198,11 @@ def _empty_result(run: IsolatedCanaryRun, started_at: float) -> dict[str, Any]:
         "isolated_fresh_state": True,
         "final_state": "failed",
         "awaiting_review": False,
+        "published": False,
+        "wordpress_post_id": None,
+        "wordpress_post_type": "",
+        "wordpress_created_this_run": False,
+        "wordpress_authenticated_readback": False,
         "bounded_automatic_repair": False,
         "operator_intervention": False,
         "publication_readiness": "fail",
@@ -1984,7 +3232,7 @@ def _finish_frozen_cohort_results(
 
     duration = round(time.monotonic() - started_at, 3)
     for result in results:
-        if result["final_state"] not in {"awaiting_review", "failed"}:
+        if result["final_state"] not in {"awaiting_review", "published", "failed"}:
             result["final_state"] = "failed"
         if result["final_state"] == "failed" and not result["terminal_failure_code"]:
             result["terminal_failure_code"] = "frozen_cohort_terminal_outcome_missing"
@@ -2059,7 +3307,7 @@ def summarize_frozen_cohort_results(
         for item in results
         if str(item.get("terminal_failure_code") or "")
     ]
-    terminal_states = {"awaiting_review", "failed"}
+    terminal_states = {"awaiting_review", "published", "failed"}
     missing_terminal_report_ids = sorted(
         str(item.get("report_id") or "")
         for item in results
@@ -2080,6 +3328,15 @@ def summarize_frozen_cohort_results(
             for item in admitted
         )
         / workflow_denominator,
+        "published_report_count": sum(
+            item.get("final_state") == "published" for item in admitted
+        ),
+        "first_attempt_published_rate": sum(
+            item.get("final_state") == "published"
+            and int(item.get("workflow_attempt_count") or 1) == 1
+            for item in admitted
+        )
+        / workflow_denominator,
         "publication_readiness_rate": sum(
             item.get("publication_readiness") == "pass" for item in admitted
         )
@@ -2089,11 +3346,12 @@ def summarize_frozen_cohort_results(
         )
         / workflow_denominator,
         "workflow_failure_rate": sum(
-            item.get("final_state") != "awaiting_review" for item in admitted
+            item.get("final_state") not in {"awaiting_review", "published"}
+            for item in admitted
         )
         / workflow_denominator,
         "typed_terminal_rate": sum(
-            item.get("final_state") in {"awaiting_review", "failed"}
+            item.get("final_state") in {"awaiting_review", "published", "failed"}
             for item in admitted
         )
         / workflow_denominator,
@@ -2117,8 +3375,12 @@ def summarize_frozen_cohort_results(
         ),
     }
     if cohort_metrics is not None:
+        report_attribution_modes = {
+            "per_report_isolated_workflow",
+            "canonical_run_and_report_id",
+        }
         per_report_attribution = bool(results) and all(
-            item.get("metric_attribution") == "per_report_isolated_workflow"
+            item.get("metric_attribution") in report_attribution_modes
             for item in results
         )
         summary.update(
@@ -2133,6 +3395,11 @@ def summarize_frozen_cohort_results(
                 ),
                 "cohort_input_tokens": cohort_metrics.get("input_tokens"),
                 "cohort_output_tokens": cohort_metrics.get("output_tokens"),
+                "per_report_metric_scope": (
+                    "report_scoped_excludes_shared_handoffs"
+                    if per_report_attribution
+                    else "unavailable"
+                ),
                 "bounded_repair_rate": (
                     summary["bounded_repair_rate"]
                     if per_report_attribution

@@ -12,9 +12,8 @@ text: |
     Never replace a whole insight, metric, quote, or other object.
   - Return each replacement directly in `value` as a string scalar. Do not
     encode JSON inside the string or return an object or array.
-  - `evidence_ids_used` contains only retained `relevant_evidence` IDs that
-    support this patch. Exclude quarantined IDs. Failed/current/rejected copy
-    and retry memory are diagnostic only, never evidence.
+  - Cite only supporting IDs from `repair_context_json.allowed_evidence_ids`.
+    Failed/current/rejected copy and retry memory are diagnostic, never evidence.
   - Return replacement public text and retained evidence IDs only. Do not
     provide provenance, claim classifications, spans, or pages; the generator
     carries forward claim classification and builds canonical provenance.

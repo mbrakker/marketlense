@@ -213,6 +213,32 @@ def test_core_signal_prefers_market_evidence_over_report_annotation() -> None:
     assert "documents nine foundational" not in signal["body"]
 
 
+def test_core_signal_preserves_selected_insight_order_over_lexical_markers() -> None:
+    selected = {
+        "id": "ai-referrals",
+        "evidence_id": "finding-ai-referrals",
+        "text": (
+            "AI answer engines divert readers from publisher sites, weakening "
+            "referral traffic."
+        ),
+    }
+    later = {
+        "id": "revenue-models",
+        "evidence_id": "finding-revenue-models",
+        "text": "Revenue growth is changing across the media market.",
+    }
+
+    signal = _build_core_signal(
+        tldr_text="",
+        executive_summary="",
+        insights=[selected, later],
+    )
+
+    assert signal["body"] == selected["text"]
+    assert signal["insight_id"] == selected["id"]
+    assert signal["evidence_id"] == selected["evidence_id"]
+
+
 def test_core_signal_derives_a_short_heading_from_a_long_strategic_claim() -> None:
     signal = _build_core_signal(
         tldr_text="",
@@ -464,9 +490,10 @@ def test_core_signal_heading_preserves_iab_between_coordination() -> None:
     )
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
 
-    assert _core_signal_heading(fixture["core_signal_source"]) == fixture[
-        "expected_core_signal_heading"
-    ]
+    assert (
+        _core_signal_heading(fixture["core_signal_source"])
+        == fixture["expected_core_signal_heading"]
+    )
 
 
 def test_core_signal_heading_keeps_noun_lists_at_clause_boundaries() -> None:
@@ -584,8 +611,7 @@ def test_render_sanitizer_removes_editorial_labels_without_hiding_prose() -> Non
 
 def test_render_sanitizer_preserves_quarterly_and_half_year_periods() -> None:
     text = (
-        "Share moved from 43% in Q1 2025 to 41% in Q2 2025 and from H1 2025 "
-        "to H2 2025."
+        "Share moved from 43% in Q1 2025 to 41% in Q2 2025 and from H1 2025 to H2 2025."
     )
 
     assert _sanitize_public_prose(text) == text
@@ -612,9 +638,7 @@ def test_core_signal_preserves_distinct_quarterly_periods() -> None:
     signal = _build_core_signal(
         tldr_text="",
         executive_summary="",
-        insights=[
-            {"text": "Share moved from 43% in Q1 2025 to 41% in Q2 2025."}
-        ],
+        insights=[{"text": "Share moved from 43% in Q1 2025 to 41% in Q2 2025."}],
     )
 
     assert "Q1 2025" in signal["body"]

@@ -7,6 +7,7 @@ schema_snippets:
 text: |
   Context:
   - Editorial plan JSON: {{ editorial_plan_json }}
+  - Selected lead insight JSON: {{ selected_lead_insight_json }}
   - Evidence packs JSON: {{ evidence_json }}
   - DocMap JSON: {{ doc_map_json }}
 
@@ -18,25 +19,32 @@ text: |
     "summary": {
       "tldr": "<one complete sentence, target 20-30 words, maximum 45 words>",
       "card_tldr_compact": "<one complete sentence, maximum 18 words>",
-      "executive_summary": "<5-7 sentence executive summary grounded in evidence: lead with the answer, quantify the most important result or comparison when present, state an executive implication only when supported, then name the main caveat or limitation when present>",
+      "executive_summary": "<5-7 sentences grounded in evidence: open with the strongest direct finding and preserve its complete metric relationship when available; state only supported implications and caveats>",
       "claim_evidence_map": [
-        {"claim": "<concise claim>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
+        {"claim": "<non-empty claim string>", "evidence_id": "<single existing evidence id from findings/quotes/doc map>", "evidence": "<supporting excerpt or paraphrase>", "pages": [<page numbers if known>]}
       ]
     },
     "claim_provenance": [
       {"claim": "<material sentence quoted from tldr, card_tldr_compact, or executive_summary>", "classification": "factual|interpretive|recommendation", "evidence_ids": ["<existing evidence id>"]}
     ]
   }
-  `claim_provenance` is retained metadata only: cover every material sentence or claim from the public summary fields with one object per sentence or consecutive sentence group, quoting the covered text as your claim; minor punctuation differences are resolved mechanically. Use exact existing IDs, and never place IDs in public prose. A factual claim must have at least one evidence ID.
+  `claim_provenance` is retained metadata only. Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and `executive_summary` once. Copy each `claim` verbatim from the public sentence, including punctuation; do not combine or paraphrase sentences or omit any. Use exact existing IDs, keep IDs out of public prose, and give every factual binding at least one evidence ID.
   - Keep claims specific and tied to evidence identifiers present in the provided context.
-  - Inspect `evidence_json.findings` for a direct measure tied to the priority-one theme. Lead the executive summary with its figures, cohort, denominator, and period; bind it in `claim_evidence_map` and `claim_provenance`. If none exists, lead descriptively.
-  - Follow the editorial plan's report thesis and themes; do not introduce a competing thematic frame.
+  - If selected lead insight JSON is present, lead both TLDRs and the opening
+    executive_summary sentence with it. Preserve its subject, relationship,
+    values, period, and evidence ID; do not substitute an introductory
+    statistic or recommendation. If absent, use the strongest direct finding
+    or abstain when none is supportable.
+  - Use the plan only for coherence. Priority order or section summaries do not prove cross-section links or report-wide centrality.
   - Facts must stay within evidence. Non-contradictory interpretation may explain why a finding matters; advice may be conditional MarketLense guidance tied to it. Add no new factual premise, promised outcome, or false source attribution.
-  - Numbers require the linked finding's direct `evidence` excerpt to show and support the value and subject. Paraphrased `text` alone is insufficient; omit unsupported numbers and map the excerpt.
-  - State that a dataset represents or comes from a specific population only when retained evidence explicitly identifies that population as the dataset's subjects. A report topic, data owner, or section title does not establish the population. When the population is not explicit, describe what the data are used to discuss or measure instead of who they represent.
+  - A numeric claim must preserve each exact source value, metric/category,
+    subject, denominator, direction, and period as one linked relationship;
+    another value in the excerpt does not support reassignment. Split claims
+    from separate IDs; DocMap cannot fill gaps.
+  - State dataset population or methodology only when linked evidence says so; keep its wording and date range exact. Do not add qualifiers such as "primarily" or extend a performance-chart period to report coverage. A report topic or data owner does not establish population or coverage.
   - Classify source-derived factual statements as factual and MarketLense-authored recommendations as recommendation; never present a recommendation as a source claim.
-  - Lead with the executive answer; use a useful editorial perspective when
-    supported, without forcing action or promising an outcome.
+  - Never round exact source values or replace explicit periods with relative
+    timeframes. DocMap and the plan guide context, not evidence.
   - Include no more than one caveat, and only when the evidence explicitly supports it.
   - Author both TLDRs independently from the same evidence. The compact TLDR must not be a clipped prefix of the standard TLDR.
   - Target 20-30 words for `tldr` (hard limit: 45). Use one simple complete sentence and exactly one terminal punctuation mark; never use an ellipsis or attach a second topic to fill space.
@@ -47,4 +55,4 @@ text: |
   - A claim containing a number, magnitude, superlative, requirement, or forecast must cite a direct `findings` or `quote_candidates` ID. Use a DocMap section ID only for descriptive, non-quantitative context; otherwise omit or soften the claim.
   - Keep each executive-summary sentence and each `claim_evidence_map` item to one proposition supported by its linked evidence ID. Do not combine unrelated sections or topics in one sentence or map item. Use a section summary only for a descriptive statement about that section, not to assert what is central to the full report.
   - Preserve per-group versus across-group scope exactly as stated in linked evidence.
-  - Keep the claim_evidence_map brief (3-5 items).
+  - Keep 3-5 claim-map items.

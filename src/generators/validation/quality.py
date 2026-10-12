@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from typing import Any, Iterable, List
 
+from src.contracts.soft_copy_claim_provenance import (
+    soft_copy_claim_provenance_from_payload,
+)
 from src.contracts.validation import ValidationIssue
 from src.generators.validation.models import ValidationRuntime
 from src.utils.coercion import string_value as _s
+from src.utils.errors import AppError
 
 RULE_ID = "artifact_quality"
 
@@ -28,11 +33,49 @@ _TECHNICAL_ALLOWLIST = (
     re.compile(r"\brobust (standard errors|regression|statistics|methodology)\b", re.I),
 )
 
-_CONCRETE_SIGNAL = re.compile(
+_GENERIC_COPY_SIGNAL = re.compile(
     r"(\d|%|\$|\b(revenue|margin|growth|demand|adoption|retention|cost|risk|"
     r"enterprise|merchant|consumer|retailer|publisher|operator|brand|market|"
     r"channel|payments|wallet|ai|cloud|supply|pricing)\b|[A-Z]{2,})",
     re.I,
+)
+_QUANTITATIVE_SIGNAL = re.compile(
+    r"(?:[$€£]\s*\d[\d,.]*(?:\s?(?:[KMB]|million|billion|trillion))?\b|"
+    r"\b\d[\d,.]*\s?(?:%|percent(?:age)?|GB|TB|MB|hours?|minutes?|"
+    r"days?|weeks?|months?|years?|points?|basis points?|downloads?|users?)\b|"
+    r"\b\d[\d,.]*\s+(?:thousand|million|billion|trillion)\b)",
+    re.IGNORECASE,
+)
+_QUANTITATIVE_METRIC_CONTEXT = re.compile(
+    r"\b(?:revenue|sales|download(?:s|ed|ing)?|installs?|sessions?|traffic|referrals?|"
+    r"conversions?|retention|churn|spending|spend|costs?|prices?|margins?|"
+    r"profits?|orders?|transactions?|market share|time spent|engagement|GDP)\b",
+    re.IGNORECASE,
+)
+_QUALITATIVE_ACTOR = re.compile(
+    r"\b(?:AI|advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
+    r"corporates?|creators?|developers?|households?|investors?|marketers?|"
+    r"merchants?|operators?|publishers?|retailers?|users?|apps?|games?|gaming|"
+    r"casino|slots?|installs?|sessions?|referrals?|traffic|pipelines?|"
+    r"carve[- ]?outs?)\b",
+    re.IGNORECASE,
+)
+_QUALITATIVE_RELATION = re.compile(
+    r"\b(?:account for|adopt|choose|constrain|decline(?:s|d|ing)?|depend|"
+    r"divert|drive|disrupt|erode|exceed|fall|fell|gain(?:s|ed|ing)?|"
+    r"generate|grow|grew|increase(?:s|d|ing)?|lead to|lose|outpace|prefer|"
+    r"push|raise(?:s|d|ing)?|reduce|redirect|reshape|rise|rose|shift|"
+    r"substitute|switch|trade off|weigh|while|whereas|rather than|"
+    r"instead of|more likely|less likely)\b",
+    re.IGNORECASE,
+)
+_QUALITATIVE_VALUE_VERB = re.compile(
+    r"\b(?:advertisers?|audiences?|brands?|buyers?|companies?|consumers?|"
+    r"corporates?|creators?|developers?|households?|investors?|marketers?|"
+    r"merchants?|operators?|publishers?|retailers?|users?)\s+"
+    r"(?:(?:also|can|increasingly|may|often|should|sometimes|will)\s+)?"
+    r"values?\b",
+    re.IGNORECASE,
 )
 
 
@@ -62,15 +105,70 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
                 )
             )
         first_sentence = _first_sentence(normalized)
-        if (
-            first_sentence
-            and not has_structured_category
-            and not _has_concrete_signal(first_sentence)
-        ):
+        if not first_sentence or has_structured_category:
+            continue
+        if path.startswith("summary."):
+            if _has_concrete_signal(first_sentence):
+                continue
+            stronger_evidence_id = _stronger_retained_insight_evidence_id(artifacts)
+            if not stronger_evidence_id:
+                continue
+            claim_id = _summary_opening_claim_id(
+                artifacts=artifacts,
+                path=path,
+                sentence=first_sentence,
+            )
             issues.append(
                 ValidationIssue(
                     schema_version="1.0",
-                    message="Generated copy opens without a concrete metric, category, actor, or implication.",
+                    message=(
+                        "Summary opening is broader than a retained source-supported "
+                        "finding."
+                    ),
+                    severity="warning",
+                    affected_section=path,
+                    rule_id=RULE_ID,
+                    repair_target="artifact_copy",
+                    entity_id=claim_id or path,
+                    evidence_ids=[stronger_evidence_id],
+                )
+            )
+            continue
+        if path == "insights_final[0].text":
+            if _has_concrete_signal(first_sentence):
+                continue
+            stronger_evidence_id = _stronger_retained_insight_evidence_id(
+                artifacts, start_index=1
+            )
+            if not stronger_evidence_id:
+                continue
+            insights = artifacts.get("insights_final")
+            lead = insights[0] if isinstance(insights, list) and insights else {}
+            lead_id = _s(lead.get("id")).strip() if isinstance(lead, dict) else ""
+            issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message=(
+                        "Core signal is broader than another retained "
+                        "source-supported insight."
+                    ),
+                    severity="warning",
+                    affected_section=path,
+                    rule_id=RULE_ID,
+                    repair_target="artifact_copy",
+                    entity_id=f"insight:{lead_id}:text" if lead_id else path,
+                    evidence_ids=[stronger_evidence_id],
+                )
+            )
+            continue
+        if not _has_generic_copy_signal(first_sentence):
+            issues.append(
+                ValidationIssue(
+                    schema_version="1.0",
+                    message=(
+                        "Generated copy opens without a concrete metric or specific "
+                        "qualitative relationship."
+                    ),
                     severity="warning",
                     affected_section=path,
                     rule_id=RULE_ID,
@@ -79,6 +177,54 @@ def run_artifact_quality_rule(runtime: ValidationRuntime) -> List[ValidationIssu
                 )
             )
     return issues
+
+
+def _stronger_retained_insight_evidence_id(
+    artifacts: dict, *, start_index: int = 0
+) -> str:
+    """Return the first specific, evidence-linked selected insight, if any."""
+
+    insights = artifacts.get("insights_final")
+    if not isinstance(insights, list):
+        return ""
+    for insight in insights[start_index:]:
+        if not isinstance(insight, dict):
+            continue
+        evidence_id = _s(insight.get("evidence_id")).strip()
+        evidence = _s(insight.get("evidence")).strip()
+        first_sentence = _first_sentence(_s(insight.get("text")).strip())
+        if (
+            evidence_id
+            and evidence
+            and first_sentence
+            and _has_concrete_signal(first_sentence)
+        ):
+            return evidence_id
+    return ""
+
+
+def _summary_opening_claim_id(*, artifacts: dict, path: str, sentence: str) -> str:
+    """Attribute a summary opening warning only to one exact retained claim."""
+
+    if path not in {
+        "summary.tldr",
+        "summary.card_tldr_compact",
+        "summary.executive_summary",
+    }:
+        return ""
+    try:
+        claims = soft_copy_claim_provenance_from_payload(
+            artifacts.get("soft_copy_claim_provenance")
+        )
+    except (AppError, TypeError, ValueError):
+        return ""
+    text_hash = hashlib.sha256(" ".join(sentence.split()).encode("utf-8")).hexdigest()
+    matches = [
+        claim
+        for claim in claims
+        if claim.artifact_family == "summary" and claim.text_hash == text_hash
+    ]
+    return matches[0].claim_id if len(matches) == 1 else ""
 
 
 def _artifact_copy_fields(artifacts: dict) -> Iterable[tuple[str, str, bool]]:
@@ -161,6 +307,24 @@ def _first_sentence(text: str) -> str:
 
 
 def _has_concrete_signal(sentence: str) -> bool:
+    if any(pattern.search(sentence) for pattern in _TECHNICAL_ALLOWLIST):
+        return True
+    if _QUANTITATIVE_SIGNAL.search(sentence) and _QUANTITATIVE_METRIC_CONTEXT.search(
+        sentence
+    ):
+        return True
+    return bool(
+        _QUALITATIVE_ACTOR.search(sentence)
+        and (
+            _QUALITATIVE_RELATION.search(sentence)
+            or _QUALITATIVE_VALUE_VERB.search(sentence)
+        )
+    )
+
+
+def _has_generic_copy_signal(sentence: str) -> bool:
+    """Preserve broad-copy checks outside summary leads."""
+
     if re.match(r"^(this report|the report|it)\b", sentence, flags=re.I):
         return False
-    return bool(_CONCRETE_SIGNAL.search(sentence))
+    return bool(_GENERIC_COPY_SIGNAL.search(sentence))

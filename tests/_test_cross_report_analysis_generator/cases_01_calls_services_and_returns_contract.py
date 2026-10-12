@@ -550,6 +550,36 @@ def test_generate_cross_report_analysis_rejects_empty_sections(
     )
 
 
+def test_generate_cross_report_analysis_marks_invalid_takeaway_count_retryable(
+    tmp_path,
+    run_context,
+    assert_app_error,
+) -> None:
+    evidence_inputs, signal_result, agreement_result = _analysis_inputs()
+    bad_payload = dict(FakeOpenAIClient().payload)
+    bad_payload["executive_takeaways"] = ["Preserve uncertainty when sources diverge."]
+
+    with pytest.raises(Exception) as exc:
+        generate_cross_report_analysis(
+            _request(),
+            evidence_inputs,
+            signal_result,
+            agreement_result,
+            _settings(tmp_path),
+            run_context,
+            prompt_client=FakePromptClient(),
+            openai_client=FakeOpenAIClient(bad_payload),
+        )
+
+    assert_app_error(
+        exc.value,
+        code="cross_report_analysis_output_invalid",
+        retryable=True,
+        severity="error",
+    )
+    assert exc.value.context["field"] == "executive_takeaways"
+
+
 def test_validate_cross_report_generated_analysis_accepts_grounded_artifact(
     tmp_path,
     run_context,
@@ -705,6 +735,7 @@ __all__ = [
     "test_generate_cross_report_analysis_omits_unsupported_source_notes",
     "test_generate_cross_report_analysis_rejects_missing_json_payload",
     "test_generate_cross_report_analysis_rejects_empty_sections",
+    "test_generate_cross_report_analysis_marks_invalid_takeaway_count_retryable",
     "test_validate_cross_report_generated_analysis_accepts_grounded_artifact",
     "test_validate_cross_report_generated_analysis_rejects_missing_section_evidence",
     "test_validate_cross_report_generated_analysis_rejects_unknown_evidence",

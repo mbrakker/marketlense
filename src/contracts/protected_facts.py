@@ -84,7 +84,7 @@ class ProtectedFactComparison:
 
 _YEAR = r"(?:19|20)\d{2}"
 _OBSERVATION_YEAR_RE = re.compile(
-    rf"\b(?:in|during|for|as of|as at|collected(?: in)?|fielded(?: in)?|"
+    rf"\b(?:in|during|for|across(?: the)?|as of|as at|collected(?: in)?|fielded(?: in)?|"
     rf"survey(?:ed)?(?: in)?|observed(?: in)?|reported(?: in)?|"
     rf"data(?: gathered| collected)?(?: in| for)?|year ended(?: in)?)\s+"
     rf"(?:the\s+)?(?P<year>{_YEAR})(?:e)?\b"
@@ -222,9 +222,7 @@ def compare_protected_fact_texts(
         payload["value"] = {
             "claim_value": claim_value,
             "evidence_value": evidence_value or None,
-            "status": _quantity_dimension_status(
-                claim_quantities, evidence_quantities
-            ),
+            "status": _quantity_dimension_status(claim_quantities, evidence_quantities),
         }
         explicit_claim_quantities = [
             item for item in claim_quantities if item.unit_family != "unknown"
@@ -250,14 +248,10 @@ def compare_protected_fact_texts(
     if claim_years:
         evidence_ranges = _observation_year_range_facts(evidence_text)
         same_status_facts = [
-            (year, status)
-            for year, status in claim_year_facts
-            if status != "unknown"
+            (year, status) for year, status in claim_year_facts if status != "unknown"
         ]
         same_status_evidence = {
-            status
-            for _year, status in evidence_year_facts
-            if status != "unknown"
+            status for _year, status in evidence_year_facts if status != "unknown"
         }
         covered = {
             (year, status)
@@ -535,26 +529,38 @@ def _subjects(text: str) -> tuple[str, ...]:
     discourse_subject_starts = {
         "a",
         "an",
+        "and",
         "as",
         "because",
+        "but",
         "expected",
         "expect",
         "forecast",
         "from",
         "not",
         "of",
+        "or",
         "reported",
         "that",
         "to",
+        "whereas",
+        "while",
     }
+    leading_discourse_connectors = {"and", "or", "alongside"}
     quantities = extract_quantities(text)
     subjects: list[str] = []
     for match in _SUBJECT_RE.finditer(text):
         subject = re.sub(r"\s+", " ", match.group(1).casefold()).strip()
+        subject_words = subject.split()
+        while subject_words and subject_words[0] in leading_discourse_connectors:
+            subject_words.pop(0)
+        subject = " ".join(subject_words)
         if (
             not subject
             or subject.split()[0] in discourse_subject_starts
-            or re.search(r"\b(?:expect|expected|expectation|reported|forecast)\b", subject)
+            or re.search(
+                r"\b(?:expect|expected|expectation|reported|forecast)\b", subject
+            )
         ):
             continue
         if any(

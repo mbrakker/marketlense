@@ -221,6 +221,13 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
             "evidence_json"
         ]
     )["findings"]["findings"]
+    summary_lead = json.loads(
+        prompt_client.variables_for_namespace("report_vs/artifacts/summary")[
+            "selected_lead_insight_json"
+        ]
+    )
+    assert summary_lead["evidence_id"] == payload["insights_final"][0]["evidence_id"]
+    assert summary_lead["text"] == payload["insights_final"][0]["text"]
     assert [item["id"] for item in summary_findings] == [
         "f3",
         "f1",
@@ -241,8 +248,8 @@ def test_editorial_plan_is_the_shared_basis_for_summary_insights_and_expert(tmp_
         "f5",
     ]
     assert [item["evidence_id"] for item in payload["insights_final"]] == [
-        "f3",
         "f2",
+        "f3",
         "f1",
         "f2",
         "f3",
@@ -560,17 +567,23 @@ def test_expert_comment_receives_grounded_theme_context_not_summary_prose(tmp_pa
         evidence["evidence_id"]
         for theme in synthesis_context["themes"]
         for evidence in theme["evidence"]
-    } == {"f1", "f2", "f3", "s1"}
+    } == {"f1", "f2", "f3"}
     assert synthesis_context["insight_implications"] == [
         {
             "evidence_id": "f3",
             "so_what": "Retention changes the growth tradeoff.",
+            "source_finding": "Retention stabilizing",
+            "source_excerpt": "Retention improved",
+            "source_page": 4,
         },
         {
             "evidence_id": "f2",
             "so_what": "Margin pressure limits expansion options.",
+            "source_finding": "Margin pressure in EU",
+            "source_excerpt": "Margin declined",
+            "source_page": 3,
         },
-    ]
+    ], synthesis_context["insight_implications"]
     assert synthesis_context["limitations"] == [
         {
             "evidence_id": "f3",
@@ -601,6 +614,57 @@ def test_expert_synthesis_context_keeps_string_limitations_from_evidence_pack():
             "text": "Sample sizes vary across the report's analyses.",
         }
     ]
+
+
+def test_expert_synthesis_context_does_not_use_docmap_sections_as_evidence():
+    context = artifact_normalization.build_expert_synthesis_context(
+        editorial_plan={
+            "report_thesis": "Finance acquisition and engagement diverged.",
+            "themes": [
+                {
+                    "theme": "Finance outcomes",
+                    "priority": 1,
+                    "evidence_ids": ["docmap-only", "direct-finding"],
+                },
+                {
+                    "theme": "Finance adoption",
+                    "priority": 2,
+                    "evidence_ids": ["docmap-only"],
+                },
+            ],
+        },
+        insights_final=[],
+        doc_map={
+            "sections": [
+                {
+                    "id": "docmap-only",
+                    "title": "Finance outcomes",
+                    "summary": "Global installs fell 4% while sessions rose 21%.",
+                    "key_points": [
+                        "Global finance-app installs fell 4% while sessions rose 21%."
+                    ],
+                    "pages": [34],
+                }
+            ]
+        },
+        evidence_packs={
+            "findings": {
+                "findings": [
+                    {
+                        "id": "direct-finding",
+                        "text": "Global finance-app installs fell 4% while sessions rose 21%.",
+                        "evidence": "Global finance-app installs fell 4% while sessions rose 21%.",
+                        "pages": [34],
+                    }
+                ]
+            }
+        },
+    )
+
+    evidence_ids = {
+        item["evidence_id"] for theme in context["themes"] for item in theme["evidence"]
+    }
+    assert evidence_ids == {"direct-finding"}
 
 
 def test_expert_comment_can_abstain_when_no_distinct_synthesis_is_returned(tmp_path):
@@ -734,6 +798,7 @@ def test_editorial_plan_prompt_and_inputs_invalidate_artifact_cache_identity(tmp
     assert first["editorial_plan_transform_version"] == (
         artifact_normalization.EDITORIAL_PLAN_TRANSFORM_VERSION
     )
+    assert first["soft_copy_sentence_grid_version"] == "2"
     changed_prompt = _artifact_cache_meta(
         **common, prompt_client=PlanPromptClient("b" * 64)
     )

@@ -279,7 +279,8 @@ def test_find_post_by_file_id_found(wordpress_http) -> None:
         {
             "id": 11,
             "link": "https://site/p/11",
-            "content": {"rendered": "Drive fileId: file-1"},
+            "content": {"rendered": "Published report content"},
+            "meta": {"ml_file_id": "file-1"},
         },
     ]
     wordpress_http.add_json(
@@ -303,6 +304,8 @@ def test_find_post_by_file_id_found(wordpress_http) -> None:
     assert response.link == "https://site/p/11"
     assert call.allow_redirects is False
     assert call.params["status"] == "any"
+    assert call.params["ml_file_id"] == "file-1"
+    assert "search" not in call.params
 
 
 def test_find_post_by_file_id_fails_closed_for_multiple_matches(

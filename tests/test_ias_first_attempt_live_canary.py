@@ -3,13 +3,22 @@ import json
 import sqlite3
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
+import yaml
 
 import scripts.quality.ias_live_canary_runner as canary_runner
 from scripts.quality.ias_live_canary_runner import (
     _collect_frozen_cohort_queue_timing_evidence,
+    _queue_terminal_state,
     _read_retained_claim_counts,
+    _replay_completed_wordpress_jobs,
     _seed_isolated_workflow_queue_controls,
+    _sum_member_metric,
+    _validate_wordpress_staging_origin,
+    _wordpress_publication_evidence,
     ensure_isolated_publication_queue_disabled,
     prepare_isolated_canary_run,
     run_ias_first_attempt_canary,
@@ -17,6 +26,19 @@ from scripts.quality.ias_live_canary_runner import (
 from src.contracts.config import ConfigLoadRequest
 from src.contracts.report_analysis import AnalysisPackPathRequest
 from src.contracts.semantic_ids import ReportId
+from src.contracts.signal_candidates import (
+    SIGNAL_CANDIDATE_SCHEMA_VERSION,
+    SignalCandidate,
+    SignalCandidateGroup,
+    SignalCandidateSourceRef,
+    SignalCandidateStoreRequest,
+)
+from src.contracts.workflow_queue import (
+    WordPressPublishPayload,
+    WorkflowJobSubmission,
+    WorkflowStageResult,
+)
+from src.services.analytics_store_service import upsert_signal_candidates
 from src.services.config_service import (
     load_settings,
     load_workflow_control_settings,
@@ -24,7 +46,13 @@ from src.services.config_service import (
     new_runtime_context,
 )
 from src.services.report_analysis_store_service import pack_path
-from src.services.workflow_queue_service import get_workflow_queue_control
+from src.services.workflow_queue_service import (
+    claim_next_workflow_job,
+    complete_workflow_job,
+    enqueue_workflow_job,
+    get_workflow_queue_control,
+    start_workflow_job,
+)
 
 
 def _long_test_output_root(tmp_path: Path) -> Path:
@@ -68,11 +96,510 @@ def test_isolated_canary_config_keeps_repository_owned_cost_pricing_available(
     assert control.supervisor.max_parallel_workers == 3
     assert control.supervisor.max_jobs_per_queue == 3
     assert control.supervisor.max_total_jobs == 60
+    assert control.autonomous_publication_policy.enabled is False
     queues = load_workflow_queue_policies(
         ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
         new_runtime_context(task_id="isolated-canary-queue-test"),
     )
     assert queues["wordpress_publish"].enabled is False
+
+
+def test_isolated_canary_staging_mode_is_explicit_draft_only_and_host_pinned(
+    tmp_path: Path,
+) -> None:
+    run = prepare_isolated_canary_run(
+        runs_root=tmp_path,
+        publish_to_wordpress_staging=True,
+        staging_hostname="marketlense.medianewsonline.com",
+        allow_insecure_staging_http=True,
+        enable_cross_report_analysis=True,
+    )
+
+    config = yaml.safe_load(run.config_path.read_text(encoding="utf-8"))
+    control = load_workflow_control_settings(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-staging-policy-test"),
+    )
+    queues = load_workflow_queue_policies(
+        ConfigLoadRequest(schema_version="1.0", path=str(run.config_path)),
+        new_runtime_context(task_id="isolated-staging-queue-test"),
+    )
+
+    assert control.autonomous_publication_policy.enabled is True
+    assert control.supervisor.deferred_work_enabled is True
+    assert control.supervisor.remediation_enabled is True
+    assert queues["wordpress_publish"].enabled is True
+    assert queues["publisher_discovery"].enabled is False
+    assert queues["report_acquisition"].enabled is False
+    assert queues["mailbox_delivery"].enabled is False
+    assert config["publish"]["wp"]["post_status"] == "draft"
+    assert config["cross_report_analysis"]["enabled"] is True
+    assert config["cross_report_analysis"]["publish_enabled"] is False
+
+
+def test_isolated_canary_refuses_an_unconfirmed_publication_host(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="confirmed WordPress staging host"):
+        prepare_isolated_canary_run(
+            runs_root=tmp_path,
+            publish_to_wordpress_staging=True,
+            staging_hostname="production.example",
+        )
+
+
+def test_isolated_canary_refuses_http_opt_in_without_staging_publication(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="requires WordPress staging publication"):
+        prepare_isolated_canary_run(
+            runs_root=tmp_path,
+            allow_insecure_staging_http=True,
+        )
+
+
+def test_wordpress_staging_origin_allows_pinned_http_opt_in() -> None:
+    origin = _validate_wordpress_staging_origin(
+        "http://marketlense.medianewsonline.com",
+        staging_hostname="marketlense.medianewsonline.com",
+        allow_insecure_http=True,
+    )
+
+    assert origin.scheme == "http"
+    assert origin.hostname == "marketlense.medianewsonline.com"
+
+
+@pytest.mark.parametrize(
+    ("site_url", "hostname", "allow_insecure_http"),
+    [
+        (
+            "http://marketlense.medianewsonline.com",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com:8443",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://user@marketlense.medianewsonline.com",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com?next=evil",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com?",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com/#fragment",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        (
+            "https://marketlense.medianewsonline.com/#",
+            "marketlense.medianewsonline.com",
+            False,
+        ),
+        ("https://other.example", "marketlense.medianewsonline.com", False),
+    ],
+)
+def test_wordpress_staging_origin_rejects_unapproved_or_ambiguous_targets(
+    site_url: str, hostname: str, allow_insecure_http: bool
+) -> None:
+    with pytest.raises(ValueError):
+        _validate_wordpress_staging_origin(
+            site_url,
+            staging_hostname=hostname,
+            allow_insecure_http=allow_insecure_http,
+        )
+
+
+@pytest.mark.parametrize(
+    (
+        "write_count",
+        "readback_verified",
+        "workflow_attempt_count",
+        "wordpress_post_id",
+        "expected",
+    ),
+    [
+        (1, True, 1, 42, (True, True)),
+        (0, True, 1, 42, (False, False)),
+        (1, True, 2, 42, (False, False)),
+        (1, False, 1, 42, (True, False)),
+        (1, True, 1, 99, (False, False)),
+    ],
+)
+def test_wordpress_publication_evidence_requires_first_attempt_create_and_readback(
+    write_count: int,
+    readback_verified: bool,
+    workflow_attempt_count: int,
+    wordpress_post_id: int,
+    expected: tuple[bool, bool],
+) -> None:
+    evidence = _wordpress_publication_evidence(
+        publication_outcome={
+            "status": "published",
+            "publication_outcome": "post_created",
+            "file_id": "report-1",
+            "post_id": 42,
+            "actual_write_count": write_count,
+            "authenticated_readback_verified": readback_verified,
+            "readback_expectation": {
+                "file_id": "report-1",
+                "post_type": "ml_report",
+            },
+            "readback_checks": [
+                {"name": name, "status": "verified"}
+                for name in (
+                    "post_id",
+                    "report_file_identity",
+                    "canonical_url",
+                    "post_type",
+                    "status",
+                    "content_checksum",
+                    "source_attribution",
+                    "metadata",
+                    "taxonomy_assignments",
+                    "media_associations",
+                )
+            ],
+        },
+        workflow_status="succeeded",
+        workflow_attempt_count=workflow_attempt_count,
+        wordpress_post_id=wordpress_post_id,
+        expected_file_id="report-1",
+        expected_post_type="ml_report",
+    )
+
+    assert (
+        evidence["wordpress_created_this_run"],
+        evidence["wordpress_authenticated_readback"],
+    ) == expected
+
+
+def test_wordpress_publication_evidence_requires_verified_metadata_readback() -> None:
+    outcome = {
+        "status": "published",
+        "publication_outcome": "post_created",
+        "file_id": "report-1",
+        "post_id": 42,
+        "actual_write_count": 1,
+        "authenticated_readback_verified": True,
+        "readback_expectation": {"file_id": "report-1", "post_type": "ml_report"},
+        "readback_checks": [
+            {"name": "post_id", "status": "verified"},
+            {"name": "metadata", "status": "not_verified"},
+        ],
+    }
+
+    evidence = _wordpress_publication_evidence(
+        publication_outcome=outcome,
+        workflow_status="succeeded",
+        workflow_attempt_count=1,
+        wordpress_post_id=42,
+        expected_file_id="report-1",
+        expected_post_type="ml_report",
+    )
+
+    assert evidence == {
+        "wordpress_created_this_run": True,
+        "wordpress_authenticated_readback": False,
+    }
+
+
+def test_wordpress_publication_evidence_rejects_conflicting_duplicate_checks() -> None:
+    outcome = {
+        "status": "published",
+        "publication_outcome": "post_created",
+        "file_id": "report-1",
+        "post_id": 42,
+        "actual_write_count": 1,
+        "authenticated_readback_verified": True,
+        "readback_expectation": {"file_id": "report-1", "post_type": "ml_report"},
+        "readback_checks": [
+            {"name": name, "status": "verified"}
+            for name in (
+                "post_id",
+                "report_file_identity",
+                "canonical_url",
+                "post_type",
+                "status",
+                "content_checksum",
+                "source_attribution",
+                "metadata",
+                "taxonomy_assignments",
+                "media_associations",
+            )
+        ]
+        + [{"name": "metadata", "status": "mismatch"}],
+    }
+
+    evidence = _wordpress_publication_evidence(
+        publication_outcome=outcome,
+        workflow_status="succeeded",
+        workflow_attempt_count=1,
+        wordpress_post_id=42,
+        expected_file_id="report-1",
+        expected_post_type="ml_report",
+    )
+
+    assert evidence["wordpress_created_this_run"] is True
+    assert evidence["wordpress_authenticated_readback"] is False
+
+
+def test_signal_manifest_mutation_probe_closes_temporary_sqlite_handles(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "signals.sqlite"
+    ctx = new_runtime_context(task_id="signal-manifest-close-test")
+    group_id = "signal-group:test"
+    candidate_id = "signal-candidate:test"
+    source_ref = SignalCandidateSourceRef(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        report_id="report-1",
+        evidence_id="report-1:claim:1",
+        source_table="report_claims",
+        entity_uid="report-1:claim:1",
+        content_class="claim",
+        page_refs=[1],
+        source_metadata={"pages": [1], "evidence": "A retained source claim."},
+    )
+    candidate = SignalCandidate(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        candidate_id=candidate_id,
+        candidate_type="market_signal",
+        title="Test signal",
+        summary="A source-backed signal for the mutation probe.",
+        confidence=0.8,
+        strength=1.0,
+        support_level="single_report",
+        caveats=["single_report_coverage"],
+        source_report_ids=["report-1"],
+        evidence_ids=["report-1:claim:1"],
+        source_refs=[source_ref],
+        raw_source_context={"fixture": "focused-test"},
+        validation_status="approved",
+        validation_notes=["source_backed"],
+        group_id=group_id,
+        extraction_request_id="extract-1",
+        generated_at_utc="2026-10-09T10:00:00Z",
+    )
+    group = SignalCandidateGroup(
+        schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+        group_id=group_id,
+        stable_key="test:signal",
+        title="Test signal",
+        summary="A source-backed signal for the mutation probe.",
+        support_level="single_report",
+        candidate_ids=[candidate_id],
+        source_report_ids=["report-1"],
+        evidence_ids=["report-1:claim:1"],
+        caveats=["single_report_coverage"],
+        raw_group_context={"agreement_type": "thin_coverage"},
+        validation_status="approved",
+        extraction_request_id="extract-1",
+        generated_at_utc="2026-10-09T10:00:00Z",
+        publication_status="held",
+        publication_hold_reason="signal_grounding_insufficient",
+    )
+    stored = upsert_signal_candidates(
+        SignalCandidateStoreRequest(
+            schema_version=SIGNAL_CANDIDATE_SCHEMA_VERSION,
+            db_path=str(db_path),
+            extraction_request_id="extract-1",
+            candidates=[candidate],
+            groups=[group],
+        ),
+        ctx,
+    )
+
+    verified = canary_runner._verify_signal_manifest_immutable(
+        signal_store_db=str(db_path),
+        manifest_hash=stored.manifest_hashes[group_id],
+        extraction_request_id="extract-1",
+        group_id=group_id,
+        ctx=ctx,
+    )
+
+    assert verified is True
+    assert list(tmp_path.glob("signal-manifest-mutation-*")) == []
+
+
+def test_queue_terminal_state_accepts_a_published_autonomous_report(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    with sqlite3.connect(state_db) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE workflow_publication_readiness (
+              package_checksum TEXT, readiness_status TEXT
+            );
+            CREATE TABLE workflow_jobs (
+              queue_name TEXT, output_content_hash TEXT, report_id TEXT,
+              root_workflow_id TEXT, status TEXT, error_code TEXT,
+              completed_at_utc TEXT
+            );
+            CREATE TABLE published (
+              file_id TEXT PRIMARY KEY, md5 TEXT NOT NULL,
+              published_at INTEGER NOT NULL, wp_post_id INTEGER NOT NULL,
+              wp_post_url TEXT NOT NULL, post_type TEXT NOT NULL DEFAULT ''
+            );
+            INSERT INTO workflow_publication_readiness VALUES ('pkg', 'approved');
+            INSERT INTO workflow_jobs VALUES
+              ('publication_readiness', 'pkg', 'report-1', 'root-1',
+               'succeeded', '', '');
+            INSERT INTO published VALUES
+              ('report-1', 'source-hash', 1, 42,
+               'https://staging.example/posts/42', 'ml_report');
+            """
+        )
+
+    state = _queue_terminal_state(
+        state_db=str(state_db), report_id="report-1", root_workflow_id="root-1"
+    )
+
+    assert state == "published"
+
+
+def test_completed_wordpress_job_duplicate_submission_reuses_record_without_writes(
+    tmp_path: Path,
+) -> None:
+    state_db = tmp_path / "workflow.sqlite"
+    ctx = new_runtime_context(task_id="wordpress-job-replay-test")
+    get_workflow_queue_control(state_db, "wordpress_publish", ctx)
+    available = datetime.now(timezone.utc) + timedelta(seconds=1)
+    claim_time = available + timedelta(seconds=1)
+    start_time = claim_time + timedelta(seconds=1)
+    complete_time = start_time + timedelta(seconds=1)
+
+    def as_iso(value: datetime) -> str:
+        return value.isoformat(timespec="seconds")
+
+    submission = WorkflowJobSubmission(
+        schema_version="1.0",
+        queue_name="wordpress_publish",
+        job_type="wordpress_publish.v1",
+        payload=WordPressPublishPayload(
+            schema_version="1.0",
+            entity_type="report",
+            entity_package_reference="report.html",
+            package_checksum="package-hash",
+            approval_id="approval-id",
+            target_site="https://marketlense.medianewsonline.com",
+        ),
+        idempotency_key="publish:report-1:package-hash",
+        deduplication_scope="wordpress_publish",
+        root_workflow_id="root-1",
+        report_id="report-1",
+        available_at_utc=as_iso(available),
+    )
+    job, created = enqueue_workflow_job(state_db, submission, ctx)
+    assert created is True
+    claimed = claim_next_workflow_job(
+        state_db,
+        "wordpress_publish",
+        "replay-test-worker",
+        ctx,
+        now_utc=as_iso(claim_time),
+    )
+    assert claimed is not None
+    start_workflow_job(
+        state_db,
+        claimed.job_id,
+        "replay-test-worker",
+        ctx,
+        now_utc=as_iso(start_time),
+    )
+    complete_workflow_job(
+        state_db,
+        claimed.job_id,
+        "replay-test-worker",
+        WorkflowStageResult(
+            output_reference="https://marketlense.medianewsonline.com/report/42",
+            output_content_hash="package-hash",
+            output_verified=True,
+        ),
+        [],
+        ctx,
+        now_utc=as_iso(complete_time),
+        external_effects=["wordpress"],
+    )
+    with sqlite3.connect(state_db) as conn:
+        conn.execute(
+            "INSERT INTO published VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "report-1",
+                "source-hash",
+                1,
+                42,
+                "https://marketlense.medianewsonline.com/report/42",
+                "ml_report",
+            ),
+        )
+
+    replay = _replay_completed_wordpress_jobs(
+        state_db=str(state_db),
+        root_workflow_id="root-1",
+        report_ids=("report-1",),
+        ctx=ctx,
+    )
+
+    assert replay["status"] == "verified"
+    assert replay["duplicate_submissions"] == 1
+    assert replay["first_attempt_publication_jobs"] == 1
+    assert replay["created_duplicate_jobs"] == 0
+    assert replay["attempt_counts_unchanged"] is True
+    assert replay["published_rows_unchanged"] is True
+    assert replay["additional_wordpress_writes"] == 0
+    with sqlite3.connect(state_db) as conn:
+        assert (
+            conn.execute(
+                "SELECT COUNT(*) FROM workflow_jobs "
+                "WHERE queue_name='wordpress_publish'"
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
+            conn.execute("SELECT COUNT(*) FROM workflow_job_attempts").fetchone()[0]
+            == 1
+        )
+
+
+def test_member_metric_sum_requires_every_report_value() -> None:
+    reports = [
+        {"cost": 0.01, "model_provider_calls": 1},
+        {"cost": 0.02, "model_provider_calls": 2},
+    ]
+
+    assert _sum_member_metric(reports, "cost") == 0.03
+    assert _sum_member_metric(reports, "model_provider_calls") == 3
+    assert _sum_member_metric([*reports, {"cost": None}], "cost") is None
+
+
+def test_staging_batch_requires_cross_report_handoff_verification(
+    tmp_path: Path,
+) -> None:
+    from scripts.quality.run_frozen_reliability_cohort import (
+        run_frozen_reliability_cohort,
+    )
+
+    with pytest.raises(ValueError, match="cross-report handoff"):
+        run_frozen_reliability_cohort(
+            sources_manifest=tmp_path / "not-loaded.json",
+            runs_root=tmp_path / "runs",
+            shared_batch=True,
+            publish_to_wordpress_staging=True,
+            staging_hostname="marketlense.medianewsonline.com",
+        )
 
 
 def test_isolated_canary_persists_publication_queue_disabled_without_changing_limits(

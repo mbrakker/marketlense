@@ -47,6 +47,10 @@ from src.contracts.run_context import RunContext
 from src.utils.clock import utc_now_iso
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.pdf_text_layout import (
+    detached_percent_label_tokens,
+    layout_text_preserves_label_value_rows,
+)
 from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
 
 from .page_artifacts import create_page_artifact_cache
@@ -59,12 +63,12 @@ from .text_quality import (
 PDF_TEXT_EXCEPTIONS = (OSError, RuntimeError, ValueError, TypeError, AttributeError)
 
 
-def _extract_fitz_page_text(fitz_doc, page_index: int) -> str:
+def _extract_fitz_page_text(fitz_doc, page_index: int, *, sort: bool = False) -> str:
     """Extract one page with PyMuPDF, returning empty text on failure."""
     if fitz_doc is None:
         return ""
     try:
-        return fitz_doc[page_index].get_text() or ""
+        return fitz_doc[page_index].get_text("text", sort=sort) or ""
     except PDF_TEXT_EXCEPTIONS:
         return ""
 
@@ -82,11 +86,23 @@ def _resolve_native_page_text(
     the primary page text.
     """
     selection = select_healthier_native_text(primary_text, "")
-    if not selection.primary_reasons or fitz_doc is None:
+    if fitz_doc is None:
         return selection
-    return select_healthier_native_text(
-        primary_text,
-        _extract_fitz_page_text(fitz_doc, page_index),
+    if selection.primary_reasons:
+        selection = select_healthier_native_text(
+            primary_text,
+            _extract_fitz_page_text(fitz_doc, page_index),
+        )
+    if not detached_percent_label_tokens(primary_text):
+        return selection
+    layout_text = _extract_fitz_page_text(fitz_doc, page_index, sort=True)
+    if not layout_text_preserves_label_value_rows(primary_text, layout_text):
+        return selection
+    return NativeTextSelection(
+        text=layout_text,
+        used_fallback=True,
+        primary_reasons=selection.primary_reasons or ("detached_label_value_rows",),
+        fallback_reasons=("layout_order_preserved_rows",),
     )
 
 
@@ -436,7 +452,9 @@ def extract_pdf_text(
             selection = _resolve_native_page_text(
                 primary_text=text, fitz_doc=fitz_doc, page_index=i
             )
-            if selection.primary_reasons and not fitz_open_attempted:
+            if (
+                selection.primary_reasons or detached_percent_label_tokens(text)
+            ) and not fitz_open_attempted:
                 fitz_open_attempted = True
                 fitz_doc = _open_fallback_fitz_doc(request.path)
                 owns_fitz_doc = fitz_doc is not None

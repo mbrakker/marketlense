@@ -1,6 +1,8 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.contracts.openai import OpenAIFileSearchResult
+
 from ._support_cases import *  # noqa: F401,F403
 
 
@@ -56,6 +58,7 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
         "measurement-methods",
         "investment-outlook",
     ]
+    assert prompt_client.findings_variables["findings_target_source_pages_json"] == ""
     assert packs["findings"]["findings"] == [
         {
             "id": "finding-1",
@@ -81,7 +84,19 @@ def test_generate_evidence_packs_passes_doc_map_sections_to_findings_and_retains
 def test_generate_evidence_packs_passes_source_temporal_relationships_to_findings(
     tmp_path,
 ):
-    prompt_client = RecordingPromptClient()
+    class PrimaryFindingsPromptClient(FakePromptClient):
+        def __init__(self):
+            self.findings_variables = None
+
+        def render_prompt(self, request, ctx):
+            if (
+                self.findings_variables is None
+                and "doc_map_sections_json" in request.variables
+            ):
+                self.findings_variables = dict(request.variables)
+            return super().render_prompt(request, ctx)
+
+    prompt_client = PrimaryFindingsPromptClient()
     generate_evidence_packs(
         report_id="source-temporal-pairs",
         report_name="Source temporal pairs",
@@ -174,61 +189,510 @@ def test_findings_context_retains_counterbalancing_major_docmap_sections(tmp_pat
     ]
 
 
-def test_generate_evidence_packs_logs_prompt_observability_and_response_metadata(
-    tmp_path, caplog, assert_logs_have_required_fields
-):
+def test_misleading_doc_map_does_not_promote_unsupported_finding(tmp_path, caplog):
+    from dataclasses import replace
+
+    from src.contracts.openai import OpenAIResponseResult
+
+    section_id = "market-growth"
+    section_title = "Market growth"
+    doc_map = {
+        **substantive_doc_map(),
+        "sections": [
+            {
+                "id": section_id,
+                "title": section_title,
+                "summary": "The market grew rapidly.",
+                "key_points": ["Revenue reached $90B in 2026."],
+                "pages": [4],
+            }
+        ],
+    }
+    misleading = {
+        "findings": [
+            {
+                "id": "unsupported-90b",
+                "text": "Market revenue reached $90B in 2026.",
+                "evidence": "Market revenue reached $90B in 2026.",
+                "pages": [4],
+                "section_id": section_id,
+                "section_title": section_title,
+            }
+        ]
+    }
+    supported_source_finding = {
+        "findings": [
+            {
+                "id": "supported-9b",
+                "text": "Market revenue reached $9B in 2026.",
+                "evidence": "Market revenue reached $9B in 2026.",
+                "pages": [4],
+                "section_id": section_id,
+                "section_title": section_title,
+            }
+        ]
+    }
+
+    class UnsupportedFallbackClient:
+        def __init__(self):
+            self.findings_calls = 0
+
+        def openai_respond_with_vector_store(self, request, ctx):
+            if str(ctx.task_id).endswith(":doc_map"):
+                payload = doc_map
+            else:
+                self.findings_calls += 1
+                payload = (
+                    misleading if self.findings_calls > 1 else supported_source_finding
+                )
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=3,
+                output_tokens=2,
+                tool_calls=1,
+                model=request.model,
+            )
+
+        def openai_chat_json(self, request, ctx):
+            self.findings_calls += 1
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(misleading),
+                parsed_json=misleading,
+                input_tokens=3,
+                output_tokens=2,
+                tool_calls=0,
+                model=request.model,
+            )
+
     caplog.set_level(logging.INFO, logger="market_lense.evidence_pack_generator")
+    client = UnsupportedFallbackClient()
     packs = generate_evidence_packs(
-        report_id="r1",
-        report_name="report",
-        vector_store_id="vs_1",
-        settings=_settings(tmp_path),
-        ctx=_ctx(),
-        openai_client=FakeOpenAIClient(substantive_doc_map()),
+        report_id="misleading-docmap",
+        report_name="misleading-docmap.pdf",
+        vector_store_id="vs_misleading",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=replace(_ctx(), task_id="test:misleading-docmap"),
+        source_spans=[
+            {
+                "id": "pdf:p4",
+                "page": 4,
+                "text": "Market revenue reached $9B in 2026.",
+            }
+        ],
+        openai_client=client,
         prompt_client=FakePromptClient(),
         analysis_store=FakeAnalysisStore(),
     )
 
-    assert packs["doc_map"]["doc_id"] == "d1"
-    events = []
+    assert client.findings_calls == 2
+    assert [finding["id"] for finding in packs["findings"]["findings"]] == [
+        "supported-9b"
+    ]
+    assert packs["evidence_fidelity"]["unsupported_factual_count"] == 0
+    fallback_events = []
     for record in caplog.records:
         try:
-            payload = json.loads(record.message)
+            event = json.loads(record.message)
         except json.JSONDecodeError:
             continue
-        if payload.get("event") in {
-            "evidence_pack_prompt_rendered",
-            "evidence_pack_response_received",
-        }:
-            events.append(payload)
+        if event.get("event") == "findings_targeted_fallback_complete":
+            fallback_events.append(event)
+    assert len(fallback_events) == 1
+    assert fallback_events[0]["fields"]["returned_findings"] == 1
+    assert fallback_events[0]["fields"]["supported_findings"] == 0
 
-    assert len(events) >= 2
-    assert_logs_have_required_fields(events)
-    rendered = next(
-        event
-        for event in events
-        if event.get("event") == "evidence_pack_prompt_rendered"
+
+def test_supported_priority_body_finding_avoids_targeted_fallback(tmp_path):
+    from dataclasses import replace
+
+    from src.contracts.openai import OpenAIResponseResult
+
+    section_id = "revenue-growth"
+    section_title = "Revenue growth"
+    source_excerpt = "Revenue was up 12% in 2025."
+    doc_map = {
+        **substantive_doc_map(),
+        "sections": [
+            {
+                "id": section_id,
+                "title": section_title,
+                "summary": "Revenue growth accelerated.",
+                "key_points": ["Revenue was up 12% in 2025."],
+                "pages": [4],
+            }
+        ],
+    }
+    finding = {
+        "findings": [
+            {
+                "id": "revenue-growth-2025",
+                "text": "Revenue was up 12% in 2025.",
+                "evidence": source_excerpt,
+                "pages": [4],
+                "section_id": section_id,
+                "section_title": section_title,
+            }
+        ]
+    }
+
+    class CompleteBodyFindingClient:
+        def __init__(self):
+            self.findings_calls = 0
+
+        def openai_respond_with_vector_store(self, request, ctx):
+            if str(ctx.task_id).endswith(":doc_map"):
+                payload = doc_map
+            else:
+                self.findings_calls += 1
+                payload = finding
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=4,
+                output_tokens=3,
+                tool_calls=1,
+                model=request.model,
+            )
+
+    client = CompleteBodyFindingClient()
+    packs = generate_evidence_packs(
+        report_id="supported-body-report",
+        report_name="supported-body-report.pdf",
+        vector_store_id="vs_supported_body",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=replace(_ctx(), task_id="test:supported-body-report"),
+        source_spans=[{"id": "pdf:p4", "page": 4, "text": source_excerpt}],
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
     )
-    rendered_fields = rendered["fields"]
-    assert rendered_fields["namespace"] == "report_vs/doc_map"
-    assert rendered_fields["system_path"] == "system"
-    assert rendered_fields["user_path"] == "user"
-    assert "system_prompt" not in rendered_fields
-    assert "user_prompt" not in rendered_fields
-    assert len(rendered_fields["execution_policy_hash"]) == 64
-    assert rendered_fields["resolved_model"] == "gpt-4.1-mini"
-    response = next(
-        event
-        for event in events
-        if event.get("event") == "evidence_pack_response_received"
+
+    assert client.findings_calls == 1
+    assert packs["findings"]["findings"][0]["id"] == "revenue-growth-2025"
+    assert packs["evidence_fidelity"]["deterministic_pass_count"] == 1
+
+
+def test_supported_finding_gets_physical_page_from_validated_source_reference(
+    tmp_path,
+):
+    from dataclasses import replace
+
+    from src.contracts.openai import OpenAIResponseResult
+
+    source_excerpt = "Revenue was up 12% in 2025."
+    section_id = "revenue-growth"
+    doc_map = {
+        **substantive_doc_map(),
+        "sections": [
+            {
+                "id": section_id,
+                "title": "Revenue growth",
+                "summary": "Revenue growth accelerated.",
+                "key_points": ["Revenue was up 12% in 2025."],
+                "pages": [4],
+            }
+        ],
+    }
+    finding = {
+        "findings": [
+            {
+                "id": "revenue-growth-2025",
+                "text": "Revenue was up 12% in 2025.",
+                "evidence": source_excerpt,
+                "pages": [],
+                "section_id": section_id,
+                "section_title": "Revenue growth",
+            }
+        ]
+    }
+
+    class SupportedWithoutPageClient:
+        def __init__(self):
+            self.findings_calls = 0
+
+        def openai_respond_with_vector_store(self, request, ctx):
+            if str(ctx.task_id).endswith(":doc_map"):
+                payload = doc_map
+            else:
+                self.findings_calls += 1
+                payload = finding
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=4,
+                output_tokens=3,
+                tool_calls=1,
+                model=request.model,
+            )
+
+    client = SupportedWithoutPageClient()
+    packs = generate_evidence_packs(
+        report_id="supported-without-page",
+        report_name="supported-without-page.pdf",
+        vector_store_id="vs_supported_without_page",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=replace(_ctx(), task_id="test:supported-without-page"),
+        source_spans=[{"id": "pdf:p4", "page": 4, "text": source_excerpt}],
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
     )
-    response_fields = response["fields"]
-    assert response_fields["pack"] == "doc_map"
-    assert response_fields["has_json"] is True
-    assert response_fields["response_chars"] == 2
-    response_hash = response_fields["response_sha256"]
-    assert response_hash["redaction"] == "***REDACTED***"
-    assert len(response_hash["sha256"]) == 64
+
+    assert client.findings_calls == 1
+    assert packs["findings"]["findings"][0]["pages"] == [4]
+    assert packs["evidence_fidelity"]["deterministic_pass_count"] == 1
+
+
+def test_semantically_supported_finding_gets_physical_page_after_final_validation(
+    tmp_path,
+):
+    from dataclasses import replace
+
+    from src.contracts.openai import OpenAIResponseResult
+
+    source_excerpt = (
+        "Dealmakers are prioritizing transactions where integration, capability "
+        "acquisition, and portfolio optimization can be executed with speed "
+        "and control."
+    )
+    finding = {
+        "findings": [
+            {
+                "id": "transaction-focus",
+                "text": (
+                    "Dealmakers now favor transactions over megadeals, prioritizing "
+                    "integration, capability acquisition, and faster portfolio "
+                    "optimization."
+                ),
+                "evidence": source_excerpt,
+                "pages": [],
+                "section_id": "",
+                "section_title": "",
+            }
+        ]
+    }
+
+    class SemanticSupportWithoutFindingPageClient:
+        def openai_respond_with_vector_store(self, request, ctx):
+            if request.artifact_family == "doc_map":
+                payload = {
+                    "doc_id": "d1",
+                    "title": "M&A Outlook",
+                    "summary": "The report reviews current dealmaking priorities.",
+                    "sections": [
+                        {
+                            "id": "deal-priorities",
+                            "title": "Deal priorities",
+                            "summary": "Dealmakers prioritize portfolio optimization.",
+                            "key_points": [
+                                "Dealmakers prioritize integration and portfolio "
+                                "optimization."
+                            ],
+                            "pages": [8],
+                        }
+                    ],
+                }
+            elif request.artifact_family == "findings":
+                payload = (
+                    {"findings": []}
+                    if str(ctx.task_id).endswith(":targeted_fallback")
+                    else finding
+                )
+            elif request.artifact_family == "validation_semantic":
+                payload = {
+                    "metrics": [
+                        {
+                            "id": "evidence:findings:transaction-focus",
+                            "supported": True,
+                            "confidence": 0.99,
+                            "reason": (
+                                "The source supports the stated dealmaking priorities."
+                            ),
+                        }
+                    ],
+                    "quotes": [],
+                }
+            else:
+                payload = {"not_found_reason": "fixture_insufficient_evidence"}
+            return OpenAIResponseResult(
+                schema_version="1.0",
+                text=json.dumps(payload),
+                parsed_json=payload,
+                input_tokens=4,
+                output_tokens=3,
+                tool_calls=0,
+                model=request.model,
+            )
+
+        def openai_chat_json(self, request, ctx):
+            return self.openai_respond_with_vector_store(request, ctx)
+
+    packs = generate_evidence_packs(
+        report_id="semantic-page-reference",
+        report_name="semantic-page-reference.pdf",
+        vector_store_id="vs_semantic_page_reference",
+        settings=_settings(tmp_path, evidence_pack_registry=["doc_map", "findings"]),
+        ctx=replace(_ctx(), task_id="test:semantic-page-reference"),
+        source_spans=[{"id": "pdf:p8", "page": 8, "text": source_excerpt}],
+        openai_client=SemanticSupportWithoutFindingPageClient(),
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+    )
+
+    assert packs["evidence_fidelity"]["semantic_validation_count"] == 1
+    assert packs["findings"]["findings"][0]["pages"] == [8]
+
+
+def test_complete_numeric_lead_does_not_trigger_secondary_numeric_fallback():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    targets = [
+        {
+            "id": "tech-media-growth-dollars",
+            "title": "$300 Billion in Tech and Media Growth Dollars",
+            "key_point": (
+                "Revenue rose from $1.7T in 2017E to $2.0T in 2021E, adding "
+                "$302B at 4.1% CAGR versus approximately 3% GDP CAGR."
+            ),
+            "pages": [3, 4, 5, 6],
+        },
+        {
+            "id": "web-video",
+            "title": "Big Influencers and Media Brands will Rule Web Video",
+            "key_point": "Creator shares and video views are compared.",
+            "pages": [49, 50],
+        },
+    ]
+    findings = [
+        {
+            "id": "internet-media-revenue-forecast",
+            "section_id": "tech-media-growth-dollars",
+            "text": targets[0]["key_point"],
+            "evidence": targets[0]["key_point"],
+            "pages": [5],
+        }
+    ]
+
+    assert _missing_findings_retrieval_targets(
+        targets, findings, {"internet-media-revenue-forecast"}
+    ) == [targets[1]]
+
+
+def test_incomplete_numeric_lead_does_not_expand_to_secondary_numeric_target():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    targets = [
+        {
+            "id": "tech-media-growth-dollars",
+            "title": "$300 Billion in Tech and Media Growth Dollars",
+            "key_point": "Revenue grew by $302B at a 4.1% CAGR.",
+            "pages": [3, 4, 5, 6],
+        },
+        {
+            "id": "web-video",
+            "title": "Big Influencers and Media Brands will Rule Web Video",
+            "key_point": "50M+ creators account for 71% of views.",
+            "pages": [49, 50, 51, 52],
+        },
+    ]
+
+    assert _missing_findings_retrieval_targets(targets, [], set()) == targets
+
+
+def test_exact_buyer_comparison_leaves_missing_portfolio_target_for_fallback():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    targets = [
+        {
+            "id": "diverging-risk-appetites-between-buyers",
+            "title": "Diverging risk appetites between buyers",
+            "key_point": "Planned 2026 M&A deals: corporate mean 5.2; PE mean 7.3.",
+            "pages": [14, 15, 16, 17],
+        },
+        {
+            "id": "portfolio-simplification-as-a-value-creation-strategy",
+            "title": "Portfolio simplification as a value creation strategy",
+            "key_point": "Portfolio simplification sharpens strategic direction.",
+            "pages": [18, 19, 20, 21, 22],
+        },
+    ]
+    findings = [
+        {
+            "id": "buyer-deal-comparison",
+            "section_id": "diverging-risk-appetites-between-buyers",
+            "text": "Planned 2026 M&A deals: corporate mean 5.2; PE mean 7.3.",
+            "evidence": "2026 M&A deals: corporate mean 5.2; private equity mean 7.3.",
+            "pages": [15],
+        }
+    ]
+
+    assert _missing_findings_retrieval_targets(
+        targets, findings, {"buyer-deal-comparison"}
+    ) == [targets[1]]
+
+
+def test_same_section_title_does_not_match_a_different_docmap_section_id():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    target = {
+        "id": "gaming-finding-keeping-users",
+        "title": "Finding and keeping users",
+        "key_point": (
+            "Casino installs +22% and sessions -5%; slots +46% and sessions -5%."
+        ),
+        "pages": [17, 18, 19, 20, 21, 22, 23],
+    }
+    ecommerce_finding = {
+        "id": "ecommerce-session-outcome",
+        "section_id": "ecommerce-finding-keeping-users",
+        "section_title": "Finding and keeping users",
+        "text": ("Casino installs +22% and sessions -5%; slots +46% and sessions -5%."),
+        "evidence": (
+            "Casino installs +22% and sessions -5%; slots +46% and sessions -5%."
+        ),
+        "pages": [27],
+    }
+
+    assert _missing_findings_retrieval_targets(
+        [target], [ecommerce_finding], {"ecommerce-session-outcome"}
+    ) == [target]
+
+
+def test_different_section_title_does_not_cover_target_without_section_id():
+    from src.generators.evidence_pack_generator import (
+        _missing_findings_retrieval_targets,
+    )
+
+    target = {
+        "id": "paid-media-results",
+        "title": "Paid media results",
+        "key_point": "Paid media revenue grew 12% in 2025.",
+        "pages": [5],
+    }
+    unrelated_finding = {
+        "id": "unrelated-finding",
+        "section_title": "Consumer behavior",
+        "text": "Paid media revenue grew 12% in 2025.",
+        "evidence": "Paid media revenue grew 12% in 2025.",
+        "pages": [5],
+    }
+
+    assert _missing_findings_retrieval_targets(
+        [target], [unrelated_finding], {"unrelated-finding"}
+    ) == [target]
 
 
 def test_generate_evidence_packs_handles_missing_json(tmp_path):

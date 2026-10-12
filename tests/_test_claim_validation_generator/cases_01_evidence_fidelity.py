@@ -19,6 +19,101 @@ def test_retained_claim_validation_indexes_legacy_finding_excerpt() -> None:
     assert package.results[0].status == "supported"
 
 
+def test_actual_activate_video_insight_matches_validated_finding_relationship() -> None:
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend; "
+        "all other users account for 39% of time spent and 66% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "66%\n39%\n34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention) All Other Users"
+    )
+    insight = {
+        "id": "video-attention-and-spend-cohorts",
+        "text": (
+            "U.S. 2017 video users: top 25% (4.5+ daily video-attention hours), "
+            "61% time/34% consumer spend; others, 39% time/66% spend."
+        ),
+        "evidence_id": "video_super_users_time_spend",
+        "evidence_spans": [
+            {
+                "evidence_id": "video_super_users_time_spend",
+                "source_pack": "findings",
+                "page": 15,
+            }
+        ],
+    }
+    evidence = {
+        "findings": {
+            "findings": [
+                {
+                    "id": "video_super_users_time_spend",
+                    "text": statement,
+                    "evidence": excerpt,
+                    "page": 15,
+                }
+            ]
+        }
+    }
+
+    package = validate_retained_claims({"insights_final": [insight]}, evidence)
+
+    result = package.results[0]
+    assert result.status == "supported"
+    assert result.deterministic_status == "supported"
+    assert {reference.page for reference in result.candidate.evidence_references} == {
+        15
+    }
+    assert all(
+        reference.source_pack == "findings"
+        for reference in result.candidate.evidence_references
+    )
+
+
+def test_activate_video_insight_rejects_numeric_values_absent_from_finding() -> None:
+    statement = (
+        "In the U.S. in 2017, the top 25% of video users (4.5+ hours of daily "
+        "video attention) account for 61% of time spent and 34% of consumer spend."
+    )
+    excerpt = (
+        "VIDEO TIME AND SPEND RELATIVE TO SHARE OF USERS, U.S., 2017, % TOTAL\n"
+        "34%\n61%\nShare of Time Spent Share of Consumer Spend\n"
+        "Top 25% of Users (4.5+ hours of daily video attention)"
+    )
+    package = validate_retained_claims(
+        {
+            "insights_final": [
+                {
+                    "id": "video-insight",
+                    "text": "Top 25% video users accounted for 62% of time spent.",
+                    "evidence_id": "video-finding",
+                }
+            ]
+        },
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "video-finding",
+                        "text": statement,
+                        "evidence": excerpt,
+                    }
+                ]
+            }
+        },
+    )
+
+    result = package.results[0]
+    assert result.status == "unsupported"
+    assert any(
+        check.name == "number_value_unit_match"
+        and check.reason == "quantity_not_entailed"
+        for check in result.checks
+    )
+
+
 def test_retained_claim_validation_indexes_doc_map_section_key_points() -> None:
     claim = "Adjust data covers the top 5,000 apps."
     package = validate_retained_claims(
@@ -104,8 +199,8 @@ def test_numeric_and_quote_claims_pass_without_semantic_call() -> None:
             ],
         },
         _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
+        semantic_batch_validator=lambda *_: (_ for _ in ()).throw(
+            AssertionError("unused")
         ),
     )
 
@@ -142,6 +237,68 @@ def test_evidence_fidelity_rejects_a_generated_finding_with_the_wrong_number() -
     assert package.results[0].status == "unsupported"
     assert any(
         check.reason == "quantity_not_entailed" for check in package.results[0].checks
+    )
+
+
+def test_evidence_fidelity_treats_year_over_year_endpoint_as_timeframe() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Across 2025 year over year, adoption grew 10%.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Adoption grew 10% over YoY 2024-2025, while average session "
+                    "length was 4 minutes."
+                ),
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "supported"
+
+
+def test_evidence_fidelity_rejects_wrong_year_over_year_endpoint() -> None:
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": "Across 2026 year over year, adoption grew 10%.",
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "Adoption grew 10% over YoY 2024-2025, while average session "
+                    "length was 4 minutes."
+                ),
+            }
+        ],
+        semantic_validator=lambda *_: (_ for _ in ()).throw(AssertionError("unused")),
+    )
+
+    assert package.results[0].status == "unsupported"
+    assert any(
+        check.reason == "protected_fact_timeframe_incompatible"
+        for check in package.results[0].checks
     )
 
 
@@ -274,6 +431,115 @@ def test_evidence_fidelity_recovers_page_provenance_from_exact_source_text() -> 
 
     assert package.results[0].status == "supported"
     assert package.results[0].candidate.evidence_references[0].page == 4
+
+
+def test_evidence_fidelity_uses_exact_excerpt_when_reported_page_is_printed_page() -> (
+    None
+):
+    excerpt = (
+        "Among survey respondents, confidence in journalism prospects was 38% in 2026."
+    )
+    package = validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "f1",
+                        "text": excerpt,
+                        "evidence": excerpt,
+                        "pages": [3],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:3",
+                "page": 3,
+                "text": "Contents\n1. Pressures on Journalism Mount\n2. Answer Engines",
+            },
+            {"id": "source:page:5", "page": 5, "text": excerpt},
+        ],
+    )
+
+    assert package.results[0].candidate.evidence_references[0].page == 5
+    assert package.results[0].status == "supported"
+
+
+def _activate_revenue_fidelity_case(alternate_page_text: str):
+    claim = (
+        "Global consumer Internet and media revenue is forecast to rise from "
+        "$1.7 trillion in 2017E to $2.0 trillion in 2021E, adding $302 billion "
+        "at 4.1% CAGR versus approximately 3% global GDP CAGR."
+    )
+    evidence = (
+        "Global consumer Internet and media revenue outlook, a four-year "
+        "forecast: $1.7 trillion to $2.0 trillion; $302 billion in growth; "
+        "4.1% CAGR versus global GDP around 3%."
+    )
+    return validate_evidence_fidelity(
+        {
+            "findings": {
+                "findings": [
+                    {
+                        "id": "revenue-growth",
+                        "text": claim,
+                        "evidence": evidence,
+                        "pages": [4],
+                    }
+                ]
+            }
+        },
+        source_spans=[
+            {
+                "id": "source:page:4",
+                "page": 4,
+                "text": (
+                    "www.activate.com\n3\nContents\n"
+                    "$300 Billion in Tech and Media Growth Dollars"
+                ),
+            },
+            {
+                "id": "source:page:5",
+                "page": 5,
+                "text": alternate_page_text,
+            },
+        ],
+    )
+
+
+def test_evidence_fidelity_recovers_unique_numeric_source_page_from_excerpt() -> None:
+    package = _activate_revenue_fidelity_case(
+        "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
+        "2017E\n2021E\n$1.7T\n$2.0T\n$302B\nCAGR 4.1%\n"
+        "Global GDP CAGR: ~3%\nFORECAST"
+    )
+
+    result = package.results[0]
+    assert result.status == "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [5]
+
+
+def test_evidence_fidelity_does_not_rebind_to_same_values_for_another_subject() -> None:
+    package = _activate_revenue_fidelity_case(
+        "GLOBAL SPORTS REVENUE OUTLOOK, 2017E-2021E, USD\n"
+        "$1.7T\n$2.0T\n$302B\nCAGR 4.1%\nGlobal GDP CAGR: ~3%"
+    )
+
+    result = package.results[0]
+    assert result.status != "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [4]
+
+
+def test_evidence_fidelity_does_not_rebind_when_alternate_page_is_incomplete() -> None:
+    package = _activate_revenue_fidelity_case(
+        "CONSUMER INTERNET AND MEDIA REVENUES, GLOBAL, 2017E-2021E, USD\n"
+        "2017E\n2021E\n$1.7T\n$2.0T\n$302B"
+    )
+
+    result = package.results[0]
+    assert result.status != "supported"
+    assert [reference.page for reference in result.candidate.evidence_references] == [4]
 
 
 def test_evidence_fidelity_does_not_treat_explanatory_evidence_as_the_claim() -> None:
@@ -597,9 +863,7 @@ def test_evidence_fidelity_batches_identical_evidence_and_fails_closed() -> None
     assert by_id["evidence:findings:f1"].status == "supported"
     assert by_id["evidence:findings:f2"].status == "unsupported"
     assert by_id["evidence:findings:f3"].status == "unsupported"
-    assert by_id["evidence:findings:f3"].reasons == [
-        "semantic_support_not_established"
-    ]
+    assert by_id["evidence:findings:f3"].reasons == ["semantic_support_not_established"]
     assert package.semantic_validation_count == 3
     assert package.semantic_execution_identities == ["semantic-batch-1"]
 
@@ -728,81 +992,3 @@ def test_evidence_fidelity_accepts_a_normalized_quote_and_keeps_unknown_unknown(
     assert quote.semantic_validation_count == 0
     assert unknown.results[0].protected_facts is not None
     assert unknown.results[0].protected_facts.dimension("timeframe").status == "unknown"
-
-
-def test_changed_numeric_claim_blocks_readiness_without_model_call() -> None:
-    package = validate_retained_claims(
-        {
-            "summary": {
-                "claim_evidence_map": [
-                    {
-                        "claim": "Wallet adoption reached 43% in 2026.",
-                        "evidence_id": "f1",
-                    }
-                ]
-            }
-        },
-        _evidence(),
-        semantic_batch_validator=lambda *_: (
-            (_ for _ in ()).throw(AssertionError("unused"))
-        ),
-    )
-
-    assert package.readiness_status == "not_publishable"
-    assert package.unsupported_factual_count == 1
-    assert package.semantic_validation_count == 0
-
-
-def test_claim_reference_order_tolerates_root_and_page_specific_duplicates() -> None:
-    package = validate_retained_claims(
-        {
-            "summary": {
-                "claim_evidence_map": [
-                    {
-                        "claim": "Wallet adoption reached 42% in 2026.",
-                        "evidence_id": "f1",
-                        "evidence_spans": [{"evidence_id": "f1", "page": 4}],
-                    }
-                ]
-            }
-        },
-        _evidence(),
-    )
-
-    assert [item.page for item in package.results[0].candidate.evidence_references] == [
-        4,
-        4,
-    ]
-
-
-def test_unresolved_descriptive_claim_is_the_only_kind_sent_to_semantic_boundary() -> (
-    None
-):
-    calls = []
-
-    from .cases_03_hybrid_grounding import _semantic_result
-
-    def semantic(claims):
-        calls.append(claims)
-        return [_semantic_result(claim, "entailed") for claim in claims]
-
-    package = validate_retained_claims(
-        {
-            "summary": {
-                "claim_evidence_map": [
-                    {
-                        "claim": "Wallet adoption is reshaping checkout strategy.",
-                        "evidence_id": "f1",
-                    }
-                ]
-            }
-        },
-        _evidence(),
-        semantic_batch_validator=semantic,
-    )
-
-    assert package.readiness_status == "awaiting_review"
-    assert package.semantic_validation_count == 1
-    assert len(calls) == 1
-    assert len(calls[0]) == 1
-    assert package.semantic_execution_identities == ["execution-1"]

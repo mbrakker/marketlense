@@ -294,6 +294,7 @@ def test_ambiguous_writable_path_abstains_before_provider_is_required() -> None:
             request=SimpleNamespace(report_id="report-1"), openai_client=None
         ),
         target=target,
+        grounding_package={},
         state=SimpleNamespace(
             summary={},
             insights_candidates=[],

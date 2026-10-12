@@ -10,6 +10,10 @@ text: |
     comparison; never call the whole comparison observed or forecast.
   - Keep source frequency, likelihood, modality, and certainty qualifiers
     (for example, "often" and "may"), even in compact copy.
+  - Preserve what the survey question actually measures; do not recast
+    perceived importance as an intention or plan. Describe respondents only as
+    specifically as the linked source evidence does; do not infer their role or
+    seniority from report context.
   - Co-location does not establish a relationship, contrast, significance, or
     implication; state one only with linked evidence. Separate measures and
     populations.

@@ -18,6 +18,7 @@ text: |
   Rules:
   - Prefer verbatim, attribution-ready snippets.
   - "id" must be stable and unique within this output.
-  - "page" must be integer or null.
+  - "page" must be a positive, one-based physical PDF page index containing
+    the quote, or null when retrieval gives no page.
   - Do not output fabricated speakers or citations.
   - If no suitable quotes exist, return [] and set "not_found_reason".

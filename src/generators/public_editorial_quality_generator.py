@@ -175,8 +175,13 @@ _VALUE_PERIOD_PAIR = re.compile(
 )
 _CAPITALIZED_CATEGORY_VALUE_PAIR = re.compile(
     rf"\b(?P<label>[A-Z][A-Za-z0-9&/-]*(?:\s+(?:[A-Z][A-Za-z0-9&/-]*|and|&)){{0,4}})"
-    rf"\s*(?::|is|has|accounts\s+for|at|reaches)?\s*"
+    rf"(?:[ \t]*(?::|is|has|accounts\s+for|at|reaches)[ \t]*|[ \t]+)"
     rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+)
+_DELIMITED_SPACE_CATEGORY_VALUE_PAIR = re.compile(
+    rf";\s*(?P<label>[A-Za-z][A-Za-z0-9&/-]*"
+    rf"(?:\s+[A-Za-z][A-Za-z0-9&/-]*){{1,4}})"
+    rf"[ \t]+(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
 )
 _DELIMITED_CATEGORY_VALUE_PAIR = re.compile(
     rf"(?:^|[;,\n])\s*(?P<label>[A-Za-z][A-Za-z0-9&/ -]{{0,48}}?)"
@@ -1668,11 +1673,12 @@ def _structured_category_value_pairs(text: str) -> set[tuple[str, str]]:
     pairs: set[tuple[str, str]] = set()
     for pattern in (
         _CAPITALIZED_CATEGORY_VALUE_PAIR,
+        _DELIMITED_SPACE_CATEGORY_VALUE_PAIR,
         _DELIMITED_CATEGORY_VALUE_PAIR,
     ):
         for match in pattern.finditer(text):
             value = _normalized_relationship_value(match.group("value"))
-            label = _normalized_relationship_label(match.group("label"))
+            label = _normalized_category_value_label(match.group("label"))
             if value and label and not _is_year_value(value):
                 pairs.add((label, value))
     return pairs
@@ -1740,9 +1746,7 @@ def _values_near_label(
         for related_label in other_labels
     ]
     permitted_neighbors = {
-        value.strip().casefold()
-        for value in permitted_neighbor_labels
-        if value.strip()
+        value.strip().casefold() for value in permitted_neighbor_labels if value.strip()
     }
     shared_value_prefix = re.compile(
         rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+",
@@ -1757,15 +1761,44 @@ def _values_near_label(
             if _is_compound_category_header(fragment, label_match.start()):
                 continue
             prefix = fragment[: label_match.start()]
+            attributed_preceding_value = re.search(
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+                r"\s+(?:called|rated|described)\s+(?:as\s+)?"
+                r"(?:(?:the|a|an)\s+)?(?:impact|effect|result|outcome)\s*$",
+                prefix,
+                re.IGNORECASE,
+            )
+            adjacent_preceding_value = re.search(
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s*$",
+                prefix,
+            )
+            preceding_category_value = (
+                attributed_preceding_value or adjacent_preceding_value
+            )
+            if preceding_category_value and not attributed_preceding_value:
+                preceding_context = prefix[: preceding_category_value.start()]
+                has_category_separator = re.search(
+                    r"(?:[,;:]|\b(?:and|or)\b)\s*$",
+                    preceding_context,
+                    re.IGNORECASE,
+                )
+                if not has_category_separator:
+                    preceding_category_value = None
+            if preceding_category_value:
+                value = _normalized_relationship_value(
+                    preceding_category_value.group("value")
+                )
+                if value and not _is_year_value(value):
+                    values.add(value)
+                continue
+
             preceding_value = re.search(
-                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+in\s+$",
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+(?:in|for)\s+$",
                 prefix,
                 re.IGNORECASE,
             )
             if preceding_value:
-                value = _normalized_relationship_value(
-                    preceding_value.group("value")
-                )
+                value = _normalized_relationship_value(preceding_value.group("value"))
                 if value and not _is_year_value(value):
                     values.add(value)
                 continue
@@ -1780,9 +1813,8 @@ def _values_near_label(
                     if pattern.search(intervening_text):
                         matched_related_label = True
                         intervening_text = pattern.sub(" ", intervening_text)
-                if (
-                    matched_related_label
-                    and category_list_separators.fullmatch(intervening_text)
+                if matched_related_label and category_list_separators.fullmatch(
+                    intervening_text
                 ):
                     value = _normalized_relationship_value(prefix.group("value"))
                     if value and not _is_year_value(value):
@@ -1829,6 +1861,12 @@ def _is_compound_category_header(text: str, label_start: int) -> bool:
         return False
     header = text[header_start : label_start + header_end_match.start()]
     return bool(re.search(r"\b(?:and|&)\b|&", header))
+
+
+def _normalized_category_value_label(value: str) -> str:
+    """Use the nearest blank-line-delimited row label, not its table heading."""
+    nearest_label = re.split(r"\r?\n[ \t]*\r?\n", value)[-1]
+    return _normalized_relationship_label(nearest_label)
 
 
 def _normalized_relationship_label(value: str) -> str:

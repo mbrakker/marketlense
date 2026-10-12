@@ -48,6 +48,24 @@ def _build_text_pdf(path: Path, *, paragraph: str = "") -> None:
     doc.close()
 
 
+def _build_detached_chart_text_pdf(path: Path) -> None:
+    """Write chart labels and values in separate object-order groups."""
+
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    rows = [
+        ("Main source of income", "0%"),
+        ("Significant source of income", "20%"),
+        ("Minor source of income", "49%"),
+    ]
+    for row_index, (label, _value) in enumerate(rows):
+        page.insert_text((60, 140 + row_index * 28), label, fontsize=11)
+    for row_index, (_label, value) in enumerate(rows):
+        page.insert_text((300, 140 + row_index * 28), value, fontsize=11)
+    doc.save(path.as_posix())
+    doc.close()
+
+
 # ---------------------------------------------------------------------------
 # Deterministic malformation detection
 # ---------------------------------------------------------------------------
@@ -339,6 +357,26 @@ def test_extract_pdf_text_keeps_healthy_output_without_fallback(
         for event in events
         if event.get("event") == "pdf_text_native_fallback_applied"
     ]
+
+
+def test_extract_pdf_text_restores_detached_chart_row_order(tmp_path) -> None:
+    pdf_path = tmp_path / "detached-chart-rows.pdf"
+    _build_detached_chart_text_pdf(pdf_path)
+
+    response = extract_pdf_text(
+        PdfTextExtractRequest(
+            schema_version="1.0",
+            path=str(pdf_path),
+            max_pages=1,
+            max_chars=8000,
+        ),
+        _ctx(),
+    )
+
+    normalized = " ".join(response.text.split())
+    assert "Main source of income 0%" in normalized
+    assert "Significant source of income 20%" in normalized
+    assert "Minor source of income 49%" in normalized
 
 
 def test_sample_pdf_text_scores_recovered_text(tmp_path) -> None:

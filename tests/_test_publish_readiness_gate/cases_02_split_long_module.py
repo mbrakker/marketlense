@@ -15,9 +15,7 @@ def test_readiness_accepts_the_canonical_page_bound_semantic_identity() -> None:
     evidence_packs["findings"]["findings"][0]["text"] = (
         "Revenue grew in the measured market."
     )
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, semantic=True
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
     page_text = "Revenue grew in the measured market.\n1"
     reference = package["results"][0]["candidate"]["evidence_references"][0]
     evidence_identity = {
@@ -63,9 +61,7 @@ def test_readiness_rejects_a_changed_page_for_semantic_identity() -> None:
     evidence_packs["findings"]["findings"][0]["text"] = (
         "Revenue grew in the measured market."
     )
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, semantic=True
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
     original_page = "Revenue grew in the measured market.\n1"
     reference = package["results"][0]["candidate"]["evidence_references"][0]
     evidence_identity = {
@@ -117,9 +113,7 @@ def test_readiness_does_not_bind_a_page_when_linked_evidence_is_missing() -> Non
     evidence_packs["findings"]["findings"][0]["text"] = (
         "Revenue grew in the measured market."
     )
-    package = _retained_claim_package(
-        artifacts, evidence_packs, html, semantic=True
-    )
+    package = _retained_claim_package(artifacts, evidence_packs, html, semantic=True)
     page_text = "Revenue grew in the measured market.\n1"
     reference = package["results"][0]["candidate"]["evidence_references"][0]
     evidence_identity = {
@@ -442,3 +436,80 @@ def test_rendered_scaffolding_projects_canonical_html_issues() -> None:
         assert "publish_readiness.rendered_scaffolding" in failed
         assert "publish_readiness.editorial_quality" in failed
         assert ("publish_readiness.source_fidelity" in failed) == ("..." in bad_html)
+
+
+@pytest.mark.parametrize(
+    "affected_section",
+    (
+        "insights:smaller-quantities-budget-management.text",
+        "key_figures:smaller-quantities-budget-management.figure",
+    ),
+)
+def test_unresolved_factual_grounding_warning_blocks_readiness(
+    affected_section: str,
+) -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    validation = ValidationReport(
+        schema_version="1.1",
+        status="pass",
+        severity="warning",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                rule_id="grounding",
+                violation_type="not_established",
+                severity="warning",
+                affected_section=affected_section,
+                message=(
+                    "[grounding] [factual_claim|not_established] The retained "
+                    "evidence supports 49% buying smaller quantities but not the "
+                    "stated budget-management reason: Around half of consumers "
+                    "(49%) said they were buying smaller quantities to manage budgets."
+                ),
+            )
+        ],
+    )
+
+    readiness = _readiness_with_package(package, validation_report=validation)
+
+    semantic_rule = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.semantic_grounding"
+    )
+    assert semantic_rule.status == "fail"
+    assert readiness.status == "fail"
+
+
+def test_unresolved_analyst_interpretation_warning_does_not_block_readiness() -> None:
+    artifacts, evidence_packs, html, _ = _ready_inputs()
+    package = _retained_claim_package(artifacts, evidence_packs, html)
+    validation = ValidationReport(
+        schema_version="1.1",
+        status="pass",
+        severity="warning",
+        issues=[
+            ValidationIssue(
+                schema_version="1.0",
+                rule_id="grounding",
+                violation_type="not_established",
+                severity="warning",
+                affected_section="insights:smaller-quantities-budget-management.so_what",
+                message=(
+                    "[grounding] [analyst_interpretation|not_established] This "
+                    "pattern may affect assortment and pack-size planning."
+                ),
+            )
+        ],
+    )
+
+    readiness = _readiness_with_package(package, validation_report=validation)
+
+    semantic_rule = next(
+        item
+        for item in readiness.rule_results
+        if item.rule_id == "publish_readiness.semantic_grounding"
+    )
+    assert semantic_rule.status == "pass"
+    assert readiness.status == "pass"

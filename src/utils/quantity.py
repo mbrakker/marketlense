@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, Tuple
 
 from src.utils.text_normalization import (
@@ -69,6 +69,8 @@ _TIMEFRAME_RE = re.compile(
     r"\b(?:"
     r"q[1-4]\s*20\d{2}|20\d{2}\s*q[1-4]|"
     r"fy\s*20\d{2}|20\d{2}\s*forecast|"
+    r"(?:yoy|year\s+over\s+year)\s+(?:19|20)\d{2}"
+    r"(?:\s*[-–—]\s*|\s+)(?:19|20)\d{2}|"
     r"ytd|mtd|qtd|yoy|mom|qoq|"
     r"[a-z]{3,9}\s+\d{1,2}\s*-\s*[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
     r"[a-z]{3,9}\s+\d{1,2},?\s*20\d{2}|"
@@ -276,6 +278,7 @@ def extract_quantities(text: str) -> List[Quantity]:
         _extract_main(normalized, ignored_number_spans=compact_year_end_spans)
     )
     quantities.extend(_extract_multipliers(normalized))
+    quantities = _inherit_time_unit_to_endpoint(normalized, quantities)
     return _dedupe_quantities(quantities)
 
 
@@ -387,13 +390,11 @@ def should_ground_quantity(
     explicit_unit = quantity.unit_family != "unknown" or bool(quantity.unit)
     metric_context = _has_metric_context(sentence_norm)
     if strict_section or section_policy == "strict":
-        if (
+        return not (
             _looks_like_non_metric_token(quantity, sentence_norm)
             and not metric_context
             and not explicit_unit
-        ):
-            return False
-        return True
+        )
     if quantity.unit_family == "time" and not metric_context:
         return False
     if explicit_unit:
@@ -449,31 +450,41 @@ def _extract_ranges(text: str) -> List[Quantity]:
         if low is None or high is None:
             continue
         unit = _clean_unit(match.group("unit"))
+        low_is_year = bool(re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip()))
+        high_is_year = bool(
+            re.fullmatch(r"(?:19|20)\d{2}", match.group("high").strip())
+        )
+        starts_with_currency = match.start() > 0 and text[match.start() - 1] in "$€£¥"
+        duration_unit_follows = re.match(
+            r"\s*(?:minutes?|hours?|days?|weeks?|months?|years?)\b",
+            text[match.end() :],
+            re.IGNORECASE,
+        )
         if (
-            not unit
-            and re.fullmatch(r"20\d{2}", match.group("low").strip())
-            and re.fullmatch(r"20\d{2}", match.group("high").strip())
+            low_is_year
+            and not starts_with_currency
+            and (high_is_year or unit or duration_unit_follows)
         ):
-            # A pair of calendar years is a timeframe, not a numeric range.
+            # A calendar year followed by another year or a unit-qualified
+            # value is temporal context, not a metric range endpoint.
+            continue
+        if (
+            low_is_year
+            and not starts_with_currency
+            and not unit
+            and re.search(r"\b(?:in|during|for)\s+$", text[: match.start("low")])
+            and re.search(r"\bto\b", match.group(0), re.IGNORECASE)
+        ):
+            # A period year followed by an unqualified measurement is not a
+            # numeric range (for example, "in 2024 to 9.6 minutes").
             continue
         if (
             not unit
-            and re.fullmatch(r"(?:19|20)\d{2}", match.group("low").strip())
+            and low_is_year
             and re.fullmatch(r"\d{2}", match.group("high").strip())
         ):
             # A compact year range such as 2015–20 is temporal context; its
             # abbreviated endpoint is not an independently groundable value.
-            continue
-        if unit in {
-            "%",
-            "percent",
-            "pct",
-            "pp",
-            "percentage point",
-            "percentage points",
-        } and re.fullmatch(r"20\d{2}", match.group("low").strip()):
-            # "from 16.3% in 2024 to 17.8%" is a time comparison, not a
-            # 2024-to-17.8 percent range.
             continue
         family, canonical_unit, magnitude = _resolve_unit_family(
             unit=unit,
@@ -505,6 +516,52 @@ def _extract_ranges(text: str) -> List[Quantity]:
             )
         )
     return output
+
+
+def _inherit_time_unit_to_endpoint(
+    text: str, quantities: Sequence[Quantity]
+) -> List[Quantity]:
+    """Carry a time unit across a direct ``from X unit to Y`` measurement."""
+
+    time_units = r"minutes?|hours?|days?|weeks?|months?|years?"
+    endpoint_re = re.compile(
+        rf"\bfrom\s+(?P<first>{_NUMBER_RE})\s+(?P<unit>{time_units})\b"
+        rf"(?:\s+in\s+(?:19|20)\d{{2}})?\s+to\s+(?P<second>{_NUMBER_RE})\b"
+        rf"(?!\s*{time_units}\b)",
+        re.IGNORECASE,
+    )
+    updated = list(quantities)
+    for match in endpoint_re.finditer(text):
+        first_start, first_end = match.span("first")
+        second_start, second_end = match.span("second")
+        first = next(
+            (
+                quantity
+                for quantity in quantities
+                if quantity.start <= first_start
+                and first_end <= quantity.end
+                and quantity.unit_family == "time"
+            ),
+            None,
+        )
+        if first is None:
+            continue
+        for index, quantity in enumerate(updated):
+            if not (
+                quantity.start <= second_start
+                and second_end <= quantity.end
+                and quantity.unit_family == "unknown"
+            ):
+                continue
+            updated[index] = replace(
+                quantity,
+                unit_family=first.unit_family,
+                unit=first.unit,
+                magnitude=first.magnitude,
+                confidence=min(first.confidence, 0.9),
+            )
+            break
+    return updated
 
 
 def _extract_ratios(text: str) -> List[Quantity]:
@@ -612,9 +669,7 @@ def _extract_main(
     ignored_number_spans: Sequence[tuple[int, int]] = (),
 ) -> List[Quantity]:
     output: List[Quantity] = []
-    sample_size_spans = tuple(
-        match.span("n") for match in _N_EQUALS_RE.finditer(text)
-    )
+    sample_size_spans = tuple(match.span("n") for match in _N_EQUALS_RE.finditer(text))
     for match in _MAIN_RE.finditer(text):
         if _is_duration_component(text, match.start("number"), match.end("number")):
             continue
@@ -827,6 +882,11 @@ def _resolve_unit_family(
         }.get(unit_norm, unit_norm.removesuffix("s"))
         return "count", count_unit, magnitude_norm
 
+    if not unit_norm:
+        preceding = sentence_norm[max(0, span[0] - 16) : span[0]]
+        if re.search(r"\bbase\s*(?:=|:)\s*$", preceding):
+            return "count", "sample", magnitude_norm
+
     if magnitude_norm:
         following_count_unit = re.search(
             r"\b(user|users|download|downloads|respondent|respondents|"
@@ -856,6 +916,19 @@ def _resolve_unit_family(
         "years",
     }:
         return "time", unit_norm, magnitude_norm
+
+    # A metric may place descriptive cohort words between a number and its
+    # explicit duration unit (for example, "4.5 daily video-attention hours").
+    # Bind only a short alphabetic descriptor run; do not borrow a unit across
+    # another clause, conjunction, or numeric value.
+    duration_suffix = re.match(
+        r"\s+(?:(?!(?:and|or|but)\b)[a-z]+(?:-[a-z]+)*\s+){1,3}"
+        r"(?P<unit>minutes?|hours?|days?|weeks?|months?|years?)\b",
+        sentence[span[1] : min(len(sentence), span[1] + 48)],
+    )
+    if duration_suffix:
+        duration_unit = duration_suffix.group("unit")
+        return "time", duration_unit, magnitude_norm
 
     if unit_norm in {"point", "points"}:
         return "points", "points", magnitude_norm
@@ -1041,9 +1114,7 @@ def _looks_like_non_metric_token(quantity: Quantity, sentence: str) -> bool:
         and not _has_metric_context(sentence)
     ):
         return True
-    if any(token in sentence for token in ("page ", "p.", "pp.")):
-        return True
-    return False
+    return any(token in sentence for token in ("page ", "p.", "pp."))
 
 
 def _normalize_comparator(raw: str) -> Comparator:

@@ -11,13 +11,13 @@ text: |
   - Editorial plan JSON: {{ editorial_plan_json }}
 
   Evidence identity rules:
-  - Use DocMap for section selection and nonnumeric coverage only. For a
-    source-backed numeric claim, `evidence_id` must equal the `id` of the
-    supporting entry in the `findings` evidence pack. Never use a DocMap section
-    id as `evidence_id` for a numeric claim.
-  - Keep each value beside its explicitly labeled metric/category, subject or
-    cohort, denominator, geography, and period/status from that same finding.
-    Omit the metric if the finding does not state the complete relationship.
+  - DocMap guides sections and qualitative coverage; it does not prove claims.
+    For numeric claims, `evidence_id` must be one supporting finding ID. A
+    quote ID is allowed only when its text states the exact value, subject, and
+    period/status. Never cite a DocMap ID as numeric evidence.
+  - Keep each value's role (level, change, forecast, or cumulative) and bind it
+    to its metric, population, geography, period, and any stated denominator.
+    Leave unclear bindings empty.
 
   Source-of-truth candidate insight schema:
   {{ insights_candidates_schema }}
@@ -39,12 +39,19 @@ text: |
   - report_type_lens: one of market_size, consumer_behavior, technology_shift, channel_strategy, brand_strategy, investment_outlook, risk_regulation, operations, creative_culture
   In `so_what` and `now_what`, avoid repeating numbers and ranked-group labels
   from `text`; omit counts absent from the linked evidence.
-  Produce candidates for the editorial plan's themes and retain their linked evidence IDs; do not independently introduce another theme set.
-  Make both fields audience-specific, non-generic, and non-contradictory; add
-  no factual premise. Use a number only when the linked finding's `evidence`
-  excerpt contains and supports its value and subject. The finding's
-  paraphrased `text` alone is not numeric evidence; otherwise omit the number
-  and keep only supported qualitative content.
-  Do not hallucinate numbers; lift them from the provided context only.
+  Use the plan only for coherence. Prioritize distinctive, decision-relevant
+  report-body outcomes, including comparisons, counter-signals, and qualitative
+  conclusions. Prefer stronger body findings over general introductory or
+  repeated context; retain introductory metrics when they materially frame the
+  report. Avoid several candidates from one theme when stronger distinct themes
+  remain. Preserve exact values, subjects, and periods.
+  Keep each group's paired metrics and direction together when evidence shows
+  materially different outcomes for distinct named groups or subgroups. Do not
+  omit distinct groups solely because they share a theme; use one clear
+  comparison or distinct candidates when each is material.
+  Keep source-derived text and advice within the selected evidence ID; do not
+  infer subjects or qualifiers from DocMap or titles. Use numbers only when its
+  excerpt states the full value-subject-period relationship. Keep both fields
+  audience-specific, non-generic, and non-contradictory.
   For each metric, `metric.value` must contain one complete human-readable primary metric or one coherent comparison/range. When `metric.value` is present, `metric.label` is required: make it a concise human-readable description of that exact source-backed metric (for example, `Digital video revenue growth`, `Monthly U.S. adult generative AI users`, or `Global eCommerce sales`), never a general insight or search statement. Never put a semicolon-separated metric list in `metric.value`. `metric.unit` must represent one semantic unit and must not repeat currency symbols or magnitude words already contained in `metric.value`. Keep supporting numbers in `text` and `evidence`, not in the public metric display.
   When the retained evidence supplies them, preserve the exact numeric binding in `metric.subject`, `metric.cohort`, `metric.denominator`, and `metric.observation_status` (`observed`, `forecast`, or `estimate`). Leave a field empty rather than inferring it.

@@ -1964,6 +1964,15 @@ def _render_regeneration_model(
 ) -> Dict[str, Any]:
     request = execution.runtime.request
     active_target = _active_repair_target(execution, variables)
+    decision_grounding = execution.grounding_package
+    if repair_call:
+        call_grounding = variables.get("grounding_package_json")
+        try:
+            parsed_grounding = json.loads(call_grounding) if call_grounding else None
+        except (TypeError, ValueError):
+            parsed_grounding = None
+        if isinstance(parsed_grounding, dict):
+            decision_grounding = parsed_grounding
     current_repair_artifacts = (
         _current_repair_artifacts(execution.state) if repair_call else {}
     )
@@ -1996,8 +2005,12 @@ def _render_regeneration_model(
                     "allowed_paths": active_target.allowed_paths,
                     "repair_action": execution.target.repair_action,
                     "repair_strategy": execution.target.repair_strategy,
+                    "allowed_evidence_ids": _repair_allowed_evidence_ids(
+                        decision_grounding,
+                        active_target.quarantined_evidence_ids,
+                    ),
                     "quarantined_evidence_ids": list(
-                        execution.target.quarantined_evidence_ids
+                        active_target.quarantined_evidence_ids
                     ),
                     "failure_classes": sorted(
                         {
@@ -2064,13 +2077,6 @@ def _render_regeneration_model(
     )
     if not repair_call:
         return result
-    call_grounding = variables.get("grounding_package_json")
-    try:
-        decision_grounding = json.loads(call_grounding) if call_grounding else None
-    except (TypeError, ValueError):
-        decision_grounding = None
-    if not isinstance(decision_grounding, dict):
-        decision_grounding = execution.grounding_package
     decision = _validated_repair_decision(
         result.get("repair_decision"),
         execution=execution,
@@ -2130,6 +2136,40 @@ def _render_regeneration_model(
         root_key: root_value,
         "_repair_decision": decision,
     }
+
+
+def _repair_allowed_evidence_ids(
+    grounding_package: Dict[str, Any], target_quarantined_ids: List[str]
+) -> List[str]:
+    """Expose the exact retained evidence whitelist used by repair validation."""
+
+    raw_package_ids = grounding_package.get("evidence_ids", [])
+    package_ids = _unique_strings(
+        raw_package_ids if isinstance(raw_package_ids, list) else []
+    )
+    relevant_entries = grounding_package.get("relevant_evidence", [])
+    relevant_ids = (
+        {
+            _normalized_evidence_id(_entry_evidence_id(entry))
+            for entry in relevant_entries
+            if isinstance(entry, dict)
+        }
+        if isinstance(relevant_entries, list)
+        else set()
+    )
+    raw_quarantined_ids = grounding_package.get("quarantined_evidence_ids", [])
+    quarantined_ids = set(
+        _unique_strings(
+            raw_quarantined_ids if isinstance(raw_quarantined_ids, list) else []
+        )
+    )
+    quarantined_ids.update(_unique_strings(target_quarantined_ids))
+    return [
+        evidence_id
+        for evidence_id in package_ids
+        if evidence_id not in quarantined_ids
+        and _normalized_evidence_id(evidence_id) in relevant_ids
+    ]
 
 
 def _active_repair_target(

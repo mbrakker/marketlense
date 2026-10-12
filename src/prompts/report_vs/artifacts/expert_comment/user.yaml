@@ -22,14 +22,14 @@ text: |
     observation to implication and a conditional MarketLense-authored action or
     watchpoint in direct prose. Do not force an action or watchpoint; do not emit
     labels such as "Observation:", "Implication:", or "Executive action:"
-  - If metrics conflict or are too weakly contextualized, state the supported tension instead of smoothing it over
+  - Keep each metric's source label before its value. If metrics conflict or lack context, state the supported tension.
   - No emojis, no hashtags
 
   Content constraints (strict):
-  - Facts must be supported. Interpretation may explain why a linked finding
-    matters even when the source does not; advice may be conditional
-    MarketLense guidance tied to that finding.
-  - Develop the editorial plan's report thesis and priority themes; do not create a competing thematic frame.
+  - Support facts with selected source spans; plan themes and DocMap are
+    context, not evidence. Tie interpretation and conditional advice to linked
+    findings.
+  - The plan selects an angle; it cannot prove cross-section links or report-wide centrality. Omit unsupported synthesis.
   - Keep facts descriptive when evidence is descriptive. Make interpretation
     non-contradictory; make advice conditional and MarketLense-authored. Add no
     factual premise, outcome promise, or false source attribution.

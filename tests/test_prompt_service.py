@@ -101,12 +101,26 @@ def test_artifact_prompts_include_shared_editorial_constitution() -> None:
     assert (
         "do not join it with separate evidence or preferences." in prompt_set.user.text
     )
+    assert "Keep each metric's source label before its value" in prompt_set.user.text
     assert any(
         path.replace("\\", "/").endswith(
             "report_vs/artifacts/_partials/editorial_constitution.yaml"
         )
         for path in prompt_set.user.include_paths
     )
+
+
+def test_cross_report_prompt_requires_two_populated_takeaways() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="cross_report_analysis/synthesis",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "exactly two non-empty `executive_takeaways`" in prompt_set.user.text
 
 
 def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> None:
@@ -123,10 +137,74 @@ def test_summary_repair_prompt_limits_claim_map_repairs_to_the_named_leaf() -> N
         prompt_set.user.text
     )
     assert "repair_context_json.allowed_paths" in prompt_set.user.text
+    assert "repair_context_json.allowed_evidence_ids" in prompt_set.user.text
     assert "do not patch map siblings, public" in prompt_set.user.text
     assert "not established by the linked evidence" in prompt_set.user.text
     assert "neighboring" in prompt_set.user.text
     assert "never return null" in prompt_set.user.text
+
+
+def test_insight_candidate_repair_prompt_uses_explicit_evidence_whitelist() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/regenerate/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    assert "repair_context_json.allowed_evidence_ids" in prompt_set.user.text
+    assert "Cite only supporting IDs from" in prompt_set.user.text
+
+
+def test_doc_map_prompt_prioritizes_distinctive_body_results_and_contrasts() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/doc_map",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split())
+
+    assert "Key points prioritize distinctive, exact body outcomes" in prompt_text
+    assert (
+        "Where a section shows materially different groups, retain the strongest"
+        in prompt_text
+    )
+    assert "preserve paired measures, causes, mechanisms, and periods" in prompt_text
+    assert "Use only the provided report content." in prompt_text
+
+
+def test_insight_candidate_prompt_prioritizes_distinctive_findings() -> None:
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/insights_candidates",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    prompt_text = " ".join(prompt_set.user.text.split())
+
+    assert "Prioritize distinctive, decision-relevant report-body outcomes" in (
+        prompt_text
+    )
+    assert "comparisons, counter-signals, and qualitative conclusions" in prompt_text
+    assert "Do not omit distinct groups solely because they share a theme" in (
+        prompt_text
+    )
+    assert "Keep each group's paired metrics and direction together" in prompt_text
+    assert "evidence_id" in prompt_text
+    assert (
+        "Use numbers only when its excerpt states the full value-subject-period relationship"
+        in prompt_text
+    )
+    system_text = " ".join(prompt_set.system.text.split())
+    assert "Prefer distinctive, decision-relevant findings" in system_text
+    assert "complete numeric relationships and qualitative conclusions" in system_text
 
 
 def test_editorial_plan_and_findings_prompts_require_representative_counterbalance() -> (
@@ -155,6 +233,11 @@ def test_editorial_plan_and_findings_prompts_require_representative_counterbalan
     assert "counterbalancing" in editorial_plan_prompt.user.text
     assert "executive-summary" in editorial_plan_prompt.user.text
     assert "counterbalancing" in findings_prompt.user.text
+    findings_text = " ".join(findings_prompt.user.text.split()).casefold()
+    assert (
+        "if retrieved body evidence supports a material key point, include it as a finding"
+        in findings_text
+    )
 
 
 def test_editorial_plan_prompt_retains_substantive_central_forecasts() -> None:
@@ -190,12 +273,43 @@ def test_findings_prompt_retains_substantive_central_forecasts() -> None:
         "include the displayed title and period/timeframe from the same page in `evidence`"
         in (normalized_findings_system)
     )
-    prompt_text = findings_prompt.user.text.casefold()
+    assert "verbatim source-body excerpt" in normalized_findings_system
+    assert "one-based physical PDF page indexes" in normalized_findings_system
+    prompt_text = " ".join(findings_prompt.user.text.casefold().split())
 
+    assert "docmap is a clue, not evidence" in prompt_text
+    assert "printed page labels guide retrieval but are not pdf offsets" in prompt_text
+    assert "physical pdf page index" in prompt_text
     assert "materially central" in prompt_text
     assert "publisher forecast" in prompt_text
     assert "promotional" in prompt_text
     assert "current-state" in prompt_text
+    assert (
+        "its evidence excerpt must independently contain every number and the "
+        "exact subject, cohort, and period stated in the finding text"
+    ) in prompt_text
+    assert "section titles and docmap summaries cannot supply missing links" in (
+        prompt_text
+    )
+
+
+def test_findings_prompt_matches_evidence_source_to_retrieval_mode() -> None:
+    findings_prompt = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/evidence_packs/findings",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+
+    system_text = " ".join(findings_prompt.system.text.casefold().split())
+    user_text = " ".join(findings_prompt.user.text.casefold().split())
+    assert "primary: file_search" in system_text
+    assert "fallback: supplied page excerpts; otherwise file_search" in system_text
+    assert "docmap guides, not evidence" in system_text
+    assert "docmap is a clue, not evidence" in user_text
+    assert "primary pass: search file_search" in user_text
 
 
 def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> None:
@@ -224,6 +338,18 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
         _ctx(),
     )
 
+    summary_text = " ".join(summary_prompt.user.text.casefold().split())
+    expert_text = " ".join(expert_prompt.user.text.casefold().split())
+    assert (
+        "a numeric claim must preserve each exact source value, metric/category, "
+        "subject, denominator, direction, and period as one linked relationship"
+        in summary_text
+    )
+    assert (
+        "support facts with selected source spans; plan themes and docmap are "
+        "context, not evidence"
+    ) in expert_text
+
     assert (
         'do not emit labels such as "Answer:" or "Implication:"'
         in summary_prompt.user.text
@@ -232,7 +358,7 @@ def test_summary_and_expert_prompts_prevent_first_run_readiness_failures() -> No
     assert "explicitly named publisher or organization" in doc_map_prompt.user.text
 
 
-def test_doc_map_prompt_carries_chart_periods_and_one_based_page_coverage() -> None:
+def test_doc_map_prompt_carries_chart_periods_and_printed_page_coverage() -> None:
     doc_map_prompt = load_prompt_set(
         PromptLoadRequest(
             schema_version="1.0",
@@ -245,14 +371,17 @@ def test_doc_map_prompt_carries_chart_periods_and_one_based_page_coverage() -> N
     normalized_prompt = " ".join(doc_map_prompt.user.text.split())
 
     assert (
-        "each numeric chart/table key point, include its displayed title/axis period"
-        in normalized_prompt
+        "For ordered series and multi-measure charts/tables, bind every value to"
+        " its displayed period, category/row, and measure/column" in normalized_prompt
     )
     assert (
-        "list every supporting one-based printed page in the section's pages"
-        in normalized_prompt
+        "the full inclusive page span through continuation pages, and all explicit"
+        " printed-page references" in normalized_prompt
     )
-    assert "Do not infer periods or use PDF page indices" in normalized_prompt
+    assert (
+        "all supporting printed pages for numeric key points; use printed, not PDF,"
+        " page numbers" in normalized_prompt
+    )
 
 
 def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> None:
@@ -293,9 +422,17 @@ def test_public_copy_prompts_preserve_evidence_scope_and_specific_bindings() -> 
     ]
 
     assert (
-        "State that a dataset represents or comes from a specific population only when "
-        "retained evidence explicitly identifies that population"
+        "State dataset population or methodology only when linked evidence says so"
         in summary_prompt.user.text
+    )
+    normalized_summary_prompt = " ".join(summary_prompt.user.text.split())
+    assert (
+        "Bind each distinct material sentence in `tldr`, `card_tldr_compact`, and "
+        "`executive_summary` once" in normalized_summary_prompt
+    )
+    assert (
+        "Copy each `claim` verbatim from the public sentence, including punctuation"
+        in normalized_summary_prompt
     )
     assert "use the most specific supplied evidence ID that states that detail" in (
         linkedin_prompt.user.text
@@ -360,7 +497,10 @@ def test_findings_prompt_keeps_each_proposition_bound_to_direct_evidence() -> No
         "one finding states one independently verifiable proposition; split distinct measures"
         in prompt_text
     )
-    assert "must directly establish all material details in `text`" in prompt_text
+    assert (
+        "must be a verbatim source-body excerpt that directly establishes all material details in `text`"
+        in prompt_text
+    )
 
 
 def test_grounding_prompt_uses_chart_layout_not_extraction_order_for_bindings() -> None:
@@ -437,7 +577,11 @@ def test_public_copy_prompts_keep_claims_inside_single_evidence_boundaries() -> 
         for rule in shared_rules:
             assert rule in normalized_text
 
+    final_insights_text = " ".join(prompts[1].user.text.split())
+    assert "Reuse selected candidate IDs; keep IDs unique." in final_insights_text
+
     summary_text = " ".join(prompts[0].user.text.split())
+    assert '"claim": "<non-empty claim string>"' in summary_text
     assert "Target 20-30 words for `tldr` (hard limit: 45)" in summary_text
     assert "exactly one terminal punctuation mark" in summary_text
 

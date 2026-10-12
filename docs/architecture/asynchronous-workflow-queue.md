@@ -178,6 +178,13 @@ single frozen-generation outbox event; it performs no model generation itself.
 The generation configuration hash includes all bounded selection and prompt
 settings, so a deliberate compatibility change can be replayed without
 mistaking a prior terminal configuration for the same effective request.
+The Briefing generator marks only malformed `executive_takeaways` cardinality
+or missing populated string values as retryable. The durable queue applies the
+configured bounded attempt allowance (the default `briefing_generation`
+control permits two attempts total) and dead-letters the job when that
+allowance is exhausted. Grounding, evidence, and other invalid-output failures
+remain fail-closed and non-retryable; retry does not repair or invent model
+content.
 
 ## Approval and WordPress publication
 

@@ -21,7 +21,8 @@
           "section_title": { "type": "string" },
           "pages": {
             "type": "array",
-            "items": { "type": "integer" }
+            "description": "One-based physical PDF page indexes containing the finding's direct evidence.",
+            "items": { "type": "integer", "minimum": 1 }
           }
         }
       }

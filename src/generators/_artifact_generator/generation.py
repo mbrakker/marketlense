@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from time import perf_counter
 from collections.abc import Callable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, wait
 from copy import deepcopy
 from threading import Lock
+from time import perf_counter
 from typing import Any, Dict, List, Optional, TypedDict, cast
 
 from src.contracts.artifact_generation import ArtifactRenderTask
@@ -18,6 +18,7 @@ from src.contracts.run_context import RunContext
 from src.contracts.soft_copy_claim_provenance import (
     SOFT_COPY_PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
     SoftCopyPromptFamilyMaterialization,
+    soft_copy_claim_bindings_match_public_text_grid,
     soft_copy_prompt_family_materialization_from_payload,
 )
 from src.generators._artifact_generator.family_policy import (
@@ -410,6 +411,17 @@ def generate_artifacts(
     ) -> None:
         validate_evidence_references(payload, reference_evidence_packs, task_ctx)
 
+    def validate_summary_payload(payload: Dict[str, Any], task_ctx: RunContext) -> None:
+        normalize_required_evidence_references(payload)
+        prune_supplementary_unbound_summary_claims(payload)
+        validate_required_evidence_references(payload, task_ctx)
+        validate_soft_copy_provenance_references(payload, task_ctx)
+        _validate_card_tldrs(
+            normalize_artifact_summary(payload.get("summary")),
+            summary_abstained=False,
+            ctx=task_ctx,
+        )
+
     def normalize_required_evidence_references(payload: Dict[str, Any]) -> None:
         """Canonicalize model reference aliases before enforcing their contract."""
 
@@ -565,15 +577,7 @@ def generate_artifacts(
         elif task.step_name == "summary":
 
             def payload_validator(payload: Dict[str, Any]) -> None:
-                normalize_required_evidence_references(payload)
-                prune_supplementary_unbound_summary_claims(payload)
-                validate_required_evidence_references(payload, task.ctx)
-                validate_soft_copy_provenance_references(payload, task.ctx)
-                _validate_card_tldrs(
-                    normalize_artifact_summary(payload.get("summary")),
-                    summary_abstained=False,
-                    ctx=task.ctx,
-                )
+                validate_summary_payload(payload, task.ctx)
 
         elif task.step_name in {"expert_comment", "linkedin_post"}:
 
@@ -705,6 +709,23 @@ def generate_artifacts(
                 soft_copy_reuse_rejected=True,
                 soft_copy_reuse_rejection_reason="soft_copy_provenance_missing",
             )
+        elif (
+            reuse is not None
+            and reuse.reusable
+            and soft_copy_family
+            and retained_soft_copy is not None
+            and not soft_copy_claim_bindings_match_public_text_grid(
+                artifact_family=soft_copy_family,
+                public_output=retained_soft_copy.public_output,
+                claim_bindings=retained_soft_copy.claim_provenance,
+            )
+        ):
+            reuse = None
+            update_family_reuse(
+                namespace,
+                soft_copy_reuse_rejected=True,
+                soft_copy_reuse_rejection_reason="soft_copy_provenance_incompatible",
+            )
         if reuse is not None and reuse.reusable:
             with family_state_lock:
                 reused = family_reuse_telemetry["reused_families"]
@@ -747,7 +768,10 @@ def generate_artifacts(
             return {root_key: public_output}
         reason = (
             (
-                "soft_copy_provenance_missing"
+                str(
+                    family_reuse[namespace].get("soft_copy_reuse_rejection_reason")
+                    or "soft_copy_provenance_missing"
+                )
                 if family_reuse[namespace].get("soft_copy_reuse_rejected")
                 else reuse.reason
             )
@@ -1117,18 +1141,6 @@ def generate_artifacts(
     stage_one_tasks = [
         ArtifactRenderTask(
             schema_version="1.0",
-            step_name="summary",
-            namespace="report_vs/artifacts/summary",
-            variables={
-                **base_vars,
-                **editorial_plan_dependency_vars,
-                "evidence_json": summary_evidence_json,
-                "editorial_plan_json": editorial_plan_json,
-            },
-            ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
-        ),
-        ArtifactRenderTask(
-            schema_version="1.0",
             step_name="insights_candidates",
             namespace="report_vs/artifacts/insights_candidates",
             variables={
@@ -1165,10 +1177,11 @@ def generate_artifacts(
             pending_artifact_tasks[task.step_name] = future
 
         quote_submitted = quote_task is None
+        # Keep quote generation off the candidate critical path when only two
+        # workers are available.  With three or more workers it can run beside
+        # candidate generation without delaying final insight selection.
         first_stage_tasks = (
-            stage_one_tasks
-            if dag_worker_limit >= len(stage_one_tasks)
-            else stage_one_tasks[:2]
+            stage_one_tasks if dag_worker_limit >= 3 else stage_one_tasks[:1]
         )
         for task in first_stage_tasks:
             submit_dag_task(task, "stage_one")
@@ -1192,9 +1205,6 @@ def generate_artifacts(
             "stage_one",
         )
 
-    summary = normalize_artifact_summary(
-        stage_one_results.get("summary", {}).get("summary")
-    )
     insights_candidates = normalize_artifact_insights(
         stage_one_results.get("insights_candidates", {}).get("insights_candidates"),
         prefix="candidate",
@@ -1318,6 +1328,46 @@ def generate_artifacts(
         candidate_insights=insights_candidates,
         editorial_plan=editorial_plan,
     )
+    selected_lead_insight = next(
+        (insight for insight in insights_final if _s(insight.get("text")).strip()),
+        {},
+    )
+    selected_lead_insight_json = _dump_json(
+        {
+            key: selected_lead_insight[key]
+            for key in (
+                "id",
+                "text",
+                "evidence_id",
+            )
+            if key in selected_lead_insight
+        }
+    )
+    summary_task = ArtifactRenderTask(
+        schema_version="1.0",
+        step_name="summary",
+        namespace="report_vs/artifacts/summary",
+        variables={
+            **base_vars,
+            **editorial_plan_dependency_vars,
+            "evidence_json": summary_evidence_json,
+            "editorial_plan_json": editorial_plan_json,
+            "selected_lead_insight_json": selected_lead_insight_json,
+        },
+        ctx=child_context(ctx, task_id=f"{ctx.task_id}:summary"),
+    )
+    if dependency_dag_enabled:
+        submit_dag_task(summary_task, "summary")
+    else:
+        summary_result = resolve_or_render_family(
+            namespace="report_vs/artifacts/summary",
+            variables=summary_task.variables,
+            ctx=summary_task.ctx,
+            payload_validator=lambda payload: validate_summary_payload(
+                payload, summary_task.ctx
+            ),
+        )
+        summary = normalize_artifact_summary(summary_result.get("summary"))
     cover_insights_final_json = _dump_json(insights_final)
     cover_semantics_ctx = child_context(ctx, task_id=f"{ctx.task_id}:cover_semantics")
 

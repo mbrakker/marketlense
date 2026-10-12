@@ -119,8 +119,8 @@ def test_publish_batches_preflight_and_term_resolution(
 
     def _lookup_posts(call: RecordedHttpRequest) -> FakeHttpResponse:
         params = call.params or {}
-        search = str(params.get("search") or "")
-        if "file123" in search:
+        file_id = str(params.get("ml_file_id") or "")
+        if file_id == "file123":
             return FakeHttpResponse.from_payload(
                 status_code=200,
                 payload=[

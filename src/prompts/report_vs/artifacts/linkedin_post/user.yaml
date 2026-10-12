@@ -2,7 +2,7 @@ includes:
   - "report_vs/artifacts/_partials/editorial_constitution.yaml"
 text: |
   Context (authoritative sources only):
-  - Editorial plan (primary thematic authority, JSON): {{ editorial_plan_json }}
+  - Editorial plan (selection guidance, not source evidence, JSON): {{ editorial_plan_json }}
   - Report context including separate provenance roles, title, publisher, author/byline, data providers, and scope (JSON; canonical identity metadata is not evidence): {{ doc_map_json }}
   - Validated representative insights (supporting evidence, JSON): {{ insights_final_json }}
   - Metric spine (supporting evidence, JSON): {{ metric_spine_json }}

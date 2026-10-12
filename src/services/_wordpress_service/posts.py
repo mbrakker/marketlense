@@ -479,7 +479,6 @@ def find_post_by_file_id(
     url = f"{request.base_url.rstrip('/')}/wp-json/wp/v2/{post_type_endpoint}"
     params = {
         "ml_file_id": request.file_id,
-        "search": f"Drive fileId: {request.file_id}",
         "per_page": request.per_page,
         "context": "edit",
         "status": "any",

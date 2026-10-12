@@ -177,6 +177,8 @@ def test_regenerate_artifacts_expert_comment_uses_grounded_synthesis_context(
         {
             "evidence_id": "f1",
             "so_what": "The primary finding changes the operating tradeoff.",
+            "source_finding": "Finding text",
+            "source_excerpt": "Evidence text",
         }
     ]
     assert context["limitations"] == [

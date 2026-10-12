@@ -218,7 +218,7 @@ def _retained_claim_package(
             "report_id": "report-1",
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v2",
+            "claim_validation_validator_version": "retained_claim_validation:v5",
             "grounding_validator_version": "grounding_validation_output:1.5",
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
@@ -231,7 +231,7 @@ def _retained_claim_package(
             "evidence_pack_hash": sha256_json(evidence_packs),
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v2",
+            "claim_validation_validator_version": "retained_claim_validation:v5",
             "grounding_validator_version": "grounding_validation_output:1.5",
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []
@@ -252,13 +252,15 @@ def _readiness_with_package(
     *,
     configuration_hash: str = "config-current",
     policy_hash: str = "policy-current",
+    validation_report: ValidationReport | None = None,
 ) -> object:
     artifacts, evidence_packs, html, provenance = _ready_inputs()
     return _evaluate_readiness_for_test(
         report_id="report-1",
         artifacts=artifacts,
         evidence_packs=evidence_packs,
-        validation_report=ValidationReport(schema_version="1.1", status="pass"),
+        validation_report=validation_report
+        or ValidationReport(schema_version="1.1", status="pass"),
         final_html=html,
         final_html_path="",
         category_ids=["markets"],

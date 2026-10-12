@@ -1002,7 +1002,9 @@ def _has_printed_page_label(page_text: str, page_number: int) -> bool:
             return True
         if re.fullmatch(rf"(?i)(?:page|p\.?)\s*{number}(?:\s+of\s+\d+)?", line):
             return True
-        if len(line) <= 120 and re.search(rf"(?:^|[\s\-–—]){number}$", line):
+        if re.match(rf"^{number}[©�]\s+\d{{4}}\s+copyright\b", line, re.I):
+            return True
+        if len(line) <= 120 and re.search(rf"[•·|\-–—]\s*{number}$", line):
             return True
     return False
 
@@ -1952,6 +1954,24 @@ def _source_index(
     return indexed
 
 
+def _source_pages_support_numeric_claim(
+    raw: dict,
+    pages: Sequence[int],
+    source_evidence: dict[str, tuple[str, str, int | None]],
+) -> bool:
+    claim_quantities = extract_quantities(_item_claim_text(raw))
+    if not claim_quantities:
+        return False
+    page_quantities = [
+        quantity
+        for _pack, text, page in source_evidence.values()
+        if page in pages
+        for quantity in extract_quantities(text)
+    ]
+    status, _reason = _numeric_evidence_status(claim_quantities, page_quantities)
+    return status == "passed"
+
+
 def _source_references(
     raw: dict,
     source_evidence: dict[str, tuple[str, str, int | None]],
@@ -1963,6 +1983,34 @@ def _source_references(
         for value in pages
         if isinstance(value, int) and not isinstance(value, bool) and value > 0
     ]
+    exact_evidence_pages = _exact_evidence_pages(
+        _item_direct_evidence_text(raw), source_evidence
+    )
+    if exact_evidence_pages:
+        page_values = [page for page in page_values if page in exact_evidence_pages]
+        if not page_values:
+            page_values = exact_evidence_pages[:1]
+    elif len(page_values) == 1:
+        source_text = _item_source_text(raw)
+        matched_pages = _matched_source_pages(source_text, source_evidence)
+        if (
+            len(matched_pages) == 1
+            and matched_pages[0] != page_values[0]
+            and not _source_pages_support_numeric_claim(
+                raw, page_values, source_evidence
+            )
+            and _source_pages_support_numeric_claim(raw, matched_pages, source_evidence)
+        ):
+            matched_page_text = "\n".join(
+                text
+                for _pack, text, page in source_evidence.values()
+                if page == matched_pages[0]
+            )
+            shared_tokens = _recovery_tokens(source_text) & _recovery_tokens(
+                matched_page_text
+            )
+            if len(shared_tokens) >= 5:
+                page_values = matched_pages
     has_page_provenance = any(
         source_page is not None
         for _source_id, (_pack, _text, source_page) in source_evidence.items()
@@ -1987,6 +2035,42 @@ def _source_references(
         )
         for source_id in sorted(matching)
     ]
+
+
+def _item_direct_evidence_text(raw: dict) -> str:
+    """Return the item’s direct excerpt, falling back to its quote text."""
+
+    for key in ("evidence", "quote", "snippet", "excerpt", "text"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _exact_evidence_pages(
+    evidence_text: str,
+    source_evidence: dict[str, tuple[str, str, int | None]],
+) -> list[int]:
+    """Resolve a specific direct excerpt to its physical PDF page.
+
+    Pack page values can be copied from DocMap's printed labels. Exact source
+    text is authoritative when it identifies a physical page, while short
+    fragments remain too ambiguous to override an explicit page value.
+    """
+
+    normalized = normalize_for_lookup(evidence_text)
+    if not normalized or (
+        len(_recovery_tokens(evidence_text)) < 5
+        and len(_recovery_quantity_values(evidence_text)) < 2
+    ):
+        return []
+    return sorted(
+        {
+            page
+            for _source_id, (_pack, source_text, page) in source_evidence.items()
+            if page is not None and normalized in normalize_for_lookup(source_text)
+        }
+    )
 
 
 def _matched_source_pages(
@@ -2100,6 +2184,16 @@ def _numeric_evidence_status(
     claim_quantities: Sequence[Quantity], evidence_quantities: Sequence[Quantity]
 ) -> tuple[Literal["passed", "failed", "not_applicable"], str]:
     """Separate absent quantitative evidence from a comparable contradiction."""
+    claim_quantities = [
+        quantity
+        for quantity in claim_quantities
+        if not _is_calendar_year_quantity(quantity)
+    ]
+    evidence_quantities = [
+        quantity
+        for quantity in evidence_quantities
+        if not _is_calendar_year_quantity(quantity)
+    ]
     if not claim_quantities:
         return "failed", "quantity_not_entailed"
     if all(
@@ -2127,6 +2221,17 @@ def _numeric_evidence_status(
             return "failed", "quantity_not_entailed"
 
     return "not_applicable", "quantity_not_established"
+
+
+def _is_calendar_year_quantity(quantity: Quantity) -> bool:
+    """Let protected timeframe validation handle explicit calendar years."""
+
+    return (
+        quantity.unit_family == "time"
+        and quantity.unit.casefold() in {"year", "years"}
+        and quantity.value.is_integer()
+        and 1900 <= int(quantity.value) <= 2100
+    )
 
 
 def _evidence_fidelity_candidates(

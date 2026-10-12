@@ -5,3 +5,4 @@ from ._test_validation_generator.cases_01_validation_flags_metric_and_quote impo
 from ._test_validation_generator.cases_02_load_cached_validation_rejects_schema import *  # noqa: F401,F403
 from ._test_validation_generator.cases_03_grounding_cache_and_reuse import *  # noqa: F401,F403
 from ._test_validation_generator.cases_04_abstained_and_direct_evidence import *  # noqa: F401,F403
+from ._test_validation_generator.cases_05_core_signal_specificity import *  # noqa: F401,F403

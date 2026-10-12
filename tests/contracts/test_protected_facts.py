@@ -40,6 +40,20 @@ def test_protected_fact_comparison_does_not_mark_a_missing_value_compatible() ->
     assert comparison.dimension("timeframe").status == "unknown"
 
 
+@pytest.mark.parametrize(
+    ("claim_year", "expected"), [(2025, "compatible"), (2026, "incompatible")]
+)
+def test_across_year_over_year_period_is_checked_against_source_range(
+    claim_year: int, expected: str
+) -> None:
+    comparison = compare_protected_fact_texts(
+        f"Across {claim_year} year over year, adoption grew 10%.",
+        "Adoption grew 10% over YoY 2024-2025.",
+    )
+
+    assert comparison.dimension("timeframe").status == expected
+
+
 def test_percentage_unit_is_not_mistaken_for_population_before_increase() -> None:
     claim = (
         "Increase in retail-site traffic from generative AI tools Retail-site "
@@ -131,6 +145,47 @@ def test_protected_direction_does_not_read_growth_noun_as_direction() -> None:
     )
 
     assert comparison.dimension("direction").status == "incompatible"
+
+
+def test_discourse_but_is_not_misread_as_a_population() -> None:
+    claim = (
+        "Strategy games showed stronger session growth despite flat installs; "
+        "casino and slots had install growth, but sessions declined."
+    )
+    evidence = (
+        "This subsection compares gaming installs, sessions, retention, and CPI, "
+        "including differences across regions and genres. The discussion emphasizes "
+        "that install growth does not always translate into session growth and that "
+        "churn can require targeted retention tactics. Strategy games showed stronger "
+        "session growth despite flat installs, while casino and slots had install "
+        "growth alongside declining sessions. The report suggests welcome "
+        "notifications, benefits, streaks, and attribution dashboards to address "
+        "churn and assess user value. Gaming retention changed little overall; "
+        "hyper-casual retention declined more sharply over the days after install."
+    )
+
+    comparison = compare_protected_fact_texts(claim, evidence)
+
+    assert comparison.dimension("population").status != "incompatible"
+
+
+def test_conjoined_finance_metrics_ignore_discourse_words_as_population() -> None:
+    claim = (
+        "For finance apps in LATAM, installs rose 76% and sessions rose 57% "
+        "year over year in 2024-2025, according to the benchmark."
+    )
+    evidence = (
+        "Analyzes finance-app growth, engagement, retention, CPI, and paid-versus-"
+        "organic acquisition across regions and subverticals. It contrasts strong "
+        "LATAM growth and longer global sessions with falling retention and lower "
+        "CPI, alongside increased reliance on paid acquisition. Finance app install "
+        "and session growth, YoY 2024-2025: LATAM installs 76% and sessions 57%. "
+        "Global finance-app session length increased 8% to 7.18 minutes in 2025."
+    )
+
+    comparison = compare_protected_fact_texts(claim, evidence)
+
+    assert comparison.dimension("population").status == "compatible"
 
 
 @pytest.mark.parametrize(

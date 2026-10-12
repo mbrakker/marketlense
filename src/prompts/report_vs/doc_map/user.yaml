@@ -14,27 +14,23 @@ text: |
     - `source_organization_names` and `report_owner_name`: only when explicitly stated.
     - Each populated role needs a short exact `source_excerpt` in `evidence`.
   - Use `publisher` only for an explicitly named publisher or organization that is the publisher/publication identity. Leave it empty if source evidence is ambiguous; do not infer it from a filename, taxonomy, cited provider, or byline.
-  - Capture all major report sections in source order.
-  - For each section, include:
-    - id
-    - title
-    - summary (1-2 concise, specific sentences)
-    - key_points (2-4 short strings when available)
-    - pages and references (when explicit)
-  - Preserve explicit inclusive page ranges; never shorten known ranges or infer a missing end page.
+  - Capture all major sections in source order. For each, include id, title, a
+    specific 1-2 sentence summary, 2-4 concise key points when available, the
+    full inclusive page span through continuation pages, and all explicit
+    printed-page references. Keep ranges intact; never infer endpoints.
+  - Key points prioritize distinctive, exact body outcomes. Where a section
+    shows materially different groups, retain the strongest labeled subgroup
+    comparison or counter-direction even alongside aggregates; preserve paired
+    measures, causes, mechanisms, and periods.
   - Use schema field names exactly (for example `title`, not `document_title`).
   - Do not substitute runtime metadata for report content. Report IDs, vector-store IDs,
     file names, pack names, field names, and metadata-only sections are not a document map.
     Include a source-derived document brief and at least one section with subject-specific
     content whenever the report contains readable content.
   - If a field is unknown, use an empty string or empty array (do not invent values).
-  - For ordered charts, tables, and metric series, keep each value attached to its displayed year, forecast period, quarter, category, or row. Do not infer a label from an adjacent value.
-  - For each table or chart with multiple measures, state every numeric value
-    beside its explicit row and column labels in `key_points` (for example,
-    `Region A: Measure 1 10%; Measure 2 20%`). Do not emit bare ordered value
-    lists that require later stages to infer a label from column order. If the
-    source layout does not establish a pair, omit that numeric pair.
-  - For each numeric chart/table key point, include its displayed title/axis
-    period; list every supporting one-based printed page in the section's pages.
-    Do not infer periods or use PDF page indices.
+  - For ordered series and multi-measure charts/tables, bind every value to its
+    displayed period, category/row, and measure/column. Never infer labels from
+    adjacent values. Include chart title/axis period and all supporting printed
+    pages for numeric key points; use printed, not PDF, page numbers. Omit any
+    numeric pair not established by the source layout.
   - Output JSON only (no markdown, no commentary).

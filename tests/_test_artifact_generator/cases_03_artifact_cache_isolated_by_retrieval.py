@@ -828,6 +828,106 @@ def test_legacy_soft_copy_reuse_regenerates_missing_provenance(tmp_path) -> None
     assert claim["evidence_ids"] == ["f1"]
 
 
+def test_soft_copy_reuse_regenerates_when_sentence_grid_changes(tmp_path) -> None:
+    family = "report_vs/artifacts/expert_comment"
+    public_output = "The U.S. 2017 video metric shows 61% of time."
+    old_materialization = {
+        "schema_version": "1.0",
+        "public_output": public_output,
+        "claim_provenance": [
+            {
+                "claim": "The U.S.",
+                "classification": "interpretive",
+                "evidence_ids": [],
+            },
+            {
+                "claim": "2017 video metric shows 61% of time.",
+                "classification": "factual",
+                "evidence_ids": ["f1"],
+            },
+        ],
+        "producing_prompt_identity": {"namespace": family},
+        "generation_attempt": 1,
+    }
+
+    def reuse_reader(request, _ctx):
+        if request.family_id == family:
+            return PromptFamilyReuseResponse(
+                schema_version="1.0",
+                reusable=True,
+                reason="reused",
+                output_payload=old_materialization,
+                artifact_id="retained:expert-comment",
+                output_hash="retained-hash",
+            )
+        return PromptFamilyReuseResponse(
+            schema_version="1.0",
+            reusable=False,
+            reason="not_found",
+            output_payload={},
+            artifact_id="",
+            output_hash="",
+        )
+
+    client = FakeOpenAI(
+        {
+            "summary": {
+                "summary": {
+                    "tldr": "Grounded summary.",
+                    "card_tldr_compact": "Grounded summary.",
+                    "executive_summary": "Evidence informs planning.",
+                    "claim_evidence_map": [],
+                }
+            },
+            "insights_candidates": {"insights_candidates": []},
+            "quotes": {"quotes_final": []},
+            "insights_final": {"insights_final": []},
+            "cover_semantics": _cover_semantics_response(),
+            "expert_comment": {
+                "expert_comment": public_output,
+                "claim_provenance": [
+                    {
+                        "claim": public_output,
+                        "classification": "factual",
+                        "evidence_ids": ["f1"],
+                    }
+                ],
+            },
+            "linkedin_post": {
+                "linkedin_post": "Leaders should assess video audiences.",
+                "claim_provenance": [
+                    {
+                        "claim": "Leaders should assess video audiences.",
+                        "classification": "recommendation",
+                        "evidence_ids": [],
+                    }
+                ],
+            },
+        }
+    )
+
+    artifacts = generate_artifacts(
+        report_id="initialism-year-reuse",
+        report_name="Initialism Year Reuse",
+        doc_map=_doc_map(),
+        evidence_packs=_evidence_packs(),
+        settings=_settings(tmp_path),
+        md5="initialism-year-reuse-md5",
+        ctx=replace(_ctx(), source_identity_id="source:initialism-year-reuse"),
+        openai_client=client,
+        prompt_client=FakePromptClient(),
+        analysis_store=FakeAnalysisStore(),
+        prompt_family_reuse_reader=reuse_reader,
+    )
+
+    assert artifacts["expert_comment"] == public_output
+    assert "expert_comment" in [request[2] for request in client.requests]
+    assert (
+        artifacts["_cache"]["family_reuse_telemetry"]["regeneration_reasons"][family]
+        == "soft_copy_provenance_incompatible"
+    )
+
+
 def test_invalidating_one_family_calls_only_its_model_route(tmp_path) -> None:
     retained = {
         "report_vs/artifacts/editorial_plan": _default_editorial_plan(),
@@ -1018,6 +1118,7 @@ __all__ = [
     "test_compatible_retained_families_make_zero_model_calls",
     "test_vector_store_identity_is_part_of_family_reuse_proof",
     "test_legacy_soft_copy_reuse_regenerates_missing_provenance",
+    "test_soft_copy_reuse_regenerates_when_sentence_grid_changes",
     "test_invalidating_one_family_calls_only_its_model_route",
     "test_editorial_plan_change_invalidates_only_linkedin_family_reuse",
 ]

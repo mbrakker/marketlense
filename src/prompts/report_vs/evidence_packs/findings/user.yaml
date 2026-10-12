@@ -1,55 +1,48 @@
 text: |
-  Extract concise findings from file_search evidence using the following DocMap
-  major sections to guide retrieval. The DocMap is planning context only: every
-  finding and its evidence must still be grounded in file_search.
+  Primary pass: search file_search by section/title/page and each key-point
+  metric; seek directional body outcomes with subject, value, and period. If
+  hits show only introduction, sample, or methodology, refine to mapped body.
+  DocMap is a clue,
+  not evidence; printed page labels guide retrieval but are not PDF offsets.
+  Quote verbatim body evidence; cite the physical PDF page index in pages.
+  For every finding, its evidence excerpt must independently contain every
+  number and the exact subject, cohort, and period stated in the finding text.
+  Section titles and DocMap summaries cannot supply missing links. Use a longer
+  verbatim span when needed, or omit the claim.
 
   {{ doc_map_sections_json }}
 
-  The following deterministic source label/value relationships are binding
-  whenever a finding uses the listed period and value. They are extracted from
-  the retained source text, so they take precedence over an ambiguous
-  file_search rendering of the same chart. Do not omit, reorder, or reassociate
-  a listed pair; if it cannot be supported, omit the metric from the finding.
+  {{ findings_target_source_pages_json }}
+
+  Deterministic retained-source label/value pairs bind periods and override
+  ambiguous file_search chart readings; preserve order or omit unsupported
+  pairs.
 
   {{ source_temporal_relationships_json }}
 
-  For a chart or table finding, verify one complete source tuple before writing
-  it: value, metric/category, subject or cohort, denominator, geography, and
-  period/status. Use file_search to inspect the actual row, column, or legend.
-  A number visible elsewhere in the same chart is not evidence for a different
-  row, cohort, category, or denominator. Omit a numeric finding when the exact
-  tuple cannot be established.
+  Bind chart/table values to measure, subject/cohort, geography, and period.
+  Keep chart values exact. Percentages do not establish a share; state a share
+  only when the source names its base. Do not transfer nearby values across
+  rows/cohorts; omit uncertain tuples.
 
-  Prefer distinct supported sections when the report contains multiple major
-  themes. When materially different or counterbalancing major DocMap sections
-  exist and file_search supports them, retrieve evidence from both sides. Do
-  not treat multiple close subtopics from one side as sufficient coverage when
-  another material side is supported. Do not manufacture a counterpoint or pad
-  a narrow, sparse, or one-sided report: return only the findings the
-  file_search evidence supports.
+  Cover distinct or counterbalancing supported sections; related subtopics
+  cannot replace supported sides. Do not invent counterpoints or pad sparse
+  reports.
 
-  Retain a source-backed publisher forecast when it is materially central to
-  the report's stated argument and supported by substantive synthesis such as
-  executive-summary or opening-takeaway repetition. Keep it explicitly framed
-  as a forecast, name the publisher when the source identifies it, and retain
-  any source caveat. A central forecast may remain alongside a current-state
-  metric on the same theme. Page position, repetition alone, and promotional
-  copy are not sufficient.
+  Retain only materially central, source-backed publisher forecasts with
+  substantive synthesis (e.g., an opening takeaway). Label forecasts; name the
+  publisher if identified, keep caveats, and allow alongside current-state
+  data. Page position, repetition, or promotional copy alone do not establish
+  centrality.
 
-  For each finding include:
-  - id
-  - text
-  - evidence
-  - confidence
-  - section_id (copy the matching DocMap id, or "")
-  - section_title (copy the matching DocMap title, or "")
-  - pages
+  Each finding: id, text, evidence, confidence, DocMap section_id/title (or ""),
+  and pages.
 
-  Return JSON only:
-  {
-    "findings": [],
-    "not_found_reason": ""
-  }
+  Return JSON only: {"findings": [], "not_found_reason": ""}
 
-  If no findings are supported by evidence:
-  {"findings": [], "not_found_reason": "findings_not_found"}
+  If retrieved body evidence supports a material key point, include it as a
+  finding. Primary pass: exhaust mapped body searches before summary-only
+  findings. Return empty only if body searches find no direct support; set
+  not_found_reason to findings_not_found.
+
+  {{ findings_targeted_fallback_instruction }}

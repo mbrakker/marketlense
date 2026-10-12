@@ -1063,7 +1063,7 @@ def select_artifact_insights(
     candidate_insights: List[Dict[str, Any]],
     editorial_plan: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Keep theme coverage, then fill the report's required grounded insight slots.
+    """Lead with the strongest evidence-bound insight and retain theme coverage.
 
     When a final insight shares a stable ID with a chosen candidate, the
     candidate is the evidence-anchored source of the protected factual fields
@@ -1084,6 +1084,15 @@ def select_artifact_insights(
     required_count = max(REQUIRED_REPORT_PAYLOAD_INSIGHTS, len(plan["themes"]))
     selected: List[Dict[str, Any]] = []
     selected_keys: set[str] = set()
+    # A high-scored final claim may still lack its source binding; allow only
+    # evidence-bound candidates to bypass the editorial plan's coverage order.
+    grounded_ranked = [
+        item for item in ranked if _s(item[1].get("evidence_id")).strip()
+    ]
+    if grounded_ranked:
+        _append_distinct_insight(
+            selected, selected_keys, _best_ranked_insight(grounded_ranked)[1]
+        )
     for theme in plan["themes"]:
         evidence_ids = {
             normalize_text(evidence_id) for evidence_id in theme["evidence_ids"]
@@ -1169,11 +1178,21 @@ def build_expert_synthesis_context(
     doc_map: Dict[str, Any],
     evidence_packs: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Build the bounded, evidence-first input for Expert View synthesis."""
+    """Build bounded direct-source input for Expert View synthesis."""
     plan = normalize_artifact_editorial_plan(editorial_plan)
-    span_index = _build_evidence_span_index(
-        doc_map=doc_map, evidence_packs=evidence_packs
+    # DocMap selects retrieval targets; it cannot substantiate factual claims.
+    span_index = _build_evidence_span_index(doc_map={}, evidence_packs=evidence_packs)
+    source_findings = _expert_source_findings(evidence_packs)
+    implications = _expert_insight_implications(
+        insights_final,
+        evidence_span_index=span_index,
+        source_findings=source_findings,
     )
+    implication_source_ids = {
+        _s(item.get("evidence_id")).casefold()
+        for item in implications
+        if item.get("source_finding")
+    }
     themes: List[Dict[str, Any]] = []
     for theme in plan["themes"]:
         evidence = []
@@ -1182,13 +1201,19 @@ def build_expert_synthesis_context(
             if not spans:
                 continue
             span = spans[0]
-            evidence.append(
-                {
-                    "evidence_id": _s(span.get("evidence_id")),
-                    "source_pack": _s(span.get("source_pack")),
-                    "text": _s(span.get("text")),
-                }
-            )
+            item: Dict[str, Any] = {
+                "evidence_id": _s(span.get("evidence_id")),
+                "source_pack": _s(span.get("source_pack")),
+                "text": _s(span.get("text")),
+            }
+            source_page = span.get("page")
+            if isinstance(source_page, int) and source_page > 0:
+                item["page"] = source_page
+            evidence_id = _s(span.get("evidence_id")).casefold()
+            source_finding = source_findings.get(evidence_id, "")
+            if source_finding and evidence_id not in implication_source_ids:
+                item["source_finding"] = source_finding
+            evidence.append(item)
         themes.append(
             {
                 "theme": theme["theme"],
@@ -1199,7 +1224,7 @@ def build_expert_synthesis_context(
     return {
         "schema_version": "1.0",
         "themes": themes,
-        "insight_implications": _expert_insight_implications(insights_final),
+        "insight_implications": implications,
         "limitations": _expert_context_items(
             evidence_packs.get("limitations"),
             item_key="limitations",
@@ -1211,9 +1236,36 @@ def build_expert_synthesis_context(
 
 def _expert_insight_implications(
     insights_final: List[Dict[str, Any]],
-) -> List[Dict[str, str]]:
-    implications: List[Dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
+    *,
+    evidence_span_index: Dict[str, List[Dict[str, Any]]],
+    source_findings: Dict[str, str],
+) -> List[Dict[str, Any]]:
+    """Keep insight claims adjacent to their independently retained source span."""
+
+    metric_context_fields = (
+        "label",
+        "value",
+        "unit",
+        "subject",
+        "cohort",
+        "denominator",
+        "timeframe",
+        "geography",
+        "segment",
+        "sample_size",
+        "observation_status",
+    )
+    required_metric_fields = (
+        "label",
+        "value",
+        "unit",
+        "subject",
+        "cohort",
+        "denominator",
+        "timeframe",
+    )
+    implications: List[Dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
     for insight in insights_final:
         if not isinstance(insight, dict):
             continue
@@ -1221,14 +1273,76 @@ def _expert_insight_implications(
         if not implication:
             continue
         evidence_id = _s(insight.get("evidence_id")).strip()
-        key = (evidence_id.casefold(), normalize_text(implication))
+        source_finding = source_findings.get(evidence_id.casefold(), "")
+        spans = evidence_span_index.get(evidence_id.casefold(), [])
+        source_span = next(
+            (
+                span
+                for span in spans
+                if _s(span.get("text")).strip()
+                and _s(span.get("evidence_id")).casefold() == evidence_id.casefold()
+            ),
+            None,
+        )
+        key = (
+            evidence_id.casefold(),
+            normalize_text(implication),
+            normalize_text(source_finding),
+        )
         if key in seen:
             continue
         seen.add(key)
-        implications.append({"evidence_id": evidence_id, "so_what": implication})
+        item: Dict[str, Any] = {"evidence_id": evidence_id}
+        if implication:
+            item["so_what"] = implication
+        if source_finding and source_span is not None:
+            item.update(
+                {
+                    "source_finding": source_finding,
+                    "source_excerpt": _s(source_span.get("text")),
+                }
+            )
+            source_page = source_span.get("page")
+            if isinstance(source_page, int) and source_page > 0:
+                item["source_page"] = source_page
+            metric = insight.get("metric")
+            if isinstance(metric, dict):
+                structured_metric = {
+                    field_name: _s(metric.get(field_name)).strip()
+                    for field_name in metric_context_fields
+                    if _s(metric.get(field_name)).strip()
+                }
+                if all(
+                    field_name in structured_metric
+                    for field_name in required_metric_fields
+                ):
+                    item["metric"] = structured_metric
+        implications.append(item)
         if len(implications) == 7:
             break
     return implications
+
+
+def _expert_source_findings(evidence_packs: Dict[str, Any]) -> Dict[str, str]:
+    """Index only unique findings-pack statements by their retained evidence ID."""
+
+    findings_pack = evidence_packs.get("findings")
+    findings = findings_pack.get("findings") if isinstance(findings_pack, dict) else []
+    if not isinstance(findings, list):
+        return {}
+    by_id: Dict[str, set[str]] = {}
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        evidence_id = _s(finding.get("id")).strip().casefold()
+        text = _s(finding.get("text")).strip()
+        if evidence_id and text:
+            by_id.setdefault(evidence_id, set()).add(text)
+    return {
+        evidence_id: next(iter(texts))
+        for evidence_id, texts in by_id.items()
+        if len(texts) == 1
+    }
 
 
 def _expert_counter_signals(
@@ -1924,10 +2038,17 @@ def bind_artifact_evidence_spans(
             elif "page" in page_keys and pages:
                 item["page"] = pages[0]
             if bind_canonical_evidence:
+                source_bound = [
+                    span
+                    for span in derived
+                    if span.get("source_pack")
+                    in {"findings", "findings_statement", "quote_candidates"}
+                ]
+                canonical_spans = source_bound or derived
                 canonical_evidence = " ".join(
                     dict.fromkeys(
                         _s(span.get("text")).strip()
-                        for span in derived
+                        for span in canonical_spans
                         if _s(span.get("text")).strip()
                     )
                 )
@@ -2597,17 +2718,92 @@ def _build_evidence_span_index(
     if isinstance(evidence_packs, dict):
         findings_pack = evidence_packs.get("findings")
         if isinstance(findings_pack, dict):
+            fidelity = evidence_packs.get("evidence_fidelity")
+            supported_findings: dict[str, tuple[str, set[int]]] = {}
+            ambiguous_findings: set[str] = set()
+            fidelity_results = (
+                fidelity.get("results") if isinstance(fidelity, dict) else None
+            )
+            for result in (
+                fidelity_results if isinstance(fidelity_results, list) else []
+            ):
+                if not isinstance(result, dict) or result.get("status") != "supported":
+                    continue
+                candidate = result.get("candidate")
+                if not isinstance(candidate, dict):
+                    continue
+                claim_id = _s(candidate.get("claim_id"))
+                prefix = "evidence:findings:"
+                if not claim_id.startswith(prefix):
+                    continue
+                validated_finding_id = claim_id.removeprefix(prefix)
+                statement = _s(candidate.get("text")).strip()
+                references = candidate.get("evidence_references")
+                source_pages: set[int] = set()
+                if isinstance(references, list):
+                    for reference in references:
+                        if (
+                            not isinstance(reference, dict)
+                            or reference.get("source_pack") != "source_pdf"
+                        ):
+                            continue
+                        page = reference.get("page")
+                        if isinstance(page, int) and page > 0:
+                            source_pages.add(page)
+                if not validated_finding_id or not statement or not source_pages:
+                    continue
+                binding = (statement, source_pages)
+                if (
+                    validated_finding_id in supported_findings
+                    and supported_findings[validated_finding_id] != binding
+                ):
+                    supported_findings.pop(validated_finding_id, None)
+                    ambiguous_findings.add(validated_finding_id)
+                elif validated_finding_id not in ambiguous_findings:
+                    supported_findings[validated_finding_id] = binding
+            family_status = findings_pack.get("family_status")
+            findings_validated = (
+                isinstance(family_status, dict)
+                and family_status.get("status") == "generated"
+                and family_status.get("policy_action") == "keep"
+            )
             for item in findings_pack.get("findings") or []:
                 if not isinstance(item, dict):
                     continue
-                _register(
-                    evidence_id=item.get("id"),
-                    source_pack="findings",
-                    pages=_coerce_span_pages(item),
-                    text=_pick_first_non_empty_text(
-                        item.get("evidence"), item.get("text"), item.get("statement")
-                    ),
+                finding_id = _s(item.get("id") or item.get("evidence_id")).strip()
+                pages = _coerce_span_pages(item)
+                excerpt = _pick_first_non_empty_text(
+                    item.get("evidence"), item.get("excerpt")
                 )
+                if not finding_id or not excerpt:
+                    # A generated finding sentence without its retained source
+                    # excerpt is not evidence for a downstream artifact.
+                    continue
+                _register(
+                    evidence_id=finding_id,
+                    source_pack="findings",
+                    pages=pages,
+                    text=excerpt,
+                )
+                statement = _pick_first_non_empty_text(
+                    item.get("text"), item.get("statement")
+                )
+                validated_statement, validated_pages = supported_findings.get(
+                    _s(finding_id), ("", set())
+                )
+                if (
+                    findings_validated
+                    and statement
+                    and statement == validated_statement
+                    and pages
+                    and set(pages).issubset(validated_pages)
+                ):
+                    _register(
+                        evidence_id=finding_id,
+                        source_pack="findings_statement",
+                        pages=pages,
+                        text=statement,
+                    )
         quotes_pack = evidence_packs.get("quote_candidates")
         if isinstance(quotes_pack, dict):
             for item in quotes_pack.get("quote_candidates") or []:
