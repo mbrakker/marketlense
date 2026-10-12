@@ -39,6 +39,17 @@ def test_pytest_assertion_failure_is_the_only_mutant_kill(tmp_path: Path) -> Non
     assert classify_pytest_result(1, report, expected_test_count=2) == "killed"
 
 
+def test_pytest_test_call_exception_is_a_legitimate_mutant_kill(tmp_path: Path) -> None:
+    report = _write_junit(
+        tmp_path / "test-call-exception.xml",
+        '<testsuite tests="1" failures="1" errors="0">'
+        '<testcase name="test_mutated_behavior"><failure type="ValueError">'
+        "invalid value from mutated behavior</failure></testcase></testsuite>",
+    )
+
+    assert classify_pytest_result(1, report, expected_test_count=1) == "killed"
+
+
 def test_pytest_success_is_a_surviving_mutant(tmp_path: Path) -> None:
     report = _write_junit(
         tmp_path / "passed.xml",
@@ -59,13 +70,6 @@ def test_pytest_success_is_a_surviving_mutant(tmp_path: Path) -> None:
             '<testsuite tests="1" failures="0" errors="1"><testcase '
             'name="test_import"><error type="ImportError">broken import</error>'
             "</testcase></testsuite>",
-            1,
-        ),
-        (
-            1,
-            '<testsuite tests="1" failures="1" errors="0"><testcase '
-            'name="test_runtime"><failure type="TypeError">unexpected error'
-            "</failure></testcase></testsuite>",
             1,
         ),
         (2, '<testsuite tests="0" failures="0" errors="0"/>', 0),

@@ -244,7 +244,7 @@ def classify_pytest_result(
     *,
     expected_test_count: int | None = None,
 ) -> str:
-    """Return killed/survived only for a complete, assertion-based test result."""
+    """Classify complete test-call failures as kills and execution errors as invalid."""
 
     try:
         root = ET.parse(junit_xml_path).getroot()
@@ -283,15 +283,7 @@ def classify_pytest_result(
         return "survived"
     if exit_code != 1 or errors or not failures:
         raise MutationExecutionError(
-            f"pytest exited {exit_code} without an assertion-only failure report"
-        )
-    if any(
-        failure.attrib.get("type", "").rsplit(".", 1)[-1]
-        not in {"AssertionError", "Failed"}
-        for failure in failures
-    ):
-        raise MutationExecutionError(
-            "pytest reported a non-assertion test failure; mutant verdict is invalid"
+            f"pytest exited {exit_code} without a failure-only test report"
         )
     return "killed"
 
