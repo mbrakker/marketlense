@@ -286,6 +286,8 @@ _CORE_SIGNAL_ANNOTATION = re.compile(
     r"describes?|outlines?|examines?|covers?)\b",
     re.IGNORECASE,
 )
+
+
 def _extract_focus_year(*values: object) -> str:
     for value in values:
         candidate = _s(value)

@@ -255,28 +255,30 @@ def _select_diverse_sources(
             candidate.report_id,
         )
 
+    def rescore_candidate(
+        candidate: CrossReportSourceReportCandidate,
+        publishers: set[str],
+    ) -> CrossReportSourceReportCandidate:
+        publisher_key = candidate.publisher.strip().casefold()
+        diversity_score = 0.75 if publisher_key not in publishers else 0.0
+        return replace(
+            candidate,
+            diversity_score=diversity_score,
+            total_score=round(base_scores[candidate.report_id] + diversity_score, 6),
+            selection_reasons=[
+                *base_reasons[candidate.report_id],
+                *(
+                    ["publisher_diversity"]
+                    if diversity_score > 0
+                    else ["same_publisher_already_selected"]
+                ),
+            ],
+        )
+
     while remaining and len(selected) < max_source_reports:
-        rescored: list[CrossReportSourceReportCandidate] = []
-        for candidate in remaining:
-            publisher_key = candidate.publisher.strip().casefold()
-            diversity_score = 0.75 if publisher_key not in selected_publishers else 0.0
-            rescored.append(
-                replace(
-                    candidate,
-                    diversity_score=diversity_score,
-                    total_score=round(
-                        base_scores[candidate.report_id] + diversity_score, 6
-                    ),
-                    selection_reasons=[
-                        *base_reasons[candidate.report_id],
-                        *(
-                            ["publisher_diversity"]
-                            if diversity_score > 0
-                            else ["same_publisher_already_selected"]
-                        ),
-                    ],
-                )
-            )
+        rescored = [
+            rescore_candidate(candidate, selected_publishers) for candidate in remaining
+        ]
         winner = min(rescored, key=sort_key)
         selected_publishers.add(winner.publisher.strip().casefold())
         selected.append(
@@ -306,8 +308,17 @@ def _select_diverse_sources(
         ]
 
     rejected.extend(
-        replace(candidate, rejection_reasons=["max_source_reports_reached"])
-        for candidate in sorted(remaining, key=sort_key)
+        replace(
+            candidate,
+            rejection_reasons=["max_source_reports_reached"],
+        )
+        for candidate in sorted(
+            (
+                rescore_candidate(candidate, selected_publishers)
+                for candidate in remaining
+            ),
+            key=sort_key,
+        )
     )
     return selected, rejected
 

@@ -55,6 +55,7 @@ from src.services.llm_usage_ledger_service import (
 from src.utils.clock import utc_now_seconds_z
 from src.utils.errors import AppError
 from src.utils.logging import log_event
+from src.utils.path_utils import bounded_artifact_filename
 from src.utils.url_utils import url_identity
 
 logger = logging.getLogger("market_lense.mailbox_acquisition_service")
@@ -69,6 +70,12 @@ _MAX_ZIP_PDF_COUNT = 100
 _MAX_ZIP_COMPRESSION_RATIO = 100.0
 _ZIP_READ_CHUNK_BYTES = 64 * 1024
 _SUPPORTED_ZIP_COMPRESSION_TYPES = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+_WINDOWS_ARTIFACT_PATH_BUDGET = 240
+_WINDOWS_COMPONENT_LENGTH_BUDGET = 255
+_MAILBOX_MESSAGE_COMPONENT_MAX_LENGTH = 64
+_MAILBOX_PDF_COMPONENT_MAX_LENGTH = 96
+_MAILBOX_HASH_SUFFIX_LENGTH = 13
+_MAILBOX_ZIP_TEMP_COMPONENT_LENGTH = len("." + "0" * 32 + ".tmp")
 _MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES = {
     "mailbox_attachment_too_large",
     "mailbox_zip_attachment_too_large",
@@ -286,9 +293,23 @@ def materialize_mailbox_attachments(
     )
     artifacts: list[MailboxAttachmentArtifact] = []
     failures: list[MailboxAttachmentFailure] = []
+    direct_pdf_file_names = _plan_direct_pdf_file_names(request)
+    reserved_pdf_output_names = {
+        file_name.casefold() for file_name in direct_pdf_file_names.values()
+    }
     for attachment_index, attachment in enumerate(request.attachments):
         try:
-            artifacts.extend(_materialize_attachment(request, attachment, ctx))
+            materialized = _materialize_attachment(
+                request,
+                attachment,
+                ctx,
+                planned_pdf_file_name=direct_pdf_file_names.get(attachment_index),
+                reserved_pdf_output_names=reserved_pdf_output_names,
+            )
+            artifacts.extend(materialized)
+            reserved_pdf_output_names.update(
+                artifact.file_name.casefold() for artifact in materialized
+            )
         except AppError as exc:
             if exc.code not in _MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES:
                 raise
@@ -1044,6 +1065,9 @@ def _materialize_attachment(
     request: MailboxAttachmentMaterializeRequest,
     attachment: MailboxAttachment,
     ctx: RunContext,
+    *,
+    planned_pdf_file_name: str | None = None,
+    reserved_pdf_output_names: set[str] | None = None,
 ) -> list[MailboxAttachmentArtifact]:
     file_name = _safe_file_name(attachment.file_name)
     lower_name = file_name.casefold()
@@ -1055,12 +1079,31 @@ def _materialize_attachment(
                 message="Mailbox PDF attachment exceeds the supported size",
                 retryable=False,
             )
+        output_file_name = planned_pdf_file_name
+        if output_file_name is None:
+            output_file_name = str(attachment.file_name or "")
+            if not lower_name.endswith(".pdf"):
+                output_file_name = f"{output_file_name}.pdf"
         path = _artifact_path(
             settings=request.settings,
             provider_message_id=request.provider_message_id,
-            file_name=file_name if lower_name.endswith(".pdf") else f"{file_name}.pdf",
+            file_name=output_file_name,
         )
-        path.write_bytes(attachment.payload)
+        try:
+            path.write_bytes(attachment.payload)
+        except OSError as exc:
+            raise AppError(
+                code="mailbox_attachment_write_failed",
+                message="Mailbox PDF attachment could not be written under output_dir",
+                cause=exc,
+                retryable=False,
+                context={
+                    "next_action": (
+                        "Check output_dir permissions and available space; shorten "
+                        "the configured path if needed"
+                    )
+                },
+            ) from exc
         return [
             MailboxAttachmentArtifact(
                 schema_version="1.0",
@@ -1072,7 +1115,13 @@ def _materialize_attachment(
             )
         ]
     if lower_name.endswith(".zip") or "zip" in content_type:
-        return _materialize_zip_pdfs(request, attachment, file_name, ctx)
+        return _materialize_zip_pdfs(
+            request,
+            attachment,
+            str(attachment.file_name or ""),
+            ctx,
+            reserved_pdf_output_names=reserved_pdf_output_names,
+        )
     return []
 
 
@@ -1081,6 +1130,8 @@ def _materialize_zip_pdfs(
     attachment: MailboxAttachment,
     container_file_name: str,
     ctx: RunContext,
+    *,
+    reserved_pdf_output_names: set[str] | None = None,
 ) -> list[MailboxAttachmentArtifact]:
     if len(attachment.payload) > _MAX_ZIP_ATTACHMENT_BYTES:
         raise AppError(
@@ -1115,8 +1166,9 @@ def _materialize_zip_pdfs(
                 retryable=False,
             )
 
-        pdf_members: list[tuple[zipfile.ZipInfo, str]] = []
+        pdf_members: list[tuple[zipfile.ZipInfo, str, str]] = []
         output_names: set[str] = set()
+        pdf_component_length: int | None = None
         declared_total_bytes = 0
         for member in members:
             if member.flag_bits & 0x1:
@@ -1169,21 +1221,31 @@ def _materialize_zip_pdfs(
                     message="Mailbox ZIP attachment contains too many PDF files",
                     retryable=False,
                 )
-            file_name = _safe_file_name(Path(member.filename).name)
+            raw_file_name = Path(member.filename).name
+            if pdf_component_length is None:
+                _, _, pdf_component_length = _mailbox_artifact_component_limits(
+                    request.settings
+                )
+            file_name = _bounded_pdf_file_name(
+                raw_file_name,
+                max_length=pdf_component_length,
+            )
             folded_file_name = file_name.casefold()
-            if folded_file_name in output_names:
+            if folded_file_name in output_names or folded_file_name in (
+                reserved_pdf_output_names or set()
+            ):
                 raise AppError(
                     code="mailbox_zip_duplicate_pdf_name",
                     message="Mailbox ZIP contains colliding PDF output names",
                     retryable=False,
                 )
             output_names.add(folded_file_name)
-            pdf_members.append((member, file_name))
+            pdf_members.append((member, raw_file_name, file_name))
 
         materialized: list[tuple[str, bytes]] = []
         actual_total_bytes = 0
         try:
-            for member, file_name in pdf_members:
+            for member, _, file_name in pdf_members:
                 payload = _read_zip_member_bounded(
                     archive,
                     member,
@@ -1206,7 +1268,7 @@ def _materialize_zip_pdfs(
             )
             temp_path = path.parent / f".{uuid4().hex}.tmp"
             existed_before = path.exists()
-            staged.append((temp_path, path, file_name, len(payload), existed_before))
+            staged.append((temp_path, path, path.name, len(payload), existed_before))
             with temp_path.open("xb") as temp_file:
                 temp_file.write(payload)
         for temp_path, path, file_name, size_bytes, _ in staged:
@@ -1323,23 +1385,223 @@ def _artifact_path(
     provider_message_id: str,
     file_name: str,
 ) -> Path:
-    root = Path(settings.output_dir).expanduser().resolve()
-    message_dir = (root / _safe_file_name(provider_message_id or "message")).resolve()
+    root, message_component_length, pdf_component_length = (
+        _mailbox_artifact_component_limits(settings)
+    )
+    root_length = _windows_path_length(root)
+
+    message_name = _bounded_message_component(
+        provider_message_id or "message", max_length=message_component_length
+    )
+    pdf_name = _bounded_pdf_file_name(file_name, max_length=pdf_component_length)
+    try:
+        message_dir = (root / message_name).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise _mailbox_output_path_error(root_length=root_length, cause=exc) from exc
     if root != message_dir and root not in message_dir.parents:
         raise AppError(
             code="mailbox_attachment_output_dir_invalid",
             message="Mailbox attachment output path escaped the configured root",
             retryable=False,
         )
-    message_dir.mkdir(parents=True, exist_ok=True)
-    path = (message_dir / _safe_file_name(file_name)).resolve()
+    try:
+        path = (message_dir / pdf_name).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise _mailbox_output_path_error(root_length=root_length, cause=exc) from exc
     if root != path and root not in path.parents:
         raise AppError(
             code="mailbox_attachment_output_dir_invalid",
             message="Mailbox attachment output path escaped the configured root",
             retryable=False,
         )
+    temp_path = message_dir / ("." + "0" * 32 + ".tmp")
+    if (
+        _windows_path_length(path) > _WINDOWS_ARTIFACT_PATH_BUDGET
+        or _windows_path_length(temp_path) > _WINDOWS_ARTIFACT_PATH_BUDGET
+        or len(message_dir.name) > _WINDOWS_COMPONENT_LENGTH_BUDGET
+        or len(path.name) > _WINDOWS_COMPONENT_LENGTH_BUDGET
+        or len(temp_path.name) > _WINDOWS_COMPONENT_LENGTH_BUDGET
+    ):
+        raise _mailbox_output_path_error(root_length=root_length)
+    try:
+        message_dir.mkdir(parents=True, exist_ok=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise _mailbox_output_path_error(root_length=root_length, cause=exc) from exc
     return path
+
+
+def _mailbox_artifact_component_limits(
+    settings: MailboxAcquisitionSettings,
+) -> tuple[Path, int, int]:
+    try:
+        root = Path(settings.output_dir).expanduser().resolve()
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        raise _mailbox_output_path_error(root_length=0, cause=exc) from exc
+
+    root_length = _windows_path_length(root)
+    available_component_length = _WINDOWS_ARTIFACT_PATH_BUDGET - root_length - 2
+    if available_component_length < (
+        _MAILBOX_HASH_SUFFIX_LENGTH + _MAILBOX_ZIP_TEMP_COMPONENT_LENGTH
+    ):
+        raise _mailbox_output_path_error(root_length=root_length)
+
+    message_component_length = min(
+        _MAILBOX_MESSAGE_COMPONENT_MAX_LENGTH,
+        max(
+            _MAILBOX_HASH_SUFFIX_LENGTH,
+            available_component_length - _MAILBOX_PDF_COMPONENT_MAX_LENGTH,
+        ),
+    )
+    pdf_component_length = min(
+        _MAILBOX_PDF_COMPONENT_MAX_LENGTH,
+        available_component_length - message_component_length,
+    )
+    if (
+        message_component_length < _MAILBOX_HASH_SUFFIX_LENGTH
+        or pdf_component_length < _MAILBOX_ZIP_TEMP_COMPONENT_LENGTH
+    ):
+        raise _mailbox_output_path_error(root_length=root_length)
+    return root, message_component_length, pdf_component_length
+
+
+def _bounded_message_component(value: str, *, max_length: int) -> str:
+    identity = str(value or "")
+    raw = identity.strip() or "message"
+    safe_name = _safe_file_name(raw)
+    if len(safe_name) <= max_length and raw.isascii():
+        return safe_name
+
+    digest = hashlib.sha256((identity or raw).encode("utf-8")).hexdigest()[:12]
+    prefix_budget = max_length - _MAILBOX_HASH_SUFFIX_LENGTH
+    prefix = safe_name[:prefix_budget].rstrip("._-")
+    if prefix:
+        return f"{prefix}-{digest}"
+    return digest
+
+
+def _bounded_pdf_file_name(value: str, *, max_length: int) -> str:
+    identity = str(value or "")
+    raw = identity.strip()
+    safe_name = _safe_file_name(raw)
+    if not safe_name.casefold().endswith(".pdf"):
+        safe_name += ".pdf"
+    if len(safe_name) <= max_length and raw.isascii() and safe_name == raw:
+        return safe_name
+
+    extension = safe_name[-4:]
+    stem = safe_name[:-4]
+    digest = hashlib.sha256((identity or safe_name).encode("utf-8")).hexdigest()[:12]
+    return bounded_artifact_filename(
+        f"{stem}-{digest}",
+        compact_stem=stem,
+        extension=extension,
+        max_length=max_length,
+    )
+
+
+def _plan_direct_pdf_file_names(
+    request: MailboxAttachmentMaterializeRequest,
+) -> dict[int, str]:
+    direct_attachments: list[tuple[int, str, str, bytes]] = []
+    for index, attachment in enumerate(request.attachments):
+        safe_name = _safe_file_name(attachment.file_name)
+        lower_name = safe_name.casefold()
+        content_type = str(attachment.content_type or "").casefold()
+        if not (lower_name.endswith(".pdf") or content_type == "application/pdf"):
+            continue
+        if len(attachment.payload) > _MAX_ZIP_ATTACHMENT_BYTES:
+            continue
+        original_name = str(attachment.file_name or "")
+        output_name = original_name
+        if not lower_name.endswith(".pdf"):
+            output_name = f"{output_name}.pdf"
+        direct_attachments.append(
+            (index, original_name, output_name, attachment.payload)
+        )
+
+    if not direct_attachments:
+        return {}
+
+    _, _, pdf_component_length = _mailbox_artifact_component_limits(request.settings)
+    output_names: dict[int, str] = {}
+    groups: dict[str, list[tuple[int, str, str, bytes]]] = {}
+    for item in direct_attachments:
+        index, _, output_name, _ = item
+        bounded_name = _bounded_pdf_file_name(
+            output_name,
+            max_length=pdf_component_length,
+        )
+        output_names[index] = bounded_name
+        groups.setdefault(bounded_name.casefold(), []).append(item)
+
+    for group in groups.values():
+        identities = {
+            (original_name, payload) for _, original_name, _, payload in group
+        }
+        if len(identities) <= 1:
+            continue
+        for index, original_name, output_name, payload in group:
+            safe_name = _safe_file_name(output_name)
+            if not safe_name.casefold().endswith(".pdf"):
+                safe_name += ".pdf"
+            stem = safe_name[:-4]
+            identity_digest = hashlib.sha256(
+                original_name.encode("utf-8") + b"\0" + payload
+            ).hexdigest()[:12]
+            output_names[index] = bounded_artifact_filename(
+                f"{stem}-{identity_digest}",
+                compact_stem=stem,
+                extension=".pdf",
+                max_length=pdf_component_length,
+            )
+
+    final_identities: dict[str, tuple[str, bytes]] = {}
+    for index, original_name, _, payload in direct_attachments:
+        file_name = output_names[index]
+        path_identity = file_name.casefold()
+        attachment_identity = (original_name, payload)
+        previous = final_identities.get(path_identity)
+        if previous is not None and previous != attachment_identity:
+            raise AppError(
+                code="mailbox_attachment_output_collision",
+                message=(
+                    "Distinct mailbox PDF attachments could not be assigned unique "
+                    "Windows output paths"
+                ),
+                retryable=False,
+                context={
+                    "next_action": (
+                        "Preserve unique attachment names and retry after checking the "
+                        "configured output directory"
+                    )
+                },
+            )
+        final_identities[path_identity] = attachment_identity
+
+    return output_names
+
+
+def _mailbox_output_path_error(
+    *, root_length: int, cause: Exception | None = None
+) -> AppError:
+    return AppError(
+        code="mailbox_attachment_output_dir_invalid",
+        message=(
+            "Mailbox output directory cannot fit within the supported Windows "
+            "path budget; choose a shorter, writable output_dir"
+        ),
+        cause=cause,
+        retryable=False,
+        context={
+            "configured_root_path_units": root_length,
+            "windows_path_budget": _WINDOWS_ARTIFACT_PATH_BUDGET,
+            "next_action": "Set a shorter, writable mailbox_acquisition.output_dir",
+        },
+    )
+
+
+def _windows_path_length(path: Path) -> int:
+    return len(str(path).encode("utf-16-le", errors="surrogatepass")) // 2
 
 
 def _safe_file_name(value: str) -> str:

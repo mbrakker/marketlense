@@ -78,7 +78,8 @@ def _is_ignored(path: str) -> bool:
 def _normalize_title(value: str) -> str:
     """Normalize only presentation differences in one canonical backlog title."""
 
-    normalized = re.sub(r"[^a-z0-9]+", " ", value.lower())
+    display_title = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", value)
+    normalized = re.sub(r"[^a-z0-9]+", " ", display_title.lower())
     return " ".join(normalized.split())
 
 
@@ -162,8 +163,7 @@ def validate_canonical_backlog(
             BacklogSourceViolation(
                 path=CANONICAL_BACKLOG,
                 reason=(
-                    "active unified-register ID missing detailed section: "
-                    f"{item_id}"
+                    f"active unified-register ID missing detailed section: {item_id}"
                 ),
             )
         )

@@ -12,11 +12,31 @@ import pytest
 
 from src.contracts.lock import LockAcquireRequest, LockGetRequest
 from src.contracts.run_context import RunContext
-from src.services.lock_service import acquire_lock, get_lock
+from src.services.lock_service import (
+    _write_lock_atomically,
+    acquire_lock,
+    get_lock,
+)
+from src.utils.errors import AppError
 
 
 def _ctx() -> RunContext:
     return RunContext(schema_version="1.0", run_id="r", task_id="t", span_id="s")
+
+
+def test_lock_publication_does_not_replace_a_legacy_lock(tmp_path: Path) -> None:
+    lock_path = tmp_path / "legacy.lock"
+    legacy_record = b'{"owner_id":"legacy-worker","pid":123,"created_at":1}'
+    lock_path.write_bytes(legacy_record)
+
+    published = _write_lock_atomically(
+        lock_path,
+        {"owner_id": "new-worker", "pid": 456, "created_at": 2},
+        _ctx(),
+    )
+
+    assert lock_path.read_bytes() == legacy_record
+    assert published is False
 
 
 def _acquire_after_barrier(lock_path, owner_id, barrier, results, release_winner):
@@ -193,7 +213,7 @@ def test_reader_waits_for_a_guarded_mid_creation_write(tmp_path: Path) -> None:
                 reader.join(timeout=5)
 
 
-def test_process_crash_after_partial_lock_creation_is_recovered(
+def test_process_crash_after_partial_lock_creation_fails_closed(
     tmp_path: Path,
 ) -> None:
     mp = multiprocessing.get_context("spawn")
@@ -210,23 +230,20 @@ def test_process_crash_after_partial_lock_creation_is_recovered(
     assert writer.exitcode == 0
     assert lock_path.read_text(encoding="utf-8") == '{"owner_id":"half-written"'
 
-    recovered = acquire_lock(
-        LockAcquireRequest(
-            schema_version="1.0",
-            lock_path=str(lock_path),
-            owner_id="recovered-owner",
-            pid=os.getpid(),
-            ttl_seconds=3600,
-        ),
-        _ctx(),
-    )
+    with pytest.raises(AppError) as exc_info:
+        acquire_lock(
+            LockAcquireRequest(
+                schema_version="1.0",
+                lock_path=str(lock_path),
+                owner_id="recovered-owner",
+                pid=os.getpid(),
+                ttl_seconds=3600,
+            ),
+            _ctx(),
+        )
 
-    assert recovered.acquired is True
-    assert recovered.lock is not None
-    assert recovered.lock.owner_id == "recovered-owner"
-    persisted = json.loads(lock_path.read_text(encoding="utf-8"))
-    assert persisted["owner_id"] == "recovered-owner"
-    assert persisted["generation"] == recovered.lock.generation
+    assert exc_info.value.code == "lock_file_corrupt"
+    assert lock_path.read_text(encoding="utf-8") == '{"owner_id":"half-written"'
 
 
 def test_concurrent_dead_owner_eviction_has_one_successor(tmp_path: Path) -> None:

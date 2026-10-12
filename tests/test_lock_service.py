@@ -289,7 +289,7 @@ def test_legacy_release_is_exact_and_cannot_release_new_generation(
         '{"owner_id":"private-lock-marker","pid":1,"created_at":NaN}',
     ],
 )
-def test_get_lock_diagnoses_and_acquire_recovers_corrupt_existing_lock(
+def test_acquire_lock_fails_closed_on_corrupt_existing_lock(
     payload: str, tmp_path: Path, caplog
 ) -> None:
     lock_path = tmp_path / "ingest.lock"
@@ -300,20 +300,23 @@ def test_get_lock_diagnoses_and_acquire_recovers_corrupt_existing_lock(
         get_lock(LockGetRequest(schema_version="1.0", lock_path=str(lock_path)), _ctx())
 
     assert read_error.value.code == "lock_file_corrupt"
-    acquired = acquire_lock(
-        LockAcquireRequest(
-            schema_version="1.0",
-            lock_path=str(lock_path),
-            owner_id="replacement-owner",
-            pid=os.getpid(),
-            ttl_seconds=3600,
-        ),
-        _ctx(),
-    )
+    with pytest.raises(AppError) as acquire_error:
+        acquire_lock(
+            LockAcquireRequest(
+                schema_version="1.0",
+                lock_path=str(lock_path),
+                owner_id="replacement-owner",
+                pid=os.getpid(),
+                ttl_seconds=3600,
+            ),
+            _ctx(),
+        )
 
-    assert acquired.acquired is True
-    assert acquired.lock is not None
-    assert acquired.lock.owner_id == "replacement-owner"
+    assert acquire_error.value.code == "lock_file_corrupt"
+    assert acquire_error.value.retryable is False
+    assert "private-lock-marker" not in str(acquire_error.value)
+    assert "private-lock-marker" not in str(acquire_error.value.context)
+    assert lock_path.read_text(encoding="utf-8") == payload
     assert "private-lock-marker" not in caplog.text
 
 
@@ -324,10 +327,10 @@ def test_failed_initial_lock_write_removes_only_the_created_file(
     unrelated_file = tmp_path / ".ingest.lock.unrelated.tmp"
     unrelated_file.write_text("preserve", encoding="utf-8")
 
-    def fail_replace(source, destination):
-        raise OSError("simulated atomic lock write failure")
+    def fail_link(source, destination):
+        raise OSError("simulated atomic lock publication failure")
 
-    external_boundary_mocks_only.setattr(lock_service.os, "replace", fail_replace)
+    external_boundary_mocks_only.setattr(lock_service.os, "link", fail_link)
 
     with pytest.raises(AppError) as exc_info:
         acquire_lock(

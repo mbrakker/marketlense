@@ -44,12 +44,19 @@ except ModuleNotFoundError:  # Direct `python scripts/quality/...` execution.
     )
     from _cto_review_evidence.run_projection import project_cto_evidence
 
+from scripts.quality._cto_review_evidence.log_reduction_scorecard import (  # noqa: E402
+    LogReductionAccumulator,
+)
 from src.contracts.cto_evidence import (  # noqa: E402
     cto_evidence_bundle_payload,
     parse_cto_evidence_bundle,
 )
+from src.contracts.log_reduction import (  # noqa: E402
+    LogReductionScorecard,
+    validate_log_reduction_scorecard,
+)
 
-COLLECTOR_VERSION = "3.0"
+COLLECTOR_VERSION = "3.1"
 COST_TOLERANCE = Decimal("0.000001")
 COMMIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 CANONICAL_LOG_RE = re.compile(r"^market_lense_\d{4}-\d{2}-\d{2}\.log$")
@@ -971,7 +978,12 @@ def _finalize_repository_provenance(
 
 
 def _executive_summary(
-    detailed_path: Path, *, run_id: str, commit_sha: str, artifact_names: list[str]
+    detailed_path: Path,
+    *,
+    run_id: str,
+    commit_sha: str,
+    artifact_names: list[str],
+    log_reduction_scorecard: LogReductionScorecard,
 ) -> dict[str, object]:
     if not detailed_path.is_file():
         raise SummaryBeforeDetailedArtifactsError(
@@ -1033,7 +1045,25 @@ def _executive_summary(
                     int(row.get("record_count") or 0) for row in failures
                 )
             },
+            "log_reductions": _log_reduction_summary(log_reduction_scorecard),
         },
+    }
+
+
+def _log_reduction_summary(
+    scorecard: LogReductionScorecard,
+) -> dict[str, object]:
+    """Project bounded scorecard totals into the existing CTO summary."""
+
+    group_summary = scorecard["group_summary"]
+    return {
+        "status": scorecard["status"],
+        "reduction_count": scorecard["reduction_count"],
+        "module_event_group_count": group_summary["module_event_group_count"],
+        "recurring_group_count": group_summary["recurring_group_count"],
+        "included_group_count": group_summary["included_group_count"],
+        "omitted_group_count": group_summary["omitted_group_count"],
+        "attempted_size_bytes": scorecard["attempted_size_bytes"],
     }
 
 
@@ -1051,6 +1081,7 @@ def validate_consistency(
         "snapshot_manifest.json",
         "detailed_metrics.json",
         "executive_summary.json",
+        "log_reduction_scorecard.json",
         "log_content_leakage.json",
         "workflow_to_remediation_coverage.json",
         "artifact_lineage_completeness.json",
@@ -1072,6 +1103,9 @@ def validate_consistency(
     snapshot = json.loads(files["snapshot_manifest.json"].read_text(encoding="utf-8"))
     detailed = json.loads(files["detailed_metrics.json"].read_text(encoding="utf-8"))
     summary = json.loads(files["executive_summary.json"].read_text(encoding="utf-8"))
+    scorecard = validate_log_reduction_scorecard(
+        json.loads(files["log_reduction_scorecard.json"].read_text(encoding="utf-8"))
+    )
     leakage = json.loads(files["log_content_leakage.json"].read_text(encoding="utf-8"))
     canonical_bundle = json.loads(
         files["cto_evidence_bundle.json"].read_text(encoding="utf-8")
@@ -1090,7 +1124,7 @@ def validate_consistency(
         else None
     )
     commit_sha = str(manifest.get("repository", {}).get("expected_commit_sha") or "")
-    artifacts = (manifest, snapshot, detailed, summary, leakage)
+    artifacts = (manifest, snapshot, detailed, summary, scorecard, leakage)
     if any(
         str(item.get("evidence_run_id") or "") != expected_run_id for item in artifacts
     ):
@@ -1109,7 +1143,7 @@ def validate_consistency(
         )
     if any(
         str(item.get("repository_commit_sha") or "") != commit_sha
-        for item in (snapshot, detailed, summary, leakage)
+        for item in (snapshot, detailed, summary, scorecard, leakage)
     ):
         raise RepositoryShaMismatchError(
             "Evidence artifacts do not share one repository SHA"
@@ -1221,6 +1255,12 @@ def validate_consistency(
     ):
         raise RowCountMismatchError(
             "Failure total differs from detailed failure records"
+        )
+    if summary.get("totals", {}).get("log_reductions") != _log_reduction_summary(
+        scorecard
+    ):
+        raise RowCountMismatchError(
+            "Executive log-reduction totals differ from the scorecard"
         )
     for item in inventory:
         if not isinstance(item, dict):
@@ -1380,17 +1420,29 @@ def _leakage_payload(
     minimum_editorial: int,
     maximum_per_class: int,
     allow_unavailable_run_logs: bool,
-) -> tuple[dict[str, object], tuple[str, ...]]:
+) -> tuple[dict[str, object], tuple[str, ...], LogReductionScorecard]:
     source_canaries, editorial_canaries, examined = extract_canaries(
         artifact_snapshot_root, maximum_per_class=maximum_per_class
     )
     canaries = [*source_canaries, *editorial_canaries]
+    reduction_accumulator = LogReductionAccumulator(
+        evidence_run_id=run_id,
+        repository_commit_sha=commit_sha,
+        full_scan_available=fresh_after is not None,
+    )
     matches, log_coverage, fresh_log_seen = scan_logs(
         log_snapshot_root,
         log_entries,
         canaries,
         fresh_after=fresh_after,
         parse_timestamp=lambda value: _parse_log_timestamp(value),
+        reduction_accumulator=reduction_accumulator,
+    )
+    scorecard = reduction_accumulator.build(
+        scanned_log_file_count=len(log_entries),
+        unreadable_log_file_count=sum(
+            1 for entry in log_entries if entry.get("accessibility") != "readable"
+        ),
     )
     coverage: dict[str, object] = {
         "artifact_files_examined": examined,
@@ -1454,6 +1506,7 @@ def _leakage_payload(
             "limitations": limitations,
         },
         tuple(item.normalized_text for item in canaries),
+        scorecard,
     )
 
 
@@ -1568,7 +1621,7 @@ def collect(
         _validate_snapshot_integrity(entries, snapshots)
         commit_sha = str(repository["expected_commit_sha"])
         try:
-            leakage, forbidden_canaries = _leakage_payload(
+            leakage, forbidden_canaries, log_reduction_scorecard = _leakage_payload(
                 run_id=run_id,
                 commit_sha=commit_sha,
                 artifact_snapshot_root=artifact_snapshot_root,
@@ -1630,6 +1683,10 @@ def collect(
                 "metrics": metrics,
             },
         )
+        scorecard_path = _write_json(
+            staging_dir / "log_reduction_scorecard.json",
+            log_reduction_scorecard,
+        )
         leakage_path = _write_json(staging_dir / "log_content_leakage.json", leakage)
         summary_artifacts = [
             path.name
@@ -1638,6 +1695,7 @@ def collect(
                 *cto_paths,
                 canonical_bundle_path,
                 detailed_path,
+                scorecard_path,
                 snapshot_manifest_path,
                 leakage_path,
             ]
@@ -1649,6 +1707,7 @@ def collect(
                 run_id=run_id,
                 commit_sha=commit_sha,
                 artifact_names=summary_artifacts,
+                log_reduction_scorecard=log_reduction_scorecard,
             ),
         )
         _finalize_repository_provenance(

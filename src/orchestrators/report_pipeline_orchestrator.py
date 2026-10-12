@@ -756,9 +756,13 @@ def run_report_pipeline(
                         module=logger.name,
                         fields={
                             "incoming_file_id": file.file_id,
-                            "canonical_source_identity": reuse.canonical_source_identity,
+                            "canonical_source_identity": (
+                                reuse.canonical_source_identity
+                            ),
                             "matched_report_id": reuse.report_id,
-                            "highest_reused_checkpoint": reuse.highest_reusable_checkpoint,
+                            "highest_reused_checkpoint": (
+                                reuse.highest_reusable_checkpoint
+                            ),
                             "reused_stages": ["source_prepared", "selection_complete"],
                             "regenerated_stages": [],
                             "decision_reason": reuse.reason,

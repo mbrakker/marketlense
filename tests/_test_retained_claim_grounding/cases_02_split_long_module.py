@@ -916,6 +916,7 @@ def test_key_figure_grounding_uses_the_full_public_metric_and_direct_evidence() 
                     {
                         "id": evidence_id,
                         "text": evidence_text,
+                        "evidence": evidence_text,
                         "pages": [3],
                     }
                 ]
@@ -965,7 +966,15 @@ def test_key_figure_grounding_retains_cohort_and_denominator_scope() -> None:
         report=_report(),
         artifacts={"key_figures": [figure]},
         evidence_packs={
-            "findings": {"findings": [{"id": evidence_id, "text": evidence_text}]}
+            "findings": {
+                "findings": [
+                    {
+                        "id": evidence_id,
+                        "text": evidence_text,
+                        "evidence": evidence_text,
+                    }
+                ]
+            }
         },
         source_id="source-key-figure-population-grounding",
     )

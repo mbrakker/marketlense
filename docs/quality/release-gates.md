@@ -20,7 +20,7 @@ recorded failed tests, `ci_performance_benchmark.json.passed: false`, a false
 provenance. A waiver may record an exception but cannot make failed machine
 evidence or a failed manifest release-green.
 
-The GitHub job summary runs only when its release-review and queue-evidence inputs exist. The evidence bundle upload still runs after an earlier gate fails, retaining available diagnostics without adding a missing-artifact summary failure.
+The GitHub job summary runs after the always-on release-bundle upload, even when an earlier gate prevented release-review or queue-evidence generation. It reports absent inputs as unavailable/non-green. Upload-step success is reported separately from configured required-file completeness, so a partial diagnostic archive is not described as a complete bundle.
 
 ## GitHub merge enforcement
 

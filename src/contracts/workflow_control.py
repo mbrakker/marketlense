@@ -1136,6 +1136,40 @@ class ModelCallAuditRecord:
 
 
 @dataclass(frozen=True)
+class ModelCallReplayComparisonEvidence:
+    """Explicit retained identities needed for safe replay comparison.
+
+    Every hash is supplied from retained evidence; callers must not derive it
+    from a matching prompt or model identity.
+    """
+
+    schema_version: str = field(metadata={"doc": "Comparison-evidence schema version."})
+    artifact_family: str = field(
+        metadata={"doc": "Stable output artifact family for this call."}
+    )
+    policy_sha256: str | None = field(
+        default=None,
+        metadata={"doc": "Retained resolved-policy identity, when available."},
+    )
+    evidence_sha256: str | None = field(
+        default=None,
+        metadata={"doc": "Retained selected-evidence identity, when available."},
+    )
+    output_sha256: str | None = field(
+        default=None,
+        metadata={"doc": "Retained structured output identity, when available."},
+    )
+    artifact_sha256: str | None = field(
+        default=None,
+        metadata={"doc": "Retained final artifact identity, when available."},
+    )
+    schema_sha256: str | None = field(
+        default=None,
+        metadata={"doc": "Retained output-schema identity, when available."},
+    )
+
+
+@dataclass(frozen=True)
 class ModelCallReplayBundle:
     schema_version: str = field(
         metadata={"doc": "Model call replay bundle schema version."}
@@ -1148,6 +1182,10 @@ class ModelCallReplayBundle:
         metadata={
             "doc": "False unless an explicit operator override enables live replay."
         }
+    )
+    comparison_evidence: ModelCallReplayComparisonEvidence | None = field(
+        default=None,
+        metadata={"doc": "Explicit retained identities for deterministic comparison."},
     )
 
 

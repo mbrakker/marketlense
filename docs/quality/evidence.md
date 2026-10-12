@@ -27,7 +27,42 @@ configured output/artifact mechanism. The waiver policy is
 
 CI also runs `scripts/quality/generate_workflow_queue_evidence.py` against a temporary SQLite database. It requires an expected full commit SHA, checks that HEAD is unchanged before and after generation, and records only queue record IDs and scalar counts. The fixed scenario proves submission, lease/start, completion, one downstream outbox event and materialisation, expired-lease recovery, a bounded retry, a budget deferral, and a dry-run publication-approval handoff. The artifact is required in the release manifest and is included in `release-evidence-bundle`.
 
-This deterministic queue evidence confirms queue semantics at the exact tested revision; it does **not** demonstrate live production throughput, provider behavior, or a public WordPress write. The GitHub job summary explicitly preserves that distinction and bounds any listed unwaived issues.
+This deterministic queue evidence confirms queue semantics at the exact tested revision; it does **not** demonstrate live production throughput, provider behavior, or a public WordPress write.
+
+The existing CI job summary is rendered by
+`scripts/quality/release_evidence_job_summary.py`. It compares the release
+review and queue evidence with the workflow's exact SHA and build identity,
+shows the canonical release-review/queue validation result and unwaived issue
+count, and links directly to the uploaded `release-evidence-bundle` when the
+Actions upload step supplies a validated artifact URL. The summary runs after
+upload. It reports the upload action outcome separately from bundle
+completeness: `complete` requires a successful upload, a direct artifact URL,
+and every configured required bundle path to exist; absent paths produce
+`partial`, and unproven upload/link conditions remain `unverified` or
+`unavailable`. The optional WordPress staging artifact is excluded from this
+required-path check. A successful validation is only an exact-SHA release
+review plus deterministic queue validation; it does not prove representative
+runtime processing or a complete uploaded bundle. The artifact has 14-day
+retention. Full issue details remain in the canonical bundled review
+JSON/Markdown; the job summary emits no issue reasons or diagnostic text. The
+summary step still runs when an input file is absent and labels missing,
+malformed, stale, incompatible, mismatched, or contradictory review evidence
+non-green. This is a review surface only; the existing release approval gates
+are unchanged.
+
+The summary reads only allow-listed provenance, status, SHA, freshness, and
+`log_corpus.operator_declared_scope` fields from the retained CTO
+`log_content_leakage.json`. Scope is shown as `representative`, `smoke-only`,
+or `unavailable`. Evidence whose repository SHA differs from the tested SHA is
+shown as `historical_unmatched` with its recorded scope and is explicitly
+excluded from current-run validation. A smoke-only corpus is insufficient for
+representative processing. The collector describes scope as operator-declared
+and does not verify that the declared workflow ran, so representative scope is
+shown as `declared_unverified`; it does not change the canonical validation
+result. Missing or malformed CTO metadata is shown as unavailable or
+incompatible. After the configured retention period, an Actions artifact may
+expire; the summary does not make an external API call to inspect later
+availability.
 
 For operational diagnostics, use structured logs and retained workflow artifacts first. See [monitoring](../ops/monitoring.md) and [recovery](../ops/recovery.md).
 
@@ -89,6 +124,68 @@ unchanged cohort result, manifest/result hashes, per-report package-lineage
 checks, typed outcomes, and aggregate calls, tokens, cost, and duration; full
 workflow state and model payloads remain in ignored run storage. These
 comparisons are stochastic observations, not controlled causal estimates.
+
+## Model-call replay bundle comparison
+
+Compare two retained `ModelCallReplayBundle` JSON files without constructing a
+provider client or writing an output artifact:
+
+```powershell
+python scripts/quality/compare_model_call_replay_bundles.py `
+  --baseline <baseline-replay-bundle.json> `
+  --candidate <candidate-replay-bundle.json> `
+  --artifact-family report_vs/doc_map `
+  --expect model=<expected-model>
+```
+
+`--expect` is optional and repeatable. It accepts allowlisted candidate
+identity fields; expectation values are compared but never included in output.
+The command prints one stable JSON response to stdout. It reports only artifact
+family, bundle-byte hashes, safe field names, classification, and bounded
+diagnostic codes. Exit code `2` means a malformed or unreadable input; other
+classifications exit successfully so callers can inspect the result.
+
+`equivalent` requires the same prompt, model execution, policy, schema,
+selected-evidence, output, and artifact identities. Changes to the prompt,
+model, policy, schema, evidence, operation, provider decision, or artifact
+family classify as `incompatible`; they cannot support a regression claim.
+Changed output or artifact identities within a complete compatible cohort are
+`compatible_but_changed`. `materially_regressed` is reserved for a changed
+output identity where the baseline validation passed and candidate validation
+failed in that same cohort. Missing required identity is `incomplete`, and
+invalid structure or identity hashes are `malformed`.
+
+Bundle schema `1.1` can carry a typed `comparison_evidence` block with explicit
+artifact-family, policy, evidence, output, artifact, and optional schema
+SHA-256 identities. The replay builder accepts that block only from a caller
+that already has those retained identities. Schema `1.0` bundles and `1.1`
+bundles without those identities remain incomplete; prompt/model equality does
+not fill gaps. The command validates hash shape but does not independently
+authenticate how a producer derived an identity or prove that two output hashes
+represent equivalent content.
+
+The block uses these fields; hashes must come from retained artifacts or
+provenance records, never from guessed values:
+
+```json
+{
+  "schema_version": "1.0",
+  "artifact_family": "report_vs/doc_map",
+  "policy_sha256": "<retained-sha256>",
+  "evidence_sha256": "<retained-sha256>",
+  "output_sha256": "<retained-sha256>",
+  "artifact_sha256": "<retained-sha256>",
+  "schema_sha256": "<optional-retained-sha256>"
+}
+```
+
+No serialized model-call replay bundles are retained in the current checked-in
+evidence corpus. Existing audit log rows lack policy, selected-evidence,
+output, and artifact identities, while report-level lineage has no stable
+per-call link; neither is joined speculatively. Complete comparison tests use
+synthetic bundles and prove the comparator behavior, not provenance from a
+real retained call. Re-run the command on retained bundles when an eligible
+pair exists, and keep incomplete legacy outcomes explicit.
 
 ## Repair-effectiveness evidence
 
@@ -212,11 +309,45 @@ Raw snapshotted log lines are compared deterministically, including unstructured
 The existing CSV filenames remain stable. The collector additionally writes:
 
 - `detailed_metrics.json`: finalized structured input for summary derivation;
-- `executive_summary.json`: totals derived only from that finalized detail;
+- `executive_summary.json`: totals derived from finalized detail plus the bounded log-reduction scorecard;
 - `snapshot_manifest.json`: database, retained-artifact, and standard-log snapshot provenance;
 - `log_content_leakage.json`: versioned canary coverage and redacted matching result (`passed`, `failed`, or `incomplete`);
+- `log_reduction_scorecard.json`: versioned read-only reduction counts, module/event groups, size summaries, time/build identity, and recurring-caller review locators;
 - `evidence_run_manifest.json`: exact repository provenance, configuration, snapshot-manifest hash, and canonical file inventory with byte counts and SHA-256 values;
 - `consistency_validation.json`: compact checks, exact-head outcome, repository SHA, and finalized run-manifest hash.
+
+The scorecard reuses the structured-log parser pass already performed for a
+fresh CTO scan. `--fresh-after` enables that full metadata pass; without it,
+the scorecard reports `unavailable` rather than treating unparsed records as
+zero reductions. No readable log files also reports `unavailable`. A complete
+scan with no reductions reports `zero`; malformed structured lines, invalid
+reduction metadata, or unreadable files report `partial` with explicit counts.
+The existing content-leakage result and release approval checks are unchanged.
+
+Only validated module and event identifiers and numeric reduction metadata
+enter the scorecard. Module identities accept the current `src.*` namespace
+and retained `market_lense.*` namespace; other module/event identities are
+represented by a generic unavailable identity. Attempted-size percentiles use
+nearest-rank p50, p90, p95, p99, and maximum values. Retained event size is the
+UTF-8 byte length of the serialized JSON message in the snapshotted log; the
+discarded values are never reconstructed. The scorecard compares that size
+with each event's retained `maximum_size_bytes` and reports the budget result.
+It reports both validated
+offset-aware `timestamp_utc` bounds and dates from canonical log filenames,
+plus the collector SHA and up to 25 sorted producer SHAs retained by events.
+Missing build or time identity is explicit.
+
+A caller is recurring after at least three reductions for the same validated
+module/event pair across the scanned corpus. Such a group points reviewers to
+the owning module and
+`CONSOLIDATED_TODO.md#r6-review-bounded-log-reduction-telemetry-and-remediate-recurring-callers`.
+This creates review work only;
+it never changes logging code or event bounds. The scorecard includes at most
+100 caller groups, ordered by reduction count and then identifier. If more
+groups exist, it reports omitted and omitted-recurring counts, routes the
+overflow to module owners through R6, and sets its state to `partial`.
+`log_reduction_scorecard.json` is included in the executive-summary artifact
+list and the CTO inventory.
 
 The JSON CTO artifacts carry one `evidence_run_id` and one `repository_commit_sha`; the manifest binds stable CSV names through the same inventory. It records the collector Python/OS separately from bounded producer-commit observations in historical structured logs; historical producer runtime version is explicitly `not_retained` when absent. The run manifest intentionally does not hash itself. Instead, `consistency_validation.json` records the finalized run-manifest SHA after independent validation, avoiding a circular hash. Public output paths never include a workstation root or username.
 

@@ -7,16 +7,21 @@ import json
 import os
 import subprocess
 import sys
+import time
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable, Sequence, cast
+from typing import Sequence, cast
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.ci.policy import DEFAULT_POLICY_PATH, load_architecture_policy  # noqa: E402
+from scripts.ci.policy import (  # noqa: E402
+    DEFAULT_POLICY_PATH,
+    load_architecture_policy,
+)
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,7 @@ class MutationTarget:
     max_mutants: int
     min_score: float
     report_module: str | None = None
+    duration_weight_ms: int = 1
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,7 @@ class MutationResult:
     target: MutationTarget
     total: int
     killed: int
+    elapsed_ms: int
 
     @property
     def score(self) -> float:
@@ -56,18 +63,26 @@ class MutationReport:
     schema_version: str
     min_score_default: float
     targets: list[dict[str, object]]
+    metadata: dict[str, object] | None = None
 
     def to_json(self) -> str:
+        payload: dict[str, object] = {
+            "schema_version": self.schema_version,
+            "min_score_default": self.min_score_default,
+            "targets": self.targets,
+        }
+        if self.metadata is not None:
+            payload.update(self.metadata)
         return json.dumps(
-            {
-                "schema_version": self.schema_version,
-                "min_score_default": self.min_score_default,
-                "targets": self.targets,
-            },
+            payload,
             ensure_ascii=False,
             indent=2,
             sort_keys=True,
         )
+
+
+class MutationExecutionError(RuntimeError):
+    """A baseline or mutant test execution could not produce a valid verdict."""
 
 
 def _threshold(env_name: str, default: float) -> float:
@@ -80,20 +95,44 @@ def _threshold(env_name: str, default: float) -> float:
         raise SystemExit(f"Invalid float for {env_name}: {raw}") from exc
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run targeted mutation testing gate.")
     parser.add_argument(
         "--json-out",
         default="mutation_results.json",
         help="Path to write mutation summary JSON.",
     )
-    parser.add_argument(
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument(
         "--target",
         action="append",
         default=[],
-        help="Run only mutation targets whose module path or report module contains this text.",
+        help=(
+            "Run only mutation targets whose module path or report module "
+            "contains this text."
+        ),
     )
-    return parser.parse_args()
+    selection.add_argument(
+        "--partition-index",
+        type=int,
+        help="Run one deterministic partition of the configured mutation targets.",
+    )
+    parser.add_argument("--partition-count", type=int)
+    parser.add_argument("--repository-commit-sha")
+    parser.add_argument("--evidence-run-id")
+    args = parser.parse_args(argv)
+    if args.partition_index is not None:
+        if args.partition_count is None or args.partition_count < 1:
+            parser.error("--partition-index requires a positive --partition-count")
+        if not 0 <= args.partition_index < args.partition_count:
+            parser.error("--partition-index must be within --partition-count")
+        if not args.repository_commit_sha or not args.evidence_run_id:
+            parser.error(
+                "partitioned runs require --repository-commit-sha and --evidence-run-id"
+            )
+    elif args.partition_count is not None:
+        parser.error("--partition-count requires --partition-index")
+    return args
 
 
 def _line_col_to_index(source: str, line: int, col: int) -> int:
@@ -187,8 +226,81 @@ def _collect_candidates(source: str) -> list[MutationCandidate]:
     return list(unique.values())
 
 
-def _run_tests(test_paths: Sequence[str]) -> bool:
-    cmd = [sys.executable, "-m", "pytest", "-m", "not integration", "-q", *test_paths]
+def _junit_test_count(path: Path) -> int:
+    try:
+        root = ET.parse(path).getroot()
+    except (OSError, ET.ParseError) as exc:
+        raise MutationExecutionError(
+            f"pytest produced invalid JUnit XML: {path}"
+        ) from exc
+    return sum(
+        1 for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "testcase"
+    )
+
+
+def classify_pytest_result(
+    exit_code: int,
+    junit_xml_path: Path,
+    *,
+    expected_test_count: int | None = None,
+) -> str:
+    """Classify complete test-call failures as kills and execution errors as invalid."""
+
+    try:
+        root = ET.parse(junit_xml_path).getroot()
+    except (OSError, ET.ParseError) as exc:
+        raise MutationExecutionError(
+            f"pytest produced invalid JUnit XML: {junit_xml_path}"
+        ) from exc
+    test_count = sum(
+        1 for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "testcase"
+    )
+    if test_count <= 0:
+        raise MutationExecutionError("pytest collected no target tests")
+    skipped_count = sum(
+        1 for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "skipped"
+    )
+    if skipped_count >= test_count:
+        raise MutationExecutionError("pytest executed no target tests")
+    if expected_test_count is not None and test_count != expected_test_count:
+        raise MutationExecutionError(
+            f"pytest collected {test_count} tests; expected {expected_test_count}"
+        )
+
+    failures = [
+        element
+        for element in root.iter()
+        if element.tag.rsplit("}", 1)[-1] == "failure"
+    ]
+    errors = [
+        element for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "error"
+    ]
+    if exit_code == 0:
+        if failures or errors:
+            raise MutationExecutionError(
+                "pytest exited successfully but JUnit XML contains failures or errors"
+            )
+        return "survived"
+    if exit_code != 1 or errors or not failures:
+        raise MutationExecutionError(
+            f"pytest exited {exit_code} without a failure-only test report"
+        )
+    return "killed"
+
+
+def _run_tests(
+    test_paths: Sequence[str], junit_xml_path: Path, expected_test_count: int
+) -> str:
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-m",
+        "not integration",
+        "-q",
+        f"--junitxml={junit_xml_path}",
+        *test_paths,
+    ]
     result = subprocess.run(
         cmd,
         cwd=ROOT,
@@ -197,15 +309,20 @@ def _run_tests(test_paths: Sequence[str]) -> bool:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    return result.returncode != 0
+    return classify_pytest_result(
+        result.returncode,
+        junit_xml_path,
+        expected_test_count=expected_test_count,
+    )
 
 
-def _target_module_coverage_lines(target: MutationTarget) -> set[int]:
+def _target_module_coverage_lines(target: MutationTarget) -> tuple[set[int], int]:
     module_rel = target.module_path.relative_to(ROOT).as_posix().lower()
     with TemporaryDirectory(prefix="mutation_cov_", dir=ROOT) as tmp_dir:
         tmp_path = Path(tmp_dir)
         data_path = tmp_path / ".coverage"
         json_path = tmp_path / "coverage.json"
+        junit_path = tmp_path / "baseline.xml"
         run_cmd = [
             sys.executable,
             "-m",
@@ -220,6 +337,7 @@ def _target_module_coverage_lines(target: MutationTarget) -> set[int]:
             "-m",
             "not integration",
             "-q",
+            f"--junitxml={junit_path}",
             *target.test_paths,
         ]
         run_result = subprocess.run(
@@ -230,12 +348,17 @@ def _target_module_coverage_lines(target: MutationTarget) -> set[int]:
             stderr=subprocess.STDOUT,
             text=True,
         )
-        if run_result.returncode != 0:
-            print(
-                f"  - warning: coverage probe failed for {module_rel}; "
-                "using unfiltered mutation candidates"
+        try:
+            baseline_status = classify_pytest_result(run_result.returncode, junit_path)
+        except MutationExecutionError as exc:
+            raise MutationExecutionError(
+                f"unmutated target suite failed for {module_rel}: {exc}"
+            ) from exc
+        if baseline_status != "survived":
+            raise MutationExecutionError(
+                f"unmutated target suite did not pass for {module_rel}"
             )
-            return set()
+        expected_test_count = _junit_test_count(junit_path)
         json_cmd = [
             sys.executable,
             "-m",
@@ -255,29 +378,39 @@ def _target_module_coverage_lines(target: MutationTarget) -> set[int]:
             text=True,
         )
         if json_result.returncode != 0 or not json_path.exists():
-            print(
-                f"  - warning: coverage json export failed for {module_rel}; "
-                "using unfiltered mutation candidates"
+            raise MutationExecutionError(
+                "coverage JSON export failed for "
+                f"{module_rel}: {json_result.stdout[-2000:]}"
             )
-            return set()
         try:
             payload = json.loads(json_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return set()
+        except json.JSONDecodeError as exc:
+            raise MutationExecutionError(
+                f"coverage JSON is malformed for {module_rel}"
+            ) from exc
     files = payload.get("files", {})
     if not isinstance(files, dict):
-        return set()
+        raise MutationExecutionError(
+            f"coverage JSON has no files mapping for {module_rel}"
+        )
     for file_path, details in files.items():
         normalized_file = str(file_path).replace("\\", "/").lower()
         if not normalized_file.endswith(module_rel):
             continue
         if not isinstance(details, dict):
-            return set()
+            raise MutationExecutionError(
+                f"coverage entry is malformed for {module_rel}"
+            )
         executed = details.get("executed_lines")
         if not isinstance(executed, list):
-            return set()
-        return {int(line) for line in executed if isinstance(line, int)}
-    return set()
+            raise MutationExecutionError(
+                f"coverage lines are malformed for {module_rel}"
+            )
+        return (
+            {int(line) for line in executed if isinstance(line, int)},
+            expected_test_count,
+        )
+    return set(), expected_test_count
 
 
 def _filter_candidates_by_coverage(
@@ -297,35 +430,54 @@ def _filter_candidates_by_coverage(
 
 
 def _run_target(target: MutationTarget) -> MutationResult:
+    started_ns = time.perf_counter_ns()
     source = target.module_path.read_text(encoding="utf-8")
     candidates = _collect_candidates(source)
-    covered_lines = _target_module_coverage_lines(target)
+    covered_lines, expected_test_count = _target_module_coverage_lines(target)
     candidates = _filter_candidates_by_coverage(candidates, covered_lines)
     candidates = candidates[: target.max_mutants]
     if not candidates:
-        return MutationResult(target=target, total=0, killed=0)
+        return MutationResult(
+            target=target,
+            total=0,
+            killed=0,
+            elapsed_ms=round((time.perf_counter_ns() - started_ns) / 1_000_000),
+        )
 
     killed = 0
     try:
-        for index, candidate in enumerate(candidates, start=1):
-            mutated = (
-                source[: candidate.start]
-                + candidate.replacement
-                + source[candidate.end :]
-            )
-            target.module_path.write_text(mutated, encoding="utf-8")
-            is_killed = _run_tests(target.test_paths)
-            status = "killed" if is_killed else "survived"
-            print(
-                f"  - {target.module_path.as_posix()} mutant {index}/{len(candidates)} "
-                f"[{candidate.description} @L{candidate.start_line}-L{candidate.end_line}] => {status}"
-            )
-            if is_killed:
-                killed += 1
+        with TemporaryDirectory(prefix="mutation_run_", dir=ROOT) as tmp_dir:
+            junit_dir = Path(tmp_dir)
+            for index, candidate in enumerate(candidates, start=1):
+                mutated = (
+                    source[: candidate.start]
+                    + candidate.replacement
+                    + source[candidate.end :]
+                )
+                target.module_path.write_text(mutated, encoding="utf-8")
+                status = _run_tests(
+                    target.test_paths,
+                    junit_dir / f"mutant-{index}.xml",
+                    expected_test_count,
+                )
+                print(
+                    f"  - {target.module_path.as_posix()} "
+                    f"mutant {index}/{len(candidates)} "
+                    f"[{candidate.description} @L{candidate.start_line}-"
+                    f"L{candidate.end_line}] => {status}",
+                    flush=True,
+                )
+                if status == "killed":
+                    killed += 1
     finally:
         target.module_path.write_text(source, encoding="utf-8")
 
-    return MutationResult(target=target, total=len(candidates), killed=killed)
+    return MutationResult(
+        target=target,
+        total=len(candidates),
+        killed=killed,
+        elapsed_ms=round((time.perf_counter_ns() - started_ns) / 1_000_000),
+    )
 
 
 def _mutation_policy() -> dict[str, object]:
@@ -345,8 +497,12 @@ def _target_min_score(path: str, default: float) -> float:
         return default
 
 
-def _targets() -> Iterable[MutationTarget]:
-    return [
+def configured_mutation_targets() -> tuple[MutationTarget, ...]:
+    """Return the canonical mutation inventory and measured partition weights."""
+
+    # Seed weights are per-target timings from Ubuntu 24.04/CPython 3.12.15,
+    # measured in run 38211776311 at SHA 29fb1fb9f401f9a914b4c3298558f59a5ee6f872.
+    return (
         MutationTarget(
             module_path=ROOT
             / "src"
@@ -355,18 +511,21 @@ def _targets() -> Iterable[MutationTarget]:
             test_paths=("tests/test_publish_queue_orchestrator.py",),
             max_mutants=4,
             min_score=50.0,
+            duration_weight_ms=12_377,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "taxonomy_generator.py",
             test_paths=("tests/test_taxonomy_generator.py",),
             max_mutants=4,
             min_score=75.0,
+            duration_weight_ms=28_526,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "evidence_pack_generator.py",
             test_paths=("tests/test_evidence_pack_generator.py",),
             max_mutants=3,
             min_score=60.0,
+            duration_weight_ms=29_142,
         ),
         MutationTarget(
             module_path=ROOT
@@ -378,12 +537,14 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/generators/artifact_generator.py",
+            duration_weight_ms=58_409,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "validation_generator.py",
             test_paths=("tests/test_validation_generator.py",),
             max_mutants=3,
             min_score=60.0,
+            duration_weight_ms=44_052,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "report_card_projection.py",
@@ -393,12 +554,14 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=6,
             min_score=80.0,
+            duration_weight_ms=27_744,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "cover_image_generator.py",
             test_paths=("tests/test_cover_image_generator.py",),
             max_mutants=4,
             min_score=75.0,
+            duration_weight_ms=23_237,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "report_render_generator.py",
@@ -408,12 +571,14 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=4,
             min_score=75.0,
+            duration_weight_ms=48_912,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "publish_generator.py",
             test_paths=("tests/test_publish_generator.py",),
             max_mutants=4,
             min_score=_target_min_score("src/generators/publish_generator.py", 85.0),
+            duration_weight_ms=36_434,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "services" / "_llm_service" / "vector_store.py",
@@ -421,6 +586,7 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/llm_service.py",
+            duration_weight_ms=28_905,
         ),
         MutationTarget(
             module_path=ROOT
@@ -432,6 +598,7 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/drive_service.py",
+            duration_weight_ms=26_106,
         ),
         MutationTarget(
             module_path=ROOT
@@ -443,6 +610,7 @@ def _targets() -> Iterable[MutationTarget]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/wordpress_service.py",
+            duration_weight_ms=15_081,
         ),
         MutationTarget(
             module_path=ROOT
@@ -455,6 +623,7 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=3,
             min_score=60.0,
+            duration_weight_ms=45_571,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "orchestrators" / "retry_orchestrator.py",
@@ -464,6 +633,7 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=6,
             min_score=80.0,
+            duration_weight_ms=71_190,
         ),
         MutationTarget(
             module_path=ROOT
@@ -476,8 +646,9 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=6,
             min_score=_target_min_score(
-                "src/orchestrators/retry_telemetry_orchestrator.py", 90.0
+                "src/orchestrators/pipeline_preflight_orchestrator.py", 90.0
             ),
+            duration_weight_ms=80_316,
         ),
         MutationTarget(
             module_path=ROOT
@@ -490,8 +661,9 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=6,
             min_score=_target_min_score(
-                "src/orchestrators/workflow_control_orchestrator.py", 90.0
+                "src/orchestrators/retry_telemetry_orchestrator.py", 90.0
             ),
+            duration_weight_ms=27_248,
         ),
         MutationTarget(
             module_path=ROOT
@@ -504,14 +676,55 @@ def _targets() -> Iterable[MutationTarget]:
             ),
             max_mutants=6,
             min_score=_target_min_score(
-                "src/orchestrators/pipeline_preflight_orchestrator.py", 90.0
+                "src/orchestrators/workflow_control_orchestrator.py", 90.0
             ),
+            duration_weight_ms=80_209,
         ),
-    ]
+    )
 
 
-def main() -> int:
-    args = _parse_args()
+def _targets() -> list[MutationTarget]:
+    """Keep the original mutation inventory helper for existing callers."""
+
+    return list(configured_mutation_targets())
+
+
+def partition_targets(
+    targets: Sequence[MutationTarget], *, partition_count: int
+) -> tuple[tuple[MutationTarget, ...], ...]:
+    """Balance targets deterministically using observed whole-target runtimes."""
+
+    if partition_count <= 0 or partition_count > len(targets):
+        raise ValueError("partition_count must be between one and the target count")
+    target_ids = [target.module_path.relative_to(ROOT).as_posix() for target in targets]
+    if len(target_ids) != len(set(target_ids)):
+        raise ValueError("mutation target inventory contains duplicate modules")
+    if any(
+        isinstance(target.duration_weight_ms, bool) or target.duration_weight_ms <= 0
+        for target in targets
+    ):
+        raise ValueError("mutation target duration weights must be positive integers")
+
+    groups: list[list[MutationTarget]] = [[] for _ in range(partition_count)]
+    group_weights = [0] * partition_count
+    ordered = sorted(
+        targets,
+        key=lambda target: (
+            -target.duration_weight_ms,
+            target.module_path.relative_to(ROOT).as_posix(),
+        ),
+    )
+    for target in ordered:
+        index = min(
+            range(partition_count), key=lambda part: (group_weights[part], part)
+        )
+        groups[index].append(target)
+        group_weights[index] += target.duration_weight_ms
+    return tuple(tuple(group) for group in groups)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     raw_default = _mutation_policy().get("default_min_score", 60.0)
     try:
         default_min_score = float(raw_default)
@@ -519,7 +732,19 @@ def main() -> int:
         default_min_score = 60.0
     min_score = _threshold("MUTATION_MIN_SCORE", default_min_score)
     print(f"Mutation gate: min score {min_score:.2f}%")
-    targets = list(_targets())
+    targets = list(configured_mutation_targets())
+    metadata: dict[str, object] | None = None
+    if args.partition_index is not None:
+        partitions = partition_targets(
+            targets, partition_count=int(args.partition_count)
+        )
+        targets = list(partitions[args.partition_index])
+        metadata = {
+            "partition_index": args.partition_index,
+            "partition_count": args.partition_count,
+            "repository_commit_sha": args.repository_commit_sha,
+            "evidence_run_id": args.evidence_run_id,
+        }
     if args.target:
         filters = tuple(str(item) for item in args.target)
         targets = [
@@ -535,7 +760,13 @@ def main() -> int:
             raise SystemExit(
                 "No mutation targets matched filters: " + ", ".join(filters)
             )
-    results = [_run_target(target) for target in targets]
+    worker_started_ns = time.perf_counter_ns()
+    try:
+        results = [_run_target(target) for target in targets]
+    except MutationExecutionError as exc:
+        print(f"Mutation execution failed: {exc}", file=sys.stderr)
+        return 2
+    worker_elapsed_ms = round((time.perf_counter_ns() - worker_started_ns) / 1_000_000)
 
     failed = []
     report_targets: list[dict[str, object]] = []
@@ -545,7 +776,10 @@ def main() -> int:
             result.target.report_module
             or result.target.module_path.relative_to(ROOT).as_posix()
         )
-        print(f"  - {rel}: {result.killed}/{result.total} killed ({result.score:.2f}%)")
+        print(
+            f"  - {rel}: {result.killed}/{result.total} killed "
+            f"({result.score:.2f}%, {result.elapsed_ms} ms)"
+        )
         required_score = max(min_score, result.target.min_score)
         report_targets.append(
             {
@@ -554,6 +788,7 @@ def main() -> int:
                 "total": result.total,
                 "score": round(result.score, 4),
                 "min_score": required_score,
+                "elapsed_ms": result.elapsed_ms,
             }
         )
         if result.total <= 0:
@@ -562,12 +797,17 @@ def main() -> int:
         if result.score < required_score:
             failed.append(f"{rel}: score {result.score:.2f}% < {required_score:.2f}%")
 
+    if metadata is not None:
+        metadata["worker_elapsed_ms"] = worker_elapsed_ms
     report = MutationReport(
         schema_version="1.0",
         min_score_default=min_score,
         targets=report_targets,
+        metadata=metadata,
     )
-    Path(args.json_out).write_text(report.to_json(), encoding="utf-8")
+    output_path = Path(args.json_out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(report.to_json() + "\n", encoding="utf-8")
     print(f"Mutation report written: {args.json_out}")
 
     if failed:

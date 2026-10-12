@@ -81,8 +81,7 @@ def test_numeric_summary_claim_rebinds_unique_exact_direct_finding() -> None:
                 {
                     "id": "gaming-retention",
                     "text": (
-                        "Global gaming-app retention was 27% on day 1 and "
-                        "5% on day 30."
+                        "Global gaming-app retention was 27% on day 1 and 5% on day 30."
                     ),
                     "pages": [21],
                 },
@@ -183,6 +182,10 @@ def test_numeric_summary_claim_rebinds_to_paired_metric_finding() -> None:
                     {
                         "id": "ecommerce-growth",
                         "text": (
+                            "Global e-commerce app installs fell 10% year over year "
+                            "in 2025 while sessions increased 5%."
+                        ),
+                        "evidence": (
                             "Global e-commerce app installs fell 10% year over year "
                             "in 2025 while sessions increased 5%."
                         ),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from src.services._llm_service.audit import compare_model_call_replay_bundles
 from src.services._llm_service.client import (
     LLMServiceClient,
     build_browser_use_llm_clients,
@@ -33,12 +34,12 @@ from src.services._llm_service.openai_shared import (
     _strip_json_fence,
     openai_legacy,
 )
-from src.services._llm_service.openrouter_preflight import preflight_openrouter_model
-from src.services._llm_service.preflight import preflight_openai_model
 from src.services._llm_service.openrouter import (
     build_openrouter_client,
     openrouter_chat_json,
 )
+from src.services._llm_service.openrouter_preflight import preflight_openrouter_model
+from src.services._llm_service.preflight import preflight_openai_model
 from src.services._llm_service.vector_store import (
     openai_vector_store_attach_file,
     openai_vector_store_create,
@@ -66,6 +67,7 @@ __all__ = [
     "build_openai_client_from_callables",
     "build_openrouter_client",
     "client_policy_from_settings",
+    "compare_model_call_replay_bundles",
     "default_client_policy",
     "default_openai_client_policy",
     "openai_chat_json",
