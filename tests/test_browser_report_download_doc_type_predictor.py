@@ -276,7 +276,8 @@ def test_download_report_predicts_query_embedded_pdf_before_browser(
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
             AssertionError(
-                f"browser runtime should not start for predicted query-target PDF: {module_name}"
+                "browser runtime should not start for predicted query-target PDF: "
+                f"{module_name}"
             )
         ),
     )
@@ -295,9 +296,10 @@ def test_download_report_predicts_query_embedded_pdf_before_browser(
     prediction_fields = _prediction_fields(events)
     assert prediction_fields["predicted_doc_type"] == "direct_pdf"
     assert prediction_fields["probe_host"] == "cdn.example.com"
-    assert prediction_fields["probe_url_sha256"] == sha256(
-        pdf_url.encode("utf-8")
-    ).hexdigest()
+    assert (
+        prediction_fields["probe_url_sha256"]
+        == sha256(pdf_url.encode("utf-8")).hexdigest()
+    )
     assert prediction_fields["evidence_label_count"] == 2
     assert observed_urls == [pdf_url]
     assert response.route_family == "direct_pdf_probe"
@@ -335,7 +337,8 @@ def test_download_report_predicts_candidate_pdf_before_browser(
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
             AssertionError(
-                f"browser runtime should not start for predicted candidate PDF: {module_name}"
+                "browser runtime should not start for predicted candidate PDF: "
+                f"{module_name}"
             )
         ),
     )
@@ -366,9 +369,10 @@ def test_download_report_predicts_candidate_pdf_before_browser(
     prediction_fields = _prediction_fields(events)
     assert prediction_fields["predicted_doc_type"] == "direct_pdf"
     assert prediction_fields["probe_host"] == "cdn.example.com"
-    assert prediction_fields["probe_url_sha256"] == sha256(
-        candidate_pdf_url.encode("utf-8")
-    ).hexdigest()
+    assert (
+        prediction_fields["probe_url_sha256"]
+        == sha256(candidate_pdf_url.encode("utf-8")).hexdigest()
+    )
     assert prediction_fields["evidence_label_count"] == 1
     assert observed_urls == [candidate_pdf_url]
     assert response.used_candidate_pdf_url is True
@@ -391,7 +395,9 @@ def test_download_report_falls_back_after_invalid_predicted_candidate_pdf(
     runtime = _runtime(
         tmp_path,
         route_kind="pdf_download",
-        route_summary="Open the landing page and save the real PDF after browser fallback.",
+        route_summary=(
+            "Open the landing page and save the real PDF after browser fallback."
+        ),
         create_pdf=True,
     )
     browser_loaded = {"value": False}
@@ -490,7 +496,8 @@ def test_download_report_predicts_report_page_pdf_link_without_route_hint(
         "import_module",
         lambda module_name: (_ for _ in ()).throw(
             AssertionError(
-                f"browser runtime should not start for predicted report-page PDF link: {module_name}"
+                "browser runtime should not start for predicted report-page PDF link: "
+                f"{module_name}"
             )
         ),
     )
