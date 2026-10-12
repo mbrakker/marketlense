@@ -365,8 +365,8 @@ def test_mutation_ci_workflow_overlaps_tests_with_two_isolated_workers() -> None
             if step.get("uses", "").startswith("actions/setup-python@")
         )
         assert "--require-hashes -r requirements.lock" in install["run"]
-        assert setup_python["with"]["cache"] == "pip"
-        assert setup_python["with"]["cache-dependency-path"] == "requirements.lock"
+        assert "cache" not in setup_python["with"]
+        assert "cache-dependency-path" not in setup_python["with"]
 
     test_steps = jobs["tests"]["steps"]
     pytest_step = next(
