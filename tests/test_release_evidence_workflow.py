@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 from scripts.quality.release_evidence_job_summary import (
     CANONICAL_BUNDLE_REQUIRED_PATHS,
 )
@@ -10,8 +12,7 @@ from scripts.quality.release_evidence_job_summary import (
 def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
-    freshness_index = workflow.index("RELEASE_EVIDENCE_STARTED_AT")
-    coverage_index = workflow.index("Run default pytest suite with coverage")
+    jobs = yaml.safe_load(workflow)["jobs"]
     trend_index = workflow.index("PDF benchmark trend gate")
     health_index = workflow.index("Build CI health scorecard")
     accounting_index = workflow.index(
@@ -24,9 +25,21 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     executive_summary_index = workflow.index("Build release evidence executive summary")
     review_index = workflow.index("Build release evidence review")
     summary_index = workflow.index("Write release evidence job summary")
-    upload_index = workflow.index("actions/upload-artifact@v4")
+    upload_step_start = workflow.index("- name: Upload release evidence bundle")
+    upload_index = workflow.index("actions/upload-artifact@v4", review_index)
 
-    assert freshness_index < coverage_index
+    assert jobs["ci_start"]["outputs"]["release_evidence_started_at"] == (
+        "${{ steps.mark.outputs.release_evidence_started_at }}"
+    )
+    assert "date -u" in jobs["ci_start"]["steps"][0]["run"]
+    assert jobs["tests"]["needs"] == ["ci_start"]
+    assert jobs["release_evidence"]["needs"] == ["ci_start", "tests", "mutation"]
+    expected_freshness = "${{ needs.ci_start.outputs.release_evidence_started_at }}"
+    assert jobs["tests"]["env"]["RELEASE_EVIDENCE_STARTED_AT"] == expected_freshness
+    assert (
+        jobs["release_evidence"]["env"]["RELEASE_EVIDENCE_STARTED_AT"]
+        == expected_freshness
+    )
     assert (
         trend_index
         < queue_evidence_index
@@ -68,7 +81,6 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         in workflow
     )
     assert "release_evidence_job_summary.py" in workflow
-    upload_step_start = workflow.index("- name: Upload release evidence bundle")
     upload_step = workflow[upload_step_start:summary_index]
     summary_step = workflow[summary_index:]
     assert "id: release_evidence_bundle" in upload_step

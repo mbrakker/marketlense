@@ -689,6 +689,12 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
     )
 
 
+def _targets() -> list[MutationTarget]:
+    """Keep the original mutation inventory helper for existing callers."""
+
+    return list(configured_mutation_targets())
+
+
 def partition_targets(
     targets: Sequence[MutationTarget], *, partition_count: int
 ) -> tuple[tuple[MutationTarget, ...], ...]:
