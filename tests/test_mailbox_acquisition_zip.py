@@ -463,6 +463,139 @@ def test_direct_pdf_long_unicode_paths_are_bounded_distinct_and_reusable(tmp_pat
         assert len(path.parent.name) <= 64
 
 
+def test_direct_pdf_sanitized_name_collisions_keep_each_payload_and_stable_path(
+    tmp_path,
+):
+    attachments = [
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name="A?B.pdf",
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 question mark",
+        ),
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name="A*B.pdf",
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 asterisk",
+        ),
+    ]
+    request = _request(tmp_path, attachments, message_id="sanitized-collision")
+    output_dir = _deep_output_dir(tmp_path)
+    request = replace(
+        request,
+        settings=replace(request.settings, output_dir=str(output_dir)),
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="sanitized-collision",
+        span_id="zip-span",
+    )
+
+    first = materialize_mailbox_attachments(request, ctx)
+    repeated = materialize_mailbox_attachments(request, ctx)
+
+    assert first.failures == []
+    assert [artifact.path for artifact in first.artifacts] == [
+        artifact.path for artifact in repeated.artifacts
+    ]
+    assert len({artifact.path.casefold() for artifact in first.artifacts}) == 2
+    assert [Path(artifact.path).read_bytes() for artifact in first.artifacts] == [
+        attachment.payload for attachment in attachments
+    ]
+    assert all(
+        _windows_path_units(Path(artifact.path)) <= 240 for artifact in first.artifacts
+    )
+    assert all(
+        _windows_path_units(Path(artifact.path).parent / ("." + "0" * 32 + ".tmp"))
+        <= 240
+        for artifact in first.artifacts
+    )
+    assert all(len(Path(artifact.path).name) <= 96 for artifact in first.artifacts)
+    assert all(
+        len(Path(artifact.path).parent.name) <= 64 for artifact in first.artifacts
+    )
+
+
+def test_direct_same_name_different_payloads_get_distinct_stable_paths(tmp_path):
+    attachments = [
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name="reused.pdf",
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 first version",
+        ),
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name="reused.pdf",
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 second version",
+        ),
+    ]
+    request = _request(tmp_path, attachments, message_id="same-name-collision")
+    output_dir = _deep_output_dir(tmp_path)
+    request = replace(
+        request,
+        settings=replace(request.settings, output_dir=str(output_dir)),
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="same-name-collision",
+        span_id="zip-span",
+    )
+
+    first = materialize_mailbox_attachments(request, ctx)
+    repeated = materialize_mailbox_attachments(request, ctx)
+
+    assert first.failures == []
+    assert [artifact.path for artifact in first.artifacts] == [
+        artifact.path for artifact in repeated.artifacts
+    ]
+    assert len({artifact.path.casefold() for artifact in first.artifacts}) == 2
+    assert [Path(artifact.path).read_bytes() for artifact in first.artifacts] == [
+        attachment.payload for attachment in attachments
+    ]
+    assert all(
+        _windows_path_units(Path(artifact.path)) <= 240 for artifact in first.artifacts
+    )
+
+
+def test_zip_member_collision_with_direct_pdf_does_not_overwrite(tmp_path):
+    direct_payload = b"%PDF-1.7 direct attachment"
+    zip_payload = b"%PDF-1.7 archived attachment"
+    attachments = [
+        _attachment(_zip_bytes([("reports/report.pdf", zip_payload)])),
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name="report.pdf",
+            content_type="application/pdf",
+            payload=direct_payload,
+        ),
+    ]
+    response = materialize_mailbox_attachments(
+        _request(tmp_path, attachments, message_id="zip-direct-collision"),
+        RunContext(
+            schema_version="1.0",
+            run_id="zip-test",
+            task_id="zip-direct-collision",
+            span_id="zip-span",
+        ),
+    )
+
+    assert [
+        (failure.attachment_index, failure.error_code) for failure in response.failures
+    ] == [(0, "mailbox_zip_duplicate_pdf_name")]
+    assert len(response.artifacts) == 1
+    assert Path(response.artifacts[0].path).read_bytes() == direct_payload
+    assert response.artifacts[0].source_container_file_name == ""
+    assert list(Path(response.artifacts[0].path).parent.glob(".*.tmp")) == []
+    assert list(Path(response.artifacts[0].path).parent.glob("*.pdf")) == [
+        Path(response.artifacts[0].path)
+    ]
+
+
 def test_zip_long_unicode_and_near_identical_names_stage_and_read_back(tmp_path):
     output_dir = _deep_output_dir(tmp_path)
     settings = replace(_settings(tmp_path), output_dir=str(output_dir))
@@ -501,6 +634,54 @@ def test_zip_long_unicode_and_near_identical_names_stage_and_read_back(tmp_path)
     ]
     assert all(
         artifact.source_container_file_name == "季度投递.zip"
+        for artifact in first.artifacts
+    )
+    assert all(
+        _windows_path_units(Path(artifact.path)) <= 240 for artifact in first.artifacts
+    )
+    assert all(
+        _windows_path_units(Path(artifact.path).parent / ("." + "0" * 32 + ".tmp"))
+        <= 240
+        for artifact in first.artifacts
+    )
+    assert list(Path(first.artifacts[0].path).parent.glob(".*.tmp")) == []
+
+
+def test_zip_distinct_unicode_names_use_output_path_identity(tmp_path):
+    entries = [
+        ("报告甲.pdf", b"%PDF-1.7 unicode A"),
+        ("报告乙.pdf", b"%PDF-1.7 unicode B"),
+    ]
+    request = _request(
+        tmp_path,
+        [_attachment(_zip_bytes(entries), name="unicode-reports.zip")],
+        message_id="unicode-zip-collisions",
+    )
+    output_dir = _deep_output_dir(tmp_path)
+    request = replace(
+        request,
+        settings=replace(request.settings, output_dir=str(output_dir)),
+    )
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="unicode-zip-collisions",
+        span_id="zip-span",
+    )
+
+    first = materialize_mailbox_attachments(request, ctx)
+    repeated = materialize_mailbox_attachments(request, ctx)
+
+    assert first.failures == []
+    assert [artifact.path for artifact in first.artifacts] == [
+        artifact.path for artifact in repeated.artifacts
+    ]
+    assert len({artifact.path.casefold() for artifact in first.artifacts}) == 2
+    assert [Path(artifact.path).read_bytes() for artifact in first.artifacts] == [
+        payload for _, payload in entries
+    ]
+    assert all(
+        artifact.source_container_file_name == "unicode-reports.zip"
         for artifact in first.artifacts
     )
     assert all(
