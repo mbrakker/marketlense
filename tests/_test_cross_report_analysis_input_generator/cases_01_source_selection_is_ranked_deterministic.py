@@ -143,6 +143,12 @@ def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) 
             evidence_count=2,
         ),
         _candidate(
+            "c-sibling",
+            publisher="Publisher C",
+            report_date="2026-05-30",
+            evidence_count=2,
+        ),
+        _candidate(
             "d-independent",
             publisher="Publisher D",
             report_date="2026-05-01",
@@ -174,6 +180,9 @@ def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) 
             for source in result.selected_sources
         ]
         assert [report_id for report_id, _ in observed] == expected_ids
+        assert [
+            (source.report_id, source.rank) for source in result.selected_sources
+        ] == list(zip(expected_ids, range(1, len(expected_ids) + 1), strict=True))
         assert {
             candidate.report_id: candidate.total_score
             for candidate in result.ranked_candidates
@@ -182,6 +191,7 @@ def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) 
             "z-second": 4.5,
             "b-independent": 4.3,
             "c-independent": 3.7,
+            "c-sibling": 3.7,
             "d-independent": 2.7,
         }
         assert [
@@ -208,10 +218,26 @@ def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) 
             == 1
             for _, reasons in observed
         )
+        ranked = {
+            candidate.report_id: candidate for candidate in result.ranked_candidates
+        }
+        for source, diversity_reason in zip(
+            result.selected_sources, expected_diversity_reasons, strict=True
+        ):
+            assert source.selection_reasons == [
+                *ranked[source.report_id].selection_reasons,
+                diversity_reason,
+            ]
         rejected = {
             candidate.report_id: candidate for candidate in result.rejected_candidates
         }
-        assert set(rejected) == {"d-independent"}
+        assert set(rejected) == {"c-sibling", "d-independent"}
+        assert rejected["c-sibling"].total_score == 3.7
+        assert rejected["c-sibling"].diversity_score == 0.0
+        assert rejected["c-sibling"].selection_reasons == [
+            *ranked["c-sibling"].selection_reasons,
+            "same_publisher_already_selected",
+        ]
         rejected_reasons = rejected["d-independent"].selection_reasons
         assert rejected["d-independent"].total_score == 3.45
         assert rejected["d-independent"].diversity_score == 0.75
@@ -221,6 +247,65 @@ def test_diversity_bonus_is_recomputed_from_base_scores_each_round(run_context) 
             baseline = observed
         else:
             assert observed == baseline
+
+
+def test_final_rejected_scores_follow_selected_publishers_with_one_report_cap(
+    run_context,
+) -> None:
+    result = select_cross_report_source_reports(
+        _request(max_source_reports=1),
+        _projected_data(
+            [
+                _candidate(
+                    "a-first",
+                    publisher="Publisher A",
+                    report_date="2026-05-30",
+                    evidence_count=10,
+                ),
+                _candidate(
+                    "a-sibling",
+                    publisher="Publisher A",
+                    report_date="2026-05-30",
+                    evidence_count=8,
+                ),
+                _candidate(
+                    "b-independent",
+                    publisher="Publisher B",
+                    report_date="2026-05-30",
+                    evidence_count=8,
+                ),
+            ]
+        ),
+        run_context,
+    )
+
+    assert [(source.report_id, source.rank) for source in result.selected_sources] == [
+        ("a-first", 1)
+    ]
+    ranked = {candidate.report_id: candidate for candidate in result.ranked_candidates}
+    selected = result.selected_sources[0]
+    assert selected.selection_reasons == [
+        *ranked["a-first"].selection_reasons,
+        "publisher_diversity",
+    ]
+    rejected = {
+        candidate.report_id: candidate for candidate in result.rejected_candidates
+    }
+    assert set(rejected) == {"a-sibling", "b-independent"}
+    assert rejected["a-sibling"].total_score == ranked["a-sibling"].total_score
+    assert rejected["a-sibling"].diversity_score == 0.0
+    assert rejected["a-sibling"].selection_reasons == [
+        *ranked["a-sibling"].selection_reasons,
+        "same_publisher_already_selected",
+    ]
+    assert rejected["b-independent"].total_score == (
+        ranked["b-independent"].total_score + 0.75
+    )
+    assert rejected["b-independent"].diversity_score == 0.75
+    assert rejected["b-independent"].selection_reasons == [
+        *ranked["b-independent"].selection_reasons,
+        "publisher_diversity",
+    ]
 
 
 def test_source_selection_honors_max_report_cap_and_filters(run_context) -> None:
@@ -846,6 +931,7 @@ def test_theme_variety_downranks_recent_repetition_through_file_service(
 __all__ = [
     "test_source_selection_is_ranked_deterministic_and_diverse",
     "test_diversity_bonus_is_recomputed_from_base_scores_each_round",
+    "test_final_rejected_scores_follow_selected_publishers_with_one_report_cap",
     "test_source_selection_honors_max_report_cap_and_filters",
     "test_source_selection_honors_category_id_filters_when_label_differs",
     "test_source_selection_normalizes_whitespace_dates",
