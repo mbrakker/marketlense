@@ -290,13 +290,22 @@ def test_mailbox_zip_candidate_failure_keeps_valid_pdf_eligible_for_ingest(
     source_pdf_bytes = source_pdf.read_bytes()
     archive_buffer = BytesIO()
     with ZipFile(archive_buffer, "w") as archive:
-        archive.writestr("nested/retail-trends-2026.pdf", source_pdf_bytes)
+        archive.writestr(
+            f"nested/{'retail-trends-2026-' + '市场报告' * 45}.pdf",
+            source_pdf_bytes,
+        )
+    mailbox_output_dir = (
+        tmp_path / "deep-mailbox-root" / "nested-acquisition" / "mailbox"
+    )
+    mailbox_settings = replace(
+        _mailbox_settings(tmp_path), output_dir=str(mailbox_output_dir)
+    )
 
     response = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
-            settings=_mailbox_settings(tmp_path),
-            provider_message_id="mailbox-zip-handoff",
+            settings=mailbox_settings,
+            provider_message_id="mailbox-zip-handoff-" + "邮件标识" * 90,
             attachments=[
                 MailboxAttachment(
                     schema_version="1.0",
@@ -340,7 +349,7 @@ def test_mailbox_zip_candidate_failure_keeps_valid_pdf_eligible_for_ingest(
     rejected_only = materialize_mailbox_attachments(
         MailboxAttachmentMaterializeRequest(
             schema_version="1.0",
-            settings=_mailbox_settings(tmp_path),
+            settings=mailbox_settings,
             provider_message_id="mailbox-zip-rejected-only",
             attachments=[
                 MailboxAttachment(
@@ -357,6 +366,4 @@ def test_mailbox_zip_candidate_failure_keeps_valid_pdf_eligible_for_ingest(
     assert [failure.error_code for failure in rejected_only.failures] == [
         "mailbox_zip_invalid"
     ]
-    assert (
-        list((tmp_path / "mailbox" / "mailbox-zip-rejected-only").glob("*.pdf")) == []
-    )
+    assert list((mailbox_output_dir / "mailbox-zip-rejected-only").glob("*.pdf")) == []

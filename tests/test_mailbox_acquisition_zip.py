@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import zipfile
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -127,6 +128,17 @@ def _mutate_encryption_flag(payload: bytes) -> bytes:
         2, "little"
     )
     return bytes(encrypted)
+
+
+def _windows_path_units(path: Path) -> int:
+    return len(str(path).encode("utf-16-le")) // 2
+
+
+def _deep_output_dir(tmp_path: Path) -> Path:
+    output_dir = tmp_path
+    while _windows_path_units(output_dir) < 150:
+        output_dir /= f"mailbox-root-{output_dir.name[-1]}-segment"
+    return output_dir / "mailbox"
 
 
 def _corrupt_member_data(payload: bytes, member_name: str) -> bytes:
@@ -389,3 +401,183 @@ def test_zip_write_failure_cleans_temporary_and_already_committed_files(tmp_path
     assert not (output_dir / "first.pdf").exists()
     assert (output_dir / "second.pdf").is_dir()
     assert list(output_dir.glob(".*.tmp")) == []
+
+
+def test_direct_pdf_long_unicode_paths_are_bounded_distinct_and_reusable(tmp_path):
+    output_dir = _deep_output_dir(tmp_path)
+    settings = replace(_settings(tmp_path), output_dir=str(output_dir))
+    message_id = "long-message-" + "消息身份" * 100
+    first_name = "季度市场研究" * 45 + "-甲.pdf"
+    second_name = "季度市场研究" * 45 + "-乙.pdf"
+    attachments = [
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name=first_name,
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 first long attachment",
+        ),
+        MailboxAttachment(
+            schema_version="1.0",
+            file_name=second_name,
+            content_type="application/pdf",
+            payload=b"%PDF-1.7 second long attachment",
+        ),
+    ]
+
+    request = _request(tmp_path, attachments, message_id=message_id)
+    request = replace(request, settings=settings)
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="long-direct",
+        span_id="zip-span",
+    )
+    first = materialize_mailbox_attachments(request, ctx)
+    repeated = materialize_mailbox_attachments(request, ctx)
+    near_message_id = materialize_mailbox_attachments(
+        replace(request, provider_message_id=message_id + "-distinct"), ctx
+    )
+
+    assert first.failures == []
+    assert [artifact.path for artifact in first.artifacts] == [
+        artifact.path for artifact in repeated.artifacts
+    ]
+    assert len({artifact.path.casefold() for artifact in first.artifacts}) == 2
+    assert {artifact.path.casefold() for artifact in first.artifacts}.isdisjoint(
+        artifact.path.casefold() for artifact in near_message_id.artifacts
+    )
+    for artifact, expected in zip(
+        first.artifacts,
+        [
+            b"%PDF-1.7 first long attachment",
+            b"%PDF-1.7 second long attachment",
+        ],
+        strict=True,
+    ):
+        path = Path(artifact.path)
+        assert path.read_bytes() == expected
+        assert path.resolve().is_relative_to(output_dir.resolve())
+        assert _windows_path_units(path) <= 240
+        assert _windows_path_units(path.parent / ("." + "0" * 32 + ".tmp")) <= 240
+        assert len(path.name) <= 96
+        assert len(path.parent.name) <= 64
+
+
+def test_zip_long_unicode_and_near_identical_names_stage_and_read_back(tmp_path):
+    output_dir = _deep_output_dir(tmp_path)
+    settings = replace(_settings(tmp_path), output_dir=str(output_dir))
+    message_id = "zip-message-" + "配送識別子" * 90
+    common_stem = "global-market-insights-" * 18
+    entries = [
+        (f"reports/{common_stem}-north.pdf", b"%PDF-1.7 north"),
+        (f"reports/{common_stem}-south.pdf", b"%PDF-1.7 south"),
+        ("reports/国际市场报告.pdf", b"%PDF-1.7 unicode"),
+    ]
+    request = _request(
+        tmp_path,
+        [_attachment(_zip_bytes(entries), name="季度投递.zip")],
+        message_id=message_id,
+    )
+    request = replace(request, settings=settings)
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="long-zip",
+        span_id="zip-span",
+    )
+
+    first = materialize_mailbox_attachments(request, ctx)
+    repeated = materialize_mailbox_attachments(request, ctx)
+
+    assert first.failures == []
+    assert [artifact.path for artifact in first.artifacts] == [
+        artifact.path for artifact in repeated.artifacts
+    ]
+    assert len({artifact.path.casefold() for artifact in first.artifacts}) == len(
+        entries
+    )
+    assert [Path(artifact.path).read_bytes() for artifact in first.artifacts] == [
+        payload for _, payload in entries
+    ]
+    assert all(
+        artifact.source_container_file_name == "季度投递.zip"
+        for artifact in first.artifacts
+    )
+    assert all(
+        _windows_path_units(Path(artifact.path)) <= 240 for artifact in first.artifacts
+    )
+    assert all(
+        _windows_path_units(Path(artifact.path).parent / ("." + "0" * 32 + ".tmp"))
+        <= 240
+        for artifact in first.artifacts
+    )
+    assert list(Path(first.artifacts[0].path).parent.glob(".*.tmp")) == []
+
+
+def test_short_mailbox_paths_remain_compatible(tmp_path):
+    response = materialize_mailbox_attachments(
+        _request(
+            tmp_path,
+            [
+                MailboxAttachment(
+                    schema_version="1.0",
+                    file_name="quarterly.pdf",
+                    content_type="application/pdf",
+                    payload=b"%PDF-1.7 short path",
+                )
+            ],
+            message_id="short-message",
+        ),
+        RunContext(
+            schema_version="1.0",
+            run_id="zip-test",
+            task_id="short-message",
+            span_id="zip-span",
+        ),
+    )
+
+    assert response.failures == []
+    assert response.artifacts[0].path == str(
+        (tmp_path / "mailbox" / "short-message" / "quarterly.pdf").resolve()
+    )
+    assert Path(response.artifacts[0].path).read_bytes() == b"%PDF-1.7 short path"
+
+
+def test_impossible_mailbox_root_fails_before_direct_or_zip_materialization(tmp_path):
+    impossible_root = tmp_path
+    while _windows_path_units(impossible_root) <= 250:
+        impossible_root /= "root-segment-" + "x" * 24
+    settings = replace(_settings(tmp_path), output_dir=str(impossible_root))
+    direct_request = _request(
+        tmp_path,
+        [
+            MailboxAttachment(
+                schema_version="1.0",
+                file_name="report.pdf",
+                content_type="application/pdf",
+                payload=b"%PDF-1.7 direct",
+            )
+        ],
+        message_id="impossible-direct",
+    )
+    zip_request = _request(
+        tmp_path,
+        [_attachment(_zip_bytes([("report.pdf", b"%PDF-1.7 zipped")]))],
+        message_id="impossible-zip",
+    )
+    direct_request = replace(direct_request, settings=settings)
+    zip_request = replace(zip_request, settings=settings)
+    ctx = RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id="impossible-root",
+        span_id="zip-span",
+    )
+
+    for request in (direct_request, zip_request):
+        with pytest.raises(AppError) as error:
+            materialize_mailbox_attachments(request, ctx)
+        assert error.value.code == "mailbox_attachment_output_dir_invalid"
+        assert error.value.retryable is False
+        assert error.value.context["next_action"]
+    assert not impossible_root.exists()
