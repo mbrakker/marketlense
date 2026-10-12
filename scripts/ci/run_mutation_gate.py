@@ -309,16 +309,11 @@ def _run_tests(
         stderr=subprocess.STDOUT,
         text=True,
     )
-    try:
-        return classify_pytest_result(
-            result.returncode,
-            junit_xml_path,
-            expected_test_count=expected_test_count,
-        )
-    except MutationExecutionError as exc:
-        details = result.stdout[-4000:].strip()
-        suffix = f"\n{details}" if details else ""
-        raise MutationExecutionError(f"{exc}{suffix}") from exc
+    return classify_pytest_result(
+        result.returncode,
+        junit_xml_path,
+        expected_test_count=expected_test_count,
+    )
 
 
 def _target_module_coverage_lines(target: MutationTarget) -> tuple[set[int], int]:
@@ -505,9 +500,8 @@ def _target_min_score(path: str, default: float) -> float:
 def configured_mutation_targets() -> tuple[MutationTarget, ...]:
     """Return the canonical mutation inventory and measured partition weights."""
 
-    # Seed weights are per-target serial timings from CPython 3.12.10 on Windows 11,
-    # measured at target-source SHA 20ac0f406ab14bd5c6cb78ace2a64f7fab3e132e.
-    # GHA reports retain actual timings for this runner and workflow.
+    # Seed weights are per-target timings from Ubuntu 24.04/CPython 3.12.15,
+    # measured in run 38211776311 at SHA 29fb1fb9f401f9a914b4c3298558f59a5ee6f872.
     return (
         MutationTarget(
             module_path=ROOT
@@ -517,21 +511,21 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             test_paths=("tests/test_publish_queue_orchestrator.py",),
             max_mutants=4,
             min_score=50.0,
-            duration_weight_ms=35_743,
+            duration_weight_ms=12_377,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "taxonomy_generator.py",
             test_paths=("tests/test_taxonomy_generator.py",),
             max_mutants=4,
             min_score=75.0,
-            duration_weight_ms=51_333,
+            duration_weight_ms=28_526,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "evidence_pack_generator.py",
             test_paths=("tests/test_evidence_pack_generator.py",),
             max_mutants=3,
             min_score=60.0,
-            duration_weight_ms=51_753,
+            duration_weight_ms=29_142,
         ),
         MutationTarget(
             module_path=ROOT
@@ -543,14 +537,14 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/generators/artifact_generator.py",
-            duration_weight_ms=83_694,
+            duration_weight_ms=58_409,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "validation_generator.py",
             test_paths=("tests/test_validation_generator.py",),
             max_mutants=3,
             min_score=60.0,
-            duration_weight_ms=66_903,
+            duration_weight_ms=44_052,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "report_card_projection.py",
@@ -560,14 +554,14 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             ),
             max_mutants=6,
             min_score=80.0,
-            duration_weight_ms=71_416,
+            duration_weight_ms=27_744,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "cover_image_generator.py",
             test_paths=("tests/test_cover_image_generator.py",),
             max_mutants=4,
             min_score=75.0,
-            duration_weight_ms=45_514,
+            duration_weight_ms=23_237,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "report_render_generator.py",
@@ -577,14 +571,14 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             ),
             max_mutants=4,
             min_score=75.0,
-            duration_weight_ms=78_145,
+            duration_weight_ms=48_912,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "generators" / "publish_generator.py",
             test_paths=("tests/test_publish_generator.py",),
             max_mutants=4,
             min_score=_target_min_score("src/generators/publish_generator.py", 85.0),
-            duration_weight_ms=96_411,
+            duration_weight_ms=36_434,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "services" / "_llm_service" / "vector_store.py",
@@ -592,7 +586,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/llm_service.py",
-            duration_weight_ms=68_836,
+            duration_weight_ms=28_905,
         ),
         MutationTarget(
             module_path=ROOT
@@ -604,7 +598,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/drive_service.py",
-            duration_weight_ms=80_887,
+            duration_weight_ms=26_106,
         ),
         MutationTarget(
             module_path=ROOT
@@ -616,7 +610,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             max_mutants=3,
             min_score=60.0,
             report_module="src/services/wordpress_service.py",
-            duration_weight_ms=52_643,
+            duration_weight_ms=15_081,
         ),
         MutationTarget(
             module_path=ROOT
@@ -629,7 +623,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             ),
             max_mutants=3,
             min_score=60.0,
-            duration_weight_ms=128_042,
+            duration_weight_ms=45_571,
         ),
         MutationTarget(
             module_path=ROOT / "src" / "orchestrators" / "retry_orchestrator.py",
@@ -639,7 +633,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             ),
             max_mutants=6,
             min_score=80.0,
-            duration_weight_ms=155_622,
+            duration_weight_ms=71_190,
         ),
         MutationTarget(
             module_path=ROOT
@@ -654,7 +648,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             min_score=_target_min_score(
                 "src/orchestrators/pipeline_preflight_orchestrator.py", 90.0
             ),
-            duration_weight_ms=177_847,
+            duration_weight_ms=80_316,
         ),
         MutationTarget(
             module_path=ROOT
@@ -669,7 +663,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             min_score=_target_min_score(
                 "src/orchestrators/retry_telemetry_orchestrator.py", 90.0
             ),
-            duration_weight_ms=62_879,
+            duration_weight_ms=27_248,
         ),
         MutationTarget(
             module_path=ROOT
@@ -684,7 +678,7 @@ def configured_mutation_targets() -> tuple[MutationTarget, ...]:
             min_score=_target_min_score(
                 "src/orchestrators/workflow_control_orchestrator.py", 90.0
             ),
-            duration_weight_ms=186_472,
+            duration_weight_ms=80_209,
         ),
     )
 

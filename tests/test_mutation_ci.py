@@ -116,10 +116,13 @@ def test_high_minimum_scores_follow_their_own_policy_keys() -> None:
     )
 
 
-def test_target_partitions_are_deterministic_disjoint_and_balanced() -> None:
+@pytest.mark.parametrize("partition_count", [2, 3, 4])
+def test_target_partitions_are_deterministic_disjoint_and_balanced(
+    partition_count: int,
+) -> None:
     targets = configured_mutation_targets()
-    first = partition_targets(targets, partition_count=4)
-    second = partition_targets(targets, partition_count=4)
+    first = partition_targets(targets, partition_count=partition_count)
+    second = partition_targets(targets, partition_count=partition_count)
     target_ids = [
         target.module_path.relative_to(Path.cwd()).as_posix()
         for partition in first
@@ -332,7 +335,7 @@ def test_parallel_mutation_duration_refuses_duplicate_stage(tmp_path: Path) -> N
         record_parallel_mutation_stage(telemetry_path, wall_time_ms=4321)
 
 
-def test_mutation_ci_workflow_overlaps_tests_with_four_isolated_workers() -> None:
+def test_mutation_ci_workflow_overlaps_tests_with_two_isolated_workers() -> None:
     import yaml
 
     workflow = yaml.safe_load(
@@ -344,7 +347,7 @@ def test_mutation_ci_workflow_overlaps_tests_with_four_isolated_workers() -> Non
 
     assert jobs["tests"]["needs"] == ["ci_start"]
     assert jobs["mutation"]["needs"] == ["ci_start"]
-    assert jobs["mutation"]["strategy"]["matrix"]["partition"] == [0, 1, 2, 3]
+    assert jobs["mutation"]["strategy"]["matrix"]["partition"] == [0, 1]
     assert jobs["release_evidence"]["needs"] == [
         "ci_start",
         "tests",
@@ -379,10 +382,12 @@ def test_mutation_ci_workflow_overlaps_tests_with_four_isolated_workers() -> Non
     assert "--require-hashes -r requirements.lock" in mutation_script
     assert "python scripts/ci/check_risk_policy.py" in mutation_script
     assert "--partition-index" in mutation_script
+    assert "--partition-count 2" in mutation_script
     merge_script = "\n".join(
         step.get("run", "") for step in jobs["release_evidence"]["steps"]
     )
     assert "--quality-command-telemetry" in merge_script
+    assert "--partition-count 2" in merge_script
     release_step_names = {
         step.get("name") for step in jobs["release_evidence"]["steps"]
     }
