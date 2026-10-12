@@ -1761,6 +1761,37 @@ def _values_near_label(
             if _is_compound_category_header(fragment, label_match.start()):
                 continue
             prefix = fragment[: label_match.start()]
+            attributed_preceding_value = re.search(
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])"
+                r"\s+(?:called|rated|described)\s+(?:as\s+)?"
+                r"(?:(?:the|a|an)\s+)?(?:impact|effect|result|outcome)\s*$",
+                prefix,
+                re.IGNORECASE,
+            )
+            adjacent_preceding_value = re.search(
+                rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s*$",
+                prefix,
+            )
+            preceding_category_value = (
+                attributed_preceding_value or adjacent_preceding_value
+            )
+            if preceding_category_value and not attributed_preceding_value:
+                preceding_context = prefix[: preceding_category_value.start()]
+                has_category_separator = re.search(
+                    r"(?:[,;:]|\b(?:and|or)\b)\s*$",
+                    preceding_context,
+                    re.IGNORECASE,
+                )
+                if not has_category_separator:
+                    preceding_category_value = None
+            if preceding_category_value:
+                value = _normalized_relationship_value(
+                    preceding_category_value.group("value")
+                )
+                if value and not _is_year_value(value):
+                    values.add(value)
+                continue
+
             preceding_value = re.search(
                 rf"(?P<value>{_RELATIONSHIP_VALUE})(?![A-Za-z0-9%])\s+(?:in|for)\s+$",
                 prefix,

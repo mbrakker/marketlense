@@ -156,6 +156,25 @@ def test_region_metric_values_allow_value_before_region_without_losing_binding()
     assert "public_editorial_quality.metric_label_relationship" in _rule_ids(swapped)
 
 
+def test_value_before_predicate_category_preserves_relationship_and_rejects_swap() -> (
+    None
+):
+    evidence = (
+        "Transformational 13%. Promising 44%. Limited 42%. "
+        "Q11 asked for the best adjective describing current AI initiative impact."
+    )
+    valid_text = (
+        "44% called the impact promising, 42% limited, and 13% transformational."
+    )
+    swapped_text = valid_text.replace(
+        "42% limited, and 13% transformational",
+        "13% limited, and 42% transformational",
+    )
+
+    assert _metric_label_relationship_explanation(valid_text, evidence) == ""
+    assert _metric_label_relationship_explanation(swapped_text, evidence)
+
+
 def test_grouped_regions_keep_the_preceding_value_binding() -> None:
     evidence = (
         "The Q1 2026 Global Quality Benchmarks table lists Video Viewable Rate "

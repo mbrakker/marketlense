@@ -301,6 +301,48 @@ def test_linkedin_prompt_names_each_metric_instead_of_using_ordinal_references()
     assert "do not call values the first or second figure" in normalised
 
 
+def test_survey_copy_preserves_measured_construct_and_respondent_scope() -> None:
+    variables = _scenario_render_variables(_cases()["policy_cases"][0])
+    for family in ("expert_comment", "linkedin_post"):
+        rendered = _render_primary_prompt(
+            f"report_vs/artifacts/{family}",
+            variables[f"report_vs/artifacts/{family}"],
+        )
+        normalised = _normalise_whitespace(rendered)
+
+        assert (
+            "preserve what the survey question actually measures; do not recast "
+            "perceived importance as an intention or plan"
+        ) in normalised
+        assert (
+            "describe respondents only as specifically as the linked source "
+            "evidence does"
+        ) in normalised
+
+
+def test_linkedin_prompt_does_not_turn_document_context_into_source_attribution() -> (
+    None
+):
+    prompt_set = load_prompt_set(
+        PromptLoadRequest(
+            schema_version="1.0",
+            namespace="report_vs/artifacts/linkedin_post",
+            force_reload=True,
+        ),
+        _ctx(),
+    )
+    normalised = _normalise_whitespace(prompt_set.system.text)
+
+    assert "use report context for scope, not attribution" in normalised
+    assert (
+        "name publisher or source only when linked evidence explicitly states it"
+        in normalised
+    )
+    assert "attribute the publisher/source naturally when it is available" not in (
+        normalised
+    )
+
+
 def test_insight_candidates_bind_to_source_findings_not_docmap_sections() -> None:
     prompt_set = load_prompt_set(
         PromptLoadRequest(

@@ -69,6 +69,15 @@ def test_n_equals_sample_size_is_not_reclassified_by_nearby_percentages() -> Non
     ]
 
 
+def test_explicit_survey_base_matches_the_same_base_and_rejects_a_different_one() -> (
+    None
+):
+    evidence = "Q13. Which of the following should be more important? Base = 264."
+
+    assert _numeric_grounding_match("For Q13 respondents (base = 264).", evidence)
+    assert not _numeric_grounding_match("For Q13 respondents (base = 265).", evidence)
+
+
 def test_percent_decimal_and_ratio_forms_match() -> None:
     assert _any_match("1 in 10 respondents converted.", "Conversion reached 10%.")
     assert _any_match("Conversion rate was 0.1.", "Conversion reached 10%.")

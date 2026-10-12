@@ -882,6 +882,11 @@ def _resolve_unit_family(
         }.get(unit_norm, unit_norm.removesuffix("s"))
         return "count", count_unit, magnitude_norm
 
+    if not unit_norm:
+        preceding = sentence_norm[max(0, span[0] - 16) : span[0]]
+        if re.search(r"\bbase\s*(?:=|:)\s*$", preceding):
+            return "count", "sample", magnitude_norm
+
     if magnitude_norm:
         following_count_unit = re.search(
             r"\b(user|users|download|downloads|respondent|respondents|"
