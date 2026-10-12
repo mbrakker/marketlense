@@ -27,6 +27,7 @@ OUTPUT_A = "1" * 64
 OUTPUT_B = "2" * 64
 ARTIFACT_A = "3" * 64
 ARTIFACT_B = "4" * 64
+SCHEMA_A = "9" * 64
 ARTIFACT_FAMILY = "report_vs/doc_map"
 
 
@@ -263,6 +264,43 @@ def test_cli_candidate_expectation_mismatch_reports_field_without_value(
     assert "gpt-6-astra" not in output
 
 
+def test_cli_missing_schema_expectation_reports_incomplete_without_value(
+    tmp_path: Path, capsys
+) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(
+        json.dumps(asdict(_bundle(schema_hash=None)), sort_keys=True),
+        encoding="utf-8",
+    )
+    candidate_path.write_text(
+        json.dumps(asdict(_bundle(schema_hash=None)), sort_keys=True),
+        encoding="utf-8",
+    )
+
+    exit_code = comparison_cli.main(
+        [
+            "--baseline",
+            str(baseline_path),
+            "--candidate",
+            str(candidate_path),
+            "--artifact-family",
+            ARTIFACT_FAMILY,
+            "--expect",
+            f"schema_sha256={SCHEMA_A}",
+        ]
+    )
+    output = capsys.readouterr().out
+    result = json.loads(output)
+
+    assert exit_code == 0
+    assert result["classification"] == "incomplete"
+    assert result["missing_fields"] == ["schema_sha256"]
+    assert result["expectation_mismatch_fields"] == []
+    assert result["expectations_met"] is False
+    assert SCHEMA_A not in output
+
+
 def test_identical_bundles_are_equivalent_and_repeatable() -> None:
     baseline = _bundle()
 
@@ -419,4 +457,56 @@ def test_candidate_compatibility_expectation_mismatch_is_reported_without_value(
     assert result.classification == "incompatible"
     assert result.expectations_met is False
     assert result.expectation_mismatch_fields == ("model",)
+    assert "gpt-6-astra" not in repr(result)
+
+
+def test_missing_expected_schema_both_sides_is_incomplete_and_repeatable() -> None:
+    baseline = _bundle(schema_hash=None)
+    candidate = _bundle(schema_hash=None)
+    expectations = {"schema_sha256": SCHEMA_A}
+
+    first = _compare(baseline, candidate, expectations=expectations)
+    second = _compare(baseline, candidate, expectations=expectations)
+
+    assert first == second
+    assert first.classification == "incomplete"
+    assert first.cohort_compatibility == "unknown"
+    assert first.missing_fields == ("schema_sha256",)
+    assert first.expectation_mismatch_fields == ()
+    assert first.expectations_met is False
+    assert first.diagnostic_codes == ("IDENTITY_INCOMPLETE",)
+    assert SCHEMA_A not in repr(first)
+
+
+def test_missing_expected_candidate_schema_identity_is_incomplete() -> None:
+    result = _compare(
+        _bundle(schema_hash=SCHEMA_A),
+        _bundle(schema_hash=None),
+        expectations={"schema_sha256": SCHEMA_A},
+    )
+
+    assert result.classification == "incomplete"
+    assert result.missing_fields == ("schema_sha256",)
+    assert result.expectation_mismatch_fields == ()
+    assert result.expectations_met is False
+
+
+def test_missing_expectation_plus_mismatch_keeps_both_diagnostics() -> None:
+    result = _compare(
+        _bundle(schema_hash=None),
+        _bundle(schema_hash=None),
+        expectations={"schema_sha256": SCHEMA_A, "model": "gpt-6-astra"},
+    )
+
+    assert result.classification == "incomplete"
+    assert result.cohort_compatibility == "incompatible"
+    assert result.missing_fields == ("schema_sha256",)
+    assert result.expectation_mismatch_fields == ("model",)
+    assert result.expectations_met is False
+    assert result.diagnostic_codes == (
+        "IDENTITY_INCOMPLETE",
+        "COHORT_INCOMPATIBLE",
+        "EXPECTATION_MISMATCH",
+    )
+    assert SCHEMA_A not in repr(result)
     assert "gpt-6-astra" not in repr(result)

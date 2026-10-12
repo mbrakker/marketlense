@@ -46,7 +46,7 @@ _FORBIDDEN_CONTENT_KEYS = frozenset(
     }
 )
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-_EXPECTATION_NAME_RE = re.compile(r"^[a-z_]+$")
+_EXPECTATION_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 class _DuplicateJsonKey(ValueError):

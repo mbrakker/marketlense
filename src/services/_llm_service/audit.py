@@ -124,11 +124,18 @@ def compare_model_call_replay_bundles(
         ):
             baseline_missing.add(optional_field)
             candidate_missing.add(optional_field)
+    expectation_missing = {
+        field_name
+        for field_name in request.compatibility_expectations
+        if field_name not in candidate_identity
+    }
+    candidate_missing.update(expectation_missing)
     missing_fields = _ordered_fields(baseline_missing | candidate_missing)
     changed_fields = _ordered_difference(baseline_identity, candidate_identity)
     expectation_mismatches = _expectation_mismatches(
         request.compatibility_expectations, candidate_identity
     )
+    expectations_met = not expectation_missing and not expectation_mismatches
 
     family_mismatch = (
         "artifact_family" in baseline_identity
@@ -199,7 +206,7 @@ def compare_model_call_replay_bundles(
             diagnostic_codes=diagnostics,
             regression_evidence=regression_evidence,
             expectation_mismatch_fields=expectation_mismatches,
-            expectations_met=not expectation_mismatches,
+            expectations_met=expectations_met,
         )
 
     return _comparison_response(
@@ -215,7 +222,7 @@ def compare_model_call_replay_bundles(
         missing_fields=missing_fields,
         diagnostic_codes=diagnostics,
         expectation_mismatch_fields=expectation_mismatches,
-        expectations_met=not expectation_mismatches,
+        expectations_met=expectations_met,
     )
 
 
@@ -481,8 +488,8 @@ def _expectation_mismatches(
         {
             field_name
             for field_name, expected in expectations.items()
-            if candidate_identity.get(field_name)
-            != _expected_value(field_name, expected)
+            if field_name in candidate_identity
+            and candidate_identity[field_name] != _expected_value(field_name, expected)
         }
     )
 
