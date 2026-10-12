@@ -8,8 +8,19 @@ permissions:
   contents: read
 
 jobs:
-  tests:
+  ci_start:
     runs-on: ubuntu-latest
+    outputs:
+      release_evidence_started_at: ${{ steps.mark.outputs.release_evidence_started_at }}
+    steps:
+      - id: mark
+        run: echo "release_evidence_started_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: [ci_start]
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_EVIDENCE_STARTED_AT: ${{ needs.ci_start.outputs.release_evidence_started_at }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,14 +92,120 @@ jobs:
           WP_STAGING_BRIEFING_ARTIFACT: ${{ vars.WP_STAGING_BRIEFING_ARTIFACT }}
           WP_STAGING_SIGNAL_ARTIFACT: ${{ vars.WP_STAGING_SIGNAL_ARTIFACT }}
         run: python scripts/ci/check_wordpress_staging_rest_gate.py
-      - name: Mark release evidence freshness start
-        run: echo "RELEASE_EVIDENCE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Run default pytest suite with coverage and timing telemetry
         run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha "${GITHUB_SHA}" --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage coverage -- python scripts/ci/check_coverage.py --coverage-xml coverage.xml
-      - name: Mutation gate
-        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage mutation -- python scripts/ci/run_mutation_gate.py --json-out mutation_results.json
+      - name: Upload pytest and coverage inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            coverage.xml
+            out/test_telemetry_ci.json
+            out/quality_command_telemetry_ci.json
+
+  mutation:
+    needs: [ci_start]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --require-hashes -r requirements.lock
+      - name: Apply the configured mutation threshold policy
+        run: python scripts/ci/check_risk_policy.py
+      - name: Run isolated mutation partition
+        run: |
+          python scripts/ci/run_mutation_gate.py \
+            --json-out out/mutation-partition.json \
+            --partition-index "${{ matrix.partition }}" \
+            --partition-count 4 \
+            --repository-commit-sha "${GITHUB_SHA}" \
+            --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+      - name: Upload mutation partition result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.partition }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: out/mutation-partition.json
+
+  release_evidence:
+    if: ${{ always() }}
+    needs: [ci_start, tests, mutation]
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_EVIDENCE_STARTED_AT: ${{ needs.ci_start.outputs.release_evidence_started_at }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --require-hashes -r requirements.lock
+      - name: Download pytest and coverage inputs
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-test-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .
+          if-no-artifact-found: warn
+      - name: Download mutation partition results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: out/mutation-partitions
+          merge-multiple: false
+          if-no-artifact-found: warn
+      - name: Merge mutation partition results
+        if: always()
+        run: |
+          python scripts/ci/merge_mutation_partitions.py \
+            --partition-dir out/mutation-partitions \
+            --partition-count 4 \
+            --expected-sha "${GITHUB_SHA}" \
+            --expected-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --worker-conclusion "${{ needs.mutation.result }}" \
+            --quality-command-telemetry out/quality_command_telemetry_ci.json \
+            --output-json mutation_results.json
+      - name: Check full-CI prerequisites
+        if: always()
+        env:
+          TEST_JOB_RESULT: ${{ needs.tests.result }}
+          MUTATION_JOB_RESULT: ${{ needs.mutation.result }}
+        run: |
+          if [ "$TEST_JOB_RESULT" != "success" ]; then
+            echo "Full pytest/coverage job did not pass: $TEST_JOB_RESULT" >&2
+            exit 1
+          fi
+          if [ "$MUTATION_JOB_RESULT" != "success" ]; then
+            echo "Mutation partition matrix did not pass: $MUTATION_JOB_RESULT" >&2
+            exit 1
+          fi
       - name: Quality non-regression gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage quality_non_regression -- python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
       - name: PDF candidate benchmark gate
@@ -171,7 +288,7 @@ jobs:
             --artifact workflow_queue_evidence=out/workflow_queue_evidence_ci.json \
             --expected-schema workflow_queue_evidence=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
-            --artifact-command mutation="python scripts/ci/run_mutation_gate.py --json-out mutation_results.json" \
+            --artifact-command mutation="python scripts/ci/merge_mutation_partitions.py --partition-dir out/mutation-partitions --partition-count 4 --expected-sha ${GITHUB_SHA} --expected-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} --worker-conclusion success --quality-command-telemetry out/quality_command_telemetry_ci.json --output-json mutation_results.json" \
             --artifact-command test_telemetry="python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha ${GITHUB_SHA} --evidence-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} -- -n 8 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing" \
             --artifact-command ci_performance_benchmark="python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \

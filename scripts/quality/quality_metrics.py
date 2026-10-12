@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
+import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-
 
 SCHEMA_ROOT = Path(__file__).resolve().parents[2] / "src" / "schemas"
 EXPECTED_PACKS = (
@@ -98,21 +98,56 @@ def load_coverage_metrics(coverage_xml_path: str) -> dict[str, float]:
 
 def load_mutation_metrics(mutation_json_path: str) -> dict[str, dict[str, float]]:
     payload = json.loads(Path(mutation_json_path).read_text(encoding="utf-8"))
-    targets = payload.get("targets") or []
+    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+        raise ValueError("Mutation report must be a schema 1.0 object")
+    targets = payload.get("targets")
+    if not isinstance(targets, list) or not targets:
+        raise ValueError("Mutation report targets must be a non-empty list")
     result: dict[str, dict[str, float]] = {}
     for target in targets:
         if not isinstance(target, dict):
-            continue
+            raise ValueError("Mutation report target rows must be objects")
         module = str(target.get("module") or "").strip()
         if not module:
-            continue
-        score = float(target.get("score") or 0.0)
-        min_score = float(target.get("min_score") or 0.0)
+            raise ValueError("Mutation report target module must be non-empty")
+        if module in result:
+            raise ValueError(f"Mutation report contains duplicate target: {module}")
+        killed = target.get("killed")
+        total = target.get("total")
+        score = target.get("score")
+        min_score = target.get("min_score")
+        if (
+            isinstance(killed, bool)
+            or not isinstance(killed, int)
+            or isinstance(total, bool)
+            or not isinstance(total, int)
+            or total <= 0
+            or not 0 <= killed <= total
+        ):
+            raise ValueError(f"Mutation counts are invalid for target: {module}")
+        if (
+            isinstance(score, bool)
+            or not isinstance(score, (int, float))
+            or isinstance(min_score, bool)
+            or not isinstance(min_score, (int, float))
+            or not math.isfinite(float(score))
+            or not math.isfinite(float(min_score))
+            or not 0 <= float(score) <= 100
+            or not 0 <= float(min_score) <= 100
+        ):
+            raise ValueError(f"Mutation scores are invalid for target: {module}")
+        expected_score = round(killed / total * 100.0, 4)
+        if round(float(score), 4) != expected_score:
+            raise ValueError(
+                f"Mutation score does not match counts for target: {module}"
+            )
+        if float(score) < float(min_score):
+            raise ValueError(f"Mutation score is below its floor for target: {module}")
         result[module] = {
-            "score": round(score, 4),
-            "min_score": round(min_score, 4),
-            "killed": float(target.get("killed") or 0.0),
-            "total": float(target.get("total") or 0.0),
+            "score": round(float(score), 4),
+            "min_score": round(float(min_score), 4),
+            "killed": float(killed),
+            "total": float(total),
         }
     return result
 

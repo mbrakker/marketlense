@@ -9,9 +9,63 @@ from scripts.quality.migrate_golden_artifact_fixtures import migrate_artifact_pa
 from scripts.quality.quality_metrics import (
     collect_candidate_pack_metrics,
     collect_docpack_metrics,
+    load_mutation_metrics,
 )
 
 _GOLDEN_DOCPACK_ROOT = Path(__file__).parent / "fixtures" / "docpacks" / "golden"
+
+
+@pytest.mark.parametrize(
+    "targets",
+    [
+        [
+            {
+                "module": "src/services/example.py",
+                "killed": 1,
+                "total": 1,
+                "score": 100.0,
+                "min_score": 60.0,
+            },
+            {
+                "module": "src/services/example.py",
+                "killed": 1,
+                "total": 1,
+                "score": 100.0,
+                "min_score": 60.0,
+            },
+        ],
+        [
+            {
+                "module": "src/services/example.py",
+                "killed": 0,
+                "total": 0,
+                "score": 0.0,
+                "min_score": 60.0,
+            }
+        ],
+        [
+            {
+                "module": "src/services/example.py",
+                "killed": 1,
+                "total": 2,
+                "score": 100.0,
+                "min_score": 60.0,
+            }
+        ],
+        ["malformed row"],
+    ],
+)
+def test_load_mutation_metrics_rejects_duplicate_or_invalid_rows(
+    tmp_path: Path, targets: list[object]
+) -> None:
+    path = tmp_path / "mutation.json"
+    path.write_text(
+        json.dumps({"schema_version": "1.0", "targets": targets}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        load_mutation_metrics(str(path))
 
 
 def _write_candidate_pack(root: Path, report_name: str, payload: dict) -> None:
