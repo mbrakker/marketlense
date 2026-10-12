@@ -2,7 +2,7 @@
 
 **Source:** [archived original improvement catalogue](archive/10improvements-20261011-preconsolidation.md). **Status authority:** [CONSOLIDATED_TODO.md](../../CONSOLIDATED_TODO.md). This index retains **100 original numbered recommendations and nine architecture follow-ups**, plus **six new PATH-01..06 Windows path-risk slices** added 2026-10-11. They are implementation subtasks, not extra Active outcomes.
 
-Original proposal disposition labels describe historic reconciliation evidence, not a current-HEAD audit. PATH-01..06 derive from a targeted 2026-10-11 static inspection, not verified native Windows failures. Every proposal has one primary canonical owner, and the new PATH slices have Luna execution guidance under R8. Related outcomes are dependencies/consumers, not parallel owners.
+Original proposal disposition labels describe historic reconciliation evidence unless a row records a verified implementation SHA. PATH-01..06 derive from a targeted 2026-10-11 static inspection, not verified native Windows failures. Every proposal has one primary canonical owner, and the new PATH slices have Luna execution guidance under R8. Related outcomes are dependencies/consumers, not parallel owners.
 
 | Technical ID | Canonical owner / full specification | Proposal disposition |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ Original proposal disposition labels describe historic reconciliation evidence, 
 | [ART-10](P-publication.md#art-10-test-generated-artifact-delivery-by-content-role-not-only-leak-counts) | [P6](P-publication.md#p6-complete-blind-human-editorial-acceptance) | Proposal; revalidate at current HEAD |
 | [ANA-01](E-evidence.md#ana-01-preserve-supported-metric-context-through-projection-and-readback) | [E16](E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Proposal; revalidate at current HEAD |
 | [ANA-02](A-autonomy.md#ana-02-separate-successful-persistence-from-usable-analytical-coverage) | [A21](A-autonomy.md#a21-establish-a-representative-first-attempt-end-to-end-reliability-slo) | Proposal; revalidate at current HEAD |
-| [ANA-03](P-publication.md#ana-03-calculate-publisher-diversity-bonuses-once-per-selection-round) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Proposal; revalidate at current HEAD |
+| [ANA-03](P-publication.md#ana-03-calculate-publisher-diversity-bonuses-once-per-selection-round) | [P16](P-publication.md#p16-build-a-decision-grade-consulting-synthesis-artifact) | Implemented and verified at source commit `46c87c0170bfc6575a06f55de23557eb0de77334`; see P16/ANA-03 evidence |
 | [ANA-04](E-evidence.md#ana-04-retrieve-evidence-for-the-request-not-the-average-retained-claim) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
 | [ANA-05](E-evidence.md#ana-05-reject-incompatible-or-numerically-invalid-retrieval-vectors) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
 | [ANA-06](E-evidence.md#ana-06-close-e6-with-task-relevant-offline-semantic-evaluation) | [E6](E-evidence.md#e6-retain-a-hash-pinned-claim-embedding-benchmark-export) | Proposal; revalidate at current HEAD |
