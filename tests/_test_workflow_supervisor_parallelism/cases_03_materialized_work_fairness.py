@@ -552,76 +552,191 @@ def test_selection_backlog_gets_a_fair_slot_before_third_analysis_worker() -> No
     assert not analysis_overtook_selection.is_set()
 
 
-def test_source_ingest_backlog_progresses_before_deeper_report_stages() -> None:
+def test_source_ingest_backlog_progresses_before_deeper_report_stages(
+    tmp_path,
+) -> None:
+    state_db = str(tmp_path / "source-ingest-fairness.sqlite")
+    for queue_name in ("source_ingest", "report_selection", "report_analysis"):
+        _set_queue_concurrency(state_db, queue_name, 3)
+
+    source_job_ids: list[str] = []
+    source_submissions: list[WorkflowJobSubmission] = []
+    for index in range(5):
+        submission = WorkflowJobSubmission(
+            schema_version="1.0",
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
+            payload=SourceIngestPayload(
+                source_identity_id=f"source-fair-{index}",
+                input_reference=f"snapshot:source-fair-{index}",
+                input_content_hash=f"source-hash-{index}",
+                report_id=f"report-fair-{index}",
+            ),
+            idempotency_key=f"source-fairness:{index}",
+            deduplication_scope="supervisor-source-fairness",
+        )
+        job, _ = enqueue_workflow_job(
+            state_db,
+            submission,
+            _ctx(),
+            now_utc="2026-08-11T00:00:00+00:00",
+        )
+        source_job_ids.append(job.job_id)
+        source_submissions.append(submission)
+
     lock = Lock()
     three_sources_started = Event()
     release_initial_sources = Event()
     source_started = 0
-    source_completed = 0
-    materialized_sources = 0
-    selection_pending = 0
-    selection_outbox_pending = 0
-    analysis_pending = 0
+    selection_started = 0
     analysis_started = 0
     source_progress_overtaken = Event()
+    active_workers: dict[str, int] = {}
+    maximum_active_workers: dict[str, int] = {}
+    processed_job_ids: dict[str, list[str]] = {
+        "source_ingest": [],
+        "report_selection": [],
+        "report_analysis": [],
+    }
+    parent_job_ids: dict[str, dict[str, str]] = {
+        "report_selection": {},
+        "report_analysis": {},
+    }
+    event_trace: list[str] = []
 
-    def worker(**kwargs):
-        nonlocal source_started, source_completed, selection_pending
-        nonlocal analysis_started
-        nonlocal selection_outbox_pending, analysis_pending
-        queue_name = str(kwargs["queue_name"])
-        if queue_name == "source_ingest":
-            with lock:
-                if source_started == 5:
-                    return SimpleNamespace(
-                        released_lease_job_ids=[], terminal_status="idle"
-                    )
-                source_started += 1
-                call_number = source_started
-                if source_started == 3:
-                    three_sources_started.set()
-            if call_number <= 3:
-                assert release_initial_sources.wait(timeout=10)
-            with lock:
-                source_completed += 1
-            return _succeeded_worker()
-        if queue_name == "report_selection":
-            with lock:
-                if selection_pending <= 0:
-                    return SimpleNamespace(
-                        released_lease_job_ids=[], terminal_status="idle"
-                    )
-                selection_pending -= 1
-                selection_outbox_pending += 1
-            return _succeeded_worker()
-        if queue_name == "report_analysis":
-            with lock:
-                if analysis_pending <= 0:
-                    return SimpleNamespace(
-                        released_lease_job_ids=[], terminal_status="idle"
-                    )
-                analysis_pending -= 1
-                analysis_started += 1
-                if analysis_started == 3 and source_started < 5:
-                    source_progress_overtaken.set()
-            return _succeeded_worker()
-        return SimpleNamespace(released_lease_job_ids=[], terminal_status="idle")
-
-    def materialize_outbox(*_args, **_kwargs):
-        nonlocal materialized_sources, selection_pending, selection_outbox_pending
-        nonlocal analysis_pending
+    def ingest(job, _payload, _ctx):
+        nonlocal source_started
         with lock:
-            if materialized_sources < source_completed:
-                materialized_sources += 1
-                selection_pending += 1
-                return [f"selection-{materialized_sources}"]
-            if selection_outbox_pending:
-                selection_outbox_pending -= 1
-                analysis_pending += 1
-                return [f"analysis-{analysis_pending}"]
-        return []
+            source_started += 1
+            call_number = source_started
+            processed_job_ids["source_ingest"].append(job.job_id)
+            event_trace.append(f"source_ingest start {call_number}")
+            if source_started == 3:
+                three_sources_started.set()
+        if call_number <= 3:
+            assert release_initial_sources.wait(timeout=10)
+        return WorkflowQueueHandlerResult(
+            result=SourceIngestResult(
+                output_reference=f"prepared:{job.job_id}",
+                output_content_hash=f"prepared-hash:{job.job_id}",
+                output_verified=True,
+            ),
+            downstream=[
+                WorkflowJobSubmission(
+                    schema_version="1.0",
+                    queue_name="report_selection",
+                    job_type="report_selection.v1",
+                    payload=ReportSelectionPayload(report_id=job.report_id),
+                    idempotency_key=f"selection:{job.job_id}",
+                    deduplication_scope="supervisor-source-fairness",
+                    root_workflow_id=job.root_workflow_id,
+                    parent_job_id=job.job_id,
+                    entity_type="report",
+                    entity_id=job.report_id,
+                    source_identity_id=job.source_identity_id,
+                    report_id=job.report_id,
+                )
+            ],
+        )
 
-    dependencies = replace(_dependencies(worker), materialize_outbox=materialize_outbox)
+    def select(job, _payload, _ctx):
+        nonlocal selection_started
+        with lock:
+            selection_started += 1
+            processed_job_ids["report_selection"].append(job.job_id)
+            parent_job_ids["report_selection"][job.job_id] = job.parent_job_id
+            event_trace.append(f"report_selection start {selection_started}")
+        return WorkflowQueueHandlerResult(
+            result=ReportSelectionResult(
+                output_reference=f"selected:{job.report_id}",
+                output_content_hash=f"selection-hash:{job.report_id}",
+                output_verified=True,
+            ),
+            downstream=[
+                WorkflowJobSubmission(
+                    schema_version="1.0",
+                    queue_name="report_analysis",
+                    job_type="report_analysis.v1",
+                    payload=ReportAnalysisPayload(report_id=job.report_id),
+                    idempotency_key=f"analysis:{job.job_id}",
+                    deduplication_scope="supervisor-source-fairness",
+                    root_workflow_id=job.root_workflow_id,
+                    parent_job_id=job.job_id,
+                    entity_type="report",
+                    entity_id=job.report_id,
+                    source_identity_id=job.source_identity_id,
+                    report_id=job.report_id,
+                )
+            ],
+        )
+
+    def analyze(job, _payload, _ctx):
+        nonlocal analysis_started
+        with lock:
+            analysis_started += 1
+            processed_job_ids["report_analysis"].append(job.job_id)
+            parent_job_ids["report_analysis"][job.job_id] = job.parent_job_id
+            event_trace.append(f"report_analysis start {analysis_started}")
+            if analysis_started == 3 and source_started < 5:
+                source_progress_overtaken.set()
+        return WorkflowQueueHandlerResult(
+            result=ReportAnalysisResult(
+                output_reference=f"analyzed:{job.report_id}",
+                output_content_hash=f"analysis-hash:{job.report_id}",
+                output_verified=True,
+            )
+        )
+
+    registry = {
+        ("source_ingest", "source_ingest.v1"): _queue_handler_registration(
+            queue_name="source_ingest",
+            job_type="source_ingest.v1",
+            payload_type=SourceIngestPayload,
+            result_type=SourceIngestResult,
+            handler=ingest,
+            allowed_downstream_job_types=("report_selection.v1",),
+        ),
+        ("report_selection", "report_selection.v1"): _queue_handler_registration(
+            queue_name="report_selection",
+            job_type="report_selection.v1",
+            payload_type=ReportSelectionPayload,
+            result_type=ReportSelectionResult,
+            handler=select,
+            allowed_downstream_job_types=("report_analysis.v1",),
+        ),
+        ("report_analysis", "report_analysis.v1"): _queue_handler_registration(
+            queue_name="report_analysis",
+            job_type="report_analysis.v1",
+            payload_type=ReportAnalysisPayload,
+            result_type=ReportAnalysisResult,
+            handler=analyze,
+        ),
+    }
+
+    def run_worker(**kwargs):
+        queue_name = str(kwargs["queue_name"])
+        with lock:
+            active_workers[queue_name] = active_workers.get(queue_name, 0) + 1
+            maximum_active_workers[queue_name] = max(
+                maximum_active_workers.get(queue_name, 0), active_workers[queue_name]
+            )
+        try:
+            result = run_workflow_worker_once(registry=registry, **kwargs)
+            if result.claimed_job_id:
+                with lock:
+                    event_trace.append(
+                        f"{queue_name} completed {result.claimed_job_id} "
+                        f"as {result.terminal_status}"
+                    )
+            return result
+        finally:
+            with lock:
+                active_workers[queue_name] -= 1
+
+    dependencies = replace(
+        _dependencies(run_worker),
+        materialize_outbox=materialize_workflow_outbox,
+    )
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(
@@ -630,6 +745,7 @@ def test_source_ingest_backlog_progresses_before_deeper_report_stages() -> None:
                 max_parallel_workers=3,
                 max_total_jobs=20,
                 max_jobs_per_queue=3,
+                state_db=state_db,
             ),
             _ctx(),
             dependencies=dependencies,
@@ -642,8 +758,45 @@ def test_source_ingest_backlog_progresses_before_deeper_report_stages() -> None:
             release_initial_sources.set()
 
     assert source_started == 5
-    assert not source_progress_overtaken.is_set()
+    assert selection_started == 5
+    assert analysis_started == 5
+    assert not source_progress_overtaken.is_set(), event_trace
+    assert event_trace.index("source_ingest start 5") < event_trace.index(
+        "report_analysis start 3"
+    ), event_trace
     assert result.completed_job_count == 15
+    assert maximum_active_workers["source_ingest"] == 3
+    assert all(active_count <= 3 for active_count in maximum_active_workers.values())
+    processed_ids = [
+        job_id
+        for queue_job_ids in processed_job_ids.values()
+        for job_id in queue_job_ids
+    ]
+    assert len(processed_ids) == len(set(processed_ids)) == 15
+    assert set(processed_job_ids["source_ingest"]) == set(source_job_ids)
+    assert [
+        get_workflow_job(state_db, job_id, _ctx()).status for job_id in processed_ids
+    ] == ["succeeded"] * 15
+    assert all(
+        len(list_workflow_job_attempts(state_db, job_id, _ctx())) == 1
+        for job_id in processed_ids
+    )
+    assert set(parent_job_ids["report_selection"].values()) <= set(source_job_ids)
+    assert set(parent_job_ids["report_analysis"].values()) <= set(
+        processed_job_ids["report_selection"]
+    )
+
+    for source_job_id, submission in zip(
+        source_job_ids, source_submissions, strict=True
+    ):
+        replayed_job, created = enqueue_workflow_job(
+            state_db,
+            submission,
+            _ctx(),
+            now_utc="2026-08-11T00:00:03+00:00",
+        )
+        assert replayed_job.job_id == source_job_id
+        assert created is False
 
 
 def test_downstream_work_runs_before_same_queue_upstream_backlog_drains() -> None:
