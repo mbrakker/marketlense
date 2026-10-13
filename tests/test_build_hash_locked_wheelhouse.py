@@ -111,7 +111,7 @@ def test_hash_lock_merge_preserves_linux_hashes_when_adding_windows_artifacts(
     )
 
 
-def test_target_markers_follow_windows_platform_and_python_version(
+def test_target_marker_filters_windows_only_pin(
     tmp_path: Path,
 ) -> None:
     lock = tmp_path / "requirements.lock"
@@ -122,13 +122,23 @@ def test_target_markers_follow_windows_platform_and_python_version(
         encoding="utf-8",
     )
 
-    active = active_requirements(
-        locked_requirements(lock),
+    requirements = locked_requirements(lock)
+    linux_active = active_requirements(
+        requirements,
+        python_version="3.12",
+        platform="manylinux2014_x86_64",
+    )
+    windows_active = active_requirements(
+        requirements,
         python_version="3.12",
         platform="win_amd64",
     )
 
-    assert [entry.requirement.name for entry in active] == [
+    assert [entry.requirement.name for entry in linux_active] == [
+        "linux-package",
+        "cp312-package",
+    ]
+    assert [entry.requirement.name for entry in windows_active] == [
         "windows-package",
         "cp312-package",
     ]
