@@ -201,6 +201,31 @@ def test_supported_environment_diagnostics_require_windows_hashes() -> None:
     assert diagnostics == ()
 
 
+def test_supported_environments_evaluate_os_name_markers_for_both_targets(
+    tmp_path: Path,
+) -> None:
+    _write_repository(
+        tmp_path,
+        runtime=("runtime-package==1.0.0\nposix-only==1.0.0; os_name == 'posix'\n"),
+        development=(
+            "dev-package==2.0.0\n"
+            "pydantic-settings==2.14.2\n"
+            "nt-only==2.0.0; os_name == 'nt'\n"
+        ),
+    )
+
+    diagnostics = diagnostics_for_supported_environments(tmp_path)
+
+    assert any(
+        item.startswith("CPython 3.12 Linux x86_64: requirements.txt: posix-only")
+        for item in diagnostics
+    )
+    assert any(
+        item.startswith("CPython 3.12 Windows x64: requirements-dev.txt: nt-only")
+        for item in diagnostics
+    )
+
+
 def test_ci_installs_the_lock_with_hash_verification() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 

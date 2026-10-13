@@ -7,6 +7,17 @@ import json
 from pathlib import Path
 from typing import Any
 
+if __package__:
+    from .build_ci_performance_benchmark import (
+        benchmark_validation_errors,
+        validate_test_telemetry,
+    )
+else:
+    from build_ci_performance_benchmark import (
+        benchmark_validation_errors,
+        validate_test_telemetry,
+    )
+
 
 def build_release_evidence_summary(
     *,
@@ -30,6 +41,10 @@ def build_release_evidence_summary(
     tests = test_telemetry.get("tests")
     if not isinstance(tests, list):
         raise ValueError("test telemetry tests must be a list")
+    test_validation_errors = validate_test_telemetry(test_telemetry)
+    benchmark_errors = benchmark_validation_errors(
+        ci_performance_benchmark, test_telemetry=test_telemetry
+    )
     failed_test_count = sum(
         1
         for test in tests
@@ -47,8 +62,11 @@ def build_release_evidence_summary(
         "evidence_run_id": release_id,
         "release_id": release_id,
         "passed": (
-            claims["pytest_exit_code"] == 0
+            type(claims["pytest_exit_code"]) is int
+            and claims["pytest_exit_code"] == 0
             and failed_test_count == 0
+            and not test_validation_errors
+            and not benchmark_errors
             and claims["performance_passed"] is True
             and claims["performance_quality_passed"] is True
         ),

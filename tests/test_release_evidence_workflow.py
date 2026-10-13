@@ -70,7 +70,8 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     benchmark_step = workflow[
         workflow.index("- name: Build CI performance benchmark") : manifest_index
     ]
-    assert "always() && hashFiles('out/test_telemetry_ci.json') != ''" in benchmark_step
+    assert "if: ${{ always() }}" in benchmark_step
+    assert "hashFiles('out/test_telemetry_ci.json')" not in benchmark_step
     assert "out/release_evidence_executive_summary_ci.json" in workflow
     assert "--test-telemetry-json out/test_telemetry_ci.json" in workflow
     assert (

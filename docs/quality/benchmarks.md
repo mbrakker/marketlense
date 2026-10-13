@@ -97,14 +97,39 @@ supported budgets. The operator-supplied output root is preserved; if the root
 alone leaves insufficient room for a safe path, path construction fails with a
 typed error.
 
-CI also measures each existing standalone coverage, mutation,
-quality-regression, PDF, public-render, retained-LLM-routing,
-workflow-evidence, and prompt-fixture gate once.
-`out/ci_performance_benchmark.json` combines those stage wall times with the
-full pytest session wall time. It sets `quality_passed` only when the test
-suite and every measured gate passed. Its estimated provider cost is zero
-because CI makes no live provider call; that is not evidence of live-pipeline
-cost.
+CI requires telemetry for ten quality stages: `coverage`, the merged
+`mutation` partition result, `quality_non_regression`, `pdf_candidate_benchmark`,
+`pdf_crop_refine_benchmark`, `pdf_benchmark_trends`, `public_report_quality`,
+`llm_routing_retained_benchmark`, `workflow_queue_evidence`, and
+`prompt_fixture_regression`. The benchmark rejects missing or duplicate stage
+identities, a mismatched `stage_count`, invalid required fields, inconsistent
+exit-code/outcome pairs, and any unsuccessful stage. The merged mutation stage
+uses the longest successful partition duration, which represents the mutation
+critical worker rather than the sum of both parallel workers.
+
+`quality_stage_summaries[].wall_time_ms` is an individual measured command
+duration. `pytest_duration_ms` is the pytest session duration.
+`quality_command_duration_ms` sums the measured quality-stage durations, and
+`aggregate_command_duration_ms` adds that sum to pytest duration. These
+aggregates may include work that ran in parallel and are not workflow elapsed
+time. For schema 1.0 compatibility, `total_run_duration_ms` remains as an alias
+for pytest duration only. The measurement profile is `v2` to keep these
+semantics separate from historical additive artifacts.
+
+The release-evidence job runs before the workflow is complete, so
+`workflow_elapsed_ms` and `workflow_critical_path_ms` remain `null` in the
+manifest-bound benchmark. For a completed-run comparison, use GitHub Actions
+job `started_at` and `completed_at` timestamps after the run finishes. Compute
+workflow elapsed time from the earliest job start to the latest job completion;
+identify the critical prerequisite branch from the `needs` graph and its job
+intervals, then include release-evidence assembly. Keep that timing analysis
+outside the release job and do not rewrite the hash-bound benchmark. The
+comparison utility uses those completed-workflow fields for the `v2` profile
+and will not treat command aggregates as wall time.
+
+`estimated_cost_usd` is `null` because this benchmark does not measure GitHub
+runner spend. Do not interpret a zero provider-call cost as CI spending; any
+available GitHub billed-duration information is a separate measurement.
 
 ## Canonical source-reuse benchmark
 

@@ -19,11 +19,38 @@ def compare_artifacts(
     candidate_profile = str(candidate.get("measurement_profile_hash") or "")
     if not baseline_profile or baseline_profile != candidate_profile:
         reasons.append("incomparable_measurement_profile")
-    baseline_duration = _non_negative_int(baseline.get("total_run_duration_ms"))
-    candidate_duration = _non_negative_int(candidate.get("total_run_duration_ms"))
+    ci_workflow_profile = candidate_profile == "ci:pytest-and-quality-gates:v2"
+    duration_field = (
+        "workflow_elapsed_ms" if ci_workflow_profile else "total_run_duration_ms"
+    )
+    if ci_workflow_profile and (
+        baseline.get("workflow_timing_status") != "completed_github_actions_timestamps"
+        or candidate.get("workflow_timing_status")
+        != "completed_github_actions_timestamps"
+    ):
+        reasons.append("workflow_timing_not_completed")
+    baseline_duration = _non_negative_int(baseline.get(duration_field))
+    candidate_duration = _non_negative_int(candidate.get(duration_field))
     if baseline_duration is None or candidate_duration is None:
         reasons.append("duration_unavailable")
-    if not bool(candidate.get("quality_passed")):
+    baseline_critical_path = (
+        _non_negative_int(baseline.get("workflow_critical_path_ms"))
+        if ci_workflow_profile
+        else None
+    )
+    candidate_critical_path = (
+        _non_negative_int(candidate.get("workflow_critical_path_ms"))
+        if ci_workflow_profile
+        else None
+    )
+    critical_path_delta = (
+        candidate_critical_path - baseline_critical_path
+        if baseline_critical_path is not None and candidate_critical_path is not None
+        else None
+    )
+    if ci_workflow_profile and critical_path_delta is None:
+        reasons.append("critical_path_duration_unavailable")
+    if candidate.get("quality_passed") is not True:
         reasons.append("quality_regression")
     baseline_cost = _decimal(baseline.get("estimated_cost_usd"))
     candidate_cost = _decimal(candidate.get("estimated_cost_usd"))
@@ -41,9 +68,16 @@ def compare_artifacts(
     return {
         "schema_version": "1.0",
         "measurement_profile_hash": candidate_profile,
+        "duration_metric": duration_field,
         "duration_delta_ms": duration_delta,
         "baseline_duration_ms": baseline_duration,
         "candidate_duration_ms": candidate_duration,
+        "critical_path_metric": (
+            "workflow_critical_path_ms" if ci_workflow_profile else ""
+        ),
+        "baseline_critical_path_ms": baseline_critical_path,
+        "candidate_critical_path_ms": candidate_critical_path,
+        "critical_path_delta_ms": critical_path_delta,
         "baseline_estimated_cost_usd": str(baseline_cost) if baseline_cost else "",
         "candidate_estimated_cost_usd": str(candidate_cost) if candidate_cost else "",
         "quality_passed": bool(candidate.get("quality_passed")),

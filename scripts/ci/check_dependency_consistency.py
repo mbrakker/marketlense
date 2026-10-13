@@ -30,6 +30,7 @@ SUPPORTED_ENVIRONMENTS = (
         "CPython 3.12 Linux x86_64",
         {
             "implementation_name": "cpython",
+            "os_name": "posix",
             "platform_machine": "x86_64",
             "platform_python_implementation": "CPython",
             "platform_system": "Linux",
@@ -42,6 +43,7 @@ SUPPORTED_ENVIRONMENTS = (
         "CPython 3.12 Windows x64",
         {
             "implementation_name": "cpython",
+            "os_name": "nt",
             "platform_machine": "AMD64",
             "platform_python_implementation": "CPython",
             "platform_system": "Windows",

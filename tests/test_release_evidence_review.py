@@ -9,6 +9,19 @@ from scripts.quality.release_evidence_review import (
     write_release_evidence_review,
 )
 
+REQUIRED_QUALITY_STAGES = (
+    "coverage",
+    "mutation",
+    "quality_non_regression",
+    "pdf_candidate_benchmark",
+    "pdf_crop_refine_benchmark",
+    "pdf_benchmark_trends",
+    "public_report_quality",
+    "llm_routing_retained_benchmark",
+    "workflow_queue_evidence",
+    "prompt_fixture_regression",
+)
+
 
 def _write_manifest(path: Path, *, issues: list[dict[str, str]]) -> None:
     path.write_text(
@@ -17,7 +30,7 @@ def _write_manifest(path: Path, *, issues: list[dict[str, str]]) -> None:
                 "schema_version": "1.0",
                 "release_id": "release-20260628",
                 "generated_at": "2026-06-28T12:00:00+00:00",
-                "commit_sha": "abc123",
+                "commit_sha": "a" * 40,
                 "command_args": ("manifest",),
                 "passed": not issues,
                 "artifacts": [
@@ -95,15 +108,28 @@ def _write_machine_evidence(
     pytest_exit_code: int = 0,
     failed_test_count: int = 0,
     performance_passed: bool = True,
-    commit_sha: str = "abc123",
+    commit_sha: str = "a" * 40,
     run_id: str = "release-20260628",
     summary_claims: dict[str, object] | None = None,
 ) -> tuple[Path, Path, Path]:
     telemetry_path = tmp_path / "test_telemetry.json"
     benchmark_path = tmp_path / "ci_performance_benchmark.json"
     summary_path = tmp_path / "release_evidence_executive_summary.json"
-    tests = [{"outcome": "passed"}] + [
-        {"outcome": "failed"} for _ in range(failed_test_count)
+    tests = [
+        {
+            "nodeid": "tests/test_passed.py::test_passed",
+            "duration_ms": 1,
+            "outcome": "passed",
+            "resource_status": "unavailable",
+        }
+    ] + [
+        {
+            "nodeid": f"tests/test_failed_{index}.py::test_failed",
+            "duration_ms": 1,
+            "outcome": "failed",
+            "resource_status": "unavailable",
+        }
+        for index in range(failed_test_count)
     ]
     telemetry = {
         "schema_version": "1.0",
@@ -111,14 +137,35 @@ def _write_machine_evidence(
         "evidence_run_id": run_id,
         "pytest_exit_code": pytest_exit_code,
         "test_count": len(tests),
+        "total_run_duration_ms": len(tests),
         "tests": tests,
     }
     benchmark = {
         "schema_version": "1.0",
         "repository_commit_sha": commit_sha,
         "evidence_run_id": run_id,
+        "measurement_profile_hash": "ci:pytest-and-quality-gates:v2",
+        "total_run_duration_ms": len(tests),
+        "pytest_duration_ms": len(tests),
+        "quality_command_duration_ms": len(REQUIRED_QUALITY_STAGES),
+        "aggregate_command_duration_ms": len(tests) + len(REQUIRED_QUALITY_STAGES),
+        "workflow_elapsed_ms": None,
+        "workflow_critical_path_ms": None,
+        "workflow_timing_status": "pending_completed_github_actions_timestamps",
+        "estimated_cost_usd": None,
         "passed": performance_passed,
         "quality_passed": performance_passed,
+        "quality_validation_errors": [],
+        "quality_stage_summaries": [
+            {
+                "stage": stage,
+                "wall_time_ms": 1,
+                "exit_code": 0,
+                "outcome": "passed",
+                "resource_status": "unavailable",
+            }
+            for stage in REQUIRED_QUALITY_STAGES
+        ],
         "test_summary": {
             "total": len(tests),
             "passed": len(tests) - failed_test_count,
@@ -137,7 +184,10 @@ def _write_machine_evidence(
         "evidence_run_id": run_id,
         "release_id": run_id,
         "passed": (
-            pytest_exit_code == 0 and failed_test_count == 0 and performance_passed
+            type(pytest_exit_code) is int
+            and pytest_exit_code == 0
+            and failed_test_count == 0
+            and performance_passed
         ),
         "claims": claims,
     }
@@ -175,6 +225,51 @@ def test_release_evidence_review_rejects_failed_pytest_telemetry(
     assert {issue.reason for issue in review.issues} >= {
         "pytest_exit_code_nonzero",
         "pytest_failed_tests",
+    }
+
+
+def test_release_evidence_review_rejects_boolean_pytest_exit_code(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "release_evidence_manifest.json"
+    _write_manifest(manifest_path, issues=[])
+    telemetry_path, benchmark_path, summary_path = _write_machine_evidence(
+        tmp_path,
+        pytest_exit_code=False,
+    )
+
+    review = build_release_evidence_review(
+        manifest_paths=(manifest_path,),
+        test_telemetry_path=telemetry_path,
+        ci_performance_benchmark_path=benchmark_path,
+        executive_summary_path=summary_path,
+    )
+
+    assert review.passed is False
+    assert "pytest_exit_code_nonzero" in {issue.reason for issue in review.issues}
+
+
+def test_release_evidence_review_rejects_legacy_green_incomplete_benchmark(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "release_evidence_manifest.json"
+    _write_manifest(manifest_path, issues=[])
+    telemetry_path, benchmark_path, summary_path = _write_machine_evidence(tmp_path)
+    benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+    benchmark["measurement_profile_hash"] = "ci:pytest-and-quality-gates:v1"
+    benchmark["quality_stage_summaries"] = []
+    benchmark_path.write_text(json.dumps(benchmark), encoding="utf-8")
+
+    review = build_release_evidence_review(
+        manifest_paths=(manifest_path,),
+        test_telemetry_path=telemetry_path,
+        ci_performance_benchmark_path=benchmark_path,
+        executive_summary_path=summary_path,
+    )
+
+    assert review.passed is False
+    assert "ci_performance_benchmark_incomplete" in {
+        issue.reason for issue in review.issues
     }
 
 

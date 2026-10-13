@@ -10,6 +10,17 @@ from typing import Any, Sequence
 
 import yaml
 
+if __package__:
+    from .build_ci_performance_benchmark import (
+        benchmark_validation_errors,
+        validate_test_telemetry,
+    )
+else:
+    from build_ci_performance_benchmark import (
+        benchmark_validation_errors,
+        validate_test_telemetry,
+    )
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -231,9 +242,12 @@ def render_release_evidence_review_markdown(
         f"- Release IDs: `{', '.join(review.release_ids)}`",
         f"- Commit SHAs: `{', '.join(review.commit_shas)}`",
         f"- Approval status: `{'passed' if review.passed else 'failed'}`",
-        f"- Manifest status before waivers: `{'passed' if review.manifest_passed else 'failed'}`",
+        f"- Manifest status before waivers: "
+        f"`{'passed' if review.manifest_passed else 'failed'}`",
         f"- Artifacts: `{review.artifact_count}`",
-        f"- Issues: `{review.issue_count}` total, `{review.waived_issue_count}` waived, `{review.unwaived_issue_count}` unwaived",
+        f"- Issues: `{review.issue_count}` total, "
+        f"`{review.waived_issue_count}` waived, "
+        f"`{review.unwaived_issue_count}` unwaived",
         f"- Waiver errors: `{review.waiver_error_count}`",
         "",
         "## Artifacts",
@@ -398,13 +412,23 @@ def _machine_evidence_issues(
 
     pytest_exit_code = telemetry.get("pytest_exit_code")
     tests = telemetry.get("tests")
-    if pytest_exit_code != 0:
+    if type(pytest_exit_code) is not int or pytest_exit_code != 0:
         issues.append(
             _machine_issue(
                 artifact_name="test_telemetry",
                 artifact_path=telemetry_path,
                 reason="pytest_exit_code_nonzero",
                 detail=f"pytest_exit_code is {pytest_exit_code!r}, expected 0",
+            )
+        )
+    test_telemetry_errors = validate_test_telemetry(telemetry)
+    if test_telemetry_errors:
+        issues.append(
+            _machine_issue(
+                artifact_name="test_telemetry",
+                artifact_path=telemetry_path,
+                reason="test_telemetry_incomplete",
+                detail="; ".join(test_telemetry_errors[:16]),
             )
         )
     if not isinstance(tests, list):
@@ -451,6 +475,16 @@ def _machine_evidence_issues(
                 detail="ci_performance_benchmark.json quality_passed must be true",
             )
         )
+    benchmark_errors = benchmark_validation_errors(benchmark, test_telemetry=telemetry)
+    if benchmark_errors:
+        issues.append(
+            _machine_issue(
+                artifact_name="ci_performance_benchmark",
+                artifact_path=benchmark_path,
+                reason="ci_performance_benchmark_incomplete",
+                detail="; ".join(benchmark_errors[:16]),
+            )
+        )
 
     expected_commit_shas = {
         str(manifest.get("commit_sha") or "") for manifest, _ in manifests
@@ -469,7 +503,10 @@ def _machine_evidence_issues(
                 artifact_name="release_evidence_provenance",
                 artifact_path="",
                 reason="evidence_commit_sha_mismatch",
-                detail="Manifest and mandatory machine evidence do not share one commit SHA",
+                detail=(
+                    "Manifest and mandatory machine evidence do not share one "
+                    "commit SHA"
+                ),
             )
         )
 
@@ -490,7 +527,9 @@ def _machine_evidence_issues(
                 artifact_name="release_evidence_provenance",
                 artifact_path="",
                 reason="evidence_run_id_mismatch",
-                detail="Manifest and mandatory machine evidence do not share one run ID",
+                detail=(
+                    "Manifest and mandatory machine evidence do not share one run ID"
+                ),
             )
         )
 
@@ -501,8 +540,11 @@ def _machine_evidence_issues(
         "performance_quality_passed": benchmark.get("quality_passed"),
     }
     expected_summary_passed = (
-        pytest_exit_code == 0
+        type(pytest_exit_code) is int
+        and pytest_exit_code == 0
         and failed_test_count == 0
+        and not test_telemetry_errors
+        and not benchmark_errors
         and benchmark.get("passed") is True
         and benchmark.get("quality_passed") is True
     )
