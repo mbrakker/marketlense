@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -154,24 +155,30 @@ def test_existing_wheelhouse_reports_missing_active_artifact(tmp_path: Path) -> 
     lock = tmp_path / "requirements.lock"
     wheelhouse = tmp_path / "wheelhouse"
     wheelhouse.mkdir()
-    (
-        wheelhouse / "windows_package-4.5.6-cp312-cp312-manylinux_2_17_x86_64.whl"
-    ).write_bytes(b"platform-incompatible artifact")
-    lock.write_text(
-        "linux-package==1.2.3; sys_platform == 'linux'\n"
-        "windows-package==4.5.6; platform_system == 'Windows'\n",
-        encoding="utf-8",
-    )
+    if sys.platform == "win32":
+        platform = "win_amd64"
+        active_package = "windows-package"
+        lock_entry = "windows-package==4.5.6; platform_system == 'Windows'\n"
+        incompatible_wheel = (
+            "windows_package-4.5.6-cp312-cp312-manylinux_2_17_x86_64.whl"
+        )
+    else:
+        platform = "manylinux2014_x86_64"
+        active_package = "linux-package"
+        lock_entry = "linux-package==1.2.3; sys_platform == 'linux'\n"
+        incompatible_wheel = "linux_package-1.2.3-cp312-cp312-win_amd64.whl"
+    (wheelhouse / incompatible_wheel).write_bytes(b"platform-incompatible artifact")
+    lock.write_text(lock_entry, encoding="utf-8")
 
     rows = audit_existing_wheelhouse(
         lock_path=lock,
         wheelhouse=wheelhouse,
         python_version="3.12",
-        platform="win_amd64",
+        platform=platform,
     )
 
     assert [(row.package, row.category) for row in rows] == [
-        ("windows-package", "wheelhouse_missing_artifact")
+        (active_package, "wheelhouse_missing_artifact")
     ]
 
 
