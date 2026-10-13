@@ -105,7 +105,7 @@ browser = "browser_use.skill_cli.main:main"  # Alias for browser-use
 browser-use-tui = "browser_use.cli:main"  # Legacy TUI interface
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.32.4", "editables==0.6"]
 build-backend = "hatchling.build"
 
 

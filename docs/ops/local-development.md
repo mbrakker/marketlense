@@ -6,20 +6,47 @@
 
 ## Prerequisites
 
-- CPython 3.12 or later, as declared in `pyproject.toml`.
+- CPython 3.12. Native dependency installation has been verified on Windows x64
+  with CPython 3.12.10 and Ubuntu 24.04 x86_64 with CPython 3.12.3. Although
+  project metadata allows newer Python releases, Python 3.13 and later have not
+  been verified against the canonical lock.
 - A local virtual environment.
 - Credentials only for workflows that contact their external systems.
 
 ## Setup
 
 Codex Cloud uses the repository bootstrap and its hash-locked dependencies; see
-[Codex Cloud environment](codex-cloud-environment.md). The canonical lock is
-hash-verified for the CPython 3.12 Linux environment used by CI. Its
-platform-specific hashes do not currently cover Windows wheels: a clean
-CPython 3.12 Windows install with `--require-hashes` fails at the Windows
-`aiohttp==3.14.3` wheel. Do not disable hash checking to work around this. A
-reproducible Windows bootstrap is unavailable until the lock carries verified
-Windows artifact hashes.
+[Codex Cloud environment](codex-cloud-environment.md). Install the canonical
+lock with hash verification, then install the checked-out vendored browser-use
+package in editable mode using the already-installed, hash-locked build tools.
+
+Linux:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements.lock
+.venv/bin/python -m pip install --no-index --no-build-isolation --editable tools/browser-use
+.venv/bin/python -m pip check
+```
+
+Windows PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install --require-hashes -r requirements.lock
+.venv\Scripts\python.exe -m pip install --no-index --no-build-isolation --editable .\tools\browser-use
+.venv\Scripts\python.exe -m pip check
+```
+
+The first install verifies every third-party artifact against `requirements.lock`.
+The editable source is the checked-out repository tree rather than a standalone
+wheel, so pip cannot verify it as a hashed distribution. Its Git revision
+provides source provenance; its build requirements (`hatchling` and `editables`)
+are exact-pinned in the vendored `pyproject.toml` and hash-locked. The editable
+command disables build isolation to use those installed tools and disables the
+package index so it fails if a required dependency is missing. It still resolves
+and checks the package dependencies; do not add `--no-deps` or disable hash
+verification for the lock install.
 
 Keep machine-specific values in `src/config/app.local.yaml` and secrets in `.env` or the process environment. Do not commit either secret material or generated runtime output.
 

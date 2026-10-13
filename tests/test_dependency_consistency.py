@@ -5,6 +5,7 @@ from pathlib import Path
 from scripts.ci.check_dependency_consistency import (
     check_consistency,
     declared_exact_pins,
+    diagnostics_for_supported_environments,
     hash_lock_diagnostics,
     locked_pins,
 )
@@ -119,6 +120,21 @@ def test_conflicting_versions_across_manifests_fail(tmp_path: Path) -> None:
     )
 
 
+def test_vendored_build_backend_pin_must_match_the_lock(tmp_path: Path) -> None:
+    _write_repository(tmp_path)
+    browser_pyproject = tmp_path / "tools" / "browser-use" / "pyproject.toml"
+    browser_pyproject.write_text(
+        browser_pyproject.read_text(encoding="utf-8")
+        + '\n[build-system]\nrequires = ["hatchling==1.32.4", "editables==0.6"]\n',
+        encoding="utf-8",
+    )
+
+    assert check_consistency(tmp_path) == (
+        "tools/browser-use/pyproject.toml: editables declared 0.6, locked missing",
+        "tools/browser-use/pyproject.toml: hatchling declared 1.32.4, locked missing",
+    )
+
+
 def test_inactive_environment_marker_does_not_require_a_lock_pin(
     tmp_path: Path,
 ) -> None:
@@ -147,6 +163,42 @@ def test_hash_lock_diagnostics_require_active_linux_hashes(tmp_path: Path) -> No
         tmp_path,
         environment={"platform_system": "Linux", "sys_platform": "linux"},
     ) == ("requirements.lock: linux-unverified has no SHA-256 hash",)
+
+
+def test_hash_lock_diagnostics_require_the_active_platform_hash(tmp_path: Path) -> None:
+    verified_hash = "a" * 64
+    _write_repository(
+        tmp_path,
+        lock=(
+            "runtime-package==1.0.0 \\\n"
+            f"    --hash=sha256:{verified_hash}\n"
+            "dev-package==2.0.0 \\\n"
+            f"    --hash=sha256:{verified_hash}\n"
+            "browser-package==3.0.0 \\\n"
+            f"    --hash=sha256:{verified_hash}\n"
+            "pydantic-settings==2.14.2 \\\n"
+            f"    --hash=sha256:{verified_hash}\n"
+            "linux-only==1.0.0; sys_platform == 'linux'\n"
+            "windows-only==1.0.0; platform_system == 'Windows'\n"
+        ),
+    )
+
+    assert hash_lock_diagnostics(
+        tmp_path,
+        environment={"platform_system": "Windows", "sys_platform": "win32"},
+    ) == ("requirements.lock: windows-only has no SHA-256 hash",)
+    assert hash_lock_diagnostics(
+        tmp_path,
+        environment={"platform_system": "Linux", "sys_platform": "linux"},
+    ) == ("requirements.lock: linux-only has no SHA-256 hash",)
+
+
+def test_supported_environment_diagnostics_require_windows_hashes() -> None:
+    root = Path(__file__).resolve().parents[1]
+
+    diagnostics = diagnostics_for_supported_environments(root)
+
+    assert diagnostics == ()
 
 
 def test_ci_installs_the_lock_with_hash_verification() -> None:

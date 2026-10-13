@@ -24,6 +24,33 @@ LOCK_FILE = Path("requirements.lock")
 VENDORED_SECURITY_DEV_PACKAGES = frozenset({"pydantic-settings"})
 _LOCK_HASH_PATTERN = re.compile(r"\s+--hash=sha256:[0-9a-fA-F]{64}")
 _LOCK_HASH_VALUE_PATTERN = re.compile(r"--hash=sha256:[0-9a-fA-F]{64}")
+_LOCK_HASH_ARGUMENT_PATTERN = re.compile(r"--hash=\S+")
+SUPPORTED_ENVIRONMENTS = (
+    (
+        "CPython 3.12 Linux x86_64",
+        {
+            "implementation_name": "cpython",
+            "platform_machine": "x86_64",
+            "platform_python_implementation": "CPython",
+            "platform_system": "Linux",
+            "python_full_version": "3.12.0",
+            "python_version": "3.12",
+            "sys_platform": "linux",
+        },
+    ),
+    (
+        "CPython 3.12 Windows x64",
+        {
+            "implementation_name": "cpython",
+            "platform_machine": "AMD64",
+            "platform_python_implementation": "CPython",
+            "platform_system": "Windows",
+            "python_full_version": "3.12.0",
+            "python_version": "3.12",
+            "sys_platform": "win32",
+        },
+    ),
+)
 
 
 def _marker_environment(
@@ -88,9 +115,11 @@ def _requirements_from_pyproject(
 ) -> tuple[tuple[str, str], ...]:
     payload = tomllib.loads(path.read_text(encoding="utf-8"))
     project = payload.get("project", {})
+    build_system = payload.get("build-system", {})
     tool = payload.get("tool", {})
     uv = tool.get("uv", {}) if isinstance(tool, dict) else {}
-    raw_requirements = project.get("dependencies", [])
+    raw_requirements = list(project.get("dependencies", []))
+    raw_requirements.extend(build_system.get("requires", []))
     raw_requirements.extend(
         requirement
         for requirement in uv.get("dev-dependencies", [])
@@ -189,9 +218,15 @@ def hash_lock_diagnostics(
         ]
         if len(exact_versions) != 1 or len(requirement.specifier) != 1:
             continue
-        if not _LOCK_HASH_VALUE_PATTERN.findall(logical_line):
+        hash_arguments = _LOCK_HASH_ARGUMENT_PATTERN.findall(logical_line)
+        hashes = _LOCK_HASH_VALUE_PATTERN.findall(logical_line)
+        if not hashes:
             diagnostics.append(
                 f"requirements.lock: {requirement.name} has no SHA-256 hash"
+            )
+        elif len(hash_arguments) != len(hashes):
+            diagnostics.append(
+                f"requirements.lock: {requirement.name} has an invalid SHA-256 hash"
             )
     if pending:
         diagnostics.append("requirements.lock: unfinished line continuation")
@@ -241,6 +276,17 @@ def check_consistency(
     return tuple(diagnostics)
 
 
+def diagnostics_for_supported_environments(root: Path) -> tuple[str, ...]:
+    """Check exact pins and SHA-256 lock entries for each supported local target."""
+    diagnostics: list[str] = []
+    for label, environment in SUPPORTED_ENVIRONMENTS:
+        target_diagnostics = check_consistency(root, environment=environment) + (
+            hash_lock_diagnostics(root, environment=environment)
+        )
+        diagnostics.extend(f"{label}: {item}" for item in target_diagnostics)
+    return tuple(diagnostics)
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Verify exact dependency declarations agree with requirements.lock."
@@ -251,16 +297,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     root = _parse_args().root
-    diagnostics = check_consistency(root) + hash_lock_diagnostics(
-        root,
-        environment={
-            "implementation_name": "cpython",
-            "platform_machine": "x86_64",
-            "platform_system": "Linux",
-            "python_version": "3.12",
-            "sys_platform": "linux",
-        },
-    )
+    diagnostics = diagnostics_for_supported_environments(root)
     if diagnostics:
         print("Dependency manifest consistency check failed:")
         for diagnostic in diagnostics:
