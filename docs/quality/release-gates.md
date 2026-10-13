@@ -12,6 +12,12 @@ python scripts/ci/run_quality_gate.py --list
 
 The local gate sequence mirrors GitHub's pre-test checks, including dependency consistency, formatting and linting, typing, architecture and I/O policy, service-boundary mapping, refactor evidence, bounded structured logging, repository hygiene, runbook and backlog ownership, contract snapshots, and WordPress checks. It then runs the default tests, coverage, mutation testing, and retained quality regressions. Benchmarks and evidence artifacts are separate gates where configured. The release bundle also includes exact-HEAD deterministic queue evidence; it is a temporary-SQLite semantic check, not live production throughput evidence.
 
+The PDF candidate benchmark runs in mutation partition 0. Its result and its
+single-stage timing telemetry travel in that partition's run- and attempt-scoped
+artifact. The release-evidence job requires both files and merges the recorded
+stage into the pytest/coverage command telemetry before checking the remaining
+release gates. A missing or failed candidate result prevents release approval.
+
 The release-review gate requires the pytest telemetry, CI performance benchmark,
 and machine-derived executive summary alongside the manifest. A green manifest
 alone is insufficient: release review rejects nonzero pytest exit codes,

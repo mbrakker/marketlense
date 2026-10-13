@@ -107,3 +107,59 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "out/pdf_benchmark_trends_ci.json" in workflow
     assert "mutation_results.json" in workflow
     assert "coverage.xml" in workflow
+
+
+def test_pdf_candidate_gate_runs_in_existing_partition_and_is_required_evidence() -> (
+    None
+):
+    jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
+        "jobs"
+    ]
+    mutation_steps = jobs["mutation"]["steps"]
+    candidate_step = next(
+        step
+        for step in mutation_steps
+        if step.get("name") == "PDF candidate benchmark gate"
+    )
+    mutation_upload = next(
+        step
+        for step in mutation_steps
+        if step.get("name") == "Upload mutation partition result"
+    )
+    release_steps = jobs["release_evidence"]["steps"]
+    download_step = next(
+        step
+        for step in release_steps
+        if step.get("name") == "Download mutation partition results"
+    )
+    restore_step = next(
+        step
+        for step in release_steps
+        if step.get("name") == "Restore PDF candidate benchmark evidence"
+    )
+    merge_step = next(
+        step
+        for step in release_steps
+        if step.get("name") == "Merge mutation partition results"
+    )
+
+    assert candidate_step["if"] == "${{ matrix.partition == 0 }}"
+    assert "run_command_with_telemetry.py" in candidate_step["run"]
+    assert "--stage pdf_candidate_benchmark" in candidate_step["run"]
+    assert "out/pdf_candidate_benchmark_ci.json" in mutation_upload["with"]["path"]
+    assert "out/quality_command_telemetry_ci.json" in mutation_upload["with"]["path"]
+    assert (
+        download_step["with"]["pattern"]
+        == "mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-*"
+    )
+    assert restore_step["if"] == "always()"
+    assert (
+        "mutation-partition-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-0"
+        in restore_step["run"]
+    )
+    assert "test -s" in restore_step["run"]
+    assert "--merge-stage-json" in restore_step["run"]
+    assert release_steps.index(restore_step) < release_steps.index(merge_step)
+    assert not any(
+        step.get("name") == "PDF candidate benchmark gate" for step in release_steps
+    )

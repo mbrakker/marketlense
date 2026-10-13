@@ -134,6 +134,9 @@ jobs:
             --partition-count 2 \
             --repository-commit-sha "${GITHUB_SHA}" \
             --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+      - name: PDF candidate benchmark gate
+        if: ${{ matrix.partition == 0 }}
+        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_candidate_benchmark -- python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
       - name: Upload mutation partition result
         if: always()
         uses: actions/upload-artifact@v4
@@ -141,7 +144,10 @@ jobs:
           name: mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.partition }}
           retention-days: 14
           if-no-files-found: warn
-          path: out/mutation-partition.json
+          path: |
+            out/mutation-partition.json
+            ${{ matrix.partition == 0 && 'out/pdf_candidate_benchmark_ci.json' || '' }}
+            ${{ matrix.partition == 0 && 'out/quality_command_telemetry_ci.json' || '' }}
 
   release_evidence:
     if: ${{ always() }}
@@ -175,6 +181,18 @@ jobs:
           path: out/mutation-partitions
           merge-multiple: false
           if-no-artifact-found: warn
+      - name: Restore PDF candidate benchmark evidence
+        if: always()
+        run: |
+          artifact_dir="out/mutation-partitions/mutation-partition-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-0"
+          mkdir -p out
+          test -s "$artifact_dir/pdf_candidate_benchmark_ci.json"
+          test -s "$artifact_dir/quality_command_telemetry_ci.json"
+          cp "$artifact_dir/pdf_candidate_benchmark_ci.json" out/pdf_candidate_benchmark_ci.json
+          python scripts/quality/run_command_with_telemetry.py \
+            --output-json out/quality_command_telemetry_ci.json \
+            --stage pdf_candidate_benchmark \
+            --merge-stage-json "$artifact_dir/quality_command_telemetry_ci.json"
       - name: Merge mutation partition results
         if: always()
         run: |
@@ -202,8 +220,6 @@ jobs:
           fi
       - name: Quality non-regression gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage quality_non_regression -- python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
-      - name: PDF candidate benchmark gate
-        run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_candidate_benchmark -- python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json
       - name: PDF crop-refine benchmark gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage pdf_crop_refine_benchmark -- python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json
       - name: PDF benchmark trend gate
