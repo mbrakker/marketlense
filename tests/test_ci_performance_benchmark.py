@@ -81,7 +81,7 @@ def _command_telemetry(
     }
 
 
-def test_benchmark_combines_complete_evidence_with_unambiguous_durations() -> None:
+def test_benchmark_combines_pytest_and_passed_quality_stages() -> None:
     result = build_benchmark(
         test_telemetry=_test_telemetry(),
         command_telemetry=_command_telemetry(),
@@ -138,6 +138,17 @@ def test_benchmark_fails_closed_when_pytest_exit_code_is_missing() -> None:
     )
 
     assert result["passed"] is False
+
+
+def test_benchmark_fails_quality_when_pytest_exits_unsuccessfully() -> None:
+    result = build_benchmark(
+        test_telemetry=_test_telemetry(pytest_exit_code=1),
+        command_telemetry=_command_telemetry(),
+    )
+
+    assert result["quality_passed"] is False
+    assert result["passed"] is False
+    assert "pytest_exit_code_nonzero" in result["quality_validation_errors"]
 
 
 @pytest.mark.parametrize(
@@ -241,7 +252,7 @@ def test_ci_workflow_stage_inventory_matches_benchmark_contract() -> None:
     assert workflow_stages == set(BENCHMARK_REQUIRED_QUALITY_STAGES)
 
 
-def test_builder_writes_failed_diagnostic_benchmark_when_command_telemetry_is_missing(
+def test_builder_writes_failed_benchmark_when_command_telemetry_is_missing(
     tmp_path: Path,
 ) -> None:
     test_telemetry = tmp_path / "tests.json"
