@@ -17,6 +17,12 @@ from src.contracts.artifact_lineage import (
 )
 from src.contracts.drive import DriveFile
 from src.contracts.files import PipelineStageCheckpoint
+from src.contracts.pdf_text import (
+    PdfTextChartIdentityEvidence,
+    PdfTextExtractResponse,
+    PdfTextLayoutEvidence,
+    PdfTextPage,
+)
 from src.contracts.prompts import PromptLoadRequest
 from src.contracts.report_generation import ReportRuntimeState
 from src.generators.artifact_prompt_provenance import current_artifact_prompt_identity
@@ -25,6 +31,8 @@ from src.generators.report_render_generator import render_preview_asset
 from src.orchestrators._report_generation_orchestrator.checkpoints import (
     _record_rendered_html_prompt_family_lineage,
     _regeneration_attempts_from_list,
+    _source_checkpoint_payload,
+    _source_state_from_checkpoint,
     _vector_indexing_state_from_checkpoint,
 )
 from src.contracts.regeneration import FailureFingerprint
@@ -180,6 +188,74 @@ def test_regeneration_attempt_checkpoint_restores_typed_repair_delta() -> None:
     )
 
     assert isinstance(attempts[0].repair_delta.persisting[0], FailureFingerprint)
+
+
+def test_checkpoint_roundtrips_chart_provenance_and_rejects_tampered_identity(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    source_md5 = hashlib.md5(Path(runtime.local_pdf_path).read_bytes()).hexdigest()
+    runtime = replace(runtime, md5=source_md5)
+    source = _source(runtime)
+    page_text = (
+        "SHARE OF TOP1 YOUTUBE AND FACEBOOK CREATORS VS. SHARE OF VIEWS BY "
+        "PLATFORM, GLOBAL, Q2 2017, % TOTAL 24% 76% 71% 29% 26% 74% 77% 23%"
+    )
+    identity = PdfTextChartIdentityEvidence(
+        schema_version="1.0",
+        status="transcribed",
+        source_pdf_md5=source_md5,
+        physical_page_number=53,
+        crop_image_path="cache/page-53-labels.png",
+        crop_image_sha256=hashlib.sha256(b"retained chart crop").hexdigest(),
+        label_left="YOUTUBE",
+        label_right="FACEBOOK",
+        confidence_left=0.99,
+        confidence_right=0.98,
+        model="fixture-visual-model",
+        request_id="req_checkpoint_fixture",
+        prompt_sha256=hashlib.sha256(b"chart identity prompt").hexdigest(),
+    )
+    page = PdfTextPage(
+        page_number=53,
+        text=page_text,
+        layout_analysis_complete=True,
+        layout_evidence=[
+            PdfTextLayoutEvidence(
+                schema_version="1.0",
+                evidence_kind="native_pdf_geometry",
+                text="Derived chart panel values for the source page.",
+            )
+        ],
+        chart_identity_status="transcribed",
+        chart_identity_evidence=identity,
+    )
+    source = replace(
+        source,
+        text_response=PdfTextExtractResponse(
+            schema_version="1.0",
+            text=page_text,
+            pages_extracted=1,
+            char_count=len(page_text),
+            text_density=float(len(page_text)),
+            pages=[page],
+        ),
+    )
+
+    serialized = _source_checkpoint_payload(source)
+    restored = _source_state_from_checkpoint(runtime, serialized)
+    restored_page = restored.text_response.pages[0]
+    assert restored_page.chart_identity_status == "transcribed"
+    assert restored_page.chart_identity_evidence == identity
+    assert restored_page.layout_evidence == page.layout_evidence
+
+    tampered = json.loads(json.dumps(serialized))
+    tampered["text_response"]["pages"][0]["chart_identity_evidence"]["label_left"] = (
+        "FACEBOOK"
+    )
+    rejected = _source_state_from_checkpoint(runtime, tampered)
+    assert rejected.text_response.pages[0].chart_identity_status == "unavailable"
+    assert rejected.text_response.pages[0].chart_identity_evidence is None
 
 
 def test_rendered_html_lineage_explicitly_depends_on_prompt_materializations(

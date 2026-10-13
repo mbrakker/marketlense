@@ -84,7 +84,7 @@ The register's five workstreams remain the prioritisation lanes, **not** a newly
 | Active | E15 | [Make publication crops visually complete and repairable](docs/backlog/E-evidence.md#e15-make-publication-crops-visually-complete-and-repairable) | Affine coordinate and invalid-bbox guards have scoped fixes; semantic completeness, directional repair, publication-DPI consistency and human-labelled production acceptance remain unproved. |
 | Active | E16 | [Make methodology, applicability, and uncertainty decision-grade](docs/backlog/E-evidence.md#e16-make-methodology-applicability-and-uncertainty-decision-grade) | Convert loose methods/limitations text into source-linked evidence-strength facts that constrain claims and support executive interpretation. |
 | Active | E17 | [Reduce LLM input, output, and cache cost without quality regression](docs/backlog/E-evidence.md#e17-reduce-llm-input-output-and-cache-cost-without-quality-regression) | Stage measurement, grounding response efficiency, source-preserving prompt projections, provider-cache policy and evidence-gated consolidation; prove lower total cost without quality/reliability regression on frozen five reports. |
-| Active | E18 | [Stabilize LLM report analysis and first-pass validation](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation) | Four sequential stages: pin repeated-generation and fixed-input validator baseline; address proven factual drift; stabilize insight selection; fix proven semantic-verdict/repair instability and verify frozen-five quality, first-pass readiness, speed and cost. |
+| Active | E18 | [Stabilize LLM report analysis and first-pass validation](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation) | Four sequential stages: pin repeated-generation and fixed-input validator baseline; address proven factual drift; stabilize insight selection; fix proven semantic-verdict/repair instability and verify frozen-five quality, first-pass readiness, speed and cost. A bounded Activate physical p. 53 evidence-binding slice is verified; the broader stability and readiness gates remain open. |
 | Active | R1 | [Publish release-evidence reviews where reviewers work](docs/backlog/R-engineering.md#r1-publish-release-evidence-reviews-where-reviewers-work) | Renderer/workflow commit `974ee328505af12bda78222e0c85326cada5957d`; backlog/status follow-up `7b56f0e8403008a7dfb64de511ab39bf8b430715`. Full R1 run `38176147143` passed at SHA `b3464bc5bbdb3d03149d9285506af69d8555d4e6` (7,205 pytest cases). Full current-code run `38179966176` passed at SHA `f5d5dd370abb44f7726196c4b7f954477a3e51a8` (7,229 pytest cases; all required gates passed; optional WordPress staging REST gate skipped). Artifact `11718610500` has all 17/17 required paths (392,779 bytes; expires 2026-10-25). Re-rendering its review/queue JSON produced a 1,224-byte summary with exact SHA, passed canonical validation, zero unwaived/waived issues, historical-unmatched runtime and representative-scope caveat, successful upload and complete bundle. Keep Active because the actual private GitHub rendered-summary page could not be inspected in the signed-out browser. |
 | Active | R2 | [Enforce role boundaries, direct-I/O discipline, and controlled module growth](docs/backlog/R-engineering.md#r2-enforce-role-boundaries-direct-io-discipline-and-controlled-module-growth) | Close targeted boundary-coverage and expiring-waiver gaps without generic governance noise. |
 | Active | R3 | [Restore service quality coverage above the retained baseline](docs/backlog/R-engineering.md#r3-restore-service-quality-coverage-above-the-retained-baseline) | Add behavior-focused service coverage and refresh the baseline only from a passing exact-commit run. |
@@ -230,6 +230,16 @@ Navigation-only sections for compatibility with existing backlog-source checks. 
 #### E18. Stabilize LLM report analysis and first-pass validation
 
 [Full E18 specification](docs/backlog/E-evidence.md#e18-stabilize-llm-report-analysis-and-first-pass-validation).
+
+**Evidence update — 2026-10-13:** Activate's frozen physical PDF page 53 now has
+separate geometry-derived cohort/metric evidence and provenance-bound visual
+transcription of the two panel labels. The correct YouTube/Facebook relationships
+pass deterministic evidence-fidelity validation; platform/metric swaps, missing
+cohort labels, expanded population claims, and missing visual identity fail
+closed. The focused nonpublishing replay and limitations are recorded in
+`docs/quality/frozen-five-autonomous-mvp-comparison-20261009.md`. This does not
+complete E18's repeatability baseline or verify downstream editorial/readiness;
+E18 remains Active.
 
 #### R1. Publish release-evidence reviews where reviewers work
 

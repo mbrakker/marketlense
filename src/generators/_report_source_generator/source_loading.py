@@ -3,11 +3,16 @@ from __future__ import annotations
 # ruff: noqa: F401,F403,F405,F821
 import hashlib
 import random
+from dataclasses import asdict, replace
 from typing import Optional
 
 from src.contracts.pdf_contents import PdfContentsDetectionRequest
 from src.contracts.pdf_context import PdfContext, PdfContextBuildRequest
-from src.contracts.pdf_text import PdfTextExtractRequest, PdfTextExtractResponse
+from src.contracts.pdf_text import (
+    PdfTextExtractRequest,
+    PdfTextExtractResponse,
+    PdfTextPage,
+)
 from src.contracts.pdf_utils import PdfInfoRequest, PdfInfoResponse
 from src.contracts.report_assets import PreviewRequest
 from src.contracts.report_generation import ReportRuntimeState
@@ -18,6 +23,9 @@ from src.generators.report_generation_shared import (
     ocr_text_cache_key,
     pdf_info_cache_key,
     text_cache_key,
+)
+from src.generators.pdf_chart_panel_identity_generator import (
+    transcribe_chart_panel_identity,
 )
 from src.generators.report_source_cache import (
     bind_report_source_cache,
@@ -337,8 +345,9 @@ def _load_text(
     source_page_count: int,
     pdf_context_for_tasks: PdfContext | None,
     cache_prefix: str,
-    analysis_artifact_md5: str | None = None,
     dependencies: ReportSourceDependencies,
+    analysis_artifact_md5: str | None = None,
+    chart_identity_openai_client=None,
 ) -> tuple[PdfTextExtractResponse, TextStatus]:
     text_ctx = child_context(runtime.ctx, task_id=f"{runtime.ctx.task_id}:text")
     if not runtime.md5:
@@ -366,6 +375,8 @@ def _load_text(
         adapt_payload=lambda payload: _adapt_cached_text(
             payload,
             source_page_count=source_page_count,
+            require_chart_identity=cache_prefix == "text",
+            source_md5=runtime.md5,
         ),
     )
     text_resp = text_cached.value
@@ -381,6 +392,28 @@ def _load_text(
             ),
             text_ctx,
         )
+        if cache_prefix == "text" and isinstance(text_resp, PdfTextExtractResponse):
+            enriched_pages = []
+            changed_page = False
+            for page in text_resp.pages:
+                if (
+                    isinstance(page, PdfTextPage)
+                    and page.chart_identity_status == "pending"
+                ):
+                    enriched_page = transcribe_chart_panel_identity(
+                        runtime,
+                        page,
+                        pdf_path=analysis_pdf_path,
+                        pdf_context=pdf_context_for_tasks,
+                        dependencies=dependencies,
+                        llm_client=chart_identity_openai_client,
+                    )
+                    changed_page = changed_page or enriched_page is not page
+                    enriched_pages.append(enriched_page)
+                else:
+                    enriched_pages.append(page)
+            if changed_page:
+                text_resp = replace(text_resp, pages=enriched_pages)
         write_report_source_cache(
             text_binding,
             payload={
@@ -391,7 +424,36 @@ def _load_text(
                 "char_count": text_resp.char_count,
                 "text_density": text_resp.text_density,
                 "pages": [
-                    {"page_number": page.page_number, "text": page.text}
+                    {
+                        "page_number": page.page_number,
+                        "text": page.text,
+                        "layout_analysis_complete": bool(
+                            getattr(page, "layout_analysis_complete", False)
+                        ),
+                        "chart_identity_status": str(
+                            getattr(page, "chart_identity_status", "not_applicable")
+                        ),
+                        "chart_identity_evidence": (
+                            asdict(chart_identity_evidence)
+                            if (
+                                chart_identity_evidence := getattr(
+                                    page, "chart_identity_evidence", None
+                                )
+                            )
+                            is not None
+                            else None
+                        ),
+                        "layout_evidence": [
+                            {
+                                "schema_version": evidence.schema_version,
+                                "evidence_kind": evidence.evidence_kind,
+                                "text": evidence.text,
+                            }
+                            for evidence in list(
+                                getattr(page, "layout_evidence", []) or []
+                            )
+                        ],
+                    }
                     for page in text_resp.pages
                 ],
             },

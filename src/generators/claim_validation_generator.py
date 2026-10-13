@@ -39,6 +39,10 @@ from src.contracts.soft_copy_claim_provenance import (
 )
 from src.generators.artifact_normalization import canonical_artifact_quote_id
 from src.utils.errors import AppError
+from src.utils.pdf_text_layout import (
+    has_two_panel_percent_chart_candidate,
+    two_panel_chart_platform_names,
+)
 from src.utils.publication_projection import publication_projection_hash
 from src.utils.quantity import Quantity, extract_quantities, quantities_match
 from src.utils.text_normalization import normalize_for_lookup
@@ -50,6 +54,25 @@ _INTERPRETIVE_RE = re.compile(
     r"\b(recommend|suggest|should|could|may|likely|interpret)\b", re.I
 )
 _QUOTED_RE = re.compile(r"""(?:"[^"]+"|“[^”]+”|‘[^’]+’|'[^']+')""")
+_LAYOUT_CHART_ROW_RE = re.compile(
+    r"^Panel\s+(?P<panel>[12]):\s+the\s+"
+    r"(?P<cohort>.+?)\s+total-view\s+cohort\s+is\s+"
+    r"(?P<creator_value>\d+(?:\.\d+)?)%\s+of\s+creators\s+in\s+"
+    r"the\s+stated\s+over-(?P<population>\d+(?:\.\d+)?\s*[kmb])-view\s+"
+    r"creator\s+population,\s+with\s+"
+    r"(?P<view_value>\d+(?:\.\d+)?)%\s+of\s+views\s+in\s+"
+    r"the\s+chart's\s+%\s+total\s+frame\.$",
+    re.IGNORECASE,
+)
+_VISUAL_PANEL_LABEL_RE = re.compile(
+    r"^(?P<side>left|right) panel visible label:\s*(?P<label>[^.]+)\.$",
+    re.IGNORECASE,
+)
+_CLAIM_CHART_METRIC_RE = re.compile(
+    r"(?P<value>\d+(?:\.\d+)?)\s*%\s*(?:of\s+)?"
+    r"(?P<metric>creators?|views?)\b",
+    re.IGNORECASE,
+)
 _RECOVERY_TOKEN_RE = re.compile(r"[a-z]{4,}")
 _RECOVERY_STOP_WORDS = {
     "about",
@@ -642,7 +665,224 @@ def _checks(
                 reason="requires_semantic_or_editorial_assessment",
             )
         )
+    chart_relationship_check = _chart_relationship_fidelity_check(
+        text,
+        [source_evidence[reference.evidence_id] for reference in known],
+    )
+    if chart_relationship_check is not None:
+        checks.append(chart_relationship_check)
     return checks, protected_facts
+
+
+def _chart_relationship_fidelity_check(
+    claim: str,
+    cited_sources: Sequence[tuple[str, str, int | None]],
+) -> ClaimValidationCheck | None:
+    """Verify platform/cohort/metric tuples when a page contains this chart form."""
+
+    native_chart_sources = [
+        (text, page)
+        for source_pack, text, page in cited_sources
+        if source_pack == "source_pdf" and has_two_panel_percent_chart_candidate(text)
+    ]
+    if not native_chart_sources:
+        return None
+    native_chart_text, chart_page = native_chart_sources[0]
+    if chart_page is None:
+        return _chart_relationship_failure("chart_physical_page_unresolved")
+    expected_labels = two_panel_chart_platform_names(native_chart_text)
+    chart_specific_claim = bool(
+        re.search(r"\d+(?:\.\d+)?\s*%", claim)
+        and re.search(r"\b(?:creators?|views?)\b", claim, re.IGNORECASE)
+        and (
+            re.search(r"\b\d+\s*m(?:\s*\+)?", claim, re.IGNORECASE)
+            or any(
+                re.search(
+                    rf"(?<![\w]){re.escape(label)}(?![\w])",
+                    claim,
+                    re.IGNORECASE,
+                )
+                for label in (expected_labels or ())
+            )
+        )
+    )
+    if not chart_specific_claim:
+        return None
+
+    layout_texts = [
+        text
+        for source_pack, text, page in cited_sources
+        if source_pack == "source_pdf_layout" and page == chart_page
+    ]
+    rows = []
+    for layout_text in layout_texts:
+        for line in layout_text.splitlines():
+            match = _LAYOUT_CHART_ROW_RE.fullmatch(line.strip())
+            if match is not None:
+                rows.append(
+                    {
+                        "panel": int(match.group("panel")),
+                        "cohort": _normalize_chart_cohort(match.group("cohort")),
+                        "creator_value": float(match.group("creator_value")),
+                        "view_value": float(match.group("view_value")),
+                        "population": match.group("population").replace(" ", ""),
+                    }
+                )
+    if not rows:
+        return _chart_relationship_failure("chart_layout_relationship_unresolved")
+
+    visual_sources = [
+        text
+        for source_pack, text, page in cited_sources
+        if source_pack == "source_pdf_visual" and page == chart_page
+    ]
+    visual_labels: dict[int, str] = {}
+    for visual_text in visual_sources:
+        for line in visual_text.splitlines():
+            match = _VISUAL_PANEL_LABEL_RE.fullmatch(line.strip())
+            if match is None:
+                continue
+            panel = 1 if match.group("side").casefold() == "left" else 2
+            visual_labels[panel] = match.group("label").strip()
+    if (
+        len(rows) != 4
+        or set(visual_labels) != {1, 2}
+        or expected_labels is None
+        or {label.casefold() for label in visual_labels.values()}
+        != {label.casefold() for label in expected_labels}
+        or len({label.casefold() for label in visual_labels.values()}) != 2
+    ):
+        return _chart_relationship_failure("chart_visual_identity_unresolved")
+    for row in rows:
+        row["platform"] = visual_labels[int(row["panel"])]
+
+    platform_matches = [
+        row
+        for row in rows
+        if re.search(
+            rf"(?<![\w]){re.escape(str(row['platform']))}(?![\w])",
+            claim,
+            re.IGNORECASE,
+        )
+    ]
+    if not platform_matches:
+        return _chart_relationship_failure("chart_platform_relationship_unresolved")
+
+    population = str(platform_matches[0]["population"])
+    population_match = re.fullmatch(
+        r"(?P<number>\d+(?:\.\d+)?)(?P<unit>[kmb])", population, re.IGNORECASE
+    )
+    if population_match is None:
+        return _chart_relationship_failure("chart_population_scope_unresolved")
+    number = re.escape(population_match.group("number"))
+    unit = re.escape(population_match.group("unit"))
+    stated_population = re.search(
+        rf"\bcreators?\b[^.;]{{0,100}}\b(?:over|more\s+than|>\s*)\s*"
+        rf"{number}\s*{unit}\s+total\s+views\b",
+        claim,
+        re.IGNORECASE,
+    )
+    if stated_population is None:
+        return _chart_relationship_failure("chart_population_scope_unresolved")
+
+    platform_names = list(dict.fromkeys(str(row["platform"]) for row in rows))
+    for platform in platform_names:
+        if re.search(
+            rf"\b(?:all|every)\s+(?:the\s+)?{re.escape(platform)}\s+"
+            rf"(?:creators?|views?)\b",
+            claim,
+            re.IGNORECASE,
+        ):
+            return _chart_relationship_failure("chart_population_scope_expanded")
+    platform_mentions = sorted(
+        (
+            match
+            for name in platform_names
+            for match in re.finditer(
+                rf"(?<![\w]){re.escape(name)}(?![\w])", claim, re.IGNORECASE
+            )
+        ),
+        key=lambda match: match.start(),
+    )
+    checked_row_count = 0
+    for mention_index, mention in enumerate(platform_mentions):
+        platform = mention.group(0)
+        previous_mention_end = (
+            platform_mentions[mention_index - 1].end() if mention_index else 0
+        )
+        preceding_boundary = max(
+            claim.rfind(".", previous_mention_end, mention.start()),
+            claim.rfind(";", previous_mention_end, mention.start()),
+            claim.rfind(",", previous_mention_end, mention.start()),
+            claim.rfind("\n", previous_mention_end, mention.start()),
+        )
+        start = max(previous_mention_end, preceding_boundary + 1)
+        next_mention_start = (
+            platform_mentions[mention_index + 1].start()
+            if mention_index + 1 < len(platform_mentions)
+            else len(claim)
+        )
+        following_boundary = min(
+            (
+                position
+                for delimiter in (".", ";", ",", "\n")
+                if (
+                    position := claim.find(delimiter, mention.end(), next_mention_start)
+                )
+                >= 0
+            ),
+            default=next_mention_start,
+        )
+        end = min(next_mention_start, following_boundary)
+        segment = claim[start:end]
+        if re.search(
+            rf"\b(?:all|every)\s+{re.escape(platform)}\s+(?:creators?|views?)\b",
+            segment,
+            re.IGNORECASE,
+        ):
+            return _chart_relationship_failure("chart_population_scope_expanded")
+
+        for row in rows:
+            if str(row["platform"]).casefold() != platform.casefold():
+                continue
+            if str(row["cohort"]) not in _normalize_chart_cohort(segment):
+                continue
+            checked_row_count += 1
+            metrics: dict[str, list[float]] = {"creator": [], "view": []}
+            for match in _CLAIM_CHART_METRIC_RE.finditer(segment):
+                metric = (
+                    "creator"
+                    if match.group("metric").casefold().startswith("creator")
+                    else "view"
+                )
+                metrics[metric].append(float(match.group("value")))
+            if not metrics["creator"] or not metrics["view"]:
+                return _chart_relationship_failure("chart_metric_label_unresolved")
+            if metrics["creator"][0] != row["creator_value"]:
+                return _chart_relationship_failure("chart_metric_relationship_mismatch")
+            if metrics["view"][0] != row["view_value"]:
+                return _chart_relationship_failure("chart_metric_relationship_mismatch")
+    if checked_row_count == 0:
+        return _chart_relationship_failure("chart_cohort_relationship_unresolved")
+    return ClaimValidationCheck(
+        schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+        name="chart_relationship_fidelity",
+        status="passed",
+        reason="chart_platform_cohort_metrics_and_scope_matched",
+    )
+
+
+def _normalize_chart_cohort(value: str) -> str:
+    return re.sub(r"[^a-z0-9+]", "", str(value or "").casefold())
+
+
+def _chart_relationship_failure(reason: str) -> ClaimValidationCheck:
+    return ClaimValidationCheck(
+        schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
+        name="chart_relationship_fidelity",
+        status="failed",
+        reason=reason,
+    )
 
 
 def _validate_claims_against_sources(
@@ -1946,8 +2186,17 @@ def _source_index(
         text = str(raw.get("text") or "").strip()
         page = raw.get("page")
         if span_id and text:
+            source_pack = (
+                "source_pdf_layout"
+                if raw.get("evidence_kind") == "native_pdf_geometry"
+                and raw.get("verbatim") is False
+                else "source_pdf_visual"
+                if raw.get("evidence_kind") == "visual_model_transcription"
+                and raw.get("verbatim") is False
+                else "source_pdf"
+            )
             indexed[span_id] = (
-                "source_pdf",
+                source_pack,
                 text,
                 page if isinstance(page, int) and not isinstance(page, bool) else None,
             )

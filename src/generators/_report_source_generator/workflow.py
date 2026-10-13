@@ -59,6 +59,7 @@ def prepare_report_source(
         source_page_count=info_resp.page_count,
         pdf_context_for_tasks=pdf_context_for_tasks,
         cache_prefix="text",
+        chart_identity_openai_client=ocr_openai_client,
         dependencies=dependencies,
     )
     native_text_status["ocr_policy"] = ocr_policy

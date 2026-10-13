@@ -30,6 +30,7 @@ from src.contracts.pdf_text import (
     PdfTextContainsResponse,
     PdfTextExtractRequest,
     PdfTextExtractResponse,
+    PdfTextLayoutEvidence,
     PdfTextPage,
     PdfTextSample,
     PdfTextSampleRequest,
@@ -49,6 +50,8 @@ from src.utils.errors import AppError
 from src.utils.logging import log_event
 from src.utils.pdf_text_layout import (
     detached_percent_label_tokens,
+    derive_two_panel_percent_chart_evidence,
+    has_two_panel_percent_chart_candidate,
     layout_text_preserves_label_value_rows,
 )
 from src.utils.pdf_utils import pdf_has_eof_marker as _pdf_has_eof_marker
@@ -449,11 +452,14 @@ def extract_pdf_text(
                 text = reader.pages[i].extract_text() or ""
             except PDF_TEXT_EXCEPTIONS:
                 text = ""
+            chart_candidate = has_two_panel_percent_chart_candidate(text)
             selection = _resolve_native_page_text(
                 primary_text=text, fitz_doc=fitz_doc, page_index=i
             )
             if (
-                selection.primary_reasons or detached_percent_label_tokens(text)
+                selection.primary_reasons
+                or detached_percent_label_tokens(text)
+                or chart_candidate
             ) and not fitz_open_attempted:
                 fitz_open_attempted = True
                 fitz_doc = _open_fallback_fitz_doc(request.path)
@@ -472,7 +478,41 @@ def extract_pdf_text(
             else:
                 retained_text = text[:remaining_chars]
                 remaining_chars -= len(retained_text)
-            extracted_pages.append(PdfTextPage(page_number=i + 1, text=retained_text))
+            layout_evidence: list[PdfTextLayoutEvidence] = []
+            chart_identity_status = "not_applicable"
+            if chart_candidate and fitz_doc is not None:
+                try:
+                    layout_text = derive_two_panel_percent_chart_evidence(
+                        text,
+                        fitz_doc[i].get_text("words", sort=True),
+                        page_number=i + 1,
+                    )
+                except PDF_TEXT_EXCEPTIONS:
+                    layout_text = None
+                if layout_text:
+                    layout_evidence.append(
+                        PdfTextLayoutEvidence(
+                            schema_version="1.0",
+                            evidence_kind="native_pdf_geometry",
+                            text=layout_text,
+                        )
+                    )
+                    chart_identity_status = "pending"
+                else:
+                    chart_identity_status = "geometry_unresolved"
+            elif chart_candidate:
+                chart_identity_status = "pending"
+            extracted_pages.append(
+                PdfTextPage(
+                    page_number=i + 1,
+                    text=retained_text,
+                    layout_evidence=layout_evidence,
+                    layout_analysis_complete=bool(
+                        chart_candidate and fitz_doc is not None
+                    ),
+                    chart_identity_status=chart_identity_status,
+                )
+            )
         raw_text = "\n\n".join(chunks)
         text_out = raw_text[: max(request.max_chars, 0)]
         density = _compute_text_density(raw_text, pages)

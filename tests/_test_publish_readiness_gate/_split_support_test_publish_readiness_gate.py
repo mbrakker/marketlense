@@ -11,6 +11,7 @@ import re
 from copy import deepcopy
 from pathlib import Path
 import pytest
+from src.contracts.claim_validation import CLAIM_VALIDATION_VALIDATOR_VERSION
 from src.contracts.validation import ValidationIssue, ValidationReport
 from src.generators.publish_readiness_generator import (
     evaluate_publish_readiness as _evaluate_readiness_core,
@@ -218,7 +219,7 @@ def _retained_claim_package(
             "report_id": "report-1",
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v5",
+            "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
             "grounding_validator_version": "grounding_validation_output:1.5",
             "configuration_hash": configuration_hash,
             "policy_hash": policy_hash,
@@ -231,7 +232,7 @@ def _retained_claim_package(
             "evidence_pack_hash": sha256_json(evidence_packs),
             "source_id": source_id,
             "source_md5": source_md5,
-            "claim_validation_validator_version": "retained_claim_validation:v5",
+            "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
             "grounding_validator_version": "grounding_validation_output:1.5",
             "semantic_execution_identities": (
                 ["grounding-execution-1"] if semantic else []

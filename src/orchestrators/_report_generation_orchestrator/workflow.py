@@ -753,6 +753,8 @@ def run_report_generation(
             validation_openai_client=validation_openai_client,
             regeneration_openai_client=regeneration_openai_client,
             figure_caption_openai_client=figure_caption_openai_client,
+            source_openai_client=source_openai_client,
+            source_dependencies=deps.source,
         )
         _write_stage_checkpoint(
             runtime,

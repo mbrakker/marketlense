@@ -29710,6 +29710,66 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_text.PdfTextChartIdentityEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence_left": {
+          "type": "number"
+        },
+        "confidence_right": {
+          "type": "number"
+        },
+        "crop_image_path": {
+          "type": "string"
+        },
+        "crop_image_sha256": {
+          "type": "string"
+        },
+        "label_left": {
+          "type": "string"
+        },
+        "label_right": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "physical_page_number": {
+          "type": "integer"
+        },
+        "prompt_sha256": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source_pdf_md5": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "status",
+        "source_pdf_md5",
+        "physical_page_number",
+        "crop_image_path",
+        "crop_image_sha256",
+        "label_left",
+        "label_right",
+        "confidence_left",
+        "confidence_right",
+        "model",
+        "request_id",
+        "prompt_sha256"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_text.PdfTextContainsRequest": {
       "additionalProperties": false,
       "properties": {
@@ -29813,9 +29873,51 @@
       ],
       "type": "object"
     },
+    "src.contracts.pdf_text.PdfTextLayoutEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_kind": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "evidence_kind",
+        "text"
+      ],
+      "type": "object"
+    },
     "src.contracts.pdf_text.PdfTextPage": {
       "additionalProperties": false,
       "properties": {
+        "chart_identity_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src.contracts.pdf_text.PdfTextChartIdentityEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chart_identity_status": {
+          "type": "string"
+        },
+        "layout_analysis_complete": {
+          "type": "boolean"
+        },
+        "layout_evidence": {
+          "items": {
+            "$ref": "#/$defs/src.contracts.pdf_text.PdfTextLayoutEvidence"
+          },
+          "type": "array"
+        },
         "page_number": {
           "type": "integer"
         },

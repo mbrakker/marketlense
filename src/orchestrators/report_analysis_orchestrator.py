@@ -37,7 +37,13 @@ from src.generators.report_analysis_generator import (
     _resolve_categories_from_report_context,
     _resolve_taxonomy,
 )
-from src.generators.report_generation_dependencies import ReportAnalysisDependencies
+from src.generators.report_generation_dependencies import (
+    ReportAnalysisDependencies,
+    ReportSourceDependencies,
+)
+from src.generators.pdf_chart_panel_identity_generator import (
+    transcribe_chart_panel_identity,
+)
 from src.generators.report_generation_shared import (
     merge_artifacts_into_payload,
     pack_paths,
@@ -409,6 +415,8 @@ def run_report_analysis(
     validation_openai_client=None,
     regeneration_openai_client=None,
     figure_caption_openai_client=None,
+    source_openai_client=None,
+    source_dependencies: ReportSourceDependencies | None = None,
 ) -> ReportAnalysisState:
     if str(runtime.ctx.admission_decision_hash or "").strip():
         # Admission is the report workflow boundary.  Reject incomplete
@@ -491,10 +499,25 @@ def run_report_analysis(
         else None
     )
     evidence_kwargs["vector_store_content_hash"] = vector_store_content_hash
+    chart_identity_enricher = None
+    if source_openai_client is not None and source_dependencies is not None:
+        source_pdf_path = source.analysis_pdf_path or runtime.local_pdf_path
+
+        def chart_identity_enricher(page):
+            return transcribe_chart_panel_identity(
+                runtime,
+                page,
+                pdf_path=source_pdf_path,
+                pdf_context=source.pdf_context or source.pdf_context_for_tasks,
+                dependencies=source_dependencies,
+                llm_client=source_openai_client,
+            )
+
     source_spans = build_findings_source_spans(
         source,
         extract_pdf_text=dependencies.extract_pdf_text,
         ctx=mode_ctx,
+        chart_identity_enricher=chart_identity_enricher,
     )
     if artifact_openai_client is not None:
         artifact_kwargs["openai_client"] = artifact_openai_client

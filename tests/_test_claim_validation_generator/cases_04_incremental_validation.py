@@ -6,6 +6,7 @@ from dataclasses import asdict
 
 from src.contracts.claim_validation import (
     CLAIM_GROUNDING_VALIDATOR_VERSION,
+    CLAIM_VALIDATION_VALIDATOR_VERSION,
     ClaimSemanticGroundingResult,
     ClaimSemanticValidationIdentity,
 )
@@ -541,7 +542,7 @@ def test_grounding_revalidates_only_changed_claims_and_avoids_a_batch(tmp_path) 
         "report_id": report_id,
         "source_id": _CONTEXT["source_id"],
         "source_md5": "",
-        "claim_validation_validator_version": "retained_claim_validation:v5",
+        "claim_validation_validator_version": CLAIM_VALIDATION_VALIDATOR_VERSION,
         "grounding_validator_version": CLAIM_GROUNDING_VALIDATOR_VERSION,
         "configuration_hash": str(ctx.configuration_hash or ""),
         "policy_hash": str(ctx.policy_hash or ""),

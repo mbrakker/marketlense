@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,7 +20,12 @@ from src.contracts.files import (
     PipelineStageCheckpoint,
 )
 from src.contracts.ingest import IngestOutcome, IngestSettings
-from src.contracts.pdf_text import PdfTextExtractResponse, PdfTextPage
+from src.contracts.pdf_text import (
+    PdfTextChartIdentityEvidence,
+    PdfTextExtractResponse,
+    PdfTextLayoutEvidence,
+    PdfTextPage,
+)
 from src.contracts.pdf_utils import PdfInfoResponse
 from src.contracts.prompt_family_materialization import (
     PROMPT_FAMILY_MATERIALIZATION_SCHEMA_VERSION,
@@ -63,6 +69,7 @@ from src.services.prompt_family_materialization_service import materialize_promp
 from src.services.report_store_service import record_artifact_lineage
 from src.utils.cache_utils import sha256_json
 from src.utils.errors import AppError
+from src.utils.pdf_text_layout import two_panel_chart_platform_names
 from src.utils.logging import log_event
 
 logger = logging.getLogger("market_lense.report_generation_orchestrator")
@@ -1238,6 +1245,28 @@ def _source_text_payload(source: ReportSourceState) -> dict:
             {
                 "page_number": int(getattr(page, "page_number", 0) or 0),
                 "text": str(getattr(page, "text", "") or ""),
+                "layout_analysis_complete": bool(
+                    getattr(page, "layout_analysis_complete", False)
+                ),
+                "chart_identity_status": str(
+                    getattr(page, "chart_identity_status", "not_applicable")
+                ),
+                "chart_identity_evidence": (
+                    asdict(page.chart_identity_evidence)
+                    if isinstance(
+                        getattr(page, "chart_identity_evidence", None),
+                        PdfTextChartIdentityEvidence,
+                    )
+                    else None
+                ),
+                "layout_evidence": [
+                    {
+                        "schema_version": str(evidence.schema_version),
+                        "evidence_kind": str(evidence.evidence_kind),
+                        "text": str(evidence.text),
+                    }
+                    for evidence in list(getattr(page, "layout_evidence", []) or [])
+                ],
             }
             for page in list(getattr(text, "pages", []) or [])
             if int(getattr(page, "page_number", 0) or 0) > 0
@@ -1385,9 +1414,7 @@ def _source_state_from_checkpoint(
             char_count=int(text_raw["char_count"]),
             text_density=float(text_raw.get("text_density") or 0.0),
             pages=[
-                PdfTextPage(
-                    page_number=int(item["page_number"]), text=str(item["text"])
-                )
+                _source_text_page_from_checkpoint(item, runtime)
                 for item in list(text_raw.get("pages") or [])
                 if isinstance(item, dict)
                 and isinstance(item.get("page_number"), int)
@@ -1409,6 +1436,116 @@ def _source_state_from_checkpoint(
         ocr_pdf_path=str(raw_source.get("ocr_pdf_path") or ""),
         pdf_context=None,
         pdf_context_for_tasks=None,
+    )
+
+
+def _source_text_page_from_checkpoint(
+    item: dict, runtime: ReportRuntimeState
+) -> PdfTextPage:
+    page_number = int(item["page_number"])
+    layout_evidence = [
+        PdfTextLayoutEvidence(
+            schema_version=str(evidence["schema_version"]),
+            evidence_kind=str(evidence["evidence_kind"]),
+            text=str(evidence["text"]),
+        )
+        for evidence in list(item.get("layout_evidence") or [])
+        if isinstance(evidence, dict)
+        and evidence.get("schema_version") == "1.0"
+        and evidence.get("evidence_kind") == "native_pdf_geometry"
+        and isinstance(evidence.get("text"), str)
+        and evidence["text"].strip()
+    ]
+    status = str(item.get("chart_identity_status") or "not_applicable")
+    raw_identity = item.get("chart_identity_evidence")
+    identity = None
+    if isinstance(raw_identity, dict):
+        try:
+            candidate = PdfTextChartIdentityEvidence(
+                schema_version=str(raw_identity["schema_version"]),
+                status=str(raw_identity["status"]),
+                source_pdf_md5=str(raw_identity["source_pdf_md5"]),
+                physical_page_number=int(raw_identity["physical_page_number"]),
+                crop_image_path=str(raw_identity["crop_image_path"]),
+                crop_image_sha256=str(raw_identity["crop_image_sha256"]),
+                label_left=str(raw_identity["label_left"]),
+                label_right=str(raw_identity["label_right"]),
+                confidence_left=float(raw_identity["confidence_left"]),
+                confidence_right=float(raw_identity["confidence_right"]),
+                model=str(raw_identity["model"]),
+                request_id=str(raw_identity["request_id"]),
+                prompt_sha256=str(raw_identity["prompt_sha256"]),
+            )
+            if _checkpoint_chart_identity_is_valid(
+                candidate,
+                page_number=page_number,
+                page_text=str(item["text"]),
+                source_md5=str(runtime.md5 or ""),
+                page_status=status,
+            ):
+                identity = candidate
+        except (KeyError, TypeError, ValueError):
+            identity = None
+    if identity is None and status in {"transcribed", "abstained"}:
+        status = "unavailable"
+    elif status not in {
+        "not_applicable",
+        "pending",
+        "transcribed",
+        "abstained",
+        "unavailable",
+        "geometry_unresolved",
+    }:
+        status = "unavailable"
+    return PdfTextPage(
+        page_number=page_number,
+        text=str(item["text"]),
+        layout_analysis_complete=bool(item.get("layout_analysis_complete", False)),
+        layout_evidence=layout_evidence,
+        chart_identity_status=status,
+        chart_identity_evidence=identity,
+    )
+
+
+def _checkpoint_chart_identity_is_valid(
+    evidence: PdfTextChartIdentityEvidence,
+    *,
+    page_number: int,
+    page_text: str,
+    source_md5: str,
+    page_status: str,
+) -> bool:
+    if (
+        evidence.schema_version != "1.0"
+        or evidence.status not in {"transcribed", "abstained"}
+        or evidence.status != page_status
+        or not re.fullmatch(r"[0-9a-fA-F]{32}", evidence.source_pdf_md5)
+        or evidence.source_pdf_md5.casefold() != source_md5.casefold()
+        or evidence.physical_page_number != page_number
+        or not evidence.crop_image_path
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", evidence.crop_image_sha256)
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", evidence.prompt_sha256)
+        or not evidence.model
+        or not 0.0 <= evidence.confidence_left <= 1.0
+        or not 0.0 <= evidence.confidence_right <= 1.0
+    ):
+        return False
+    if evidence.status == "abstained":
+        return not evidence.label_left and not evidence.label_right
+
+    expected_labels = two_panel_chart_platform_names(page_text)
+    return bool(
+        evidence.confidence_left >= 0.9
+        and evidence.confidence_right >= 0.9
+        and evidence.label_left
+        and evidence.label_right
+        and evidence.label_left.casefold() != evidence.label_right.casefold()
+        and expected_labels is not None
+        and {
+            evidence.label_left.casefold(),
+            evidence.label_right.casefold(),
+        }
+        == {label.casefold() for label in expected_labels}
     )
 
 

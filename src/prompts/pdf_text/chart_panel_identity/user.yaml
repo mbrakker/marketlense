@@ -1,0 +1,3 @@
+text: |
+  Inspect the attached targeted chart crop. Transcribe the visible label or wordmark above the left panel and above the right panel. The crop was rendered from physical page {{ page_number }} of the original PDF.
+  Return {"left_label":"...","right_label":"...","left_confidence":0.0,"right_confidence":0.0}.

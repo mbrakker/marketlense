@@ -15,7 +15,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.contracts.claim_validation import CLAIM_GROUNDING_VALIDATOR_VERSION
+from src.contracts.claim_validation import (
+    CLAIM_GROUNDING_VALIDATOR_VERSION,
+    CLAIM_VALIDATION_VALIDATOR_VERSION,
+)
 from src.contracts.drive import DriveFile
 from src.contracts.ingest import IngestSettings
 from src.contracts.pdf_text import PdfTextExtractResponse

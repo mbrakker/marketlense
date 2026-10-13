@@ -57,6 +57,7 @@ PRODUCTION_LLM_NAMESPACES: tuple[str, ...] = (
     "crop_qa_escalation/publication_strict",
     "cross_report_analysis/synthesis",
     "pdf_text/ocr_fallback",
+    "pdf_text/chart_panel_identity",
     "publisher_inventory/discovery",
     "publisher_inventory/meaningful_candidate_screen",
     "rank_candidates",

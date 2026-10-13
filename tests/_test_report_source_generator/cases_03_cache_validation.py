@@ -1,7 +1,132 @@
 # ruff: noqa: F401,F403,F405
 from __future__ import annotations
 
+from src.generators._report_source_generator.cache_io import _adapt_cached_text
+
 from ._shared import *  # noqa: F401,F403
+
+
+def test_cached_chart_page_requires_a_completed_layout_inspection():
+    page_text = (
+        "SHARE OF TOP1 NORTHSTAR AND REDWOOD CREATORS VS. SHARE OF VIEWS BY "
+        "PLATFORM, GLOBAL, Q2 2017, % TOTAL 24% 76% 71% 29% 26% 74% 77% 23%"
+    )
+    payload = {
+        "schema_version": "2.0",
+        "text": page_text,
+        "pages_extracted": 1,
+        "char_count": len(page_text),
+        "text_density": float(len(page_text)),
+        "pages": [{"page_number": 1, "text": page_text}],
+    }
+
+    assert _adapt_cached_text(payload) is None
+
+    checked_ambiguous_payload = {
+        **payload,
+        "pages": [
+            {
+                "page_number": 1,
+                "text": page_text,
+                "layout_analysis_complete": True,
+                "chart_identity_status": "geometry_unresolved",
+                "layout_evidence": [],
+            }
+        ],
+    }
+    adapted = _adapt_cached_text(checked_ambiguous_payload)
+
+    assert adapted is not None
+    assert adapted.pages[0].layout_analysis_complete is True
+    assert adapted.pages[0].layout_evidence == []
+
+
+def test_cached_chart_layout_evidence_roundtrips_with_separate_provenance():
+    page_text = (
+        "SHARE OF TOP1 NORTHSTAR AND REDWOOD CREATORS VS. SHARE OF VIEWS BY "
+        "PLATFORM, GLOBAL, Q2 2017, % TOTAL 24% 76% 71% 29% 26% 74% 77% 23%"
+    )
+    layout_text = (
+        "Deterministic PDF layout-derived evidence; not verbatim native PDF text.\n"
+        "Physical source page 1. Panel 1: the 50M+ total-view cohort is "
+        "24% of creators in the stated over-10M-view creator population, "
+        "with 71% of views in the chart's % total frame."
+    )
+    payload = {
+        "schema_version": "2.0",
+        "text": page_text,
+        "pages_extracted": 1,
+        "char_count": len(page_text),
+        "text_density": float(len(page_text)),
+        "pages": [
+            {
+                "page_number": 1,
+                "text": page_text,
+                "layout_analysis_complete": True,
+                "chart_identity_status": "transcribed",
+                "layout_evidence": [
+                    {
+                        "schema_version": "1.0",
+                        "evidence_kind": "native_pdf_geometry",
+                        "text": layout_text,
+                    }
+                ],
+                "chart_identity_evidence": {
+                    "schema_version": "1.0",
+                    "status": "transcribed",
+                    "source_pdf_md5": "a" * 32,
+                    "physical_page_number": 1,
+                    "crop_image_path": "cache/chart-crop.png",
+                    "crop_image_sha256": "b" * 64,
+                    "label_left": "NORTHSTAR",
+                    "label_right": "REDWOOD",
+                    "confidence_left": 0.99,
+                    "confidence_right": 0.98,
+                    "model": "fixture-vision-model",
+                    "request_id": "req_fixture",
+                    "prompt_sha256": "c" * 64,
+                },
+            }
+        ],
+    }
+
+    adapted = _adapt_cached_text(payload)
+
+    assert adapted is not None
+    assert adapted.pages[0].layout_evidence[0].text == layout_text
+    assert adapted.pages[0].layout_evidence[0].evidence_kind == "native_pdf_geometry"
+    assert adapted.pages[0].chart_identity_status == "transcribed"
+    assert adapted.pages[0].chart_identity_evidence.label_left == "NORTHSTAR"
+    assert adapted.pages[0].chart_identity_evidence.crop_image_sha256 == "b" * 64
+    assert _adapt_cached_text(payload, source_md5="d" * 32) is None
+
+    low_confidence_payload = {
+        **payload,
+        "pages": [
+            {
+                **payload["pages"][0],
+                "chart_identity_evidence": {
+                    **payload["pages"][0]["chart_identity_evidence"],
+                    "confidence_left": 0.89,
+                },
+            }
+        ],
+    }
+    assert _adapt_cached_text(low_confidence_payload) is None
+
+    mismatched_label_payload = {
+        **payload,
+        "pages": [
+            {
+                **payload["pages"][0],
+                "chart_identity_evidence": {
+                    **payload["pages"][0]["chart_identity_evidence"],
+                    "label_left": "REDWOOD",
+                },
+            }
+        ],
+    }
+    assert _adapt_cached_text(mismatched_label_payload) is None
 
 
 @pytest.mark.parametrize(

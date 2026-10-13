@@ -1,0 +1,6 @@
+text: |
+  Transcribe only the visible platform or publisher labels directly above the left and right panels in the supplied chart crop.
+  Return JSON only with fields: left_label, right_label, left_confidence, right_confidence.
+  Copy visible words or logo names exactly. Do not infer identity from the caption, title, colors, order named in surrounding prose, or the metric values.
+  Do not transcribe or interpret percentages. If either label is not clearly readable, return an empty label and confidence 0 for that side.
+  Confidence must be a number from 0 to 1. Do not wrap JSON in markdown fences.
