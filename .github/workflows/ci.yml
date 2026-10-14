@@ -156,6 +156,48 @@ jobs:
     env:
       RELEASE_EVIDENCE_STARTED_AT: ${{ needs.ci_start.outputs.release_evidence_started_at }}
     steps:
+      - name: Check full-CI prerequisites
+        id: check_full_ci_prerequisites
+        if: always()
+        env:
+          CI_START_RESULT: ${{ needs.ci_start.result }}
+          TEST_JOB_RESULT: ${{ needs.tests.result }}
+          MUTATION_JOB_RESULT: ${{ needs.mutation.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          required_jobs = (
+              ("ci_start", "CI_START_RESULT"),
+              ("tests", "TEST_JOB_RESULT"),
+              ("mutation", "MUTATION_JOB_RESULT"),
+          )
+          failed_jobs = []
+          summary_lines = ["## Full-CI prerequisites failed", ""]
+          for job_name, variable_name in required_jobs:
+              result = os.environ.get(variable_name, "")
+              display_result = result or "missing"
+              print(f"{job_name} job result: {display_result}")
+              if result != "success":
+                  failed_jobs.append(job_name)
+                  summary_lines.append(f"- `{job_name}` job: `{display_result}`")
+
+          if failed_jobs:
+              summary_lines.extend(
+                  [
+                      "",
+                      "The release bundle was not created because required jobs did not succeed.",
+                  ]
+              )
+              summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+              if summary_path:
+                  with Path(summary_path).open("a", encoding="utf-8") as handle:
+                      handle.write("\n".join(summary_lines) + "\n")
+              raise SystemExit(1)
+
+          print("All full-CI prerequisites passed.")
+          PY
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -167,14 +209,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --require-hashes -r requirements.lock
       - name: Download pytest and coverage inputs
-        if: always()
         uses: actions/download-artifact@v4
         with:
           name: ci-test-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: .
           if-no-artifact-found: warn
       - name: Download mutation partition results
-        if: always()
         uses: actions/download-artifact@v4
         with:
           pattern: mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-*
@@ -182,7 +222,6 @@ jobs:
           merge-multiple: false
           if-no-artifact-found: warn
       - name: Restore PDF candidate benchmark evidence
-        if: always()
         run: |
           artifact_dir="out/mutation-partitions/mutation-partition-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-0"
           mkdir -p out
@@ -194,7 +233,6 @@ jobs:
             --stage pdf_candidate_benchmark \
             --merge-stage-json "$artifact_dir/quality_command_telemetry_ci.json"
       - name: Merge mutation partition results
-        if: always()
         run: |
           python scripts/ci/merge_mutation_partitions.py \
             --partition-dir out/mutation-partitions \
@@ -204,20 +242,6 @@ jobs:
             --worker-conclusion "${{ needs.mutation.result }}" \
             --quality-command-telemetry out/quality_command_telemetry_ci.json \
             --output-json mutation_results.json
-      - name: Check full-CI prerequisites
-        if: always()
-        env:
-          TEST_JOB_RESULT: ${{ needs.tests.result }}
-          MUTATION_JOB_RESULT: ${{ needs.mutation.result }}
-        run: |
-          if [ "$TEST_JOB_RESULT" != "success" ]; then
-            echo "Full pytest/coverage job did not pass: $TEST_JOB_RESULT" >&2
-            exit 1
-          fi
-          if [ "$MUTATION_JOB_RESULT" != "success" ]; then
-            echo "Mutation partition matrix did not pass: $MUTATION_JOB_RESULT" >&2
-            exit 1
-          fi
       - name: Quality non-regression gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage quality_non_regression -- python scripts/ci/check_quality_regression.py --baseline docs/quality/baseline_2026-02-21.json --coverage-xml coverage.xml --mutation-json mutation_results.json --docpack-root tests/fixtures/docpacks/golden
       - name: PDF crop-refine benchmark gate
@@ -263,7 +287,7 @@ jobs:
       - name: Prompt fixture corpus regression gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage prompt_fixture_regression -- python scripts/ci/check_prompt_fixture_regression.py --baseline docs/quality/prompt_fixture_corpus_baseline_2026-04-26.json --config src/config/app.yaml --iterations 3
       - name: Build CI performance benchmark
-        if: ${{ always() }}
+        if: ${{ always() && steps.check_full_ci_prerequisites.outcome == 'success' }}
         run: python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json
       - name: Build release evidence manifest
         run: |
@@ -326,7 +350,7 @@ jobs:
             --output-md out/release_evidence_review_ci.md
       - name: Upload release evidence bundle
         id: release_evidence_bundle
-        if: always()
+        if: ${{ always() && steps.check_full_ci_prerequisites.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: release-evidence-bundle
@@ -352,7 +376,7 @@ jobs:
             out/quality_command_telemetry_ci.json
             out/ci_performance_benchmark.json
       - name: Write release evidence job summary
-        if: ${{ always() }}
+        if: ${{ always() && steps.check_full_ci_prerequisites.outcome == 'success' }}
         env:
           RELEASE_EVIDENCE_UPLOAD_OUTCOME: ${{ steps.release_evidence_bundle.outcome }}
           RELEASE_EVIDENCE_ARTIFACT_URL: ${{ steps.release_evidence_bundle.outputs.artifact-url }}
