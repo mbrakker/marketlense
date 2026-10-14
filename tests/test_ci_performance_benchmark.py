@@ -328,7 +328,7 @@ def test_builder_writes_failed_diagnostic_when_command_telemetry_is_malformed(
     assert "command_telemetry_invalid_json" in benchmark["quality_validation_errors"]
 
 
-def test_ci_builds_benchmark_even_when_test_telemetry_is_absent() -> None:
+def test_ci_performance_benchmark_uses_prerequisite_not_file_presence_gate() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     builder_step = workflow.split("- name: Build CI performance benchmark\n", 1)[1]
     builder_step = builder_step.split("      - name:", 1)[0]
@@ -337,6 +337,8 @@ def test_ci_builds_benchmark_even_when_test_telemetry_is_absent() -> None:
         "if: ${{ always() && steps.check_full_ci_prerequisites.outcome == 'success' }}"
         in builder_step
     )
+    # A missing telemetry file must not bypass the diagnostic builder once the
+    # full-CI prerequisites succeed.
     assert "hashFiles('out/test_telemetry_ci.json')" not in builder_step
 
 

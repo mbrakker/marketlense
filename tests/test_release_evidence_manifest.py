@@ -4,12 +4,65 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from scripts.quality.release_evidence_manifest import (
     ReleaseEvidenceArtifactInput,
+    ReleaseEvidenceManifest,
     build_release_evidence_manifest,
     main,
     write_release_evidence_manifest,
 )
+
+
+def _pdf_candidate_row(**overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "pdf_path": "cache/benchmark/report.pdf",
+        "report_name": "report",
+        "expected_candidate_count": 2,
+        "actual_candidate_count": 2,
+        "expected_pdf_sha256": "a" * 64,
+        "actual_pdf_sha256": "a" * 64,
+        "expected_signature": "candidate-signature",
+        "actual_signature": "candidate-signature",
+        "expected_degraded_page_count": 0,
+        "actual_degraded_page_count": 0,
+        "status": "passed",
+    }
+    row.update(overrides)
+    return row
+
+
+def _pdf_candidate_manifest(
+    tmp_path: Path,
+    *,
+    comparison: dict[str, object],
+    skipped_pdf_paths: list[str] | None = None,
+) -> ReleaseEvidenceManifest:
+    candidate_path = tmp_path / "pdf_candidate_benchmark.json"
+    candidate_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "skipped_pdf_paths": skipped_pdf_paths or [],
+                "comparison": comparison,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="pdf_candidate",
+                path=candidate_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20261014",
+        commit_sha="abc123",
+        command_args=("manifest",),
+        generated_at="2026-10-14T12:00:00+00:00",
+    )
 
 
 def test_release_evidence_manifest_orders_and_summarizes_artifacts(
@@ -34,10 +87,12 @@ def test_release_evidence_manifest_orders_and_summarizes_artifacts(
         json.dumps(
             {
                 "schema_version": "1.0",
+                "skipped_pdf_paths": [],
                 "comparison": {
                     "passed": True,
                     "failures": [],
                     "warnings": [],
+                    "rows": [_pdf_candidate_row()],
                 },
             }
         ),
@@ -232,6 +287,179 @@ def test_release_evidence_manifest_flags_warning_payloads(tmp_path: Path) -> Non
     assert manifest.passed is False
     assert manifest.artifacts[0].status == "warned"
     assert [issue.reason for issue in manifest.issues] == ["artifact_failed"]
+
+
+def test_release_evidence_manifest_accepts_only_pdf_runtime_advisories(
+    tmp_path: Path,
+) -> None:
+    warning = {
+        "pdf_path": "cache/benchmark/report.pdf",
+        "reason": "runtime_regression_warning",
+        "detail": "median runtime increased 25.1% (1.150s -> 1.439s)",
+    }
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison={
+            "passed": True,
+            "failures": [],
+            "warnings": [warning],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+    )
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "warned"
+    assert manifest.artifacts[0].passed is True
+    assert manifest.issues == ()
+
+
+def test_release_evidence_manifest_accepts_lenient_runtime_failure_warning(
+    tmp_path: Path,
+) -> None:
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison={
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_failure",
+                    "detail": "runtime failure threshold exceeded in advisory mode",
+                }
+            ],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+    )
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "warned"
+    assert manifest.artifacts[0].passed is True
+
+
+@pytest.mark.parametrize(
+    "row_overrides",
+    [
+        {"expected_candidate_count": 2, "actual_candidate_count": 3},
+        {"expected_pdf_sha256": "a" * 64, "actual_pdf_sha256": "b" * 64},
+        {"expected_signature": "expected", "actual_signature": "changed"},
+        {"expected_degraded_page_count": 0, "actual_degraded_page_count": 1},
+    ],
+)
+def test_release_evidence_manifest_blocks_pdf_candidate_row_mismatches(
+    tmp_path: Path,
+    row_overrides: dict[str, object],
+) -> None:
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison={
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row(**row_overrides)],
+        },
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+    assert "artifact_failed" in {issue.reason for issue in manifest.issues}
+
+
+@pytest.mark.parametrize(
+    "comparison",
+    [
+        {
+            "passed": False,
+            "failures": [{"reason": "runtime_regression_failure"}],
+            "warnings": [],
+            "rows": [_pdf_candidate_row(status="failed")],
+        },
+        {
+            "passed": False,
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row()],
+        },
+        {
+            "passed": True,
+            "failures": [{"reason": "candidate_signature_changed"}],
+            "warnings": [],
+            "rows": [_pdf_candidate_row(status="failed")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "median runtime increased 25.1%",
+                },
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "benchmark_pdf_missing",
+                    "detail": "benchmark input was missing",
+                },
+            ],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                }
+            ],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": "runtime_regression_warning",
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": "true",
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row()],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [],
+        },
+    ],
+)
+def test_release_evidence_manifest_fails_closed_for_invalid_pdf_comparisons(
+    tmp_path: Path,
+    comparison: dict[str, object],
+) -> None:
+    manifest = _pdf_candidate_manifest(tmp_path, comparison=comparison)
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+
+
+def test_release_evidence_manifest_rejects_missing_pdf_candidate_inputs(
+    tmp_path: Path,
+) -> None:
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison={
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row()],
+        },
+        skipped_pdf_paths=["cache/benchmark/missing.pdf"],
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
 
 
 def test_release_evidence_manifest_fails_stale_required_artifact(

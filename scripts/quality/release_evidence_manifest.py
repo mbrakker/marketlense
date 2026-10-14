@@ -15,6 +15,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+_PDF_CANDIDATE_ADVISORY_WARNING_REASONS = frozenset(
+    {"runtime_regression_warning", "runtime_regression_failure"}
+)
+
 
 @dataclass(frozen=True)
 class ReleaseEvidenceArtifactInput:
@@ -245,7 +249,10 @@ def _artifact_from_payload(
     schema_version = _string_or_none(payload.get("schema_version"))
     generated_at = _string_or_none(payload.get("generated_at"))
     repository_commit_sha = _embedded_repository_commit_sha(payload)
-    status, passed = _status_from_payload(payload)
+    if artifact_input.name == "pdf_candidate":
+        status, passed = _pdf_candidate_status(payload)
+    else:
+        status, passed = _status_from_payload(payload)
     issues: list[ReleaseEvidenceIssue] = []
     if schema_version != artifact_input.expected_schema_version:
         issues.append(
@@ -412,6 +419,100 @@ def _status_from_payload(payload: dict[str, Any]) -> tuple[str, bool]:
             return ("passed", True) if scorecard_passed else ("failed", False)
 
     return "passed", True
+
+
+def _pdf_candidate_status(payload: dict[str, Any]) -> tuple[str, bool]:
+    if any(key in payload for key in ("passed", "failures", "warnings", "status")):
+        return "invalid", False
+    skipped_pdf_paths = payload.get("skipped_pdf_paths")
+    comparison = payload.get("comparison")
+    if (
+        not isinstance(skipped_pdf_paths, list)
+        or skipped_pdf_paths
+        or not isinstance(comparison, dict)
+    ):
+        return "invalid", False
+
+    comparison_passed = comparison.get("passed")
+    failures = comparison.get("failures")
+    warnings = comparison.get("warnings")
+    rows = comparison.get("rows")
+    if (
+        type(comparison_passed) is not bool
+        or not isinstance(failures, list)
+        or not isinstance(warnings, list)
+        or not isinstance(rows, list)
+        or "status" in comparison
+        or not rows
+    ):
+        return "invalid", False
+    if failures or not comparison_passed:
+        return "failed", False
+
+    warning_paths: set[str] = set()
+    for warning in warnings:
+        if not isinstance(warning, dict):
+            return "invalid", False
+        pdf_path = warning.get("pdf_path")
+        reason = warning.get("reason")
+        detail = warning.get("detail")
+        if (
+            not isinstance(pdf_path, str)
+            or not pdf_path.strip()
+            or not isinstance(reason, str)
+            or reason not in _PDF_CANDIDATE_ADVISORY_WARNING_REASONS
+            or not isinstance(detail, str)
+            or not detail.strip()
+        ):
+            return "invalid", False
+        warning_paths.add(pdf_path)
+
+    row_paths: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            return "invalid", False
+        pdf_path = row.get("pdf_path")
+        row_status = row.get("status")
+        expected_count = row.get("expected_candidate_count")
+        actual_count = row.get("actual_candidate_count")
+        expected_signature = row.get("expected_signature")
+        actual_signature = row.get("actual_signature")
+        expected_degraded_pages = row.get("expected_degraded_page_count")
+        actual_degraded_pages = row.get("actual_degraded_page_count")
+        expected_pdf_sha256 = row.get("expected_pdf_sha256")
+        actual_pdf_sha256 = row.get("actual_pdf_sha256")
+        if (
+            not isinstance(pdf_path, str)
+            or not pdf_path.strip()
+            or not isinstance(row_status, str)
+            or row_status not in {"passed", "warned"}
+            or type(expected_count) is not int
+            or type(actual_count) is not int
+            or not isinstance(expected_signature, str)
+            or not expected_signature
+            or not isinstance(actual_signature, str)
+            or not actual_signature
+            or type(expected_degraded_pages) is not int
+            or type(actual_degraded_pages) is not int
+            or not isinstance(expected_pdf_sha256, str)
+            or not isinstance(actual_pdf_sha256, str)
+            or not actual_pdf_sha256
+        ):
+            return "invalid", False
+        if (
+            expected_count != actual_count
+            or expected_signature != actual_signature
+            or expected_degraded_pages != actual_degraded_pages
+            or (expected_pdf_sha256 and expected_pdf_sha256 != actual_pdf_sha256)
+        ):
+            return "failed", False
+        if (row_status == "warned") != (pdf_path in warning_paths):
+            return "invalid", False
+        row_paths.add(pdf_path)
+
+    if not warning_paths.issubset(row_paths):
+        return "invalid", False
+    return ("warned", True) if warnings else ("passed", True)
 
 
 def _has_items(value: Any) -> bool:

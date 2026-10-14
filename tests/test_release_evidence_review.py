@@ -1,8 +1,19 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 
+from scripts.quality.pdf_candidate_benchmark import (
+    PdfCandidateBenchmarkBaselineEntry,
+    PdfCandidateBenchmarkObservation,
+    compare_benchmark_observations,
+)
+from scripts.quality.release_evidence_manifest import (
+    ReleaseEvidenceArtifactInput,
+    build_release_evidence_manifest,
+    write_release_evidence_manifest,
+)
 from scripts.quality.release_evidence_review import (
     build_release_evidence_review,
     render_release_evidence_review_markdown,
@@ -82,6 +93,98 @@ def test_release_evidence_review_summarizes_clean_manifest(tmp_path: Path) -> No
     assert review.unwaived_issue_count == 0
     assert "| coverage | passed | yes | 0 | 0 |" in markdown
     assert "Release Evidence Review" in markdown
+
+
+def test_pdf_candidate_runtime_advisory_passes_manifest_and_review(
+    tmp_path: Path,
+) -> None:
+    baseline = PdfCandidateBenchmarkBaselineEntry(
+        pdf_path="cache/benchmark/report.pdf",
+        report_name="report",
+        expected_candidate_count=2,
+        expected_signature="candidate-signature",
+        expected_degraded_page_count=0,
+        baseline_median_seconds=1.150,
+        runtime_warn_percent=10.0,
+        runtime_fail_percent=50.0,
+        expected_pdf_sha256="a" * 64,
+    )
+    observation = PdfCandidateBenchmarkObservation(
+        pdf_path="cache/benchmark/report.pdf",
+        report_name="report",
+        candidate_count=2,
+        signature="candidate-signature",
+        degraded_page_count=0,
+        durations_seconds=(1.43865, 1.43865, 1.43865),
+        median_seconds=1.43865,
+        pdf_sha256="a" * 64,
+    )
+    comparison = compare_benchmark_observations(
+        baseline_entries=(baseline,),
+        observations=(observation,),
+    )
+    assert comparison.passed is True
+    assert comparison.failures == ()
+    assert [warning.reason for warning in comparison.warnings] == [
+        "runtime_regression_warning"
+    ]
+    assert comparison.warnings[0].detail.startswith("median runtime increased 25.1%")
+
+    candidate_path = tmp_path / "pdf_candidate_benchmark.json"
+    candidate_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "generated_at": "2026-06-28T12:00:00+00:00",
+                "baseline_path": "baseline.json",
+                "output_root": "out/pdf_candidate_benchmark",
+                "iterations": 3,
+                "parallel_workers": 1,
+                "observations": [asdict(observation)],
+                "skipped_pdf_paths": [],
+                "comparison": {
+                    "passed": comparison.passed,
+                    "failures": [asdict(issue) for issue in comparison.failures],
+                    "warnings": [asdict(issue) for issue in comparison.warnings],
+                    "rows": [asdict(row) for row in comparison.rows],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = build_release_evidence_manifest(
+        artifact_inputs=(
+            ReleaseEvidenceArtifactInput(
+                name="pdf_candidate",
+                path=candidate_path,
+                expected_schema_version="1.0",
+            ),
+        ),
+        release_id="release-20260628",
+        commit_sha="a" * 40,
+        command_args=("manifest",),
+    )
+    manifest_path = tmp_path / "release_evidence_manifest.json"
+    write_release_evidence_manifest(manifest, manifest_path)
+    telemetry_path, benchmark_path, summary_path = _write_machine_evidence(tmp_path)
+
+    review = build_release_evidence_review(
+        manifest_paths=(manifest_path,),
+        test_telemetry_path=telemetry_path,
+        ci_performance_benchmark_path=benchmark_path,
+        executive_summary_path=summary_path,
+        generated_at="2026-06-28T13:00:00+00:00",
+        today="2026-06-28",
+    )
+    markdown = render_release_evidence_review_markdown(review)
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "warned"
+    assert manifest.artifacts[0].passed is True
+    assert review.passed is True
+    assert review.issue_count == 0
+    assert review.artifacts[0].status == "warned"
+    assert "| pdf_candidate | warned | yes | 0 | 0 |" in markdown
 
 
 def test_release_evidence_review_fails_without_mandatory_machine_inputs(

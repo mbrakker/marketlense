@@ -201,7 +201,9 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "coverage.xml" in workflow
 
 
-def test_failed_prerequisites_skip_release_setup_and_bundle_upload() -> None:
+def test_failed_prerequisites_stop_release_assembly_and_keep_upstream_artifacts() -> (
+    None
+):
     jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
         "jobs"
     ]
@@ -221,6 +223,24 @@ def test_failed_prerequisites_skip_release_setup_and_bundle_upload() -> None:
     ):
         step = next(step for step in steps if step.get("name") == step_name)
         assert step.get("if") is None
+
+    for job_name, upload_name in (
+        ("tests", "Upload pytest and coverage inputs"),
+        ("mutation", "Upload mutation partition result"),
+    ):
+        upload_step = next(
+            step for step in jobs[job_name]["steps"] if step.get("name") == upload_name
+        )
+        assert upload_step["if"] == "always()"
+
+    bundle_step = next(
+        step for step in steps if step.get("name") == "Upload release evidence bundle"
+    )
+    assert "steps.check_full_ci_prerequisites.outcome == 'success'" in bundle_step["if"]
+    merge_step = next(
+        step for step in steps if step.get("name") == "Merge mutation partition results"
+    )
+    assert "always()" not in merge_step.get("if", "")
 
     for step in steps[1:]:
         condition = step.get("if", "")
