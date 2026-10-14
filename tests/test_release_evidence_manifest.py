@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,15 @@ from scripts.quality.release_evidence_manifest import (
     main,
     write_release_evidence_manifest,
 )
+from scripts.quality.pdf_candidate_benchmark import (
+    DEFAULT_BASELINE_PATH,
+    PdfCandidateBenchmarkObservation,
+    ROOT as PDF_BENCHMARK_ROOT,
+    compare_benchmark_observations,
+    load_benchmark_baseline,
+)
+
+PDF_CANDIDATE_BASELINE_PATH = Path(DEFAULT_BASELINE_PATH)
 
 
 def _pdf_candidate_row(**overrides: object) -> dict[str, object]:
@@ -36,16 +46,29 @@ def _pdf_candidate_row(**overrides: object) -> dict[str, object]:
 def _pdf_candidate_manifest(
     tmp_path: Path,
     *,
-    comparison: dict[str, object],
+    comparison: dict[str, object] | None = None,
+    observations: list[dict[str, object]] | None = None,
     skipped_pdf_paths: list[str] | None = None,
+    baseline_path: str | None = None,
 ) -> ReleaseEvidenceManifest:
+    default_observations, default_comparison = _pdf_candidate_evidence()
     candidate_path = tmp_path / "pdf_candidate_benchmark.json"
     candidate_path.write_text(
         json.dumps(
             {
                 "schema_version": "1.0",
+                "baseline_path": baseline_path
+                or str((PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH).resolve()),
+                "iterations": 3,
+                "parallel_workers": 1,
+                "output_root": str(tmp_path / "pdf_candidate_benchmark"),
+                "observations": (
+                    default_observations if observations is None else observations
+                ),
                 "skipped_pdf_paths": skipped_pdf_paths or [],
-                "comparison": comparison,
+                "comparison": (
+                    default_comparison if comparison is None else comparison
+                ),
             }
         ),
         encoding="utf-8",
@@ -65,11 +88,69 @@ def _pdf_candidate_manifest(
     )
 
 
+def _pdf_candidate_evidence(
+    *,
+    global_food_median_seconds: float | None = None,
+    fail_on_runtime_regression: bool = False,
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    baseline_entries = load_benchmark_baseline(
+        PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH
+    )
+    observations = tuple(
+        PdfCandidateBenchmarkObservation(
+            pdf_path=entry.pdf_path,
+            report_name=entry.report_name,
+            candidate_count=entry.expected_candidate_count,
+            signature=entry.expected_signature,
+            degraded_page_count=entry.expected_degraded_page_count,
+            durations_seconds=(
+                entry.baseline_median_seconds,
+                entry.baseline_median_seconds,
+                entry.baseline_median_seconds,
+            )
+            if (
+                global_food_median_seconds is None
+                or entry.report_name != "2026_Global_Food_and_Drink_Predictions"
+            )
+            else (
+                global_food_median_seconds,
+                global_food_median_seconds,
+                global_food_median_seconds,
+            ),
+            median_seconds=(
+                entry.baseline_median_seconds
+                if (
+                    global_food_median_seconds is None
+                    or entry.report_name != "2026_Global_Food_and_Drink_Predictions"
+                )
+                else global_food_median_seconds
+            ),
+            pdf_sha256=entry.expected_pdf_sha256,
+        )
+        for entry in baseline_entries
+    )
+    comparison = compare_benchmark_observations(
+        baseline_entries=baseline_entries,
+        observations=observations,
+        fail_on_runtime_regression=fail_on_runtime_regression,
+    )
+    return (
+        [asdict(observation) for observation in observations],
+        {
+            "passed": comparison.passed,
+            "failures": [asdict(issue) for issue in comparison.failures],
+            "warnings": [asdict(issue) for issue in comparison.warnings],
+            "rows": [asdict(row) for row in comparison.rows],
+        },
+    )
+
+
 def test_release_evidence_manifest_orders_and_summarizes_artifacts(
     tmp_path: Path,
 ) -> None:
     health_path = tmp_path / "run_health_scorecard.json"
     candidate_path = tmp_path / "pdf_candidate_benchmark.json"
+    observations, comparison = _pdf_candidate_evidence()
     health_path.write_text(
         json.dumps(
             {
@@ -87,13 +168,15 @@ def test_release_evidence_manifest_orders_and_summarizes_artifacts(
         json.dumps(
             {
                 "schema_version": "1.0",
+                "baseline_path": str(
+                    (PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH).resolve()
+                ),
+                "iterations": 3,
+                "parallel_workers": 1,
+                "output_root": str(tmp_path / "pdf_candidate_benchmark"),
+                "observations": observations,
                 "skipped_pdf_paths": [],
-                "comparison": {
-                    "passed": True,
-                    "failures": [],
-                    "warnings": [],
-                    "rows": [_pdf_candidate_row()],
-                },
+                "comparison": comparison,
             }
         ),
         encoding="utf-8",
@@ -292,19 +375,13 @@ def test_release_evidence_manifest_flags_warning_payloads(tmp_path: Path) -> Non
 def test_release_evidence_manifest_accepts_only_pdf_runtime_advisories(
     tmp_path: Path,
 ) -> None:
-    warning = {
-        "pdf_path": "cache/benchmark/report.pdf",
-        "reason": "runtime_regression_warning",
-        "detail": "median runtime increased 25.1% (1.150s -> 1.439s)",
-    }
+    observations, comparison = _pdf_candidate_evidence(
+        global_food_median_seconds=1.43865
+    )
     manifest = _pdf_candidate_manifest(
         tmp_path,
-        comparison={
-            "passed": True,
-            "failures": [],
-            "warnings": [warning],
-            "rows": [_pdf_candidate_row(status="warned")],
-        },
+        comparison=comparison,
+        observations=observations,
     )
 
     assert manifest.passed is True
@@ -316,20 +393,11 @@ def test_release_evidence_manifest_accepts_only_pdf_runtime_advisories(
 def test_release_evidence_manifest_accepts_lenient_runtime_failure_warning(
     tmp_path: Path,
 ) -> None:
+    observations, comparison = _pdf_candidate_evidence(global_food_median_seconds=2.1)
     manifest = _pdf_candidate_manifest(
         tmp_path,
-        comparison={
-            "passed": True,
-            "failures": [],
-            "warnings": [
-                {
-                    "pdf_path": "cache/benchmark/report.pdf",
-                    "reason": "runtime_regression_failure",
-                    "detail": "runtime failure threshold exceeded in advisory mode",
-                }
-            ],
-            "rows": [_pdf_candidate_row(status="warned")],
-        },
+        comparison=comparison,
+        observations=observations,
     )
 
     assert manifest.passed is True
@@ -432,6 +500,98 @@ def test_release_evidence_manifest_blocks_pdf_candidate_row_mismatches(
             "warnings": [],
             "rows": [],
         },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [
+                _pdf_candidate_row(
+                    expected_candidate_count=-1,
+                    actual_candidate_count=-1,
+                )
+            ],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [
+                _pdf_candidate_row(
+                    expected_degraded_page_count=-1,
+                    actual_degraded_page_count=-1,
+                )
+            ],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row(), _pdf_candidate_row()],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "runtime increased above warning threshold",
+                },
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_failure",
+                    "detail": "runtime increased above failure threshold",
+                },
+            ],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "runtime increased above warning threshold",
+                },
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "duplicate warning entry",
+                },
+            ],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/report.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "runtime increased above warning threshold",
+                }
+            ],
+            "rows": [_pdf_candidate_row(status="passed")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [],
+            "rows": [_pdf_candidate_row(status="warned")],
+        },
+        {
+            "passed": True,
+            "failures": [],
+            "warnings": [
+                {
+                    "pdf_path": "cache/benchmark/other.pdf",
+                    "reason": "runtime_regression_warning",
+                    "detail": "runtime increased above warning threshold",
+                }
+            ],
+            "rows": [_pdf_candidate_row()],
+        },
     ],
 )
 def test_release_evidence_manifest_fails_closed_for_invalid_pdf_comparisons(
@@ -456,6 +616,86 @@ def test_release_evidence_manifest_rejects_missing_pdf_candidate_inputs(
             "rows": [_pdf_candidate_row()],
         },
         skipped_pdf_paths=["cache/benchmark/missing.pdf"],
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+
+
+@pytest.mark.parametrize(
+    "observations",
+    [
+        [],
+        _pdf_candidate_evidence()[0][:-1],
+        [*_pdf_candidate_evidence()[0], _pdf_candidate_evidence()[0][0]],
+    ],
+    ids=("missing-all", "missing-baseline-pdf", "duplicate-pdf"),
+)
+def test_release_evidence_manifest_rejects_incomplete_pdf_observations(
+    tmp_path: Path,
+    observations: list[dict[str, object]],
+) -> None:
+    manifest = _pdf_candidate_manifest(tmp_path, observations=observations)
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+
+
+def test_release_evidence_manifest_rejects_noncanonical_pdf_baseline(
+    tmp_path: Path,
+) -> None:
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        baseline_path="baseline.json",
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("candidate_count", -1),
+        ("degraded_page_count", -1),
+        ("durations_seconds", []),
+        ("durations_seconds", [9.0, 9.0, 9.0]),
+        ("median_seconds", "not-a-number"),
+    ],
+)
+def test_release_evidence_manifest_rejects_malformed_pdf_observations(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    observations, comparison = _pdf_candidate_evidence()
+    observations[0] = {**observations[0], field: value}
+
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        observations=observations,
+        comparison=comparison,
+    )
+
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+
+
+def test_release_evidence_manifest_rejects_self_consistent_forged_pdf_row(
+    tmp_path: Path,
+) -> None:
+    observations, comparison = _pdf_candidate_evidence()
+    rows = list(comparison["rows"])
+    first_row = dict(rows[0])
+    first_row["expected_candidate_count"] = 99
+    first_row["actual_candidate_count"] = 99
+    rows[0] = first_row
+    comparison["rows"] = rows
+
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        observations=observations,
+        comparison=comparison,
     )
 
     assert manifest.passed is False

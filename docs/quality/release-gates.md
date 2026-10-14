@@ -18,12 +18,17 @@ artifact. The release-evidence job requires both files and merges the recorded
 stage into the pytest/coverage command telemetry before checking the remaining
 release gates. A missing or failed candidate result prevents release approval.
 At manifest classification, the PDF candidate's own comparison must explicitly
-pass with no failures, no skipped inputs, consistent deterministic result rows,
-and only the recognized runtime advisory warning reasons. A valid advisory keeps
-the artifact `passed: true` with `status: warned`; the review displays that status
-while remaining approval-green. Unknown warnings, malformed or contradictory
-comparisons, deterministic mismatches, and strict runtime failures remain
-blocking. Other artifact types retain the general rule that warnings fail.
+pass with no failures or skipped inputs and use the checked-in canonical
+benchmark baseline. Every baseline PDF must have one unique observation and one
+comparison row; report names, nonnegative counts, iteration samples, and their
+reported median must agree. The manifest recomputes the comparison with the
+existing producer function and requires the supplied result to match exactly.
+Warnings must be recognized runtime advisories, unique by PDF, and correspond
+one-to-one with rows marked `warned`. A valid advisory keeps the artifact
+`passed: true` with `status: warned`; the review displays that status while
+remaining approval-green. Unknown warnings, duplicate paths, malformed or
+contradictory comparisons, deterministic mismatches, and strict runtime failures
+remain blocking. Other artifact types retain the general rule that warnings fail.
 
 The release-evidence job first checks the `ci_start`, `tests`, and `mutation`
 job results before checkout, Python setup, dependency installation, or artifact

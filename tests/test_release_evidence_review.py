@@ -5,20 +5,27 @@ from dataclasses import asdict
 from pathlib import Path
 
 from scripts.quality.pdf_candidate_benchmark import (
-    PdfCandidateBenchmarkBaselineEntry,
+    DEFAULT_BASELINE_PATH,
+    PdfCandidateBenchmarkComparison,
     PdfCandidateBenchmarkObservation,
+    ROOT as PDF_BENCHMARK_ROOT,
     compare_benchmark_observations,
+    load_benchmark_baseline,
 )
 from scripts.quality.release_evidence_manifest import (
     ReleaseEvidenceArtifactInput,
+    ReleaseEvidenceManifest,
     build_release_evidence_manifest,
     write_release_evidence_manifest,
 )
 from scripts.quality.release_evidence_review import (
+    ReleaseEvidenceReviewSummary,
     build_release_evidence_review,
     render_release_evidence_review_markdown,
     write_release_evidence_review,
 )
+
+PDF_CANDIDATE_BASELINE_PATH = Path(DEFAULT_BASELINE_PATH)
 
 REQUIRED_QUALITY_STAGES = (
     "coverage",
@@ -98,37 +105,89 @@ def test_release_evidence_review_summarizes_clean_manifest(tmp_path: Path) -> No
 def test_pdf_candidate_runtime_advisory_passes_manifest_and_review(
     tmp_path: Path,
 ) -> None:
-    baseline = PdfCandidateBenchmarkBaselineEntry(
-        pdf_path="cache/benchmark/report.pdf",
-        report_name="report",
-        expected_candidate_count=2,
-        expected_signature="candidate-signature",
-        expected_degraded_page_count=0,
-        baseline_median_seconds=1.150,
-        runtime_warn_percent=10.0,
-        runtime_fail_percent=50.0,
-        expected_pdf_sha256="a" * 64,
+    comparison, manifest, review, markdown = _build_pdf_candidate_review(
+        tmp_path,
+        observation_median_seconds=1.43865,
     )
-    observation = PdfCandidateBenchmarkObservation(
-        pdf_path="cache/benchmark/report.pdf",
-        report_name="report",
-        candidate_count=2,
-        signature="candidate-signature",
-        degraded_page_count=0,
-        durations_seconds=(1.43865, 1.43865, 1.43865),
-        median_seconds=1.43865,
-        pdf_sha256="a" * 64,
-    )
-    comparison = compare_benchmark_observations(
-        baseline_entries=(baseline,),
-        observations=(observation,),
-    )
+
     assert comparison.passed is True
     assert comparison.failures == ()
     assert [warning.reason for warning in comparison.warnings] == [
         "runtime_regression_warning"
     ]
     assert comparison.warnings[0].detail.startswith("median runtime increased 25.1%")
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "warned"
+    assert manifest.artifacts[0].passed is True
+    assert review.passed is True
+    assert review.issue_count == 0
+    assert review.artifacts[0].status == "warned"
+    assert "| pdf_candidate | warned | yes | 0 | 0 |" in markdown
+
+
+def test_pdf_candidate_strict_runtime_failure_blocks_manifest_and_review(
+    tmp_path: Path,
+) -> None:
+    comparison, manifest, review, _ = _build_pdf_candidate_review(
+        tmp_path,
+        observation_median_seconds=2.1,
+        fail_on_runtime_regression=True,
+    )
+
+    assert comparison.passed is False
+    assert [failure.reason for failure in comparison.failures] == [
+        "runtime_regression_failure"
+    ]
+    assert manifest.passed is False
+    assert manifest.artifacts[0].passed is False
+    assert review.passed is False
+
+
+def _build_pdf_candidate_review(
+    tmp_path: Path,
+    *,
+    observation_median_seconds: float,
+    fail_on_runtime_regression: bool = False,
+) -> tuple[
+    PdfCandidateBenchmarkComparison,
+    ReleaseEvidenceManifest,
+    ReleaseEvidenceReviewSummary,
+    str,
+]:
+    baseline_path = PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH
+    baseline_entries = load_benchmark_baseline(baseline_path)
+    observations = tuple(
+        PdfCandidateBenchmarkObservation(
+            pdf_path=entry.pdf_path,
+            report_name=entry.report_name,
+            candidate_count=entry.expected_candidate_count,
+            signature=entry.expected_signature,
+            degraded_page_count=entry.expected_degraded_page_count,
+            durations_seconds=(
+                observation_median_seconds,
+                observation_median_seconds,
+                observation_median_seconds,
+            )
+            if entry.report_name == "2026_Global_Food_and_Drink_Predictions"
+            else (
+                entry.baseline_median_seconds,
+                entry.baseline_median_seconds,
+                entry.baseline_median_seconds,
+            ),
+            median_seconds=(
+                observation_median_seconds
+                if entry.report_name == "2026_Global_Food_and_Drink_Predictions"
+                else entry.baseline_median_seconds
+            ),
+            pdf_sha256=entry.expected_pdf_sha256,
+        )
+        for entry in baseline_entries
+    )
+    comparison = compare_benchmark_observations(
+        baseline_entries=baseline_entries,
+        observations=observations,
+        fail_on_runtime_regression=fail_on_runtime_regression,
+    )
 
     candidate_path = tmp_path / "pdf_candidate_benchmark.json"
     candidate_path.write_text(
@@ -136,11 +195,11 @@ def test_pdf_candidate_runtime_advisory_passes_manifest_and_review(
             {
                 "schema_version": "1.0",
                 "generated_at": "2026-06-28T12:00:00+00:00",
-                "baseline_path": "baseline.json",
+                "baseline_path": str(baseline_path.resolve()),
                 "output_root": "out/pdf_candidate_benchmark",
                 "iterations": 3,
                 "parallel_workers": 1,
-                "observations": [asdict(observation)],
+                "observations": [asdict(observation) for observation in observations],
                 "skipped_pdf_paths": [],
                 "comparison": {
                     "passed": comparison.passed,
@@ -178,13 +237,7 @@ def test_pdf_candidate_runtime_advisory_passes_manifest_and_review(
     )
     markdown = render_release_evidence_review_markdown(review)
 
-    assert manifest.passed is True
-    assert manifest.artifacts[0].status == "warned"
-    assert manifest.artifacts[0].passed is True
-    assert review.passed is True
-    assert review.issue_count == 0
-    assert review.artifacts[0].status == "warned"
-    assert "| pdf_candidate | warned | yes | 0 | 0 |" in markdown
+    return comparison, manifest, review, markdown
 
 
 def test_release_evidence_review_fails_without_mandatory_machine_inputs(
