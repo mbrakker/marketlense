@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -550,15 +551,17 @@ def _pdf_candidate_comparison_matches_canonical_baseline(
     ):
         return False
 
-    baseline_path = Path(baseline_path_text)
-    if not baseline_path.is_absolute():
-        baseline_path = ROOT / baseline_path
+    path_parts = PurePosixPath(baseline_path_text.replace("\\", "/")).parts
+    canonical_path_parts = PurePosixPath(DEFAULT_BASELINE_PATH).parts
+    if (
+        ".." in path_parts
+        or path_parts[-len(canonical_path_parts) :] != canonical_path_parts
+    ):
+        return False
     canonical_baseline_path = (ROOT / DEFAULT_BASELINE_PATH).resolve()
     try:
-        if baseline_path.resolve() != canonical_baseline_path:
-            return False
         baseline_entries = load_benchmark_baseline(canonical_baseline_path)
-    except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
+    except (OSError, TypeError, ValueError, KeyError):
         return False
 
     baseline_by_path = {entry.pdf_path: entry for entry in baseline_entries}
@@ -611,7 +614,11 @@ def _pdf_candidate_comparison_matches_canonical_baseline(
                 for duration in durations_seconds
             )
             or not _nonnegative_finite_number(median_seconds)
-            or round(float(statistics.median(durations_seconds)), 6) != median_seconds
+            # The producer rounds each sample and the median independently.
+            or abs(
+                round(float(statistics.median(durations_seconds)), 6) - median_seconds
+            )
+            > 1.001e-6
             or not isinstance(pdf_sha256, str)
             or not pdf_sha256
         ):

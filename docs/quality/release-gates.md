@@ -20,9 +20,11 @@ release gates. A missing or failed candidate result prevents release approval.
 At manifest classification, the PDF candidate's own comparison must explicitly
 pass with no failures or skipped inputs and use the checked-in canonical
 benchmark baseline. Every baseline PDF must have one unique observation and one
-comparison row; report names, nonnegative counts, iteration samples, and their
-reported median must agree. The manifest recomputes the comparison with the
-existing producer function and requires the supplied result to match exactly.
+comparison row; report names, nonnegative counts, and sample counts must agree.
+The reported median must match the serialized samples within one microsecond,
+allowing for the producer's separate six-decimal rounding of raw samples and
+their median. The manifest recomputes the comparison with the existing producer
+function and requires the supplied result to match exactly.
 Warnings must be recognized runtime advisories, unique by PDF, and correspond
 one-to-one with rows marked `warned`. A valid advisory keeps the artifact
 `passed: true` with `status: warned`; the review displays that status while

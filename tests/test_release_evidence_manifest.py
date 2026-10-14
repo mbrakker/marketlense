@@ -50,6 +50,7 @@ def _pdf_candidate_manifest(
     observations: list[dict[str, object]] | None = None,
     skipped_pdf_paths: list[str] | None = None,
     baseline_path: str | None = None,
+    iterations: int = 3,
 ) -> ReleaseEvidenceManifest:
     default_observations, default_comparison = _pdf_candidate_evidence()
     candidate_path = tmp_path / "pdf_candidate_benchmark.json"
@@ -59,7 +60,7 @@ def _pdf_candidate_manifest(
                 "schema_version": "1.0",
                 "baseline_path": baseline_path
                 or str((PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH).resolve()),
-                "iterations": 3,
+                "iterations": iterations,
                 "parallel_workers": 1,
                 "output_root": str(tmp_path / "pdf_candidate_benchmark"),
                 "observations": (
@@ -92,43 +93,39 @@ def _pdf_candidate_evidence(
     *,
     global_food_median_seconds: float | None = None,
     fail_on_runtime_regression: bool = False,
+    rounding_boundary: bool = False,
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
     baseline_entries = load_benchmark_baseline(
         PDF_BENCHMARK_ROOT / PDF_CANDIDATE_BASELINE_PATH
     )
-    observations = tuple(
-        PdfCandidateBenchmarkObservation(
-            pdf_path=entry.pdf_path,
-            report_name=entry.report_name,
-            candidate_count=entry.expected_candidate_count,
-            signature=entry.expected_signature,
-            degraded_page_count=entry.expected_degraded_page_count,
-            durations_seconds=(
-                entry.baseline_median_seconds,
-                entry.baseline_median_seconds,
-                entry.baseline_median_seconds,
+    observation_values: list[PdfCandidateBenchmarkObservation] = []
+    for index, entry in enumerate(baseline_entries):
+        is_global_food = entry.report_name == "2026_Global_Food_and_Drink_Predictions"
+        if rounding_boundary and index == 0:
+            durations = (2.240724, 2.006241)
+            median_seconds = 2.123482
+        elif rounding_boundary:
+            durations = (entry.baseline_median_seconds,) * 2
+            median_seconds = entry.baseline_median_seconds
+        elif global_food_median_seconds is not None and is_global_food:
+            durations = (global_food_median_seconds,) * 3
+            median_seconds = global_food_median_seconds
+        else:
+            durations = (entry.baseline_median_seconds,) * 3
+            median_seconds = entry.baseline_median_seconds
+        observation_values.append(
+            PdfCandidateBenchmarkObservation(
+                pdf_path=entry.pdf_path,
+                report_name=entry.report_name,
+                candidate_count=entry.expected_candidate_count,
+                signature=entry.expected_signature,
+                degraded_page_count=entry.expected_degraded_page_count,
+                durations_seconds=durations,
+                median_seconds=median_seconds,
+                pdf_sha256=entry.expected_pdf_sha256,
             )
-            if (
-                global_food_median_seconds is None
-                or entry.report_name != "2026_Global_Food_and_Drink_Predictions"
-            )
-            else (
-                global_food_median_seconds,
-                global_food_median_seconds,
-                global_food_median_seconds,
-            ),
-            median_seconds=(
-                entry.baseline_median_seconds
-                if (
-                    global_food_median_seconds is None
-                    or entry.report_name != "2026_Global_Food_and_Drink_Predictions"
-                )
-                else global_food_median_seconds
-            ),
-            pdf_sha256=entry.expected_pdf_sha256,
         )
-        for entry in baseline_entries
-    )
+    observations = tuple(observation_values)
     comparison = compare_benchmark_observations(
         baseline_entries=baseline_entries,
         observations=observations,
@@ -143,6 +140,39 @@ def _pdf_candidate_evidence(
             "rows": [asdict(row) for row in comparison.rows],
         },
     )
+
+
+def test_release_evidence_manifest_accepts_producer_rounding_boundary(
+    tmp_path: Path,
+) -> None:
+    observations, comparison = _pdf_candidate_evidence(rounding_boundary=True)
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison=comparison,
+        observations=observations,
+        iterations=2,
+    )
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "passed"
+
+
+def test_release_evidence_manifest_accepts_runner_absolute_canonical_baseline(
+    tmp_path: Path,
+) -> None:
+    observations, comparison = _pdf_candidate_evidence()
+    manifest = _pdf_candidate_manifest(
+        tmp_path,
+        comparison=comparison,
+        observations=observations,
+        baseline_path=(
+            "/home/runner/work/marketlense/marketlense/"
+            "docs/quality/pdf_candidate_extraction_benchmark_baseline.json"
+        ),
+    )
+
+    assert manifest.passed is True
+    assert manifest.artifacts[0].status == "passed"
 
 
 def test_release_evidence_manifest_orders_and_summarizes_artifacts(
