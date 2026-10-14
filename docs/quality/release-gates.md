@@ -17,6 +17,13 @@ single-stage timing telemetry travel in that partition's run- and attempt-scoped
 artifact. The release-evidence job requires both files and merges the recorded
 stage into the pytest/coverage command telemetry before checking the remaining
 release gates. A missing or failed candidate result prevents release approval.
+At manifest classification, the PDF candidate's own comparison must explicitly
+pass with no failures, no skipped inputs, consistent deterministic result rows,
+and only the recognized runtime advisory warning reasons. A valid advisory keeps
+the artifact `passed: true` with `status: warned`; the review displays that status
+while remaining approval-green. Unknown warnings, malformed or contradictory
+comparisons, deterministic mismatches, and strict runtime failures remain
+blocking. Other artifact types retain the general rule that warnings fail.
 
 The release-evidence job first checks the `ci_start`, `tests`, and `mutation`
 job results before checkout, Python setup, dependency installation, or artifact
@@ -45,17 +52,18 @@ pytest or mutation prerequisite fails, no release bundle is uploaded.
 
 ## GitHub merge enforcement
 
-The `ci` workflow runs for both `push` and `pull_request` and exposes a separate
-`tests` status check. If merge enforcement is enabled, require that check and
-require the branch to be current with its base before merging. GitHub
-repository settings are the merge authority and cannot be enforced by this
-checkout. On 2026-10-14, the GitHub branch-protection API reported `main` as
-unprotected, and the repository had no rulesets; therefore CI failures were
-visible on pull requests but were not enforced as merge-blocking checks.
-Enable a branch-protection rule or ruleset when that enforcement is intended.
-Require pull requests as part of the same rule when direct pushes must be
-prevented. Enable required code-owner review separately if the repository
-intends the existing `CODEOWNERS` file to be a merge requirement.
+The `ci` workflow runs for both `push` and `pull_request`. On 2026-10-14,
+GitHub branch protection was enabled for `main` and read back through the
+repository API: the required status context is `release_evidence`, the branch
+must be current with its base, and enforcement includes administrators. The
+check name was verified against a successful PR run. The release-evidence job
+waits for `ci_start`, `tests`, and `mutation`, then fails unless release assembly
+and review pass, so this required check covers the full validation path rather
+than pytest alone. No repository rulesets were present. This change does not
+require PRs or restrict who can push directly; configure those separately if
+direct updates to `main` must also be prevented. Enable required code-owner
+review separately if the repository intends the existing `CODEOWNERS` file to
+be a merge requirement.
 
 Repository hygiene exceptions are temporary migration tools, not permanent
 storage policy. Generated screenshots belong in ignored runtime output or, when

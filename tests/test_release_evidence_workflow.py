@@ -201,9 +201,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "coverage.xml" in workflow
 
 
-def test_failed_prerequisites_stop_release_assembly_and_keep_upstream_artifacts() -> (
-    None
-):
+def test_failed_prerequisites_skip_release_setup_and_bundle_upload() -> None:
     jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
         "jobs"
     ]
