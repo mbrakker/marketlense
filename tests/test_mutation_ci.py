@@ -375,7 +375,7 @@ def test_mutation_ci_workflow_overlaps_tests_with_two_isolated_workers() -> None
         if step.get("name")
         == "Run default pytest suite with coverage and timing telemetry"
     )
-    assert "-n 6 --dist=worksteal" in pytest_step["run"]
+    assert "-n 4 --dist=worksteal" in pytest_step["run"]
     mutation_script = "\n".join(
         step.get("run", "") for step in jobs["mutation"]["steps"]
     )

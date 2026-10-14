@@ -91,7 +91,7 @@ jobs:
           WP_STAGING_SIGNAL_ARTIFACT: ${{ vars.WP_STAGING_SIGNAL_ARTIFACT }}
         run: python scripts/ci/check_wordpress_staging_rest_gate.py
       - name: Run default pytest suite with coverage and timing telemetry
-        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha "${GITHUB_SHA}" --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -- -n 6 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
+        run: python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha "${GITHUB_SHA}" --evidence-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -- -n 4 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing
       - name: Coverage gate
         run: python scripts/quality/run_command_with_telemetry.py --output-json out/quality_command_telemetry_ci.json --stage coverage -- python scripts/ci/check_coverage.py --coverage-xml coverage.xml
       - name: Upload pytest and coverage inputs
@@ -323,7 +323,7 @@ jobs:
             --expected-schema workflow_queue_evidence=1.0 \
             --artifact-command coverage="python scripts/ci/check_coverage.py --coverage-xml coverage.xml" \
             --artifact-command mutation="python scripts/ci/merge_mutation_partitions.py --partition-dir out/mutation-partitions --partition-count 2 --expected-sha ${GITHUB_SHA} --expected-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} --worker-conclusion success --quality-command-telemetry out/quality_command_telemetry_ci.json --output-json mutation_results.json" \
-            --artifact-command test_telemetry="python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha ${GITHUB_SHA} --evidence-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} -- -n 6 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing" \
+            --artifact-command test_telemetry="python scripts/quality/run_pytest_with_telemetry.py --output-json out/test_telemetry_ci.json --repository-commit-sha ${GITHUB_SHA} --evidence-run-id ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT} -- -n 4 --dist=worksteal --cov=src --cov-report=xml --cov-report=term-missing" \
             --artifact-command ci_performance_benchmark="python scripts/quality/build_ci_performance_benchmark.py --test-telemetry out/test_telemetry_ci.json --command-telemetry out/quality_command_telemetry_ci.json --output-json out/ci_performance_benchmark.json" \
             --artifact-command pdf_candidate="python scripts/ci/check_pdf_candidate_benchmark.py --baseline docs/quality/pdf_candidate_extraction_benchmark_baseline.json --output-json out/pdf_candidate_benchmark_ci.json" \
             --artifact-command pdf_crop_refine="python scripts/ci/check_pdf_crop_refine_benchmark.py --baseline docs/quality/pdf_crop_refine_benchmark_baseline.json --output-json out/pdf_crop_refine_benchmark_ci.json" \
