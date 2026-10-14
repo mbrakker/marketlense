@@ -228,6 +228,26 @@ def test_failed_prerequisites_skip_release_setup_and_bundle_upload() -> None:
             assert "steps.check_full_ci_prerequisites.outcome == 'success'" in condition
 
 
+def test_release_evidence_fetches_only_head_while_diff_gates_keep_full_history() -> (
+    None
+):
+    jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
+        "jobs"
+    ]
+
+    def checkout_depth(job_name: str) -> int:
+        checkout = next(
+            step
+            for step in jobs[job_name]["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        return checkout["with"]["fetch-depth"]
+
+    assert checkout_depth("release_evidence") == 1
+    assert checkout_depth("tests") == 0
+    assert checkout_depth("mutation") == 0
+
+
 def test_pdf_candidate_gate_runs_in_existing_partition_and_is_required_evidence() -> (
     None
 ):
