@@ -40,6 +40,7 @@ def _full_ci_prerequisite_program() -> tuple[str, dict[str, object]]:
         ),
         (("success", "", "success"), 1, "- `tests` job: `missing`"),
         (("success", "success", ""), 1, "- `mutation` job: `missing`"),
+        (("success", "skipped", "success"), 1, "- `tests` job: `skipped`"),
         (
             ("success", "success", "cancelled"),
             1,
@@ -61,6 +62,11 @@ def test_release_evidence_prerequisite_gate_handles_all_job_outcomes(
     program, gate = _full_ci_prerequisite_program()
     assert gate.get("if") == "always()"
     assert gate.get("id") == "check_full_ci_prerequisites"
+    assert gate["env"] == {
+        "CI_START_RESULT": "${{ needs.ci_start.result }}",
+        "TEST_JOB_RESULT": "${{ needs.tests.result }}",
+        "MUTATION_JOB_RESULT": "${{ needs.mutation.result }}",
+    }
     summary = tmp_path / "step-summary.md"
     environment = os.environ.copy()
     environment.update(

@@ -333,7 +333,10 @@ def test_ci_builds_benchmark_even_when_test_telemetry_is_absent() -> None:
     builder_step = workflow.split("- name: Build CI performance benchmark\n", 1)[1]
     builder_step = builder_step.split("      - name:", 1)[0]
 
-    assert "if: ${{ always() }}" in builder_step
+    assert (
+        "if: ${{ always() && steps.check_full_ci_prerequisites.outcome == 'success' }}"
+        in builder_step
+    )
     assert "hashFiles('out/test_telemetry_ci.json')" not in builder_step
 
 
