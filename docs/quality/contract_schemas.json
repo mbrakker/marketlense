@@ -26117,6 +26117,9 @@
         },
         "source_container_file_name": {
           "type": "string"
+        },
+        "source_member_file_name": {
+          "type": "string"
         }
       },
       "required": [

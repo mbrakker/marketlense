@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import re
+import stat
 import struct
 import zipfile
 import zlib
@@ -20,21 +21,22 @@ from pathlib import Path
 from typing import Any, Callable, cast
 from uuid import uuid4
 
+import httplib2
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
 from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
-import httplib2
 
+from src.contracts.files import WriteBytesRequest
 from src.contracts.mailbox_acquisition import (
+    MailboxAccessPreflightResponse,
     MailboxAcquisitionSettings,
     MailboxAttachment,
     MailboxAttachmentArtifact,
     MailboxAttachmentFailure,
     MailboxAttachmentMaterializeRequest,
     MailboxAttachmentMaterializeResponse,
-    MailboxAccessPreflightResponse,
     MailboxLinkReference,
     MailboxMessage,
     MailboxSearchRequest,
@@ -48,6 +50,7 @@ from src.contracts.run_budget import (
     RunBudgetUsage,
 )
 from src.contracts.run_context import RunContext
+from src.services import file_service
 from src.services.llm_usage_ledger_service import (
     evaluate_budget_request,
     finalize_budget_side_effect,
@@ -75,6 +78,20 @@ _WINDOWS_COMPONENT_LENGTH_BUDGET = 255
 _MAILBOX_MESSAGE_COMPONENT_MAX_LENGTH = 64
 _MAILBOX_PDF_COMPONENT_MAX_LENGTH = 96
 _MAILBOX_HASH_SUFFIX_LENGTH = 13
+_MAILBOX_HASH_SUFFIX_RX = re.compile(
+    rf"(?:^|-)[0-9a-f]{{{_MAILBOX_HASH_SUFFIX_LENGTH - 1}}}$",
+    re.IGNORECASE,
+)
+_WINDOWS_RESERVED_COMPONENT_BASES = {
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    *(f"com{index}" for index in range(1, 10)),
+    *(f"com{superscript}" for superscript in ("¹", "²", "³")),
+    *(f"lpt{index}" for index in range(1, 10)),
+    *(f"lpt{superscript}" for superscript in ("¹", "²", "³")),
+}
 _MAILBOX_ZIP_TEMP_COMPONENT_LENGTH = len("." + "0" * 32 + ".tmp")
 _MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES = {
     "mailbox_attachment_too_large",
@@ -87,6 +104,7 @@ _MAILBOX_ATTACHMENT_CANDIDATE_ERROR_CODES = {
     "mailbox_zip_member_count_exceeded",
     "mailbox_zip_member_read_failed",
     "mailbox_zip_member_size_exceeded",
+    "mailbox_zip_output_conflict",
     "mailbox_zip_pdf_count_exceeded",
     "mailbox_zip_total_size_exceeded",
     "mailbox_zip_unsupported_compression",
@@ -709,7 +727,9 @@ def _search_imap_messages(
                 (item, f"{message_id_prefix}{uid_validity}:{item.decode('ascii')}")
                 for item in reversed(ids)
                 if item.isdigit()
-                and f"{message_id_prefix}{uid_validity}:{item.decode('ascii')}".casefold()
+                and (
+                    f"{message_id_prefix}{uid_validity}:{item.decode('ascii')}".casefold()
+                )
                 not in seen_ids
             ][: settings.max_results]
             messages: list[MailboxMessage] = []
@@ -1079,18 +1099,108 @@ def _materialize_attachment(
                 message="Mailbox PDF attachment exceeds the supported size",
                 retryable=False,
             )
+        source_file_name = str(attachment.file_name or "")
+        identity_output_file_name = source_file_name
+        if not lower_name.endswith(".pdf"):
+            identity_output_file_name = f"{identity_output_file_name}.pdf"
         output_file_name = planned_pdf_file_name
         if output_file_name is None:
-            output_file_name = str(attachment.file_name or "")
-            if not lower_name.endswith(".pdf"):
-                output_file_name = f"{output_file_name}.pdf"
+            _, _, pdf_component_length = _mailbox_artifact_component_limits(
+                request.settings
+            )
+            output_file_name = _bounded_pdf_file_name(
+                identity_output_file_name,
+                max_length=pdf_component_length,
+            )
         path = _artifact_path(
             settings=request.settings,
             provider_message_id=request.provider_message_id,
             file_name=output_file_name,
         )
+        if path.name != output_file_name:
+            _, _, pdf_component_length = _mailbox_artifact_component_limits(
+                request.settings
+            )
+            output_file_name = _direct_pdf_identity_file_name(
+                source_file_name,
+                identity_output_file_name,
+                attachment.payload,
+                max_length=pdf_component_length,
+            )
+            if output_file_name.casefold() == path.name.casefold():
+                raise AppError(
+                    code="mailbox_attachment_output_collision",
+                    message=(
+                        "Mailbox PDF destination aliases a different "
+                        "attachment identity"
+                    ),
+                    retryable=False,
+                    context={
+                        "next_action": (
+                            "Preserve unique attachment names and verify the existing "
+                            "artifact before retrying"
+                        )
+                    },
+                )
+            path = _artifact_path(
+                settings=request.settings,
+                provider_message_id=request.provider_message_id,
+                file_name=output_file_name,
+            )
+            if path.name != output_file_name:
+                raise AppError(
+                    code="mailbox_attachment_output_collision",
+                    message=(
+                        "Mailbox PDF destination aliases a different "
+                        "attachment identity"
+                    ),
+                    retryable=False,
+                    context={
+                        "next_action": (
+                            "Preserve unique attachment names and verify the existing "
+                            "artifact before retrying"
+                        )
+                    },
+                )
         try:
-            path.write_bytes(attachment.payload)
+            file_service.write_bytes(
+                WriteBytesRequest(
+                    schema_version="1.0",
+                    path=str(path),
+                    content=attachment.payload,
+                    make_parents=False,
+                ),
+                ctx,
+                reject_conflicting_existing=True,
+            )
+        except AppError as exc:
+            if exc.code == "file_write_conflict":
+                raise AppError(
+                    code="mailbox_attachment_output_collision",
+                    message=(
+                        "Mailbox PDF destination already contains a different artifact"
+                    ),
+                    cause=exc,
+                    retryable=False,
+                    context={
+                        "next_action": (
+                            "Preserve unique attachment names or verify the existing "
+                            "artifact before retrying"
+                        )
+                    },
+                ) from exc
+            raise AppError(
+                code="mailbox_attachment_write_failed",
+                message="Mailbox PDF attachment could not be written under output_dir",
+                cause=exc,
+                retryable=False,
+                context={
+                    "next_action": (
+                        "Check output_dir permissions and available space; shorten "
+                        "the configured path if needed"
+                    )
+                },
+            ) from exc
         except OSError as exc:
             raise AppError(
                 code="mailbox_attachment_write_failed",
@@ -1166,7 +1276,7 @@ def _materialize_zip_pdfs(
                 retryable=False,
             )
 
-        pdf_members: list[tuple[zipfile.ZipInfo, str, str]] = []
+        pdf_members: list[tuple[zipfile.ZipInfo, str, str, str]] = []
         output_names: set[str] = set()
         pdf_component_length: int | None = None
         declared_total_bytes = 0
@@ -1240,52 +1350,172 @@ def _materialize_zip_pdfs(
                     retryable=False,
                 )
             output_names.add(folded_file_name)
-            pdf_members.append((member, raw_file_name, file_name))
+            pdf_members.append((member, member.filename, raw_file_name, file_name))
 
-        materialized: list[tuple[str, bytes]] = []
+        materialized: list[tuple[str, str, bytes]] = []
         actual_total_bytes = 0
         try:
-            for member, _, file_name in pdf_members:
+            for member, source_member_file_name, _, file_name in pdf_members:
                 payload = _read_zip_member_bounded(
                     archive,
                     member,
                     total_bytes_read=actual_total_bytes,
                 )
                 actual_total_bytes += len(payload)
-                materialized.append((file_name, payload))
+                materialized.append((file_name, source_member_file_name, payload))
         except AppError:
             raise
 
     artifacts: list[MailboxAttachmentArtifact] = []
-    staged: list[tuple[Path, Path, str, int, bool]] = []
-    committed_paths: set[Path] = set()
+    staged: list[tuple[Path, Path, str, str, bytes]] = []
     try:
-        for file_name, payload in materialized:
+        planned_outputs: list[tuple[Path, str, str, bytes, bool]] = []
+        for file_name, source_member_file_name, payload in materialized:
             path = _artifact_path(
                 settings=request.settings,
                 provider_message_id=request.provider_message_id,
                 file_name=file_name,
             )
+            if path.name != file_name:
+                raise _mailbox_zip_output_conflict()
+            try:
+                aliases = [
+                    existing
+                    for existing in path.parent.iterdir()
+                    if existing.name.casefold() == file_name.casefold()
+                ]
+            except OSError as exc:
+                raise AppError(
+                    code="mailbox_zip_write_failed",
+                    message=(
+                        "Mailbox ZIP PDF artifacts could not be written "
+                        "atomically: "
+                        "destination could not be checked safely"
+                    ),
+                    cause=exc,
+                    retryable=True,
+                ) from exc
+            if any(existing.name != file_name for existing in aliases):
+                raise _mailbox_zip_output_conflict()
+
+            existing_path = next(
+                (existing for existing in aliases if existing.name == file_name), None
+            )
+            existed = existing_path is not None
+            if existing_path is not None:
+                try:
+                    existing_info = existing_path.lstat()
+                    if not stat.S_ISREG(existing_info.st_mode):
+                        raise _mailbox_zip_output_conflict()
+                    existing_payload = existing_path.read_bytes()
+                except AppError:
+                    raise
+                except OSError as exc:
+                    raise AppError(
+                        code="mailbox_zip_write_failed",
+                        message=(
+                            "Mailbox ZIP PDF artifacts could not be written "
+                            "atomically: "
+                            "destination could not be checked safely"
+                        ),
+                        cause=exc,
+                        retryable=True,
+                    ) from exc
+                if existing_payload != payload:
+                    raise _mailbox_zip_output_conflict()
+            planned_outputs.append(
+                (path, file_name, source_member_file_name, payload, existed)
+            )
+
+        for (
+            path,
+            file_name,
+            source_member_file_name,
+            payload,
+            existed,
+        ) in planned_outputs:
+            if existed:
+                continue
             temp_path = path.parent / f".{uuid4().hex}.tmp"
-            existed_before = path.exists()
-            staged.append((temp_path, path, path.name, len(payload), existed_before))
+            staged.append(
+                (temp_path, path, file_name, source_member_file_name, payload)
+            )
             with temp_path.open("xb") as temp_file:
                 temp_file.write(payload)
-        for temp_path, path, file_name, size_bytes, _ in staged:
-            os.replace(temp_path, path)
-            committed_paths.add(path)
+
+        staged_by_path = {
+            path: (temp_path, file_name, source_name, payload)
+            for temp_path, path, file_name, source_name, payload in staged
+        }
+        for (
+            path,
+            file_name,
+            source_member_file_name,
+            payload,
+            _existed,
+        ) in planned_outputs:
+            staged_item = staged_by_path.get(path)
+            if staged_item is not None:
+                temp_path, _, _, _ = staged_item
+                try:
+                    if os.name == "nt":
+                        os.rename(temp_path, path)
+                    else:
+                        os.link(temp_path, path)
+                except FileExistsError as collision_exc:
+                    try:
+                        aliases = [
+                            existing
+                            for existing in path.parent.iterdir()
+                            if existing.name.casefold() == file_name.casefold()
+                        ]
+                    except OSError as exc:
+                        raise AppError(
+                            code="mailbox_zip_write_failed",
+                            message="Mailbox ZIP PDF destination could not be "
+                            "checked safely",
+                            cause=exc,
+                            retryable=True,
+                        ) from exc
+                    if any(existing.name != file_name for existing in aliases):
+                        raise _mailbox_zip_output_conflict(
+                            cause=collision_exc
+                        ) from collision_exc
+                    try:
+                        existing_info = path.lstat()
+                        if not stat.S_ISREG(existing_info.st_mode):
+                            raise _mailbox_zip_output_conflict(
+                                cause=collision_exc
+                            ) from collision_exc
+                        existing_payload = path.read_bytes()
+                    except AppError:
+                        raise
+                    except OSError as exc:
+                        raise AppError(
+                            code="mailbox_zip_write_failed",
+                            message="Mailbox ZIP PDF destination could not be "
+                            "checked safely",
+                            cause=exc,
+                            retryable=True,
+                        ) from exc
+                    if existing_payload != payload:
+                        raise _mailbox_zip_output_conflict(
+                            cause=collision_exc
+                        ) from collision_exc
+                temp_path.unlink(missing_ok=True)
             artifacts.append(
                 MailboxAttachmentArtifact(
                     schema_version="1.0",
                     file_name=file_name,
                     content_type="application/pdf",
-                    size_bytes=size_bytes,
+                    size_bytes=len(payload),
                     path=str(path),
                     source_container_file_name=container_file_name,
+                    source_member_file_name=source_member_file_name,
                 )
             )
     except Exception as exc:
-        existed_by_path = {path: existed for _, path, _, _, existed in staged}
+        # Committed PDFs are create-if-absent outputs and may already be reused.
         for temp_path, _, _, _, _ in staged:
             try:
                 temp_path.unlink(missing_ok=True)
@@ -1299,21 +1529,6 @@ def _materialize_zip_pdfs(
                         fields={"provider_message_id": request.provider_message_id},
                     )
                 )
-        for path in committed_paths:
-            if existed_by_path.get(path, False):
-                continue
-            try:
-                path.unlink(missing_ok=True)
-            except OSError:
-                logger.warning(
-                    log_event(
-                        ctx,
-                        role="service",
-                        event="mailbox_zip_output_cleanup_failed",
-                        module=logger.name,
-                        fields={"provider_message_id": request.provider_message_id},
-                    )
-                )
         if isinstance(exc, AppError):
             raise
         raise AppError(
@@ -1323,6 +1538,20 @@ def _materialize_zip_pdfs(
             retryable=True,
         ) from exc
     return artifacts
+
+
+def _mailbox_zip_output_conflict(*, cause: Exception | None = None) -> AppError:
+    return AppError(
+        code="mailbox_zip_output_conflict",
+        message="Mailbox ZIP PDF destination conflicts with an existing artifact",
+        cause=cause,
+        retryable=False,
+        context={
+            "next_action": (
+                "Verify the message and ZIP member identity before retrying"
+            )
+        },
+    )
 
 
 def _read_zip_member_bounded(
@@ -1393,7 +1622,14 @@ def _artifact_path(
     message_name = _bounded_message_component(
         provider_message_id or "message", max_length=message_component_length
     )
-    pdf_name = _bounded_pdf_file_name(file_name, max_length=pdf_component_length)
+    pdf_name = str(file_name)
+    if (
+        len(pdf_name) > pdf_component_length
+        or _safe_file_name(pdf_name) != pdf_name
+        or not pdf_name.casefold().endswith(".pdf")
+        or _is_windows_reserved_component(pdf_name)
+    ):
+        raise _mailbox_output_path_error(root_length=root_length)
     try:
         message_dir = (root / message_name).resolve()
     except (OSError, RuntimeError, ValueError) as exc:
@@ -1468,10 +1704,17 @@ def _bounded_message_component(value: str, *, max_length: int) -> str:
     identity = str(value or "")
     raw = identity.strip() or "message"
     safe_name = _safe_file_name(raw)
-    if len(safe_name) <= max_length and raw.isascii():
+    if (
+        len(safe_name) <= max_length
+        and identity.isascii()
+        and identity == safe_name
+        and identity == identity.casefold()
+        and not _is_windows_reserved_component(safe_name)
+        and not _has_mailbox_hash_suffix(safe_name)
+    ):
         return safe_name
 
-    digest = hashlib.sha256((identity or raw).encode("utf-8")).hexdigest()[:12]
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:12]
     prefix_budget = max_length - _MAILBOX_HASH_SUFFIX_LENGTH
     prefix = safe_name[:prefix_budget].rstrip("._-")
     if prefix:
@@ -1485,7 +1728,13 @@ def _bounded_pdf_file_name(value: str, *, max_length: int) -> str:
     safe_name = _safe_file_name(raw)
     if not safe_name.casefold().endswith(".pdf"):
         safe_name += ".pdf"
-    if len(safe_name) <= max_length and raw.isascii() and safe_name == raw:
+    if (
+        len(safe_name) <= max_length
+        and identity.isascii()
+        and safe_name == identity
+        and not _is_windows_reserved_component(safe_name)
+        and not _has_mailbox_hash_suffix(safe_name)
+    ):
         return safe_name
 
     extension = safe_name[-4:]
@@ -1522,11 +1771,21 @@ def _plan_direct_pdf_file_names(
     if not direct_attachments:
         return {}
 
-    _, _, pdf_component_length = _mailbox_artifact_component_limits(request.settings)
+    root, message_component_length, pdf_component_length = (
+        _mailbox_artifact_component_limits(request.settings)
+    )
     output_names: dict[int, str] = {}
     groups: dict[str, list[tuple[int, str, str, bytes]]] = {}
     for item in direct_attachments:
-        index, _, output_name, _ = item
+        index, original_name, output_name, payload = item
+        if not _safe_file_name(original_name).casefold().endswith(".pdf"):
+            output_names[index] = _direct_pdf_identity_file_name(
+                original_name,
+                output_name,
+                payload,
+                max_length=pdf_component_length,
+            )
+            continue
         bounded_name = _bounded_pdf_file_name(
             output_name,
             max_length=pdf_component_length,
@@ -1540,18 +1799,89 @@ def _plan_direct_pdf_file_names(
         }
         if len(identities) <= 1:
             continue
-        for index, original_name, output_name, payload in group:
-            safe_name = _safe_file_name(output_name)
-            if not safe_name.casefold().endswith(".pdf"):
-                safe_name += ".pdf"
-            stem = safe_name[:-4]
-            identity_digest = hashlib.sha256(
-                original_name.encode("utf-8") + b"\0" + payload
-            ).hexdigest()[:12]
-            output_names[index] = bounded_artifact_filename(
-                f"{stem}-{identity_digest}",
-                compact_stem=stem,
-                extension=".pdf",
+        ordered_group = sorted(
+            group,
+            key=lambda item: (
+                item[1],
+                hashlib.sha256(item[3]).hexdigest(),
+            ),
+        )
+        for index, original_name, output_name, payload in ordered_group[1:]:
+            output_names[index] = _direct_pdf_identity_file_name(
+                original_name,
+                output_name,
+                payload,
+                max_length=pdf_component_length,
+            )
+
+    message_component = _bounded_message_component(
+        request.provider_message_id or "message",
+        max_length=message_component_length,
+    )
+    try:
+        message_dir = (root / message_component).resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise _mailbox_output_path_error(
+            root_length=_windows_path_length(root), cause=exc
+        ) from exc
+    if root != message_dir and root not in message_dir.parents:
+        raise AppError(
+            code="mailbox_attachment_output_dir_invalid",
+            message="Mailbox attachment output path escaped the configured root",
+            retryable=False,
+        )
+    for index, original_name, output_name, payload in direct_attachments:
+        file_name = output_names[index]
+        try:
+            if message_dir.is_dir():
+                aliases = [
+                    existing
+                    for existing in message_dir.iterdir()
+                    if existing.name.casefold() == file_name.casefold()
+                ]
+            else:
+                aliases = []
+        except OSError as exc:
+            raise AppError(
+                code="mailbox_attachment_output_collision",
+                message="Mailbox PDF destination could not be checked safely",
+                cause=exc,
+                retryable=False,
+                context={
+                    "next_action": (
+                        "Check output_dir permissions and verify existing artifact "
+                        "names before retrying"
+                    )
+                },
+            ) from exc
+        if not aliases:
+            continue
+
+        collision = any(existing.name != file_name for existing in aliases)
+        for existing in aliases:
+            if existing.name != file_name:
+                continue
+            try:
+                if not existing.is_file() or existing.read_bytes() != payload:
+                    collision = True
+            except OSError as exc:
+                raise AppError(
+                    code="mailbox_attachment_output_collision",
+                    message="Mailbox PDF destination could not be checked safely",
+                    cause=exc,
+                    retryable=False,
+                    context={
+                        "next_action": (
+                            "Check output_dir permissions and verify the existing "
+                            "artifact before retrying"
+                        )
+                    },
+                ) from exc
+        if collision:
+            output_names[index] = _direct_pdf_identity_file_name(
+                original_name,
+                output_name,
+                payload,
                 max_length=pdf_component_length,
             )
 
@@ -1581,6 +1911,28 @@ def _plan_direct_pdf_file_names(
     return output_names
 
 
+def _direct_pdf_identity_file_name(
+    original_name: str,
+    output_name: str,
+    payload: bytes,
+    *,
+    max_length: int,
+) -> str:
+    safe_name = _safe_file_name(output_name)
+    if not safe_name.casefold().endswith(".pdf"):
+        safe_name += ".pdf"
+    stem = safe_name[:-4]
+    identity_digest = hashlib.sha256(
+        original_name.encode("utf-8") + b"\0" + payload
+    ).hexdigest()[:12]
+    return bounded_artifact_filename(
+        f"{stem}-{identity_digest}",
+        compact_stem=stem,
+        extension=".pdf",
+        max_length=max_length,
+    )
+
+
 def _mailbox_output_path_error(
     *, root_length: int, cause: Exception | None = None
 ) -> AppError:
@@ -1607,6 +1959,18 @@ def _windows_path_length(path: Path) -> int:
 def _safe_file_name(value: str) -> str:
     token = _SAFE_FILENAME_RX.sub("_", str(value or "").strip()).strip("._")
     return token or "attachment"
+
+
+def _is_windows_reserved_component(value: str) -> bool:
+    base_name = str(value or "").split(".", maxsplit=1)[0].rstrip(" .")
+    return base_name.casefold() in _WINDOWS_RESERVED_COMPONENT_BASES
+
+
+def _has_mailbox_hash_suffix(value: str) -> bool:
+    component = _safe_file_name(value)
+    if component.casefold().endswith(".pdf"):
+        component = component[:-4]
+    return _MAILBOX_HASH_SUFFIX_RX.search(component) is not None
 
 
 def _imap_internaldate_to_utc(value: bytes | str | None) -> str:
