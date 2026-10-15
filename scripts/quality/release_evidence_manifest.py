@@ -3,17 +3,24 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import statistics
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+_PDF_CANDIDATE_ADVISORY_WARNING_REASONS = frozenset(
+    {"runtime_regression_warning", "runtime_regression_failure"}
+)
 
 
 @dataclass(frozen=True)
@@ -245,7 +252,10 @@ def _artifact_from_payload(
     schema_version = _string_or_none(payload.get("schema_version"))
     generated_at = _string_or_none(payload.get("generated_at"))
     repository_commit_sha = _embedded_repository_commit_sha(payload)
-    status, passed = _status_from_payload(payload)
+    if artifact_input.name == "pdf_candidate":
+        status, passed = _pdf_candidate_status(payload)
+    else:
+        status, passed = _status_from_payload(payload)
     issues: list[ReleaseEvidenceIssue] = []
     if schema_version != artifact_input.expected_schema_version:
         issues.append(
@@ -414,8 +424,250 @@ def _status_from_payload(payload: dict[str, Any]) -> tuple[str, bool]:
     return "passed", True
 
 
+def _pdf_candidate_status(payload: dict[str, Any]) -> tuple[str, bool]:
+    if any(key in payload for key in ("passed", "failures", "warnings", "status")):
+        return "invalid", False
+    skipped_pdf_paths = payload.get("skipped_pdf_paths")
+    comparison = payload.get("comparison")
+    if (
+        not isinstance(skipped_pdf_paths, list)
+        or skipped_pdf_paths
+        or not isinstance(comparison, dict)
+    ):
+        return "invalid", False
+
+    comparison_passed = comparison.get("passed")
+    failures = comparison.get("failures")
+    warnings = comparison.get("warnings")
+    rows = comparison.get("rows")
+    if (
+        type(comparison_passed) is not bool
+        or not isinstance(failures, list)
+        or not isinstance(warnings, list)
+        or not isinstance(rows, list)
+        or "status" in comparison
+        or not rows
+    ):
+        return "invalid", False
+    if failures or not comparison_passed:
+        return "failed", False
+
+    warning_paths: set[str] = set()
+    for warning in warnings:
+        if not isinstance(warning, dict):
+            return "invalid", False
+        pdf_path = warning.get("pdf_path")
+        reason = warning.get("reason")
+        detail = warning.get("detail")
+        if (
+            not isinstance(pdf_path, str)
+            or not pdf_path.strip()
+            or pdf_path in warning_paths
+            or not isinstance(reason, str)
+            or reason not in _PDF_CANDIDATE_ADVISORY_WARNING_REASONS
+            or not isinstance(detail, str)
+            or not detail.strip()
+        ):
+            return "invalid", False
+        warning_paths.add(pdf_path)
+
+    row_paths: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            return "invalid", False
+        pdf_path = row.get("pdf_path")
+        row_status = row.get("status")
+        expected_count = row.get("expected_candidate_count")
+        actual_count = row.get("actual_candidate_count")
+        expected_signature = row.get("expected_signature")
+        actual_signature = row.get("actual_signature")
+        expected_degraded_pages = row.get("expected_degraded_page_count")
+        actual_degraded_pages = row.get("actual_degraded_page_count")
+        expected_pdf_sha256 = row.get("expected_pdf_sha256")
+        actual_pdf_sha256 = row.get("actual_pdf_sha256")
+        if (
+            not isinstance(pdf_path, str)
+            or not pdf_path.strip()
+            or not isinstance(row_status, str)
+            or row_status not in {"passed", "warned"}
+            or type(expected_count) is not int
+            or type(actual_count) is not int
+            or expected_count < 0
+            or actual_count < 0
+            or not isinstance(expected_signature, str)
+            or not expected_signature
+            or not isinstance(actual_signature, str)
+            or not actual_signature
+            or type(expected_degraded_pages) is not int
+            or type(actual_degraded_pages) is not int
+            or expected_degraded_pages < 0
+            or actual_degraded_pages < 0
+            or not isinstance(expected_pdf_sha256, str)
+            or not isinstance(actual_pdf_sha256, str)
+            or not actual_pdf_sha256
+        ):
+            return "invalid", False
+        if pdf_path in row_paths:
+            return "invalid", False
+        if (
+            expected_count != actual_count
+            or expected_signature != actual_signature
+            or expected_degraded_pages != actual_degraded_pages
+            or (expected_pdf_sha256 and expected_pdf_sha256 != actual_pdf_sha256)
+        ):
+            return "failed", False
+        if (row_status == "warned") != (pdf_path in warning_paths):
+            return "invalid", False
+        row_paths.add(pdf_path)
+
+    if not warning_paths.issubset(row_paths):
+        return "invalid", False
+
+    if not _pdf_candidate_comparison_matches_canonical_baseline(payload):
+        return "invalid", False
+    return ("warned", True) if warnings else ("passed", True)
+
+
+def _pdf_candidate_comparison_matches_canonical_baseline(
+    payload: dict[str, Any],
+) -> bool:
+    from scripts.quality.pdf_candidate_benchmark import (
+        DEFAULT_BASELINE_PATH,
+        PdfCandidateBenchmarkObservation,
+        compare_benchmark_observations,
+        load_benchmark_baseline,
+    )
+
+    baseline_path_text = payload.get("baseline_path")
+    observation_payloads = payload.get("observations")
+    iterations = payload.get("iterations")
+    if (
+        not isinstance(baseline_path_text, str)
+        or not baseline_path_text.strip()
+        or not isinstance(observation_payloads, list)
+        or not observation_payloads
+        or type(iterations) is not int
+        or iterations < 1
+    ):
+        return False
+
+    path_parts = PurePosixPath(baseline_path_text.replace("\\", "/")).parts
+    canonical_path_parts = PurePosixPath(DEFAULT_BASELINE_PATH).parts
+    if (
+        ".." in path_parts
+        or path_parts[-len(canonical_path_parts) :] != canonical_path_parts
+    ):
+        return False
+    canonical_baseline_path = (ROOT / DEFAULT_BASELINE_PATH).resolve()
+    try:
+        baseline_entries = load_benchmark_baseline(canonical_baseline_path)
+    except (OSError, TypeError, ValueError, KeyError):
+        return False
+
+    baseline_by_path = {entry.pdf_path: entry for entry in baseline_entries}
+    if (
+        not baseline_entries
+        or len(baseline_by_path) != len(baseline_entries)
+        or len({entry.report_name for entry in baseline_entries})
+        != len(baseline_entries)
+    ):
+        return False
+
+    observations: list[PdfCandidateBenchmarkObservation] = []
+    observed_paths: set[str] = set()
+    for observation_payload in observation_payloads:
+        if not isinstance(observation_payload, dict) or set(observation_payload) != {
+            "pdf_path",
+            "report_name",
+            "candidate_count",
+            "signature",
+            "degraded_page_count",
+            "durations_seconds",
+            "median_seconds",
+            "pdf_sha256",
+        }:
+            return False
+        pdf_path = observation_payload.get("pdf_path")
+        report_name = observation_payload.get("report_name")
+        candidate_count = observation_payload.get("candidate_count")
+        signature = observation_payload.get("signature")
+        degraded_page_count = observation_payload.get("degraded_page_count")
+        durations_seconds = observation_payload.get("durations_seconds")
+        median_seconds = observation_payload.get("median_seconds")
+        pdf_sha256 = observation_payload.get("pdf_sha256")
+        if (
+            not isinstance(pdf_path, str)
+            or not pdf_path.strip()
+            or pdf_path in observed_paths
+            or pdf_path not in baseline_by_path
+            or report_name != baseline_by_path[pdf_path].report_name
+            or type(candidate_count) is not int
+            or candidate_count < 0
+            or not isinstance(signature, str)
+            or not signature
+            or type(degraded_page_count) is not int
+            or degraded_page_count < 0
+            or not isinstance(durations_seconds, list)
+            or len(durations_seconds) != iterations
+            or any(
+                not _nonnegative_finite_number(duration)
+                for duration in durations_seconds
+            )
+            or not _nonnegative_finite_number(median_seconds)
+            # The producer rounds each sample and the median independently.
+            or abs(
+                round(float(statistics.median(durations_seconds)), 6) - median_seconds
+            )
+            > 1.001e-6
+            or not isinstance(pdf_sha256, str)
+            or not pdf_sha256
+        ):
+            return False
+        try:
+            observations.append(
+                PdfCandidateBenchmarkObservation(
+                    pdf_path=pdf_path,
+                    report_name=report_name,
+                    candidate_count=candidate_count,
+                    signature=signature,
+                    degraded_page_count=degraded_page_count,
+                    durations_seconds=tuple(durations_seconds),
+                    median_seconds=median_seconds,
+                    pdf_sha256=pdf_sha256,
+                )
+            )
+        except (TypeError, ValueError):
+            return False
+        observed_paths.add(pdf_path)
+
+    if observed_paths != set(baseline_by_path):
+        return False
+
+    expected = compare_benchmark_observations(
+        baseline_entries=baseline_entries,
+        observations=observations,
+        fail_on_runtime_regression=False,
+    )
+    expected_payload = {
+        "passed": expected.passed,
+        "failures": [asdict(issue) for issue in expected.failures],
+        "warnings": [asdict(issue) for issue in expected.warnings],
+        "rows": [asdict(row) for row in expected.rows],
+    }
+    return payload["comparison"] == expected_payload
+
+
 def _has_items(value: Any) -> bool:
     return isinstance(value, list) and bool(value)
+
+
+def _nonnegative_finite_number(value: Any) -> bool:
+    if type(value) not in {int, float} or value < 0:
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 def _string_or_none(value: Any) -> str | None:

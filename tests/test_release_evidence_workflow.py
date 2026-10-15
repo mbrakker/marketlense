@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scripts.quality.release_evidence_job_summary import (
@@ -9,10 +13,97 @@ from scripts.quality.release_evidence_job_summary import (
 )
 
 
+def _full_ci_prerequisite_program() -> tuple[str, dict[str, object]]:
+    jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
+        "jobs"
+    ]
+    steps = jobs["release_evidence"]["steps"]
+    gate = next(
+        step for step in steps if step.get("name") == "Check full-CI prerequisites"
+    )
+    prefix = "python3 - <<'PY'\n"
+    suffix = "\nPY"
+    run = gate["run"].rstrip("\n")
+    assert run.startswith(prefix) and run.endswith(suffix)
+    return run[len(prefix) : -len(suffix)], gate
+
+
+@pytest.mark.parametrize(
+    ("results", "expected_exit", "expected_summary"),
+    [
+        (("success", "success", "success"), 0, None),
+        (("success", "failure", "success"), 1, "- `tests` job: `failure`"),
+        (
+            ("success", "success", "failure"),
+            1,
+            "- `mutation` job: `failure`",
+        ),
+        (("success", "", "success"), 1, "- `tests` job: `missing`"),
+        (("success", "success", ""), 1, "- `mutation` job: `missing`"),
+        (("success", "skipped", "success"), 1, "- `tests` job: `skipped`"),
+        (
+            ("success", "success", "cancelled"),
+            1,
+            "- `mutation` job: `cancelled`",
+        ),
+        (
+            ("cancelled", "skipped", "skipped"),
+            1,
+            "- `ci_start` job: `cancelled`",
+        ),
+    ],
+)
+def test_release_evidence_prerequisite_gate_handles_all_job_outcomes(
+    tmp_path: Path,
+    results: tuple[str, str, str],
+    expected_exit: int,
+    expected_summary: str | None,
+) -> None:
+    program, gate = _full_ci_prerequisite_program()
+    assert gate.get("if") == "always()"
+    assert gate.get("id") == "check_full_ci_prerequisites"
+    assert gate["env"] == {
+        "CI_START_RESULT": "${{ needs.ci_start.result }}",
+        "TEST_JOB_RESULT": "${{ needs.tests.result }}",
+        "MUTATION_JOB_RESULT": "${{ needs.mutation.result }}",
+    }
+    summary = tmp_path / "step-summary.md"
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CI_START_RESULT": results[0],
+            "TEST_JOB_RESULT": results[1],
+            "MUTATION_JOB_RESULT": results[2],
+            "GITHUB_STEP_SUMMARY": str(summary),
+        }
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-c", program],
+        check=False,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.returncode == expected_exit
+    if expected_summary is None:
+        assert not summary.exists()
+    else:
+        assert expected_summary in summary.read_text(encoding="utf-8")
+        assert "release bundle was not created" in summary.read_text(encoding="utf-8")
+
+
 def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
 
     jobs = yaml.safe_load(workflow)["jobs"]
+    release_steps = jobs["release_evidence"]["steps"]
+    prerequisite_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if step.get("name") == "Check full-CI prerequisites"
+    )
     trend_index = workflow.index("PDF benchmark trend gate")
     health_index = workflow.index("Build CI health scorecard")
     accounting_index = workflow.index(
@@ -34,6 +125,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "date -u" in jobs["ci_start"]["steps"][0]["run"]
     assert jobs["tests"]["needs"] == ["ci_start"]
     assert jobs["release_evidence"]["needs"] == ["ci_start", "tests", "mutation"]
+    assert prerequisite_index == 0
     expected_freshness = "${{ needs.ci_start.outputs.release_evidence_started_at }}"
     assert jobs["tests"]["env"]["RELEASE_EVIDENCE_STARTED_AT"] == expected_freshness
     assert (
@@ -70,7 +162,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     benchmark_step = workflow[
         workflow.index("- name: Build CI performance benchmark") : manifest_index
     ]
-    assert "if: ${{ always() }}" in benchmark_step
+    assert "steps.check_full_ci_prerequisites.outcome == 'success'" in benchmark_step
     assert "hashFiles('out/test_telemetry_ci.json')" not in benchmark_step
     assert "out/release_evidence_executive_summary_ci.json" in workflow
     assert "--test-telemetry-json out/test_telemetry_ci.json" in workflow
@@ -92,7 +184,7 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
         "out/wordpress_entity_rest_verification_staging.json"
         not in CANONICAL_BUNDLE_REQUIRED_PATHS
     )
-    assert "if: ${{ always() }}" in summary_step
+    assert "steps.check_full_ci_prerequisites.outcome == 'success'" in summary_step
     assert "hashFiles(" not in summary_step
     assert "RELEASE_EVIDENCE_UPLOAD_OUTCOME" in summary_step
     assert "steps.release_evidence_bundle.outcome" in summary_step
@@ -107,6 +199,71 @@ def test_ci_workflow_archives_fresh_release_evidence_bundle() -> None:
     assert "out/pdf_benchmark_trends_ci.json" in workflow
     assert "mutation_results.json" in workflow
     assert "coverage.xml" in workflow
+
+
+def test_failed_prerequisites_skip_release_setup_and_bundle_upload() -> None:
+    jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
+        "jobs"
+    ]
+    steps = jobs["release_evidence"]["steps"]
+    names = [step.get("name", step.get("uses", "")) for step in steps]
+    gate_index = names.index("Check full-CI prerequisites")
+
+    assert gate_index == 0
+    assert gate_index < names.index("actions/checkout@v4")
+    assert gate_index < names.index("actions/setup-python@v5")
+    assert gate_index < names.index("Install dependencies")
+    for step_name in (
+        "Download pytest and coverage inputs",
+        "Download mutation partition results",
+        "Restore PDF candidate benchmark evidence",
+        "Merge mutation partition results",
+    ):
+        step = next(step for step in steps if step.get("name") == step_name)
+        assert step.get("if") is None
+
+    for job_name, upload_name in (
+        ("tests", "Upload pytest and coverage inputs"),
+        ("mutation", "Upload mutation partition result"),
+    ):
+        upload_step = next(
+            step for step in jobs[job_name]["steps"] if step.get("name") == upload_name
+        )
+        assert upload_step["if"] == "always()"
+
+    bundle_step = next(
+        step for step in steps if step.get("name") == "Upload release evidence bundle"
+    )
+    assert "steps.check_full_ci_prerequisites.outcome == 'success'" in bundle_step["if"]
+    merge_step = next(
+        step for step in steps if step.get("name") == "Merge mutation partition results"
+    )
+    assert "always()" not in merge_step.get("if", "")
+
+    for step in steps[1:]:
+        condition = step.get("if", "")
+        if "always()" in condition:
+            assert "steps.check_full_ci_prerequisites.outcome == 'success'" in condition
+
+
+def test_release_evidence_fetches_only_head_while_diff_gates_keep_full_history() -> (
+    None
+):
+    jobs = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))[
+        "jobs"
+    ]
+
+    def checkout_depth(job_name: str) -> int:
+        checkout = next(
+            step
+            for step in jobs[job_name]["steps"]
+            if step.get("uses", "").startswith("actions/checkout@")
+        )
+        return checkout["with"]["fetch-depth"]
+
+    assert checkout_depth("release_evidence") == 1
+    assert checkout_depth("tests") == 0
+    assert checkout_depth("mutation") == 0
 
 
 def test_pdf_candidate_gate_runs_in_existing_partition_and_is_required_evidence() -> (
@@ -152,7 +309,7 @@ def test_pdf_candidate_gate_runs_in_existing_partition_and_is_required_evidence(
         download_step["with"]["pattern"]
         == "mutation-partition-${{ github.run_id }}-${{ github.run_attempt }}-*"
     )
-    assert restore_step["if"] == "always()"
+    assert restore_step.get("if") is None
     assert (
         "mutation-partition-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-0"
         in restore_step["run"]
@@ -160,6 +317,13 @@ def test_pdf_candidate_gate_runs_in_existing_partition_and_is_required_evidence(
     assert "test -s" in restore_step["run"]
     assert "--merge-stage-json" in restore_step["run"]
     assert release_steps.index(restore_step) < release_steps.index(merge_step)
+    assert release_steps.index(merge_step) < release_steps.index(
+        next(
+            step
+            for step in release_steps
+            if step.get("name") == "Build release evidence manifest"
+        )
+    )
     assert not any(
         step.get("name") == "PDF candidate benchmark gate" for step in release_steps
     )

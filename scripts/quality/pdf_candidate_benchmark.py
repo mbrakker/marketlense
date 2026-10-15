@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_BASELINE_PATH = "docs/quality/pdf_candidate_extraction_benchmark_baseline.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -247,10 +248,10 @@ def compare_benchmark_observations(
             PdfCandidateBenchmarkRow(
                 pdf_path=entry.pdf_path,
                 report_name=entry.report_name,
-            expected_candidate_count=entry.expected_candidate_count,
-            actual_candidate_count=observation.candidate_count,
-            expected_pdf_sha256=entry.expected_pdf_sha256,
-            actual_pdf_sha256=observation.pdf_sha256,
+                expected_candidate_count=entry.expected_candidate_count,
+                actual_candidate_count=observation.candidate_count,
+                expected_pdf_sha256=entry.expected_pdf_sha256,
+                actual_pdf_sha256=observation.pdf_sha256,
                 expected_signature=entry.expected_signature,
                 actual_signature=observation.signature,
                 expected_degraded_page_count=entry.expected_degraded_page_count,
@@ -468,7 +469,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument(
         "--baseline",
-        default="docs/quality/pdf_candidate_extraction_benchmark_baseline.json",
+        default=DEFAULT_BASELINE_PATH,
     )
     parser.add_argument(
         "--output-root",
