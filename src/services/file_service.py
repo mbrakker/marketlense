@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 import threading
 import time
@@ -803,7 +804,12 @@ def file_exists(request: FileExistsRequest, ctx: RunContext) -> FileExistsRespon
     return FileExistsResponse(schema_version="1.0", path=request.path, exists=exists)
 
 
-def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesResponse:
+def write_bytes(
+    request: WriteBytesRequest,
+    ctx: RunContext,
+    *,
+    reject_conflicting_existing: bool = False,
+) -> WriteBytesResponse:
     logger.info(
         log_event(
             ctx,
@@ -818,7 +824,40 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with _write_lock_for_path(path):
-            _atomic_write_bytes(path, request.content)
+            if reject_conflicting_existing:
+                aliases = (
+                    [
+                        candidate
+                        for candidate in path.parent.iterdir()
+                        if candidate.name.casefold() == path.name.casefold()
+                    ]
+                    if path.parent.is_dir()
+                    else []
+                )
+                if any(candidate.name != path.name for candidate in aliases):
+                    raise _file_write_identity_conflict()
+                if aliases:
+                    existing_content = _read_existing_regular_file(aliases[0])
+                    if existing_content != request.content:
+                        raise _file_write_identity_conflict()
+                else:
+                    try:
+                        _atomic_create_bytes(path, request.content)
+                    except FileExistsError as exc:
+                        aliases = [
+                            candidate
+                            for candidate in path.parent.iterdir()
+                            if candidate.name.casefold() == path.name.casefold()
+                        ]
+                        if any(candidate.name != path.name for candidate in aliases):
+                            raise _file_write_identity_conflict(cause=exc) from exc
+                        if not aliases:
+                            raise
+                        existing_content = _read_existing_regular_file(aliases[0])
+                        if existing_content != request.content:
+                            raise _file_write_identity_conflict(cause=exc) from exc
+            else:
+                _atomic_write_bytes(path, request.content)
     except OSError as exc:
         raise AppError(
             code="file_write_failed",
@@ -842,6 +881,27 @@ def write_bytes(request: WriteBytesRequest, ctx: RunContext) -> WriteBytesRespon
         bytes_written=len(request.content),
         md5=md5,
     )
+
+
+def _file_write_identity_conflict(*, cause: Exception | None = None) -> AppError:
+    return AppError(
+        code="file_write_conflict",
+        message="Refusing to replace or alias a different file identity",
+        cause=cause,
+        retryable=False,
+        context={
+            "next_action": (
+                "Choose a unique destination or verify the existing artifact identity"
+            )
+        },
+    )
+
+
+def _read_existing_regular_file(path: Path) -> bytes:
+    file_info = path.lstat()
+    if not stat.S_ISREG(file_info.st_mode):
+        raise _file_write_identity_conflict()
+    return path.read_bytes()
 
 
 def append_bytes(request: AppendBytesRequest, ctx: RunContext) -> AppendBytesResponse:
@@ -1127,6 +1187,36 @@ def _atomic_write_bytes(path: Path, content: bytes) -> None:
                 "Atomic-write temp cleanup failed",
                 extra={
                     "event": "atomic_write_temp_cleanup_failed",
+                    "path": str(temp_path),
+                    "error_type": type(cleanup_error).__name__,
+                },
+            )
+        raise
+
+
+def _atomic_create_bytes(path: Path, content: bytes) -> None:
+    """Atomically create a file without replacing a competing destination."""
+
+    _cleanup_stale_atomic_temp_files(path)
+    temp_path = _atomic_temp_path(path)
+    try:
+        with temp_path.open("xb") as file_obj:
+            file_obj.write(content)
+            file_obj.flush()
+            os.fsync(file_obj.fileno())
+        if os.name == "nt":
+            os.rename(temp_path, path)
+        else:
+            os.link(temp_path, path)
+            temp_path.unlink()
+    except Exception:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError as cleanup_error:
+            logger.debug(
+                "Atomic-create temp cleanup failed",
+                extra={
+                    "event": "atomic_create_temp_cleanup_failed",
                     "path": str(temp_path),
                     "error_type": type(cleanup_error).__name__,
                 },

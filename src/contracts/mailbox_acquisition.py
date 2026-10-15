@@ -64,7 +64,8 @@ class MailboxAccessPreflightResponse:
     )
     provider_calls: int = field(
         metadata={
-            "doc": "Bounded provider requests made by the check, counting Gmail token refresh separately from the Gmail profile request."
+            "doc": "Bounded provider requests made by the check, counting Gmail "
+            "token refresh separately from the Gmail profile request."
         }
     )
 
@@ -140,6 +141,12 @@ class MailboxAttachmentArtifact:
     path: str = field(metadata={"doc": "Absolute local materialized file path."})
     source_container_file_name: str = field(
         metadata={"doc": "ZIP file name when the PDF was extracted from an archive."}
+    )
+    source_member_file_name: str = field(
+        default="",
+        metadata={
+            "doc": "Original ZIP member name, including its archive-relative path."
+        },
     )
 
 
