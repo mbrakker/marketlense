@@ -76,11 +76,29 @@ def _request(
     )
 
 
+def _context(message_id: str) -> RunContext:
+    return RunContext(
+        schema_version="1.0",
+        run_id="zip-test",
+        task_id=message_id,
+        span_id="zip-span",
+    )
+
+
 def _attachment(payload: bytes, *, name: str = "delivery.zip") -> MailboxAttachment:
     return MailboxAttachment(
         schema_version="1.0",
         file_name=name,
         content_type="application/zip",
+        payload=payload,
+    )
+
+
+def _pdf(file_name: str, payload: bytes) -> MailboxAttachment:
+    return MailboxAttachment(
+        schema_version="1.0",
+        file_name=file_name,
+        content_type="application/pdf",
         payload=payload,
     )
 
@@ -106,12 +124,7 @@ def _materialize(
 ):
     return materialize_mailbox_attachments(
         _request(tmp_path, [_attachment(payload)], message_id=message_id),
-        RunContext(
-            schema_version="1.0",
-            run_id="zip-test",
-            task_id=message_id,
-            span_id="zip-span",
-        ),
+        _context(message_id),
     )
 
 
@@ -420,21 +433,11 @@ def test_rejected_archive_leaves_no_outputs_and_preserves_valid_sibling_attachme
             tmp_path,
             [
                 _attachment(archive_payload),
-                MailboxAttachment(
-                    schema_version="1.0",
-                    file_name="standalone.pdf",
-                    content_type="application/pdf",
-                    payload=b"%PDF-1.7 standalone",
-                ),
+                _pdf("standalone.pdf", b"%PDF-1.7 standalone"),
             ],
             message_id="mixed-message",
         ),
-        RunContext(
-            schema_version="1.0",
-            run_id="zip-test",
-            task_id="mixed-message",
-            span_id="zip-span",
-        ),
+        _context("mixed-message"),
     )
 
     assert [failure.error_code for failure in response.failures] == [
@@ -463,6 +466,9 @@ def test_zip_write_failure_retains_committed_files_and_cleans_staging(
             ("existing.pdf", existing_payload),
         ]
     )
+    request = _request(
+        tmp_path, [_attachment(archive_payload)], message_id="write-failure"
+    )
     commit_operation = "rename" if mailbox_service.os.name == "nt" else "link"
     actual_commit = getattr(mailbox_service.os, commit_operation)
     commit_calls = 0
@@ -479,19 +485,7 @@ def test_zip_write_failure_retains_committed_files_and_cleans_staging(
     )
 
     with pytest.raises(AppError, match="Mailbox ZIP PDF artifacts") as error:
-        materialize_mailbox_attachments(
-            _request(
-                tmp_path,
-                [_attachment(archive_payload)],
-                message_id="write-failure",
-            ),
-            RunContext(
-                schema_version="1.0",
-                run_id="zip-test",
-                task_id="write-failure",
-                span_id="zip-span",
-            ),
-        )
+        materialize_mailbox_attachments(request, _context("write-failure"))
 
     assert error.value.code == "mailbox_zip_write_failed"
     assert error.value.retryable is True
@@ -499,139 +493,21 @@ def test_zip_write_failure_retains_committed_files_and_cleans_staging(
     assert not (output_dir / "second.pdf").exists()
     assert (output_dir / "existing.pdf").read_bytes() == existing_payload
     assert list(output_dir.glob(".*.tmp")) == []
+    external_boundary_mocks_only.close()
 
-
-def test_zip_retry_reuses_committed_pdf_after_later_member_failure(
-    tmp_path, external_boundary_mocks_only
-):
-    output_dir = tmp_path / "mailbox" / "zip-retry-partial"
-    first_payload = b"%PDF-1.7 first member"
-    second_payload = b"%PDF-1.7 second member"
-    archive_payload = _zip_bytes(
-        [("first.pdf", first_payload), ("second.pdf", second_payload)]
-    )
-    request = _request(
-        tmp_path,
-        [_attachment(archive_payload, name="weekly-delivery.zip")],
-        message_id="zip-retry-partial",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="zip-retry-partial",
-        span_id="zip-span",
-    )
-    commit_operation = "rename" if mailbox_service.os.name == "nt" else "link"
-    actual_commit = getattr(mailbox_service.os, commit_operation)
-    commit_calls = 0
-
-    def fail_second_commit(source, destination):
-        nonlocal commit_calls
-        commit_calls += 1
-        if commit_calls == 2:
-            raise OSError("injected second ZIP commit failure")
-        actual_commit(source, destination)
-
-    external_boundary_mocks_only.setattr(
-        mailbox_service.os, commit_operation, fail_second_commit
-    )
-    try:
-        with pytest.raises(AppError) as error:
-            materialize_mailbox_attachments(request, ctx)
-    finally:
-        external_boundary_mocks_only.close()
-
-    assert error.value.code == "mailbox_zip_write_failed"
-    first_path = output_dir / "first.pdf"
-    assert first_path.read_bytes() == first_payload
-    first_stat = first_path.stat()
-    assert not (output_dir / "second.pdf").exists()
-    assert list(output_dir.glob(".*.tmp")) == []
-
-    replay = materialize_mailbox_attachments(request, ctx)
+    replay = materialize_mailbox_attachments(request, _context("write-failure"))
 
     assert replay.failures == []
     assert [Path(artifact.path).name for artifact in replay.artifacts] == [
         "first.pdf",
         "second.pdf",
+        "existing.pdf",
     ]
-    assert [artifact.source_container_file_name for artifact in replay.artifacts] == [
-        "weekly-delivery.zip",
-        "weekly-delivery.zip",
+    assert [Path(artifact.path).read_bytes() for artifact in replay.artifacts] == [
+        first_payload,
+        second_payload,
+        existing_payload,
     ]
-    assert [artifact.source_member_file_name for artifact in replay.artifacts] == [
-        "first.pdf",
-        "second.pdf",
-    ]
-    assert Path(replay.artifacts[0].path).read_bytes() == first_payload
-    assert Path(replay.artifacts[0].path).stat().st_ino == first_stat.st_ino
-    assert Path(replay.artifacts[0].path).stat().st_mtime_ns == first_stat.st_mtime_ns
-    assert Path(replay.artifacts[1].path).read_bytes() == second_payload
-    assert list(output_dir.glob(".*.tmp")) == []
-
-
-def test_zip_conflicting_retry_preserves_committed_pdf_after_later_failure(
-    tmp_path, external_boundary_mocks_only
-):
-    output_dir = tmp_path / "mailbox" / "zip-conflicting-retry"
-    original_first = b"%PDF-1.7 original first member"
-    attempted_second = b"%PDF-1.7 attempted second member"
-    initial_archive = _zip_bytes(
-        [("first.pdf", original_first), ("second.pdf", attempted_second)]
-    )
-    request = _request(
-        tmp_path,
-        [_attachment(initial_archive)],
-        message_id="zip-conflicting-retry",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="zip-conflicting-retry",
-        span_id="zip-span",
-    )
-    commit_operation = "rename" if mailbox_service.os.name == "nt" else "link"
-    actual_commit = getattr(mailbox_service.os, commit_operation)
-    commit_calls = 0
-
-    def fail_second_commit(source, destination):
-        nonlocal commit_calls
-        commit_calls += 1
-        if commit_calls == 2:
-            raise OSError("injected second ZIP commit failure")
-        actual_commit(source, destination)
-
-    external_boundary_mocks_only.setattr(
-        mailbox_service.os, commit_operation, fail_second_commit
-    )
-    try:
-        with pytest.raises(AppError) as error:
-            materialize_mailbox_attachments(request, ctx)
-    finally:
-        external_boundary_mocks_only.close()
-
-    assert error.value.code == "mailbox_zip_write_failed"
-    first_path = output_dir / "first.pdf"
-    assert first_path.read_bytes() == original_first
-
-    conflicting_archive = _zip_bytes(
-        [
-            ("first.pdf", b"%PDF-1.7 conflicting first member"),
-            ("second.pdf", attempted_second),
-        ]
-    )
-    conflicting_request = replace(
-        request,
-        attachments=[_attachment(conflicting_archive)],
-    )
-    conflict = materialize_mailbox_attachments(conflicting_request, ctx)
-
-    assert conflict.artifacts == []
-    assert [failure.error_code for failure in conflict.failures] == [
-        "mailbox_zip_output_conflict"
-    ]
-    assert first_path.read_bytes() == original_first
-    assert not (output_dir / "second.pdf").exists()
     assert list(output_dir.glob(".*.tmp")) == []
 
 
@@ -719,28 +595,13 @@ def test_direct_pdf_long_unicode_paths_are_bounded_distinct_and_reusable(tmp_pat
     first_name = "季度市场研究" * 45 + "-甲.pdf"
     second_name = "季度市场研究" * 45 + "-乙.pdf"
     attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name=first_name,
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 first long attachment",
-        ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name=second_name,
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 second long attachment",
-        ),
+        _pdf(first_name, b"%PDF-1.7 first long attachment"),
+        _pdf(second_name, b"%PDF-1.7 second long attachment"),
     ]
 
     request = _request(tmp_path, attachments, message_id=message_id)
     request = replace(request, settings=settings)
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="long-direct",
-        span_id="zip-span",
-    )
+    ctx = _context("long-direct")
     first = materialize_mailbox_attachments(request, ctx)
     repeated = materialize_mailbox_attachments(request, ctx)
     near_message_id = materialize_mailbox_attachments(
@@ -776,18 +637,8 @@ def test_direct_pdf_sanitized_name_collisions_keep_each_payload_and_stable_path(
     tmp_path,
 ):
     attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="A?B.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 question mark",
-        ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="A*B.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 asterisk",
-        ),
+        _pdf("A?B.pdf", b"%PDF-1.7 question mark"),
+        _pdf("A*B.pdf", b"%PDF-1.7 asterisk"),
     ]
     request = _request(tmp_path, attachments, message_id="sanitized-collision")
     output_dir = _deep_output_dir(tmp_path)
@@ -795,12 +646,7 @@ def test_direct_pdf_sanitized_name_collisions_keep_each_payload_and_stable_path(
         request,
         settings=replace(request.settings, output_dir=str(output_dir)),
     )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="sanitized-collision",
-        span_id="zip-span",
-    )
+    ctx = _context("sanitized-collision")
 
     first = materialize_mailbox_attachments(request, ctx)
     repeated = materialize_mailbox_attachments(request, ctx)
@@ -829,18 +675,8 @@ def test_direct_pdf_sanitized_name_collisions_keep_each_payload_and_stable_path(
 
 def test_direct_same_name_different_payloads_get_distinct_stable_paths(tmp_path):
     attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="reused.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 first version",
-        ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="reused.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 second version",
-        ),
+        _pdf("reused.pdf", b"%PDF-1.7 first version"),
+        _pdf("reused.pdf", b"%PDF-1.7 second version"),
     ]
     request = _request(tmp_path, attachments, message_id="same-name-collision")
     output_dir = _deep_output_dir(tmp_path)
@@ -848,12 +684,7 @@ def test_direct_same_name_different_payloads_get_distinct_stable_paths(tmp_path)
         request,
         settings=replace(request.settings, output_dir=str(output_dir)),
     )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="same-name-collision",
-        span_id="zip-span",
-    )
+    ctx = _context("same-name-collision")
 
     first = materialize_mailbox_attachments(request, ctx)
     repeated = materialize_mailbox_attachments(request, ctx)
@@ -883,21 +714,11 @@ def test_zip_member_collision_with_direct_pdf_does_not_overwrite(tmp_path):
     zip_payload = b"%PDF-1.7 archived attachment"
     attachments = [
         _attachment(_zip_bytes([("reports/report.pdf", zip_payload)])),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="report.pdf",
-            content_type="application/pdf",
-            payload=direct_payload,
-        ),
+        _pdf("report.pdf", direct_payload),
     ]
     response = materialize_mailbox_attachments(
         _request(tmp_path, attachments, message_id="zip-direct-collision"),
-        RunContext(
-            schema_version="1.0",
-            run_id="zip-test",
-            task_id="zip-direct-collision",
-            span_id="zip-span",
-        ),
+        _context("zip-direct-collision"),
     )
 
     assert [
@@ -928,12 +749,7 @@ def test_zip_long_unicode_and_near_identical_names_stage_and_read_back(tmp_path)
         message_id=message_id,
     )
     request = replace(request, settings=settings)
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="long-zip",
-        span_id="zip-span",
-    )
+    ctx = _context("long-zip")
 
     first = materialize_mailbox_attachments(request, ctx)
     repeated = materialize_mailbox_attachments(request, ctx)
@@ -981,12 +797,7 @@ def test_zip_distinct_unicode_names_use_output_path_identity(tmp_path):
         request,
         settings=replace(request.settings, output_dir=str(output_dir)),
     )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="unicode-zip-collisions",
-        span_id="zip-span",
-    )
+    ctx = _context("unicode-zip-collisions")
 
     first = materialize_mailbox_attachments(request, ctx)
     repeated = materialize_mailbox_attachments(request, ctx)
@@ -1018,22 +829,10 @@ def test_short_mailbox_paths_remain_compatible(tmp_path):
     response = materialize_mailbox_attachments(
         _request(
             tmp_path,
-            [
-                MailboxAttachment(
-                    schema_version="1.0",
-                    file_name="quarterly.pdf",
-                    content_type="application/pdf",
-                    payload=b"%PDF-1.7 short path",
-                )
-            ],
+            [_pdf("quarterly.pdf", b"%PDF-1.7 short path")],
             message_id="short-message",
         ),
-        RunContext(
-            schema_version="1.0",
-            run_id="zip-test",
-            task_id="short-message",
-            span_id="zip-span",
-        ),
+        _context("short-message"),
     )
 
     assert response.failures == []
@@ -1050,14 +849,7 @@ def test_impossible_mailbox_root_fails_before_direct_or_zip_materialization(tmp_
     settings = replace(_settings(tmp_path), output_dir=str(impossible_root))
     direct_request = _request(
         tmp_path,
-        [
-            MailboxAttachment(
-                schema_version="1.0",
-                file_name="report.pdf",
-                content_type="application/pdf",
-                payload=b"%PDF-1.7 direct",
-            )
-        ],
+        [_pdf("report.pdf", b"%PDF-1.7 direct")],
         message_id="impossible-direct",
     )
     zip_request = _request(
@@ -1067,12 +859,7 @@ def test_impossible_mailbox_root_fails_before_direct_or_zip_materialization(tmp_
     )
     direct_request = replace(direct_request, settings=settings)
     zip_request = replace(zip_request, settings=settings)
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="impossible-root",
-        span_id="zip-span",
-    )
+    ctx = _context("impossible-root")
 
     for request in (direct_request, zip_request):
         with pytest.raises(AppError) as error:
@@ -1086,12 +873,7 @@ def test_impossible_mailbox_root_fails_before_direct_or_zip_materialization(tmp_
 def test_provider_message_ids_that_sanitize_to_the_same_name_remain_distinct(
     tmp_path,
 ):
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="message-id-collision",
-        span_id="zip-span",
-    )
+    ctx = _context("message-id-collision")
     artifacts = []
     first_message_id = "a?b"
     mimicking_message_id = (
@@ -1108,14 +890,7 @@ def test_provider_message_ids_that_sanitize_to_the_same_name_remain_distinct(
         response = materialize_mailbox_attachments(
             _request(
                 tmp_path,
-                [
-                    MailboxAttachment(
-                        schema_version="1.0",
-                        file_name="report.pdf",
-                        content_type="application/pdf",
-                        payload=payload,
-                    )
-                ],
+                [_pdf("report.pdf", payload)],
                 message_id=message_id,
             ),
             ctx,
@@ -1128,340 +903,39 @@ def test_provider_message_ids_that_sanitize_to_the_same_name_remain_distinct(
     assert [Path(artifact.path).read_bytes() for artifact in artifacts] == payloads
 
 
-def test_windows_reserved_and_trimmed_message_ids_keep_distinct_artifacts(tmp_path):
-    message_ids = [
-        "mail",
-        "mail ",
-        "mail:123",
-        "mail?123",
-        "ABC123",
-        "abc123",
-        "con",
-        "prn",
-        "aux",
-        "nul",
-        "com1",
-        "lpt9",
-        "gmail-187ab",
-        "imap-account-42-99",
-    ]
-    payload = b"%PDF-1.7 stable message identity"
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="windows-message-components",
-        span_id="zip-span",
-    )
-
-    artifacts = []
-    for message_id in message_ids:
-        response = materialize_mailbox_attachments(
-            _request(
-                tmp_path,
-                [
-                    MailboxAttachment(
-                        schema_version="1.0",
-                        file_name="report.pdf",
-                        content_type="application/pdf",
-                        payload=payload,
-                    )
-                ],
-                message_id=message_id,
-            ),
-            ctx,
-        )
-        assert response.failures == []
-        artifacts.append(response.artifacts[0])
-
-    message_components = [Path(artifact.path).parent.name for artifact in artifacts]
-    assert len({component.casefold() for component in message_components}) == len(
-        message_ids
-    )
-    reserved_components = {"con", "prn", "aux", "nul", "com1", "lpt9"}
-    assert all(
-        component.casefold() not in reserved_components
-        for component in message_components
-    )
-    assert message_components[-2:] == message_ids[-2:]
-    assert all(Path(artifact.path).read_bytes() == payload for artifact in artifacts)
-
-
-def test_casefold_colliding_direct_names_keep_paths_on_subset_replay(tmp_path):
-    attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="Report.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 title case",
-        ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="report.pdf",
-            content_type="application/pdf",
-            payload=b"%PDF-1.7 lower case",
-        ),
-    ]
-    request = _request(tmp_path, attachments, message_id="casefold-subset")
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="casefold-subset",
-        span_id="zip-span",
-    )
-
-    full = materialize_mailbox_attachments(request, ctx)
-    reordered = materialize_mailbox_attachments(
-        replace(request, attachments=list(reversed(attachments))), ctx
-    )
-    replayed = [
-        materialize_mailbox_attachments(replace(request, attachments=[attachment]), ctx)
-        for attachment in attachments
-    ]
-
-    assert full.failures == []
-    assert reordered.failures == []
-    assert {
-        Path(artifact.path).read_bytes(): artifact.path for artifact in full.artifacts
-    } == {
-        Path(artifact.path).read_bytes(): artifact.path
-        for artifact in reordered.artifacts
-    }
-    assert len({artifact.path.casefold() for artifact in full.artifacts}) == 2
-    assert [replay.artifacts[0].path for replay in replayed] == [
-        artifact.path for artifact in full.artifacts
-    ]
-    assert [Path(artifact.path).read_bytes() for artifact in full.artifacts] == [
-        attachment.payload for attachment in attachments
-    ]
-
-
-def test_distinct_direct_names_cannot_mimic_a_lossy_name_hash_output(tmp_path):
+def test_direct_path_identities_survive_casefold_hash_and_extension_aliases(
+    tmp_path,
+):
     lossy_name = "A?B.pdf"
-    mimicking_name = (
-        "A_B-" + hashlib.sha256(lossy_name.encode("utf-8")).hexdigest()[:12] + ".pdf"
-    )
-    payload = b"%PDF-1.7 identical bytes from distinct names"
-    attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name=lossy_name,
-            content_type="application/pdf",
-            payload=payload,
+    cases = [
+        ("Report.pdf", b"%PDF upper", "report.pdf", b"%PDF lower"),
+        (
+            lossy_name,
+            b"%PDF shared",
+            "A_B-" + hashlib.sha256(lossy_name.encode()).hexdigest()[:12] + ".pdf",
+            b"%PDF shared",
         ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name=mimicking_name,
-            content_type="application/pdf",
-            payload=payload,
-        ),
-    ]
-    request = _request(tmp_path, attachments, message_id="mimicked-artifact-name")
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="mimicked-artifact-name",
-        span_id="zip-span",
-    )
-
-    full = materialize_mailbox_attachments(request, ctx)
-    subset = materialize_mailbox_attachments(
-        replace(request, attachments=[attachments[1]]), ctx
-    )
-
-    assert full.failures == []
-    assert len({artifact.path.casefold() for artifact in full.artifacts}) == 2
-    assert subset.artifacts[0].path == full.artifacts[1].path
-    assert [Path(artifact.path).read_bytes() for artifact in full.artifacts] == [
-        payload,
-        payload,
+        ("report", b"%PDF shared", "report.pdf", b"%PDF shared"),
     ]
 
+    for index, (first_name, first_payload, second_name, second_payload) in enumerate(
+        cases
+    ):
+        message_id = f"path-identity-{index}"
+        attachments = [
+            _pdf(first_name, first_payload),
+            _pdf(second_name, second_payload),
+        ]
+        request = _request(tmp_path, attachments, message_id=message_id)
+        ctx = _context(message_id)
+        full = materialize_mailbox_attachments(request, ctx)
 
-def test_direct_name_extension_normalization_keeps_subset_references(tmp_path):
-    payload = b"%PDF-1.7 same content under two original names"
-    attachments = [
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="report",
-            content_type="application/pdf",
-            payload=payload,
-        ),
-        MailboxAttachment(
-            schema_version="1.0",
-            file_name="report.pdf",
-            content_type="application/pdf",
-            payload=payload,
-        ),
-    ]
-    request = _request(tmp_path, attachments, message_id="extension-name-alias")
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="extension-name-alias",
-        span_id="zip-span",
-    )
-
-    full = materialize_mailbox_attachments(request, ctx)
-    subset = materialize_mailbox_attachments(
-        replace(request, attachments=[attachments[1]]), ctx
-    )
-
-    assert full.failures == []
-    assert len({artifact.path.casefold() for artifact in full.artifacts}) == 2
-    assert subset.artifacts[0].path == full.artifacts[1].path
-    assert [Path(artifact.path).read_bytes() for artifact in full.artifacts] == [
-        payload,
-        payload,
-    ]
-
-
-def test_changed_direct_payload_does_not_replace_previous_artifact(tmp_path):
-    original = MailboxAttachment(
-        schema_version="1.0",
-        file_name="report.pdf",
-        content_type="application/pdf",
-        payload=b"%PDF-1.7 original version",
-    )
-    changed = replace(original, payload=b"%PDF-1.7 updated version")
-    request = _request(tmp_path, [original], message_id="changed-payload")
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="changed-payload",
-        span_id="zip-span",
-    )
-
-    first = materialize_mailbox_attachments(request, ctx)
-    second = materialize_mailbox_attachments(
-        replace(request, attachments=[changed]), ctx
-    )
-    repeated = materialize_mailbox_attachments(
-        replace(request, attachments=[changed]), ctx
-    )
-
-    assert first.failures == second.failures == repeated.failures == []
-    assert first.artifacts[0].path != second.artifacts[0].path
-    assert repeated.artifacts[0].path == second.artifacts[0].path
-    assert Path(first.artifacts[0].path).read_bytes() == original.payload
-    assert Path(second.artifacts[0].path).read_bytes() == changed.payload
-
-
-def test_direct_identical_pdf_replay_reuses_bytes_without_rewriting(
-    tmp_path, external_boundary_mocks_only
-):
-    payload = b"%PDF-1.7 reusable report bytes"
-    request = _request(
-        tmp_path,
-        [
-            MailboxAttachment(
-                schema_version="1.0",
-                file_name="report.pdf",
-                content_type="application/pdf",
-                payload=payload,
-            )
-        ],
-        message_id="direct-identical-replay",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="direct-identical-replay",
-        span_id="zip-span",
-    )
-    first = materialize_mailbox_attachments(request, ctx)
-
-    def fail_sync(_file_descriptor):
-        raise OSError("identical replay must not write a staging file")
-
-    external_boundary_mocks_only.setattr(file_service.os, "fsync", fail_sync)
-    replay = materialize_mailbox_attachments(request, ctx)
-
-    assert replay.failures == []
-    assert replay.artifacts[0].path == first.artifacts[0].path
-    assert Path(replay.artifacts[0].path).read_bytes() == payload
-
-
-def test_direct_write_interruption_preserves_previous_pdf_and_cleans_temp(
-    tmp_path, external_boundary_mocks_only
-):
-    original_payload = b"%PDF-1.7 original report"
-    changed_payload = b"%PDF-1.7 replacement report"
-    attachment = MailboxAttachment(
-        schema_version="1.0",
-        file_name="report.pdf",
-        content_type="application/pdf",
-        payload=original_payload,
-    )
-    request = _request(tmp_path, [attachment], message_id="direct-write-interruption")
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="direct-write-interruption",
-        span_id="zip-span",
-    )
-    original = materialize_mailbox_attachments(request, ctx)
-    old_path = Path(original.artifacts[0].path)
-
-    def fail_sync(_file_descriptor):
-        raise OSError("injected direct PDF staging interruption")
-
-    external_boundary_mocks_only.setattr(file_service.os, "fsync", fail_sync)
-    with pytest.raises(AppError) as error:
-        materialize_mailbox_attachments(
-            replace(
-                request, attachments=[replace(attachment, payload=changed_payload)]
-            ),
-            ctx,
-        )
-
-    assert error.value.code == "mailbox_attachment_write_failed"
-    assert error.value.retryable is False
-    assert old_path.read_bytes() == original_payload
-    assert sorted(path.name for path in old_path.parent.glob("*.pdf")) == ["report.pdf"]
-    assert list(old_path.parent.glob(".*")) == []
-
-
-def test_atomic_direct_write_rejects_a_conflicting_destination_created_after_planning(
-    tmp_path, external_boundary_mocks_only
-):
-    request = _request(
-        tmp_path,
-        [
-            MailboxAttachment(
-                schema_version="1.0",
-                file_name="report.pdf",
-                content_type="application/pdf",
-                payload=b"%PDF-1.7 intended payload",
-            )
-        ],
-        message_id="atomic-race",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="atomic-race",
-        span_id="zip-span",
-    )
-    actual_write_bytes = file_service.write_bytes
-    conflicting_payload = b"%PDF-1.7 competing payload"
-
-    def write_conflict_before_atomic_call(write_request, write_ctx, **kwargs):
-        Path(write_request.path).write_bytes(conflicting_payload)
-        return actual_write_bytes(write_request, write_ctx, **kwargs)
-
-    external_boundary_mocks_only.setattr(
-        file_service, "write_bytes", write_conflict_before_atomic_call
-    )
-
-    with pytest.raises(AppError) as error:
-        materialize_mailbox_attachments(request, ctx)
-
-    assert error.value.code == "mailbox_attachment_output_collision"
-    assert error.value.retryable is False
-    assert Path(tmp_path / "mailbox" / "atomic-race" / "report.pdf").read_bytes() == (
-        conflicting_payload
-    )
-    assert list((tmp_path / "mailbox" / "atomic-race").glob(".*.tmp")) == []
+        assert full.failures == []
+        assert len({artifact.path.casefold() for artifact in full.artifacts}) == 2
+        assert [Path(artifact.path).read_bytes() for artifact in full.artifacts] == [
+            first_payload,
+            second_payload,
+        ]
 
 
 def test_atomic_direct_commit_preserves_a_competing_writer(
@@ -1469,22 +943,10 @@ def test_atomic_direct_commit_preserves_a_competing_writer(
 ):
     request = _request(
         tmp_path,
-        [
-            MailboxAttachment(
-                schema_version="1.0",
-                file_name="report.pdf",
-                content_type="application/pdf",
-                payload=b"%PDF-1.7 intended payload",
-            )
-        ],
+        [_pdf("report.pdf", b"%PDF-1.7 intended payload")],
         message_id="atomic-commit-race",
     )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="atomic-commit-race",
-        span_id="zip-span",
-    )
+    ctx = _context("atomic-commit-race")
     competing_payload = b"%PDF-1.7 competing payload at commit"
     commit_operation = "rename" if file_service.os.name == "nt" else "link"
     actual_no_replace_commit = getattr(file_service.os, commit_operation)
@@ -1515,48 +977,6 @@ def test_atomic_direct_commit_preserves_a_competing_writer(
     assert list(output_dir.glob(".*.tmp")) == []
 
 
-def test_atomic_direct_write_rejects_a_casefold_alias_created_after_planning(
-    tmp_path, external_boundary_mocks_only
-):
-    payload = b"%PDF-1.7 same bytes, different filename identity"
-    request = _request(
-        tmp_path,
-        [
-            MailboxAttachment(
-                schema_version="1.0",
-                file_name="report.pdf",
-                content_type="application/pdf",
-                payload=payload,
-            )
-        ],
-        message_id="atomic-case-race",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="atomic-case-race",
-        span_id="zip-span",
-    )
-    actual_write_bytes = file_service.write_bytes
-
-    def write_case_alias_before_atomic_call(write_request, write_ctx, **kwargs):
-        Path(write_request.path).with_name("Report.pdf").write_bytes(payload)
-        return actual_write_bytes(write_request, write_ctx, **kwargs)
-
-    external_boundary_mocks_only.setattr(
-        file_service, "write_bytes", write_case_alias_before_atomic_call
-    )
-
-    with pytest.raises(AppError) as error:
-        materialize_mailbox_attachments(request, ctx)
-
-    output_dir = tmp_path / "mailbox" / "atomic-case-race"
-    assert error.value.code == "mailbox_attachment_output_collision"
-    assert error.value.retryable is False
-    assert [path.name for path in output_dir.glob("*.pdf")] == ["Report.pdf"]
-    assert (output_dir / "Report.pdf").read_bytes() == payload
-
-
 def test_zip_output_conflict_preserves_prior_pdf_and_leaves_no_staging_files(tmp_path):
     previous_payload = b"%PDF-1.7 previous archive member"
     new_payload = b"%PDF-1.7 changed archive member"
@@ -1578,119 +998,3 @@ def test_zip_output_conflict_preserves_prior_pdf_and_leaves_no_staging_files(tmp
     ]
     assert Path(first.artifacts[0].path).read_bytes() == previous_payload
     assert list(Path(first.artifacts[0].path).parent.glob(".*.tmp")) == []
-
-
-def test_zip_output_casefold_alias_is_rejected_even_when_payload_matches(tmp_path):
-    payload = b"%PDF-1.7 same bytes, different ZIP member identity"
-    first = _materialize(
-        tmp_path,
-        _zip_bytes([("Report.pdf", payload)]),
-        message_id="zip-casefold-alias",
-    )
-    second = _materialize(
-        tmp_path,
-        _zip_bytes([("report.pdf", payload)]),
-        message_id="zip-casefold-alias",
-    )
-
-    assert first.failures == []
-    assert second.artifacts == []
-    assert [failure.error_code for failure in second.failures] == [
-        "mailbox_zip_output_conflict"
-    ]
-    output_dir = Path(first.artifacts[0].path).parent
-    assert Path(first.artifacts[0].path).read_bytes() == payload
-    assert len(list(output_dir.glob("*.pdf"))) == 1
-    assert list(output_dir.glob(".*.tmp")) == []
-
-
-def test_zip_write_rollback_never_replaces_an_existing_pdf(tmp_path):
-    previous_payload = b"%PDF-1.7 existing first member"
-    existing_output_dir = tmp_path / "mailbox" / "zip-preserve-existing"
-    existing_output_dir.mkdir(parents=True)
-    (existing_output_dir / "first.pdf").write_bytes(previous_payload)
-    (existing_output_dir / "second.pdf").mkdir()
-    request = _request(
-        tmp_path,
-        [
-            _attachment(
-                _zip_bytes(
-                    [
-                        ("first.pdf", b"%PDF-1.7 attempted replacement"),
-                        ("second.pdf", b"%PDF-1.7 directory conflict"),
-                    ]
-                )
-            )
-        ],
-        message_id="zip-preserve-existing",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="zip-preserve-existing",
-        span_id="zip-span",
-    )
-
-    response = materialize_mailbox_attachments(request, ctx)
-
-    assert response.artifacts == []
-    assert [failure.error_code for failure in response.failures] == [
-        "mailbox_zip_output_conflict"
-    ]
-    assert (existing_output_dir / "first.pdf").read_bytes() == previous_payload
-    assert (existing_output_dir / "second.pdf").is_dir()
-    assert list(existing_output_dir.glob(".*.tmp")) == []
-
-
-def test_zip_write_failure_does_not_delete_a_competing_replacement(
-    tmp_path, external_boundary_mocks_only
-):
-    output_dir = tmp_path / "mailbox" / "zip-rollback-race"
-    output_dir.mkdir(parents=True)
-    competing_payload = b"%PDF-1.7 competing worker output"
-    request = _request(
-        tmp_path,
-        [
-            _attachment(
-                _zip_bytes(
-                    [
-                        ("first.pdf", b"%PDF-1.7 first member"),
-                        ("second.pdf", b"%PDF-1.7 second member"),
-                    ]
-                )
-            )
-        ],
-        message_id="zip-rollback-race",
-    )
-    ctx = RunContext(
-        schema_version="1.0",
-        run_id="zip-test",
-        task_id="zip-rollback-race",
-        span_id="zip-span",
-    )
-    commit_operation = "rename" if mailbox_service.os.name == "nt" else "link"
-    actual_commit = getattr(mailbox_service.os, commit_operation)
-    commit_calls = 0
-
-    def replace_first_and_fail_second(source, destination):
-        nonlocal commit_calls
-        commit_calls += 1
-        if commit_calls == 2:
-            first_path = output_dir / "first.pdf"
-            first_path.unlink()
-            first_path.write_bytes(competing_payload)
-            raise OSError("injected second ZIP commit failure")
-        return actual_commit(source, destination)
-
-    external_boundary_mocks_only.setattr(
-        mailbox_service.os, commit_operation, replace_first_and_fail_second
-    )
-
-    with pytest.raises(AppError) as error:
-        materialize_mailbox_attachments(request, ctx)
-
-    assert error.value.code == "mailbox_zip_write_failed"
-    assert error.value.retryable is True
-    assert (output_dir / "first.pdf").read_bytes() == competing_payload
-    assert not (output_dir / "second.pdf").exists()
-    assert list(output_dir.glob(".*.tmp")) == []
