@@ -21,6 +21,7 @@ from src.services import file_service
 from src.services import mailbox_acquisition_service as mailbox_service
 from src.services.mailbox_acquisition_service import materialize_mailbox_attachments
 from src.utils.errors import AppError
+from tests.conftest import ExternalBoundaryMocksOnly
 
 _MIB = 1024 * 1024
 _MAX_ZIP_ATTACHMENT_BYTES = 25 * _MIB
@@ -135,7 +136,7 @@ def _zip_materialization_process(
     )
     commit_operation = "rename" if mailbox_service.os.name == "nt" else "link"
     actual_commit = getattr(mailbox_service.os, commit_operation)
-    patched_commit = False
+    boundary_mocks = ExternalBoundaryMocksOnly()
 
     if role == "pause_then_fail":
 
@@ -153,8 +154,9 @@ def _zip_materialization_process(
                     raise OSError("timed out waiting to resume the first worker")
             return result
 
-        setattr(mailbox_service.os, commit_operation, pause_then_fail_commit)
-        patched_commit = True
+        boundary_mocks.setattr(
+            mailbox_service.os, commit_operation, pause_then_fail_commit
+        )
 
     try:
         response = materialize_mailbox_attachments(request, ctx)
@@ -179,8 +181,7 @@ def _zip_materialization_process(
     except Exception as exc:
         result_queue.put(("unexpected", role, type(exc).__name__, str(exc)))
     finally:
-        if patched_commit:
-            setattr(mailbox_service.os, commit_operation, actual_commit)
+        boundary_mocks.close()
 
 
 def _mutate_encryption_flag(payload: bytes) -> bytes:
@@ -447,7 +448,7 @@ def test_rejected_archive_leaves_no_outputs_and_preserves_valid_sibling_attachme
 
 
 def test_zip_write_failure_retains_committed_files_and_cleans_staging(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     output_dir = tmp_path / "mailbox" / "write-failure"
     output_dir.mkdir(parents=True)
@@ -473,7 +474,9 @@ def test_zip_write_failure_retains_committed_files_and_cleans_staging(
             raise OSError("injected second ZIP commit failure")
         actual_commit(source, destination)
 
-    monkeypatch.setattr(mailbox_service.os, commit_operation, fail_second_commit)
+    external_boundary_mocks_only.setattr(
+        mailbox_service.os, commit_operation, fail_second_commit
+    )
 
     with pytest.raises(AppError, match="Mailbox ZIP PDF artifacts") as error:
         materialize_mailbox_attachments(
@@ -499,7 +502,7 @@ def test_zip_write_failure_retains_committed_files_and_cleans_staging(
 
 
 def test_zip_retry_reuses_committed_pdf_after_later_member_failure(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     output_dir = tmp_path / "mailbox" / "zip-retry-partial"
     first_payload = b"%PDF-1.7 first member"
@@ -529,10 +532,14 @@ def test_zip_retry_reuses_committed_pdf_after_later_member_failure(
             raise OSError("injected second ZIP commit failure")
         actual_commit(source, destination)
 
-    with monkeypatch.context() as patcher:
-        patcher.setattr(mailbox_service.os, commit_operation, fail_second_commit)
+    external_boundary_mocks_only.setattr(
+        mailbox_service.os, commit_operation, fail_second_commit
+    )
+    try:
         with pytest.raises(AppError) as error:
             materialize_mailbox_attachments(request, ctx)
+    finally:
+        external_boundary_mocks_only.close()
 
     assert error.value.code == "mailbox_zip_write_failed"
     first_path = output_dir / "first.pdf"
@@ -564,7 +571,7 @@ def test_zip_retry_reuses_committed_pdf_after_later_member_failure(
 
 
 def test_zip_conflicting_retry_preserves_committed_pdf_after_later_failure(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     output_dir = tmp_path / "mailbox" / "zip-conflicting-retry"
     original_first = b"%PDF-1.7 original first member"
@@ -594,10 +601,14 @@ def test_zip_conflicting_retry_preserves_committed_pdf_after_later_failure(
             raise OSError("injected second ZIP commit failure")
         actual_commit(source, destination)
 
-    with monkeypatch.context() as patcher:
-        patcher.setattr(mailbox_service.os, commit_operation, fail_second_commit)
+    external_boundary_mocks_only.setattr(
+        mailbox_service.os, commit_operation, fail_second_commit
+    )
+    try:
         with pytest.raises(AppError) as error:
             materialize_mailbox_attachments(request, ctx)
+    finally:
+        external_boundary_mocks_only.close()
 
     assert error.value.code == "mailbox_zip_write_failed"
     first_path = output_dir / "first.pdf"
@@ -1336,7 +1347,7 @@ def test_changed_direct_payload_does_not_replace_previous_artifact(tmp_path):
 
 
 def test_direct_identical_pdf_replay_reuses_bytes_without_rewriting(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     payload = b"%PDF-1.7 reusable report bytes"
     request = _request(
@@ -1362,7 +1373,7 @@ def test_direct_identical_pdf_replay_reuses_bytes_without_rewriting(
     def fail_sync(_file_descriptor):
         raise OSError("identical replay must not write a staging file")
 
-    monkeypatch.setattr(file_service.os, "fsync", fail_sync)
+    external_boundary_mocks_only.setattr(file_service.os, "fsync", fail_sync)
     replay = materialize_mailbox_attachments(request, ctx)
 
     assert replay.failures == []
@@ -1371,7 +1382,7 @@ def test_direct_identical_pdf_replay_reuses_bytes_without_rewriting(
 
 
 def test_direct_write_interruption_preserves_previous_pdf_and_cleans_temp(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     original_payload = b"%PDF-1.7 original report"
     changed_payload = b"%PDF-1.7 replacement report"
@@ -1394,7 +1405,7 @@ def test_direct_write_interruption_preserves_previous_pdf_and_cleans_temp(
     def fail_sync(_file_descriptor):
         raise OSError("injected direct PDF staging interruption")
 
-    monkeypatch.setattr(file_service.os, "fsync", fail_sync)
+    external_boundary_mocks_only.setattr(file_service.os, "fsync", fail_sync)
     with pytest.raises(AppError) as error:
         materialize_mailbox_attachments(
             replace(
@@ -1411,7 +1422,7 @@ def test_direct_write_interruption_preserves_previous_pdf_and_cleans_temp(
 
 
 def test_atomic_direct_write_rejects_a_conflicting_destination_created_after_planning(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     request = _request(
         tmp_path,
@@ -1438,7 +1449,9 @@ def test_atomic_direct_write_rejects_a_conflicting_destination_created_after_pla
         Path(write_request.path).write_bytes(conflicting_payload)
         return actual_write_bytes(write_request, write_ctx, **kwargs)
 
-    monkeypatch.setattr(file_service, "write_bytes", write_conflict_before_atomic_call)
+    external_boundary_mocks_only.setattr(
+        file_service, "write_bytes", write_conflict_before_atomic_call
+    )
 
     with pytest.raises(AppError) as error:
         materialize_mailbox_attachments(request, ctx)
@@ -1451,7 +1464,9 @@ def test_atomic_direct_write_rejects_a_conflicting_destination_created_after_pla
     assert list((tmp_path / "mailbox" / "atomic-race").glob(".*.tmp")) == []
 
 
-def test_atomic_direct_commit_preserves_a_competing_writer(tmp_path, monkeypatch):
+def test_atomic_direct_commit_preserves_a_competing_writer(
+    tmp_path, external_boundary_mocks_only
+):
     request = _request(
         tmp_path,
         [
@@ -1483,8 +1498,12 @@ def test_atomic_direct_commit_preserves_a_competing_writer(tmp_path, monkeypatch
         Path(destination).write_bytes(competing_payload)
         return actual_replace(source, destination)
 
-    monkeypatch.setattr(file_service.os, commit_operation, race_no_replace_commit)
-    monkeypatch.setattr(file_service.os, "replace", race_replace_commit)
+    external_boundary_mocks_only.setattr(
+        file_service.os, commit_operation, race_no_replace_commit
+    )
+    external_boundary_mocks_only.setattr(
+        file_service.os, "replace", race_replace_commit
+    )
 
     with pytest.raises(AppError) as error:
         materialize_mailbox_attachments(request, ctx)
@@ -1497,7 +1516,7 @@ def test_atomic_direct_commit_preserves_a_competing_writer(tmp_path, monkeypatch
 
 
 def test_atomic_direct_write_rejects_a_casefold_alias_created_after_planning(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     payload = b"%PDF-1.7 same bytes, different filename identity"
     request = _request(
@@ -1524,7 +1543,7 @@ def test_atomic_direct_write_rejects_a_casefold_alias_created_after_planning(
         Path(write_request.path).with_name("Report.pdf").write_bytes(payload)
         return actual_write_bytes(write_request, write_ctx, **kwargs)
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         file_service, "write_bytes", write_case_alias_before_atomic_call
     )
 
@@ -1624,7 +1643,7 @@ def test_zip_write_rollback_never_replaces_an_existing_pdf(tmp_path):
 
 
 def test_zip_write_failure_does_not_delete_a_competing_replacement(
-    tmp_path, monkeypatch
+    tmp_path, external_boundary_mocks_only
 ):
     output_dir = tmp_path / "mailbox" / "zip-rollback-race"
     output_dir.mkdir(parents=True)
@@ -1663,7 +1682,7 @@ def test_zip_write_failure_does_not_delete_a_competing_replacement(
             raise OSError("injected second ZIP commit failure")
         return actual_commit(source, destination)
 
-    monkeypatch.setattr(
+    external_boundary_mocks_only.setattr(
         mailbox_service.os, commit_operation, replace_first_and_fail_second
     )
 
