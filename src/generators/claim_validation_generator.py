@@ -53,7 +53,16 @@ _CAUSAL_RE = re.compile(
 _INTERPRETIVE_RE = re.compile(
     r"\b(recommend|suggest|should|could|may|likely|interpret)\b", re.I
 )
-_QUOTED_RE = re.compile(r"""(?:"[^"]+"|“[^”]+”|‘[^’]+’|'[^']+')""")
+_QUOTED_RE = re.compile(
+    r"""(?:"[^"]+"|“[^”]+”"""
+    r"|(?<!\w)‘(?:[^’\r\n]|(?<=\w)’(?=\w|\s+\w))+’(?!\w)"
+    r"|(?<!\w)'(?:[^'\r\n]|(?<=\w)'(?=\w|\s+\w))+'(?!\w))"
+)
+_MINIMAL_QUOTED_RE = re.compile(
+    r"""(?:"[^"]+"|“[^”]+”"""
+    r"|(?<!\w)‘(?:[^’\r\n]|(?<=\w)’(?=\w|\s+\w))+?’(?!\w)"
+    r"|(?<!\w)'(?:[^'\r\n]|(?<=\w)'(?=\w|\s+\w))+?'(?!\w))"
+)
 _LAYOUT_CHART_ROW_RE = re.compile(
     r"^Panel\s+(?P<panel>[12]):\s+the\s+"
     r"(?P<cohort>.+?)\s+total-view\s+cohort\s+is\s+"
@@ -214,21 +223,27 @@ def _evidence_index(evidence_packs: dict) -> dict[str, tuple[str, str, int | Non
                 evidence_id = str(
                     item.get("id") or item.get("evidence_id") or ""
                 ).strip()
-                text = " ".join(
-                    str(item.get(key) or "").strip()
-                    for key in (
-                        "text",
-                        "evidence",
-                        "excerpt",
-                        "quote",
-                        "quote_text",
-                        "description",
-                        "summary",
-                        "title",
-                        "key_points",
+                if pack_name in {"findings", "quote_candidates"}:
+                    # The generated finding is a claim, not additional source
+                    # evidence. Keep its direct excerpt authoritative and avoid
+                    # duplicating it when text and evidence repeat a sentence.
+                    text = _item_direct_evidence_text(item)
+                else:
+                    text = " ".join(
+                        str(item.get(key) or "").strip()
+                        for key in (
+                            "text",
+                            "evidence",
+                            "excerpt",
+                            "quote",
+                            "quote_text",
+                            "description",
+                            "summary",
+                            "title",
+                            "key_points",
+                        )
+                        if str(item.get(key) or "").strip()
                     )
-                    if str(item.get(key) or "").strip()
-                )
                 if evidence_id and text:
                     page_value = item.get("page")
                     indexed[evidence_id] = (
@@ -648,12 +663,36 @@ def _checks(
             quote_matched = bool(normalized) and any(
                 normalized in source for source in normalized_sources
             )
+        # A trailing possessive and a closing single quote can look identical.
+        # A supported shorter parse cannot prove the longer quotation: abstain
+        # so the existing semantic path resolves the complete claim.
+        minimal_quotes = [
+            normalize_for_lookup(quote).replace('"', "")
+            for quote in _MINIMAL_QUOTED_RE.findall(text)
+        ]
+        ambiguous = (
+            not quote_matched
+            and minimal_quotes != normalized_quotes
+            and bool(minimal_quotes)
+            and all(
+                quote and any(quote in source for source in normalized_sources)
+                for quote in minimal_quotes
+            )
+        )
         checks.append(
             ClaimValidationCheck(
                 schema_version=CLAIM_VALIDATION_SCHEMA_VERSION,
                 name="quote_match",
-                status="passed" if quote_matched else "failed",
-                reason="quote_matched" if quote_matched else "quote_not_matched",
+                status="passed"
+                if quote_matched
+                else "not_applicable"
+                if ambiguous
+                else "failed",
+                reason="quote_matched"
+                if quote_matched
+                else "ambiguous_quote_boundaries"
+                if ambiguous
+                else "quote_not_matched",
             )
         )
     else:
@@ -2289,7 +2328,7 @@ def _source_references(
 def _item_direct_evidence_text(raw: dict) -> str:
     """Return the item’s direct excerpt, falling back to its quote text."""
 
-    for key in ("evidence", "quote", "snippet", "excerpt", "text"):
+    for key in ("evidence", "quote", "quote_text", "snippet", "excerpt", "text"):
         value = raw.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
