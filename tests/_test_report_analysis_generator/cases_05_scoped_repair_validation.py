@@ -23,7 +23,7 @@ def test_repair_memory_does_not_upgrade_unknown_severity_to_hard_error():
     assert plan.targets == []
 
 
-def test_multi_insight_retry_does_not_offer_single_item_safe_removal():
+def test_multi_insight_repair_scopes_safe_removal_to_one_failed_item():
     insights = [
         {
             "id": insight_id,
@@ -60,16 +60,27 @@ def test_multi_insight_retry_does_not_offer_single_item_safe_removal():
     first_plan = _build_regeneration_plan(
         issues=issues, artifacts=artifacts, broad_retry_available=False
     )
-    assert first_plan.targets[0].repair_action == "REGENERATE_ITEM"
-    fingerprints = [issue.failure_fingerprint for issue in first_plan.targets[0].issues]
+    assert [target.target_section for target in first_plan.targets] == [
+        "insights_bundle",
+        "insights_bundle",
+    ]
+    assert [target.selected_evidence_ids for target in first_plan.targets] == [
+        ["evidence-a"],
+        ["evidence-b"],
+    ]
+    assert all(
+        target.repair_action == "REGENERATE_ITEM" for target in first_plan.targets
+    )
+    first_target = first_plan.targets[0]
+    fingerprints = [issue.failure_fingerprint for issue in first_target.issues]
     rejected = {
         repair_strategy_fingerprint(
             fingerprints,
-            first_plan.targets[0].repair_strategy,
-            first_plan.targets[0].selected_evidence_ids,
+            first_target.repair_strategy,
+            first_target.selected_evidence_ids,
         ),
         repair_strategy_fingerprint(
-            fingerprints, "alternative_evidence", ["evidence-a", "evidence-b"]
+            fingerprints, "alternative_evidence", first_target.selected_evidence_ids
         ),
     }
 
@@ -80,11 +91,18 @@ def test_multi_insight_retry_does_not_offer_single_item_safe_removal():
         rejected_strategy_keys=rejected,
     )
 
-    assert exhausted.mode == "skip"
-    assert exhausted.targets == []
-    assert {issue.rule_id for issue in exhausted.unmappable_issues} == {
-        "retained_claim.protected_fact_value_consistency"
-    }
+    assert exhausted.mode == "targeted"
+    assert [target.repair_strategy for target in exhausted.targets] == [
+        "safe_removal",
+        "current_evidence",
+    ]
+    assert exhausted.targets[0].allowed_paths == [
+        "insights_candidates[item=insight-a]",
+        "insights_final[item=insight-a]",
+    ]
+    assert exhausted.targets[1].allowed_paths == [
+        "insights_final[item=insight-b].metric.value",
+    ]
 
 
 def test_soft_copy_repair_fingerprint_stays_with_sentence_slot_after_rewrite():

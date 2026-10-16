@@ -1399,27 +1399,17 @@ def _summary_issue_groups(
 def _insight_issue_groups(
     issues: List[RegenerationIssue], artifacts: Dict[str, Any]
 ) -> List[List[RegenerationIssue]]:
-    """Isolate duplicate-insight targets while preserving other atomic bundles."""
-    duplicate_rule = "public_editorial_quality.duplicate_insight"
-    duplicate_issues = [issue for issue in issues if issue.rule_id == duplicate_rule]
-    if not duplicate_issues:
-        return [issues]
-
+    """Keep each insight's repair atomic without bundling unrelated failures."""
     identities = [_issue_insight_identity(issue, artifacts) for issue in issues]
     if any(not identity for identity in identities):
-        # An unresolved family-level finding keeps the target atomic and
-        # prevents a partial repair from silently ignoring that finding.
+        # An unresolved identity keeps the family atomic; splitting it could
+        # let a repair silently omit a failure or remove the wrong insight.
         return [issues]
 
-    ordinary = [issue for issue in issues if issue.rule_id != duplicate_rule]
-    grouped_duplicates: Dict[str, List[RegenerationIssue]] = {}
-    for issue in duplicate_issues:
-        identity = _issue_insight_identity(issue, artifacts)
-        grouped_duplicates.setdefault(identity, []).append(issue)
-
-    groups = [ordinary] if ordinary else []
-    groups.extend(grouped_duplicates[key] for key in sorted(grouped_duplicates))
-    return groups
+    grouped: Dict[str, List[RegenerationIssue]] = {}
+    for issue, identity in zip(issues, identities):
+        grouped.setdefault(identity, []).append(issue)
+    return [grouped[identity] for identity in sorted(grouped)]
 
 
 def _canonical_metric_copy_changes(paths: List[str], artifacts: Dict[str, Any]) -> bool:
