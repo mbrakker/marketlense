@@ -66,6 +66,22 @@ deterministic factual check is also emitted as a typed validation issue before
 candidate promotion, so the candidate repair loop sees the same unsupported quote,
 number, evidence-reference, or provenance result that final readiness will enforce.
 
+Retained-claim validator `v7` distinguishes quotation delimiters from possessive
+apostrophes and contractions. A metric label such as `Consumers' expectations
+of brands' data use` remains subject to numeric and protected-fact validation;
+it is not treated as a verbatim quotation. Actual quotations still require
+source matching. If a single quote could also be a possessive apostrophe and
+only the shorter interpretation matches, validation abstains with
+`ambiguous_quote_boundaries` for the existing semantic grounding path; a matching
+prefix cannot prove the complete quotation. Findings and quote candidates
+contribute their direct source excerpt (`evidence`, `quote`, `quote_text`,
+`snippet`, or `excerpt`) before falling back to `text` when no separate excerpt
+exists. Generated finding text is never
+concatenated with an available source excerpt: it cannot substantiate its own
+numbers or create a duplicate excerpt that fails physical-page matching.
+The validator identity transition invalidates retained results produced under
+the previous classification and evidence-indexing rules.
+
 Grounding uses the existing `report_vs/validate/grounding` prompt family and one
 report-level execution for all unresolved retained claims. Each returned claim
 result records its stable claim ID and text hash, exact evidence IDs and
