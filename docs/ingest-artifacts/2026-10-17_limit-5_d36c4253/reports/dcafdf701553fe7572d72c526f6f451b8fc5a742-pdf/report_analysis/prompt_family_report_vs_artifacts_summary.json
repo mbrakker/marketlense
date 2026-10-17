@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": {
+      "tldr": "For global consumer internet and media revenues in 2016E–2021E, the report assigns CAGRs of 6.3% to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content.",
+      "card_tldr_compact": "Global consumer internet/media CAGRs were 6.3% for access, 4.7% for ads, and 2.6% for paid content in 2016E–2021E.",
+      "executive_summary": "For global consumer internet and media revenues in 2016E–2021E, the report assigns CAGRs of 6.3% to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content. In the U.S. in 2016, 92% of respondents multitasked across at least two media types. Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final. The report says U.S. Pay TV prices had reached the upper bound of consumer willingness to pay. The report estimates that approximately 50 million Americans are underserved by technology and media companies.",
+      "claim_evidence_map": [
+        {
+          "claim": "Global consumer internet/media CAGRs were 6.3% for access, 4.7% for ads, and 2.6% for paid content in 2016E–2021E.",
+          "evidence_id": "internet-media-segment-cagr",
+          "evidence": "For global consumer internet and media revenues in 2016E–2021E, the report assigns a 6.3% CAGR to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content.",
+          "evidence_spans": [],
+          "pages": [
+            14
+          ]
+        },
+        {
+          "claim": "In the U.S. in 2016, 92% of respondents multitasked across at least two media types.",
+          "evidence_id": "us-consumer-media-multitasking",
+          "evidence": "MULTITASKING FREQUENCY BY MEDIA TYPE, U.S., 2016, PERCENT OF RESPONDENTS ... 92% OF CONSUMERS MULTITASK ACROSS AT LEAST TWO MEDIA TYPES",
+          "evidence_spans": [],
+          "pages": [
+            6
+          ]
+        },
+        {
+          "claim": "Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final.",
+          "evidence_id": "esports-us-forecast",
+          "evidence": "Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final.",
+          "evidence_spans": [],
+          "pages": [
+            68
+          ]
+        },
+        {
+          "claim": "The report says U.S. Pay TV prices had reached the upper bound of consumer willingness to pay.",
+          "evidence_id": "pay-tv-price-limit",
+          "evidence": "Pay TV prices have reached the upper bound of consumer willingness to pay",
+          "evidence_spans": [],
+          "pages": [
+            95
+          ]
+        },
+        {
+          "claim": "The report estimates that approximately 50 million Americans are underserved by technology and media companies.",
+          "evidence_id": "underserved-americans-estimate",
+          "evidence": "The report estimates that approximately 50 million Americans are underserved by technology and media companies.",
+          "evidence_spans": [],
+          "pages": [
+            164
+          ]
+        }
+      ]
+    },
+    "claim_provenance": [
+      {
+        "claim": "For global consumer internet and media revenues in 2016E–2021E, the report assigns CAGRs of 6.3% to cost of internet access, 4.7% to ad revenue, and 2.6% to paid content.",
+        "classification": "factual",
+        "evidence_ids": [
+          "internet-media-segment-cagr"
+        ]
+      },
+      {
+        "claim": "Global consumer internet/media CAGRs were 6.3% for access, 4.7% for ads, and 2.6% for paid content in 2016E–2021E.",
+        "classification": "factual",
+        "evidence_ids": [
+          "internet-media-segment-cagr"
+        ]
+      },
+      {
+        "claim": "In the U.S. in 2016, 92% of respondents multitasked across at least two media types.",
+        "classification": "factual",
+        "evidence_ids": [
+          "us-consumer-media-multitasking"
+        ]
+      },
+      {
+        "claim": "Activate forecast that by 2020, eSports would account for approximately 10% of all U.S. sports viewing, with 70 million or more people watching an eSports final.",
+        "classification": "factual",
+        "evidence_ids": [
+          "esports-us-forecast"
+        ]
+      },
+      {
+        "claim": "The report says U.S. Pay TV prices had reached the upper bound of consumer willingness to pay.",
+        "classification": "factual",
+        "evidence_ids": [
+          "pay-tv-price-limit"
+        ]
+      },
+      {
+        "claim": "The report estimates that approximately 50 million Americans are underserved by technology and media companies.",
+        "classification": "factual",
+        "evidence_ids": [
+          "underserved-americans-estimate"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/summary",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/summary",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "sha256": "3df572a3c0dde0f0e5b7f3d83fd30339674224df030cfe2eb072b8493a4a7b05",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [
+          {
+            "schema_version": "1.0",
+            "path": "schemas/artifacts.schema.json",
+            "sha256": "fa2d3dd109c1f2ff61152454a7dff4a29dd781b490069be25e8ac3744165b3f9",
+            "kind": "schema_snippet",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "composition_version": "2.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9"
+      },
+      "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/summary",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "73d50b32108b575cd490d18d91f1215b8f180bd02969d28ccf52350cc99bd8d0",
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "regeneration_reason": "input_hash_changed"
+    },
+    "generation_attempt": 1
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "235d0284fd88df8a397724440be0e78ec6f3481c5c9c028e77d099835259d648",
+    "md5": "b75240e6062919b5616c28b73224acdb",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "816876189f546800f5137d2ef21e52bc13d38b974afd51e3b7019c6b0795f60a",
+      "candidate_id": "chart-172-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        32.0,
+        59.0,
+        955.0,
+        736.0
+      ],
+      "reason": "model_accepted",
+      "page": 172
+    }
+  ]
+}

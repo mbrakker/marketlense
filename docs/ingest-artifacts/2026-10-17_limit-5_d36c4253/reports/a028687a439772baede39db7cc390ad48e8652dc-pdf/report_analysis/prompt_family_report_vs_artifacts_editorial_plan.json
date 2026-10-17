@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The report concludes that shelter-in-place changed consumer habits and expectations, and recommends that technology and media companies rework how they engage consumers to address needs that may persist after reopening.",
+    "themes": [
+      {
+        "theme": "Changed habits and expectations call for revisiting value propositions, experiences, pricing, and marketing.",
+        "priority": 1,
+        "evidence_ids": [
+          "quote-1",
+          "quote-2",
+          "rewire-to-restart"
+        ]
+      },
+      {
+        "theme": "Online shopping behavior and consumers’ stated plans to continue buying from new retailers are part of the post-shelter demand picture.",
+        "priority": 2,
+        "evidence_ids": [
+          "new-online-retailer-continuation",
+          "sustain-ecommerce-category-penetration",
+          "sustain-increased-demand"
+        ]
+      },
+      {
+        "theme": "The report measures whether participants view digital activities as equivalent or better than in-person alternatives and recommends developing new tech experiences.",
+        "priority": 3,
+        "evidence_ids": [
+          "digital-activity-preference",
+          "accelerate-new-tech-experiences"
+        ]
+      },
+      {
+        "theme": "The reactivation section addresses live sports, reopening considerations, and expected return-to-routine timing; Activate forecasts a 26% net increase in live sports viewership when sports return among U.S. sports fans aged 18–64.",
+        "priority": 4,
+        "evidence_ids": [
+          "live-sports-viewership-forecast",
+          "reactivate-and-acquire-customers"
+        ]
+      },
+      {
+        "theme": "The action agenda covers investment and acquisitions, value propositions, pricing, advertising sales, digital experiences, and segmented marketing.",
+        "priority": 5,
+        "evidence_ids": [
+          "actionable-rewire-to-restart-agenda"
+        ]
+      }
+    ]
+  }
+}

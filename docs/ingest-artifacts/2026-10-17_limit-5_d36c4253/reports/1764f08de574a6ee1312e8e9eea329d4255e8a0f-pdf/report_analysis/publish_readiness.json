@@ -1,0 +1,356 @@
+{
+  "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "status": "fail",
+  "artifact_hashes": {
+    "artifacts": "7f17dceced00a30615ce0fb5fdb1092b74bf5e1a5e5ada895dfdd6cf3428f8e8",
+    "evidence:context_category_fit": "98a91f31f298df153e11aac75ca9c9f08965e5c88fb0e524a581a58661792217",
+    "evidence:doc_map": "3331a4cc7d87e71d3be65cfe57979fe805b155b3eaa59bac935f62def16233f0",
+    "evidence:evidence_fidelity": "75f2da0abd4038ba924786462435a4f1a49031c6fb77abbf33dea7eef8f75d97",
+    "evidence:findings": "a1c7a3aa6cca108446ddec1e92093c780d6eb09cca0ec124c8d2836e5c094710",
+    "evidence:limitations": "9ede825dbfedbb1004423613bef70c99decee52bbe76898a3a75ae9163268be9",
+    "evidence:methods": "0c5be836a0fa6e1554599c7a6d4f1bc8cc453b9079acd31e8bf5feda89f9c4a1",
+    "evidence:quote_candidates": "8c452b28648d4ccc404ceeff96513bed1b194a6fa80251421c944a1e9717c031",
+    "evidence:report_context": "3859ff6c597c9140bd81a6cac1ce857263a3bad02732685b638d6cf141b89929",
+    "evidence:scope": "4672abf2c97c23a6b64e711bc6386c691946cc7c134b74e93aa3202f606233c5",
+    "report_card_manifest_path": "a72547407d87d7890443ac980e10af082d8b2f2dd80d5c75b3366779eb0c7c7c",
+    "validation": "13ef8791f4f24c920049ded28106f04dbee0bd9e3aa38b4513a3a3356d2a0a47",
+    "retained_claim_validation": "79b665c4fa4978bb895822442b2b4f3fb79a9eee82c322285092720b2e60521e"
+  },
+  "rule_results": [
+    {
+      "rule_id": "publish_readiness.build_traceability",
+      "status": "pass",
+      "surfaces": [
+        "html_comment"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.category_consistency",
+      "status": "pass",
+      "surfaces": [
+        "categories"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.editorial_quality",
+      "status": "pass",
+      "surfaces": [
+        "artifacts",
+        "rendered_html"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.evidence_fidelity",
+      "status": "pass",
+      "surfaces": [
+        "evidence_fidelity",
+        "rendered_html"
+      ],
+      "detail": "audit_untrusted=5; rendered_untrusted=0",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.figure_linkage",
+      "status": "pass",
+      "surfaces": [
+        "artifacts.chart_insight_cards",
+        "rendered.chart_cards"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.material_claim_evidence",
+      "status": "pass",
+      "surfaces": [
+        "artifacts",
+        "evidence_packs"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_identifier_leak",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "figcaption",
+        "figcaption",
+        "figcaption",
+        "figcaption",
+        "blockquote",
+        "blockquote",
+        "blockquote",
+        "body",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "alt",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "json_ld"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_source_provenance",
+      "status": "pass",
+      "surfaces": [
+        "source",
+        "source.links"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.public_title_quality",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.regeneration_promotion",
+      "status": "pass",
+      "surfaces": [
+        "regeneration"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.rendered_scaffolding",
+      "status": "pass",
+      "surfaces": [
+        "title",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "heading",
+        "figcaption",
+        "figcaption",
+        "figcaption",
+        "figcaption",
+        "blockquote",
+        "blockquote",
+        "blockquote",
+        "body",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "link_label",
+        "link_href",
+        "alt",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "metadata",
+        "json_ld"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.repeated_boilerplate",
+      "status": "pass",
+      "surfaces": [
+        "body",
+        "caption",
+        "quotation"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.report_card_manifest",
+      "status": "pass",
+      "surfaces": [
+        "report_card_manifest"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.retained_claim_grounding",
+      "status": "pass",
+      "surfaces": [
+        "retained_claim_validation"
+      ],
+      "detail": "unsupported_factual_count=0; unresolved_factual_count=0",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.semantic_grounding",
+      "status": "fail",
+      "surfaces": [
+        "validation"
+      ],
+      "detail": "semantic or grounding validation did not pass",
+      "schema_version": "1.0"
+    },
+    {
+      "rule_id": "publish_readiness.source_fidelity",
+      "status": "pass",
+      "surfaces": [
+        "public_items"
+      ],
+      "detail": "",
+      "schema_version": "1.0"
+    }
+  ],
+  "final_html_hash": "fe3a77ec46ea2ff8ba4a173d13f834797d3f25b9cfb2be8aca3bc8e8e4b9f681",
+  "publication_projection_hash": "d8c27b22ef839a3a59d405c128fa6e1fe13fdf98ae508803ca8eee37d7063d05",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_revision": "workspace",
+  "created_at_utc": "2026-10-16T22:49:50.022756+00:00",
+  "expires_at_utc": "2026-10-17T22:49:50.022756+00:00",
+  "staleness_conditions": [
+    "final_html_hash_changed",
+    "publication_projection_hash_changed",
+    "artifact_hash_changed",
+    "retained_claim_grounding_changed",
+    "configuration_hash_changed",
+    "policy_hash_changed",
+    "producer_revision_changed",
+    "expired"
+  ],
+  "provenance": {
+    "build_artifact_hash": "bd45920c2d42804772ffdc8d43e2fe91d435c4b0536c53c9c22439eea6a4f46b",
+    "build_generated_at_utc": "2026-10-16T22:49:47.419199+00:00",
+    "build_generation_profile": "report_generation",
+    "build_generation_run_id": "fd7cf66c-a82b-46de-9d56-43c62eabeb8d",
+    "build_git_sha": "unknown",
+    "build_source_id": "source:29c6f89b707d74d91ad9ce8749e23384",
+    "build_source_md5": "b75240e6062919b5616c28b73224acdb",
+    "build_validation_run_id": "unknown",
+    "internal_acquisition_path_hash": "7f4746cd6e6c757b99766105b78afcec6c6949936821e507a093b20e5a33c490",
+    "internal_archive_url_hash": "327a0ca1439ac5eeaae75d442047818cde9c934c677b8161a1b3e22523e6203d",
+    "marketlense_article_url": "",
+    "original_report_url": "",
+    "publisher_landing_page_url": ""
+  },
+  "artifact_hash": "37c3ac01434747407bb6c578c1eb43a066d286dd5ed8f2ad3a88f25d6dfb32a6",
+  "validator_version": "publish-readiness:v2",
+  "schema_version": "1.0"
+}

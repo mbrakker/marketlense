@@ -1,0 +1,3938 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "signals",
+  "source_report_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "source_report_title": "TECH & MEDIA OUTLOOK 2017",
+  "source_report_publisher": "",
+  "source_report_md5": "58aebe24483505e5db9cfaf696159dc2",
+  "ingestion_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "ingestion_task_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "artifact_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\signals.json",
+  "reports_db": "C:\\Programing\\Market lense\\state\\reports.sqlite",
+  "signal_store_db": "C:\\Programing\\Market lense\\state\\signals.sqlite",
+  "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+  "status": "stored",
+  "candidate_count": 6,
+  "group_count": 6,
+  "support_levels": [
+    "single_report"
+  ],
+  "accepted_signal_kinds": [
+    "converging_trend",
+    "emerging_theme",
+    "contradiction",
+    "acceleration",
+    "strategic_implication",
+    "blind_spot",
+    "regional_divergence",
+    "channel_shift",
+    "capability_gap"
+  ],
+  "operating_rules": [
+    "extract_evidence_not_benchmarks",
+    "cluster_themes_not_numbers",
+    "score_signal_strength_not_market_size",
+    "preserve_source_traceability_and_caveats"
+  ],
+  "candidates": [
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-consumer-behavior",
+      "candidate_type": "weak_signal",
+      "title": "Consumer_behavior",
+      "summary": "Consumer_behavior: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "confidence": 0.76,
+      "strength": 3.5,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+          "content_class": "claim",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+          "content_class": "claim",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+          "content_class": "claim",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "content_class": "finding",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+            "confidence": "high",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "content_class": "finding",
+          "page_refs": [
+            22
+          ],
+          "source_metadata": {
+            "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+            "confidence": "high",
+            "pages": [
+              22
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "content_class": "finding",
+          "page_refs": [
+            102,
+            101
+          ],
+          "source_metadata": {
+            "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+            "confidence": "high",
+            "pages": [
+              102,
+              101
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "content_class": "finding",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+            "confidence": "medium-high",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "content_class": "finding",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+            "confidence": "high",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "content_class": "finding",
+          "page_refs": [
+            117
+          ],
+          "source_metadata": {
+            "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+            "confidence": "high",
+            "pages": [
+              117
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "content_class": "finding",
+          "page_refs": [
+            31
+          ],
+          "source_metadata": {
+            "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+            "confidence": "high",
+            "pages": [
+              31
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "Table of contents / Key findings",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q2"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q3"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "content_class": "quote",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "TIME AND ATTENTION",
+            "page": 9,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q7"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-consumer-behavior",
+          "label": "Consumer_behavior",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.5,
+          "reasons": [
+            "evidence_recurrence:17",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-consumer-behavior",
+          "label": "Consumer_behavior",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-consumer-behavior"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Consumer_behavior"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+            "content_class": "claim",
+            "text": "A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+            "source_metadata": {
+              "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+            "content_class": "claim",
+            "text": "Cord-cutting will be gradual because pay TV bundles and studio-produced content retain advantages.",
+            "source_metadata": {
+              "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+            "content_class": "claim",
+            "text": "Streaming audio takes over a third of listening time but generates under one-fifth of total industry revenue.",
+            "source_metadata": {
+              "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+            "content_class": "claim",
+            "text": "Americans spend more waking time on tech and media than on work or sleep.",
+            "source_metadata": {
+              "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+            "content_class": "claim",
+            "text": "Messaging is set to surpass social networks as the dominant media activity.",
+            "source_metadata": {
+              "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "content_class": "finding",
+            "text": "A small number of properties and platforms capture the lion's share of user time online.",
+            "source_metadata": {
+              "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+              "confidence": "high",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "content_class": "finding",
+            "text": "In Asia–Pacific local messaging apps dominate in the largest countries, while global players compete in Southeast Asia.",
+            "source_metadata": {
+              "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+              "confidence": "high",
+              "pages": [
+                22
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "content_class": "finding",
+            "text": "eSports and organized multiplayer competitions are rapidly growing spectator industries; Dota 2 tournament prize pools rose sharply (126% CAGR 2012–2015).",
+            "source_metadata": {
+              "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+              "confidence": "high",
+              "pages": [
+                102,
+                101
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "content_class": "finding",
+            "text": "Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching (especially among Millennials) is widespread.",
+            "source_metadata": {
+              "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+              "confidence": "medium-high",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "content_class": "finding",
+            "text": "Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).",
+            "source_metadata": {
+              "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+              "confidence": "high",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "content_class": "finding",
+            "text": "The app economy is concentrated: the top 10 games generated over 25% of global app revenue (≈$6B of $23B in 2014).",
+            "source_metadata": {
+              "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+              "confidence": "high",
+              "pages": [
+                117
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "content_class": "finding",
+            "text": "Enterprise messaging is moving toward app-enabled platforms with bot integrations; Slack example: ~1.1M daily active users and ~300k paying users.",
+            "source_metadata": {
+              "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+              "confidence": "high",
+              "pages": [
+                31
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "content_class": "quote",
+            "text": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "Table of contents / Key findings",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q2"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "content_class": "quote",
+            "text": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q3"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "content_class": "quote",
+            "text": "Major businesses are built on minutes of user time",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "TIME AND ATTENTION",
+              "page": 9,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q7"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-consumer-behavior",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    },
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-gaming",
+      "candidate_type": "weak_signal",
+      "title": "Gaming",
+      "summary": "Gaming: Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+      "confidence": 0.67,
+      "strength": 3.166667,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-gaming",
+          "label": "Gaming",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 0.6666666666666666,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.166667,
+          "reasons": [
+            "evidence_recurrence:2",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-gaming",
+          "label": "Gaming",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-gaming"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Gaming"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-gaming",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    },
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-messaging-apps",
+      "candidate_type": "weak_signal",
+      "title": "Messaging_apps",
+      "summary": "Messaging_apps: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "confidence": 0.76,
+      "strength": 3.5,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+          "content_class": "claim",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+          "content_class": "claim",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+          "content_class": "claim",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "content_class": "finding",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+            "confidence": "high",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "content_class": "finding",
+          "page_refs": [
+            22
+          ],
+          "source_metadata": {
+            "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+            "confidence": "high",
+            "pages": [
+              22
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "content_class": "finding",
+          "page_refs": [
+            102,
+            101
+          ],
+          "source_metadata": {
+            "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+            "confidence": "high",
+            "pages": [
+              102,
+              101
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "content_class": "finding",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+            "confidence": "medium-high",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "content_class": "finding",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+            "confidence": "high",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "content_class": "finding",
+          "page_refs": [
+            117
+          ],
+          "source_metadata": {
+            "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+            "confidence": "high",
+            "pages": [
+              117
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "content_class": "finding",
+          "page_refs": [
+            31
+          ],
+          "source_metadata": {
+            "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+            "confidence": "high",
+            "pages": [
+              31
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "Table of contents / Key findings",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q2"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q3"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "content_class": "quote",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "TIME AND ATTENTION",
+            "page": 9,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q7"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-messaging-apps",
+          "label": "Messaging_apps",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.5,
+          "reasons": [
+            "evidence_recurrence:17",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-messaging-apps",
+          "label": "Messaging_apps",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-messaging-apps"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Messaging_apps"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+            "content_class": "claim",
+            "text": "A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+            "source_metadata": {
+              "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+            "content_class": "claim",
+            "text": "Cord-cutting will be gradual because pay TV bundles and studio-produced content retain advantages.",
+            "source_metadata": {
+              "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+            "content_class": "claim",
+            "text": "Streaming audio takes over a third of listening time but generates under one-fifth of total industry revenue.",
+            "source_metadata": {
+              "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+            "content_class": "claim",
+            "text": "Americans spend more waking time on tech and media than on work or sleep.",
+            "source_metadata": {
+              "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+            "content_class": "claim",
+            "text": "Messaging is set to surpass social networks as the dominant media activity.",
+            "source_metadata": {
+              "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "content_class": "finding",
+            "text": "A small number of properties and platforms capture the lion's share of user time online.",
+            "source_metadata": {
+              "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+              "confidence": "high",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "content_class": "finding",
+            "text": "In Asia–Pacific local messaging apps dominate in the largest countries, while global players compete in Southeast Asia.",
+            "source_metadata": {
+              "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+              "confidence": "high",
+              "pages": [
+                22
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "content_class": "finding",
+            "text": "eSports and organized multiplayer competitions are rapidly growing spectator industries; Dota 2 tournament prize pools rose sharply (126% CAGR 2012–2015).",
+            "source_metadata": {
+              "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+              "confidence": "high",
+              "pages": [
+                102,
+                101
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "content_class": "finding",
+            "text": "Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching (especially among Millennials) is widespread.",
+            "source_metadata": {
+              "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+              "confidence": "medium-high",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "content_class": "finding",
+            "text": "Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).",
+            "source_metadata": {
+              "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+              "confidence": "high",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "content_class": "finding",
+            "text": "The app economy is concentrated: the top 10 games generated over 25% of global app revenue (≈$6B of $23B in 2014).",
+            "source_metadata": {
+              "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+              "confidence": "high",
+              "pages": [
+                117
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "content_class": "finding",
+            "text": "Enterprise messaging is moving toward app-enabled platforms with bot integrations; Slack example: ~1.1M daily active users and ~300k paying users.",
+            "source_metadata": {
+              "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+              "confidence": "high",
+              "pages": [
+                31
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "content_class": "quote",
+            "text": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "Table of contents / Key findings",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q2"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "content_class": "quote",
+            "text": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q3"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "content_class": "quote",
+            "text": "Major businesses are built on minutes of user time",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "TIME AND ATTENTION",
+              "page": 9,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q7"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-messaging-apps",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    },
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-technology",
+      "candidate_type": "weak_signal",
+      "title": "Technology",
+      "summary": "Technology: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "confidence": 0.76,
+      "strength": 3.5,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+          "content_class": "claim",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+          "content_class": "claim",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+          "content_class": "claim",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "content_class": "finding",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+            "confidence": "high",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "content_class": "finding",
+          "page_refs": [
+            22
+          ],
+          "source_metadata": {
+            "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+            "confidence": "high",
+            "pages": [
+              22
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "content_class": "finding",
+          "page_refs": [
+            102,
+            101
+          ],
+          "source_metadata": {
+            "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+            "confidence": "high",
+            "pages": [
+              102,
+              101
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "content_class": "finding",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+            "confidence": "medium-high",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "content_class": "finding",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+            "confidence": "high",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "content_class": "finding",
+          "page_refs": [
+            117
+          ],
+          "source_metadata": {
+            "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+            "confidence": "high",
+            "pages": [
+              117
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "content_class": "finding",
+          "page_refs": [
+            31
+          ],
+          "source_metadata": {
+            "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+            "confidence": "high",
+            "pages": [
+              31
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "Table of contents / Key findings",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q2"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q3"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "content_class": "quote",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "TIME AND ATTENTION",
+            "page": 9,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q7"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-technology",
+          "label": "Technology",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.5,
+          "reasons": [
+            "evidence_recurrence:17",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-technology",
+          "label": "Technology",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-technology"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Technology"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+            "content_class": "claim",
+            "text": "A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+            "source_metadata": {
+              "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+            "content_class": "claim",
+            "text": "Cord-cutting will be gradual because pay TV bundles and studio-produced content retain advantages.",
+            "source_metadata": {
+              "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+            "content_class": "claim",
+            "text": "Streaming audio takes over a third of listening time but generates under one-fifth of total industry revenue.",
+            "source_metadata": {
+              "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+            "content_class": "claim",
+            "text": "Americans spend more waking time on tech and media than on work or sleep.",
+            "source_metadata": {
+              "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+            "content_class": "claim",
+            "text": "Messaging is set to surpass social networks as the dominant media activity.",
+            "source_metadata": {
+              "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "content_class": "finding",
+            "text": "A small number of properties and platforms capture the lion's share of user time online.",
+            "source_metadata": {
+              "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+              "confidence": "high",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "content_class": "finding",
+            "text": "In Asia–Pacific local messaging apps dominate in the largest countries, while global players compete in Southeast Asia.",
+            "source_metadata": {
+              "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+              "confidence": "high",
+              "pages": [
+                22
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "content_class": "finding",
+            "text": "eSports and organized multiplayer competitions are rapidly growing spectator industries; Dota 2 tournament prize pools rose sharply (126% CAGR 2012–2015).",
+            "source_metadata": {
+              "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+              "confidence": "high",
+              "pages": [
+                102,
+                101
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "content_class": "finding",
+            "text": "Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching (especially among Millennials) is widespread.",
+            "source_metadata": {
+              "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+              "confidence": "medium-high",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "content_class": "finding",
+            "text": "Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).",
+            "source_metadata": {
+              "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+              "confidence": "high",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "content_class": "finding",
+            "text": "The app economy is concentrated: the top 10 games generated over 25% of global app revenue (≈$6B of $23B in 2014).",
+            "source_metadata": {
+              "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+              "confidence": "high",
+              "pages": [
+                117
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "content_class": "finding",
+            "text": "Enterprise messaging is moving toward app-enabled platforms with bot integrations; Slack example: ~1.1M daily active users and ~300k paying users.",
+            "source_metadata": {
+              "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+              "confidence": "high",
+              "pages": [
+                31
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "content_class": "quote",
+            "text": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "Table of contents / Key findings",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q2"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "content_class": "quote",
+            "text": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q3"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "content_class": "quote",
+            "text": "Major businesses are built on minutes of user time",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "TIME AND ATTENTION",
+              "page": 9,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q7"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-technology",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    },
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-technology-innovation",
+      "candidate_type": "weak_signal",
+      "title": "Technology & Innovation",
+      "summary": "Technology & Innovation: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "confidence": 0.76,
+      "strength": 3.5,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+          "content_class": "claim",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+          "content_class": "claim",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+          "content_class": "claim",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+          "source_table": "report_claims",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+          "content_class": "claim",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+            "pages": [
+              3
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+          "content_class": "finding",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+            "confidence": "high",
+            "pages": [
+              9
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+          "content_class": "finding",
+          "page_refs": [
+            22
+          ],
+          "source_metadata": {
+            "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+            "confidence": "high",
+            "pages": [
+              22
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+          "content_class": "finding",
+          "page_refs": [
+            102,
+            101
+          ],
+          "source_metadata": {
+            "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+            "confidence": "high",
+            "pages": [
+              102,
+              101
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+          "content_class": "finding",
+          "page_refs": [
+            64,
+            69,
+            67
+          ],
+          "source_metadata": {
+            "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+            "confidence": "medium-high",
+            "pages": [
+              64,
+              69,
+              67
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+          "content_class": "finding",
+          "page_refs": [
+            37
+          ],
+          "source_metadata": {
+            "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+            "confidence": "high",
+            "pages": [
+              37
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+          "content_class": "finding",
+          "page_refs": [
+            117
+          ],
+          "source_metadata": {
+            "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+            "confidence": "high",
+            "pages": [
+              117
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+          "content_class": "finding",
+          "page_refs": [
+            31
+          ],
+          "source_metadata": {
+            "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+            "confidence": "high",
+            "pages": [
+              31
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "Table of contents / Key findings",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q2"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+          "content_class": "quote",
+          "page_refs": [
+            3
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "page": 3,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q3"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "source_table": "report_quotes",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+          "content_class": "quote",
+          "page_refs": [
+            9
+          ],
+          "source_metadata": {
+            "speaker": "Unknown",
+            "citation": "TIME AND ATTENTION",
+            "page": 9,
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+            "quote_id": "q7"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-technology-innovation",
+          "label": "Technology & Innovation",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 1.0,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.5,
+          "reasons": [
+            "evidence_recurrence:17",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-technology-innovation",
+          "label": "Technology & Innovation",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-technology-innovation"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Technology & Innovation"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:29acb953a65f8b43",
+            "content_class": "claim",
+            "text": "A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+            "source_metadata": {
+              "evidence": "Finding: 'A small number of properties and platforms capture the lion’s share of user time online.' (complemented by app-economy evidence showing top games take ~25% of global app revenue).",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:4dc6ce348119b7ab",
+            "content_class": "claim",
+            "text": "Cord-cutting will be gradual because pay TV bundles and studio-produced content retain advantages.",
+            "source_metadata": {
+              "evidence": "Finding: 'Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching is widespread,' explaining why rapid cord-cutting is unlikely.",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:d0fb62e54eae567b",
+            "content_class": "claim",
+            "text": "Streaming audio takes over a third of listening time but generates under one-fifth of total industry revenue.",
+            "source_metadata": {
+              "evidence": "Finding: 'Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).'",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:dd82d3190b88f9a9",
+            "content_class": "claim",
+            "text": "Americans spend more waking time on tech and media than on work or sleep.",
+            "source_metadata": {
+              "evidence": "Report headline and table-of-contents headline: 'THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP.'",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_claims",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:39059d03a02f33de",
+            "content_class": "claim",
+            "text": "Messaging is set to surpass social networks as the dominant media activity.",
+            "source_metadata": {
+              "evidence": "Section headline: 'MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY' and related analysis of messaging penetration and platform monetization.",
+              "pages": [
+                3
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+            "content_class": "finding",
+            "text": "A small number of properties and platforms capture the lion's share of user time online.",
+            "source_metadata": {
+              "evidence": "We can find growth opportunities in people’s online behavior: how many users visit the top websites and apps, and for how long? A few properties and platforms capture the lion’s share of user time.",
+              "confidence": "high",
+              "pages": [
+                9
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+            "content_class": "finding",
+            "text": "In Asia–Pacific local messaging apps dominate in the largest countries, while global players compete in Southeast Asia.",
+            "source_metadata": {
+              "evidence": "In Asia-Pacific, local messaging apps dominate in the largest countries, but in Southeast Asia global players are competing. Penetration by Country, Local vs. Global Messengers.",
+              "confidence": "high",
+              "pages": [
+                22
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+            "content_class": "finding",
+            "text": "eSports and organized multiplayer competitions are rapidly growing spectator industries; Dota 2 tournament prize pools rose sharply (126% CAGR 2012–2015).",
+            "source_metadata": {
+              "evidence": "Growth in tournament prize pools - which are largely crowdfunded by fans - illustrates potential of eSports. Dota 2 Example: Growth in Tournament Prize Pool, $M (2012–2015) ... 126% CAGR. Organized multiplayer video game competitions are emerging as a formidable spectator sport.",
+              "confidence": "high",
+              "pages": [
+                102,
+                101
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+            "content_class": "finding",
+            "text": "Cord-cutting will not mirror past tech transitions; pay TV and studio-produced content remain dominant, and binge-watching (especially among Millennials) is widespread.",
+            "source_metadata": {
+              "evidence": "If television cable cutting followed the same pattern as telephones, the crossover would happen in 2019—but this isn’t likely. Most Americans now binge watch TV, amplifying time-shifted viewing; percentage of people who binge by age group shows Millennials highest. People are still spending most of their time with TV- and studio-produced content.",
+              "confidence": "medium-high",
+              "pages": [
+                64,
+                69,
+                67
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+            "content_class": "finding",
+            "text": "Streaming audio accounts for over a third of listening time but under one-fifth of total industry revenue (U.S. digital revenue ~$4.5B vs total ~$14.9B).",
+            "source_metadata": {
+              "evidence": "Expect growth to come from digital players claiming their fair share of the pie. TOTAL U.S. DIGITAL REVENUE $4.5B. Digital takes up over a third of listening time, but less than a fifth of total revenue (Consumer and Advertising Spend on Music Listening, U.S., 2014 ($14.9B)).",
+              "confidence": "high",
+              "pages": [
+                37
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+            "content_class": "finding",
+            "text": "The app economy is concentrated: the top 10 games generated over 25% of global app revenue (≈$6B of $23B in 2014).",
+            "source_metadata": {
+              "evidence": "The top 10 games take 25% of the $23 Billion in global app revenue... Over 25% of global revenue ($6B) generated by Top 10 game apps.",
+              "confidence": "high",
+              "pages": [
+                117
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+            "content_class": "finding",
+            "text": "Enterprise messaging is moving toward app-enabled platforms with bot integrations; Slack example: ~1.1M daily active users and ~300k paying users.",
+            "source_metadata": {
+              "evidence": "Enterprise is also starting to move to app-enabled messaging with bot integrations. LAYER #2 - APPS & BOTS ... 1.1m Daily Active Users, 300k Paying Users.",
+              "confidence": "high",
+              "pages": [
+                31
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+            "content_class": "quote",
+            "text": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "Table of contents / Key findings",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q2"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+            "content_class": "quote",
+            "text": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "MESSAGING WILL BLOW PAST SOCIAL NETWORKS AS THE DOMINANT MEDIA ACTIVITY",
+              "page": 3,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q3"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_quotes",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7",
+            "content_class": "quote",
+            "text": "Major businesses are built on minutes of user time",
+            "source_metadata": {
+              "speaker": "Unknown",
+              "citation": "TIME AND ATTENTION",
+              "page": 9,
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view",
+              "quote_id": "q7"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-technology-innovation",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    },
+    {
+      "schema_version": "1.0",
+      "candidate_id": "signal-candidate:theme-explicit-technology-innovation:signal-video",
+      "candidate_type": "weak_signal",
+      "title": "Video",
+      "summary": "Video: Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+      "confidence": 0.67,
+      "strength": 3.166667,
+      "support_level": "single_report",
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+      ],
+      "source_refs": [
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+          "content_class": "finding",
+          "page_refs": [
+            12
+          ],
+          "source_metadata": {
+            "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+            "confidence": "high",
+            "pages": [
+              12
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+          "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "source_table": "report_findings",
+          "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+          "content_class": "finding",
+          "page_refs": [
+            100
+          ],
+          "source_metadata": {
+            "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+            "confidence": "high",
+            "pages": [
+              100
+            ],
+            "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+          }
+        }
+      ],
+      "raw_source_context": {
+        "request": {
+          "request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+          "topic": "Technology & Innovation",
+          "category_filters": [
+            "technology",
+            "Technology & Innovation"
+          ],
+          "tag_filters": [
+            "consumer_internet",
+            "consumer_behavior",
+            "consumer_attention",
+            "digital_economy",
+            "messaging_apps",
+            "video",
+            "gaming",
+            "audience_segments"
+          ]
+        },
+        "signal_score": {
+          "schema_version": "1.0",
+          "signal_id": "signal-video",
+          "label": "Video",
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+          ],
+          "component_scores": {
+            "contradiction": 0.0,
+            "diversity": 0.5,
+            "recency": 0.0,
+            "recurrence": 0.6666666666666666,
+            "support": 1.0,
+            "taxonomy_fit": 1.0
+          },
+          "total_score": 3.166667,
+          "reasons": [
+            "evidence_recurrence:2",
+            "source_publishers:1",
+            "taxonomy_fit:1.0",
+            "support:1.0",
+            "raw_metric_magnitude_ignored"
+          ]
+        },
+        "agreement_group": {
+          "schema_version": "1.0",
+          "group_id": "group-signal-video",
+          "label": "Video",
+          "agreement_type": "thin_coverage",
+          "signal_ids": [
+            "signal-video"
+          ],
+          "evidence_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+          ],
+          "source_report_ids": [
+            "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+          ],
+          "publisher_count": 1,
+          "uncertainty_reasons": [
+            "single_report_coverage"
+          ],
+          "prompt_input_label": "thin_coverage: Video"
+        },
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+            "content_class": "finding",
+            "text": "Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+            "source_metadata": {
+              "evidence": "Time spent on major digital activities like video, audio, social media and gaming will continue to increase. CAGR: VIDEO 4.5%, SOCIAL MEDIA 17.8%, AUDIO 4.9%, GAMING 11.9%.",
+              "confidence": "high",
+              "pages": [
+                12
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          },
+          {
+            "schema_version": "1.0",
+            "evidence_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "report_id": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV",
+            "publisher": "Activate",
+            "title": "THE AVERAGE AMERICAN SPENDS MORE TIME ON TECH & MEDIA THAN WORK OR SLEEP",
+            "source_table": "report_findings",
+            "entity_uid": "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+            "content_class": "finding",
+            "text": "YouTube gaming channels demonstrate massive consumer interest — very large subscriber and view counts (e.g., billions of video views and millions of subscribers for top channels).",
+            "source_metadata": {
+              "evidence": "Top 5 Channels... 165 Million (≈11M per channel) subscribers; 47 Billion (~3B+ per channel) video views; 2015E Growth: +20% subscribers, +30% average view, +40% video views.",
+              "confidence": "high",
+              "pages": [
+                100
+              ],
+              "source_url": "https://drive.google.com/file/d/1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV/view"
+            }
+          }
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "validation_notes": [
+        "source_backed",
+        "support_level:single_report"
+      ],
+      "group_id": "signal-group:group-signal-video",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00"
+    }
+  ],
+  "groups": [
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-consumer-behavior",
+      "stable_key": "group-signal-consumer-behavior:signal-candidate:theme-explicit-technology-innovation:signal-consumer-behavior",
+      "title": "Consumer_behavior",
+      "summary": "Consumer_behavior: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-consumer-behavior"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    },
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-gaming",
+      "stable_key": "group-signal-gaming:signal-candidate:theme-explicit-technology-innovation:signal-gaming",
+      "title": "Gaming",
+      "summary": "Gaming: Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-gaming"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    },
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-messaging-apps",
+      "stable_key": "group-signal-messaging-apps:signal-candidate:theme-explicit-technology-innovation:signal-messaging-apps",
+      "title": "Messaging_apps",
+      "summary": "Messaging_apps: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-messaging-apps"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    },
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-technology",
+      "stable_key": "group-signal-technology:signal-candidate:theme-explicit-technology-innovation:signal-technology",
+      "title": "Technology",
+      "summary": "Technology: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-technology"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    },
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-technology-innovation",
+      "stable_key": "group-signal-technology-innovation:signal-candidate:theme-explicit-technology-innovation:signal-technology-innovation",
+      "title": "Technology & Innovation",
+      "summary": "Technology & Innovation: A small number of platforms capture the lion’s share of user time and app/game revenue is highly concentrated.",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-technology-innovation"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:claim:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F1",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F5",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F6",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F7",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F8",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F9",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q3",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:quote:q7"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    },
+    {
+      "schema_version": "1.0",
+      "group_id": "signal-group:group-signal-video",
+      "stable_key": "group-signal-video:signal-candidate:theme-explicit-technology-innovation:signal-video",
+      "title": "Video",
+      "summary": "Video: Time spent on major digital activities (video, social media, audio, gaming) is increasing; social media shows especially strong growth (CAGR ~17.8%).",
+      "support_level": "single_report",
+      "candidate_ids": [
+        "signal-candidate:theme-explicit-technology-innovation:signal-video"
+      ],
+      "source_report_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV"
+      ],
+      "evidence_ids": [
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F2",
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV:finding:F4"
+      ],
+      "caveats": [
+        "single_report_coverage",
+        "weak_or_single_report_coverage"
+      ],
+      "raw_group_context": {
+        "agreement_type": "thin_coverage",
+        "source_content_hashes": {
+          "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": "af28c1972fd85535e28f38535715463ed8b4ea17079aa674cc639ab4cb4b3fdd"
+        },
+        "uncertainty_reasons": [
+          "single_report_coverage"
+        ],
+        "raw_metric_policy": "raw_metrics_preserved_without_normalization"
+      },
+      "validation_status": "approved",
+      "extraction_request_id": "ingest-signal:1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "generated_at_utc": "2026-10-17T00:58:45.765703+00:00",
+      "topic": "Technology & Innovation",
+      "topic_ids": [
+        "advertising_media",
+        "connected_tv",
+        "consumer_behavior",
+        "social_video_creator",
+        "technology"
+      ],
+      "source_category_ids": {
+        "1_IcC-6-PIeN9u41-SkFt_bcCEd5tNHFV": [
+          "advertising_media",
+          "connected_tv",
+          "consumer_behavior",
+          "social_video_creator",
+          "technology"
+        ]
+      },
+      "publication_status": "held",
+      "publication_hold_reason": "signal_grounding_insufficient"
+    }
+  ],
+  "artifact_sha256": "4f26f0fd3ec238d814e145476a7dd0bb7fb401b6054b5a6be6d7f7daff2053f1"
+}

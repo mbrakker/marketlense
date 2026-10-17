@@ -1,0 +1,239 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_final",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "global-media-revenue-segment-growth",
+      "text": "Global consumer internet/media revenue CAGR, 2016E–2021E forecast: cost of internet access 6.3%, ad revenue 4.7%, paid content 2.6%.",
+      "evidence_id": "internet-media-segment-cagr",
+      "evidence": "CONSUMER INTERNET AND MEDIA REVENUE GROWTH BY REVENUE SEGMENT*, GLOBAL, 2016E-2021E, USD\nCAGR 6.3%\nCost of Internet access**\nCAGR 4.7%\nAd revenue\nCAGR 2.6%\nPaid content",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global cost of internet access revenue CAGR",
+        "value": "6.3%",
+        "unit": "percent",
+        "trend": "growth",
+        "timeframe": "2016E–2021E",
+        "geography": "Global",
+        "segment": "Cost of Internet access",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Consumer internet and media revenues",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        14
+      ],
+      "score": 0.88,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.75,
+      "coverage_role": "market_context",
+      "so_what": "The forecast differentiates growth expectations by revenue stream rather than treating the market as one rate.",
+      "now_what": "If allocating across these segments, model each stream separately and test sensitivities.",
+      "report_type_lens": "market_size"
+    },
+    {
+      "id": "messaging-payment-commerce-monetization",
+      "text": "The report says successful messaging monetization will require services to address payment and eCommerce adoption in messaging.",
+      "evidence_id": "quote-005",
+      "evidence": "For successful messaging monetization, services will need to address payment and eCommerce adoption in messaging",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Messaging monetization",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        57
+      ],
+      "score": 0.83,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.25,
+      "novelty_score": 0.82,
+      "coverage_role": "operating_implication",
+      "so_what": "The report makes payment and eCommerce adoption explicit considerations for messaging monetization.",
+      "now_what": "If assessing a messaging service, test how it addresses payment and eCommerce adoption.",
+      "report_type_lens": "technology_shift"
+    },
+    {
+      "id": "esports-in-game-wagering-forecast",
+      "text": "The report forecasts that the global amount wagered on in-game activities could reach $12 billion by 2020.",
+      "evidence_id": "esports-in-game-betting-forecast",
+      "evidence": "AMOUNT WAGERED FOR IN-GAME ACTIVITIES, GLOBAL, 2016E-2020E, BILLIONS, USD\nIn-game betting could reach $12B by 2020",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Global amount wagered on in-game activities",
+        "value": "$12 billion",
+        "unit": "USD",
+        "trend": "could reach",
+        "timeframe": "by 2020",
+        "geography": "Global",
+        "segment": "In-game activities",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Amount wagered",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": "forecast"
+      },
+      "pages": [
+        81
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.95,
+      "novelty_score": 0.9,
+      "coverage_role": "investment_signal",
+      "so_what": "The forecast measures wager volume, not operator revenue.",
+      "now_what": "If evaluating an in-game betting proposition, keep wager volume separate from revenue assumptions.",
+      "report_type_lens": "investment_outlook"
+    },
+    {
+      "id": "pay-tv-primary-non-subscription-reason",
+      "text": "In 2016, “Not Worth Money” was listed as the primary reason for not having Pay TV, at 35%.",
+      "evidence_id": "pay-tv-reason-not-subscribing",
+      "evidence": "PRIMARY REASON FOR NOT HAVING PAY TV, 2016\nNot Worth Money 35%",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Primary reason for not having Pay TV: Not Worth Money",
+        "value": "35%",
+        "unit": "percent",
+        "trend": "",
+        "timeframe": "2016",
+        "geography": "",
+        "segment": "Primary reason for not having Pay TV",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Reason for not having Pay TV",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        95
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.78,
+      "coverage_role": "behavior_shift",
+      "so_what": "The finding makes perceived value relevant to examining why consumers do not have Pay TV.",
+      "now_what": "If assessing Pay TV offers, test whether the value proposition addresses the listed reason.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "underserved-americans-estimate",
+      "text": "Approximately 50 million Americans are underserved by technology and media companies.",
+      "evidence_id": "underserved-americans-estimate",
+      "evidence": "~50 Million Americans are under-served by tech and media companies",
+      "evidence_spans": [],
+      "metric": {
+        "label": "Americans underserved by technology and media companies",
+        "value": "Approximately 50 million",
+        "unit": "people",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Americans underserved by technology and media companies",
+        "cohort": "Americans",
+        "denominator": "",
+        "observation_status": "estimate"
+      },
+      "pages": [
+        164
+      ],
+      "score": 0.86,
+      "decision_relevance_score": 0.88,
+      "metric_strength_score": 0.9,
+      "novelty_score": 0.84,
+      "coverage_role": "market_context",
+      "so_what": "The estimate makes access and inclusion relevant to audience planning.",
+      "now_what": "If reviewing audience plans, assess whether offerings are accessible to the users covered by this estimate.",
+      "report_type_lens": "consumer_behavior"
+    },
+    {
+      "id": "platform-control-over-news-publishers",
+      "text": "Major search and social platforms have squeezed out news sites to solidify control over publishers.",
+      "evidence_id": "quote-004",
+      "evidence": "The major search and social platforms have squeezed out news sites to solidify their control over publishers",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        26
+      ],
+      "score": 0.85,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.3,
+      "novelty_score": 0.85,
+      "coverage_role": "strategic_risk",
+      "so_what": "The claim puts platform control over publishers in focus for distribution decisions.",
+      "now_what": "If revisiting publisher distribution, map reliance on search and social platforms and assess alternatives.",
+      "report_type_lens": "channel_strategy"
+    },
+    {
+      "id": "pay-tv-price-willingness-bound",
+      "text": "The report says Pay TV prices have reached the upper bound of consumer willingness to pay.",
+      "evidence_id": "pay-tv-price-limit",
+      "evidence": "Pay TV prices have reached the upper bound of consumer willingness to pay",
+      "evidence_spans": [],
+      "metric": {
+        "label": "",
+        "value": "",
+        "unit": "",
+        "trend": "",
+        "timeframe": "",
+        "geography": "",
+        "segment": "Pay TV",
+        "sample_size": "",
+        "confidence": "high",
+        "subject": "Consumer willingness to pay for Pay TV",
+        "cohort": "",
+        "denominator": "",
+        "observation_status": ""
+      },
+      "pages": [
+        95
+      ],
+      "score": 0.84,
+      "decision_relevance_score": 0.9,
+      "metric_strength_score": 0.35,
+      "novelty_score": 0.72,
+      "coverage_role": "strategic_risk",
+      "so_what": "The stated willingness-to-pay ceiling is relevant when considering Pay TV pricing.",
+      "now_what": "If reviewing Pay TV pricing or packaging, test proposed offers against the stated ceiling.",
+      "report_type_lens": "channel_strategy"
+    }
+  ]
+}

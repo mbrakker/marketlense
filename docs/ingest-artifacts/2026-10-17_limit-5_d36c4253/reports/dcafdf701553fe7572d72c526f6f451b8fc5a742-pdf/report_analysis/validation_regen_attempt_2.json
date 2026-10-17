@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\dcafdf701553fe7572d72c526f6f451b8fc5a742-pdf\\report_analysis\\validation_regen_attempt_2.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[1].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[1].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "insights_final[5].text",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "insights_final[5].text",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "key_figures[2].why_it_matters",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "key_figures[2].why_it_matters",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[2].takeaway",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[2].takeaway",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "Generated copy opens without a concrete metric or specific qualitative relationship.",
+      "severity": "warning",
+      "affected_section": "chart_insight_cards[2].business_implication",
+      "rule_id": "artifact_quality",
+      "repair_target": "artifact_copy",
+      "entity_id": "chart_insight_cards[2].business_implication",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "LLM grounding validation is deferred and must run before final publish.",
+      "severity": "info",
+      "affected_section": "validation",
+      "rule_id": "deferred_grounding_required",
+      "repair_target": "validation_grounding",
+      "entity_id": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_candidates[item=esports-us-forecast]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[regeneration_scope_violation] Targeted repair changed an undeclared artifact path",
+      "severity": "error",
+      "affected_section": "insights_final[item=esports-us-forecast]",
+      "rule_id": "regeneration_scope_violation",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    }
+  ]
+}

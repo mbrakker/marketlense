@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "methods": [
+    "Consumer survey data: Activate’s Consumer Technology & Media Research Studies report samples of 4,006 (2019), 4,003 (2020), and 4,018 (2021); the 2021 Consumer NFT Research Study reports n=1,040.",
+    "Activate forecasts are reported for measures including U.S. sports betting (2020–2025E), U.S. podcast listeners (2019–2025E), and global esports viewership (2021E–2025E). The excerpts identify source inputs, including prior Activate surveys and sources such as the U.S. Bureau of Economic Analysis, Nevada Gaming Control Board, eMarketer, and Newzoo, but do not specify a forecasting model.",
+    "Some measures have explicit operational definitions: 2021 U.S. esports viewers are adults aged 18+ who watched an esports competition in the prior 12 months; NFT active users are adults aged 18+ who purchase, sell, or create NFTs; NFT industry involvement is defined as being extremely or very actively involved in the industry over the prior 12 months.",
+    "The report cites Activate analysis alongside company sites, press releases, and external industry and government sources. No validation method is stated in the excerpts."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "methods",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

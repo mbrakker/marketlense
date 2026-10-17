@@ -1,0 +1,97 @@
+{
+  "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "title": "OUTLOOK 2022",
+  "publisher": "",
+  "region": "Global and United States",
+  "time_period": "2021–2025E",
+  "overview": "Activate Technology & Media Outlook 2022 The report forecasts growth and changing consumer behavior across technology, media, finance, gaming, commerce, sports, audio, and enterprise software. It argues that consumer time and spending, new digital behaviors, and technology advances will create opportunities for companies, including an estimated $390 billion in global internet and media revenue growth from 2021 to 2025. Activate’s 2022 technology and media outlook covers consumer technology and media behavior, digital finance, cryptocurrency, NFTs, gaming and the metaverse, eCommerce, video, sports and sports technology, sports betting and iGaming, esports, audio, and data solutions and enterprise automation. It discusses the U.S. and global markets, using historical data and forecasts that include projections through 2025.",
+  "methods": [
+    "Consumer survey data: Activate’s Consumer Technology & Media Research Studies report samples of 4,006 (2019), 4,003 (2020), and 4,018 (2021); the 2021 Consumer NFT Research Study reports n=1,040.",
+    "Activate forecasts are reported for measures including U.S. sports betting (2020–2025E), U.S. podcast listeners (2019–2025E), and global esports viewership (2021E–2025E). The excerpts identify source inputs, including prior Activate surveys and sources such as the U.S. Bureau of Economic Analysis, Nevada Gaming Cont...",
+    "Some measures have explicit operational definitions: 2021 U.S. esports viewers are adults aged 18+ who watched an esports competition in the prior 12 months; NFT active users are adults aged 18+ who purchase, sell, or create NFTs; NFT industry involvement is defined as being extremely or very actively involved in th...",
+    "The report cites Activate analysis alongside company sites, press releases, and external industry and government sources. No validation method is stated in the excerpts."
+  ],
+  "key_findings": [
+    "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+    "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, faster than paid content at 2.2% and internet access at 3.8%.",
+    "In the U.S. in 2021, 53% of Super Users said they tended to buy or use new services and devices before anyone else, compared with 7% of all other users.",
+    "In the U.S. in 2021, 68% of Super Users said they always or often kept informed about the latest technology and media products and services, compared with 24% of all other users.",
+    "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+    "In the U.S. in 2021, adults extremely or very active in cryptocurrency were 5.3 times as likely to be active NFT participants as adults overall."
+  ],
+  "limitations": [
+    "The 2020 esports title list includes only titles ranked in the top 25 for total esports tournament prize money.",
+    "Projected state counts reflect states that legalized sports betting by year-end, not necessarily states where betting had launched.",
+    "The sports-rights chart covers regular-season deals only, excludes league-owned channels, and reflects information as of October 2021. Turner had an HBO Max option but had not scheduled live games.",
+    "The esports-viewer measure differs by year: 2021 counts adults who watched a competition in the previous 12 months, while 2019–2020 counts adults who had watched at any time."
+  ],
+  "sections": [
+    {
+      "section_label": "14 Takeaways from the Activate Technology & Media Outlook 2022",
+      "source_pack": "doc_map",
+      "summary": "An executive overview previews the report’s principal forecasts and strategic themes, from consumer-spend growth and super users to video, sports, audio, and enterprise automation. It highlights anticipated shifts in consumer behavior and the expanding role...",
+      "key_points": [
+        "The report forecasts sustained growth in technology and media use and spending after the pandemic.",
+        "It describes cryptocurrency and NFTs as expanding beyond investment and collectibles into payments, transfers, and broader industry applications.",
+        "It presents gaming as a path to the metaverse and identifies super users as a disproportionate source of time and spending."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "$390 Billion Global Technology and Media Growth Dollars Up for Grabs",
+      "source_pack": "doc_map",
+      "summary": "This opening chapter forecasts global internet and media revenues and breaks growth into major revenue segments. It identifies advertising as the primary source of projected growth.",
+      "key_points": [
+        "Global internet and media revenues are forecast to increase from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars.",
+        "The report forecasts 4.3% CAGR for overall internet and media revenues from 2021E to 2025E.",
+        "Advertising revenue is forecast to grow faster than paid content and internet access over the period."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Consumer Technology and Media Time and Attention",
+      "source_pack": "doc_map",
+      "summary": "The chapter examines changes in daily consumer attention to technology and media, including pandemic-era increases and forecasts by activity. It expects much of the increased attention to persist, with gaming and audio contributing further growth.",
+      "key_points": [
+        "Average daily technology and media attention rose during the COVID-19 outbreak, and the report expects most of that increase to be sustained.",
+        "Gaming and audio together are forecast to add more than 20 minutes of daily user time between 2021E and 2025E.",
+        "The forecast shows video time declining slightly while gaming, audio, and messaging/social media increase."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Super Users Will Drive the Digital Economy",
+      "source_pack": "doc_map",
+      "summary": "The report defines super users as a high-value consumer group that accounts for a disproportionate share of technology and media activity and spending. It describes their spending, early adoption, and tendency to recommend products and services as growth op...",
+      "key_points": [
+        "Super users are 26% of users but account for 70% of total eCommerce spend.",
+        "Super users over-index on spending across eCommerce categories, including grocery, apparel, electronics, furniture, and household products.",
+        "They are more likely than other users to adopt new services and devices early and to keep informed about technology and media."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Digital Consumer Finance at the Inflection Point",
+      "source_pack": "doc_map",
+      "summary": "This chapter covers digital investing, borrowing, and payments, and the growing role of financial services embedded in consumer, retail, and technology offerings. It also distinguishes payment behavior by age and payment type.",
+      "key_points": [
+        "The report expects investing, borrowing, and online-only payment methods to become increasingly prominent digital behaviors.",
+        "Younger adults are more likely than older adults to use digital services for peer-to-peer payments.",
+        "Use of digital services for consumer-to-business payments varies less by age than peer-to-peer payments, suggesting a different growth pattern."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Cryptocurrency: Massive Runway Ahead",
+      "source_pack": "doc_map",
+      "summary": "The chapter considers expanding consumer participation in cryptocurrency and the ways crypto may move beyond investment into payments and transfers. It also describes cryptocurrency as an enabler across areas such as eCommerce, gaming, data, and NFTs.",
+      "key_points": [
+        "The report projects that the number of consumers trading cryptocurrency will double over the next 12 months.",
+        "It anticipates a shift from buying cryptocurrency for investment toward using it for payments and transfers.",
+        "While Bitcoin and Ethereum dominate, the report expects innovation in altcoins and applications across several technology and media sectors."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

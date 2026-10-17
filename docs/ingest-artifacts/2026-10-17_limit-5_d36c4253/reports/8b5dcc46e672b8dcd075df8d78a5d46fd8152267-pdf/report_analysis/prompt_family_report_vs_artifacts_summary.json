@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": {
+      "tldr": "The report expects the next M&A wave to be driven by larger players looking to fill gaps with independent players.",
+      "card_tldr_compact": "The report expects larger players to drive the next M&A wave by filling gaps with independent players.",
+      "executive_summary": "The report expects the next M&A wave to be driven by larger players looking to fill gaps with independent players. Activate forecast that messaging would add 1.1 billion new users by 2018. In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed mix. For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%. The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+      "claim_evidence_map": [
+        {
+          "claim": "The report expects larger players to drive the next M&A wave by filling gaps with independent players.",
+          "evidence_id": "unified_stack_ma_forecast",
+          "evidence": "The report expects the next wave of M&A activity to be driven by larger players filling gaps with independent players.",
+          "evidence_spans": [],
+          "pages": [
+            132
+          ]
+        },
+        {
+          "claim": "Activate forecast that messaging would add 1.1 billion new users by 2018.",
+          "evidence_id": "messaging-user-forecast",
+          "evidence": "We forecast that messaging will add 1.1 Billion new users by 2018",
+          "evidence_spans": [],
+          "pages": [
+            17
+          ]
+        },
+        {
+          "claim": "In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed mix.",
+          "evidence_id": "audio_consumption_mix",
+          "evidence": "Audio Consumption Time Among 13+ Users, U.S., 2014 Total = 4:05 hours; 12% STREAMING; 52% AM/FM.",
+          "evidence_spans": [],
+          "pages": [
+            36
+          ]
+        },
+        {
+          "claim": "For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%.",
+          "evidence_id": "attention_daily_time_cagr",
+          "evidence": "Time Spent Among 18+ Users, U.S., 2011–2017E, Hours : Minutes; CAGRs: video 4.5%, audio 4.9%, social media 17.8%, gaming 11.9%.",
+          "evidence_spans": [],
+          "pages": [
+            12
+          ]
+        },
+        {
+          "claim": "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+          "evidence_id": "app_store_distribution_engagement",
+          "evidence": "A new wave of companies are building businesses by using the app store for distribution and engagement, but not monetization.",
+          "evidence_spans": [],
+          "pages": [
+            124
+          ]
+        }
+      ]
+    },
+    "claim_provenance": [
+      {
+        "claim": "The report expects the next M&A wave to be driven by larger players looking to fill gaps with independent players.",
+        "classification": "factual",
+        "evidence_ids": [
+          "unified_stack_ma_forecast"
+        ]
+      },
+      {
+        "claim": "The report expects larger players to drive the next M&A wave by filling gaps with independent players.",
+        "classification": "factual",
+        "evidence_ids": [
+          "unified_stack_ma_forecast"
+        ]
+      },
+      {
+        "claim": "Activate forecast that messaging would add 1.1 billion new users by 2018.",
+        "classification": "factual",
+        "evidence_ids": [
+          "messaging-user-forecast"
+        ]
+      },
+      {
+        "claim": "In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed mix.",
+        "classification": "factual",
+        "evidence_ids": [
+          "audio_consumption_mix"
+        ]
+      },
+      {
+        "claim": "For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "attention_daily_time_cagr"
+        ]
+      },
+      {
+        "claim": "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+        "classification": "factual",
+        "evidence_ids": [
+          "app_store_distribution_engagement"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/summary",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/summary",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "sha256": "3df572a3c0dde0f0e5b7f3d83fd30339674224df030cfe2eb072b8493a4a7b05",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [
+          {
+            "schema_version": "1.0",
+            "path": "schemas/artifacts.schema.json",
+            "sha256": "fa2d3dd109c1f2ff61152454a7dff4a29dd781b490069be25e8ac3744165b3f9",
+            "kind": "schema_snippet",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "composition_version": "2.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9"
+      },
+      "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/summary",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "f99f9e53daccd2ef6b5e3512283dfa74e8fab32879f307ef74bfc707f28d98b1",
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "regeneration_reason": "materialization_missing"
+    },
+    "generation_attempt": 1
+  }
+}

@@ -1,0 +1,887 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "5d5aedd7923f8ae87df7286da0060f8d9840eabe491c159143e2e9404a636e29",
+  "after_sha256": "70648bd4138b73fe3de0a8ff861aeabe7dd6523f5f8dc73794cf8ccca8c4d668",
+  "transformation_scope": [
+    "insights_candidates",
+    "insights_final"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "723d42f3c9293971f256f44d0a672e49b0f7217662553fa93d6f48894f5072f1",
+    "quotes_final": "d5dd071510f1ddc8ab96a802b3544f3631d1b04620ffc556635b96c9db6ae454"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\1764f08de574a6ee1312e8e9eea329d4255e8a0f-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "deferred_grounding_required:validation",
+    "grounding:insights_candidates:super-user-early-adoption-comparison",
+    "grounding:insights_final:super-user-early-adoption-comparison",
+    "metrics:insights:gamers-non-gaming-activity-in-games",
+    "regeneration_scope_violation:insights_candidates[item=super-user-early-adoption-comparison]",
+    "regeneration_scope_violation:insights_final[item=super-user-early-adoption-comparison]"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "cryptocurrency-trading-vs-payment-use",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "esports-global-audience-forecast-series",
+      "original_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "candidate_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "original_source_pages": [
+        162
+      ],
+      "candidate_source_pages": [
+        162
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "gamers-non-gaming-activity-in-games",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-internet-media-revenue-forecast",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "global-revenue-segment-cagr-comparison",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "online-delivered-car-purchase-forecast",
+      "original_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        103
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "super-user-early-adoption-comparison",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "cryptocurrency-trading-vs-payment-use",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "esports-global-audience-forecast-series",
+      "original_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "candidate_evidence_ids": [
+        "esports-global-audience-forecast-series"
+      ],
+      "original_source_pages": [
+        162
+      ],
+      "candidate_source_pages": [
+        162
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "gamers-non-gaming-activity-in-games",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-internet-media-revenue-forecast",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "global-revenue-segment-cagr-comparison",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "online-delivered-car-purchase-forecast",
+      "original_evidence_ids": [
+        "online-car-purchase-forecast"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        103
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "super-user-early-adoption-comparison",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [],
+      "validation_issues": [
+        "grounding"
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "0a5cf84e8e409d05656b6a6dee7179013708aee6c2fbd2f6c81b5bbe0c6d1366",
+      "original_evidence_ids": [
+        "q3"
+      ],
+      "candidate_evidence_ids": [
+        "q3"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "7935352f75fd7fc4edff1020fc00391952b8feef2c8359d343bb3ec982a518b4",
+      "original_evidence_ids": [
+        "q1"
+      ],
+      "candidate_evidence_ids": [
+        "q1"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9632f95d80d691d23f3c19919dbffc0d393320f0f4b851661d578440b8cc6b34",
+      "original_evidence_ids": [
+        "q2"
+      ],
+      "candidate_evidence_ids": [
+        "q2"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:24f921a368cb2c55",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:86e054c67d485368",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities",
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities",
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        71,
+        41
+      ],
+      "candidate_source_pages": [
+        71,
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:aa51bdba9e345bdd",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:933c7a4a9b9791f7",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:e5736baa0c7fc81c",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:f9c9676f3e62e375",
+      "original_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "candidate_evidence_ids": [
+        "super-user-early-adoption"
+      ],
+      "original_source_pages": [
+        21
+      ],
+      "candidate_source_pages": [
+        21
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:0ad2e761c00938e9",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:44463f248f1c17db",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:4a3279ecc953c34c",
+      "original_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "candidate_evidence_ids": [
+        "crypto-usage-trading-versus-transacting"
+      ],
+      "original_source_pages": [
+        41
+      ],
+      "candidate_source_pages": [
+        41
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:838661998384287a",
+      "original_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "candidate_evidence_ids": [
+        "gamers-non-gaming-activities"
+      ],
+      "original_source_pages": [
+        71
+      ],
+      "candidate_source_pages": [
+        71
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:872164c20587983c",
+      "original_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "candidate_evidence_ids": [
+        "advertising-growth-rate"
+      ],
+      "original_source_pages": [
+        7
+      ],
+      "candidate_source_pages": [
+        7
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:de2ec45a29c79d5d",
+      "original_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "candidate_evidence_ids": [
+        "global-revenue-growth"
+      ],
+      "original_source_pages": [
+        6
+      ],
+      "candidate_source_pages": [
+        6
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "eace4852883a84feb656464c7b5d7d2cd5d5f10b40ac203e63978012ab59e391",
+    "b343f7cd3fd88034c09baf2abac3ad69aa755c6d9d5f52d743255e4750e5d8d9",
+    "3061b8c5026a197bc85c51fb0c44be07b868302e6f5744a46138f602a4f8eb7b",
+    "39d4dbb4b975a92f416b6b9f2d6178c88b7cab48e0f84ff7ca5ece3ea5094c6f",
+    "e7373b4101e46663d515d2f52bb28d54cff24d55e553efc1ce582f98898e998c",
+    "698c389e724183e4db5ea8564f213beb823a1b96535f541fa399c9a042d0d9e9"
+  ],
+  "repair_action": "REMOVE_CLAIM",
+  "repair_strategy": "safe_removal",
+  "allowed_paths": [
+    "insights_candidates[item=online-delivered-car-purchase-forecast]",
+    "insights_candidates[item=super-user-early-adoption]",
+    "insights_final[item=online-delivered-car-purchase-forecast]",
+    "insights_final[item=super-user-early-adoption]"
+  ],
+  "verified_dependent_paths": [
+    "claim_ledgers[10].artifact_section",
+    "claim_ledgers[10].canonical_claim_id",
+    "claim_ledgers[10].claim_text",
+    "claim_ledgers[10].confidence",
+    "claim_ledgers[10].evidence_ids[0]",
+    "claim_ledgers[10].evidence_quality_grade",
+    "claim_ledgers[10].evidence_references",
+    "claim_ledgers[10].evidence_span_count",
+    "claim_ledgers[10].support_type",
+    "claim_ledgers[11].artifact_section",
+    "claim_ledgers[11].canonical_claim_id",
+    "claim_ledgers[11].claim_text",
+    "claim_ledgers[11].evidence_ids[0]",
+    "claim_ledgers[11].evidence_quality_grade",
+    "claim_ledgers[11].evidence_references",
+    "claim_ledgers[11].evidence_span_count",
+    "claim_ledgers[11].risk",
+    "claim_ledgers[11].support_type",
+    "claim_ledgers[12].artifact_section",
+    "claim_ledgers[12].canonical_claim_id",
+    "claim_ledgers[12].claim_text",
+    "claim_ledgers[12].confidence",
+    "claim_ledgers[12].evidence_ids[0]",
+    "claim_ledgers[12].evidence_quality_grade",
+    "claim_ledgers[12].risk",
+    "claim_ledgers[12].support_type",
+    "claim_ledgers[13].canonical_claim_id",
+    "claim_ledgers[13].claim_text",
+    "claim_ledgers[13].evidence_ids[0]",
+    "claim_ledgers[14].canonical_claim_id",
+    "claim_ledgers[14].claim_text",
+    "claim_ledgers[14].evidence_ids[0]",
+    "claim_ledgers[15].canonical_claim_id",
+    "claim_ledgers[15].claim_text",
+    "claim_ledgers[15].evidence_ids[0]",
+    "claim_ledgers[16].artifact_section",
+    "claim_ledgers[16].canonical_claim_id",
+    "claim_ledgers[16].claim_text",
+    "claim_ledgers[16].evidence_ids[0]",
+    "claim_ledgers[16].evidence_quality_grade",
+    "claim_ledgers[16].support_type",
+    "claim_ledgers[17].artifact_section",
+    "claim_ledgers[17].canonical_claim_id",
+    "claim_ledgers[17].claim_text",
+    "claim_ledgers[17].evidence_ids[0]",
+    "claim_ledgers[17].evidence_quality_grade",
+    "claim_ledgers[17].evidence_references",
+    "claim_ledgers[17].evidence_span_count",
+    "claim_ledgers[17].risk",
+    "claim_ledgers[17].support_type",
+    "claim_ledgers[18].artifact_section",
+    "claim_ledgers[18].canonical_claim_id",
+    "claim_ledgers[18].claim_text",
+    "claim_ledgers[18].evidence_ids[0]",
+    "claim_ledgers[18].evidence_quality_grade",
+    "claim_ledgers[18].evidence_references",
+    "claim_ledgers[18].evidence_span_count",
+    "claim_ledgers[18].risk",
+    "claim_ledgers[18].support_type",
+    "claim_ledgers[19].artifact_section",
+    "claim_ledgers[19].canonical_claim_id",
+    "claim_ledgers[19].claim_text",
+    "claim_ledgers[19].evidence_ids[0]",
+    "claim_ledgers[19].evidence_quality_grade",
+    "claim_ledgers[19].evidence_references",
+    "claim_ledgers[19].evidence_span_count",
+    "claim_ledgers[19].risk",
+    "claim_ledgers[19].support_type",
+    "claim_ledgers[20]",
+    "claim_ledgers[21]",
+    "claim_ledgers[22]",
+    "claim_ledgers[23]",
+    "claim_ledgers[7].canonical_claim_id",
+    "claim_ledgers[7].claim_text",
+    "claim_ledgers[7].evidence_ids[0]",
+    "claim_ledgers[7].evidence_references[0].evidence_id",
+    "claim_ledgers[7].evidence_references[1].evidence_id",
+    "claim_ledgers[8].canonical_claim_id",
+    "claim_ledgers[8].claim_text",
+    "claim_ledgers[8].evidence_ids[0]",
+    "claim_ledgers[8].evidence_references[0].evidence_id",
+    "claim_ledgers[8].evidence_references[1].evidence_id",
+    "claim_ledgers[9].canonical_claim_id",
+    "claim_ledgers[9].claim_text",
+    "claim_ledgers[9].evidence_ids[0]",
+    "claim_ledgers[9].evidence_references[0].evidence_id",
+    "claim_ledgers[9].evidence_references[1].evidence_id",
+    "executive_advisory.coverage_diagnostics.evidence_linked_insight_count",
+    "executive_advisory.decision_brief.decision_implications[2]",
+    "executive_advisory.decision_brief.evidence_links[5]",
+    "executive_advisory.decision_brief.evidence_links[6]",
+    "executive_advisory.decision_brief.evidence_links[7]",
+    "executive_advisory.decision_brief.evidence_links[8]",
+    "executive_advisory.decision_brief.evidence_links[9]",
+    "executive_advisory.decision_brief.priority_moves[2]",
+    "executive_advisory.recommendations.items[item=online-delivered-car-purchase-forecast]",
+    "executive_advisory.recommendations.items[item=super-user-early-adoption-comparison]"
+  ],
+  "selected_evidence_ids": [
+    "online-car-purchase-forecast"
+  ],
+  "quarantined_evidence_ids": [],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "retained_claim.number_value_unit_match",
+        "affected_section": "insights:online-delivered-car-purchase-forecast.text",
+        "entity_id": "insight:online-delivered-car-purchase-forecast:text",
+        "evidence_ids": [
+          "online-car-purchase-forecast",
+          "online-car-purchase-forecast"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "metadata.title",
+        "entity_id": "metadata:title",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:gamers-non-gaming-activity-in-games",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=super-user-early-adoption-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights_final:super-user-early-adoption-comparison",
+        "entity_id": "super-user-early-adoption-comparison",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=super-user-early-adoption-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights_candidates:super-user-early-adoption-comparison",
+        "entity_id": "super-user-early-adoption-comparison",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_final[item=super-user-early-adoption-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights_final:super-user-early-adoption-comparison",
+        "entity_id": "super-user-early-adoption-comparison",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "regeneration_scope_violation",
+        "affected_section": "insights_candidates[item=super-user-early-adoption-comparison]",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "insights_candidates:super-user-early-adoption-comparison",
+        "entity_id": "super-user-early-adoption-comparison",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 4,
+    "introduced_failure_categories": [
+      "unsupported_claim_evidence_introduction"
+    ],
+    "semantic_grounding_validation_status": "not_evaluated_due_to_deterministic_failure",
+    "severity_changes": [
+      {
+        "failure_fingerprint": "3061b8c5026a197bc85c51fb0c44be07b868302e6f5744a46138f602a4f8eb7b",
+        "before": "info",
+        "after": "warning"
+      }
+    ],
+    "mutation_scope_result": "fail",
+    "evidence_lineage_result": "fail",
+    "repair_action": "REMOVE_CLAIM",
+    "repair_strategy": "safe_removal",
+    "evidence_ids_used": [
+      "online-car-purchase-forecast"
+    ],
+    "strategy_fingerprint": "8db187f5a491e65a399d932b0f439185fb0bb0ece8924cbd6ce178d40711075d",
+    "candidate_sha256": "70648bd4138b73fe3de0a8ff861aeabe7dd6523f5f8dc73794cf8ccca8c4d668",
+    "input_sha256": "5d5aedd7923f8ae87df7286da0060f8d9840eabe491c159143e2e9404a636e29",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [],
+  "report_id": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "8db187f5a491e65a399d932b0f439185fb0bb0ece8924cbd6ce178d40711075d",
+  "latency_ms": 5828,
+  "schema_version": "1.0"
+}

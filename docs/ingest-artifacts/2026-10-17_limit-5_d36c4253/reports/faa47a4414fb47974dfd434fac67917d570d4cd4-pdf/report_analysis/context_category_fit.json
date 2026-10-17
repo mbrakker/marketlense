@@ -1,0 +1,290 @@
+{
+  "schema_version": "1.0",
+  "selected_category_ids": [
+    "amazon",
+    "beauty",
+    "macroeconomics",
+    "technology"
+  ],
+  "category_fits": [
+    {
+      "category_id": "consumer_behavior",
+      "label": "Consumer Behavior & Insights",
+      "fit_score": 0.97,
+      "decision": "primary",
+      "why_fit": "The report is based on consumer research into online shopping adoption, retailer discovery, new-retailer use, delivery and pickup preferences, paid memberships, and data-sharing willingness.",
+      "why_not_fit": "The findings have retail implications, but the report's central lens is what shoppers do and expect, rather than retailer performance.",
+      "evidence_sections": [
+        "The Post-COVID Online Shopper",
+        "Growth Outlook for Online Shopping",
+        "eCommerce Discovery",
+        "Delivery vs. Pickup",
+        "Purchasing with New Online Retailers",
+        "Shopping Program Memberships"
+      ],
+      "semantic_rule_status": "ambiguous",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_ambiguous"
+    },
+    {
+      "category_id": "amazon",
+      "label": "Amazon Marketplace & Advertising",
+      "fit_score": 0.0,
+      "decision": "primary",
+      "why_fit": "Explicit configured category evidence is central to the retained report context.",
+      "why_not_fit": "",
+      "evidence_sections": [],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Amazon retail, Amazon Ads, seller operations, or Amazon-specific planning decisions are central across the report."
+      ],
+      "supported_topic_rule_ids": [
+        "amazon:include:bf8737d54d219a67"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "key_findings",
+        "eCommerce Discovery",
+        "Shopping Program Memberships"
+      ],
+      "centrality_evidence_sections": [
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "beauty",
+      "label": "Beauty",
+      "fit_score": 0.0,
+      "decision": "primary",
+      "why_fit": "Explicit configured category evidence is central to the retained report context.",
+      "why_not_fit": "",
+      "evidence_sections": [],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses beauty products, beauty shoppers, personal care routines, or beauty category trends."
+      ],
+      "supported_topic_rule_ids": [
+        "beauty:include:097b917e8fcab8fa"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "methods",
+        "key_findings",
+        "limitations",
+        "The Post-COVID Online Shopper",
+        "Growth Outlook for Online Shopping",
+        "eCommerce Discovery",
+        "Delivery vs. Pickup",
+        "Purchasing with New Online Retailers"
+      ],
+      "centrality_evidence_sections": [
+        "overview",
+        "key_findings"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "macroeconomics",
+      "label": "Macroeconomics & Regional Outlooks",
+      "fit_score": 0.0,
+      "decision": "primary",
+      "why_fit": "Explicit configured category evidence is central to the retained report context.",
+      "why_not_fit": "",
+      "evidence_sections": [],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "The report interprets markets primarily through economy-wide forces rather than one product category or channel."
+      ],
+      "supported_topic_rule_ids": [
+        "macroeconomics:include:03ffab14dcc48cd8"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "methods",
+        "Growth Outlook for Online Shopping",
+        "Delivery vs. Pickup",
+        "Purchasing with New Online Retailers"
+      ],
+      "centrality_evidence_sections": [
+        "overview"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "technology",
+      "label": "Technology & Innovation",
+      "fit_score": 0.0,
+      "decision": "primary",
+      "why_fit": "Explicit configured category evidence is central to the retained report context.",
+      "why_not_fit": "",
+      "evidence_sections": [],
+      "semantic_rule_status": "supported",
+      "supported_topic_rules": [
+        "Evidence repeatedly discusses infrastructure, enterprise technology, robotics, cybersecurity, hardware, or major technology shifts."
+      ],
+      "supported_topic_rule_ids": [
+        "technology:include:84008e3e416054bb"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "overview",
+        "methods"
+      ],
+      "centrality_evidence_sections": [
+        "overview"
+      ],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "omnichannel_commerce",
+      "label": "Omnichannel Commerce",
+      "fit_score": 0.51,
+      "decision": "reject",
+      "why_fit": "The report covers online shopping alongside fulfillment choices such as curbside and in-store pickup, and notes that car shoppers move discovery and consideration online.",
+      "why_not_fit": "It does not center on integration between online and physical touchpoints or end-to-end cross-touchpoint experience design; most findings concern online shopping behavior.",
+      "evidence_sections": [
+        "The Post-COVID Online Shopper",
+        "Delivery vs. Pickup",
+        "Growth Outlook for Online Shopping"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "retail_logistics",
+      "label": "Retail Logistics & Fulfillment",
+      "fit_score": 0.39,
+      "decision": "reject",
+      "why_fit": "A section compares the fulfillment options consumers most frequently use, including delivery, curbside pickup, and in-store pickup.",
+      "why_not_fit": "Fulfillment is one part of a broader report on shopper behavior; inventory, warehousing, last-mile operations, and execution complexity are not the central focus.",
+      "evidence_sections": [
+        "Delivery vs. Pickup"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence centers on how inventory, delivery, fulfillment, or returns drive performance and shopper experience."
+      ],
+      "supported_topic_rule_ids": [
+        "retail_logistics:include:1e3b3c7f8b805d06"
+      ],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [
+        "The Post-COVID Online Shopper",
+        "Delivery vs. Pickup"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "e_grocery",
+      "label": "eGrocery",
+      "fit_score": 0.37,
+      "decision": "reject",
+      "why_fit": "The report includes online grocery adoption, retailer starting points, new retailer use, and grocery delivery and pickup preferences.",
+      "why_not_fit": "Grocery is one of several product categories studied; the report also covers clothing, beauty/grooming, and car shopping, so grocery is not the core commercial context.",
+      "evidence_sections": [
+        "Growth Outlook for Online Shopping",
+        "eCommerce Discovery",
+        "Delivery vs. Pickup",
+        "Purchasing with New Online Retailers"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [
+        "Evidence repeatedly covers grocery ecommerce, delivery windows, basket missions, rapid fulfillment, or grocery-specific digital adoption."
+      ],
+      "supported_topic_rule_ids": [
+        "e_grocery:include:96749ea699cf6a9b"
+      ],
+      "rejected_topic_rules": [
+        "Reject when grocery appears only as one product category inside a broader retail or FMCG report."
+      ],
+      "rejected_topic_rule_ids": [
+        "e_grocery:exclude:d5a2cd5c704f1dee"
+      ],
+      "rule_evidence_sections": [
+        "Growth Outlook for Online Shopping",
+        "overview"
+      ],
+      "centrality_evidence_sections": [],
+      "remediation_signal": "topic_semantics_exclusion_conflict"
+    },
+    {
+      "category_id": "online_marketplaces",
+      "label": "Online Marketplaces & Platforms",
+      "fit_score": 0.33,
+      "decision": "reject",
+      "why_fit": "The report mentions Amazon and other retailer websites or apps as places where shoppers begin online shopping.",
+      "why_not_fit": "It reports shopper starting points and discovery habits, not marketplace economics, seller acquisition, buyer-seller dynamics, or platform growth strategy.",
+      "evidence_sections": [
+        "eCommerce Discovery",
+        "Purchasing with New Online Retailers"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "privacy_identity",
+      "label": "Privacy, Identity & Data",
+      "fit_score": 0.27,
+      "decision": "reject",
+      "why_fit": "The overview says the report considers consumers' willingness to share data for personalized or monetary benefits.",
+      "why_not_fit": "Data sharing is one topic within a broad online-shopping study; the context does not describe privacy, consent, identity resolution, compliance, or data collaboration as the report's core problem.",
+      "evidence_sections": [
+        "The Post-COVID Online Shopper"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    },
+    {
+      "category_id": "fashion",
+      "label": "Fashion",
+      "fit_score": 0.22,
+      "decision": "reject",
+      "why_fit": "The report includes clothing online penetration and where online clothing shoppers typically start.",
+      "why_not_fit": "Clothing is one category in a broader study of post-COVID online shopping; the report does not focus on apparel, fashion demand, merchandising, or fashion retail dynamics.",
+      "evidence_sections": [
+        "Growth Outlook for Online Shopping",
+        "eCommerce Discovery"
+      ],
+      "semantic_rule_status": "rejected",
+      "supported_topic_rules": [],
+      "supported_topic_rule_ids": [],
+      "rejected_topic_rules": [],
+      "rejected_topic_rule_ids": [],
+      "rule_evidence_sections": [],
+      "centrality_evidence_sections": [],
+      "remediation_signal": ""
+    }
+  ]
+}

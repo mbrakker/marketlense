@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/validate/semantic",
+  "family_schema_version": "1.0",
+  "processing_version": "semantic_validation_v2",
+  "output": {
+    "metrics": [
+      {
+        "id": "evidence:quote_candidates:quote-002",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The evidence directly states that most consumers start online shopping with specific retailers rather than search engines."
+      },
+      {
+        "id": "evidence:quote_candidates:quote-004",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The evidence directly supports delivery as most popular overall and nearly half preferring grocery pickup."
+      },
+      {
+        "id": "evidence:quote_candidates:quote-006",
+        "supported": true,
+        "confidence": 1.0,
+        "reason": "The evidence directly states shoppers exchange data access for personalized benefits, including recommendations, rewards or discounts, and faster checkout."
+      }
+    ],
+    "quotes": []
+  }
+}

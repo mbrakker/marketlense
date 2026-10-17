@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/summary",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "public_output": {
+      "tldr": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+      "card_tldr_compact": "Among U.S. adults 18+ in 2021, 17% had bought/sold cryptocurrency; 4% had paid for a product/service with it.",
+      "executive_summary": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it. Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR. For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, compared with paid content at 2.2% and internet access at 3.8%. In the U.S. in 2021, 60% of gamers, defined as adults aged 18+ who currently played video games, had participated in non-gaming activities or events within games in the last 12 months. If evaluating consumer cryptocurrency activity, MarketLense recommends tracking buying or selling separately from paying for a product or service.",
+      "claim_evidence_map": [
+        {
+          "claim": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+          "evidence_id": "crypto-usage-trading-versus-transacting",
+          "evidence": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+          "evidence_spans": [],
+          "pages": [
+            41
+          ]
+        },
+        {
+          "claim": "Among U.S. adults 18+ in 2021, 17% had bought/sold cryptocurrency; 4% had paid for a product/service with it.",
+          "evidence_id": "crypto-usage-trading-versus-transacting",
+          "evidence": "The 2021 U.S. adult 18+ measure reports 17% had bought or sold cryptocurrency and 4% had paid for a product or service with it.",
+          "evidence_spans": [],
+          "pages": [
+            41
+          ]
+        },
+        {
+          "claim": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+          "evidence_id": "global-revenue-growth",
+          "evidence": "Activate forecast for global internet and media revenues: $2.1T in 2021E, $2.5T in 2025E, $390B growth dollars, and a 4.3% CAGR.",
+          "evidence_spans": [],
+          "pages": [
+            6
+          ]
+        },
+        {
+          "claim": "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, compared with paid content at 2.2% and internet access at 3.8%.",
+          "evidence_id": "advertising-growth-rate",
+          "evidence": "For 2021E–2025E, the Activate forecast gives global advertising revenue a 6.9% CAGR, paid content 2.2%, and cost of internet access 3.8%.",
+          "evidence_spans": [],
+          "pages": [
+            7
+          ]
+        },
+        {
+          "claim": "In the U.S. in 2021, 60% of gamers, defined as adults aged 18+ who currently played video games, had participated in non-gaming activities or events within games in the last 12 months.",
+          "evidence_id": "gamers-non-gaming-activities",
+          "evidence": "In the U.S. in 2021, 60% of gamers had participated in non-gaming activities or events within games in the prior 12 months; gamers are defined as adults aged 18+ who currently play video games.",
+          "evidence_spans": [],
+          "pages": [
+            71
+          ]
+        }
+      ]
+    },
+    "claim_provenance": [
+      {
+        "claim": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+        "classification": "factual",
+        "evidence_ids": [
+          "crypto-usage-trading-versus-transacting"
+        ]
+      },
+      {
+        "claim": "Among U.S. adults 18+ in 2021, 17% had bought/sold cryptocurrency; 4% had paid for a product/service with it.",
+        "classification": "factual",
+        "evidence_ids": [
+          "crypto-usage-trading-versus-transacting"
+        ]
+      },
+      {
+        "claim": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+        "classification": "factual",
+        "evidence_ids": [
+          "global-revenue-growth"
+        ]
+      },
+      {
+        "claim": "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, compared with paid content at 2.2% and internet access at 3.8%.",
+        "classification": "factual",
+        "evidence_ids": [
+          "advertising-growth-rate"
+        ]
+      },
+      {
+        "claim": "In the U.S. in 2021, 60% of gamers, defined as adults aged 18+ who currently played video games, had participated in non-gaming activities or events within games in the last 12 months.",
+        "classification": "factual",
+        "evidence_ids": [
+          "gamers-non-gaming-activities"
+        ]
+      },
+      {
+        "claim": "If evaluating consumer cryptocurrency activity, MarketLense recommends tracking buying or selling separately from paying for a product or service.",
+        "classification": "recommendation",
+        "evidence_ids": [
+          "crypto-usage-trading-versus-transacting"
+        ]
+      }
+    ],
+    "producing_prompt_identity": {
+      "schema_version": "1.0",
+      "namespace": "report_vs/artifacts/summary",
+      "family_schema_version": "1.0",
+      "processing_version": "report_generation_checkpoint_v2",
+      "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+      "prompt_dependency_manifest": {
+        "schema_version": "1.0",
+        "namespace": "report_vs/artifacts/summary",
+        "system_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/system.yaml",
+          "sha256": "3df572a3c0dde0f0e5b7f3d83fd30339674224df030cfe2eb072b8493a4a7b05",
+          "kind": "system_root",
+          "source": ""
+        },
+        "user_root": {
+          "schema_version": "1.0",
+          "path": "prompts/report_vs/artifacts/summary/user.yaml",
+          "sha256": "d48deb5a77eb5bad99d54806033ed2a7646bb82daee4d333a75ad009dca10163",
+          "kind": "user_root",
+          "source": ""
+        },
+        "included_partials": [
+          {
+            "schema_version": "1.0",
+            "path": "prompts/report_vs/artifacts/_partials/editorial_constitution.yaml",
+            "sha256": "22403047f99c92cf787e9a77ba3d9d9f85a5c8545f3ba2700adf2a9ab21480d9",
+            "kind": "partial",
+            "source": "user:0"
+          }
+        ],
+        "schema_snippets": [
+          {
+            "schema_version": "1.0",
+            "path": "schemas/artifacts.schema.json",
+            "sha256": "fa2d3dd109c1f2ff61152454a7dff4a29dd781b490069be25e8ac3744165b3f9",
+            "kind": "schema_snippet",
+            "source": "user:summary_schema:artifacts.schema.json#/properties/summary"
+          }
+        ],
+        "composition_version": "2.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9"
+      },
+      "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221",
+      "execution_identity_manifest": {
+        "schema_version": "1.0",
+        "prompt_content_hash": "e08500704849538d16cbab3d8931bf6bde31b1be2767265815a3b1aeac9887e9",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "temperature": null,
+        "seed": null,
+        "reasoning_effort": "medium",
+        "output_controls": {
+          "max_output_tokens": 8192,
+          "timeout_seconds": 600.0,
+          "provider_retry_count": 0
+        },
+        "retrieval_mode": "chat_json",
+        "routing_policy": {
+          "policy_source": "report_vs/artifacts/summary",
+          "tier": "routine_structured",
+          "quality_threshold": 0.8,
+          "same_provider_fallback": true,
+          "max_input_tokens": 48000,
+          "compaction_enabled": true,
+          "execution_policy_hash": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+          "execution_policy_source": "report_vs/artifacts/summary"
+        },
+        "compaction_policy": {
+          "enabled": true,
+          "max_input_tokens": 48000,
+          "strategy": "anchor_preserving_head_tail"
+        },
+        "output_contract_schema_version": "artifact_json:1.0",
+        "validator_version": "artifacts_schema:3.0",
+        "execution_identity": "1b182a84ae507957f833d729d8cb0577cbb40b57cddbfc3e2b69e58926de4221"
+      },
+      "model_provider": "openai",
+      "model_name": "gpt-6-luna",
+      "model_policy_namespace": "report_vs",
+      "routing_policy_version": "627358332a78af8ec69ce74c4da20f86cf25aa277f1ea6fcfa8a94ccab0d7dc8",
+      "validator_version": "artifacts_schema:3.0",
+      "relevant_input_hash": "ad5fc1196c2d67604ae94ae0a48573c376abb91a098e4699c8b4e9e1d8ae4e27",
+      "configuration_policy_hash": "62da4f99c2392d5b280b925d28774c835a4bb123d935468d6f0d10bd48a32eaa",
+      "decision": "regenerated",
+      "regeneration_reason": "input_hash_changed"
+    },
+    "generation_attempt": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "Many reported measures are survey responses or stated intentions/expectations, not observed post-reopening behavior (for example, expected time-spend growth and intent to continue using a new streaming service).",
+    "Survey measures have stated scope and differing sample sizes: examples include U.S. adults aged 18–64 and Activate study samples of n=1,866 (April 2020) and n=1,925 (May 2020)."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,2689 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "d36f70b46ccea15e0909c7ca9ddb0b2b7e5a207f13b40643403b6100f392d00b",
+  "package_hash": "f2c98310f11e8d4c952c8156aaeef23598901dd4786959b4f5f4aa9c18d1a66e",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:attention_concentration",
+        "source_family": "evidence_pack:findings",
+        "text": "In the U.S. from January through September 2015, a few properties and platforms captured the lion’s share of user time.",
+        "text_hash": "2cd09c074c35518952b1eaa02b01a414b41161f1c3bba3e28877020fe19f8a82",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:9",
+            "source_pack": "source_pdf",
+            "page": 9,
+            "text_hash": "9b98d758e2a23283058407624af447675436591c68ccc6ff8f628bcfb3702e25"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence supports attention being concentrated across relatively few apps, sites, and channels, but its data is for 2014, not January through September 2015."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence supports attention being concentrated across relatively few apps, sites, and channels, but its data is for 2014, not January through September 2015.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:attention_daily_time_cagr",
+        "source_family": "evidence_pack:findings",
+        "text": "For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%.",
+        "text_hash": "2e944a9c093cee2eb4cac910a783f374fb3ecc2472771f39e13c947a1db8abb2",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:12",
+            "source_pack": "source_pdf",
+            "page": 12,
+            "text_hash": "c3ad5854387381cf6f5416a710ab505f1a04b8fd7588e358aab56067c6f5716d"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "11.9, 17.8, 18.0, 4.5, 4.9",
+            "evidence_value": "1.0, 1000000.0, 11.9, 12.0, 12000000.0, 15000000.0, 17.8, 17000000.0, 18.0, 18000000.0, 2.0, 21000000.0, 24000000.0, 26000000.0, 3.0, 3000000.0, 31000000.0, 36000000.0, 37000000.0, 39000000.0, 4.0, 4.5, 4.9, 42000000.0, 44000000.0, 48000000.0, 5.0, 50000000.0, 52000000.0, 54000000.0, 57000000.0, 6.0, 7.0, 8000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "count, index, percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "global, us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:messaging_enterprise_bots",
+        "source_family": "evidence_pack:findings",
+        "text": "The report describes third-party integrations and automated bots in Slack as functioning like an app store, differentiating Slack from competitors and being essential for adoption.",
+        "text_hash": "c2df0ee8efc15e7310d6b55bedb8d26f13c361b9ec39aee5eaf3943fe691c402",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:32",
+            "source_pack": "source_pdf",
+            "page": 32,
+            "text_hash": "bde2e304b3ab633df720255732a9efc62d177e745a4fc34b95c6ee750838d91c"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that third-party integrations and automated bots function like an app store, differentiate Slack from competitors, and are essential for adoption."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that third-party integrations and automated bots function like an app store, differentiate Slack from competitors, and are essential for adoption.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:audio_consumption_mix",
+        "source_family": "evidence_pack:findings",
+        "text": "In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed audio-consumption mix.",
+        "text_hash": "e6444b596d4c57b497faf2c19957b2d14f4266951c3c4835cefa7ec7cff5304e",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:36",
+            "source_pack": "source_pdf",
+            "page": 36,
+            "text_hash": "589b19d0301932683a9398d8eb924c436a8d05a77069445589c9c8a2a72fbe16"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 13.0, 245.0, 52.0",
+            "evidence_value": "12.0, 13.0, 2.0, 20.0, 245.0, 35.0, 4.0, 52.0, 8.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent, time",
+            "evidence_value": "count, percent, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:cord_cutting_content_mix",
+        "source_family": "evidence_pack:findings",
+        "text": "The report states that people were still spending most of their time with TV- and studio-produced content in the U.S. monthly video-consumption chart covering 2011–2015E.",
+        "text_hash": "27355142ae4bab908ade5a5238e2e853d38eea738f7b5575a821c3d253d61cfb",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:67",
+            "source_pack": "source_pdf",
+            "page": 67,
+            "text_hash": "d14bad8094ea5e65bb1baa09018cd59a68342b4ff82a1be79634f6c8e1b1526d"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence says people remain hooked on traditional TV and consume more video overall, but does not support the claim about spending most time on TV- and studio-produced content or the 2011–2015E chart."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence says people remain hooked on traditional TV and consume more video overall, but does not support the claim about spending most time on TV- and studio-produced content or the 2011–2015E chart.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:smart_cable_positioning",
+        "source_family": "evidence_pack:findings",
+        "text": "The report argues that a “cable killer” would not be a low-priced competitor, but “smart cable”: a superior high-end experience that could target the most lucrative and profitable customers.",
+        "text_hash": "c82366d31aac342d7f916b2267cf13caae81a4af6327055aeab56baf6161526c",
+        "kind": "quotation",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:91",
+            "source_pack": "source_pdf",
+            "page": 91,
+            "text_hash": "8ca3808e3221127a1c904ff01f3e0d1c35e2d00add04a51943562264b0a01bfe"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "quote_match",
+          "status": "failed",
+          "reason": "quote_not_matched"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unsupported",
+      "reasons": [
+        "quote_not_matched"
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:esports_revenue_forecast",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate forecast global eSports revenue of $4 billion in 2018E, comprising $2.2 billion in APAC, $1.3 billion in North America, $0.4 billion in Europe, and $0.1 billion in Latin America.",
+        "text_hash": "d87fd43654ceda1d7b0de8bd3e9323e8336ac57afc65af8fad9a5fb3cbd1408c",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:105",
+            "source_pack": "source_pdf",
+            "page": 105,
+            "text_hash": "fdd9b27f86fa825b77e7970fe92d43857eb70c990e27bc1f54d45634566572b0"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "100000000.0, 1300000000.0, 2200000000.0, 400000000.0, 4000000000.0",
+            "evidence_value": "100000000.0, 104.0, 1300000000.0, 2200000000.0, 400000000.0, 4000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2018",
+            "evidence_value": "2018",
+            "status": "compatible"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "apac, europe, global, latin america, north america",
+            "evidence_value": "apac, europe, global",
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:dota_prize_pool_series",
+        "source_family": "evidence_pack:findings",
+        "text": "The Dota 2 tournament prize pool was $2 million in 2012, $3 million in 2013, $11 million in 2014, and $18 million in 2015; the chart labels the period’s CAGR as 126%.",
+        "text_hash": "3c65918152f35fd59ca0ee9279ad0e7bcf30f3e042e55566bdb41cace6232cde",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:102",
+            "source_pack": "source_pdf",
+            "page": 102,
+            "text_hash": "f06429606a727459fa9d990563cca99bfea632a93228119fe04a4e1191fcec1c"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "not_applicable",
+          "reason": "quantity_not_established"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence only describes esports tournaments generally and provides no Dota 2 prize-pool figures or CAGR."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "11000000.0, 126.0, 18000000.0, 2.0, 2000000.0, 3000000.0",
+            "evidence_value": "101.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, currency, percent",
+            "evidence_value": "unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence only describes esports tournaments generally and provides no Dota 2 prize-pool figures or CAGR.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:wagering_characteristics",
+        "source_family": "evidence_pack:findings",
+        "text": "The report describes wagering as a real-money betting layer in games and other digital entertainment experiences, and characterizes it as skill-based and social, with first-person and spectator wagering mainly on online multiplayer games and eSports events.",
+        "text_hash": "b0392f6bc340f4472a6c4716198166a9d2c4f8201dd37e79917dfd6522116742",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:106",
+            "source_pack": "source_pdf",
+            "page": 106,
+            "text_hash": "769869cf1748d9eadeea46b595832f47af7a5684910d049187f369ab68e01600"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unsupported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence does not describe wagering as real-money, skill-based, or social, nor mention first-person or spectator wagering."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "The evidence does not describe wagering as real-money, skill-based, or social, nor mention first-person or spectator wagering.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:app_store_distribution_engagement",
+        "source_family": "evidence_pack:findings",
+        "text": "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+        "text_hash": "ed516b26e2e539a048f3b82782323e0789206c9094d8fd81f10b89d740af60ff",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:124",
+            "source_pack": "source_pdf",
+            "page": 124,
+            "text_hash": "5c379abdc6da2a3269e7c2913311104876d7f4f4e284a9b2be4ceaa5a21ef5e9"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence directly states that a new wave of companies use the app store for distribution and engagement, but not monetization."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence directly states that a new wave of companies use the app store for distribution and engagement, but not monetization.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:unified_stack_ma_forecast",
+        "source_family": "evidence_pack:findings",
+        "text": "The report expects the next wave of M&A activity to be driven by larger players filling gaps with independent players.",
+        "text_hash": "0f31e79b7f2017b45b26a64ea42053180d54638184c5688bc139bd19fb67a931",
+        "kind": "causal",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:132",
+            "source_pack": "source_pdf",
+            "page": 132,
+            "text_hash": "ec777b3ee8efa11126b08998debbbbfbc217c14d34beee489f2b6ac3185c7526"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "Evidence directly says the next M&A wave will be driven by larger players looking to fill gaps with independent players."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "Evidence directly says the next M&A wave will be driven by larger players looking to fill gaps with independent players.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:gaming-spend-2014",
+        "source_family": "evidence_pack:findings",
+        "text": "The report’s global consumer-spend chart lists video gaming at $74 billion in 2014 and says spending was likely to expand as video gaming broadened to include advertising and gambling streams.",
+        "text_hash": "d75e9b897c5cd9eb770d9572732ea477893f368905c0754f565c0bccf4c92750",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:96",
+            "source_pack": "source_pdf",
+            "page": 96,
+            "text_hash": "96687552367f88c00e3979c03cc2f4923a65bc4b0e43efa0e636606a86cdd56c"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "74000000000.0",
+            "evidence_value": "205.0, 23.0, 38.0, 423.0, 66.0, 74.0, 74000000000.0, 85.0, 95.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "2014",
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "global",
+            "evidence_value": "global",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:esports-revenue-forecast-2018",
+        "source_family": "evidence_pack:findings",
+        "text": "The report forecast eSports as a $4 billion global business by 2018; its 2018E revenue chart lists $2.2 billion for APAC, $1.3 billion for North America, $0.4 billion for Europe, and $0.1 billion for Latin America.",
+        "text_hash": "b9ff8038e78599407e6529c71e32bd5adfba429b47d018a2bbbbc81c100172b5",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:105",
+            "source_pack": "source_pdf",
+            "page": 105,
+            "text_hash": "fdd9b27f86fa825b77e7970fe92d43857eb70c990e27bc1f54d45634566572b0"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "100000000.0, 1300000000.0, 2200000000.0, 400000000.0, 4000000000.0",
+            "evidence_value": "100000000.0, 104.0, 1300000000.0, 2200000000.0, 400000000.0, 4000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "apac, europe, global, latin america, north america",
+            "evidence_value": "apac, europe, global",
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:findings:messaging-user-forecast",
+        "source_family": "evidence_pack:findings",
+        "text": "Activate forecast that messaging would add 1.1 billion new users by 2018.",
+        "text_hash": "e094f76ae16937b9ab4f46415774736c15044deb5ea64c87e219107c600f86c1",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:17",
+            "source_pack": "source_pdf",
+            "page": 17,
+            "text_hash": "f486a9f0d0ec5cf9e1bf2e90cb87f169fff34a4ca14e04393d8654119bc0982a"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1100000000.0",
+            "evidence_value": "0.0, 0.4, 0.9, 1.3, 1.8, 1100000000.0, 16.0, 2.2, 2.7, 2000000000.0, 2018.0, 2400000000.0, 2500000000.0, 3.1, 3.6, 3200000000.0, 3600000000.0, 4.0, 4000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count",
+            "evidence_value": "count, time",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-001",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Over the next five years, the consumer tech and media industry will grow by over $500 Billion",
+        "text_hash": "2b7533309b21a7e35c7d7a701cb29c95de77892c486d306475406e716eaddce8",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:2",
+            "source_pack": "source_pdf",
+            "page": 2,
+            "text_hash": "aa644a0a345b17bbb83d4314c6bf71c73741a8ec1f696610f01b8d589615ebaa"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "500000000000.0",
+            "evidence_value": "1000000000.0, 1700000000000.0, 2200000000000.0, 5.6, 500000000000.0, 535000000000.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "currency",
+            "evidence_value": "count, currency, percent, rate",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-002",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Messaging has been the fastest-growing online behavior within the social landscape over the past five years, passing social networks",
+        "text_hash": "4d82d5e9f7076fd1996889dd3b9fb31a3b038eee54e7e2fe72a69ba973ecdd8f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:16",
+            "source_pack": "source_pdf",
+            "page": 16,
+            "text_hash": "db49eaf7a09bd5997150c8934d853393dd4cd52f0046d0af27068530fd677008"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The evidence states that messaging has been the fastest-growing online behavior in the social landscape over the past five years, passing social networks."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The evidence states that messaging has been the fastest-growing online behavior in the social landscape over the past five years, passing social networks.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-003",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "Consumer behavior has moved beyond traditional appointment viewing and has created audiences for new kinds of content",
+        "text_hash": "331fcd67a62d9d65b48968c8dd63e48a5b2ecdd8a064058a722a0982e6663553",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:73",
+            "source_pack": "source_pdf",
+            "page": 73,
+            "text_hash": "fff09d44842b20353f7982bd7e80863feb0894321618284c20886ddd297f1eea"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly stated in the evidence snippet; no numeric value or unit is claimed."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly stated in the evidence snippet; no numeric value or unit is claimed.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-004",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "THE “CABLE KILLER” WON'T BE A LOW-PRICED COMPETITOR, IT WILL BE “SMART CABLE”",
+        "text_hash": "0195b2f728f398673aa65357f03aaac17c5964f1b3a4183e2cda7f65a6bab84f",
+        "kind": "quotation",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:92",
+            "source_pack": "source_pdf",
+            "page": 92,
+            "text_hash": "2dccc313a1e2f4d48ca8b16e95d976a1eb92e9b58cfec0f2bc2b942c5dc90334"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "quote_match",
+          "status": "passed",
+          "reason": "quote_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-005",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "JUST AS SMARTPHONES FIRST DISRUPTED THE WIRELESS MARKET (AND INCREASED MONTHLY BILLS) BY CREATING A SUPERIOR HIGH END EXPERIENCE, SMART CABLE COULD TARGET THE MOST LUCRATIVE AND PROFITABLE CUSTOMERS.",
+        "text_hash": "0a7e89f6b9e27f49b70c2f1a1cd428dc4b7462a5992c690af2d8a4d476b8d0cb",
+        "kind": "interpretive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:92",
+            "source_pack": "source_pdf",
+            "page": 92,
+            "text_hash": "2dccc313a1e2f4d48ca8b16e95d976a1eb92e9b58cfec0f2bc2b942c5dc90334"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly supported by the evidence snippet; no value, unit, or timeframe is specified."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "rank:1",
+            "evidence_value": "rank:1",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly supported by the evidence snippet; no value, unit, or timeframe is specified.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-006",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "A new wave of companies are building businesses by using the app store for distribution and engagement, but not monetization",
+        "text_hash": "4ded34f5080ecbea86981e7cf0bbbd4d54983b364d49fb481b15a38fd7895155",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:124",
+            "source_pack": "source_pdf",
+            "page": 124,
+            "text_hash": "5c379abdc6da2a3269e7c2913311104876d7f4f4e284a9b2be4ceaa5a21ef5e9"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text closely matches the wording in the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text closely matches the wording in the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "evidence:quote_candidates:quote-007",
+        "source_family": "evidence_pack:quote_candidates",
+        "text": "As it grows, eSports will develop its own economy, extending from multiplayer games to marketing partnerships, and eventually betting",
+        "text_hash": "e0642ba498fe6933d3e4ac2ec7a4946f9b7c02f9073c0787415d6c004289b8ae",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "source:page:106",
+            "source_pack": "source_pdf",
+            "page": 106,
+            "text_hash": "769869cf1748d9eadeea46b595832f47af7a5684910d049187f369ab68e01600"
+          }
+        ],
+        "affected_section": "",
+        "entity_id": "",
+        "provenance_hash": ""
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [
+        "The insight text is directly supported by the evidence snippet."
+      ],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The insight text is directly supported by the evidence snippet.",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+    }
+  ],
+  "readiness_status": "not_publishable",
+  "unsupported_factual_count": 5,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 8,
+  "semantic_validation_count": 12,
+  "semantic_execution_identities": [
+    "f6ea08e991b8a5cd735bf68dc1e47688a2656b1b1cacb9f7b280db0f05308e73"
+  ],
+  "validation_identity": null,
+  "lineage": null
+}

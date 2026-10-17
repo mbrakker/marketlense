@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "0d29c213b0a833eb20cea72607907f537dda88ffe73dff9bbf40cc47c61d4a5d",
+    "md5": "4fa971c33046f9e9bd4c7fc6e355e505",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "559c0ac98de297e72840764b8467717821de4357706f0cc344f7aad2a352c0cf",
+      "candidate_id": "chart-25-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        58.0,
+        60.0,
+        968.0,
+        739.0
+      ],
+      "reason": "model_accepted",
+      "page": 25
+    },
+    {
+      "entry_key": "5cfbb0259449df48d761ce7c07d3971eff1f00cf870328b1dd5993bfea395ed8",
+      "candidate_id": "chart-13-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        180.0,
+        1024.0,
+        738.0
+      ],
+      "reason": "model_accepted",
+      "page": 13
+    }
+  ]
+}

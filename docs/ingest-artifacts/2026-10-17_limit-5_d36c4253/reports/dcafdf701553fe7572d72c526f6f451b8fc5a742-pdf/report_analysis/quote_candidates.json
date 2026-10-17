@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "quote_candidates": [
+    {
+      "id": "quote-001",
+      "text": "Serving everyone means reaching out to the 50M under-served: those who currently face obstacles to a quality tech and media experience",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-002",
+      "text": "Tech and media companies will need to strengthen the major pillars of their user experience to reach the under-served",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-003",
+      "text": "Incremental dollars from serving tech and media to Post-Household America are substantial — growing to $10 billion on its own",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-004",
+      "text": "The major search and social platforms have squeezed out news sites to solidify their control over publishers",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-005",
+      "text": "For successful messaging monetization, services will need to address payment and eCommerce adoption in messaging",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-006",
+      "text": "We believe eSports betting has high potential—this is amplified by a user’s ability to place bets as a spectator or as an active participant",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    },
+    {
+      "id": "quote-007",
+      "text": "New entrants to the virtual Pay TV space face significant customer acquisition challenges that established MVPDs can overcome",
+      "source": "1mHNThH3X4IOKmaB69itc0_cBjsnZvaz4.pdf",
+      "page": null
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "quote_candidates",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

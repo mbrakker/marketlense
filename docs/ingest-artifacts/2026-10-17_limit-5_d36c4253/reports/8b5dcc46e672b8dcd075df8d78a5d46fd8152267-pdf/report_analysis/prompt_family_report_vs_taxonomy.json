@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/taxonomy",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "taxonomy": [
+      "consumer_internet",
+      "messaging_apps",
+      "video_and_streaming_advertising",
+      "streaming",
+      "gaming",
+      "consumer_attention",
+      "social_media"
+    ],
+    "primary_tags": [
+      "consumer_internet",
+      "messaging_apps",
+      "video_and_streaming_advertising",
+      "gaming"
+    ],
+    "secondary_tags": [
+      "consumer_attention",
+      "streaming",
+      "social_media"
+    ],
+    "tag_evidence": [
+      {
+        "tag": "consumer_internet",
+        "tier": "primary",
+        "section_label": "Time and Attention",
+        "evidence": "Examines online behavior, major digital activities, and usage across websites and apps."
+      },
+      {
+        "tag": "messaging_apps",
+        "tier": "primary",
+        "section_label": "Messaging",
+        "evidence": "Covers messaging growth, Asian messaging platforms, and their services and revenues."
+      },
+      {
+        "tag": "video_and_streaming_advertising",
+        "tier": "primary",
+        "section_label": "Cord Cutting",
+        "evidence": "Analyzes U.S. video revenues, pay TV, and the transition to streaming and online TV."
+      },
+      {
+        "tag": "gaming",
+        "tier": "primary",
+        "section_label": "Gaming and Wagering",
+        "evidence": "Discusses eSports, gaming economics, and wagering."
+      },
+      {
+        "tag": "consumer_attention",
+        "tier": "secondary",
+        "section_label": "Time and Attention",
+        "evidence": "Compares time spent across video, audio, social media, and gaming."
+      },
+      {
+        "tag": "streaming",
+        "tier": "secondary",
+        "section_label": "Streaming Audio",
+        "evidence": "Reviews audio consumption and the share of listening represented by streaming."
+      },
+      {
+        "tag": "social_media",
+        "tier": "secondary",
+        "section_label": "Messaging",
+        "evidence": "Contrasts messaging platforms with social network platforms and tracks their growth."
+      }
+    ],
+    "region": "United States, with Asia-Pacific messaging markets also covered",
+    "time_period": "2011 to 2017E, with selected 2015 estimates and data from 2014 to 2015E",
+    "not_found_reason": null
+  }
+}

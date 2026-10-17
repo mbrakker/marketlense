@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/insights_candidates",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": []
+}

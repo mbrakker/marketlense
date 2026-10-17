@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/quotes",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "quote-1",
+      "text": "Overall, the research findings show that coming out of shelter in place, people’s habits, activities, and expectations are now fundamentally changed.",
+      "speaker": "Unknown",
+      "citation": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": 0,
+      "evidence_id": "quote-1",
+      "is_paraphrase": false,
+      "style": "verbatim",
+      "mode": "quote",
+      "label": "quote",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-2",
+      "text": "To serve people’s new needs and expectations and thrive in this post-Covid era, technology and media companies will need to rewire many of the ways they engage their users and consumers, including their value proposition, programming, experience, functionality, pricing, and marketing.",
+      "speaker": "Unknown",
+      "citation": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": 0,
+      "evidence_id": "quote-2",
+      "is_paraphrase": false,
+      "style": "verbatim",
+      "mode": "quote",
+      "label": "quote",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-4",
+      "text": "Participation in online grocery usage has spiked; to sustain these new customers after shelter in place, online grocery services will need to deliver against key value drivers: free delivery and product assortment",
+      "speaker": "Unknown",
+      "citation": "Rewire to Restart: The Post-COVID-19 Agenda for Technology and Media Companies",
+      "page": 0,
+      "evidence_id": "quote-4",
+      "is_paraphrase": false,
+      "style": "verbatim",
+      "mode": "quote",
+      "label": "quote",
+      "evidence_spans": []
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.1",
+  "status": "fail",
+  "severity": "error",
+  "source_path": "C:\\Programing\\Market lense\\out\\a028687a439772baede39db7cc390ad48e8652dc-pdf\\report_analysis\\validation_regen_attempt_1.json",
+  "issues": [
+    {
+      "schema_version": "1.0",
+      "message": "[grounding] [grounding|missing_material_evidence] Candidate lost the original material evidence reference.",
+      "severity": "error",
+      "affected_section": "summary_claim:claim_5",
+      "rule_id": "grounding",
+      "repair_target": "summary",
+      "entity_id": "claim_5",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'When live sports return' not present in evidence for live-sports-return-viewership-forecast",
+      "severity": "warning",
+      "affected_section": "insights:live-sports-return-viewership-forecast",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'During shelter in place, 2020' not present in evidence for ecommerce-category-penetration-shelter-2020",
+      "severity": "warning",
+      "affected_section": "insights:ecommerce-category-penetration-shelter-2020",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[metrics] Metric timeframe 'After shelter in place versus 2019' not present in evidence for young-adult-expected-post-shelter-time-spend",
+      "severity": "warning",
+      "affected_section": "insights:young-adult-expected-post-shelter-time-spend",
+      "rule_id": "metrics",
+      "repair_target": "",
+      "entity_id": "",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "LLM grounding validation is deferred and must run before final publish.",
+      "severity": "info",
+      "affected_section": "validation",
+      "rule_id": "deferred_grounding_required",
+      "repair_target": "validation_grounding",
+      "entity_id": "1BproyPIQZFHWYDII93LhAOmIyujqbXb-",
+      "evidence_ids": []
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.duplicate_insight] duplicates a prior insight by normalized claim content",
+      "severity": "error",
+      "affected_section": "insights:ecommerce-category-penetration-shelter-2020~insights:live-sports-return-viewership-forecast",
+      "rule_id": "public_editorial_quality.duplicate_insight",
+      "repair_target": "insights_bundle",
+      "entity_id": "insight:ecommerce-category-penetration-shelter-2020:text",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "expert_comment",
+      "entity_id": "expert_comment:expert_comment",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "expert_comment",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "expert_comment",
+      "entity_id": "expert_comment:expert_comment",
+      "evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "linkedin_post",
+      "entity_id": "linkedin_post:linkedin_post",
+      "evidence_ids": [
+        "sustain-ecommerce-category-penetration"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "message": "[public_editorial_quality.metric_label_relationship] attaches a retained metric value to a different source category",
+      "severity": "error",
+      "affected_section": "linkedin_post",
+      "rule_id": "public_editorial_quality.metric_label_relationship",
+      "repair_target": "linkedin_post",
+      "entity_id": "linkedin_post:linkedin_post",
+      "evidence_ids": [
+        "sustain-demand-young-adult-time-spend"
+      ]
+    }
+  ]
+}

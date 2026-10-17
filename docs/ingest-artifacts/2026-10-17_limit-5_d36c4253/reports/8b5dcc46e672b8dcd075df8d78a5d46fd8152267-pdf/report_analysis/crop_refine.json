@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "_cache": {
+    "schema_version": "1.0",
+    "key": "013efffcb6ab250552eaaa5b0e60397a4e421da302d92f0bcd0043fd91b2b55e",
+    "md5": "b27f28705fea520267c8b1e8dc125b7f",
+    "model": "gpt-6-luna",
+    "temperature": null,
+    "reasoning_effort": "low",
+    "seed": null,
+    "mode": "adaptive",
+    "prompt_system_sha256": "e44deabb4806c9edb05abd9327c83928adf3430f5894a2d52b7ecd356f64a410",
+    "prompt_user_sha256": "b7270ca58326e41ede53a92c23768f2f517a2dfbfcb03de5547e2d1c1a1ef280"
+  },
+  "results": [
+    {
+      "entry_key": "288aad4ab45ccaf893841903ba1cf3d13fdbebed87498bbd89c53796ce8e813b",
+      "candidate_id": "chart-58-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        60.0,
+        1024.0,
+        748.0
+      ],
+      "reason": "model_accepted",
+      "page": 58
+    },
+    {
+      "entry_key": "7ecbbd0ee33fd57e13a48e4aa2042407df16b5b41b95f2ee1f82ad5fd53946f4",
+      "candidate_id": "chart-44-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        58.0,
+        940.0,
+        752.0
+      ],
+      "reason": "model_accepted",
+      "page": 44
+    },
+    {
+      "entry_key": "8ab7b07f70031112f9e07dded67c1115cf5125101f86d2560cee85aac4afa802",
+      "candidate_id": "chart-36-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        75.0,
+        1565.0,
+        1150.0
+      ],
+      "reason": "model_accepted",
+      "page": 36
+    },
+    {
+      "entry_key": "922df594a8103b8b4108843dc06f9854e3ed79fb22cd6ee9b4ef25870bd3ee82",
+      "candidate_id": "chart-23-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        58.0,
+        1024.0,
+        689.0
+      ],
+      "reason": "model_accepted",
+      "page": 23
+    },
+    {
+      "entry_key": "e4499258f2f2b1c8dbb30a7f0b6115be8944b9ca5a342f149a8cbc2c71b1a94e",
+      "candidate_id": "chart-37-0",
+      "is_valid_candidate": true,
+      "refined_bbox": [
+        0.0,
+        60.0,
+        1024.0,
+        752.0
+      ],
+      "reason": "model_accepted",
+      "page": 37
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "attention_daily_time_cagr",
+      "text": "For U.S. users aged 18+, the 2011–2017E CAGRs for time spent were video 4.5%, audio 4.9%, social media 17.8%, and gaming 11.9%.",
+      "evidence": "Time Spent Among 18+ Users, U.S., 2011 - 2017E, Hours : Minutes\n\nCAGR\nVIDEO 4.5%\nAUDIO 4.9%\nSOCIAL MEDIA 17.8%\nGAMING 11.9%\n\n2011 2012 2013 2014 2015E 2016E 2017E",
+      "confidence": "high",
+      "pages": [
+        12
+      ],
+      "section_id": "time_and_attention",
+      "section_title": "TIME AND ATTENTION"
+    },
+    {
+      "id": "messaging_enterprise_bots",
+      "text": "The report describes third-party integrations and automated bots in Slack as functioning like an app store, differentiating Slack from competitors and being essential for adoption.",
+      "evidence": "LAYER #2 - APPS & BOTS\nThird-party integrations and automated\nbots function like an app store — this\ndifferentiates Slack from competition\nand is essential for adoption.",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "messaging",
+      "section_title": "MESSAGING"
+    },
+    {
+      "id": "audio_consumption_mix",
+      "text": "In 2014, among U.S. users aged 13+, total audio consumption was 4:05 hours; AM/FM accounted for 52% and streaming for 12% of the displayed audio-consumption mix.",
+      "evidence": "Audio Consumption Time Among 13+ Users, U.S., 2014 Total = 4:05 hours\n\n12%\nSTREAMING\n\n52%\nAM/FM",
+      "confidence": "high",
+      "pages": [
+        36
+      ],
+      "section_id": "streaming_audio",
+      "section_title": "STREAMING AUDIO"
+    },
+    {
+      "id": "esports_revenue_forecast",
+      "text": "Activate forecast global eSports revenue of $4 billion in 2018E, comprising $2.2 billion in APAC, $1.3 billion in North America, $0.4 billion in Europe, and $0.1 billion in Latin America.",
+      "evidence": "eSports will be a $4 Billion global business by 2018\n\nActivate Forecast: eSports Revenue, Global, 2018E\n\n$2.2 B\nAPAC\n\n$1.3 B\nNA\n\n$0.4 B\nEUROPE\n\n$0.1 B\nLA",
+      "confidence": "high",
+      "pages": [
+        105
+      ],
+      "section_id": "gaming_and_wagering",
+      "section_title": "GAMING AND WAGERING"
+    },
+    {
+      "id": "app_store_distribution_engagement",
+      "text": "The report says a new wave of companies are using the app store for distribution and engagement, but not monetization.",
+      "evidence": "A new wave of companies are building businesses by using the app\nstore for distribution and engagement, but not monetization",
+      "confidence": "high",
+      "pages": [
+        124
+      ],
+      "section_id": "app_economy",
+      "section_title": "THE APP ECONOMY"
+    },
+    {
+      "id": "unified_stack_ma_forecast",
+      "text": "The report expects the next wave of M&A activity to be driven by larger players filling gaps with independent players.",
+      "evidence": "Expect the next wave of M&A activity to be driven by larger players\nlooking to fill in the gaps with the independent players",
+      "confidence": "high",
+      "pages": [
+        132
+      ],
+      "section_id": "unified_stack",
+      "section_title": "UNIFIED STACK"
+    },
+    {
+      "id": "gaming-spend-2014",
+      "text": "The report’s global consumer-spend chart lists video gaming at $74 billion in 2014 and says spending was likely to expand as video gaming broadened to include advertising and gambling streams.",
+      "evidence": "Global spend of $74 Billion is likely to expand as video gaming broadens to include advertising and gambling streams\nConsumer Spend on Major Entertainment Segments, Global, 2014\n$ Billions\nGambling\nFilmed Entertainment\nMusic (LIVE & RECORDED)\nApps\nVideo Gaming\nTV Subs\nConsumer Books\n423\n205\n85\n74\n66\n38\n23",
+      "confidence": "high",
+      "pages": [
+        96
+      ],
+      "section_id": "gaming_and_wagering",
+      "section_title": "GAMING AND WAGERING"
+    },
+    {
+      "id": "esports-revenue-forecast-2018",
+      "text": "The report forecast eSports as a $4 billion global business by 2018; its 2018E revenue chart lists $2.2 billion for APAC, $1.3 billion for North America, $0.4 billion for Europe, and $0.1 billion for Latin America.",
+      "evidence": "eSports will be a $4 Billion global business by 2018\nActivate Forecast: eSports Revenue, Global, 2018E\n$1.3 B\nNA\n$2.2 B\nAPAC\n$0.1 B\nLA\n$0.4 B\nEUROPE",
+      "confidence": "high",
+      "pages": [
+        105
+      ],
+      "section_id": "gaming_and_wagering",
+      "section_title": "GAMING AND WAGERING"
+    },
+    {
+      "id": "messaging-user-forecast",
+      "text": "Activate forecast that messaging would add 1.1 billion new users by 2018.",
+      "evidence": "We forecast that messaging will add 1.1 Billion new users by 2018",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "messaging",
+      "section_title": "MESSAGING"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

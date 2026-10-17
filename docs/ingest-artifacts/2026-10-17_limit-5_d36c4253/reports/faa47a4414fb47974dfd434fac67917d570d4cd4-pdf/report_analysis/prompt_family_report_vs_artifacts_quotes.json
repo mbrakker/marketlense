@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/quotes",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "quote-002",
+      "text": "eCommerce discovery has forever changed as most consumers are starting their online shopping journey with specific retailers instead of search engines.",
+      "speaker": "Unknown",
+      "citation": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": 0,
+      "evidence_id": "quote-002",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-004",
+      "text": "Delivery is the most popular way for consumers to receive their online purchases; in grocery, however, nearly half of consumers prefer curbside or in-store pickup.",
+      "speaker": "Unknown",
+      "citation": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": 0,
+      "evidence_id": "quote-004",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "quote-005",
+      "text": "More than one-quarter of households signed up for a new paid shopping program membership during COVID-19. As a result, the average household now pays for 1.7 memberships. Most households plan to keep their new memberships.",
+      "speaker": "Unknown",
+      "citation": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50.pdf",
+      "page": 0,
+      "evidence_id": "quote-005",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    }
+  ]
+}

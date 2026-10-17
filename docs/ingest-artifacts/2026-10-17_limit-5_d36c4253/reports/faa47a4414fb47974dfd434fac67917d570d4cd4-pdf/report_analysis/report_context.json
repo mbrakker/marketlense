@@ -1,0 +1,95 @@
+{
+  "report_id": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50",
+  "title": "The Post-COVID Online Shopper: New Challenges and Opportunities",
+  "publisher": "",
+  "region": "United States",
+  "time_period": "2021; COVID-19 outbreak since March 2020",
+  "overview": "The Post-COVID Online Shopper: New Challenges and Opportunities An Activate Viewpoint presenting findings from Activate’s May 2021 consumer technology and media research (n = 2,913) on online shopping behavior and expectations after COVID-19. It covers shifts in online adoption across product categories, car shopping, retailer discovery, delivery and pickup, new online retailers, paid shopping memberships, and consumers’ willingness to share data for personalized or monetary benefits. Consumer research on post-COVID online shopping, covering adoption across auto, grocery, beauty/grooming, and clothing, as well as e-commerce discovery, delivery versus pickup, new online retailers, shopping memberships, and consumer data sharing. The geographic coverage is the U.S.; the research is framed around 2021 and shopping before, during, and after the COVID-19 outbreak, defined as beginning in March 2020.",
+  "methods": [
+    "Large-scale consumer research examined post-COVID online shopping across auto, grocery, beauty/grooming, and clothing.",
+    "Analysis used the Activate COVID-19 Consumer Tech & Media Study, fielded May 2021 (n = 2,913); the report identifies the analysis as Activate analysis.",
+    "Online-shopping penetration measures are reported for U.S. consumers aged 18+ who purchase in the relevant product category at least once per year. For online grocery shoppers, the report defines eligibility as having shopped for groceries online since the COVID-19 outbreak began in March 2020."
+  ],
+  "key_findings": [
+    "In the U.S. 2021 chart, online penetration among clothing purchasers aged 18+ was 77% before the start of the COVID-19 outbreak and 83% after the outbreak ends.",
+    "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the start of the COVID-19 outbreak and 66% after the outbreak ends.",
+    "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the start of the COVID-19 outbreak and 56% after the outbreak ends.",
+    "Amazon was the most common starting website/app for online beauty/grooming shopping: 38% of online beauty/grooming shoppers aged 18+ typically started there in the U.S. in 2021.",
+    "Amazon was the most common starting website/app for online clothing shopping: 36% of online clothes shoppers aged 18+ typically started there in the U.S. in 2021.",
+    "In the U.S. in 2021, 17% of online clothes shoppers aged 18+ typically started shopping at a department store."
+  ],
+  "limitations": [
+    "Figures may not sum due to rounding.",
+    "“Beauty/grooming” excludes personal-care products.",
+    "“Paid shopping program memberships” exclude free loyalty program memberships."
+  ],
+  "sections": [
+    {
+      "section_label": "The Post-COVID Online Shopper",
+      "source_pack": "doc_map",
+      "summary": "A summary of the report’s main conclusions about lasting shifts in consumer shopping behavior. It highlights online adoption, car shopping, retailer discovery, purchasing from new retailers, fulfillment preferences, paid memberships, and data sharing.",
+      "key_points": [
+        "Grocery, beauty/grooming, and clothing have experienced a lasting online shift; consumers aged 35+ are expected to see the largest sustained growth in online penetration.",
+        "Car shoppers have moved discovery and consideration online, while transactions are expected to shift more slowly until touchless end-to-end experiences are available.",
+        "Consumers increasingly begin online shopping at specific retailers rather than search engines; 90% or more of consumers who tried new online retailers plan to continue with at least some of them."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Growth Outlook for Online Shopping",
+      "source_pack": "doc_map",
+      "summary": "Examines how online shopping adoption changed during COVID-19 and how much of that change consumers expect to retain. It covers grocery, beauty/grooming, clothing, and car shopping.",
+      "key_points": [
+        "Chart “Online Shopper Penetration by Product Category and Time Period,” U.S., 2021: online penetration among category purchasers was 77% for clothing, 57% for beauty/grooming, and 43% for grocery b...",
+        "The age-group charts show that grocery and beauty/grooming have the greatest projected sustained growth among older purchasers, while online clothing adoption rises across all age groups (pp. 8–10).",
+        "For car shopping, consumers have shifted discovery and consideration online more than transaction; the report identifies a touchless end-to-end experience as a prerequisite for faster online transa..."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "eCommerce Discovery",
+      "source_pack": "doc_map",
+      "summary": "Compares the websites and apps consumers typically visit first when shopping online across grocery, beauty/grooming, and clothing. The findings show the importance of retailer destinations and category-specific discovery habits.",
+      "key_points": [
+        "Chart “First Website/App Visited When Grocery Shopping Online,” U.S., 2021: 31% of online grocery shoppers typically started at Amazon and 29% at Walmart (p. 15).",
+        "For online beauty/grooming shopping, Amazon was the most common starting point at 38% (p. 16).",
+        "For online clothing shopping, Amazon was the most common starting point at 36%; department stores accounted for 17% (p. 17)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Delivery vs. Pickup",
+      "source_pack": "doc_map",
+      "summary": "Compares the online-purchase fulfillment option consumers use most frequently for grocery, beauty/grooming, and clothing. Delivery leads in each category, while grocery stands out for its use of pickup.",
+      "key_points": [
+        "Chart “Delivery/Pickup Option Most Frequently Used for Online Purchases by Product Category,” U.S., 2021: delivery was the most frequently used option for grocery (56%), beauty/grooming (75%), and...",
+        "For grocery purchases, 34% most frequently used curbside pickup and 11% in-store pickup (p. 19).",
+        "For beauty/grooming, 11% most frequently used curbside pickup and 14% in-store pickup; for clothing, the corresponding figures were 7% and 9% (p. 19)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Purchasing with New Online Retailers",
+      "source_pack": "doc_map",
+      "summary": "Reports consumers’ experiences buying from online retailers they had not previously used, their plans to continue shopping with them, and their interest in trying additional sites and apps. It also compares how consumers discover new retailers across produc...",
+      "key_points": [
+        "Chart “Purchasing from New Websites/Apps During the COVID-19 Outbreak by Product Category,” U.S., 2021: during the outbreak, 50% of online grocery purchasers, 29% of beauty/grooming purchasers, and...",
+        "For discovering new retailers during the outbreak, word of mouth was the top listed source for grocery (49%); social media led for beauty/grooming (53%) and clothing (49%) (p. 22).",
+        "The report finds continued interest in finding or trying new online retailers across grocery, beauty/grooming, and clothing (p. 23)."
+      ],
+      "schema_version": "1.0"
+    },
+    {
+      "section_label": "Shopping Program Memberships",
+      "source_pack": "doc_map",
+      "summary": "Examines new paid shopping program sign-ups during COVID-19, households’ current paid memberships, and consumers’ plans to retain new memberships. Paid memberships are distinguished from free loyalty programs.",
+      "key_points": [
+        "Chart “Signing Up for New Paid Shopping Program Memberships During the COVID-19 Outbreak,” U.S., 2021: 27% of households signed up for a new paid membership; 83% planned to keep at least one of the...",
+        "Chart “Paid Shopping Program Membership Household Penetration,” U.S., 2021: 80% of households paid for at least one membership, the average household paid for 1.7, and 64% paid for Amazon Prime (p....",
+        "Half of households paid for at least one warehouse-club membership; Walmart+ had become the fourth most popular program after launching in September 2020 (p. 27)."
+      ],
+      "schema_version": "1.0"
+    }
+  ],
+  "schema_version": "1.0"
+}

@@ -1,0 +1,5398 @@
+{
+  "schema_version": "1.4",
+  "artifact_hash": "565e0bd194f96d980ca042a237d21dca431f065ba8fa9eab2dd4a5a1b5e31e7f",
+  "package_hash": "a6d87f8f992fcd2427c60b8ca748688dce47b0b137e3be901ac70446d2b450e5",
+  "results": [
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:1",
+        "source_family": "summary",
+        "text": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+        "text_hash": "6459d3e82ee707e013995ddbeb7adb5d9e52d36cc4951035ec334e49251749e7",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:1.claim",
+        "entity_id": "summary_claim:1",
+        "provenance_hash": "50eaf1fef20232e3a11feb98b9849c6ce39b0a3dbf9611bc7321e202e08dbbff"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:2",
+        "source_family": "summary",
+        "text": "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the outbreak began and 56% after it ends.",
+        "text_hash": "d5f35018971e55f095a0d7e678e766037773dfdd175b8e73dcd8cab590b548e3",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-grocery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "21e8302828336e70b73ca74b65236f5710d00e7f26d24c649e1aed44cff6ca35"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-grocery",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "21e8302828336e70b73ca74b65236f5710d00e7f26d24c649e1aed44cff6ca35"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:2.claim",
+        "entity_id": "summary_claim:2",
+        "provenance_hash": "f62a92328d25aed4799770a22afee980299d4ce3a59b5c67c0f1602ea164630b"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 43.0, 56.0",
+            "evidence_value": "18.0, 19.0, 43.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:3",
+        "source_family": "summary",
+        "text": "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the outbreak began and 66% after it ends.",
+        "text_hash": "29c7114be2e315a1904af914beb44d35f792bdebe2dbebc3cc35dc1203c4fcb2",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-beauty-grooming",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "f0465e877938b200b8d5a31c6ae7335461668c9d43d34a0b527e4d7ffe3592d5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-beauty-grooming",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "f0465e877938b200b8d5a31c6ae7335461668c9d43d34a0b527e4d7ffe3592d5"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:3.claim",
+        "entity_id": "summary_claim:3",
+        "provenance_hash": "7a19328eba7470d996fdf2818ba5e0370879e83717ca2fec8c6695a95bb353ed"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 57.0, 66.0",
+            "evidence_value": "18.0, 19.0, 57.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:4",
+        "source_family": "summary",
+        "text": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+        "text_hash": "eaca4ec6545e6a4fac0796ef8b5650dd36fc60748448a96cb893ecf0c69ec6cb",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:4.claim",
+        "entity_id": "summary_claim:4",
+        "provenance_hash": "4ba2e0805a5497be504d6302260aeae26eda93593b20972a065c059d98f0f148"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 27.0",
+            "evidence_value": "19.0, 2.0, 27.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "summary_claim:5",
+        "source_family": "summary",
+        "text": "Of households that signed up for a new paid shopping program membership during the outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+        "text_hash": "a70c5196f9ff2ef415d9ec3cfcb266555526d4328af897f0434542d87ac61b4a",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "retain-new-paid-memberships",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4b01809a08b16a2bbd41650a4fd104afff8739b9de79d994ee7015dfc167caf1"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "retain-new-paid-memberships",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "4b01809a08b16a2bbd41650a4fd104afff8739b9de79d994ee7015dfc167caf1"
+          }
+        ],
+        "affected_section": "summary.claim_evidence_map:5.claim",
+        "entity_id": "summary_claim:5",
+        "provenance_hash": "c2fb9f94f59157f804474b863619ab09673f1be4943167aedb8dcb2e85b9eb9d"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 83.0",
+            "evidence_value": "12.0, 19.0, 2.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:0b5099450b275425",
+        "source_family": "summary",
+        "text": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+        "text_hash": "6459d3e82ee707e013995ddbeb7adb5d9e52d36cc4951035ec334e49251749e7",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:0b5099450b275425",
+        "provenance_hash": "0c640027dd2b9a5b5b959a87dc7e62af5d0647549ce5740aaf29a600e4b49981"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:0b5099450b275425",
+        "source_family": "summary",
+        "text": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+        "text_hash": "6459d3e82ee707e013995ddbeb7adb5d9e52d36cc4951035ec334e49251749e7",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:0b5099450b275425",
+        "provenance_hash": "0c640027dd2b9a5b5b959a87dc7e62af5d0647549ce5740aaf29a600e4b49981"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:0b5099450b275425",
+        "source_family": "summary",
+        "text": "In 2021, U.S. clothing purchasers aged 18+ had 77% online penetration before and 83% after the outbreak ends.",
+        "text_hash": "6459d3e82ee707e013995ddbeb7adb5d9e52d36cc4951035ec334e49251749e7",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "summary",
+        "entity_id": "soft_copy:summary:0b5099450b275425",
+        "provenance_hash": "0c640027dd2b9a5b5b959a87dc7e62af5d0647549ce5740aaf29a600e4b49981"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:267bb992a557a7e2",
+        "source_family": "summary",
+        "text": "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the outbreak began and 56% after it ends.",
+        "text_hash": "d5f35018971e55f095a0d7e678e766037773dfdd175b8e73dcd8cab590b548e3",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-grocery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "21e8302828336e70b73ca74b65236f5710d00e7f26d24c649e1aed44cff6ca35"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-grocery",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "21e8302828336e70b73ca74b65236f5710d00e7f26d24c649e1aed44cff6ca35"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:267bb992a557a7e2",
+        "provenance_hash": "ab25eb889d8c42504f7b800a1a61da3f2ddffb0f47658e03f489fa454cf67993"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 43.0, 56.0",
+            "evidence_value": "18.0, 19.0, 43.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:ce94d102ca5d0840",
+        "source_family": "summary",
+        "text": "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the outbreak began and 66% after it ends.",
+        "text_hash": "29c7114be2e315a1904af914beb44d35f792bdebe2dbebc3cc35dc1203c4fcb2",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-beauty-grooming",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "f0465e877938b200b8d5a31c6ae7335461668c9d43d34a0b527e4d7ffe3592d5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-beauty-grooming",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "f0465e877938b200b8d5a31c6ae7335461668c9d43d34a0b527e4d7ffe3592d5"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:ce94d102ca5d0840",
+        "provenance_hash": "eabab453b1c7c91ff879b8bc0af3569d51ba9179cb0b595f7fb26148b09325de"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 57.0, 66.0",
+            "evidence_value": "18.0, 19.0, 57.0, 66.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:a30fc8dbd984df7c",
+        "source_family": "summary",
+        "text": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+        "text_hash": "eaca4ec6545e6a4fac0796ef8b5650dd36fc60748448a96cb893ecf0c69ec6cb",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:a30fc8dbd984df7c",
+        "provenance_hash": "df3cb08cb4ba346a4714c19d10aa510e8305fa1dc65b52e271d4d66e2189371a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 27.0",
+            "evidence_value": "19.0, 2.0, 27.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:summary:d769b91579e9430d",
+        "source_family": "summary",
+        "text": "Of households that signed up for a new paid shopping program membership during the outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+        "text_hash": "a70c5196f9ff2ef415d9ec3cfcb266555526d4328af897f0434542d87ac61b4a",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "retain-new-paid-memberships",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4b01809a08b16a2bbd41650a4fd104afff8739b9de79d994ee7015dfc167caf1"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "retain-new-paid-memberships",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "4b01809a08b16a2bbd41650a4fd104afff8739b9de79d994ee7015dfc167caf1"
+          }
+        ],
+        "affected_section": "summary.executive_summary",
+        "entity_id": "soft_copy:summary:d769b91579e9430d",
+        "provenance_hash": "6d160aed6cf3d57cf6c7331f3c06f53837167d8bfab4cfea2803f3eb040a5225"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "12.0, 83.0",
+            "evidence_value": "12.0, 19.0, 2.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, time, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:online-penetration-clothing:text",
+        "source_family": "insights_final",
+        "text": "U.S. 2021: clothing purchasers aged 18+ had 77% online penetration before outbreak start and 83% after it ends.",
+        "text_hash": "a808ceae1f6fcc8e50ad13c91d14a8c5a8d152155f0dccbfbdfbe808f470061b",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "insights:online-penetration-clothing.text",
+        "entity_id": "insight:online-penetration-clothing:text",
+        "provenance_hash": "63b724a8b494c979d6ef27ea47183e8ebd1cbbeb0d2374e7329269ead6ae6d64"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:beauty-amazon-shopping-start:text",
+        "source_family": "insights_final",
+        "text": "Amazon led starting sites/apps: 38% of U.S. online beauty/grooming shoppers aged 18+ typically started there in 2021.",
+        "text_hash": "751484d735a032f9b06690e66740c7738c18905f7f60ef73d5494c4dec83da7f",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": 17,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          }
+        ],
+        "affected_section": "insights:beauty-amazon-shopping-start.text",
+        "entity_id": "insight:beauty-amazon-shopping-start:text",
+        "provenance_hash": "db0deb24a8d7fd801acf16d920765ab41eb4a70a00c72a1a6f1abc956a08270b"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 38.0",
+            "evidence_value": "18.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:beauty-amazon-shopping-start:metric",
+        "source_family": "insights_final",
+        "text": "Share typically starting online beauty/grooming shopping at Amazon first website/app typically visited when shopping beauty/grooming online 38% U.S. Beauty/grooming online beauty/grooming shoppers aged 18+ % online beauty/grooming shoppers aged 18+ U.S., 2021",
+        "text_hash": "f9a75822a471acbca7b68c9fc1b5c88e2f400f421508aa644eae83a1f3691588",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": 17,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          }
+        ],
+        "affected_section": "insights:beauty-amazon-shopping-start.metric",
+        "entity_id": "insight:beauty-amazon-shopping-start:metric",
+        "provenance_hash": "db0deb24a8d7fd801acf16d920765ab41eb4a70a00c72a1a6f1abc956a08270b"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 38.0",
+            "evidence_value": "18.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "rank:1",
+            "evidence_value": "rank:1",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:new-grocery-retailer-purchases:text",
+        "source_family": "insights_final",
+        "text": "During the outbreak, 50% of U.S. online grocery purchasers aged 18+ bought from at least one new website/app.",
+        "text_hash": "a024ef6796138cf34a227bfa85508f2bb2f62194f141b81244d2e3516db74f19",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-grocery-retailer-purchases",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9426e768da6918ac7b5e49dd73f6036d10dc428712614c8db60e9a64345c4084"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-grocery-retailer-purchases",
+            "source_pack": "findings",
+            "page": 22,
+            "text_hash": "9426e768da6918ac7b5e49dd73f6036d10dc428712614c8db60e9a64345c4084"
+          }
+        ],
+        "affected_section": "insights:new-grocery-retailer-purchases.text",
+        "entity_id": "insight:new-grocery-retailer-purchases:text",
+        "provenance_hash": "9d577ca5a36bae195fc137a2881530f42960c022703fc193a6eb4c92f72734eb"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 50.0",
+            "evidence_value": "18.0, 19.0, 50.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:new-grocery-retailer-purchases:metric",
+        "source_family": "insights_final",
+        "text": "Online grocery purchasers buying from at least one new website/app during the outbreak purchased from at least one new website/app during the COVID-19 outbreak 50% U.S. Grocery online purchasers in the grocery category aged 18+ % online purchasers in the product category aged 18+ U.S., 2021; during the COVID-19 outbreak",
+        "text_hash": "9352f55b7d223e3e2735c87690b08f5e8f1e4b7a3673344576c4474f82a41524",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-grocery-retailer-purchases",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "9426e768da6918ac7b5e49dd73f6036d10dc428712614c8db60e9a64345c4084"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-grocery-retailer-purchases",
+            "source_pack": "findings",
+            "page": 22,
+            "text_hash": "9426e768da6918ac7b5e49dd73f6036d10dc428712614c8db60e9a64345c4084"
+          }
+        ],
+        "affected_section": "insights:new-grocery-retailer-purchases.metric",
+        "entity_id": "insight:new-grocery-retailer-purchases:metric",
+        "provenance_hash": "9d577ca5a36bae195fc137a2881530f42960c022703fc193a6eb4c92f72734eb"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 19.0, 50.0",
+            "evidence_value": "18.0, 19.0, 50.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:grocery-most-used-delivery:text",
+        "source_family": "insights_final",
+        "text": "In 2021, 56% of U.S. online grocery purchasers aged 18+ most frequently used delivery for online purchases.",
+        "text_hash": "fc99f7883534881b104a2432c82b33b99c2b27f4bb4c0616434fdf10817ecd3d",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": 20,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          }
+        ],
+        "affected_section": "insights:grocery-most-used-delivery.text",
+        "entity_id": "insight:grocery-most-used-delivery:text",
+        "provenance_hash": "101bc1db2b8b82b2b9ca1f6241135aa3502c185aea445fc8aaff9c945d24cb71"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 56.0",
+            "evidence_value": "18.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:grocery-most-used-delivery:metric",
+        "source_family": "insights_final",
+        "text": "Online grocery purchasers most frequently using delivery for online purchases delivery option most frequently used for online purchases 56% U.S. Grocery online purchasers in the grocery category aged 18+ % online purchasers in the product category aged 18+ U.S., 2021",
+        "text_hash": "a7c2a0cdc7767f832daabd823c5b76fe6015719426365dee3a5dacbaac443b6f",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": 20,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          }
+        ],
+        "affected_section": "insights:grocery-most-used-delivery.metric",
+        "entity_id": "insight:grocery-most-used-delivery:metric",
+        "provenance_hash": "101bc1db2b8b82b2b9ca1f6241135aa3502c185aea445fc8aaff9c945d24cb71"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 56.0",
+            "evidence_value": "18.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:new-paid-membership-signups:text",
+        "source_family": "insights_final",
+        "text": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+        "text_hash": "eaca4ec6545e6a4fac0796ef8b5650dd36fc60748448a96cb893ecf0c69ec6cb",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "insights:new-paid-membership-signups.text",
+        "entity_id": "insight:new-paid-membership-signups:text",
+        "provenance_hash": "72a8eb5827236102a0fe51d2f1092cce7188b83f8aa44c94a1f5e3be1562e76f"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 27.0",
+            "evidence_value": "19.0, 2.0, 27.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:new-paid-membership-signups:metric",
+        "source_family": "insights_final",
+        "text": "Households signing up for a new paid shopping program membership during the outbreak signed up for a new paid shopping program membership during the COVID-19 outbreak 27% U.S. Households U.S. households % households U.S., 2021; during the COVID-19 outbreak",
+        "text_hash": "1f21b35dd54bf79a60fe91f57cadd9d61190bd84b15af87f9a6fdc260d8e9099",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "insights:new-paid-membership-signups.metric",
+        "entity_id": "insight:new-paid-membership-signups:metric",
+        "provenance_hash": "72a8eb5827236102a0fe51d2f1092cce7188b83f8aa44c94a1f5e3be1562e76f"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 27.0",
+            "evidence_value": "19.0, 2.0, 27.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:email-list-welcome-reward:text",
+        "source_family": "insights_final",
+        "text": "U.S. 2021: 67% of online shoppers aged 18+ signed up for retailer emails to get a welcome reward.",
+        "text_hash": "52d4a3413074f748cc19895c0d45c5d8dce56544263ce5eae937c5539cf3ae83",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "email-list-welcome-reward",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "38f5a519a301034c16bb5d361cdb0b50a3d4b0b9055f99133369302bba91c1ea"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "email-list-welcome-reward",
+            "source_pack": "findings",
+            "page": 33,
+            "text_hash": "38f5a519a301034c16bb5d361cdb0b50a3d4b0b9055f99133369302bba91c1ea"
+          }
+        ],
+        "affected_section": "insights:email-list-welcome-reward.text",
+        "entity_id": "insight:email-list-welcome-reward:text",
+        "provenance_hash": "9b262a013b841527b748b2b9411beb45068acf0394bd670c478ce8c374655f0e"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 67.0",
+            "evidence_value": "18.0, 67.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:email-list-welcome-reward:metric",
+        "source_family": "insights_final",
+        "text": "Online shoppers signing up for a retailer email list to receive a welcome reward signed up online for a retailer's email list to receive a welcome reward 67% U.S. Online shoppers online shoppers aged 18+ % online shoppers aged 18+ U.S., 2021",
+        "text_hash": "744f5226de951fec95e131f08347f8872b4fe1f815fc8e95618b50111d6682d8",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "email-list-welcome-reward",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "38f5a519a301034c16bb5d361cdb0b50a3d4b0b9055f99133369302bba91c1ea"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "email-list-welcome-reward",
+            "source_pack": "findings",
+            "page": 33,
+            "text_hash": "38f5a519a301034c16bb5d361cdb0b50a3d4b0b9055f99133369302bba91c1ea"
+          }
+        ],
+        "affected_section": "insights:email-list-welcome-reward.metric",
+        "entity_id": "insight:email-list-welcome-reward:metric",
+        "provenance_hash": "9b262a013b841527b748b2b9411beb45068acf0394bd670c478ce8c374655f0e"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 67.0",
+            "evidence_value": "18.0, 67.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "insight:online-penetration-clothing:text",
+        "source_family": "insights_final",
+        "text": "In the U.S. 2021 chart, online penetration among clothing purchasers aged 18+ was 77% before the start of the COVID-19 outbreak and 83% after the outbreak ends.",
+        "text_hash": "f480a6bbfbf65766344375c109605b882a9c3548e67da905be643c646c9bacba",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "online-penetration-clothing",
+            "source_pack": "findings",
+            "page": 5,
+            "text_hash": "d53774b1a94d156a70fa14390cfd227c886f37038ec771254d88fc40165f7e74"
+          }
+        ],
+        "affected_section": "insights:online-penetration-clothing.text",
+        "entity_id": "insight:online-penetration-clothing:text",
+        "provenance_hash": "63b724a8b494c979d6ef27ea47183e8ebd1cbbeb0d2374e7329269ead6ae6d64"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 19.0, 77.0, 83.0",
+            "evidence_value": "18.0, 19.0, 77.0, 83.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b:text",
+        "source_family": "quotes_final",
+        "text": "eCommerce discovery has forever changed as most consumers are starting their online shopping journey with specific retailers instead of search engines.",
+        "text_hash": "5b878e7018566f1ffe67616c4ecfc1991cefd1371ed89e71e73bd7b6a751dbcf",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "quote-002",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "5b878e7018566f1ffe67616c4ecfc1991cefd1371ed89e71e73bd7b6a751dbcf"
+          }
+        ],
+        "affected_section": "quotes:9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b.text",
+        "entity_id": "quote:9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b:text",
+        "provenance_hash": "ccf31f6ff89a7860cc1cd13f3c71af90c1d66eb7c628b5d1c0606f526d0de633"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The attached retained quote matches the sentence exactly, including its claims about lasting change and most consumers starting with specific retailers.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": "most consumers",
+            "evidence_value": "most consumers",
+            "status": "compatible"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "discovery has changed toward starting at specific retailers rather than search engines",
+            "evidence_value": "discovery has changed toward starting at specific retailers rather than search engines",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "current behavior; change described as lasting",
+            "evidence_value": "current behavior; change described as lasting",
+            "status": "compatible"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "consumers shopping online",
+            "evidence_value": "consumers starting their online shopping journey",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "specific retailers instead of search engines",
+            "evidence_value": "specific retailers instead of search engines",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "describes consumer behavior",
+            "evidence_value": "describes consumer behavior",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "asserted; 'forever changed'",
+            "evidence_value": "asserted; 'forever changed'",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "quote:9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b:text",
+        "claim_text_hash": "5b878e7018566f1ffe67616c4ecfc1991cefd1371ed89e71e73bd7b6a751dbcf",
+        "evidence_ids": [
+          "quote-002"
+        ],
+        "evidence_hash": "6060d35e9e9194379259230205f2eedadf4014121b85b3f6535e54a7129e9457",
+        "source_identity": "source:c7236dd65d919a6aba1019954725ee36",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "895b190dd36c38ad4ebb3b971a5543f412b20935b71948daa19f646849961b20",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda:text",
+        "source_family": "quotes_final",
+        "text": "Delivery is the most popular way for consumers to receive their online purchases; in grocery, however, nearly half of consumers prefer curbside or in-store pickup.",
+        "text_hash": "43e890f34078625ecd9f876fc9327eab1ae9ef85909743ebca1cbd84d94c015f",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "quote-004",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "43e890f34078625ecd9f876fc9327eab1ae9ef85909743ebca1cbd84d94c015f"
+          }
+        ],
+        "affected_section": "quotes:ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda.text",
+        "entity_id": "quote:ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda:text",
+        "provenance_hash": "5658d8d7371fd2562424c4438836654fb7dc16a69c5ca337f032e992128fea83"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The attached retained quote is identical and supports both the overall delivery preference and the grocery pickup qualification.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": "most popular; nearly half",
+            "evidence_value": "most popular; nearly half",
+            "status": "compatible"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "delivery is most popular overall; grocery pickup preference is notable",
+            "evidence_value": "delivery is most popular overall; grocery pickup preference is notable",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "consumers receiving online purchases; grocery consumers",
+            "evidence_value": "consumers receiving online purchases; grocery consumers",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "delivery compared with other fulfillment options; grocery curbside or in-store pickup",
+            "evidence_value": "delivery compared with other fulfillment options; grocery curbside or in-store pickup",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "consumer preferences",
+            "evidence_value": "consumer preferences",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "asserted; 'nearly half'",
+            "evidence_value": "asserted; 'nearly half'",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "quote:ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda:text",
+        "claim_text_hash": "43e890f34078625ecd9f876fc9327eab1ae9ef85909743ebca1cbd84d94c015f",
+        "evidence_ids": [
+          "quote-004"
+        ],
+        "evidence_hash": "ea02d8e139732a1a57e9bc15b1ad45763a8b5a07b9d1c790ffc2aa5767d518e6",
+        "source_identity": "source:c7236dd65d919a6aba1019954725ee36",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "895b190dd36c38ad4ebb3b971a5543f412b20935b71948daa19f646849961b20",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "quote:dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37:text",
+        "source_family": "quotes_final",
+        "text": "More than one-quarter of households signed up for a new paid shopping program membership during COVID-19. As a result, the average household now pays for 1.7 memberships. Most households plan to keep their new memberships.",
+        "text_hash": "6b93abf68129f5e4f849f88c4784779e7216bc12ca015e517aee075e1ed30bd9",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "quote-005",
+            "source_pack": "quote_candidates",
+            "page": null,
+            "text_hash": "6b93abf68129f5e4f849f88c4784779e7216bc12ca015e517aee075e1ed30bd9"
+          }
+        ],
+        "affected_section": "quotes:dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37.text",
+        "entity_id": "quote:dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37:text",
+        "provenance_hash": "3c5365f8f829b6d657d9c45648d405204fea58f6a8a898e84ae2831e6e30fefc"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "1.7, 19.0",
+            "evidence_value": "1.7, 19.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:new-paid-membership-signups:figure",
+        "source_family": "key_figures",
+        "text": "Households signing up for a new paid shopping program membership during the outbreak signed up for a new paid shopping program membership during the COVID-19 outbreak 27% U.S. Households U.S. households % households U.S., 2021; during the COVID-19 outbreak",
+        "text_hash": "1f21b35dd54bf79a60fe91f57cadd9d61190bd84b15af87f9a6fdc260d8e9099",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "key_figures:new-paid-membership-signups.figure",
+        "entity_id": "key_figure:new-paid-membership-signups:figure",
+        "provenance_hash": "74e8768bce2fade967685ef1e33f78dd475f84815d38f6573a79687afc3090d5"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "19.0, 27.0",
+            "evidence_value": "19.0, 2.0, 27.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:grocery-most-used-delivery:figure",
+        "source_family": "key_figures",
+        "text": "Online grocery purchasers most frequently using delivery for online purchases delivery option most frequently used for online purchases 56% U.S. Grocery online purchasers in the grocery category aged 18+ % online purchasers in the product category aged 18+ U.S., 2021",
+        "text_hash": "a7c2a0cdc7767f832daabd823c5b76fe6015719426365dee3a5dacbaac443b6f",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          }
+        ],
+        "affected_section": "key_figures:grocery-most-used-delivery.figure",
+        "entity_id": "key_figure:grocery-most-used-delivery:figure",
+        "provenance_hash": "c7d2e2fd1ac09fc16135cf45dacde2538a6454b40f26edee231a1ea225c6fc9f"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 56.0",
+            "evidence_value": "18.0, 56.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:beauty-amazon-shopping-start:figure",
+        "source_family": "key_figures",
+        "text": "Share typically starting online beauty/grooming shopping at Amazon first website/app typically visited when shopping beauty/grooming online 38% U.S. Beauty/grooming online beauty/grooming shoppers aged 18+ % online beauty/grooming shoppers aged 18+ U.S., 2021",
+        "text_hash": "f9a75822a471acbca7b68c9fc1b5c88e2f400f421508aa644eae83a1f3691588",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          }
+        ],
+        "affected_section": "key_figures:beauty-amazon-shopping-start.figure",
+        "entity_id": "key_figure:beauty-amazon-shopping-start:figure",
+        "provenance_hash": "a7356c8f2371079cbe232bcaeea7ad6fda99f2dcce66135b890dd3ac07186a91"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 38.0",
+            "evidence_value": "18.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "count, percent",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "rank:1",
+            "evidence_value": "rank:1",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "key_figure:email-list-welcome-reward:figure",
+        "source_family": "key_figures",
+        "text": "Online shoppers signing up for a retailer email list to receive a welcome reward signed up online for a retailer's email list to receive a welcome reward 67% U.S. Online shoppers online shoppers aged 18+ % online shoppers aged 18+ U.S., 2021",
+        "text_hash": "744f5226de951fec95e131f08347f8872b4fe1f815fc8e95618b50111d6682d8",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "email-list-welcome-reward",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "38f5a519a301034c16bb5d361cdb0b50a3d4b0b9055f99133369302bba91c1ea"
+          }
+        ],
+        "affected_section": "key_figures:email-list-welcome-reward.figure",
+        "entity_id": "key_figure:email-list-welcome-reward:figure",
+        "provenance_hash": "bcfe7ccab71b708e9b39729c1967ba5730602a9677f0d67fd3a0b7e2c3d1156a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 67.0",
+            "evidence_value": "18.0, 67.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:47519f16450d68e5",
+        "source_family": "expert_comment",
+        "text": "Delivery was the most frequently used online-purchase fulfillment option for 56% of U.S. online grocery purchasers aged 18+ in 2021; separately, 27% of U.S. households signed up for a new paid shopping program membership during the COVID-19 outbreak.",
+        "text_hash": "70a2128a951dce435c0960ecb8c78346fab259cb2e3223940c8dd92dfd76dadc",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "grocery-most-used-delivery",
+            "source_pack": "findings",
+            "page": 20,
+            "text_hash": "526d652fb94a166471ac313a37991441645f35a3b8a99cc9d41e1ed5e71d6ecf"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-paid-membership-signups",
+            "source_pack": "findings",
+            "page": 26,
+            "text_hash": "958c0e2e6a9805357f0350849d7bfc3606c2a535d75646bd67175fb1eb1757f5"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:47519f16450d68e5",
+        "provenance_hash": "95a88553e9f98636c3afd407d549987b6045e3b7497d0289669a2902e54fea9c"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "not_applicable",
+          "reason": "quantity_not_established"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "0.008906481939633844, 18.0, 19.0, 27.0, 56.0",
+            "evidence_value": "18.0, 19.0, 2.0, 27.0, 56.0",
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, ratio",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "up",
+            "evidence_value": "up",
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The linked evidence supports both clauses: 56% for delivery among U.S. online grocery purchasers aged 18+ in 2021, and 27% of U.S. households signing up during the outbreak.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "56%; 27%",
+            "evidence_value": "56%; 27%",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "delivery was most frequently used; households signed up",
+            "evidence_value": "delivery was most frequently used; households signed up",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": "U.S., 2021; membership signup during the COVID-19 outbreak",
+            "evidence_value": "U.S., 2021; membership signup during the COVID-19 outbreak",
+            "status": "compatible"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "U.S.",
+            "evidence_value": "U.S.",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "online grocery purchasers aged 18+; U.S. households",
+            "evidence_value": "online purchasers in the grocery category aged 18+; U.S. households",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "most frequently used fulfillment option; separate membership signup finding",
+            "evidence_value": "most frequently used delivery option; separate membership signup finding",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "observed use and signup during the stated periods",
+            "evidence_value": "reported use and signup during the stated periods",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "asserted",
+            "evidence_value": "reported",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": "no causal link asserted between the two findings",
+            "evidence_value": "the findings are separate",
+            "status": "compatible"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "soft_copy:expert_comment:47519f16450d68e5",
+        "claim_text_hash": "70a2128a951dce435c0960ecb8c78346fab259cb2e3223940c8dd92dfd76dadc",
+        "evidence_ids": [
+          "grocery-most-used-delivery",
+          "grocery-most-used-delivery",
+          "new-paid-membership-signups",
+          "new-paid-membership-signups"
+        ],
+        "evidence_hash": "5e119f3080ea6dfa6d20720830a8c5a5c84b4ec8e5a9e12910221bd3e6e45a95",
+        "source_identity": "source:c7236dd65d919a6aba1019954725ee36",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "895b190dd36c38ad4ebb3b971a5543f412b20935b71948daa19f646849961b20",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:expert_comment:a6a8333e7df17e90",
+        "source_family": "expert_comment",
+        "text": "For planning, MarketLense recommends tracking retailer starting points and new-site purchases as separate signals, rather than treating either as a proxy for the other.",
+        "text_hash": "5f36d312af5509f6efe006ef6717f558cf779ed4aa430331e292e66a5dc0a3a6",
+        "kind": "descriptive",
+        "factual": false,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": 17,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-beauty-retailer-purchases",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "076ca8d1f4a7daa1c15b901f124999bd2e398263a04f35a6f414f87280fc268c"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "new-beauty-retailer-purchases",
+            "source_pack": "findings",
+            "page": 22,
+            "text_hash": "076ca8d1f4a7daa1c15b901f124999bd2e398263a04f35a6f414f87280fc268c"
+          }
+        ],
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:a6a8333e7df17e90",
+        "provenance_hash": "8c1561c0c62a0c8118dc4bdb294482565a10d7f661b0280ba10cf24ed7e3a23d"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_reference_present"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "unresolved",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:e359378764acbb2e",
+        "source_family": "linkedin_post",
+        "text": "Online shopping discovery is category-specific.",
+        "text_hash": "02dccfa3af73ac80a99ba6260058a651763acc8202ebc541762ab1409d4d62f9",
+        "kind": "descriptive",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": null,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 14,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 15,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 16,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 17,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 18,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:e359378764acbb2e",
+        "provenance_hash": "167283c1219cefb440e7336209be9a04ed981caf7ae76fee7e1998ddcd071a2a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "entity_geography_period_consistency",
+          "status": "not_applicable",
+          "reason": "requires_semantic_or_editorial_assessment"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "unresolved",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": "entailed",
+      "semantic_reason": "The linked evidence expressly describes category-specific discovery habits and supplies discovery findings across grocery, beauty/grooming, and clothing.",
+      "semantic_protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "compatible",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": "discovery patterns vary by category",
+            "evidence_value": "category-specific discovery habits",
+            "status": "compatible"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": "U.S., 2021 findings described",
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": "U.S.",
+            "status": "unknown"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": "online shoppers",
+            "evidence_value": "consumers shopping online across grocery, beauty/grooming, and clothing",
+            "status": "compatible"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": "across shopping categories",
+            "evidence_value": "grocery, beauty/grooming, and clothing compared",
+            "status": "compatible"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": "describes discovery patterns",
+            "evidence_value": "describes discovery habits and category findings",
+            "status": "compatible"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": "asserted",
+            "evidence_value": "findings show category-specific habits",
+            "status": "compatible"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_identity": {
+        "schema_version": "1.1",
+        "claim_id": "soft_copy:linkedin_post:e359378764acbb2e",
+        "claim_text_hash": "02dccfa3af73ac80a99ba6260058a651763acc8202ebc541762ab1409d4d62f9",
+        "evidence_ids": [
+          "ecommerce-discovery",
+          "ecommerce-discovery",
+          "ecommerce-discovery",
+          "ecommerce-discovery",
+          "ecommerce-discovery",
+          "ecommerce-discovery"
+        ],
+        "evidence_hash": "ccb804c65a637a337710bdcfcf9c6fec76c6ecf811a85b406888edd4e47dc88c",
+        "source_identity": "source:c7236dd65d919a6aba1019954725ee36",
+        "prompt_family": "report_vs/validate/grounding",
+        "prompt_content_hash": "0643e2d6ead8dee30c546800bd4d948f7aad854f828b80a29e7a7fdb37372697",
+        "execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b",
+        "validator_version": "grounding_validation_output:1.5",
+        "model_provider": "openai",
+        "model_name": "gpt-6-luna",
+        "configuration_policy_identity": "bb107ffd555c3abff33d2e2833d04d3618e04e28c1b35fad35c654fde0dfe494",
+        "relevant_input_hash": "895b190dd36c38ad4ebb3b971a5543f412b20935b71948daa19f646849961b20",
+        "retrieval_identity": "1e36c88364cc7c746169e3a850c5a16d0f00984bdaf1d8f501659bf828908d18"
+      },
+      "semantic_disagreement": "",
+      "semantic_validator_used": true,
+      "semantic_execution_identity": "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:eb9a7c04eaa3abad",
+        "source_family": "linkedin_post",
+        "text": "In the U.S. in 2021, 31% of online grocery shoppers typically started at Amazon.",
+        "text_hash": "186f9a839c012296546fd611b888a9ee23dba5e507ab1cf8a4aef6d2393ba8e4",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": null,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 14,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 15,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 16,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 17,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 18,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:eb9a7c04eaa3abad",
+        "provenance_hash": "167283c1219cefb440e7336209be9a04ed981caf7ae76fee7e1998ddcd071a2a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "31.0",
+            "evidence_value": "1.0, 15.0, 16.0, 17.0, 29.0, 31.0, 36.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:70ad24f0b40eaaf4",
+        "source_family": "linkedin_post",
+        "text": "Among U.S. online beauty/grooming shoppers aged 18+ that year, 38% typically started there.",
+        "text_hash": "a9937bdfc7d83443ddc80aef7c012a7ed0cb35dde1187c5793b6ea50e706938b",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": null,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "beauty-amazon-shopping-start",
+            "source_pack": "findings",
+            "page": 17,
+            "text_hash": "4c8f1288cd6df729dd74dfdb45b0291263e49692b80b70875bc276454e31eb37"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:70ad24f0b40eaaf4",
+        "provenance_hash": "39a8624dc39a8ab38a2c841da2783f05e386392af01dce7aa879e112debc1430"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "18.0, 38.0",
+            "evidence_value": "18.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent, time",
+            "evidence_value": "percent, unknown",
+            "status": "unknown"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    },
+    {
+      "schema_version": "1.4",
+      "candidate": {
+        "schema_version": "1.4",
+        "claim_id": "soft_copy:linkedin_post:37d4ae673f945228",
+        "source_family": "linkedin_post",
+        "text": "For online clothing shopping in the U.S. in 2021, Amazon was the most common starting point, at 36%.",
+        "text_hash": "4a9b562fc11ae568b0e628a8ffbfef961ec64b4ba87493c26a291c67a9129524",
+        "kind": "numeric",
+        "factual": true,
+        "evidence_references": [
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": null,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 14,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 15,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 16,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 17,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          },
+          {
+            "schema_version": "1.4",
+            "evidence_id": "ecommerce-discovery",
+            "source_pack": "doc_map",
+            "page": 18,
+            "text_hash": "84bfd23a6b39bbdb271d07d30706f8201287726b59f8585cf30ab5ca7dc74f23"
+          }
+        ],
+        "affected_section": "linkedin_post",
+        "entity_id": "soft_copy:linkedin_post:37d4ae673f945228",
+        "provenance_hash": "167283c1219cefb440e7336209be9a04ed981caf7ae76fee7e1998ddcd071a2a"
+      },
+      "checks": [
+        {
+          "schema_version": "1.4",
+          "name": "evidence_reference_completeness",
+          "status": "passed",
+          "reason": "evidence_references_resolved"
+        },
+        {
+          "schema_version": "1.4",
+          "name": "number_value_unit_match",
+          "status": "passed",
+          "reason": "quantities_matched"
+        }
+      ],
+      "status": "supported",
+      "deterministic_status": "supported",
+      "reasons": [],
+      "protected_facts": {
+        "schema_version": "1.0",
+        "proposition_status": "unknown",
+        "dimensions": {
+          "value": {
+            "schema_version": "1.0",
+            "claim_value": "36.0",
+            "evidence_value": "1.0, 15.0, 16.0, 17.0, 29.0, 31.0, 36.0, 38.0",
+            "status": "compatible"
+          },
+          "unit_currency": {
+            "schema_version": "1.0",
+            "claim_value": "percent",
+            "evidence_value": "percent, unknown",
+            "status": "compatible"
+          },
+          "magnitude": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "direction": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "timeframe": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "geography": {
+            "schema_version": "1.0",
+            "claim_value": "us",
+            "evidence_value": "us",
+            "status": "compatible"
+          },
+          "population": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "comparison": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "observation_status": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "attribution": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "certainty": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          },
+          "causality": {
+            "schema_version": "1.0",
+            "claim_value": null,
+            "evidence_value": null,
+            "status": "unknown"
+          }
+        }
+      },
+      "semantic_outcome": null,
+      "semantic_reason": "",
+      "semantic_protected_facts": null,
+      "semantic_identity": null,
+      "semantic_disagreement": "",
+      "semantic_validator_used": false,
+      "semantic_execution_identity": ""
+    }
+  ],
+  "readiness_status": "awaiting_review",
+  "unsupported_factual_count": 0,
+  "unresolved_factual_count": 0,
+  "deterministic_pass_count": 32,
+  "semantic_validation_count": 4,
+  "semantic_execution_identities": [
+    "bcdda9124d5e1398b2e728783e8e4295018946ed896373f39cdf7f392695c73b"
+  ],
+  "validation_identity": {
+    "schema_version": "1.1",
+    "report_id": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50",
+    "source_id": "source:c7236dd65d919a6aba1019954725ee36",
+    "source_md5": "b8de22cbd1abdce394f2390e2815508f",
+    "claim_validation_validator_version": "retained_claim_validation:v7",
+    "grounding_validator_version": "grounding_validation_output:1.5",
+    "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+    "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7"
+  },
+  "lineage": null
+}

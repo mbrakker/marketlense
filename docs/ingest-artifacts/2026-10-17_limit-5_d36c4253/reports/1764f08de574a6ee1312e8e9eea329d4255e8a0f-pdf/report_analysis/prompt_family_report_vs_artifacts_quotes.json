@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/quotes",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": [
+    {
+      "id": "q1",
+      "text": "We forecast significant growth ahead for global internet and media businesses, which will add almost $400B growth dollars between 2021 and 2025",
+      "speaker": "Unknown",
+      "citation": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": 0,
+      "evidence_id": "q1",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "q2",
+      "text": "Global advertising will be the primary driver of growth",
+      "speaker": "Unknown",
+      "citation": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": 0,
+      "evidence_id": "q2",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    },
+    {
+      "id": "q3",
+      "text": "During the COVID-19 outbreak, consumers significantly increased their time with technology and media, adding over 45 minutes a day; we expect that this growth will be largely sustained",
+      "speaker": "Unknown",
+      "citation": "1ictWKc_jIIy1NozvCorBSPINo4W0DFMB.pdf",
+      "page": 0,
+      "evidence_id": "q3",
+      "is_paraphrase": false,
+      "style": "",
+      "mode": "",
+      "label": "",
+      "evidence_spans": []
+    }
+  ]
+}

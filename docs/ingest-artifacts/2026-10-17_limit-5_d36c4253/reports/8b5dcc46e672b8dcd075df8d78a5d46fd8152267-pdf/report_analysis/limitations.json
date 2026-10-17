@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "limitations": [
+    "Messaging user counts are registered users; monthly active users are lower.",
+    "Some app figures are estimates; one estimate is based on the number of iPhones sold.",
+    "The video-on-demand measure includes multimedia devices and video watched on PC or mobile; the stated average covers all age brackets 2+.",
+    "Global ARPU uses consolidated global revenues, except Apple uses equipment sales and excludes accessories and apps, and Amazon excludes services.",
+    "U.S. ARPU figures use company-specific revenue bases, including stated exceptions for Comcast, Verizon, TWC, AT&T Wireless, and Netflix.",
+    "The attention valuation’s average daily time per user is based on data for August 2014–2015."
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "limitations",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

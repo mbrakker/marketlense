@@ -1,0 +1,61 @@
+{
+  "cover_style_hash": "57c99a2ab855ff0825cefb238c9aba493812c1ace25cfab4fe65589725e83bcb",
+  "covered_period": "2016\u20132021E",
+  "covers": {
+    "large": {
+      "content_sha256": "d2d12308b788280d9b6a24c8a870c147d24cf698085d261d3382cee1817cc887",
+      "height": 1600,
+      "output_path": "assets/report-card-large.png",
+      "schema_version": "1.0",
+      "size": "large",
+      "width": 1200
+    },
+    "medium": {
+      "content_sha256": "1baed3e5b6ffeeb5c2a8285dcb6536b07df734b22a01cddd0511ab23b972a716",
+      "height": 1500,
+      "output_path": "assets/report-card-medium.png",
+      "schema_version": "1.0",
+      "size": "medium",
+      "width": 1200
+    },
+    "schema_version": "1.0",
+    "small": {
+      "content_sha256": "b7237169fbc278833d1e48d1ce2d16acb4fdd131dd3dfe46917fa4f1edb0a326",
+      "height": 900,
+      "output_path": "assets/report-card-small.png",
+      "schema_version": "1.0",
+      "size": "small",
+      "width": 1600
+    }
+  },
+  "fingerprint": {
+    "direction": "rising",
+    "domain_layer": "forecast",
+    "evidence_density": "metric_rich",
+    "evidence_shape": "trend",
+    "geography_scope": "country",
+    "geometry_family": "forecast_horizon",
+    "schema_version": "1.0",
+    "seed": 3654008816,
+    "selection_reason": "The report foregrounds quantified growth outlooks, including rising global internet and media revenues and projected expansion in eSports."
+  },
+  "geography_label": "Global and United States",
+  "geography_scope": "country",
+  "key_insights": [
+    "In the U.S. in 2016, 92% of respondents multitasked across at least two media types.",
+    "For global consumer internet and media revenues in 2016E\u20132021E, forecast CAGRs were 6.3% for cost of internet access, 4.7% for ad revenue, and 2.6% for paid content."
+  ],
+  "published_date": "",
+  "publisher": "Activate",
+  "schema_version": "1.0",
+  "source_identity_status": "resolved",
+  "source_metadata_hash": "96b0f8d21d266595fc9abf0f67dc6fb0eab4f21b1ad62d4550b13a6da5c77fbc",
+  "source_note": "Source: Activate \u2014 Activate Technology & Media Outlook 2017 \u2014 Source URL: Not available",
+  "source_publication_date_status": "unknown",
+  "source_title": "Activate Technology & Media Outlook 2017",
+  "source_url": "",
+  "title": "TECH & MEDIA OUTLOOK 2017",
+  "title_scale": "short",
+  "tldr_compact": "In the U.S. in 2016, 92% of respondents multitasked across at least two media types.",
+  "tldr_standard": "In the U.S. in 2016, 92% of respondents multitasked across at least two media types, according to the report\u2019s consumer-attention finding."
+}

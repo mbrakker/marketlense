@@ -1,0 +1,444 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "online-penetration-clothing",
+      "text": "In the U.S. 2021 chart, online penetration among clothing purchasers aged 18+ was 77% before the start of the COVID-19 outbreak and 83% after the outbreak ends.",
+      "evidence": "ONLINE SHOPPER PENETRATION BY PRODUCT CATEGORY AND TIME PERIOD, U.S., 2021, % PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; BEFORE the start of the COVID-19 outbreak2; AFTER the COVID-19 outbreak ends3; CLOTHING 77% 83%.",
+      "confidence": "high",
+      "pages": [
+        5
+      ],
+      "section_id": "growth-outlook-for-online-shopping",
+      "section_title": "Growth Outlook for Online Shopping"
+    },
+    {
+      "id": "online-penetration-beauty-grooming",
+      "text": "In the U.S. 2021 chart, online penetration among beauty/grooming purchasers aged 18+ was 57% before the start of the COVID-19 outbreak and 66% after the outbreak ends.",
+      "evidence": "ONLINE SHOPPER PENETRATION BY PRODUCT CATEGORY AND TIME PERIOD, U.S., 2021, % PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; BEFORE the start of the COVID-19 outbreak2; AFTER the COVID-19 outbreak ends3; BEAUTY/GROOMING4 57% 66%.",
+      "confidence": "high",
+      "pages": [
+        5
+      ],
+      "section_id": "growth-outlook-for-online-shopping",
+      "section_title": "Growth Outlook for Online Shopping"
+    },
+    {
+      "id": "online-penetration-grocery",
+      "text": "In the U.S. 2021 chart, online penetration among grocery purchasers aged 18+ was 43% before the start of the COVID-19 outbreak and 56% after the outbreak ends.",
+      "evidence": "ONLINE SHOPPER PENETRATION BY PRODUCT CATEGORY AND TIME PERIOD, U.S., 2021, % PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; BEFORE the start of the COVID-19 outbreak2; AFTER the COVID-19 outbreak ends3; GROCERY 43% 56%.",
+      "confidence": "high",
+      "pages": [
+        5
+      ],
+      "section_id": "growth-outlook-for-online-shopping",
+      "section_title": "Growth Outlook for Online Shopping"
+    },
+    {
+      "id": "beauty-amazon-shopping-start",
+      "text": "Amazon was the most common starting website/app for online beauty/grooming shopping: 38% of online beauty/grooming shoppers aged 18+ typically started there in the U.S. in 2021.",
+      "evidence": "FIRST WEBSITE/APP VISITED WHEN BEAUTY/GROOMING1 SHOPPING ONLINE, U.S., 2021, % ONLINE BEAUTY/GROOMING1 SHOPPERS2 AGED 18+; When shopping online for beauty/grooming1 items, I typically start on…; 38% Amazon.",
+      "confidence": "high",
+      "pages": [
+        17
+      ],
+      "section_id": "ecommerce-discovery",
+      "section_title": "eCommerce Discovery"
+    },
+    {
+      "id": "clothing-amazon-shopping-start",
+      "text": "Amazon was the most common starting website/app for online clothing shopping: 36% of online clothes shoppers aged 18+ typically started there in the U.S. in 2021.",
+      "evidence": "FIRST WEBSITE/APP VISITED WHEN CLOTHES SHOPPING ONLINE, U.S., 2021, % ONLINE CLOTHES SHOPPERS1 AGED 18+; When shopping online for clothing, I typically start on…; 36% Amazon.",
+      "confidence": "high",
+      "pages": [
+        18
+      ],
+      "section_id": "ecommerce-discovery",
+      "section_title": "eCommerce Discovery"
+    },
+    {
+      "id": "clothing-department-store-shopping-start",
+      "text": "In the U.S. in 2021, 17% of online clothes shoppers aged 18+ typically started shopping at a department store.",
+      "evidence": "FIRST WEBSITE/APP VISITED WHEN CLOTHES SHOPPING ONLINE, U.S., 2021, % ONLINE CLOTHES SHOPPERS1 AGED 18+; 17% Department store (e.g. Nordstrom, Macy’s, JCPenney).",
+      "confidence": "high",
+      "pages": [
+        18
+      ],
+      "section_id": "ecommerce-discovery",
+      "section_title": "eCommerce Discovery"
+    },
+    {
+      "id": "grocery-most-used-delivery",
+      "text": "Delivery was the most frequently used online-purchase fulfillment option for 56% of online grocery purchasers in the U.S. in 2021.",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 56% DELIVERY; GROCERY.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "delivery-vs-pickup",
+      "section_title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "beauty-most-used-delivery",
+      "text": "Delivery was the most frequently used online-purchase fulfillment option for 75% of online beauty/grooming purchasers in the U.S. in 2021.",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 75% DELIVERY; BEAUTY/GROOMING2.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "delivery-vs-pickup",
+      "section_title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "clothing-most-used-delivery",
+      "text": "Delivery was the most frequently used online-purchase fulfillment option for 84% of online clothing purchasers in the U.S. in 2021.",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 84% DELIVERY; CLOTHING.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "delivery-vs-pickup",
+      "section_title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "grocery-curbside-pickup",
+      "text": "Curbside pickup was the most frequently used online-purchase fulfillment option for 34% of online grocery purchasers in the U.S. in 2021.",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 34% CURBSIDE PICKUP; GROCERY.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "delivery-vs-pickup",
+      "section_title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "grocery-in-store-pickup",
+      "text": "In-store pickup was the most frequently used online-purchase fulfillment option for 11% of online grocery purchasers in the U.S. in 2021.",
+      "evidence": "DELIVERY/PICKUP OPTION MOST FREQUENTLY USED FOR ONLINE PURCHASES BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY1 AGED 18+; 11% IN-STORE PICKUP; GROCERY.",
+      "confidence": "high",
+      "pages": [
+        20
+      ],
+      "section_id": "delivery-vs-pickup",
+      "section_title": "Delivery vs. Pickup"
+    },
+    {
+      "id": "new-grocery-retailer-purchases",
+      "text": "During the COVID-19 outbreak, 50% of U.S. online grocery purchasers aged 18+ bought from at least one new website/app in the grocery category.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Purchased from at least one new website/app1 during the COVID-19 outbreak2; GROCERY 50%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "new-beauty-retailer-purchases",
+      "text": "During the COVID-19 outbreak, 29% of U.S. online beauty/grooming purchasers aged 18+ bought from at least one new website/app in the beauty/grooming category.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Purchased from at least one new website/app1 during the COVID-19 outbreak2; BEAUTY/GROOMING5 29%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "new-clothing-retailer-purchases",
+      "text": "During the COVID-19 outbreak, 35% of U.S. online clothing purchasers aged 18+ bought from at least one new website/app in the clothing category.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Purchased from at least one new website/app1 during the COVID-19 outbreak2; CLOTHING 35%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "continue-new-grocery-retailers",
+      "text": "After the COVID-19 outbreak ends, 90% of the U.S. online grocery purchasers aged 18+ who bought from a new grocery website/app planned to continue shopping with at least some of those new websites/apps.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Plan to continue shopping with at least some of these new websites/apps1 after the COVID-19 outbreak ends4; GROCERY 90%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "continue-new-beauty-retailers",
+      "text": "After the COVID-19 outbreak ends, 98% of the U.S. online beauty/grooming purchasers aged 18+ who bought from a new beauty/grooming website/app planned to continue shopping with at least some of those new websites/apps.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Plan to continue shopping with at least some of these new websites/apps1 after the COVID-19 outbreak ends4; BEAUTY/GROOMING5 98%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "continue-new-clothing-retailers",
+      "text": "After the COVID-19 outbreak ends, 97% of the U.S. online clothing purchasers aged 18+ who bought from a new clothing website/app planned to continue shopping with at least some of those new websites/apps.",
+      "evidence": "PURCHASING FROM NEW WEBSITES/APPS1 DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ONLINE PURCHASERS IN THE PRODUCT CATEGORY3 AGED 18+; Plan to continue shopping with at least some of these new websites/apps1 after the COVID-19 outbreak ends4; CLOTHING 97%.",
+      "confidence": "high",
+      "pages": [
+        22
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "new-retailer-discovery-sources",
+      "text": "Among U.S. adults aged 18+ who bought from a new website/app during the COVID-19 outbreak, word of mouth was the listed discovery source for 49% of new grocery-site/app purchasers; social media was the listed source for 53% of new beauty/grooming-site/app purchasers and 49% of new clothing-site/app purchasers.",
+      "evidence": "SOURCES USED TO DISCOVER THE NEW WEBSITES/APPS1 PURCHASED FROM DURING THE COVID-19 OUTBREAK2 BY PRODUCT CATEGORY, U.S., 2021, % ADULTS AGED 18+ WHO PURCHASED IN THE PRODUCT CATEGORY FROM A NEW WEBSITE/APP1 DURING THE COVID-19 OUTBREAK2; GROCERY Word of mouth 49%; BEAUTY/GROOMING3 Social media 53%; CLOTHING Social media 49%.",
+      "confidence": "high",
+      "pages": [
+        23
+      ],
+      "section_id": "purchasing-with-new-online-retailers",
+      "section_title": "Purchasing with New Online Retailers"
+    },
+    {
+      "id": "new-paid-membership-signups",
+      "text": "During the COVID-19 outbreak, 27% of U.S. households signed up for a new paid shopping program membership.",
+      "evidence": "SIGNING UP FOR NEW PAID SHOPPING PROGRAM MEMBERSHIPS1,2 DURING THE COVID-19 OUTBREAK3 FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021, % HOUSEHOLDS; 27% of households signed up for a new paid shopping program membership1,2 during the COVID-19 outbreak3.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "retain-new-paid-memberships",
+      "text": "Of households that signed up for a new paid shopping program membership during the COVID-19 outbreak, 83% planned to keep at least one of those memberships over the next 12 months.",
+      "evidence": "SIGNING UP FOR NEW PAID SHOPPING PROGRAM MEMBERSHIPS1,2 DURING THE COVID-19 OUTBREAK3 FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021, % HOUSEHOLDS; 83% plan to keep4 at least one of these new paid shopping program memberships1,2 over the next 12 months.",
+      "confidence": "high",
+      "pages": [
+        26
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "households-with-paid-membership",
+      "text": "In the U.S. in 2021, 80% of households paid for at least one shopping program membership.",
+      "evidence": "PAID SHOPPING PROGRAM MEMBERSHIP1 HOUSEHOLD PENETRATION FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021; 80% Share of households that pay for at least one shopping program membership1.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "average-paid-memberships-household",
+      "text": "In the U.S. in 2021, the average household paid for 1.7 shopping program memberships.",
+      "evidence": "PAID SHOPPING PROGRAM MEMBERSHIP1 HOUSEHOLD PENETRATION FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021; 1.7 Number of shopping program memberships1 for which the average household pays.",
+      "confidence": "high",
+      "pages": [
+        27
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "amazon-prime-paid-households",
+      "text": "In the U.S. in 2021, 64% of households paid for an Amazon Prime membership.",
+      "evidence": "PAID SHOPPING PROGRAM MEMBERSHIP1 HOUSEHOLD PENETRATION FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021; 64% Share of households that pay for an Amazon Prime membership.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "households-warehouse-club-membership",
+      "text": "In the U.S. in 2021, 50% of households paid for at least one warehouse club membership.",
+      "evidence": "PAID SHOPPING PROGRAM MEMBERSHIP1 HOUSEHOLD PENETRATION FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021; 50% Share of households that pay for at least one warehouse club2 membership.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "walmart-plus-program-ranking",
+      "text": "In the U.S. in 2021, Walmart+ was the fourth most popular paid shopping program; the report says it launched 6 months into the COVID-19 outbreak (Sept. 2020).",
+      "evidence": "PAID SHOPPING PROGRAM MEMBERSHIP1 HOUSEHOLD PENETRATION FOR SELECT MAJOR SHOPPING PROGRAMS, U.S., 2021; Launched 6 months into the COVID-19 outbreak (Sept. 2020), Walmart+ has rapidly become the fourth most popular program.",
+      "confidence": "high",
+      "pages": [
+        28
+      ],
+      "section_id": "shopping-program-memberships",
+      "section_title": "Shopping Program Memberships"
+    },
+    {
+      "id": "average-personal-data-types-shared",
+      "text": "In the U.S. in 2021, the average online shopper aged 18+ was comfortable sharing 6.3 types of personal data with online retailers to create an account/profile in exchange for personalized benefits.",
+      "evidence": "AVERAGE NUMBER OF PERSONAL DATA TYPES THAT ONLINE SHOPPERS1 AGED 18+ ARE COMFORTABLE SHARING TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS, U.S., 2021; …the average online shopper1 is comfortable sharing 6.3 types of personal data with the online retailers that they shop with.",
+      "confidence": "high",
+      "pages": [
+        31
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "email-list-welcome-reward",
+      "text": "In the U.S. in 2021, 67% of online shoppers aged 18+ had signed up for a retailer’s email list to receive a welcome reward.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+; 67% Signed up online for a retailer’s email list to receive a welcome reward.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "date-of-birth-birthday-reward",
+      "text": "In the U.S. in 2021, 57% of online shoppers aged 18+ had shared their date of birth with a retailer online to receive a birthday reward.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+; 57% Shared their date of birth with a retailer online to receive a birthday reward.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "loyalty-program-rewards",
+      "text": "In the U.S. in 2021, 66% of online shoppers aged 18+ had signed up for a retailer’s loyalty program to receive rewards.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+; 66% Signed up online for a retailer’s loyalty program to receive rewards.",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "retailer-credit-card-rewards",
+      "text": "In the U.S. in 2021, 32% of online shoppers aged 18+ had signed up for a retailer’s credit card to receive rewards.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+; 32% Signed up online for a retailer’s credit card to receive rewards.",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-average-types",
+      "text": "In the U.S. in 2021, the average online shopper aged 18+ was comfortable sharing 6.3 types of personal data with online retailers to receive personalized benefits.",
+      "evidence": "“…the average online shopper1 is comfortable sharing 6.3 types of personal data with the online retailers that they shop with” … “AVERAGE NUMBER OF PERSONAL DATA TYPES THAT ONLINE SHOPPERS1 AGED 18+ ARE COMFORTABLE SHARING TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS, U.S., 2021”",
+      "confidence": "high",
+      "pages": [
+        31
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-comfort-demographic-vs-browsing",
+      "text": "In the U.S. in 2021, 78% of online shoppers aged 18+ were comfortable sharing gender, compared with 35% who were comfortable sharing browsing/search history on a website or app.",
+      "evidence": "“WILLINGNESS TO SHARE PERSONAL DATA TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS1, U.S., 2021, % ONLINE SHOPPERS2 AGED 18+” … “Gender 78%” … “Browsing/search history on the website/app 35%”",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-average-types-targeted-1",
+      "text": "In the U.S. in 2021, online shoppers aged 18+ were comfortable sharing an average of 6.3 types of personal data with online retailers in exchange for personalized benefits.",
+      "evidence": "…the average online shopper1 is comfortable sharing 6.3 types of personal data with the online retailers that they shop with\nAVERAGE NUMBER OF PERSONAL DATA TYPES THAT ONLINE SHOPPERS1 AGED 18+ ARE COMFORTABLE SHARING TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS, U.S., 2021",
+      "confidence": "high",
+      "pages": [
+        31
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-monetary-benefits",
+      "text": "In the U.S. in 2021, 67% of online shoppers aged 18+ had signed up for a retailer email list for a welcome reward, 57% had shared their date of birth with a retailer for a birthday reward, 66% had signed up for a retailer loyalty program for rewards, and 32% had signed up for a retailer credit card for rewards.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+\n67%\nSigned up online for a retailer’s email list to receive a welcome reward\n57%\nShared their date of birth with a retailer online to receive a birthday reward\n66%\nSigned up online for a retailer’s loyalty program to receive rewards\n32%\nSigned up online for a retailer’s credit card to receive rewards",
+      "confidence": "high",
+      "pages": [
+        33
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-comfort-by-information-type",
+      "text": "In the U.S. in 2021, 78% of online shoppers aged 18+ were comfortable sharing gender, compared with 35% comfortable sharing browsing/search history on a website or app.",
+      "evidence": "WILLINGNESS TO SHARE PERSONAL DATA TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS, U.S., 2021, % ONLINE SHOPPERS AGED 18+\nGender 78%\nBrowsing/search history on the website/app 35%",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "privacy-comfortable-data-types-2021",
+      "text": "In the U.S. in 2021, online shoppers aged 18+ were comfortable sharing an average of 6.3 types of personal data with online retailers to create an account or profile in exchange for personalized benefits.",
+      "evidence": "AVERAGE NUMBER OF PERSONAL DATA TYPES THAT ONLINE SHOPPERS1 AGED 18+ ARE COMFORTABLE SHARING TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS, U.S., 2021\n…the average online shopper1 is comfortable sharing 6.3 types of personal data with the online retailers that they shop with",
+      "confidence": "high",
+      "pages": [
+        31
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "privacy-comfort-sharing-gender-vs-browsing-history",
+      "text": "In the U.S. in 2021, 78% of online shoppers aged 18+ were comfortable sharing gender with shopping websites or apps, compared with 35% who were comfortable sharing browsing/search history on the website or app.",
+      "evidence": "WILLINGNESS TO SHARE PERSONAL DATA TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS1, U.S., 2021, % ONLINE SHOPPERS2 AGED 18+\nGender 78%\nBrowsing/search history on the website/app 35%",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-monetary-benefits-targeted-1",
+      "text": "In the U.S. in 2021, among online shoppers aged 18+, 67% signed up for a retailer email list for a welcome reward, 57% shared their date of birth for a birthday reward, 66% joined a retailer loyalty program for rewards, and 32% signed up for a retailer credit card for rewards.",
+      "evidence": "SHARING OF PERSONAL DATA WITH ONLINE RETAILERS IN EXCHANGE FOR MONETARY BENEFITS, U.S., 2021, % ONLINE SHOPPERS1 AGED 18+\n67%\n 57%\n 32%66%\nSigned up online for a \nretailer’s email list to \nreceive a welcome reward \n(e.g. discount on ﬁrst purchase, \nfree shipping on ﬁrst order)\n Shared their date of birth \nwith a retailer online to \nreceive a birthday reward \n(e.g. free item, discount, store credit)\nSigned up online for a \nretailer’s loyalty program \nto receive rewards \n(e.g. points on every purchase that \ncan be redeemed for store credit)\nSigned up online for a \nretailer’s credit card to \nreceive rewards \n(e.g. cash back on card purchases, \ndiscount on ﬁrst purchase with card)",
+      "confidence": "medium",
+      "pages": [
+        33
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    },
+    {
+      "id": "consumer-data-sharing-demographic-vs-browsing",
+      "text": "In the U.S. in 2021, 78% of online shoppers aged 18+ were comfortable sharing their gender to create a retailer account or profile, compared with 35% who were comfortable sharing browsing/search history on a website or app.",
+      "evidence": "WILLINGNESS TO SHARE PERSONAL DATA TO CREATE A USER ACCOUNT/PROFILE WITH THE WEBSITES/APPS USED TO SHOP ONLINE IN EXCHANGE FOR PERSONALIZED BENEFITS1, U.S., 2021, % ONLINE SHOPPERS2 AGED 18+\n                  Gender                              78%                                  17%      6%\n    Browsing/search history \n        on the website/app              35%                         38%                      27%",
+      "confidence": "high",
+      "pages": [
+        32
+      ],
+      "section_id": "consumer-data-sharing-on-the-privacy-focused-web",
+      "section_title": "Consumer Data Sharing on the Privacy-Focused Web"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

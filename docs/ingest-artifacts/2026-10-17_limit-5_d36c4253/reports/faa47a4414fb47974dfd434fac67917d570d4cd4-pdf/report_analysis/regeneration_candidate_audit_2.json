@@ -1,0 +1,875 @@
+{
+  "attempt_index": 2,
+  "before_sha256": "26460708d4adf40e295dc259015942d87b44505e7373f72db8811c977a7998ec",
+  "after_sha256": "565e0bd194f96d980ca042a237d21dca431f065ba8fa9eab2dd4a5a1b5e31e7f",
+  "transformation_scope": [
+    "expert_comment"
+  ],
+  "unchanged_family_sha256": {
+    "summary": "7810a26a6c532f35fea027c257c022c52dfe4e8be2847522c737e3a7afac4df2",
+    "insights_candidates": "f60542c1a895f234edfa9b33fa55b3b1ff5013e9dcc6cb233687c99f6fa0e047",
+    "insights_final": "5a884ea9a85ecfa1e4599917962439465c282c4b1233b47fb148ba85b30e664d",
+    "quotes_final": "a437720b97fb4d2fd8fd89988b50e1c0edfef9199fbfb7ef6809e4e3e5fa2ad7"
+  },
+  "current_artifacts_path": "C:\\Programing\\Market lense\\out\\faa47a4414fb47974dfd434fac67917d570d4cd4-pdf\\report_analysis\\artifacts.json",
+  "candidate_artifacts_path": "C:\\Programing\\Market lense\\out\\faa47a4414fb47974dfd434fac67917d570d4cd4-pdf\\report_analysis\\artifacts_regen_candidate_2.json",
+  "validation_status": "fail",
+  "promotion_outcome": "rolled_back",
+  "validation_issues": [
+    "artifact_quality:chart_insight_cards[3].business_implication",
+    "artifact_quality:chart_insight_cards[3].takeaway",
+    "artifact_quality:insights_final[5].text",
+    "artifact_quality:key_figures[3].why_it_matters",
+    "metrics:insights:new-grocery-retailer-purchases",
+    "metrics:insights:new-paid-membership-signups",
+    "numbers:expert_comment",
+    "public_editorial_quality.metric_label_relationship:expert_comment",
+    "public_editorial_quality.metric_label_relationship:insights:new-grocery-retailer-purchases",
+    "public_editorial_quality.metric_label_relationship:insights:online-penetration-clothing",
+    "semantic:semantic"
+  ],
+  "evidence_lineage": [
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "beauty-amazon-shopping-start",
+      "original_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "candidate_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "email-list-welcome-reward",
+      "original_evidence_ids": [
+        "email-list-welcome-reward"
+      ],
+      "candidate_evidence_ids": [
+        "email-list-welcome-reward"
+      ],
+      "original_source_pages": [
+        33
+      ],
+      "candidate_source_pages": [
+        33
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "grocery-most-used-delivery",
+      "original_evidence_ids": [
+        "grocery-most-used-delivery"
+      ],
+      "candidate_evidence_ids": [
+        "grocery-most-used-delivery"
+      ],
+      "original_source_pages": [
+        20
+      ],
+      "candidate_source_pages": [
+        20
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "new-grocery-retailer-purchases",
+      "original_evidence_ids": [
+        "new-grocery-retailer-purchases"
+      ],
+      "candidate_evidence_ids": [
+        "new-grocery-retailer-purchases"
+      ],
+      "original_source_pages": [
+        22
+      ],
+      "candidate_source_pages": [
+        22
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "new-paid-membership-signups",
+      "original_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "candidate_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "online-penetration-beauty-grooming",
+      "original_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_candidates",
+      "entity_id": "online-penetration-clothing",
+      "original_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "beauty-amazon-shopping-start",
+      "original_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "candidate_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "email-list-welcome-reward",
+      "original_evidence_ids": [
+        "email-list-welcome-reward"
+      ],
+      "candidate_evidence_ids": [
+        "email-list-welcome-reward"
+      ],
+      "original_source_pages": [
+        33
+      ],
+      "candidate_source_pages": [
+        33
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "grocery-most-used-delivery",
+      "original_evidence_ids": [
+        "grocery-most-used-delivery"
+      ],
+      "candidate_evidence_ids": [
+        "grocery-most-used-delivery"
+      ],
+      "original_source_pages": [
+        20
+      ],
+      "candidate_source_pages": [
+        20
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "new-grocery-retailer-purchases",
+      "original_evidence_ids": [
+        "new-grocery-retailer-purchases"
+      ],
+      "candidate_evidence_ids": [
+        "new-grocery-retailer-purchases"
+      ],
+      "original_source_pages": [
+        22
+      ],
+      "candidate_source_pages": [
+        22
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "new-paid-membership-signups",
+      "original_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "candidate_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "insights_final",
+      "entity_id": "online-penetration-clothing",
+      "original_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "9529058d312119d4a5e108c91615803be0d0c03f2c11a6ada9819fcccf81598b",
+      "original_evidence_ids": [
+        "quote-002"
+      ],
+      "candidate_evidence_ids": [
+        "quote-002"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "ba53e5a705b2d5611f077c8eed68467f811603a3883aaaea2499dc8a58a4cfda",
+      "original_evidence_ids": [
+        "quote-004"
+      ],
+      "candidate_evidence_ids": [
+        "quote-004"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "quotes_final",
+      "entity_id": "dc7a6872c4bc53bd55d0e2e6ffc95680a9e16e2ed21ac127fbe07388768b4c37",
+      "original_evidence_ids": [
+        "quote-005"
+      ],
+      "candidate_evidence_ids": [
+        "quote-005"
+      ],
+      "original_source_pages": [],
+      "candidate_source_pages": [],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_1",
+      "original_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_2",
+      "original_evidence_ids": [
+        "online-penetration-grocery"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-grocery"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_3",
+      "original_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_4",
+      "original_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "candidate_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "summary_claim",
+      "entity_id": "claim_5",
+      "original_evidence_ids": [
+        "retain-new-paid-memberships"
+      ],
+      "candidate_evidence_ids": [
+        "retain-new-paid-memberships"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:47519f16450d68e5",
+      "original_evidence_ids": [
+        "beauty-amazon-shopping-start",
+        "new-beauty-retailer-purchases"
+      ],
+      "candidate_evidence_ids": [
+        "grocery-most-used-delivery",
+        "new-paid-membership-signups"
+      ],
+      "original_source_pages": [
+        17,
+        22
+      ],
+      "candidate_source_pages": [
+        20,
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:expert_comment:a6a8333e7df17e90",
+      "original_evidence_ids": [
+        "beauty-amazon-shopping-start",
+        "new-beauty-retailer-purchases"
+      ],
+      "candidate_evidence_ids": [
+        "beauty-amazon-shopping-start",
+        "new-beauty-retailer-purchases"
+      ],
+      "original_source_pages": [
+        17,
+        22
+      ],
+      "candidate_source_pages": [
+        17,
+        22
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:37d4ae673f945228",
+      "original_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "candidate_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "original_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "candidate_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:70ad24f0b40eaaf4",
+      "original_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "candidate_evidence_ids": [
+        "beauty-amazon-shopping-start"
+      ],
+      "original_source_pages": [
+        17
+      ],
+      "candidate_source_pages": [
+        17
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:e359378764acbb2e",
+      "original_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "candidate_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "original_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "candidate_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:linkedin_post:eb9a7c04eaa3abad",
+      "original_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "candidate_evidence_ids": [
+        "ecommerce-discovery"
+      ],
+      "original_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "candidate_source_pages": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:0b5099450b275425",
+      "original_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-clothing"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:267bb992a557a7e2",
+      "original_evidence_ids": [
+        "online-penetration-grocery"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-grocery"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:a30fc8dbd984df7c",
+      "original_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "candidate_evidence_ids": [
+        "new-paid-membership-signups"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:ce94d102ca5d0840",
+      "original_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "candidate_evidence_ids": [
+        "online-penetration-beauty-grooming"
+      ],
+      "original_source_pages": [
+        5
+      ],
+      "candidate_source_pages": [
+        5
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    },
+    {
+      "entity_kind": "soft_copy_claim",
+      "entity_id": "soft_copy:summary:d769b91579e9430d",
+      "original_evidence_ids": [
+        "retain-new-paid-memberships"
+      ],
+      "candidate_evidence_ids": [
+        "retain-new-paid-memberships"
+      ],
+      "original_source_pages": [
+        26
+      ],
+      "candidate_source_pages": [
+        26
+      ],
+      "validation_issues": [],
+      "schema_version": "1.0"
+    }
+  ],
+  "failure_fingerprints": [
+    "47182e4fe7a6e63a8947988c3d2735f37646712a2624095bfe61562bfe4a1b6c",
+    "2bdd071b80d93c740070e156a24e2f91766f10f4636397790c58883e36682d21",
+    "69178ca8b07efe57cc3c3f0ff18cd493c911070fb1fcc81aaf40bd7506dcec6a",
+    "13a2939e836648de6537ac7d966a9960fecad67e71da198f93f7af3959da78c9",
+    "20c3ae7f369c786f0948eadcae6d0a9fd565580cd5fb1cec7fb6d52fe697c32d",
+    "5f19f24a63a91b6dd3c19216fce715c32382a1ab9abbcbb454ad7cdf19da4504",
+    "d73b23cc44e85122ae0ca5d4f74c71496190fe46b3313d0a536296fa3c2bde44",
+    "a82150bd3d3d4b4b90b1dd9c1250bde41be63819a99481d6235f49ddf5b891c8",
+    "c4d9a89ee52db63a62376a1421e2802edb9902b49721ab535ca3861774f66b5d",
+    "c1c14d10953eec19958c588c4fb6f6961d88b349ef075a927edbf85e7b967bcd",
+    "8d64a2e40a1200816ed2718659faf9db02e24abd86dc2df3a916211715679185",
+    "8d64a2e40a1200816ed2718659faf9db02e24abd86dc2df3a916211715679185"
+  ],
+  "repair_action": "REBIND_EVIDENCE",
+  "repair_strategy": "alternative_evidence",
+  "allowed_paths": [
+    "expert_comment[claim_index=0]"
+  ],
+  "verified_dependent_paths": [
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.configuration_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.execution_identity",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.execution_policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.execution_identity_manifest.routing_policy.policy_source",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[1]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.included_partials[2]",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.namespace",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.prompt_content_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.system_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.path",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.prompt_dependency_manifest.user_root.sha256",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.relevant_input_hash",
+    "_cache.producing_prompt_identities.report_vs/artifacts/expert_comment.routing_policy_version",
+    "_cache.prompts.report_vs/artifacts/regenerate/expert_comment",
+    "_cache.regeneration_prompt_requirements",
+    "_repair_evidence_selection",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:47519f16450d68e5]",
+    "soft_copy_claim_provenance.claims[item=soft_copy:expert_comment:b199b9b82dfce6f2]"
+  ],
+  "selected_evidence_ids": [
+    "grocery-most-used-delivery",
+    "new-paid-membership-signups"
+  ],
+  "quarantined_evidence_ids": [
+    "beauty-amazon-shopping-start",
+    "new-beauty-retailer-purchases"
+  ],
+  "repair_delta": {
+    "resolved": [
+      {
+        "rule_id": "grounding",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "grounding",
+        "affected_section": "key_figures:3.why_it_matters",
+        "entity_id": "key_figure:3:why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "numbers",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:b199b9b82dfce6f2",
+        "evidence_ids": [
+          "beauty-amazon-shopping-start",
+          "new-beauty-retailer-purchases"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "persisting": [
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[3].business_implication",
+        "entity_id": "chart_insight_cards[3].business_implication",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "semantic",
+        "affected_section": "semantic",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "key_figures[3].why_it_matters",
+        "entity_id": "key_figures[3].why_it_matters",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "insights_final[5].text",
+        "entity_id": "insights_final[5].text",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:new-grocery-retailer-purchases",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "artifact_quality",
+        "affected_section": "chart_insight_cards[3].takeaway",
+        "entity_id": "chart_insight_cards[3].takeaway",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "insights:online-penetration-clothing",
+        "entity_id": "insight:online-penetration-clothing:text",
+        "evidence_ids": [
+          "online-penetration-clothing"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "insights:new-grocery-retailer-purchases",
+        "entity_id": "insight:new-grocery-retailer-purchases:text",
+        "evidence_ids": [
+          "new-grocery-retailer-purchases"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "metrics",
+        "affected_section": "insights:new-paid-membership-signups",
+        "entity_id": "",
+        "evidence_ids": [],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced": [
+      {
+        "rule_id": "numbers",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:47519f16450d68e5",
+        "evidence_ids": [
+          "grocery-most-used-delivery",
+          "new-paid-membership-signups"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [
+          "new-grocery-retailer-purchases"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failures": [
+      {
+        "rule_id": "numbers",
+        "affected_section": "expert_comment",
+        "entity_id": "soft_copy:expert_comment:47519f16450d68e5",
+        "evidence_ids": [
+          "grocery-most-used-delivery",
+          "new-paid-membership-signups"
+        ],
+        "schema_version": "1.0"
+      },
+      {
+        "rule_id": "public_editorial_quality.metric_label_relationship",
+        "affected_section": "expert_comment",
+        "entity_id": "expert_comment:expert_comment",
+        "evidence_ids": [
+          "new-grocery-retailer-purchases"
+        ],
+        "schema_version": "1.0"
+      }
+    ],
+    "introduced_hard_failure_count": 2,
+    "introduced_failure_categories": [
+      "unsupported_claim_evidence_introduction"
+    ],
+    "semantic_grounding_validation_status": "evaluated",
+    "severity_changes": [],
+    "mutation_scope_result": "pass",
+    "evidence_lineage_result": "pass",
+    "repair_action": "REBIND_EVIDENCE",
+    "repair_strategy": "alternative_evidence",
+    "evidence_ids_used": [
+      "grocery-most-used-delivery",
+      "new-paid-membership-signups"
+    ],
+    "strategy_fingerprint": "52dca7ca8510ad53df9c454b830b53db0e5d80e5c3257c503f7e24946c838906",
+    "candidate_sha256": "565e0bd194f96d980ca042a237d21dca431f065ba8fa9eab2dd4a5a1b5e31e7f",
+    "input_sha256": "26460708d4adf40e295dc259015942d87b44505e7373f72db8811c977a7998ec",
+    "validator_identity": "regeneration-candidate-v1:4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa:4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+    "schema_version": "1.0"
+  },
+  "repair_decisions": [
+    {
+      "diagnosed_failure_class": "grounding",
+      "repair_action": "REBIND_EVIDENCE",
+      "repair_strategy": "alternative_evidence",
+      "evidence_ids_used": [
+        "grocery-most-used-delivery",
+        "new-paid-membership-signups"
+      ],
+      "protected_fields": [
+        "expert_comment[claim_index=1]"
+      ],
+      "changed_paths": [
+        "expert_comment[claim_index=0]"
+      ],
+      "minimal_patch": [
+        {
+          "op": "replace",
+          "path": "expert_comment[claim_index=0]",
+          "value": "Delivery was the most frequently used online-purchase fulfillment option for 56% of U.S. online grocery purchasers aged 18+ in 2021; separately, 27% of U.S. households signed up for a new paid shopping program membership during the COVID-19 outbreak."
+        }
+      ],
+      "schema_version": "regeneration_repair_decision_v5"
+    }
+  ],
+  "report_id": "19geLHf3lcIxsv0OUlmzYqDg8ZG6JQY50",
+  "validation_run_id": "",
+  "cohort_id": "",
+  "workflow_run_id": "d36c4253-46d0-498c-9069-553d61010936",
+  "configuration_hash": "4161623842aeafe29642a5ca8bbf4fb661db367caddbc6ea7a1edac441c0a6fa",
+  "policy_hash": "4ca0ca05e8c15375f623399faf1b92499fc1f853610332eb8f9ad0b3740438a7",
+  "producer_build_identity": "workspace",
+  "strategy_fingerprint": "52dca7ca8510ad53df9c454b830b53db0e5d80e5c3257c503f7e24946c838906",
+  "latency_ms": 78270,
+  "schema_version": "1.0"
+}

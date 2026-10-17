@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/evidence_packs/limitations",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "schema_version": "1.0",
+    "not_found_reason": "",
+    "limitations": [
+      "Figures may not sum due to rounding.",
+      "“Beauty/grooming” excludes personal-care products.",
+      "“Paid shopping program memberships” exclude free loyalty program memberships."
+    ],
+    "family_status": {
+      "schema_version": "1.0",
+      "family": "limitations",
+      "source": "evidence_pack",
+      "status": "generated",
+      "confidence_score": 0.9,
+      "policy_action": "keep",
+      "reason": ""
+    }
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "not_found_reason": "",
+  "findings": [
+    {
+      "id": "global-revenue-growth",
+      "text": "Activate forecasts global internet and media revenues to rise from $2.1T in 2021E to $2.5T in 2025E, adding $390B in growth dollars at a 4.3% CAGR.",
+      "evidence": "INTERNET AND MEDIA REVENUES1, GLOBAL, 2021E VS. 2025E, USD\nACTIVATE FORECAST\n$2.1T\n$390B GROWTH DOLLARS\n$2.5T\n2021E-2025E CAGR: 4.3%\n2021E 2025E",
+      "confidence": "high",
+      "pages": [
+        6
+      ],
+      "section_id": "global-growth-dollars",
+      "section_title": "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+    },
+    {
+      "id": "advertising-growth-rate",
+      "text": "For 2021E–2025E, Activate forecasts global advertising revenue to grow at a 6.9% CAGR, faster than paid content at 2.2% and internet access at 3.8%.",
+      "evidence": "INTERNET AND MEDIA REVENUE GROWTH BY SEGMENT1, GLOBAL, 2021E VS. 2025E, USD\nACTIVATE FORECAST\n2021E-2025E CAGR:\nPaid content2 2.2%\nCost of internet access3 3.8%\nAdvertising revenue 6.9%\n2021E 2025E",
+      "confidence": "high",
+      "pages": [
+        7
+      ],
+      "section_id": "global-growth-dollars",
+      "section_title": "$390 Billion Global Technology and Media Growth Dollars Up for Grabs"
+    },
+    {
+      "id": "super-user-early-adoption",
+      "text": "In the U.S. in 2021, 53% of Super Users said they tended to buy or use new services and devices before anyone else, compared with 7% of all other users.",
+      "evidence": "TENDENCY TO BUY/USE NEW SERVICES/DEVICES/TECHNOLOGIES BEFORE ANYONE ELSE, U.S., 2021, % ADULTS AGED 18+\nBuying/using new services and devices before anyone else\n53%\nSuper Users\n7%\nAll Other Users",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "super-users",
+      "section_title": "Super Users Will Drive the Digital Economy"
+    },
+    {
+      "id": "super-user-technology-news",
+      "text": "In the U.S. in 2021, 68% of Super Users said they always or often kept informed about the latest technology and media products and services, compared with 24% of all other users.",
+      "evidence": "TENDENCY TO ALWAYS OR OFTEN KEEP INFORMED ON NEWS ABOUT THE LATEST TECHNOLOGY AND MEDIA PRODUCTS/SERVICES, U.S., 2021, % ADULTS AGED 18+\nKeeping informed on news about the latest products and services\n68%\nSuper Users\n24%\nAll Other Users",
+      "confidence": "high",
+      "pages": [
+        21
+      ],
+      "section_id": "super-users",
+      "section_title": "Super Users Will Drive the Digital Economy"
+    },
+    {
+      "id": "crypto-usage-trading-versus-transacting",
+      "text": "Among U.S. adults aged 18+ in 2021, 17% had bought or sold cryptocurrency, while 4% had paid for a product or service with it.",
+      "evidence": "HOW CONSUMERS USE CRYPTOCURRENCY TODAY\nParticipation in Cryptocurrency, U.S., 2021, % Adults Aged 18+\nBought or sold 17%\nTransacted1 4%\n1. Paid for a product/service with cryptocurrency.",
+      "confidence": "high",
+      "pages": [
+        41
+      ],
+      "section_id": "cryptocurrency",
+      "section_title": "Cryptocurrency: Massive Runway Ahead"
+    },
+    {
+      "id": "nft-crypto-participation-link",
+      "text": "In the U.S. in 2021, adults extremely or very active in cryptocurrency were 5.3 times as likely to be active NFT participants as adults overall.",
+      "evidence": "CONSUMER PARTICIPATION IN NFTS BY INDUSTRY INVOLVEMENT1, U.S., 2021, INDUSTRY INDEXED TO NFT ACTIVE USERS2 BY INVOLVEMENT\nExtremely or very active cryptocurrency participants are more than 5x as likely to be active participants in NFTs\n5.3x\nAdults Aged 18+ Average: 1.0x (7%)",
+      "confidence": "high",
+      "pages": [
+        58
+      ],
+      "section_id": "nfts",
+      "section_title": "NFTs Will Become a Mainstream Behavior"
+    },
+    {
+      "id": "gamers-non-gaming-activities",
+      "text": "In the U.S. in 2021, 60% of gamers—adults aged 18+ who currently played video games—had participated in non-gaming activities or events within games in the last 12 months.",
+      "evidence": "PARTICIPATION IN NON-GAMING ACTIVITIES OR EVENTS WITHIN VIDEO GAMES IN THE LAST 12 MONTHS1, U.S., 2021, % GAMERS2\n60% of gamers have participated in non-gaming activities within games in the last 12 months\n2. “Gamers” are defined as adults aged 18+ who currently play video games.",
+      "confidence": "high",
+      "pages": [
+        71
+      ],
+      "section_id": "video-gaming",
+      "section_title": "Video Gaming: The New Technology Paradigm Leading to the Metaverse"
+    },
+    {
+      "id": "online-car-purchase-forecast",
+      "text": "Activate forecasts that online car purchases fulfilled via delivery will account for 10%–15% of total U.S. car purchases in 2025E, up from 2% in 2021E.",
+      "evidence": "CAR PURCHASES COMPLETED ONLINE AND FULFILLED VIA DELIVERY, U.S., 2021E VS. 2025E, % TOTAL CAR PURCHASES1, 2\nACTIVATE FORECAST\n10%-15%\n2%\n2021E\n2025E",
+      "confidence": "high",
+      "pages": [
+        103
+      ],
+      "section_id": "ecommerce",
+      "section_title": "eCommerce: New Technologies Break Down the Barriers for Faster Growth"
+    },
+    {
+      "id": "us-pay-tv-household-forecast",
+      "text": "Activate forecasts U.S. pay-TV households to decline from 75M in 2021E to 60M in 2025E.",
+      "evidence": "TELEVISION HOUSEHOLD BREAKDOWN1, U.S., 2021E VS. 2025E, MILLIONS HOUSEHOLDS\nACTIVATE FORECAST\nPAY TV HOUSEHOLDS\n75M\n60M\n2021E\n2025E",
+      "confidence": "high",
+      "pages": [
+        137
+      ],
+      "section_id": "video",
+      "section_title": "Video: Social and Streaming Growth Reshape the Strategies of Technology and Media Companies"
+    },
+    {
+      "id": "us-broadband-only-household-forecast",
+      "text": "Activate forecasts U.S. broadband-only households to increase from 33M in 2021E to 47M in 2025E.",
+      "evidence": "TELEVISION HOUSEHOLD BREAKDOWN1, U.S., 2021E VS. 2025E, MILLIONS HOUSEHOLDS\nACTIVATE FORECAST\nBROADBAND ONLY\n33M\n47M\n2021E\n2025E",
+      "confidence": "high",
+      "pages": [
+        137
+      ],
+      "section_id": "video",
+      "section_title": "Video: Social and Streaming Growth Reshape the Strategies of Technology and Media Companies"
+    },
+    {
+      "id": "us-sports-fan-return",
+      "text": "The share of U.S. adults aged 18+ identified as sports fans was 63% in 2020 and 70% in 2021.",
+      "evidence": "SPORTS FANS VS. NON-SPORTS FANS, U.S., 2019-2021, % ADULTS AGED 18+\nSports Fans1\n63%\n70%\n2020\n2021\n1. “Sports fans” are defined as adults aged 18+ who followed at least one sport in the last 12 months (e.g. attending live games in person, watching live games or game highlights, reading articles or statistics).",
+      "confidence": "high",
+      "pages": [
+        141
+      ],
+      "section_id": "sports-and-sports-tech",
+      "section_title": "Sports and Sports Tech: Fans Rebound as Sports Goes Digital"
+    },
+    {
+      "id": "global-esports-audience-forecast",
+      "text": "Activate forecasts the global esports audience to grow from 557M viewers in 2021E to 725M in 2025E.",
+      "evidence": "ESPORTS VIEWERSHIP, GLOBAL, 2021E-2025E, MILLIONS ESPORTS VIEWERS\nACTIVATE FORECAST\n725M\n557M\n2021E 2022E 2023E 2024E 2025E",
+      "confidence": "high",
+      "pages": [
+        162
+      ],
+      "section_id": "esports",
+      "section_title": "Esports: The Global Sport of the Future"
+    },
+    {
+      "id": "sports-betting-live-states-and-wagers",
+      "text": "As of September 2021, 28 states (including Washington, D.C.) had legal and live sports betting; U.S. sports-betting wagers were $23.5B in H1 2021.",
+      "evidence": "In the U.S., 28 states have legal and live sports betting, with the market surpassing $20B in total wagers in the first half of 2021\nTOTAL SPORTS BETTING WAGERS BY MONTH,  U.S., AUG. 2019-JUNE 2021, BILLIONS USD\nH1 2021: \n$23.5B\n28 \nLive \nStates1\n1. “Live states” are defined as states in which sports betting is legal and currently operational as of Sept. 2021. Includes Washington, D.C. as a state.",
+      "confidence": "high",
+      "pages": [
+        153
+      ],
+      "section_id": "sports-betting-igaming",
+      "section_title": "Sports Betting and iGaming: New Growth Engine for Technology and Media"
+    },
+    {
+      "id": "esports-global-audience-forecast-series",
+      "text": "The global esports audience is forecast at 557M viewers in 2021E, 595M in 2022E, 636M in 2023E, 679M in 2024E, and 725M in 2025E.",
+      "evidence": "ESPORTS VIEWERSHIP, GLOBAL, 2021E-2025E, MILLIONS\n2021E 2022E 2023E 2024E 2025E\n725M\n679M\n636M\n595M\n557M\nACTIVATE \nFORECAST",
+      "confidence": "high",
+      "pages": [
+        162
+      ],
+      "section_id": "esports",
+      "section_title": "Esports: The Global Sport of the Future"
+    },
+    {
+      "id": "us-esports-viewership-and-demographics",
+      "text": "U.S. esports viewership was 39M in 2019 and 62M in 2021; the report describes the core demographic of U.S. esports viewers as young, affluent, educated, and male.",
+      "evidence": "In the U.S., esports viewership has grown to over 60M; the core \ndemographic of U.S. esports viewers is young, affluent, educated, \nand male\nESPORTS VIEWERSHIP,  \nU.S., 2019-2021, MILLIONS\n2019 2021\n62M\n39M\n1. “Esports viewers” (2021) are defined as adults aged 18+ who have watched an esports competition in the last 12 months. “Esports \nviewers” (2019-2020) are defined as adults aged 18+ who have watched an esports competition at any point in time.",
+      "confidence": "high",
+      "pages": [
+        163
+      ],
+      "section_id": "esports",
+      "section_title": "Esports: The Global Sport of the Future"
+    },
+    {
+      "id": "global-esports-audience-forecast-targeted-1",
+      "text": "Activate forecasts the global esports audience growing from 557M viewers in 2021E to 725M in 2025E.",
+      "evidence": "“ESPORTS VIEWERSHIP, GLOBAL, 2021E-2025E, MILLIONS” … “2021E 2022E 2023E 2024E 2025E” … “725M 679M 636M 595M 557M” … “ACTIVATE FORECAST”",
+      "confidence": "medium",
+      "pages": [
+        162
+      ],
+      "section_id": "esports",
+      "section_title": "Esports: The Global Sport of the Future"
+    },
+    {
+      "id": "us-esports-viewership-growth",
+      "text": "U.S. esports viewership rose from 39M in 2019 to 62M in 2021.",
+      "evidence": "“ESPORTS VIEWERSHIP, U.S., 2019-2021, MILLIONS” … “2019 2021” … “62M 39M”",
+      "confidence": "high",
+      "pages": [
+        163
+      ],
+      "section_id": "esports",
+      "section_title": "Esports: The Global Sport of the Future"
+    }
+  ],
+  "family_status": {
+    "schema_version": "1.0",
+    "family": "findings",
+    "source": "evidence_pack",
+    "status": "generated",
+    "confidence_score": 0.9,
+    "policy_action": "keep",
+    "reason": ""
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "family_id": "report_vs/artifacts/editorial_plan",
+  "family_schema_version": "1.0",
+  "processing_version": "report_generation_checkpoint_v2",
+  "output": {
+    "report_thesis": "The outlook frames technology and media strategy around competing for consumer attention, navigating platform control of discovery and messaging, and responding to shifts across media markets and household structures.",
+    "themes": [
+      {
+        "theme": "Consumer multitasking and projected internet-and-media revenue growth by segment.",
+        "priority": 1,
+        "evidence_ids": [
+          "us-consumer-media-multitasking",
+          "internet-media-segment-cagr",
+          "consumer-time-attention",
+          "internet-media-spend"
+        ]
+      },
+      {
+        "theme": "Annual ARPU leaders differ between the U.S. and global comparisons.",
+        "priority": 2,
+        "evidence_ids": [
+          "arpu"
+        ]
+      },
+      {
+        "theme": "Platform capabilities and commercial discovery arrangements shape publishers’ visibility and traffic; messaging and bots raise questions of platform control and monetization.",
+        "priority": 3,
+        "evidence_ids": [
+          "discovery-oligopoly",
+          "messaging-bots",
+          "quote-005"
+        ]
+      },
+      {
+        "theme": "eSports forecasts sit alongside conditions the report identifies for the category to reach its potential.",
+        "priority": 4,
+        "evidence_ids": [
+          "esports-us-forecast",
+          "esports-in-game-betting-forecast",
+          "esports-conditions-for-potential"
+        ]
+      },
+      {
+        "theme": "Pay TV pricing and consumer reasons for not subscribing inform the report’s analysis of video competition.",
+        "priority": 5,
+        "evidence_ids": [
+          "pay-tv-price-limit",
+          "pay-tv-reason-not-subscribing",
+          "video"
+        ]
+      },
+      {
+        "theme": "The audio section examines music piracy and subsequent legal service models, alongside changes in home audio.",
+        "priority": 6,
+        "evidence_ids": [
+          "audio"
+        ]
+      },
+      {
+        "theme": "Post-household sharing behaviors and barriers among underserved Americans inform the report’s recommended approaches to reaching users.",
+        "priority": 7,
+        "evidence_ids": [
+          "post-household-sharing-behaviors",
+          "underserved-americans-estimate",
+          "underserved-strategies",
+          "post-household-america"
+        ]
+      }
+    ]
+  }
+}
