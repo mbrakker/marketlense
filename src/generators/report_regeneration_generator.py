@@ -1532,6 +1532,11 @@ def _copy_allowed_mutation_path(
 ) -> Any:
     """Copy one declared value from assembly onto its last-promoted family."""
 
+    identity_fields = (
+        ("id", "insight_id")
+        if root in {"insights_candidates", "insights_final"}
+        else None
+    )
     path = full_path[len(root) :].lstrip(".")
     if not path:
         return deepcopy(target_family)
@@ -1542,8 +1547,12 @@ def _copy_allowed_mutation_path(
         and isinstance(target_family, list)
     ):
         selector = item_root_match.group(1)
-        original_index = _mutation_list_index(original_family, selector)
-        target_index = _mutation_list_index(target_family, selector)
+        original_index = _mutation_list_index(
+            original_family, selector, identity_fields=identity_fields
+        )
+        target_index = _mutation_list_index(
+            target_family, selector, identity_fields=identity_fields
+        )
         if original_index is None and target_index is not None:
             original_family.append(deepcopy(target_family[target_index]))
             return original_family
@@ -1552,11 +1561,19 @@ def _copy_allowed_mutation_path(
         ):
             original_family.pop(original_index)
             return original_family
+        if identity_fields is not None:
+            if original_index is not None and target_index is not None:
+                original_family[original_index] = deepcopy(target_family[target_index])
+            return original_family
     claim_index_match = re.search(r"\[claim_index=(\d+)\]$", path)
     if claim_index_match:
         field_path = path[: claim_index_match.start()]
-        original_text = _read_mutation_path(original_family, field_path)
-        target_text = _read_mutation_path(target_family, field_path)
+        original_text = _read_mutation_path(
+            original_family, field_path, identity_fields=identity_fields
+        )
+        target_text = _read_mutation_path(
+            target_family, field_path, identity_fields=identity_fields
+        )
         index = int(claim_index_match.group(1))
         if not isinstance(original_text, str) or not isinstance(target_text, str):
             return original_family
@@ -1614,11 +1631,17 @@ def _copy_allowed_mutation_path(
                 break
         if not field_path:
             return repaired_text
-        return _write_mutation_path(original_family, field_path, repaired_text)
+        return _write_mutation_path(
+            original_family,
+            field_path,
+            repaired_text,
+            identity_fields=identity_fields,
+        )
     return _write_mutation_path(
         original_family,
         path,
-        _read_mutation_path(target_family, path),
+        _read_mutation_path(target_family, path, identity_fields=identity_fields),
+        identity_fields=identity_fields,
     )
 
 
@@ -1632,7 +1655,13 @@ def _mutation_path_tokens(path: str) -> List[tuple[str, str | None]]:
     return tokens
 
 
-def _resolve_mutation_child(value: Any, key: str, selector: str | None) -> Any:
+def _resolve_mutation_child(
+    value: Any,
+    key: str,
+    selector: str | None,
+    *,
+    identity_fields: Sequence[str] | None = None,
+) -> Any:
     child = value.get(key) if isinstance(value, dict) else None
     if selector is None:
         return child
@@ -1641,59 +1670,69 @@ def _resolve_mutation_child(value: Any, key: str, selector: str | None) -> Any:
     if selector.isdigit():
         index = int(selector)
         return child[index] if 0 <= index < len(child) else None
-    matches = [
-        item
-        for item in child
-        if isinstance(item, dict)
-        and selector
-        in {
-            _s(item.get(field)).strip()
-            for field in (
-                "id",
-                "insight_id",
-                "key_figure_id",
-                "claim_id",
-                "evidence_id",
-            )
-        }
-    ]
-    return matches[0] if len(matches) == 1 else None
+    index = _mutation_list_index(child, selector, identity_fields=identity_fields)
+    return child[index] if index is not None else None
 
 
-def _read_mutation_path(value: Any, path: str) -> Any:
+def _read_mutation_path(
+    value: Any, path: str, *, identity_fields: Sequence[str] | None = None
+) -> Any:
     list_match = re.match(r"^\[(?:item=)?([^\]]+)\](?:\.(.*))?$", path)
     if list_match and isinstance(value, list):
-        index = _mutation_list_index(value, list_match.group(1))
+        index = _mutation_list_index(
+            value, list_match.group(1), identity_fields=identity_fields
+        )
         if index is None:
             return None
         child = value[index]
         remainder = list_match.group(2)
-        return child if remainder is None else _read_mutation_path(child, remainder)
+        return (
+            child
+            if remainder is None
+            else _read_mutation_path(child, remainder, identity_fields=identity_fields)
+        )
     tokens = _mutation_path_tokens(path)
     current = value
     for key, selector in tokens:
-        current = _resolve_mutation_child(current, key, selector)
+        current = _resolve_mutation_child(
+            current, key, selector, identity_fields=identity_fields
+        )
     return current
 
 
-def _write_mutation_path(value: Any, path: str, replacement: Any) -> Any:
+def _write_mutation_path(
+    value: Any,
+    path: str,
+    replacement: Any,
+    *,
+    identity_fields: Sequence[str] | None = None,
+) -> Any:
     list_match = re.match(r"^\[(?:item=)?([^\]]+)\](?:\.(.*))?$", path)
     if list_match and isinstance(value, list):
-        index = _mutation_list_index(value, list_match.group(1))
+        index = _mutation_list_index(
+            value, list_match.group(1), identity_fields=identity_fields
+        )
         if index is None:
             return value
         remainder = list_match.group(2)
         if remainder is None:
             value[index] = deepcopy(replacement)
         else:
-            value[index] = _write_mutation_path(value[index], remainder, replacement)
+            value[index] = _write_mutation_path(
+                value[index],
+                remainder,
+                replacement,
+                identity_fields=identity_fields,
+            )
         return value
     tokens = _mutation_path_tokens(path)
     if not tokens:
         return value
     current = value
     for key, selector in tokens[:-1]:
-        current = _resolve_mutation_child(current, key, selector)
+        current = _resolve_mutation_child(
+            current, key, selector, identity_fields=identity_fields
+        )
         if current is None:
             return value
     key, selector = tokens[-1]
@@ -1709,46 +1748,33 @@ def _write_mutation_path(value: Any, path: str, replacement: Any) -> Any:
         if 0 <= index < len(items):
             items[index] = deepcopy(replacement)
         return value
-    matches = [
-        index
-        for index, item in enumerate(items)
-        if isinstance(item, dict)
-        and selector
-        in {
-            _s(item.get(field)).strip()
-            for field in (
-                "id",
-                "insight_id",
-                "key_figure_id",
-                "claim_id",
-                "evidence_id",
-            )
-        }
-    ]
-    if len(matches) == 1:
-        items[matches[0]] = deepcopy(replacement)
+    index = _mutation_list_index(items, selector, identity_fields=identity_fields)
+    if index is not None:
+        items[index] = deepcopy(replacement)
     return value
 
 
-def _mutation_list_index(values: List[Any], selector: str) -> int | None:
+def _mutation_list_index(
+    values: List[Any],
+    selector: str,
+    *,
+    identity_fields: Sequence[str] | None = None,
+) -> int | None:
     if selector.isdigit():
         index = int(selector)
         return index if 0 <= index < len(values) else None
+    selector_fields = identity_fields or (
+        "id",
+        "insight_id",
+        "key_figure_id",
+        "claim_id",
+        "evidence_id",
+    )
     matching = [
         index
         for index, item in enumerate(values)
         if isinstance(item, dict)
-        and selector
-        in {
-            _s(item.get(field)).strip()
-            for field in (
-                "id",
-                "insight_id",
-                "key_figure_id",
-                "claim_id",
-                "evidence_id",
-            )
-        }
+        and selector in {_s(item.get(field)).strip() for field in selector_fields}
     ]
     return matching[0] if len(matching) == 1 else None
 
@@ -4850,9 +4876,17 @@ def _regenerate_one_final_insight(
             context={"report_id": execution.runtime.request.report_id},
         )
     repaired = deepcopy(original)
+    rejected_required_text_patch = False
     for field_path in mutable_paths:
         regenerated_value = _insight_path_value(matching[0], field_path)
         if regenerated_value is not _MISSING_REPAIR_VALUE:
+            if (
+                field_path == "text"
+                and _has_required_insight_text(original.get("text"))
+                and not _has_required_insight_text(regenerated_value)
+            ):
+                rejected_required_text_patch = True
+                continue
             _set_insight_path_value(repaired, field_path, deepcopy(regenerated_value))
     repaired["id"] = insight_id
     if execution.target.repair_action == "REBIND_EVIDENCE":
@@ -4947,6 +4981,23 @@ def _regenerate_one_final_insight(
         != _insight_path_value(original, field_path)
         for field_path in mutable_paths
     ):
+        if rejected_required_text_patch:
+            logger.info(
+                log_event(
+                    execution.target_ctx,
+                    role="generator",
+                    event="artifact_regeneration_insight_repair_rejected",
+                    module=logger.name,
+                    fields={
+                        "report_id": execution.runtime.request.report_id,
+                        "insight_id": insight_id,
+                        "reason": "required_text_empty",
+                        "candidate_unchanged": True,
+                    },
+                )
+            )
+            execution.state.prompt_namespaces.append(namespace)
+            return True
         raise AppError(
             code="regeneration_target_item_unchanged",
             message="Atomic insight regeneration did not change its declared field.",
@@ -4957,6 +5008,11 @@ def _regenerate_one_final_insight(
     execution.state.regenerated_sections.append("insights_final")
     execution.state.prompt_namespaces.append(namespace)
     return True
+
+
+def _has_required_insight_text(value: Any) -> bool:
+    text = _s(value).strip()
+    return bool(text) and text.casefold() != "not available from text"
 
 
 _MISSING_REPAIR_VALUE = object()
