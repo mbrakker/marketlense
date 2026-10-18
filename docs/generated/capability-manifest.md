@@ -144,6 +144,7 @@ Generated from CLI registrations, configuration example, architecture policy, or
 - `src/schemas/grounding_validation_output.schema.json`
 - `src/schemas/limitations_pack.schema.json`
 - `src/schemas/methods_pack.schema.json`
+- `src/schemas/pdf_page_reconciliation.schema.json`
 - `src/schemas/publish_readiness.schema.json`
 - `src/schemas/quote_candidates_pack.schema.json`
 - `src/schemas/regeneration_candidate_audit.schema.json`
