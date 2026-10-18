@@ -1914,9 +1914,7 @@ def _reconcile_candidate_key_figure_projections(
     if candidate.get("key_figures") == before.get("key_figures"):
         return
     roots = {
-        root
-        for root in ("key_figures", "chart_insight_cards")
-        if root in candidate
+        root for root in ("key_figures", "chart_insight_cards") if root in candidate
     }
     if not roots:
         return

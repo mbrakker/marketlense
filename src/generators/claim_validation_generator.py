@@ -2340,8 +2340,10 @@ def _item_direct_evidence_text(raw: dict) -> str:
             primary = value.strip()
             break
     statement = str(raw.get("text") or "").strip()
-    if primary and statement and normalize_for_lookup(primary) != normalize_for_lookup(
-        statement
+    if (
+        primary
+        and statement
+        and normalize_for_lookup(primary) != normalize_for_lookup(statement)
     ):
         return f"{primary}\n{statement}"
     return primary or statement

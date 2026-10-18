@@ -905,9 +905,7 @@ def run_grounding_check(
             )
         )
         failed_check_keys = set()
-        exactly_evidenced_claims = _exactly_evidenced_claims(
-            retained_claim_inputs
-        )
+        exactly_evidenced_claims = _exactly_evidenced_claims(retained_claim_inputs)
         if isinstance(checks, list):
             for entry in checks:
                 if not isinstance(entry, dict):
@@ -1644,8 +1642,7 @@ def _public_factual_items(
             texts.extend(
                 s(span.get("text"))
                 for span in spans
-                if s(span.get("source_pack")) == source_pack
-                and s(span.get("text"))
+                if s(span.get("source_pack")) == source_pack and s(span.get("text"))
             )
         for span in spans:
             page = span.get("page")
@@ -1693,6 +1690,7 @@ def _public_factual_items(
         for insight in insights
         if s(insight.get("evidence_id")) and s(insight.get("text"))
     }
+
     def evidence_text_for_id(evidence_id: str) -> str:
         return retained_evidence_text_for_id(
             evidence_id,

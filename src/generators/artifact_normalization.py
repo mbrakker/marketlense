@@ -1039,9 +1039,7 @@ def normalize_artifact_insights(items: Any, *, prefix: str) -> List[Dict[str, An
             "id": _s(item.get("id") or f"{prefix}_{idx + 1}"),
             "text": _normalize_public_numeric_signs(_s(item.get("text"))),
             "evidence_id": evidence_id,
-            "evidence": _normalize_public_numeric_signs(
-                _s(item.get("evidence"))
-            ),
+            "evidence": _normalize_public_numeric_signs(_s(item.get("evidence"))),
             "evidence_spans": _normalize_evidence_spans(
                 item.get("evidence_spans"), evidence_id=evidence_id
             ),
@@ -2420,9 +2418,7 @@ def _normalize_claims(items: Any) -> List[Dict[str, Any]]:
             {
                 "claim": _normalize_public_numeric_signs(_s(item.get("claim"))),
                 "evidence_id": evidence_id,
-                "evidence": _normalize_public_numeric_signs(
-                    _s(item.get("evidence"))
-                ),
+                "evidence": _normalize_public_numeric_signs(_s(item.get("evidence"))),
                 "evidence_spans": _normalize_evidence_spans(
                     item.get("evidence_spans"), evidence_id=evidence_id
                 ),
