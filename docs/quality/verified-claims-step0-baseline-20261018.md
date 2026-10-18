@@ -9,7 +9,9 @@ Scope: baseline evidence only. No production logic, prompt, configuration, quali
 
 The frozen-cohort source and retained-run checks pass: the five original PDFs match the frozen manifest, and the retained current five-report workflow result has 5/5 admitted, 5/5 validation pass, 5/5 publication-readiness pass, zero operator interventions and zero publication writes. All five stopped at awaiting_review as intended.
 
-Overall Step 0 correction status: PARTIAL. The source truth and fixture coverage pass, but three exact current retained bindings remain explicitly unresolved and the retained findings/doc-map/artifact files are local-only ignored dependencies. The baseline does not close E18 or authorize Steps 1–7. E18 remains Active because the evidence is a source and output baseline, not a repeated current-HEAD generation experiment, a fixed-input validator repeatability baseline, or a human editorial-value study.
+Verified Claims Step 0: Complete — factual reference baseline established and approved for Step 1.
+
+This closes only the Verified Claims Step 0 preparation task. The baseline retains four exact, eight partial and three unresolved historical factual bindings; the retained findings/doc-map/artifact files are local-only ignored dependencies. Step 1 may begin from this approved reference baseline, but Steps 2–7 remain unstarted. E18 remains Active because repeated-run LLM stability, fixed-input validator stability and human editorial-value evaluation remain open.
 
 The correction at starting SHA ea7419ab55643c7197a721839459802fcdf1645c separates independent source-reference IDs from persisted findings/doc-map IDs and editorial IDs. It contains 39 deterministic candidate variants across the 15 cases: 15 supported, 23 unsupported and 1 unresolved. Four cases have an exact current persisted binding, eight have partial bindings, and three remain unresolved by policy; none is silently promoted through an editorial ID.
 
@@ -70,7 +72,7 @@ The detailed case records contain source page, printed-page, evidence ID, source
 
 ### Identity and fixture contract
 
-The JSON reference set is the executable audit record for the correction. `source_reference_ids` refer only to the independent source-reference document. `persisted_findings_ids` and `persisted_doc_map_ids` are checked against the retained `findings.json` and `doc_map.json`; `canonical_evidence_ids` is their union only. `editorial_ids` are checked against `artifacts.json` and are never treated as evidence. Physical pages are one-based, printed pages are retained when verified, and `zero_based_library_index` is derived as physical page minus one.
+The JSON reference set is the executable audit record for the correction. `source_reference_ids` refer only to independent audit IDs in the source-reference document. `persisted_findings_ids` are checked against retained `findings.json` factual evidence, and `canonical_evidence_ids` contains only those verified persisted finding IDs. `persisted_doc_map_ids` are checked against `doc_map.json` and remain contextual provenance, not canonical factual evidence. `editorial_ids` identify downstream outputs in `artifacts.json` and are never treated as evidence. Physical pages are one-based, printed pages are retained when verified, and `zero_based_library_index` is derived as physical page minus one.
 
 Every case has source truth for the metric, population, denominator, geography, period and observation/forecast status, plus valid, mutated or ambiguous candidates with an expected `supported`, `unsupported` or `unresolved` result, correction and promotion decision. The exact candidate counts are 15 supported, 23 unsupported and 1 unresolved across 39 variants; all 15 top-level cases have both positive and non-positive variants.
 
@@ -144,14 +146,20 @@ Passed in Step 0:
 - all 15 retained artifact-catalog hashes and the frozen manifest hash reverified;
 - no raw PDF, credential, prompt or raw model response added to the commit.
 
-Verification executed for this correction:
+Verification executed in the previous correction commit (not rerun in this closure pass):
 
 - `python -m pytest -q tests/test_pdf_text_quality.py tests/test_report_analysis_source_evidence.py tests/test_artifact_evidence_binding.py tests/test_validation_doc_map_evidence.py tests/test_public_editorial_quality_generator.py tests/test_public_report_quality_gate.py` — 112 passed in 10.40s.
+
+Current closure checks:
+
+- `python -m json.tool docs/quality/verified-claims-step0-reference-cases-20261018.json` — passed.
+- Provider-free inline JSON contract assertions via `python -c` — passed: 15 unique cases, 39 unique candidate IDs, fixture counts matched, canonical IDs contained no DocMap-only identifiers, wrong-page locator and Capgemini motive-transfer fixtures present, and supported/unsupported/unresolved outcomes matched.
+- `git diff --exit-code -- docs/quality/verified-claims-step0-reference-cases-20261018.json` — passed; JSON and source qualifiers were unchanged from the starting reference.
+- Provider-free source/artifact identity assertions via `python -c` — passed: all five frozen PDF MD5/SHA-256 values, frozen manifest SHA-256 and 15 catalog hashes matched.
 - `python scripts/ci/check_backlog_source.py` — passed: 33 active register items, 33 detailed active sections, zero duplicate/missing/orphan/title-mismatch issues.
 - `python scripts/ci/check_documentation.py --check-generated` — passed.
 - `python scripts/ci/check_repository_hygiene.py` — passed.
 - `git diff --check` — passed.
-- Read-only JSON identity/fixture, retained-artifact SHA-256, frozen-manifest SHA-256 and PyMuPDF page-marker checks — passed: 15 cases, 38 candidates, all 15 catalog hashes, manifest `744de32e…d22a7`, and all required page markers present. These checks made no provider calls or external writes.
 
 Open:
 
@@ -162,7 +170,7 @@ Open:
 - the 63 candidate-level evidence-fidelity rejections need future classification into genuine unsupported claims versus false rejections, without weakening fail-closed behavior;
 - the exact current persisted binding remains unavailable for CAP-003, CAP-004 and REU-003; their source truth and editorial context are retained, but their canonical evidence arrays are intentionally empty and promotion is held;
 - current findings, doc-map and editorial artifact files are ignored local retained evidence; the committed record contains IDs, hashes and summaries, not the raw artifacts, so portability requires the same retained files or an explicitly compatible artifact pack;
-- Steps 1–7 of the verified-claims implementation remain unstarted.
+- Step 1 is approved but unstarted; Steps 2–7 remain unstarted. This closure does not implement any later step.
 
 ## Canonical backlog evidence
 
