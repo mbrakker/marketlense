@@ -8,9 +8,12 @@ import pytest
 
 from scripts.quality.reconcile_pdf_pages import main as reconcile_cli_main
 from src.contracts.pdf_page_reconciliation import (
+    PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION,
+    PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
     PdfPageLabelMapping,
     PdfPageReconciliationCoverage,
     PdfPageReconciliationEvidence,
+    PdfPageReconciliationGeometry,
     PdfPageReconciliationRequest,
     PdfPageReconciliationResponse,
 )
@@ -57,6 +60,12 @@ def test_response_rejects_missing_physical_page_mapping() -> None:
         evidence=(
             PdfPageReconciliationEvidence(kind="visible_footer", detail="Page 1"),
         ),
+        source_geometry=PdfPageReconciliationGeometry(
+            physical_page=1,
+            label_text="Page 1",
+            location="visible_footer",
+            bounding_box=(0.0, 0.0, 10.0, 10.0),
+        ),
     )
     coverage = PdfPageReconciliationCoverage(
         verified_count=1,
@@ -69,8 +78,8 @@ def test_response_rejects_missing_physical_page_mapping() -> None:
 
     with pytest.raises(ValueError, match="one mapping for every physical page"):
         PdfPageReconciliationResponse(
-            schema_version="1.0",
-            algorithm_version="pdf-page-reconciliation-v1",
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+            algorithm_version=PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION,
             input_pdf_md5="0" * 32,
             physical_page_count=2,
             mappings=(mapping,),
@@ -80,8 +89,8 @@ def test_response_rejects_missing_physical_page_mapping() -> None:
 
 def test_reconciliation_schema_rejects_invalid_status(run_context) -> None:
     payload = {
-        "schema_version": "1.0",
-        "algorithm_version": "pdf-page-reconciliation-v1",
+        "schema_version": PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+        "algorithm_version": PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION,
         "input_pdf_md5": "0" * 32,
         "physical_page_count": 1,
         "mappings": [
@@ -91,6 +100,7 @@ def test_reconciliation_schema_rejects_invalid_status(run_context) -> None:
                 "status": "unsupported",
                 "method": "unresolved",
                 "native_pdf_label": None,
+                "source_geometry": None,
                 "evidence": [
                     {
                         "kind": "no_visible_label",
@@ -137,7 +147,9 @@ def test_reconciles_a_visible_footer_and_infers_one_missing_footer(
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -152,6 +164,13 @@ def test_reconciles_a_visible_footer_and_infers_one_missing_footer(
         "verified",
     ]
     assert response.mappings[0].method == "visible_footer"
+    geometry = response.mappings[0].source_geometry
+    assert geometry is not None
+    assert geometry.physical_page == 1
+    assert geometry.label_text == "Page 10"
+    assert geometry.location == "visible_footer"
+    assert geometry.bounding_box_scope == "text_block"
+    assert geometry.bounding_box[1] >= 750.0
     assert response.mappings[1].evidence[0].anchor_physical_pages == (1, 3)
 
 
@@ -163,7 +182,9 @@ def test_reconciles_printed_page_42_at_physical_page_44(tmp_path, run_context) -
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -192,7 +213,9 @@ def test_handles_roman_front_matter_offsets_and_numbering_restart(
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -206,6 +229,16 @@ def test_handles_roman_front_matter_offsets_and_numbering_restart(
         "2",
         "3",
     ]
+    assert [mapping.status for mapping in response.mappings] == [
+        "verified",
+        "verified",
+        "verified",
+        "verified",
+        "verified",
+        "verified",
+        "inferred",
+        "verified",
+    ]
     assert response.mappings[6].status == "inferred"
     assert response.mappings[6].evidence[0].anchor_physical_pages == (6, 8)
 
@@ -217,7 +250,9 @@ def test_weak_standalone_digit_is_not_verified_without_local_sequence(
     _make_pdf(pdf_path, [{"footer": "7"}])
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -225,15 +260,143 @@ def test_weak_standalone_digit_is_not_verified_without_local_sequence(
     assert response.mappings[0].printed_label is None
 
 
+def test_descending_weak_labels_remain_unresolved(tmp_path, run_context) -> None:
+    pdf_path = tmp_path / "descending-weak.pdf"
+    _make_pdf(
+        pdf_path,
+        [{"footer": "7"}, {"footer": "6"}, {"footer": "5"}],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "unresolved",
+        "unresolved",
+        "unresolved",
+    ]
+
+
+def test_two_consecutive_weak_labels_do_not_validate_each_other(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "two-weak.pdf"
+    _make_pdf(pdf_path, [{"footer": "7"}, {"footer": "8"}])
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "unresolved",
+        "unresolved",
+    ]
+
+
+def test_three_page_ascending_weak_sequence_is_verified(tmp_path, run_context) -> None:
+    pdf_path = tmp_path / "three-weak.pdf"
+    _make_pdf(
+        pdf_path,
+        [{"footer": "7"}, {"footer": "8"}, {"footer": "9"}],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "verified",
+        "verified",
+        "verified",
+    ]
+    assert response.mappings[1].evidence[0].anchor_physical_pages == (1, 3)
+
+
+def test_ambiguous_prefixed_pair_requires_more_than_pairwise_corroboration(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "two-prefixed-weak.pdf"
+    _make_pdf(pdf_path, [{"footer": "A-01"}, {"footer": "A-02"}])
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "unresolved",
+        "unresolved",
+    ]
+
+
+def test_ambiguous_trailing_number_requires_corroboration(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "trailing-number.pdf"
+    _make_pdf(pdf_path, [{"footer": "Section • 7"}])
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert response.mappings[0].status == "unresolved"
+
+
+def test_weak_numbering_restart_does_not_accept_two_short_sequences(
+    tmp_path, run_context
+) -> None:
+    pdf_path = tmp_path / "weak-restart.pdf"
+    _make_pdf(
+        pdf_path,
+        [
+            {"footer": "1"},
+            {"footer": "2"},
+            {"footer": "1"},
+            {"footer": "2"},
+        ],
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
+        run_context,
+    )
+
+    assert [mapping.status for mapping in response.mappings] == [
+        "unresolved",
+        "unresolved",
+        "unresolved",
+        "unresolved",
+    ]
+
+
 def test_inference_preserves_prefixed_zero_padded_labels(tmp_path, run_context) -> None:
     pdf_path = tmp_path / "prefixed-labels.pdf"
     _make_pdf(
         pdf_path,
-        [{"footer": "A-01"}, {}, {"footer": "A-03"}],
+        [{"footer": "Page A-01"}, {}, {"footer": "Page A-03"}],
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -246,7 +409,9 @@ def test_conflicting_margin_labels_remain_unresolved(tmp_path, run_context) -> N
     _make_pdf(pdf_path, [{"header": "Page 7", "footer": "Page 8"}])
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -259,7 +424,9 @@ def test_duplicate_printed_labels_are_allowed(tmp_path, run_context) -> None:
     _make_pdf(pdf_path, [{"footer": "Page 1"}, {"footer": "Page 1"}])
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -284,7 +451,9 @@ def test_contents_entries_and_chart_numerals_are_not_margin_proof(
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -300,13 +469,35 @@ def test_long_lower_page_chart_block_does_not_conflict_with_real_footer(
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=pdf_path),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=pdf_path
+        ),
         run_context,
     )
 
     mapping = response.mappings[9]
     assert mapping.physical_page == 10
     assert mapping.printed_label == "10"
+    assert mapping.status == "verified"
+
+
+def test_chart_card_number_does_not_hide_sequence_supported_footer(
+    run_context,
+) -> None:
+    pdf_path = (
+        "tests/fixtures/pdf_benchmark/golden/CAPGEMINI - 2026-Retail-Trends_ACIG.pdf"
+    )
+
+    response = reconcile_pdf_pages(
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=pdf_path
+        ),
+        run_context,
+    )
+
+    mapping = response.mappings[11]
+    assert mapping.physical_page == 12
+    assert mapping.printed_label == "12"
     assert mapping.status == "verified"
 
 
@@ -325,7 +516,9 @@ def test_native_labels_are_supplementary_to_visible_evidence(
     )
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -349,7 +542,9 @@ def test_blank_and_image_only_pages_are_unresolved_without_ocr(
     _make_pdf(pdf_path, [{}, {"image_only": True}])
 
     response = reconcile_pdf_pages(
-        PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+        PdfPageReconciliationRequest(
+            schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+        ),
         run_context,
     )
 
@@ -367,7 +562,10 @@ def test_invalid_pdf_raises_typed_error_and_handles_close(
 
     with pytest.raises(AppError) as captured:
         reconcile_pdf_pages(
-            PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path)),
+            PdfPageReconciliationRequest(
+                schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
+                path=str(pdf_path),
+            ),
             run_context,
         )
 
@@ -379,7 +577,9 @@ def test_reconciliation_is_deterministic_and_releases_pdf_handle(
 ) -> None:
     pdf_path = tmp_path / "repeatable.pdf"
     _make_pdf(pdf_path, [{"footer": "Page 1"}, {"footer": "Page 2"}])
-    request = PdfPageReconciliationRequest(schema_version="1.0", path=str(pdf_path))
+    request = PdfPageReconciliationRequest(
+        schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION, path=str(pdf_path)
+    )
 
     first = reconcile_pdf_pages(request, run_context)
     second = reconcile_pdf_pages(request, run_context)
@@ -400,16 +600,25 @@ def test_runner_persists_and_reuses_an_md5_bound_cache(tmp_path, capsys) -> None
     md5 = hashlib.md5(pdf_path.read_bytes()).hexdigest()
     cache_path = output_dir / f"page_reconciliation-{md5}.json"
     first_bytes = cache_path.read_bytes()
-    first_mtime_ns = cache_path.stat().st_mtime_ns
     assert "cache=miss" in first_summary
     assert sorted(item.name for item in output_dir.iterdir()) == [cache_path.name]
+
+    stale_contract = json.loads(first_bytes.decode("utf-8"))
+    stale_contract["schema_version"] = "1.0"
+    stale_contract["algorithm_version"] = "pdf-page-reconciliation-v1"
+    cache_path.write_text(json.dumps(stale_contract), encoding="utf-8")
+    assert reconcile_cli_main(args) == 0
+    assert "cache=miss" in capsys.readouterr().out
+    refreshed_bytes = cache_path.read_bytes()
+    refreshed_mtime_ns = cache_path.stat().st_mtime_ns
+    assert refreshed_bytes == first_bytes
 
     assert reconcile_cli_main(args) == 0
     second_summary = capsys.readouterr().out
 
     assert "cache=hit" in second_summary
-    assert cache_path.read_bytes() == first_bytes
-    assert cache_path.stat().st_mtime_ns == first_mtime_ns
+    assert cache_path.read_bytes() == refreshed_bytes
+    assert cache_path.stat().st_mtime_ns == refreshed_mtime_ns
 
 
 def test_runner_rejects_invalid_stale_and_checksum_mismatched_cache(

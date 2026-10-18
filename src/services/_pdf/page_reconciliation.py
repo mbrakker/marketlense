@@ -10,10 +10,12 @@ from src.contracts.pdf_page_reconciliation import (
     PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION,
     PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
     EvidenceKind,
+    GeometryLocation,
     MappingMethod,
     PdfPageLabelMapping,
     PdfPageReconciliationCoverage,
     PdfPageReconciliationEvidence,
+    PdfPageReconciliationGeometry,
     PdfPageReconciliationRequest,
     PdfPageReconciliationResponse,
 )
@@ -61,6 +63,7 @@ class _Candidate:
     band: str
     detail: str
     strong: bool
+    bounding_box: tuple[float, float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -200,7 +203,16 @@ def _observe_page(document: Any, physical_page: int) -> _PageObservation:
         for line in block_lines:
             if not line or len(line) > _MAX_MARGIN_LINE_LENGTH:
                 continue
-            candidate = _parse_candidate(line, band)
+            candidate = _parse_candidate(
+                line,
+                band,
+                bounding_box=(
+                    float(rect.x0),
+                    float(rect.y0),
+                    float(rect.x1),
+                    float(rect.y1),
+                ),
+            )
             if candidate is not None and not (
                 not candidate.strong and len(block_lines) > 2
             ):
@@ -236,18 +248,23 @@ def _margin_band(y0: float, y1: float, height: float) -> str | None:
     return None
 
 
-def _parse_candidate(line: str, band: str) -> _Candidate | None:
+def _parse_candidate(
+    line: str,
+    band: str,
+    *,
+    bounding_box: tuple[float, float, float, float] | None = None,
+) -> _Candidate | None:
     explicit = _EXPLICIT_PAGE_RE.fullmatch(line)
     if explicit:
         token = _parse_label_token(explicit.group("label"))
         if token is not None:
-            return _Candidate(token, band, line[:240], True)
+            return _Candidate(token, band, line[:240], True, bounding_box)
 
     copyright_match = _COPYRIGHT_RE.fullmatch(line)
     if copyright_match:
         token = _parse_label_token(copyright_match.group("label"))
         if token is not None:
-            return _Candidate(token, band, line[:240], True)
+            return _Candidate(token, band, line[:240], True, bounding_box)
 
     if _PAGE_TOKEN_RE.fullmatch(line):
         token = _parse_label_token(line)
@@ -257,14 +274,15 @@ def _parse_candidate(line: str, band: str) -> _Candidate | None:
             token,
             band,
             line[:240],
-            token.style.startswith("prefix:"),
+            token.style == "roman",
+            bounding_box,
         )
 
     trailing = _TRAILING_LABEL_RE.search(line)
     if trailing:
         token = _parse_label_token(trailing.group("label"))
         if token is not None:
-            return _Candidate(token, band, line[:240], True)
+            return _Candidate(token, band, line[:240], False, bounding_box)
     return None
 
 
@@ -305,44 +323,117 @@ def _confirm_direct_labels(
     observations: tuple[_PageObservation, ...],
 ) -> dict[int, _Confirmed]:
     confirmed: dict[int, _Confirmed] = {}
-    candidates_by_page: dict[int, _Candidate] = {}
-    weak_candidates: dict[int, _Candidate] = {}
+    candidates_by_page: dict[int, tuple[_Candidate, ...]] = {}
+    weak_candidates: dict[int, tuple[_Candidate, ...]] = {}
     for observation in observations:
         labels = {candidate.token.label for candidate in observation.candidates}
-        if len(labels) != 1:
+        if not observation.candidates:
             continue
-        candidates = list(observation.candidates)
-        candidates.sort(key=lambda item: (not item.strong, item.band))
-        candidate = candidates[0]
-        candidates_by_page[observation.physical_page] = candidate
-        if candidate.strong:
-            confirmed[observation.physical_page] = _Confirmed(candidate, "verified")
-        else:
-            weak_candidates[observation.physical_page] = candidate
+        ordered_candidates = list(observation.candidates)
+        ordered_candidates.sort(key=lambda item: (not item.strong, item.band))
+        if len(labels) == 1:
+            candidate = ordered_candidates[0]
+            candidates_by_page[observation.physical_page] = (candidate,)
+            if candidate.strong:
+                confirmed[observation.physical_page] = _Confirmed(candidate, "verified")
+            else:
+                weak_candidates[observation.physical_page] = (candidate,)
+            continue
 
-    for page_number, candidate in weak_candidates.items():
-        if _weak_candidate_has_adjacent_sequence(
-            page_number, candidate, candidates_by_page
-        ):
-            confirmed[page_number] = _Confirmed(candidate, "verified")
+        weak_options = tuple(
+            candidate for candidate in ordered_candidates if not candidate.strong
+        )
+        if weak_options:
+            candidates_by_page[observation.physical_page] = weak_options
+            weak_candidates[observation.physical_page] = weak_options
+
+    for page_number, candidate_options in weak_candidates.items():
+        supported = [
+            (
+                candidate,
+                _weak_candidate_sequence_anchors(
+                    page_number, candidate, candidates_by_page
+                ),
+            )
+            for candidate in candidate_options
+            if _weak_candidate_has_adjacent_sequence(
+                page_number, candidate, candidates_by_page
+            )
+        ]
+        if len(supported) == 1:
+            candidate, anchors = supported[0]
+            confirmed[page_number] = _Confirmed(candidate, "verified", anchors)
     return confirmed
 
 
 def _weak_candidate_has_adjacent_sequence(
     page_number: int,
     candidate: _Candidate,
-    candidates_by_page: dict[int, _Candidate],
+    candidates_by_page: dict[int, tuple[_Candidate, ...]],
 ) -> bool:
-    for neighbor_page in (page_number - 1, page_number + 1):
-        neighbor = candidates_by_page.get(neighbor_page)
-        if neighbor is None or neighbor.band != candidate.band:
-            continue
-        if (
-            neighbor.token.style == candidate.token.style
-            and abs(neighbor.token.number - candidate.token.number) == 1
-        ):
-            return True
-    return False
+    return bool(
+        _weak_candidate_sequence_anchors(page_number, candidate, candidates_by_page)
+    )
+
+
+def _weak_candidate_sequence_anchors(
+    page_number: int,
+    candidate: _Candidate,
+    candidates_by_page: dict[int, tuple[_Candidate, ...]],
+) -> tuple[int, ...]:
+    sequence_candidates = _consistent_local_sequence_candidates(
+        page_number, candidate, candidates_by_page
+    )
+    sequence_pages = tuple(sorted(sequence_candidates))
+    if len(sequence_pages) >= 3:
+        return (sequence_pages[0], sequence_pages[-1])
+    strong_pages = tuple(
+        page
+        for page in sequence_pages
+        if page != page_number and sequence_candidates[page].strong
+    )
+    return strong_pages[:2]
+
+
+def _consistent_local_sequence_candidates(
+    page_number: int,
+    candidate: _Candidate,
+    candidates_by_page: dict[int, tuple[_Candidate, ...]],
+) -> dict[int, _Candidate]:
+    selected = {page_number: candidate}
+    for direction in (-1, 1):
+        current_page = page_number
+        current_candidate = candidate
+        while True:
+            neighbor_page = current_page + direction
+            neighbor_options = candidates_by_page.get(neighbor_page, ())
+            matches = tuple(
+                neighbor
+                for neighbor in neighbor_options
+                if _follows_sequence(
+                    current_page, current_candidate, neighbor_page, neighbor
+                )
+            )
+            if len(matches) != 1:
+                break
+            neighbor = matches[0]
+            selected[neighbor_page] = neighbor
+            current_page = neighbor_page
+            current_candidate = neighbor
+    return selected
+
+
+def _follows_sequence(
+    left_page: int,
+    left: _Candidate,
+    right_page: int,
+    right: _Candidate,
+) -> bool:
+    return (
+        left.band == right.band
+        and left.token.style == right.token.style
+        and right.token.number - left.token.number == right_page - left_page
+    )
 
 
 def _infer_missing_labels(
@@ -389,6 +480,7 @@ def _infer_missing_labels(
             "visible_footer",
             f"between physical pages {left_page} and {right_page}",
             True,
+            None,
         )
         inferred[physical_page] = _Confirmed(
             candidate, "inferred", (left_page, right_page)
@@ -448,11 +540,14 @@ def _mapping_for_observation(
             )
         )
     if direct is not None:
+        if direct.candidate.bounding_box is None:
+            raise ValueError("direct candidate is missing source geometry")
         evidence.insert(
             0,
             PdfPageReconciliationEvidence(
                 kind=cast(EvidenceKind, direct.candidate.band),
                 detail=direct.candidate.detail,
+                anchor_physical_pages=direct.anchors,
             ),
         )
         return PdfPageLabelMapping(
@@ -462,6 +557,14 @@ def _mapping_for_observation(
             method=cast(MappingMethod, direct.candidate.band),
             native_pdf_label=observation.native_pdf_label,
             evidence=tuple(evidence),
+            source_geometry=(
+                PdfPageReconciliationGeometry(
+                    physical_page=observation.physical_page,
+                    label_text=direct.candidate.detail,
+                    location=cast(GeometryLocation, direct.candidate.band),
+                    bounding_box=direct.candidate.bounding_box,
+                )
+            ),
         )
     if inferred is not None:
         evidence.insert(

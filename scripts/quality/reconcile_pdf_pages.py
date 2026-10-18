@@ -129,7 +129,7 @@ def _run(
         payload = json.loads(json.dumps(asdict(response), ensure_ascii=True))
         validate_schema(
             SchemaValidateRequest(
-                schema_version="1.0",
+                schema_version=PDF_PAGE_RECONCILIATION_SCHEMA_VERSION,
                 schema_name="pdf_page_reconciliation",
                 payload=payload,
             ),

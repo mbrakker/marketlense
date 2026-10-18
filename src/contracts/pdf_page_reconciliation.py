@@ -5,8 +5,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, cast
 
-PDF_PAGE_RECONCILIATION_SCHEMA_VERSION = "1.0"
-PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION = "pdf-page-reconciliation-v1"
+PDF_PAGE_RECONCILIATION_SCHEMA_VERSION = "1.1"
+PDF_PAGE_RECONCILIATION_ALGORITHM_VERSION = "pdf-page-reconciliation-v2"
 _MD5_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 _STATUS_VALUES = {"verified", "inferred", "unresolved"}
 _METHOD_VALUES = {
@@ -37,6 +37,8 @@ MappingStatus = Literal["verified", "inferred", "unresolved"]
 MappingMethod = Literal[
     "visible_header", "visible_footer", "sequence_inference", "unresolved"
 ]
+GeometryLocation = Literal["visible_header", "visible_footer"]
+GeometryScope = Literal["text_block"]
 
 
 @dataclass(frozen=True)
@@ -63,7 +65,9 @@ class PdfPageReconciliationEvidence:
     detail: str = field(metadata={"doc": "Short bounded evidence detail."})
     anchor_physical_pages: tuple[int, ...] = field(
         default=(),
-        metadata={"doc": "Physical pages used as verified anchors for an inference."},
+        metadata={
+            "doc": "Bounded physical pages supporting a local sequence or inference."
+        },
     )
 
     def __post_init__(self) -> None:
@@ -85,6 +89,60 @@ class PdfPageReconciliationEvidence:
 
 
 @dataclass(frozen=True)
+class PdfPageReconciliationGeometry:
+    """Bounded geometry for the extracted text block containing a label."""
+
+    physical_page: int = field(metadata={"doc": "One-based physical PDF page."})
+    label_text: str = field(
+        metadata={"doc": "Source-extracted line text containing the label."}
+    )
+    location: GeometryLocation = field(
+        metadata={"doc": "Visible header or footer margin band."}
+    )
+    bounding_box: tuple[float, float, float, float] = field(
+        metadata={"doc": "Source text-block bounding box as x0, y0, x1, y1."}
+    )
+    bounding_box_scope: GeometryScope = field(
+        default="text_block",
+        metadata={
+            "doc": "Geometry scope; text_block avoids claiming line-level precision."
+        },
+    )
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.physical_page, int)
+            or isinstance(self.physical_page, bool)
+            or self.physical_page <= 0
+        ):
+            raise ValueError("geometry physical_page must be positive")
+        if (
+            not isinstance(self.label_text, str)
+            or not self.label_text.strip()
+            or len(self.label_text) > 240
+        ):
+            raise ValueError("geometry label_text must be non-empty and bounded")
+        if self.location not in {"visible_header", "visible_footer"}:
+            raise ValueError("geometry location is invalid")
+        if self.bounding_box_scope != "text_block":
+            raise ValueError("geometry bounding_box_scope is invalid")
+        if (
+            not isinstance(self.bounding_box, tuple)
+            or len(self.bounding_box) != 4
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                for value in self.bounding_box
+            )
+        ):
+            raise ValueError("geometry bounding_box must contain four finite values")
+        x0, y0, x1, y1 = self.bounding_box
+        if x1 < x0 or y1 < y0:
+            raise ValueError("geometry bounding_box must be ordered")
+
+
+@dataclass(frozen=True)
 class PdfPageLabelMapping:
     """One physical page and its visible printed-label reconciliation."""
 
@@ -101,6 +159,12 @@ class PdfPageLabelMapping:
     )
     evidence: tuple[PdfPageReconciliationEvidence, ...] = field(
         metadata={"doc": "Bounded evidence for the mapping decision."}
+    )
+    source_geometry: PdfPageReconciliationGeometry | None = field(
+        default=None,
+        metadata={
+            "doc": "Source-derived geometry required for directly verified labels."
+        },
     )
 
     def __post_init__(self) -> None:
@@ -143,6 +207,12 @@ class PdfPageLabelMapping:
                 raise ValueError(
                     "verified mapping evidence must name its visible method"
                 )
+            if self.source_geometry is None:
+                raise ValueError("verified mapping requires source geometry")
+            if self.source_geometry.physical_page != self.physical_page:
+                raise ValueError("source geometry page must match mapping page")
+            if self.source_geometry.location != self.method:
+                raise ValueError("source geometry location must match mapping method")
         elif self.status == "inferred":
             if self.printed_label is None or self.method != "sequence_inference":
                 raise ValueError("inferred mapping requires sequence_inference")
@@ -299,6 +369,31 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
         )
         if len(evidence) != len(raw_evidence):
             raise ValueError("mapping evidence payload contains a non-object")
+        raw_geometry = raw_mapping.get("source_geometry")
+        source_geometry: PdfPageReconciliationGeometry | None = None
+        if raw_geometry is not None:
+            if not isinstance(raw_geometry, Mapping):
+                raise ValueError("mapping source_geometry payload must be an object")
+            raw_box = raw_geometry.get("bounding_box")
+            if not isinstance(raw_box, (list, tuple)) or len(raw_box) != 4:
+                raise ValueError(
+                    "mapping source_geometry bounding_box must have four values"
+                )
+            source_geometry = PdfPageReconciliationGeometry(
+                physical_page=int(raw_geometry["physical_page"]),
+                label_text=str(raw_geometry["label_text"]),
+                location=cast(GeometryLocation, str(raw_geometry["location"])),
+                bounding_box=(
+                    float(raw_box[0]),
+                    float(raw_box[1]),
+                    float(raw_box[2]),
+                    float(raw_box[3]),
+                ),
+                bounding_box_scope=cast(
+                    GeometryScope,
+                    str(raw_geometry.get("bounding_box_scope") or ""),
+                ),
+            )
         mappings.append(
             PdfPageLabelMapping(
                 physical_page=int(raw_mapping["physical_page"]),
@@ -306,6 +401,7 @@ def response_from_payload(payload: Mapping[str, Any]) -> PdfPageReconciliationRe
                 status=cast(MappingStatus, str(raw_mapping["status"])),
                 method=cast(MappingMethod, str(raw_mapping["method"])),
                 native_pdf_label=raw_mapping.get("native_pdf_label"),
+                source_geometry=source_geometry,
                 evidence=evidence,
             )
         )

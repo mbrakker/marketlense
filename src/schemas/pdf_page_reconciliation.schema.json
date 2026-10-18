@@ -11,10 +11,10 @@
     "coverage_statistics"
   ],
   "properties": {
-    "schema_version": {"type": "string", "const": "1.0"},
+    "schema_version": {"type": "string", "const": "1.1"},
     "algorithm_version": {
       "type": "string",
-      "const": "pdf-page-reconciliation-v1"
+      "const": "pdf-page-reconciliation-v2"
     },
     "input_pdf_md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
     "physical_page_count": {"type": "integer", "minimum": 1},
@@ -29,7 +29,8 @@
           "status",
           "method",
           "native_pdf_label",
-          "evidence"
+          "evidence",
+          "source_geometry"
         ],
         "properties": {
           "physical_page": {"type": "integer", "minimum": 1},
@@ -48,6 +49,40 @@
             ]
           },
           "native_pdf_label": {"type": ["string", "null"], "minLength": 1},
+          "source_geometry": {
+            "anyOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "required": [
+                  "physical_page",
+                  "label_text",
+                  "location",
+                  "bounding_box",
+                  "bounding_box_scope"
+                ],
+                "properties": {
+                  "physical_page": {"type": "integer", "minimum": 1},
+                  "label_text": {"type": "string", "minLength": 1, "maxLength": 240},
+                  "location": {
+                    "type": "string",
+                    "enum": ["visible_header", "visible_footer"]
+                  },
+                  "bounding_box": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {"type": "number"}
+                  },
+                  "bounding_box_scope": {
+                    "type": "string",
+                    "const": "text_block"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
           "evidence": {
             "type": "array",
             "minItems": 1,
